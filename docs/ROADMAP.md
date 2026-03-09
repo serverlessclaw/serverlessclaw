@@ -29,6 +29,8 @@ Our goal: the most customizable, cost-effective, and self-evolving personal AI a
 ## ✅ Phase 7: Self-Healing & Rollback
 - [x] `check_health` tool — `GET /health` probe, rewards with counter decrement
 - [x] `trigger_rollback` tool — `git revert HEAD` + redeploy
+- [x] Build Monitor: Log-based error analysis and auto-fix loop
+- [x] Dead Man's Switch: Scheduled health probe + emergency rollback
 - [x] Main Agent orchestrates full deploy→verify→rollback cycle
 
 ---

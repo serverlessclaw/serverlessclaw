@@ -6,9 +6,19 @@
 
 - **Zero Idle Costs** — powered by AWS Lambda, pay per invocation only
 - **Self-Evolving** — the agent can write code, validate it, and redeploy itself safely
+- **Self-Healing & Resilient** — autonomously detects build failures, analyzes logs, and recovers from fatal errors with a 100% automated rollback loop
 - **Multi-Agent Orchestration** — Main Agent delegates to a Coder Agent via EventBridge
 - **Safety-First** — circuit breakers, protected resource labeling, health probes, and rollback
 - **Pluggable** — swap memory backends, LLM providers, or messaging channels
+
+## 🛡️ Autonomous Resiliency
+
+Serverless Claw is designed to be "un-killable" through two levels of autonomous recovery:
+
+1. **The Self-Healing Loop**: If a deployment fails (e.g., a bug in a new tool), the **Build Monitor** extracts the error logs, notifies the **Main Agent**, and automatically tasks the **Coder Agent** to investigate and apply a fix.
+2. **The Dead Man's Switch**: An immutable health probe runs every 15 minutes. If it detects the system is down or the "brain" (Lambda) is broken, it triggers an emergency **100% automated rollback** to the last known stable state.
+
+No human intervention required. No more midnight wake-up calls for broken deployments.
 
 ## Quick Start
 
