@@ -1,12 +1,13 @@
-import { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { DynamoMemory } from './memory';
 import { Agent } from './agent';
 import { OpenAIProvider } from './provider';
 import { tools } from './tools';
+import { DynamoLockManager } from './lock';
 import { Resource } from 'sst';
 
 const memory = new DynamoMemory();
 const provider = new OpenAIProvider();
+const lockManager = new DynamoLockManager();
 const agent = new Agent(memory, provider, Object.values(tools));
 
 export const handler = async (event: APIGatewayProxyEventV2) => {
@@ -26,11 +27,23 @@ export const handler = async (event: APIGatewayProxyEventV2) => {
   const chatId = message.chat.id.toString();
   const userText = message.text;
 
-  // Process message via Agent
-  const responseText = await agent.process(chatId, userText);
+  // 1. Acquire Lock
+  const acquired = await lockManager.acquire(chatId, 60);
+  if (!acquired) {
+    console.log(`Could not acquire lock for session ${chatId}. Task probably in progress.`);
+    return { statusCode: 200, body: 'Task in progress' };
+  }
 
-  // Send response to Telegram
-  await sendTelegramMessage(chatId, responseText);
+  try {
+    // 2. Process message via Agent
+    const responseText = await agent.process(chatId, userText);
+
+    // 3. Send response to Telegram
+    await sendTelegramMessage(chatId, responseText);
+  } finally {
+    // 4. Release Lock
+    await lockManager.release(chatId);
+  }
 
   return { statusCode: 200, body: 'OK' };
 };

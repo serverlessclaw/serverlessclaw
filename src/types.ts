@@ -38,3 +38,11 @@ export interface IChannel {
 export interface IProvider {
   call(messages: Message[], tools?: ITool[]): Promise<Message>;
 }
+
+/**
+ * Lock Manager for session isolation.
+ */
+export interface ILockManager {
+  acquire(lockId: string, ttlSeconds: number): Promise<boolean>;
+  release(lockId: string): Promise<void>;
+}
