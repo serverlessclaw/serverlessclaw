@@ -9,12 +9,17 @@ Traditional AI agents often require long-running servers to maintain WebSocket c
 - **Auto-Scaling**: Seamlessly handles one or one thousand concurrent users.
 - **Reliability**: Leverages AWS Lambda and DynamoDB for institutional-grade stability.
 
-## Architecture
+## High-Level Architecture
 
-- **AWS Lambda**: The "brain" of the agent, executing tasks and processing webhooks.
-- **Amazon DynamoDB**: Persistent session memory and state storage (replaces local markdown files).
-- **SST Ion**: Infrastructure as Code for seamless deployment and secret management.
-- **Tool Framework**: Extensible engine for mathematical calculations, web search, and more.
+The system is designed to be entirely stateless and highly modular. See the [**Architecture & Design Guide**](file:///Users/pengcao/projects/serverlessclaw/ARCHITECTURE.md) for ASCII diagrams and deep-dive logic.
+
+## Developer First: Customization
+
+Serverless Claw is built for developers who need to customize the agent's behavior:
+- **Pluggable Tools**: Add any Node.js function as an agent tool.
+- **Interchangeable Memory**: Swap DynamoDB for Redis, S3, or PostgreSQL.
+- **Multi-Channel**: Extend the webhook to support WhatsApp, Discord, or custom web-sockets.
+- **Provider-Agnostic**: Use OpenAI, Claude, or local LLMs through a unified interface.
 
 ## Quick Start
 
