@@ -1,16 +1,12 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
+import { IMemory, Message } from './types';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
 
-export interface Message {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-}
-
-export class DynamoMemory {
+export class DynamoMemory implements IMemory {
   private tableName = Resource.MemoryTable.name;
 
   async getHistory(userId: string): Promise<Message[]> {
@@ -26,8 +22,11 @@ export class DynamoMemory {
     try {
       const response = await docClient.send(command);
       return (response.Items || []).map((item) => ({
-        role: item.role,
+        role: item.role as any,
         content: item.content,
+        tool_calls: item.tool_calls,
+        tool_call_id: item.tool_call_id,
+        name: item.name,
       }));
     } catch (error) {
       console.error('Error retrieving history from DynamoDB:', error);
@@ -41,8 +40,7 @@ export class DynamoMemory {
       Item: {
         userId,
         timestamp: Date.now(),
-        role: message.role,
-        content: message.content,
+        ...message,
       },
     });
 
@@ -51,5 +49,9 @@ export class DynamoMemory {
     } catch (error) {
       console.error('Error saving message to DynamoDB:', error);
     }
+  }
+
+  async clearHistory(userId: string) {
+    console.log('Clear history requested for', userId);
   }
 }

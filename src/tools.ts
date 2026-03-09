@@ -1,11 +1,6 @@
-export interface Tool {
-  name: string;
-  description: string;
-  parameters: any;
-  execute: (args: any) => Promise<string>;
-}
+import { ITool } from './types';
 
-export const tools: Record<string, Tool> = {
+export const tools: Record<string, ITool> = {
   calculator: {
     name: 'calculator',
     description: 'Evaluates mathematical expressions.',
@@ -18,7 +13,6 @@ export const tools: Record<string, Tool> = {
     },
     execute: async ({ expression }) => {
       try {
-        // Simple eval-like logic (be careful in production)
         const result = Function(`"use strict"; return (${expression})`)();
         return `Result: ${result}`;
       } catch (e) {
@@ -37,7 +31,6 @@ export const tools: Record<string, Tool> = {
       required: ['location'],
     },
     execute: async ({ location }) => {
-      // Mock weather for now
       return `The weather in ${location} is sunny and 72°F.`;
     },
   },
