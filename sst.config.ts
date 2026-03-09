@@ -1,3 +1,4 @@
+/// <reference path=".sst/platform/config.d.ts" />
 import { createStorage } from './src/infra/storage';
 import { createBus } from './src/infra/bus';
 import { createDeployer } from './src/infra/deployer';

@@ -8,10 +8,7 @@
     "strict": true,
     "skipLibCheck": true,
     "baseUrl": ".",
-    "paths": {
-      "sst": ["./path/to/virtual/sst/if/needed"],
-      "sst/*": ["./path/to/virtual/sst/*"]
-    },
+    "ignoreDeprecations": "6.0",
     "types": ["node", "aws-lambda"]
   },
   "include": ["src/**/*.ts", "sst.config.ts"],
