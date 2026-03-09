@@ -9,6 +9,14 @@ export class Agent {
       You are the Main Manager Agent of the Serverless Claw stack. 
       You are capable of autonomous self-evolution and multi-agent orchestration.
       
+      - SYSTEM NOTIFICATIONS: If you receive a message starting with 'SYSTEM_NOTIFICATION', it means an automated process (like a build failure) needs your attention. 
+        1. Notify the user immediately about the failure.
+        2. Analyze the provided logs to understand the error.
+        3. Delegate the fix to the 'coder' agent using 'dispatch_task'.
+        4. Inform the user of your plan.
+
+      - RECOVERY EVENTS: If you see 'SYSTEM_RECOVERY_LOG' in your context, it means the Dead Man's Switch had to perform an emergency rollback because the system was down. Acknowledge this to the user and explain that you are back online.
+
       - Use 'dispatch_task' to delegate complex coding or infra changes to the 'coder' agent.
       - DEPLOY THEN VERIFY: After 'trigger_deployment', always call 'check_health' with the API URL to confirm success.
       - ROLLBACK SIGNAL: If 'trigger_deployment' returns CIRCUIT_BREAKER_ACTIVE or 'check_health' returns HEALTH_FAILED, you MUST call 'trigger_rollback' immediately and notify the user on Telegram.
@@ -23,14 +31,28 @@ export class Agent {
     const history = await this.memory.getHistory(userId);
     const distilled = await this.memory.getDistilledMemory(userId);
 
-    // 2. Add user message
+    // 2. Check for recent Recovery Events (Dead Man's Switch)
+    let recoveryContext = '';
+    try {
+      const recoveryData = await this.memory.getDistilledMemory('RECOVERY');
+      if (recoveryData) {
+        recoveryContext = `\n\nSYSTEM_RECOVERY_LOG: Recent emergency rollback occurred. Details: ${recoveryData}`;
+        // Clear it so we don't keep reporting it in every turn
+        await this.memory.updateDistilledMemory('RECOVERY', '');
+      }
+    } catch (e) {
+      console.error('Error checking recovery context:', e);
+    }
+
+    // 3. Add user message
     const userMessage: Message = { role: 'user', content: userText };
     await this.memory.addMessage(userId, userMessage);
 
-    // 3. Complete context (inject distilled facts as a system instruction)
-    const contextPrompt = distilled
-      ? `${this.systemPrompt}\n\nLONG-TERM USER FACTS:\n${distilled}`
-      : this.systemPrompt;
+    // 4. Complete context (inject distilled facts as a system instruction)
+    const contextPrompt =
+      distilled || recoveryContext
+        ? `${this.systemPrompt}${recoveryContext}\n\nLONG-TERM USER FACTS:\n${distilled}`
+        : this.systemPrompt;
 
     const messages: Message[] = [
       { role: 'system', content: contextPrompt },
@@ -70,10 +92,10 @@ export class Agent {
 
     if (!responseText) responseText = 'Sorry, I reached my iteration limit.';
 
-    // 4. Save response
+    // 5. Save response
     await this.memory.addMessage(userId, { role: 'assistant', content: responseText });
 
-    // 5. Trigger Reflection (async)
+    // 6. Trigger Reflection (async)
     this.reflect(userId, [...messages, { role: 'assistant', content: responseText }]).catch(
       console.error
     );

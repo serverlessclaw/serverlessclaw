@@ -8,10 +8,34 @@
 |-----------|-------------------|---------|
 | **Resource Labeling** | `tools.ts → file_write` | Any write to a protected file |
 | **Circuit Breaker** | `tools.ts → trigger_deployment` | > 5 deployments/day (UTC) |
+| **Self-Healing Loop** | `src/monitor.ts` | CodeBuild FAILED event |
+| **Dead Man's Switch** | `src/recovery.ts` | 15-min health probe failure |
 | **Pre-flight Validation** | `tools.ts → validate_code` | Called by Coder Agent after writes |
 | **Health Probe** | `src/health.ts` → `GET /health` | Called by Main Agent after deployment |
 | **Rollback Signal** | `tools.ts → trigger_rollback` | Circuit breaker active or health failed |
 | **Human-in-the-Loop** | Main Agent system prompt | `MANUAL_APPROVAL_REQUIRED` returned |
+
+---
+
+## Dead Man's Switch
+
+1. **Schedule**: An EventBridge Scheduler triggers the `DeadMansSwitch` Lambda every 15 minutes.
+2. **Probe**: It performs a `GET /health` on the Webhook API.
+3. **Emergency Action**: If the probe fails (5xx) or times out, it triggers a CodeBuild deployment with the `EMERGENCY_ROLLBACK=true` flag.
+4. **Git Revert**: The CodeBuild process automatically performs a `git revert HEAD` before deploying.
+5. **Persistence**: The recovery is logged in DynamoDB (`DISTILLED#RECOVERY`).
+6. **Acknowledge**: On the next user message, the Main Agent detects the log, informs the user, and clears the flag.
+
+---
+
+## Self-Healing Loop
+
+1. **Detection**: `BuildMonitor` Lambda captures `FAILED` state changes from CodeBuild.
+2. **Diagnosis**: `BuildMonitor` fetches the last 50 lines of CloudWatch logs and identifies the original user context from DynamoDB.
+3. **Notification**: Dispatches a `system.build.failed` event to the `AgentBus`.
+4. **Action**: `EventHandler` invokes the Main Agent, which notifies the user and automatically dispatches a fix task to the **Coder Agent**.
+
+This loop is still subject to the **Circuit Breaker** to prevent infinite repair attempts.
 
 ---
 

@@ -7,6 +7,15 @@ phases:
     commands:
       - npm install -g pnpm
       - pnpm install
+  pre_build:
+    commands:
+      - |
+        if [ "$EMERGENCY_ROLLBACK" = "true" ]; then
+          echo "EMERGENCY ROLLBACK INITIATED: Reverting last commit..."
+          git config --global user.email "agent@serverlessclaw.local"
+          git config --global user.name "Emergency Agent"
+          git revert HEAD --no-edit
+        fi
   build:
     commands:
       - echo "Starting autonomous deployment..."

@@ -9,6 +9,7 @@
 | **Main Agent** | `src/webhook.ts` + `src/agent.ts` | `src/agent.ts` (default param) | Interprets user intent, delegates, deploys |
 | **Coder Agent** | `src/coder.ts` | `src/coder.ts` | Writes code, runs pre-flight checks |
 | **Deployer** | AWS CodeBuild (`buildspec.yml`) | `buildspec.yml` | Runs `sst deploy` in isolated environment |
+| **Build Monitor** | `src/monitor.ts` | — | Watches for build failures, extracts logs |
 
 ---
 
@@ -29,9 +30,18 @@ POST /webhook → Main Agent (Lambda)
       │                                    └─► (returns summary)
       │
       ├──trigger_deployment──► CodeBuild Deployer
+      │                               │
+      │      (ON FAILURE)             ▼
+      │      └────────────────── Build Monitor ──► system.build.failed (Bus)
+      │                                                   │
+      │                                                   ▼
+      │                                             EventHandler (Main Agent)
+      │                                                   │
+      │                                                   ▼
+      │                                             dispatch_task("coder", fix)
       │
       └──check_health──► GET /health (src/health.ts)
-              │
+```
               ├── OK  → notify user, reward counter
               └── FAIL → trigger_rollback → notify user
 ```

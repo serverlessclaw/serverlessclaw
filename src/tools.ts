@@ -1,7 +1,12 @@
 import { CodeBuildClient, StartBuildCommand } from '@aws-sdk/client-codebuild';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import {
+  DynamoDBDocumentClient,
+  GetCommand,
+  UpdateCommand,
+  PutCommand,
+} from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
 import { ITool } from './types';
 import * as fs from 'fs/promises';
@@ -93,10 +98,14 @@ export const tools: Record<string, ITool> = {
           type: 'string',
           description: 'The reason for the deployment (e.g., added a new tool).',
         },
+        userId: {
+          type: 'string',
+          description: 'The user ID context for the deployment.',
+        },
       },
-      required: ['reason'],
+      required: ['reason', 'userId'],
     },
-    execute: async ({ reason }) => {
+    execute: async ({ reason, userId }) => {
       // Point 2: Circuit Breaker
       const today = new Date().toISOString().split('T')[0];
       const statsKey = 'system:deploy-stats';
@@ -123,6 +132,21 @@ export const tools: Record<string, ITool> = {
         });
 
         const response = await codebuild.send(command);
+        const buildId = response.build?.id;
+
+        if (buildId) {
+          // Store Build ID -> UserID mapping for the BuildMonitor
+          await db.send(
+            new PutCommand({
+              TableName: Resource.MemoryTable.name,
+              Item: {
+                userId: `BUILD#${buildId}`,
+                timestamp: Date.now(),
+                initiatorUserId: userId, // Assuming userId is available in the context or passed
+              },
+            })
+          );
+        }
 
         // Update stats
         await db.send(
@@ -140,9 +164,7 @@ export const tools: Record<string, ITool> = {
           })
         );
 
-        return `Deployment started successfully. Build ID: ${
-          response.build?.id
-        }. Build counter: ${count + 1}/${LIMIT}. Reason: ${reason}`;
+        return `Deployment started successfully. Build ID: ${buildId}. Build counter: ${count + 1}/${LIMIT}. Reason: ${reason}`;
       } catch (error) {
         return `Failed to trigger deployment: ${error instanceof Error ? error.message : String(error)}`;
       }

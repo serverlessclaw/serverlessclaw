@@ -43,11 +43,17 @@ describe('DynamoMemory', () => {
     });
 
     it('should return empty array on overflow or error', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       ddbMock.on(QueryCommand).rejects(new Error('DynamoDB Error'));
 
       const history = await memory.getHistory('user-1');
 
       expect(history).toEqual([]);
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Error retrieving history from DynamoDB:',
+        expect.any(Error)
+      );
+      consoleSpy.mockRestore();
     });
 
     it('should handle undefined Items from DynamoDB', async () => {

@@ -12,6 +12,7 @@ vi.mock('@aws-sdk/lib-dynamodb', () => ({
   },
   GetCommand: class {},
   UpdateCommand: class {},
+  PutCommand: class {},
 }));
 
 vi.mock('@aws-sdk/client-dynamodb', () => ({
@@ -19,14 +20,14 @@ vi.mock('@aws-sdk/client-dynamodb', () => ({
 }));
 
 vi.mock('@aws-sdk/client-codebuild', () => ({
-  CodeBuildClient: vi.fn().mockImplementation(function (this: any) {
+  CodeBuildClient: vi.fn().mockImplementation(function (this: { send: unknown }) {
     this.send = mocks.cbSend;
   }),
   StartBuildCommand: class {},
 }));
 
 vi.mock('@aws-sdk/client-eventbridge', () => ({
-  EventBridgeClient: vi.fn().mockImplementation(function (this: any) {
+  EventBridgeClient: vi.fn().mockImplementation(function (this: { send: unknown }) {
     this.send = mocks.ebSend;
   }),
   PutEventsCommand: class {},
@@ -41,7 +42,7 @@ vi.mock('sst', () => ({
 }));
 
 import { tools } from './tools';
-import { GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand, UpdateCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 
 describe('Deployment Circuit Breaker', () => {
   beforeEach(() => {
@@ -49,7 +50,7 @@ describe('Deployment Circuit Breaker', () => {
   });
 
   it('should block deployment if daily limit is reached (5)', async () => {
-    mocks.dbSend.mockImplementation((command: any) => {
+    mocks.dbSend.mockImplementation((command: unknown) => {
       if (command instanceof GetCommand) {
         return Promise.resolve({
           Item: {
@@ -62,14 +63,17 @@ describe('Deployment Circuit Breaker', () => {
       return Promise.resolve({});
     });
 
-    const result = await tools.trigger_deployment.execute({ reason: 'testing circuit breaker' });
+    const result = await tools.trigger_deployment.execute({
+      reason: 'testing circuit breaker',
+      userId: 'user123',
+    });
 
     expect(result).toContain('Daily deployment limit reached');
     expect(mocks.cbSend).not.toHaveBeenCalled();
   });
 
   it('should allow deployment and increment counter if limit not reached', async () => {
-    mocks.dbSend.mockImplementation((command: any) => {
+    mocks.dbSend.mockImplementation((command: unknown) => {
       if (command instanceof GetCommand) {
         return Promise.resolve({
           Item: {
@@ -83,14 +87,18 @@ describe('Deployment Circuit Breaker', () => {
     });
     mocks.cbSend.mockResolvedValue({ build: { id: 'test-build-id' } });
 
-    const result = await tools.trigger_deployment.execute({ reason: 'adding new tool' });
+    const result = await tools.trigger_deployment.execute({
+      reason: 'adding new tool',
+      userId: 'user123',
+    });
 
     expect(result).toContain('Deployment started successfully');
+    expect(mocks.dbSend).toHaveBeenCalledWith(expect.any(PutCommand)); // Build mapping
     expect(mocks.dbSend).toHaveBeenCalledWith(expect.any(UpdateCommand));
   });
 
   it('should reset counter if the day has changed', async () => {
-    mocks.dbSend.mockImplementation((command: any) => {
+    mocks.dbSend.mockImplementation((command: unknown) => {
       if (command instanceof GetCommand) {
         return Promise.resolve({
           Item: {
@@ -104,9 +112,13 @@ describe('Deployment Circuit Breaker', () => {
     });
     mocks.cbSend.mockResolvedValue({ build: { id: 'test-build-id' } });
 
-    const result = await tools.trigger_deployment.execute({ reason: 'first deploy of new day' });
+    const result = await tools.trigger_deployment.execute({
+      reason: 'first deploy of new day',
+      userId: 'user123',
+    });
 
     expect(result).toContain('Deployment started successfully');
+    expect(mocks.dbSend).toHaveBeenCalledWith(expect.any(PutCommand));
     expect(mocks.dbSend).toHaveBeenCalledWith(expect.any(UpdateCommand));
   });
 });

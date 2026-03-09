@@ -44,6 +44,74 @@ export default $config({
 
     bus.subscribe('coder.task', coderAgent.arn);
 
+    const buildMonitor = new sst.aws.Function('BuildMonitor', {
+      handler: 'src/monitor.handler',
+      link: [memoryTable, deployer, bus],
+    });
+
+    const eventHandler = new sst.aws.Function('EventHandler', {
+      handler: 'src/events.handler',
+      link: [memoryTable, ...Object.values(secrets), deployer, bus],
+    });
+
+    bus.subscribe('system.build.failed', eventHandler.arn);
+
+    const deadMansSwitch = new sst.aws.Function('DeadMansSwitch', {
+      handler: 'src/recovery.handler',
+      link: [memoryTable, deployer, api],
+    });
+
+    // Schedule to run every 15 minutes
+    new aws.scheduler.Schedule('RecoverySchedule', {
+      scheduleExpression: 'rate(15 minutes)',
+      flexibleTimeWindow: { mode: 'OFF' },
+      target: {
+        arn: deadMansSwitch.arn,
+        roleArn: new aws.iam.Role('RecoveryScheduleRole', {
+          assumeRolePolicy: JSON.stringify({
+            Version: '2012-10-17',
+            Statement: [
+              {
+                Action: 'sts:AssumeRole',
+                Effect: 'Allow',
+                Principal: { Service: 'scheduler.amazonaws.com' },
+              },
+            ],
+          }),
+        }).arn,
+      },
+    });
+
+    new aws.lambda.Permission('RecoveryPermission', {
+      action: 'lambda:InvokeFunction',
+      function: deadMansSwitch.name,
+      principal: 'scheduler.amazonaws.com',
+    });
+
+    // Capture CodeBuild State Change Events from the default bus
+    const buildRule = new aws.cloudwatch.EventRule('BuildRule', {
+      eventPattern: JSON.stringify({
+        source: ['aws.codebuild'],
+        'detail-type': ['CodeBuild Build State Change'],
+        detail: {
+          'build-status': ['FAILED'],
+          'project-name': [deployer.name],
+        },
+      }),
+    });
+
+    new aws.cloudwatch.EventTarget('BuildTarget', {
+      rule: buildRule.name,
+      arn: buildMonitor.arn,
+    });
+
+    new aws.lambda.Permission('BuildPermission', {
+      action: 'lambda:InvokeFunction',
+      function: buildMonitor.name,
+      principal: 'events.amazonaws.com',
+      sourceArn: buildRule.arn,
+    });
+
     // 5. Webhook API (Main Agent entry point)
     const api = new sst.aws.ApiGatewayV2('WebhookApi');
     api.route('POST /webhook', {
