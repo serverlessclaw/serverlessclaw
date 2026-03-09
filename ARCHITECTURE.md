@@ -92,85 +92,44 @@ The webhook handler can be extended to support multiple messaging platforms simu
 
 Serverless Claw is designed to evolve itself and manage complex agent hierarchies.
 
-### 1. Self-Evolution (GitOps)
-The agent can manage its own codebase and infrastructure through a Git-centric feedback loop.
+### 1. Self-Evolution (3-Agent + CodeBuild Loop)
 
-```text
-+--------------+       +--------------+       +-------------------+
-|              |       |              |       |                   |
-|  Main Agent  +------>+  GitHub API  +------>+  GitHub Actions   |
-| (Lambda)     |       | (Git Commit) |       | (SST Deploy)      |
-|              |       |              |       |                   |
-+--------------+       +--------------+       +---------+---------+
-       ^                                                |
-       |               Self-Update Loop                 |
-       +------------------------------------------------+
-```
-
-1.  **Code Access**: The agent has a `GITHUB_TOKEN` secret.
-2.  **Repo Management**: It can modify `sst.config.ts`, tool definitions, or prompt templates.
-3.  **Deployment**: Pushing to `main` triggers an SST deployment via GitHub Actions, effectively updating the agent's own infrastructure.
-
-### 4. Autonomous Deployer (Lambda + CodeBuild)
-To fully decouple from external CI/CD (GitHub Actions) while maintaining safety:
+The stack deploys **itself**. There is no GitHub Actions CI/CD — all deployments are triggered programmatically by the Main Agent via AWS CodeBuild.
 
 ```text
 +--------------+       +------------------+       +-------------------+
 |              |       |                  |       |                   |
 |  Main Agent  +------>+  AWS CodeBuild   +------>+   Agent Stack     |
-| (Lambda)     |       | (Execution Env)  |       | (Self-Update)     |
-|              |       |                  |       |                   |
-+--------------+       +---------+--------+       +-------------------+
-       |                         |
-       |     Protected Layer     |
-       +-------------------------+
-       |   Bootstrap Stack       |
-       | (Deployer & Roles)      |
-       +-------------------------+
+| (Lambda)     | start | (Deployer)       |  sst  | (Self-Update)     |
+|              | build |  buildspec.yml   | deploy|                   |
++--------------+       +------------------+       +-------------------+
+       |                        |
+       | Protected (no writes)  |
+       +------------------------+
+       |     Bootstrap Stack    |
+       |  (CodeBuild + Roles)   |
+       +------------------------+
 ```
 
-1.  **The Bootstrap Stack**: This is the "God Stack" that defines the deployment engine (CodeBuild) and the necessary permissions. It is marked as **Protected** and is not modifiable by the agent itself.
-2.  **The Agent Stack**: This is the "Living Stack" that the agent can modify and redeploy.
-3.  **Loop Prevention**: The Agent's IAM policy allows `codebuild:StartBuild` only for projects targeting the `Agent Stack`. It has no permissions to touch the `Bootstrap Stack` or the CodeBuild resource definition itself.
+**How it works**:
+1. Main Agent calls `trigger_deployment` (circuit-breaker guarded, max 5/day).
+2. CodeBuild runs `pnpm sst deploy` from the repo using `buildspec.yml`.
+3. Main Agent calls `check_health` → `GET /health` to confirm success.
+4. On failure: `trigger_rollback` reverts the last Git commit and redeploys.
 
-### 3. Cost-Effectiveness & Safety
-To prevent excessive GitHub Actions billing and code corruption:
+**Stack Isolation** (loop prevention):
+- **Bootstrap Stack**: defines CodeBuild, IAM roles. **Agent cannot modify this.**
+- **Agent Stack**: everything else — Lambda, DynamoDB, API Gateway. The agent can evolve this.
+- The agent's IAM role only allows `codebuild:StartBuild` for the Agent Stack project. It cannot touch the Bootstrap Stack.
 
-1.  **Pull Request Guardrail**: By default, the agent creates a **Pull Request** instead of pushing to `main`. The user reviews the diff and approves the deployment, preventing "infinite loop" deployments.
-2.  **Hot-Reloading (Dynamic Config)**: Non-structural changes (prompts, tool parameters, system messages) are stored in **DynamoDB**. The agent can update these instantly via a tool without triggering a full CI/CD pipeline.
-3.  **Change Batching**: The agent is instructed to gather multiple improvements before performing a single "Self-Commit" to minimize build minutes.
+### 3. Cost-Effectiveness & Safety (CodeBuild Edition)
 
-### 2. Self-Evolution (3-Agent Loop)
+Replacing legacy GitHub Actions cost controls with in-AWS equivalents:
 
-The current production system uses a fully in-AWS self-evolution loop:
-
-```text
-User
- │
- ▼
-Main Agent (Lambda)
- │  dispatch_task
- ▼
-Coder Agent (Lambda) ─── file_write ──► Codebase
- │  validate_code                         │
- │  (passes)                              │
- ▼                                        │
-trigger_deployment                         │
- │                                        │
- ▼                                        │
-AWS CodeBuild (Deployer) ◄────────────────┘
- │  sst deploy
- ▼
-Deployed Stack
- │
- ▼
-check_health ──► GET /health
- │
- ├── OK  (counter –1, notify user)
- └── FAIL → trigger_rollback → git revert HEAD → CodeBuild
-```
-
-See [docs/SAFETY.md](./docs/SAFETY.md) for guardrail details and [docs/AGENTS.md](./docs/AGENTS.md) for system prompts.
+1. **Circuit Breaker**: Max 5 deploys/UTC day tracked in DynamoDB. See [docs/SAFETY.md](./docs/SAFETY.md).
+2. **Health Probe Reward**: Successful `GET /health` decrements the counter (-1), allowing continued evolution for healthy changes.
+3. **Config-as-Data**: Non-structural changes (prompts, tool params) live in DynamoDB — no deploy needed.
+4. **Human-in-the-Loop**: Protected files (`sst.config.ts`, etc.) require explicit Telegram approval before any change deploys.
 
 ### 4. LLM Providers
 Provider-agnostic interface supporting:
