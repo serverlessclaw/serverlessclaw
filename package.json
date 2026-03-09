@@ -28,7 +28,8 @@
     "@aws-sdk/client-s3": "^3.1004.0",
     "@aws-sdk/client-ssm": "^3.1004.0",
     "@aws-sdk/lib-dynamodb": "^3.1004.0",
-    "lucide-react": "^0.577.0"
+    "lucide-react": "^0.577.0",
+    "sst": "^4.2.2"
   },
   "lint-staged": {
     "*.ts": [
@@ -39,6 +40,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/aws-lambda": "^8.10.161",
+    "@types/node": "^25.3.5",
     "@typescript-eslint/eslint-plugin": "^8.56.1",
     "@typescript-eslint/parser": "^8.56.1",
     "@vitest/ui": "^4.0.18",
@@ -49,6 +51,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.3.2",
     "prettier": "^3.8.1",
+    "tsx": "^4.21.0",
     "typescript-eslint": "^8.56.1",
     "vitest": "^4.0.18"
   }

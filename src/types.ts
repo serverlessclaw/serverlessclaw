@@ -13,6 +13,8 @@ export interface IMemory {
   getHistory(userId: string): Promise<Message[]>;
   addMessage(userId: string, message: Message): Promise<void>;
   clearHistory(userId: string): Promise<void>;
+  getDistilledMemory(userId: string): Promise<string>;
+  updateDistilledMemory(userId: string, facts: string): Promise<void>;
 }
 
 /**

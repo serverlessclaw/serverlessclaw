@@ -1,3 +1,4 @@
+import { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { DynamoMemory } from './memory';
 import { Agent } from './agent';
 import { OpenAIProvider } from './provider';

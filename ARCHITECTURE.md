@@ -109,6 +109,13 @@ The agent can manage its own codebase and infrastructure through a Git-centric f
 2.  **Repo Management**: It can modify `sst.config.ts`, tool definitions, or prompt templates.
 3.  **Deployment**: Pushing to `main` triggers an SST deployment via GitHub Actions, effectively updating the agent's own infrastructure.
 
+### 3. Cost-Effectiveness & Safety
+To prevent excessive GitHub Actions billing and code corruption:
+
+1.  **Pull Request Guardrail**: By default, the agent creates a **Pull Request** instead of pushing to `main`. The user reviews the diff and approves the deployment, preventing "infinite loop" deployments.
+2.  **Hot-Reloading (Dynamic Config)**: Non-structural changes (prompts, tool parameters, system messages) are stored in **DynamoDB**. The agent can update these instantly via a tool without triggering a full CI/CD pipeline.
+3.  **Change Batching**: The agent is instructed to gather multiple improvements before performing a single "Self-Commit" to minimize build minutes.
+
 ### 2. Sub-agent Orchestration
 Multi-agent tasks are handled through an event-driven "Manager-Worker" pattern.
 

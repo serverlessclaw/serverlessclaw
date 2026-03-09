@@ -54,4 +54,39 @@ export class DynamoMemory implements IMemory {
   async clearHistory(userId: string) {
     console.log('Clear history requested for', userId);
   }
+
+  async getDistilledMemory(userId: string): Promise<string> {
+    const command = new QueryCommand({
+      TableName: this.tableName,
+      KeyConditionExpression: 'userId = :userId',
+      ExpressionAttributeValues: {
+        ':userId': `DISTILLED#${userId}`,
+      },
+    });
+
+    try {
+      const response = await docClient.send(command);
+      return response.Items?.[0]?.content || '';
+    } catch (error) {
+      console.error('Error retrieving distilled memory from DynamoDB:', error);
+      return '';
+    }
+  }
+
+  async updateDistilledMemory(userId: string, facts: string): Promise<void> {
+    const command = new PutCommand({
+      TableName: this.tableName,
+      Item: {
+        userId: `DISTILLED#${userId}`,
+        timestamp: Date.now(),
+        content: facts,
+      },
+    });
+
+    try {
+      await docClient.send(command);
+    } catch (error) {
+      console.error('Error updating distilled memory in DynamoDB:', error);
+    }
+  }
 }

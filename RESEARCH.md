@@ -24,3 +24,9 @@ OpenClaw centers on a **Gateway** (Control Plane) and an **Agent Runtime**.
 OpenClaw was designed in 2025. In 2026, we optimize for:
 - **Large Context Windows**: Utilizing GPT-5.4 and Claude 4.6 for massive history without excessive summarization.
 - **Native Tool Calling**: Relying on 2026 model accuracy for complex tool chains.
+
+## 4. Deployment Cost Mitigation
+Self-evolving agents can be expensive if every small change triggers a full build.
+
+- **Config-as-Data**: Move as much "soft logic" as possible into DynamoDB/S3 so the agent can "learn" without redeploying.
+- **Human-in-the-loop (HITL)**: Mandatory PR review for infrastructure changes (`sst.config.ts`) to prevent accidental resource creation/deletion.

@@ -9,16 +9,21 @@ export class Agent {
   ) {}
 
   async process(userId: string, userText: string): Promise<string> {
-    // 1. Get history
+    // 1. Get history and distilled memory
     const history = await this.memory.getHistory(userId);
+    const distilled = await this.memory.getDistilledMemory(userId);
 
     // 2. Add user message
     const userMessage: Message = { role: 'user', content: userText };
     await this.memory.addMessage(userId, userMessage);
 
-    // 3. Complete context
+    // 3. Complete context (inject distilled facts as a system instruction)
+    const contextPrompt = distilled
+      ? `${this.systemPrompt}\n\nLONG-TERM USER FACTS:\n${distilled}`
+      : this.systemPrompt;
+
     const messages: Message[] = [
-      { role: 'system', content: this.systemPrompt },
+      { role: 'system', content: contextPrompt },
       ...history,
       userMessage,
     ];
@@ -58,6 +63,38 @@ export class Agent {
     // 4. Save response
     await this.memory.addMessage(userId, { role: 'assistant', content: responseText });
 
+    // 5. Trigger Reflection (async)
+    this.reflect(userId, [...messages, { role: 'assistant', content: responseText }]).catch(
+      console.error
+    );
+
     return responseText;
+  }
+
+  private async reflect(userId: string, conversation: Message[]) {
+    const existingFacts = await this.memory.getDistilledMemory(userId);
+
+    const reflectionPrompt = `
+      You are an observer analyzing a conversation. 
+      Your goal is to extract key facts about the user to maintain long-term memory.
+      
+      EXISTING FACTS:
+      ${existingFacts || 'None'}
+
+      CONVERSATION:
+      ${conversation.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join('\n')}
+
+      Update the EXISTING FACTS with any new information found in the CONVERSATION.
+      Be concise. Only include permanent facts (e.g., location, preferences, names, past events). 
+      Return the full updated list of facts.
+    `;
+
+    const summaryResponse = await this.provider.call([
+      { role: 'system', content: reflectionPrompt },
+    ]);
+
+    if (summaryResponse.content) {
+      await this.memory.updateDistilledMemory(userId, summaryResponse.content);
+    }
   }
 }
