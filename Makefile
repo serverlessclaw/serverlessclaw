@@ -3,6 +3,7 @@ include makefiles/Makefile.shared.mk
 include makefiles/Makefile.quality.mk
 include makefiles/Makefile.test.mk
 include makefiles/Makefile.deploy.mk
+include makefiles/Makefile.release.mk
 
 .DEFAULT_GOAL := help
 
@@ -18,6 +19,7 @@ help: ## Show all targets and descriptions in a markdown table
 			quality)    color=$$(tput setaf 2);; \
 			test)       color=$$(tput setaf 4);; \
 			deploy)     color=$$(tput setaf 3);; \
+			release)    color=$$(tput setaf 5);; \
 			*)          color=$$(tput setaf 7);; \
 		esac; \
 		echo ""; \
