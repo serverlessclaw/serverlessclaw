@@ -13,7 +13,7 @@ export function createApi(ctx: ApiContext) {
   const api = new sst.aws.ApiGatewayV2('WebhookApi');
 
   // Main Webhook
-  api.route('POST /webhook', {
+  api.route('ANY /webhook', {
     handler: 'src/agents/webhook.handler',
     link: [memoryTable, traceTable, stagingBucket, ...Object.values(secrets), deployer, bus],
   });

@@ -11,12 +11,12 @@ export default $config({
   },
   async run() {
     // SST v3 Modular Infrastructure via Dynamic Imports
-    const { createStorage } = await import('./src/infra/storage');
-    const { createBus } = await import('./src/infra/bus');
-    const { createDeployer } = await import('./src/infra/deployer');
-    const { createApi } = await import('./src/infra/api');
-    const { createAgents } = await import('./src/infra/agents');
-    const { createDashboard } = await import('./src/infra/dashboard');
+    const { createStorage } = await import('./src/infra/storage.js');
+    const { createBus } = await import('./src/infra/bus.js');
+    const { createDeployer } = await import('./src/infra/deployer.js');
+    const { createApi } = await import('./src/infra/api.js');
+    const { createAgents } = await import('./src/infra/agents.js');
+    const { createDashboard } = await import('./src/infra/dashboard.js');
 
     // 1. Storage & Secrets
     const { memoryTable, traceTable, stagingBucket, secrets } = createStorage();
@@ -27,7 +27,7 @@ export default $config({
     // 3. The Deployer (CodeBuild) - Using optional chaining for GitHubToken
     const { deployer } = createDeployer({
       stagingBucket,
-      githubToken: (secrets as any).GITHUB_TOKEN
+      githubToken: (secrets as any).GITHUB_TOKEN,
     });
 
     // 4. Webhook API

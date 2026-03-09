@@ -14,7 +14,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import * as archiver from 'archiver';
+import archiver from 'archiver';
 import { createWriteStream } from 'fs';
 
 const execAsync = promisify(exec);
@@ -66,7 +66,7 @@ export const tools: Record<string, ITool> = {
           }
         });
 
-        archive.on('error', (err) => {
+        archive.on('error', (err: Error) => {
           resolve(`Failed to create zip: ${err.message}`);
         });
 
@@ -174,13 +174,15 @@ export const tools: Record<string, ITool> = {
     execute: async ({ reason, userId }) => {
       // Point 2: Circuit Breaker
       const today = new Date().toISOString().split('T')[0];
-      const statsKey = 'system:deploy-stats';
 
       try {
         const { Item } = await db.send(
           new GetCommand({
             TableName: Resource.MemoryTable.name,
-            Key: { id: statsKey },
+            Key: {
+              userId: 'SYSTEM#DEPLOY_STATS',
+              timestamp: 0,
+            },
           })
         );
 
@@ -218,7 +220,10 @@ export const tools: Record<string, ITool> = {
         await db.send(
           new UpdateCommand({
             TableName: Resource.MemoryTable.name,
-            Key: { id: statsKey },
+            Key: {
+              userId: 'SYSTEM#DEPLOY_STATS',
+              timestamp: 0,
+            },
             UpdateExpression:
               count === 0 ? 'SET #count = :one, lastReset = :today' : 'SET #count = #count + :inc',
             ExpressionAttributeNames: { '#count': 'count' },
@@ -289,11 +294,13 @@ export const tools: Record<string, ITool> = {
         const response = await fetch(url as string);
         if (response.ok) {
           // Reward: Decrement daily limit by 1 on a healthy response
-          const statsKey = 'system:deploy-stats';
           await db.send(
             new UpdateCommand({
               TableName: Resource.MemoryTable.name,
-              Key: { id: statsKey },
+              Key: {
+                userId: 'SYSTEM#DEPLOY_STATS',
+                timestamp: 0,
+              },
               UpdateExpression: 'SET #count = if_not_exists(#count, :zero) - :one',
               ExpressionAttributeNames: { '#count': 'count' },
               ExpressionAttributeValues: { ':one': 1, ':zero': 0 },

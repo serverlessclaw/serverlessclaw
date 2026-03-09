@@ -95,7 +95,7 @@ export class Agent {
           }
           iterations++;
         } else {
-          responseText = aiResponse.content;
+          responseText = aiResponse.content || '';
           break;
         }
       }

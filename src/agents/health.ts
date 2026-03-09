@@ -15,7 +15,10 @@ export const handler: APIGatewayProxyHandlerV2 = async () => {
     const { Item } = await db.send(
       new GetCommand({
         TableName: Resource.MemoryTable.name,
-        Key: { id: 'system:deploy-stats' },
+        Key: {
+          userId: 'SYSTEM#DEPLOY_STATS',
+          timestamp: 0,
+        },
       })
     );
 

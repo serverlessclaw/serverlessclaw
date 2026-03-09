@@ -16,8 +16,9 @@ export class DynamoLockManager implements ILockManager {
       TableName: this.tableName,
       Item: {
         userId: `LOCK#${lockId}`,
-        timestamp: Date.now(),
+        timestamp: 0,
         expiresAt: expiresAt,
+        acquiredAt: Date.now(), // Store actual time in a non-key field if needed
       },
       ConditionExpression: 'attribute_not_exists(userId) OR expiresAt < :now',
       ExpressionAttributeValues: {
@@ -41,6 +42,7 @@ export class DynamoLockManager implements ILockManager {
       TableName: this.tableName,
       Key: {
         userId: `LOCK#${lockId}`,
+        timestamp: 0,
       },
     });
 

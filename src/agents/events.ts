@@ -14,7 +14,11 @@ export const handler = async (event: {
 }) => {
   console.log('EventHandler received event:', JSON.stringify(event, null, 2));
 
-  const { userId, buildId, errorLogs } = event.detail;
+  const { userId, buildId, errorLogs } = event.detail as {
+    userId: string;
+    buildId?: string;
+    errorLogs?: string;
+  };
 
   if (event['detail-type'] === 'system_build_failed') {
     const task = `CRITICAL: Deployment ${buildId} failed. 
