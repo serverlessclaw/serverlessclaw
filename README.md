@@ -5,7 +5,7 @@
 ## Key Features
 
 - **Zero Idle Costs** — powered by AWS Lambda, pay per invocation only
-- **Self-Evolving** — the agent can write code, validate it, and redeploy itself safely
+- **Self-Evolving (Code & Infra)** — the agent can write application code, modify its own AWS infrastructure via SST, validate, and redeploy itself safely
 - **Self-Healing & Resilient** — autonomously detects build failures, analyzes logs, and recovers from fatal errors with a 100% automated rollback loop
 - **Multi-Agent Orchestration** — Main Agent delegates to a Coder Agent via EventBridge
 - **Safety-First** — circuit breakers, protected resource labeling, health probes, and rollback
