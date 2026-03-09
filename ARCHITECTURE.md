@@ -88,7 +88,8 @@ The webhook handler can be extended to support multiple messaging platforms simu
 
 ### 4. LLM Providers
 Provider-agnostic interface supporting:
-- OpenAI (GPT-4o/o1)
-- Anthropic (Claude 3.5 Sonnet)
-- DeepSeek (V3/R1)
+- OpenAI (GPT-5.4 / GPT-5-mini)
+- Anthropic (Claude 4.6 Sonnet)
+- Google (Gemini 3.1 / Gemini 3 Flash)
+- Emerging models (GLM 5, MiniMax 2.5)
 - Local models (via Ollama tunnel or AWS Bedrock)
