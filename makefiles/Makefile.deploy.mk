@@ -7,11 +7,11 @@ include makefiles/Makefile.shared.mk
 
 dev: ## Start SST in development mode
 	@$(call log_step,Starting SST dev mode...)
-	@$(PNPM) sst dev
+	@$(call load_env); $(PNPM) sst dev
 
 deploy: ## Deploy SST to the specified environment (default: dev)
 	@$(call log_step,Deploying to environment: $(ENV)...)
-	@$(PNPM) sst deploy --stage $(ENV)
+	@$(call load_env); $(PNPM) sst deploy --stage $(ENV)
 
 deploy-prod: ## Deploy SST to production
 	@$(call log_step,Deploying to production...)

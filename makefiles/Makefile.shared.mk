@@ -53,6 +53,27 @@ else
 	MAKE_PARALLEL := -j$(PARALLELISM)
 endif
 
+# Environment file resolution
+# Priority: .env.$(ENV).local > .env.$(ENV) > .env.local > .env
+ENV_FILES := .env.$(ENV).local .env.$(ENV) .env.local .env
+
+# Usage: $(call load_env)
+# Loads available env files and exports variables
+define load_env
+	for f in $(ENV_FILES); do \
+		if [ -f "$$f" ]; then \
+			$(call log_info,Loading env file: $$f); \
+			set -a; . ./$$f; set +a; \
+		fi; \
+	done
+endef
+
+.PHONY: show-env
+show-env: ## Show current environment variables (filtered)
+	@$(call load_env)
+	@$(call log_info,Current Environment Settings:)
+	@env | grep -E "^(SST_|AWS_|TELEGRAM_|OPENAI_|GITHUB_)" | sort || true
+
 # Common track_time macro
 define track_time
 	start=$$(date +%s); \
