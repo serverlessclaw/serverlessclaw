@@ -76,7 +76,7 @@ describe('DynamoMemory', () => {
           content: 'test message',
         },
       });
-      expect(calls[0].args[0].input.Item.timestamp).toBeDefined();
+      expect(calls[0].args[0].input.Item?.timestamp).toBeDefined();
     });
 
     it('should handle errors gracefully during PutCommand', async () => {
