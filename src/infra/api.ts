@@ -25,14 +25,14 @@ export function createApi(ctx: ApiContext) {
       deployer,
       bus,
     ],
-    timeout: '60 seconds',
+    timeout: '29 seconds',
   });
 
   // GitHub Webhook for Renovate/MendBot
   api.route('POST /github/webhook', {
     handler: 'src/agents/renobot.handler',
     link: [memoryTable, traceTable, configTable, ...Object.values(secrets), deployer, bus],
-    timeout: '60 seconds',
+    timeout: '29 seconds',
   });
 
   // Health Probe
