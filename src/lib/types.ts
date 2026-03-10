@@ -75,7 +75,7 @@ export enum OpenAIModel {
  * Standardized Model IDs for Bedrock.
  */
 export enum BedrockModel {
-  CLAUDE_4_6 = 'anthropic.claude-4-6-sonnet-20260215-v1:0',
+  CLAUDE_4_6 = 'global.anthropic.claude-sonnet-4-6',
 }
 
 /**

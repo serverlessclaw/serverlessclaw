@@ -23,7 +23,7 @@ export class BedrockProvider implements IProvider {
   ): Promise<Message> {
     const typedResource = Resource as unknown as BedrockResource;
     const client = new BedrockRuntimeClient({
-      region: typedResource.AwsRegion?.value || 'us-east-1',
+      region: typedResource.AwsRegion?.value || 'ap-southeast-2',
     });
 
     // Fallback if profile not supported
@@ -86,14 +86,20 @@ export class BedrockProvider implements IProvider {
     // Map profile to Claude 4.6 Thinking budget
     let thinkingBudget = 1024;
     let thinkingEnabled = true;
+    let maxTokens = 8192; // Default sufficient for STANDARD
+    let temperature = 0.7;
 
     if (profile === ReasoningProfile.FAST) {
       thinkingBudget = 0;
       thinkingEnabled = false;
     } else if (profile === ReasoningProfile.THINKING) {
       thinkingBudget = 4096;
+      maxTokens = 12288;
+      temperature = 1.0; // Optimized for thinking
     } else if (profile === ReasoningProfile.DEEP) {
-      thinkingBudget = 16384;
+      thinkingBudget = 32768; // Increased for Claude 4.6 DEEP
+      maxTokens = 49152;
+      temperature = 1.0;
     }
 
     const command = new ConverseCommand({
@@ -102,8 +108,8 @@ export class BedrockProvider implements IProvider {
       system,
       toolConfig: bedrockTools ? { tools: bedrockTools } : undefined,
       inferenceConfig: {
-        maxTokens: 4096,
-        temperature: 0.7,
+        maxTokens,
+        temperature,
         topP: 0.9,
       },
       additionalModelRequestFields: {
@@ -122,9 +128,26 @@ export class BedrockProvider implements IProvider {
 
     if (response.output?.message) {
       const msg = response.output.message;
+
+      // 2026 Observability: Extract reasoningContent if present
+      const reasoning = msg.content
+        ?.filter((c) => (c as any).reasoningContent)
+        .map((c) => (c as any).reasoningContent?.reasoningText?.text || '')
+        .join('\n\n');
+
+      if (reasoning) {
+        console.debug(`[Bedrock Reasoning] for ${this.modelId}:`, reasoning);
+      }
+
+      // Aggregate all text blocks (model might return multiple)
+      const content = msg.content
+        ?.filter((c) => c.text)
+        .map((c) => c.text)
+        .join('\n\n');
+
       return {
         role: MessageRole.ASSISTANT,
-        content: msg.content?.[0]?.text || '',
+        content: content || '',
         tool_calls: msg.content
           ?.filter((c) => c.toolUse)
           .map((c) => ({
@@ -142,7 +165,7 @@ export class BedrockProvider implements IProvider {
   }
 
   async getCapabilities() {
-    const isClaude46 = this.modelId.includes(BedrockModel.CLAUDE_4_6);
+    const isClaude46 = this.modelId.includes('claude-sonnet-4-6');
     return {
       supportedReasoningProfiles: isClaude46
         ? [
