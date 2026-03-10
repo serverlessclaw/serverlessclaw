@@ -6,16 +6,17 @@
   "schedule": ["daily"],
   "prConcurrentLimit": 0,
   "prThresholdLimit": 0,
-  "automerge": false,
+  "automerge": true,
+  "automergeType": "branch",
   "platform": "github",
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
-      "automerge": false
+      "automerge": true
     }
   ],
   "vulnerabilityAlerts": {
     "enabled": true,
-    "automerge": false
+    "automerge": true
   }
 }

@@ -54,13 +54,20 @@ export const handler = async (event: APIGatewayProxyEventV2) => {
 
   // Notify on creation or update
   if (action === 'opened' || action === 'synchronize') {
-    const message = `🛠 RENOBOT NOTIFICATION
+    const isAutomerge =
+      pr.auto_merge !== null || pr.labels?.some((l: any) => l.name === 'automerge');
+
+    let message = `🛠 RENOBOT NOTIFICATION
 PR ${action}: ${pr.title}
 Repo: ${payload.repository.full_name}
-Link: ${pr.html_url}
+Link: ${pr.html_url}\n\n`;
 
-I have verified the Renovate configuration (daily runs, no limits). 
-Would you like me to run 'validate_code' or 'run_tests' on this branch?`;
+    if (isAutomerge) {
+      message += `✅ AUTOMERGE ENABLED: I will monitor this PR and it will be merged once CI passes.`;
+    } else {
+      message += `⚠️ MANUAL REVIEW REQUIRED: This is a major update or could not be automerged. 
+I have verified the daily run schedule. Would you like me to run 'validate_code' on this branch?`;
+    }
 
     await sendTelegramMessage(adminChatId, message);
   }
