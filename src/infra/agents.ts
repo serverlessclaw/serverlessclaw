@@ -18,6 +18,8 @@ export function createAgents(ctx: AgentContext) {
   const coderAgent = new sst.aws.Function('CoderAgent', {
     handler: 'src/agents/coder.handler',
     link: [memoryTable, traceTable, configTable, stagingBucket, ...Object.values(secrets)],
+    memory: '1024 MB',
+    timeout: '300 seconds',
   });
   bus.subscribe(EventType.CODER_TASK, coderAgent.arn);
 
@@ -25,6 +27,8 @@ export function createAgents(ctx: AgentContext) {
   const buildMonitor = new sst.aws.Function('BuildMonitor', {
     handler: 'src/agents/monitor.handler',
     link: [memoryTable, traceTable, configTable, stagingBucket, deployer, bus],
+    memory: '512 MB',
+    timeout: '120 seconds',
   });
 
   // 3. Event Handler
@@ -39,6 +43,8 @@ export function createAgents(ctx: AgentContext) {
       deployer,
       bus,
     ],
+    memory: '512 MB',
+    timeout: '120 seconds',
   });
   bus.subscribe(EventType.SYSTEM_BUILD_FAILED, eventHandler.arn);
 
@@ -46,6 +52,8 @@ export function createAgents(ctx: AgentContext) {
   const deadMansSwitch = new sst.aws.Function('DeadMansSwitch', {
     handler: 'src/agents/recovery.handler',
     link: [memoryTable, traceTable, configTable, deployer, api],
+    memory: '512 MB',
+    timeout: '120 seconds',
   });
 
   // 15-min Schedule
