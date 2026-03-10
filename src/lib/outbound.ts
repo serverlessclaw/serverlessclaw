@@ -8,7 +8,7 @@ export async function sendOutboundMessage(
   source: string,
   userId: string,
   message: string,
-  syncContext?: string[]
+  memoryContexts?: string[]
 ) {
   try {
     await eventbridge.send(
@@ -17,7 +17,7 @@ export async function sendOutboundMessage(
           {
             Source: source,
             DetailType: EventType.OUTBOUND_MESSAGE,
-            Detail: JSON.stringify({ userId, message, syncContext }),
+            Detail: JSON.stringify({ userId, message, memoryContexts }),
             EventBusName: (Resource as any).AgentBus.name,
           },
         ],

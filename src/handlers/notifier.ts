@@ -14,11 +14,11 @@ export const handler = async (event: any) => {
     return;
   }
 
-  const { userId, message, syncContexts } = payload;
+  const { userId, message, memoryContexts } = payload;
 
-  // 1. Sync contexts to other agents if requested
-  if (Array.isArray(syncContexts)) {
-    for (const contextId of syncContexts) {
+  if (Array.isArray(memoryContexts)) {
+    for (const contextId of memoryContexts) {
+      // 1. Sync context
       try {
         await memory.addMessage(contextId, { role: MessageRole.ASSISTANT, content: message });
       } catch (e) {
@@ -27,7 +27,7 @@ export const handler = async (event: any) => {
     }
   }
 
-  // Telegram Adapter
+  // 2. Telegram Adapter
   await sendTelegramMessage(userId, message);
 
   // Future Adapters (Slack, Discord, Dashboard WebSockets) can be added here
