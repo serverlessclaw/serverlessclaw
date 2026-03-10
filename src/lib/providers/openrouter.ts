@@ -1,4 +1,4 @@
-import { IProvider, Message, ITool } from '../types';
+import { IProvider, Message, ITool, ReasoningProfile } from '../types';
 import { Resource } from 'sst';
 
 interface OpenRouterResource {

@@ -1,4 +1,4 @@
-import { IMemory, IProvider, ITool, Message } from './types';
+import { IMemory, IProvider, ITool, Message, ReasoningProfile } from './types';
 import { ClawTracer } from './tracer';
 
 export class Agent {

@@ -1,4 +1,4 @@
-import { IProvider, Message, ITool } from '../types';
+import { IProvider, Message, ITool, ReasoningProfile } from '../types';
 import { Resource } from 'sst';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
