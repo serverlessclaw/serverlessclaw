@@ -1,13 +1,12 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
-  ],
-  "schedule": ["daily"],
+  "extends": ["config:recommended"],
+  "schedule": ["at any time"],
+  "timezone": "Australia/Sydney",
   "prConcurrentLimit": 0,
-  "prThresholdLimit": 0,
+  "prHourlyLimit": 0,
   "automerge": true,
-  "automergeType": "branch",
+  "platformAutomerge": true,
   "platform": "github",
   "packageRules": [
     {
