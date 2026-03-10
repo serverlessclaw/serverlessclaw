@@ -1,4 +1,7 @@
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
+import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
+import { EventType } from '../lib/types';
+
 import { DynamoMemory } from '../lib/memory';
 import { Agent } from '../lib/agent';
 import { ProviderManager } from '../lib/providers';
@@ -10,6 +13,7 @@ const memory = new DynamoMemory();
 const provider = new ProviderManager();
 const lockManager = new DynamoLockManager();
 const agent = new Agent(memory, provider, Object.values(tools));
+const eventbridge = new EventBridgeClient({});
 
 export const handler = async (event: APIGatewayProxyEventV2) => {
   console.log('Received event:', JSON.stringify(event, null, 2));
@@ -39,8 +43,8 @@ export const handler = async (event: APIGatewayProxyEventV2) => {
     // 2. Process message via Agent
     const responseText = await agent.process(chatId, userText);
 
-    // 3. Send response to Telegram
-    await sendTelegramMessage(chatId, responseText);
+    // 3. Send response to Notifier via AgentBus
+    await sendOutboundMessage(chatId, responseText);
   } finally {
     // 4. Release Lock
     await lockManager.release(chatId);
@@ -49,16 +53,17 @@ export const handler = async (event: APIGatewayProxyEventV2) => {
   return { statusCode: 200, body: 'OK' };
 };
 
-async function sendTelegramMessage(chatId: string, text: string) {
-  const token = Resource.TelegramBotToken.value;
-  const url = `https://api.telegram.org/bot${token}/sendMessage`;
-
-  await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text: text,
-    }),
-  });
+async function sendOutboundMessage(userId: string, message: string) {
+  await eventbridge.send(
+    new PutEventsCommand({
+      Entries: [
+        {
+          Source: 'webhook.handler',
+          DetailType: EventType.OUTBOUND_MESSAGE,
+          Detail: JSON.stringify({ userId, message }),
+          EventBusName: (Resource as any).AgentBus.name,
+        },
+      ],
+    })
+  );
 }

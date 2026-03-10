@@ -1,9 +1,12 @@
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
+import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import { Resource } from 'sst';
+import { EventType } from '../lib/types';
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+const eventbridge = new EventBridgeClient({});
 
 export const handler = async (event: APIGatewayProxyEventV2) => {
   console.log('GitHub Webhook Event:', JSON.stringify(event, null, 2));
@@ -69,26 +72,27 @@ Link: ${pr.html_url}\n\n`;
 I have verified the daily run schedule. Would you like me to run 'validate_code' on this branch?`;
     }
 
-    await sendTelegramMessage(adminChatId, message);
+    await sendOutboundMessage(adminChatId, message);
   }
 
   return { statusCode: 200, body: 'OK' };
 };
 
-async function sendTelegramMessage(chatId: string, text: string) {
-  const token = (Resource as any).TelegramBotToken.value;
-  const url = `https://api.telegram.org/bot${token}/sendMessage`;
-
+async function sendOutboundMessage(userId: string, message: string) {
   try {
-    await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: text,
-      }),
-    });
+    await eventbridge.send(
+      new PutEventsCommand({
+        Entries: [
+          {
+            Source: 'renobot.handler',
+            DetailType: EventType.OUTBOUND_MESSAGE,
+            Detail: JSON.stringify({ userId, message }),
+            EventBusName: (Resource as any).AgentBus.name,
+          },
+        ],
+      })
+    );
   } catch (e) {
-    console.error('Failed to send Telegram message:', e);
+    console.error('Failed to send outbound message:', e);
   }
 }

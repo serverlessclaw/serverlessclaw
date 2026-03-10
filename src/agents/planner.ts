@@ -90,7 +90,7 @@ export const handler = async (event: {
 
   if (evolutionMode === 'auto') {
     console.log('Evolution mode is auto, dispatching CODER_TASK directly.');
-    await notifyUserOnTelegram(
+    await sendOutboundMessage(
       contextUserId,
       `🚀 **Autonomous Evolution Triggered**\n\nI have identified a capability gap and designed a plan to fix it. The Coder Agent is now executing the following STRATEGIC_PLAN:\n\n${result}`
     );
@@ -112,8 +112,8 @@ export const handler = async (event: {
     );
   } else {
     console.log('Evolution mode is hitl, asking for approval.');
-    // Send plan to Telegram
-    await notifyUserOnTelegram(
+    // Send plan to user
+    await sendOutboundMessage(
       contextUserId,
       `🚀 **NEW STRATEGIC PLAN PROPOSED**\n\n${result}\n\nReply with 'APPROVE' to execute.`
     );
@@ -122,17 +122,17 @@ export const handler = async (event: {
   return { gapId, plan: result };
 };
 
-async function notifyUserOnTelegram(chatId: string, text: string) {
-  const token = Resource.TelegramBotToken.value;
-  const url = `https://api.telegram.org/bot${token}/sendMessage`;
-
-  await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text: text,
-      parse_mode: 'Markdown',
-    }),
-  });
+async function sendOutboundMessage(userId: string, message: string) {
+  await eventbridge.send(
+    new PutEventsCommand({
+      Entries: [
+        {
+          Source: 'planner.agent',
+          DetailType: EventType.OUTBOUND_MESSAGE,
+          Detail: JSON.stringify({ userId, message }),
+          EventBusName: (Resource as any).AgentBus.name,
+        },
+      ],
+    })
+  );
 }

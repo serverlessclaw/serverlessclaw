@@ -125,5 +125,22 @@ export function createAgents(ctx: AgentContext) {
   });
   bus.subscribe(EventType.REFLECT_TASK, reflectorAgent.arn);
 
-  return { coderAgent, buildMonitor, eventHandler, deadMansSwitch, plannerAgent, reflectorAgent };
+  // 7. Notifier
+  const notifier = new sst.aws.Function('Notifier', {
+    handler: 'src/handlers/notifier.handler',
+    link: [configTable, secrets.TelegramBotToken],
+    memory: '256 MB',
+    timeout: '30 seconds',
+  });
+  bus.subscribe(EventType.OUTBOUND_MESSAGE, notifier.arn);
+
+  return {
+    coderAgent,
+    buildMonitor,
+    eventHandler,
+    deadMansSwitch,
+    plannerAgent,
+    reflectorAgent,
+    notifier,
+  };
 }

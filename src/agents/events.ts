@@ -4,10 +4,12 @@ import { ProviderManager } from '../lib/providers';
 import { tools } from '../tools/index';
 import { Resource } from 'sst';
 import { EventType } from '../lib/types';
+import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 
 const memory = new DynamoMemory();
 const provider = new ProviderManager();
 const agent = new Agent(memory, provider, Object.values(tools));
+const eventbridge = new EventBridgeClient({});
 
 export const handler = async (event: {
   'detail-type': string;
@@ -33,21 +35,22 @@ export const handler = async (event: {
     // Process the failure context via the Main Agent
     const responseText = await agent.process(userId, `SYSTEM_NOTIFICATION: ${task}`);
 
-    // Notify user on Telegram
-    await sendTelegramMessage(userId, responseText);
+    // Notify user via Notifier
+    await sendOutboundMessage(userId, responseText);
   }
 };
 
-async function sendTelegramMessage(chatId: string, text: string) {
-  const token = Resource.TelegramBotToken.value;
-  const url = `https://api.telegram.org/bot${token}/sendMessage`;
-
-  await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text: text,
-    }),
-  });
+async function sendOutboundMessage(userId: string, message: string) {
+  await eventbridge.send(
+    new PutEventsCommand({
+      Entries: [
+        {
+          Source: 'events.handler',
+          DetailType: EventType.OUTBOUND_MESSAGE,
+          Detail: JSON.stringify({ userId, message }),
+          EventBusName: (Resource as any).AgentBus.name,
+        },
+      ],
+    })
+  );
 }

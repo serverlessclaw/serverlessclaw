@@ -46,6 +46,7 @@ export enum EventType {
   RECOVERY_LOG = 'recovery_log',
   EVOLUTION_PLAN = 'evolution_plan',
   REFLECT_TASK = 'reflect_task',
+  OUTBOUND_MESSAGE = 'outbound_message',
 }
 
 /**
