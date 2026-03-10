@@ -83,6 +83,15 @@ export enum BedrockModel {
 }
 
 /**
+ * Standardized Model IDs for OpenRouter.
+ */
+export enum OpenRouterModel {
+  GLM_5 = 'zhipu/glm-5',
+  MINIMAX_2_5 = 'minimax/minimax-2.5',
+  GEMINI_3_FLASH = 'google/gemini-3-flash-preview',
+}
+
+/**
  * Insight Categories for memory and evolution.
  */
 export enum InsightCategory {
