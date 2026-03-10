@@ -2,6 +2,8 @@
 
 **Serverless Claw** is a fully autonomous, serverless AI agent platform. It is designed from the ground up to be **Self-Evolving**, **Self-Healing**, and **Self-Cost Optimizing**. Deployed entirely on AWS using [SST (v3/Ion)](https://sst.dev), Serverless Claw features an orchestrated swarm of intelligent agents capable of writing code, modifying their own AWS infrastructure, and deploying updates with zero human intervention.
 
+![Serverless Claw Dashboard](./dashboard/public/clawcenter.png)
+
 ## 🧬 Core Philosophies
 
 ### 1. Self-Evolving (Code & Infrastructure)
@@ -23,7 +25,7 @@ Traditional AI agents run on expensive, always-on instances. Serverless Claw is 
 - **Event Bus**: AWS EventBridge
 - **CI/CD**: AWS CodeBuild
 - **Admin Dashboard**: Next.js 16 (React 19), TailwindCSS v4, deployed via OpenNext
-- **AI / LLMs**: OpenAI (gpt-4o), Anthropic Claude 3 (via Amazon Bedrock), OpenRouter
+- **AI / LLMs**: OpenAI (GPT-5.4, GPT-5-mini), Anthropic Claude 3.7 Sonnet (via Amazon Bedrock), OpenRouter
 - **Language**: TypeScript
 
 ### ASCII Architecture Diagram
