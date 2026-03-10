@@ -4,13 +4,12 @@ import { sendOutboundMessage } from '../lib/outbound';
 import { DynamoMemory } from '../lib/memory';
 import { Agent } from '../lib/agent';
 import { ProviderManager } from '../lib/providers';
-import { tools } from '../tools/index';
+import { getAgentTools } from '../tools/index';
 import { DynamoLockManager } from '../lib/lock';
 
 const memory = new DynamoMemory();
 const provider = new ProviderManager();
 const lockManager = new DynamoLockManager();
-const agent = new Agent(memory, provider, Object.values(tools));
 
 export const handler = async (event: APIGatewayProxyEventV2) => {
   console.log('Received event:', JSON.stringify(event, null, 2));
@@ -38,6 +37,8 @@ export const handler = async (event: APIGatewayProxyEventV2) => {
 
   try {
     // 2. Process message via Agent
+    const agentTools = await getAgentTools('main');
+    const agent = new Agent(memory, provider, agentTools);
     const responseText = await agent.process(chatId, userText);
 
     // 3. Send response to Notifier via AgentBus

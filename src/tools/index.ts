@@ -32,6 +32,43 @@ interface ToolsResource {
 }
 
 export const tools: Record<string, ITool> = {
+  manage_agent_tools: {
+    name: 'manage_agent_tools',
+    description: 'Updates the active toolset for a specific agent in the ConfigTable.',
+    parameters: {
+      type: 'object',
+      properties: {
+        agentId: {
+          type: 'string',
+          description: 'The unique ID of the agent (e.g., main, coder, planner).',
+        },
+        toolNames: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'The list of tool names to enable for this agent.',
+        },
+      },
+      required: ['agentId', 'toolNames'],
+    },
+    execute: async (args: Record<string, unknown>) => {
+      const { agentId, toolNames } = args as { agentId: string; toolNames: string[] };
+      const typedResource = Resource as unknown as ToolsResource;
+      try {
+        await db.send(
+          new PutCommand({
+            TableName: typedResource.ConfigTable.name,
+            Item: {
+              key: `${agentId}_tools`,
+              value: toolNames,
+            },
+          })
+        );
+        return `Successfully updated tools for agent '${agentId}': ${toolNames.join(', ')}`;
+      } catch (error) {
+        return `Failed to update agent tools: ${error instanceof Error ? error.message : String(error)}`;
+      }
+    },
+  },
   stage_changes: {
     name: 'stage_changes',
     description: 'Stages modified files to S3 for persistent deployment.',
@@ -486,6 +523,65 @@ export const tools: Record<string, ITool> = {
     },
   },
 };
+
+/**
+ * Dynamically retrieves the tools assigned to a specific agent from the ConfigTable.
+ * Falls back to sensible defaults if no configuration exists.
+ */
+export async function getAgentTools(agentId: string): Promise<ITool[]> {
+  const typedResource = Resource as unknown as ToolsResource;
+  const configKey = `${agentId}_tools`;
+
+  try {
+    const { Item } = await db.send(
+      new GetCommand({
+        TableName: typedResource.ConfigTable.name,
+        Key: { key: configKey },
+      })
+    );
+
+    let toolNames: string[] = Item?.value;
+
+    if (!toolNames) {
+      // Define sensible defaults
+      const defaults: Record<string, string[]> = {
+        main: [
+          'dispatch_task',
+          'recall_knowledge',
+          'switch_model',
+          'check_health',
+          'trigger_deployment',
+          'manage_agent_tools',
+        ],
+        coder: [
+          'file_write',
+          'file_read',
+          'validate_code',
+          'run_tests',
+          'search_code',
+          'stage_changes',
+        ],
+        planner: ['search_code', 'manage_agent_tools'],
+        events: ['dispatch_task', 'recall_knowledge'],
+      };
+
+      toolNames = defaults[agentId] || Object.keys(tools);
+
+      // Persist the defaults so the user/planner can see and edit them
+      await db.send(
+        new PutCommand({
+          TableName: typedResource.ConfigTable.name,
+          Item: { key: configKey, value: toolNames },
+        })
+      );
+    }
+
+    return toolNames.map((name) => tools[name]).filter((t) => !!t);
+  } catch (error) {
+    console.error(`Error loading tools for agent ${agentId}:`, error);
+    return Object.values(tools); // Safety fallback
+  }
+}
 
 export function getToolDefinitions() {
   return Object.values(tools).map((t) => ({

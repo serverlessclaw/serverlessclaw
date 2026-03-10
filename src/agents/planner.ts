@@ -2,7 +2,7 @@ import { DynamoMemory } from '../lib/memory';
 import { Agent } from '../lib/agent';
 import { ProviderManager } from '../lib/providers';
 import { AgentType, ReasoningProfile, EventType, EvolutionMode } from '../lib/types';
-import { getToolDefinitions } from '../tools/index';
+import { getAgentTools } from '../tools/index';
 import { Resource } from 'sst';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
@@ -77,9 +77,8 @@ export const handler = async (event: {
   `
     : '';
 
-  const toolsList = getToolDefinitions()
-    .map((t) => `- ${t.function.name}: ${t.function.description}`)
-    .join('\n    ');
+  const agentTools = await getAgentTools('planner');
+  const toolsList = agentTools.map((t) => `- ${t.name}: ${t.description}`).join('\n    ');
   const telemetry = `
     [SYSTEM_TELEMETRY]:
     - ACTIVE_AGENTS: ${Object.values(AgentType).join(', ')}

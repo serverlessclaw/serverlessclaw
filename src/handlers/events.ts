@@ -1,13 +1,12 @@
 import { DynamoMemory } from '../lib/memory';
 import { Agent } from '../lib/agent';
 import { ProviderManager } from '../lib/providers';
-import { tools } from '../tools/index';
+import { getAgentTools } from '../tools/index';
 import { EventType } from '../lib/types';
 import { sendOutboundMessage } from '../lib/outbound';
 
 const memory = new DynamoMemory();
 const provider = new ProviderManager();
-const agent = new Agent(memory, provider, Object.values(tools));
 
 export const handler = async (event: {
   'detail-type': string;
@@ -31,6 +30,8 @@ export const handler = async (event: {
     Explain your plan to the user before proceeding.`;
 
     // Process the failure context via the Main Agent
+    const agentTools = await getAgentTools('events');
+    const agent = new Agent(memory, provider, agentTools);
     const responseText = await agent.process(userId, `SYSTEM_NOTIFICATION: ${task}`);
 
     // Notify user via Notifier
