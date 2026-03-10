@@ -107,4 +107,47 @@ export const tools = {
       required: ['location'],
     },
   },
+  manage_agent_tools: {
+    name: 'manage_agent_tools',
+    description: 'Updates the active toolset for a specific agent.',
+    parameters: {
+      type: 'object',
+      properties: {
+        agentId: { type: 'string', description: 'The type of agent (main, coder, planner, events)' },
+        toolNames: { type: 'array', items: { type: 'string' }, description: 'List of tool names' },
+      },
+      required: ['agentId', 'toolNames'],
+    },
+  },
+  recall_knowledge: {
+    name: 'recall_knowledge',
+    description: 'Retrieves distilled facts/lessons from memory.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Search query' },
+      },
+      required: ['query'],
+    },
+  },
+  run_tests: {
+    name: 'run_tests',
+    description: 'Executes project unit tests (vitest).',
+    parameters: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  switch_model: {
+    name: 'switch_model',
+    description: 'Updates active provider/model in DynamoDB (Hot Config).',
+    parameters: {
+      type: 'object',
+      properties: {
+        provider: { type: 'string', enum: ['openai', 'bedrock', 'openrouter'] },
+        model: { type: 'string' },
+      },
+      required: ['provider', 'model'],
+    },
+  },
 };

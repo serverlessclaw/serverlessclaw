@@ -12,7 +12,8 @@ import {
   Zap, 
   Menu, 
   X,
-  ChevronRight
+  ChevronRight,
+  Wrench
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -37,6 +38,7 @@ export default function Sidebar() {
     { href: '/security', label: 'SECURITY_MANIFEST', icon: ShieldCheck },
     { href: '/resilience', label: 'SELF_HEALING', icon: Zap },
     { href: '/memory', label: 'MEMORY_VAULT', icon: Cpu },
+    { href: '/capabilities', label: 'CAPABILITIES_ROSTER', icon: Wrench },
   ];
 
   return (
@@ -109,7 +111,7 @@ export default function Sidebar() {
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Icon size={16} className={isActive ? 'text-cyber-green' : 'text-white/40 group-hover:text-white/60'} />
+                  {Icon && <Icon size={16} className={isActive ? 'text-cyber-green' : 'text-white/40 group-hover:text-white/60'} />}
                   <span className="font-medium tracking-tight uppercase text-xs">{item.label}</span>
                 </div>
                 {isActive && <ChevronRight size={12} className="text-cyber-green" />}

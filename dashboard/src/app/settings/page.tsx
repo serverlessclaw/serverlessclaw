@@ -8,14 +8,18 @@ async function getConfig() {
     const client = new DynamoDBClient({});
     const docClient = DynamoDBDocumentClient.from(client);
     
-    const [providerRes, modelRes] = await Promise.all([
+    const [providerRes, modelRes, modeRes, policyRes] = await Promise.all([
         docClient.send(new GetCommand({ TableName: (Resource as any).ConfigTable.name, Key: { key: 'active_provider' } })),
-        docClient.send(new GetCommand({ TableName: (Resource as any).ConfigTable.name, Key: { key: 'active_model' } }))
+        docClient.send(new GetCommand({ TableName: (Resource as any).ConfigTable.name, Key: { key: 'active_model' } })),
+        docClient.send(new GetCommand({ TableName: (Resource as any).ConfigTable.name, Key: { key: 'evolution_mode' } })),
+        docClient.send(new GetCommand({ TableName: (Resource as any).ConfigTable.name, Key: { key: 'optimization_policy' } }))
     ]);
 
     return {
         provider: providerRes.Item?.value || 'openai',
-        model: modelRes.Item?.value || 'gpt-5.4'
+        model: modelRes.Item?.value || 'gpt-5.4',
+        evolutionMode: modeRes.Item?.value || 'hitl',
+        optimizationPolicy: policyRes.Item?.value || 'balanced'
     };
 }
 
@@ -23,6 +27,8 @@ async function updateConfig(formData: FormData) {
     'use server';
     const provider = formData.get('provider') as string;
     const model = formData.get('model') as string;
+    const evolutionMode = formData.get('evolutionMode') as string;
+    const optimizationPolicy = formData.get('optimizationPolicy') as string;
 
     const client = new DynamoDBClient({});
     const docClient = DynamoDBDocumentClient.from(client);
@@ -35,6 +41,14 @@ async function updateConfig(formData: FormData) {
         docClient.send(new PutCommand({ 
             TableName: (Resource as any).ConfigTable.name, 
             Item: { key: 'active_model', value: model } 
+        })),
+        docClient.send(new PutCommand({ 
+            TableName: (Resource as any).ConfigTable.name, 
+            Item: { key: 'evolution_mode', value: evolutionMode } 
+        })),
+        docClient.send(new PutCommand({ 
+            TableName: (Resource as any).ConfigTable.name, 
+            Item: { key: 'optimization_policy', value: optimizationPolicy } 
         }))
     ]);
 
@@ -53,7 +67,7 @@ export default async function SettingsPage() {
                 </div>
             </header>
 
-            <div className="max-w-2xl">
+            <div className="max-w-2xl space-y-10">
                 <form action={updateConfig} className="glass-card p-8 space-y-8 cyber-border">
                     <div className="space-y-4">
                         <h3 className="text-sm font-bold flex items-center gap-2 text-cyber-blue">
@@ -84,9 +98,38 @@ export default async function SettingsPage() {
                                 />
                             </div>
                         </div>
-                        <p className="text-[10px] text-white/30 italic">
-                            * Changes are applied instantly via ConfigTable. No redeploy required.
-                        </p>
+                    </div>
+
+                    <div className="pt-8 border-t border-white/5 space-y-4">
+                        <h3 className="text-sm font-bold flex items-center gap-2 text-cyber-green">
+                            <Zap size={16} /> EVOLUTION_ENGINE_CONTROL
+                        </h3>
+                        
+                        <div className="grid grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] uppercase text-white/40 tracking-widest font-bold">Evolution Mode</label>
+                                <select 
+                                    name="evolutionMode" 
+                                    defaultValue={config.evolutionMode}
+                                    className="w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-cyber-green transition-colors"
+                                >
+                                    <option value="hitl">Human-in-the-Loop (Safe)</option>
+                                    <option value="auto">Fully Autonomous (Live)</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] uppercase text-white/40 tracking-widest font-bold">Optimization Policy</label>
+                                <select 
+                                    name="optimizationPolicy" 
+                                    defaultValue={config.optimizationPolicy}
+                                    className="w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-cyber-green transition-colors"
+                                >
+                                    <option value="aggressive">Aggressive (Velocity)</option>
+                                    <option value="balanced">Balanced (Stability)</option>
+                                    <option value="conservative">Conservative (Safety)</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="pt-4 border-t border-white/5 flex justify-end">
@@ -94,12 +137,12 @@ export default async function SettingsPage() {
                             type="submit"
                             className="bg-cyber-blue text-black px-4 py-2 rounded text-xs font-bold flex items-center gap-2 hover:scale-105 transition-transform cursor-pointer shadow-[0_0_15px_rgba(0,243,255,0.3)]"
                         >
-                            <Save size={14} /> COMMIT_HOT_CONFIG
+                            <Save size={14} /> COMMIT_SYSTEM_CHANGES
                         </button>
                     </div>
                 </form>
 
-                <div className="mt-10 glass-card p-8 space-y-6 border-red-900/20">
+                <div className="glass-card p-8 space-y-6 border-red-900/20">
                     <h3 className="text-sm font-bold flex items-center gap-2 text-red-500">
                         <AlertTriangle size={16} /> DANGER_ZONE
                     </h3>
