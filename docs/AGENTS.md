@@ -96,6 +96,28 @@ Key obligations (see `src/coder.ts` for the full prompt):
 
 ---
 
+## Co-Management & Evolution
+
+Agents are not just autonomous; they are **co-managed** via the ClawCenter dashboard.
+
+### 1. Dynamic Toolsets
+Instead of a static roster, every agent loads its tools from the `ConfigTable` on every execution (`await getAgentTools(agentId)`).
+- **Control**: Users can toggle tools on/off at `/capabilities`.
+- **Optimization**: The Planner Agent can also "gift" tools to other agents based on performance telemetry.
+
+### 2. Autonomous Evolution (Auto vs HITL)
+- **`hitl` mode**: Agents must request approval on Telegram/Slack for deployments or protected file writes.
+- **`auto` mode**: The system self-deploys and self-heals without human intervention.
+- **Switch**: Controlled in `/settings`.
+
+### 3. Memory Curation
+Users can "Prune" the agent's memory at `/memory` to:
+- Delete incorrect tactical lessons.
+- Remove hallucinated user preferences.
+- Clear stale strategic gaps.
+
+---
+
 ## Adding a New Sub-Agent
 
 1. Create `src/<name>.ts` with an `Agent` instance and `export const handler`.

@@ -19,7 +19,7 @@
 
 ## System Overview (One Paragraph)
 
-**Serverless Claw** is a self-evolving AI agent platform on AWS. A Main Agent (Lambda) receives messages via Telegram/Discord webhooks, processes them with an LLM, and can autonomously delegate code changes to a **Coder Agent**, which then triggers the **Deployer** (CodeBuild) to redeploy the stack. Safety guardrails (circuit breakers, protected resource labeling, health probes, rollback) prevent runaway evolution.
+**Serverless Claw** is a self-evolving AI agent platform on AWS. A Main Agent (Lambda) receives messages via Telegram/Discord webhooks, processes them with an LLM, and can autonomously delegate code changes to a **Coder Agent**, which then triggers the **Deployer** (CodeBuild) to redeploy the stack. Safety guardrails (circuit breakers, protected resource labeling, health probes, rollback) prevent runaway evolution, while the **ClawCenter Dashboard** enables real-time human **co-management** of agent capabilities and memory.
 
 ---
 

@@ -27,7 +27,7 @@ This document covers the AWS topology and data flow. For agent logic and orchest
                             +-----------+-----------+                 |
                             |                       |                 |
                             |      ClawCenter       |<----------------+
-                            |  (Next.js Dashboard)  |                 |
+                            | (Co-Management Hub)   |                 |
                             |                       |                 |
                             +-----------+-----------+                 |
                                         |                             |
@@ -194,9 +194,11 @@ The stack evolves by bridging the gap between temporary Lambda execution and per
                                    |                        |
                                    v                        v
                         +------------------+      +-------------------+
-                        |   EventBridge    |      |   GitHub Repo     |
-                        | (Status Updates) |      | (Final Persistence)|
-                        +------------------+      +-------------------+
+### 3. Capability Evolution (Co-Management)
+The system's evolution is a shared responsibility between the **Planner Agent** and the **Human Admin**.
+- **The Dashboard (ClawCenter)**: Serves as the Command & Control center.
+- **Dynamic Scoping**: Permissions are managed as data in DynamoDB, not as hardcoded logic.
+- **Pruning**: Human insight is used to "weed" the memory garden, ensuring high-quality self-improvement.
 ```
 
 ### 2. Self-Healing Loop
