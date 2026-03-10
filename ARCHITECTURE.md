@@ -118,8 +118,8 @@ Agents communicate asynchronously using **AWS EventBridge (The AgentBus)**. This
      |___________________|          (4) [ EVENT_HANDLER ]
                |                     (Handles Failures)
                |
-    (2) CODER_AGENT <--------------+
-        (Writes Code)
+    (2) CODER_AGENT <-------------- (5) [ RENOBOT ]
+        (Writes Code)                (Monitors GitHub/Renovate)
 ```
 
 - **Pattern**: The Main Agent emits a `coder_task` event. The Coder Agent is subscribed to this event, processes the work, and updates the system state.
@@ -211,7 +211,30 @@ If a deployment fails or the system becomes unstable, Serverless Claw automatica
 
 ---
 
-### 3. Cost-Effectiveness & Safety (CodeBuild Edition)
+### 3. Automated Dependency Management (Renovate)
+
+The system maintains its own dependencies through a closed-loop integration with Mend/Renovate.
+
+```text
++----------------+       +------------------+       +-------------------+
+|  Renovate Bot  |------>|  GitHub PR       |<------|   Renobot Agent   |
+| (Check Daily)  | create|  (Automated)     | notify| (Monitor Webhook) |
++----------------+       +------------------+       +---------+---------+
+                                                            |
+                                                            v
++----------------+       +------------------+       +-------------------+
+|   Main Agent   |<------|  Automerge Flow  |<------|   Telegram User   |
+| (Verify/Alert) | report| (CI Validation)  | approve| (Manual/Major)    |
++----------------+       +------------------+       +-------------------+
+```
+
+**How it works**:
+1. **Renovate**: Runs daily and creates Pull Requests for dependency updates.
+2. **Renobot Agent**: Receives webhooks from GitHub, identifies Renovate PRs, and notifies the Admin via Telegram.
+3. **Automerge**: Non-major updates are configured to automerge once CI passes, ensuring the system stays modern with zero intervention.
+4. **Safety**: Major updates require manual approval and can trigger the `validate_code` tool for autonomous verification before merging.
+
+### 4. Cost-Effectiveness & Safety (CodeBuild Edition)
 
 Replacing legacy GitHub Actions cost controls with in-AWS equivalents:
 
