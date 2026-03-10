@@ -20,6 +20,10 @@
     "lambda",
     "ai-agent"
   ],
+  "workspaces": [
+    "src/core",
+    "dashboard"
+  ],
   "author": "Peng Cao",
   "license": "MIT",
   "type": "commonjs",

@@ -30,13 +30,13 @@ export function createStorage() {
   });
 
   const secrets = {
-    TELEGRAM_BOT_TOKEN: new sst.Secret('TelegramBotToken'),
-    OPENAI_API_KEY: new sst.Secret('OpenAIApiKey'),
-    OPENROUTER_API_KEY: new sst.Secret('OpenRouterApiKey'),
-    AWS_REGION: new sst.Secret('AwsRegion'),
-    ACTIVE_PROVIDER: new sst.Secret('ActiveProvider'),
-    ACTIVE_MODEL: new sst.Secret('ActiveModel'),
-    // We don't initialize GitHubToken here to make it optional for the deploy to start
+    TelegramBotToken: new sst.Secret('TelegramBotToken'),
+    OpenAIApiKey: new sst.Secret('OpenAIApiKey'),
+    OpenRouterApiKey: new sst.Secret('OpenRouterApiKey'),
+    AwsRegion: new sst.Secret('AwsRegion'),
+    ActiveProvider: new sst.Secret('ActiveProvider'),
+    ActiveModel: new sst.Secret('ActiveModel'),
+    GitHubToken: new sst.Secret('GitHubToken', ''),
   };
 
   return { memoryTable, traceTable, stagingBucket, secrets, configTable };

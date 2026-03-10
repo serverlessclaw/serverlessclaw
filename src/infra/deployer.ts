@@ -29,8 +29,11 @@ export function createDeployer(ctx: DeployerContext) {
     { name: 'STAGING_BUCKET_NAME', value: stagingBucket.name },
   ];
 
+  const link = [stagingBucket];
+
   if (githubToken) {
     envVars.push({ name: 'GITHUB_TOKEN', value: githubToken.value });
+    link.push(githubToken as sst.aws.Secret);
   }
 
   const deployer = new aws.codebuild.Project('Deployer', {
@@ -50,5 +53,7 @@ export function createDeployer(ctx: DeployerContext) {
     },
   });
 
+  // Note: SST v3 doesn't support direct link on aws.codebuild.Project yet,
+  // but we return it for consistency in context.
   return { deployer };
 }

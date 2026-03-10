@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { DynamoMemory } from '../../../../../src/lib/memory';
-import { Agent } from '../../../../../src/lib/agent';
-import { ProviderManager } from '../../../../../src/lib/providers';
-import { tools } from '../../../../../src/tools/index';
-
-// We initialize these outside the handler for potential reuse,
-// but they depend on Resources being available.
-const memory = new DynamoMemory();
-const provider = new ProviderManager();
-const agent = new Agent(memory, provider, Object.values(tools));
+import { DynamoMemory } from '@claw/core/lib/memory.js';
+import { Agent } from '@claw/core/lib/agent.js';
+import { ProviderManager } from '@claw/core/lib/providers/index.js';
+import { getAgentTools } from '@claw/core/tools/index.js';
+import { MANAGER_SYSTEM_PROMPT } from '@claw/core/agents/manager.js';
+import { MessageRole } from '@claw/core/lib/types/index.js';
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,6 +14,13 @@ export async function POST(req: NextRequest) {
     if (!text) {
       return NextResponse.json({ error: 'Missing message' }, { status: 400 });
     }
+
+    // We initialize these inside the handler because they depend on Resources 
+    // being available in the environment.
+    const memory = new DynamoMemory();
+    const provider = new ProviderManager();
+    const agentTools = await getAgentTools('main');
+    const agent = new Agent(memory, provider, agentTools, MANAGER_SYSTEM_PROMPT);
 
     const reply = await agent.process(userId, text);
 

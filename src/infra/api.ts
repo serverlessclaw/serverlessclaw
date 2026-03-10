@@ -13,31 +13,26 @@ export function createApi(ctx: ApiContext) {
 
   const api = new sst.aws.ApiGatewayV2('WebhookApi');
 
+  // Filter out any undefined secrets before linking
+  const validSecrets = Object.values(secrets).filter((s) => s !== undefined);
+
   // Main Webhook
   api.route('ANY /webhook', {
-    handler: 'src/handlers/webhook.handler',
-    link: [
-      memoryTable,
-      traceTable,
-      configTable,
-      stagingBucket,
-      ...Object.values(secrets),
-      deployer,
-      bus,
-    ],
+    handler: 'src/core/handlers/webhook.handler',
+    link: [memoryTable, traceTable, configTable, stagingBucket, ...validSecrets, deployer, bus],
     timeout: '29 seconds',
   });
 
   // GitHub Webhook for Renovate/MendBot
   api.route('POST /github/webhook', {
-    handler: 'src/handlers/renobot.handler',
-    link: [memoryTable, traceTable, configTable, ...Object.values(secrets), deployer, bus],
+    handler: 'src/core/handlers/renobot.handler',
+    link: [memoryTable, traceTable, configTable, ...validSecrets, deployer, bus],
     timeout: '29 seconds',
   });
 
   // Health Probe
   api.route('GET /health', {
-    handler: 'src/handlers/health.handler',
+    handler: 'src/core/handlers/health.handler',
     link: [memoryTable],
   });
 

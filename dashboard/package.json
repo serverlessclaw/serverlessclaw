@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@claw/core": "workspace:*",
     "@aws-sdk/client-dynamodb": "^3.1004.0",
     "@aws-sdk/lib-dynamodb": "^3.1004.0",
     "@xyflow/react": "^12.10.1",

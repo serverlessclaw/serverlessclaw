@@ -24,10 +24,10 @@ export default $config({
     // 2. Multi-Agent Orchestration (EventBridge)
     const { bus } = createBus();
 
-    // 3. The Deployer (CodeBuild) - Using optional chaining for GitHubToken
+    // 3. The Deployer (CodeBuild)
     const { deployer } = createDeployer({
       stagingBucket,
-      githubToken: (secrets as Record<string, sst.aws.Secret>).GITHUB_TOKEN,
+      githubToken: secrets.GitHubToken,
     });
 
     // 4. Webhook API

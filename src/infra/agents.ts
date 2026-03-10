@@ -1,4 +1,4 @@
-import { EventType } from '../lib/types';
+import { EventType } from '../core/lib/types/agent.js';
 
 interface AgentContext {
   memoryTable: sst.aws.Dynamo;
@@ -14,18 +14,22 @@ interface AgentContext {
 export function createAgents(ctx: AgentContext) {
   const { memoryTable, traceTable, configTable, stagingBucket, secrets, bus, deployer } = ctx;
 
+  const validSecrets = Object.values(secrets).filter((s) => s !== undefined);
+
   // 1. Coder Agent
   const coderAgent = new sst.aws.Function('CoderAgent', {
-    handler: 'src/agents/coder.handler',
-    link: [memoryTable, traceTable, configTable, stagingBucket, ...Object.values(secrets)],
+    handler: 'src/core/agents/coder.handler',
+    link: [memoryTable, traceTable, configTable, stagingBucket, ...validSecrets],
     memory: '1024 MB',
     timeout: '900 seconds',
   });
-  bus.subscribe(EventType.CODER_TASK, coderAgent.arn);
+  bus.subscribe('CoderTaskSubscriber', coderAgent.name, {
+    pattern: { detailType: [EventType.CODER_TASK] },
+  });
 
   // 2. Build Monitor
   const buildMonitor = new sst.aws.Function('BuildMonitor', {
-    handler: 'src/handlers/monitor.handler',
+    handler: 'src/core/handlers/monitor.handler',
     link: [memoryTable, bus],
     memory: '256 MB',
     timeout: '60 seconds',
@@ -33,7 +37,7 @@ export function createAgents(ctx: AgentContext) {
 
   // 4. Dead Man's Switch (Recovery Agent)
   const deadMansSwitch = new sst.aws.Function('DeadMansSwitch', {
-    handler: 'src/handlers/recovery.handler',
+    handler: 'src/core/handlers/recovery.handler',
     link: [memoryTable, deployer],
     memory: '256 MB',
     timeout: '60 seconds',
@@ -92,65 +96,70 @@ export function createAgents(ctx: AgentContext) {
 
   // 5. Planner Agent
   const plannerAgent = new sst.aws.Function('PlannerAgent', {
-    handler: 'src/agents/planner.handler',
-    link: [memoryTable, traceTable, configTable, ...Object.values(secrets), bus],
+    handler: 'src/core/agents/planner.handler',
+    link: [memoryTable, traceTable, configTable, ...validSecrets, bus],
     memory: '1024 MB',
     timeout: '900 seconds',
   });
-  bus.subscribe(EventType.EVOLUTION_PLAN, plannerAgent.arn);
+  bus.subscribe('EvolutionPlanSubscriber', plannerAgent.name, {
+    pattern: { detailType: [EventType.EVOLUTION_PLAN] },
+  });
 
   // 3. Event Handler (System errors)
   const eventHandler = new sst.aws.Function('EventHandler', {
-    handler: 'src/handlers/events.handler',
-    link: [memoryTable, traceTable, configTable, ...Object.values(secrets), bus],
+    handler: 'src/core/handlers/events.handler',
+    link: [memoryTable, traceTable, configTable, ...validSecrets, bus],
     memory: '512 MB',
     timeout: '600 seconds',
   });
-  bus.subscribe(EventType.SYSTEM_BUILD_FAILED, eventHandler.arn);
+  bus.subscribe('SystemBuildFailedSubscriber', eventHandler.name, {
+    pattern: { detailType: [EventType.SYSTEM_BUILD_FAILED] },
+  });
 
   // 6. Reflector Agent
   const reflectorAgent = new sst.aws.Function('ReflectorAgent', {
-    handler: 'src/agents/reflector.handler',
-    link: [memoryTable, traceTable, configTable, ...Object.values(secrets), bus],
+    handler: 'src/core/agents/reflector.handler',
+    link: [memoryTable, traceTable, configTable, ...validSecrets, bus],
     memory: '512 MB',
     timeout: '900 seconds',
   });
-  bus.subscribe(EventType.REFLECT_TASK, reflectorAgent.arn);
+  bus.subscribe('ReflectTaskSubscriber', reflectorAgent.name, {
+    pattern: { detailType: [EventType.REFLECT_TASK] },
+  });
 
   // 7. Notifier
   const notifier = new sst.aws.Function('Notifier', {
-    handler: 'src/handlers/notifier.handler',
+    handler: 'src/core/handlers/notifier.handler',
     link: [configTable, secrets.TelegramBotToken],
     memory: '256 MB',
     timeout: '30 seconds',
   });
-  bus.subscribe(EventType.OUTBOUND_MESSAGE, notifier.arn);
+  bus.subscribe('OutboundMessageSubscriber', notifier.name, {
+    pattern: { detailType: [EventType.OUTBOUND_MESSAGE] },
+  });
 
   // 8. Generic Worker Agent (Handles dynamic user-defined agents)
   const workerAgent = new sst.aws.Function('WorkerAgent', {
-    handler: 'src/agents/worker.handler',
-    link: [memoryTable, traceTable, configTable, ...Object.values(secrets), bus],
+    handler: 'src/core/agents/worker.handler',
+    link: [memoryTable, traceTable, configTable, ...validSecrets, bus],
     memory: '1024 MB',
     timeout: '900 seconds',
   });
   // Subscribe to all agent tasks that don't have a specific handler
-  bus.subscribe(
-    {
-      pattern: {
-        detailType: [
-          {
-            'anything-but': [
-              EventType.CODER_TASK,
-              EventType.REFLECT_TASK,
-              EventType.EVOLUTION_PLAN,
-              EventType.SYSTEM_BUILD_FAILED,
-            ],
-          },
-        ],
-      },
+  bus.subscribe('WorkerAgentSubscriber', workerAgent.name, {
+    pattern: {
+      detailType: [
+        {
+          'anything-but': [
+            EventType.CODER_TASK,
+            EventType.REFLECT_TASK,
+            EventType.EVOLUTION_PLAN,
+            EventType.SYSTEM_BUILD_FAILED,
+          ],
+        },
+      ],
     },
-    workerAgent.arn
-  );
+  });
 
   return {
     coderAgent,

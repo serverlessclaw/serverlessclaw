@@ -12,6 +12,8 @@ interface DashboardContext {
 export function createDashboard(ctx: DashboardContext) {
   const { memoryTable, traceTable, configTable, stagingBucket, secrets, bus, deployer, api } = ctx;
 
+  const validSecrets = Object.values(secrets).filter((s) => s !== undefined);
+
   const dashboard = new sst.aws.Nextjs('ClawCenter', {
     path: 'dashboard',
     link: [
@@ -19,7 +21,7 @@ export function createDashboard(ctx: DashboardContext) {
       traceTable,
       configTable,
       stagingBucket,
-      ...Object.values(secrets),
+      ...validSecrets,
       bus,
       deployer,
       api,

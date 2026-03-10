@@ -1,0 +1,41 @@
+import { DynamoMemory } from '../lib/memory.js';
+import { Agent } from '../lib/agent.js';
+import { ProviderManager } from '../lib/providers/index.js';
+import { getAgentTools } from '../tools/index.js';
+import { EventType } from '../lib/types/index.js';
+import { sendOutboundMessage } from '../lib/outbound.js';
+import { MANAGER_SYSTEM_PROMPT } from '../agents/manager.js';
+
+const memory = new DynamoMemory();
+const provider = new ProviderManager();
+
+export const handler = async (event: {
+  'detail-type': string;
+  detail: Record<string, unknown>;
+}) => {
+  console.log('EventHandler received event:', JSON.stringify(event, null, 2));
+
+  const { userId, buildId, errorLogs } = event.detail as {
+    userId: string;
+    buildId?: string;
+    errorLogs?: string;
+  };
+
+  if (event['detail-type'] === EventType.SYSTEM_BUILD_FAILED) {
+    const task = `CRITICAL: Deployment ${buildId} failed. 
+    Here are the last few lines of the logs:
+    ---
+    ${errorLogs}
+    ---
+    Please investigate the codebase, find the root cause, fix the issue, and trigger a new deployment. 
+    Explain your plan to the user before proceeding.`;
+
+    // Process the failure context via the Main Agent
+    const agentTools = await getAgentTools('events');
+    const agent = new Agent(memory, provider, agentTools, MANAGER_SYSTEM_PROMPT);
+    const responseText = await agent.process(userId, `SYSTEM_NOTIFICATION: ${task}`);
+
+    // Notify user via Notifier
+    await sendOutboundMessage('events.handler', userId, responseText);
+  }
+};

@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { Zap, Share2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
