@@ -23,6 +23,14 @@ const eventbridge = new EventBridgeClient({});
 const s3 = new S3Client({});
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
+interface ToolsResource {
+  ConfigTable: { name: string };
+  StagingBucket: { name: string };
+  AgentBus: { name: string };
+  Deployer: { name: string };
+  MemoryTable: { name: string };
+}
+
 export const tools: Record<string, ITool> = {
   stage_changes: {
     name: 'stage_changes',
@@ -44,6 +52,7 @@ export const tools: Record<string, ITool> = {
         return 'No files to stage.';
       }
 
+      const typedResource = Resource as unknown as ToolsResource;
       const zipPath = '/tmp/staged_changes.zip';
       const output = createWriteStream(zipPath);
       const archive = archiver('zip', { zlib: { level: 9 } });
@@ -54,7 +63,7 @@ export const tools: Record<string, ITool> = {
             const fileBuffer = await fs.readFile(zipPath);
             await s3.send(
               new PutObjectCommand({
-                Bucket: Resource.StagingBucket.name,
+                Bucket: typedResource.StagingBucket.name,
                 Key: 'staged_changes.zip',
                 Body: fileBuffer,
               })
@@ -103,13 +112,14 @@ export const tools: Record<string, ITool> = {
         task: string;
       };
       console.log(`Dispatching ${agentType} task for user ${userId}: ${task}`);
+      const typedResource = Resource as unknown as ToolsResource;
       const command = new PutEventsCommand({
         Entries: [
           {
             Source: 'main.agent',
             DetailType: `${agentType}_task`,
             Detail: JSON.stringify({ userId, task }),
-            EventBusName: Resource.AgentBus.name,
+            EventBusName: typedResource.AgentBus.name,
           },
         ],
       });
@@ -182,11 +192,12 @@ export const tools: Record<string, ITool> = {
       const { reason, userId } = args as { reason: string; userId: string };
       // Point 2: Circuit Breaker
       const today = new Date().toISOString().split('T')[0];
+      const typedResource = Resource as unknown as ToolsResource;
 
       try {
         const { Item } = await db.send(
           new GetCommand({
-            TableName: Resource.MemoryTable.name,
+            TableName: typedResource.MemoryTable.name,
             Key: {
               userId: 'SYSTEM#DEPLOY_STATS',
               timestamp: 0,
@@ -204,7 +215,7 @@ export const tools: Record<string, ITool> = {
         // Proceed with deployment
         console.log(`Triggering deployment for reason: ${reason}`);
         const command = new StartBuildCommand({
-          projectName: Resource.Deployer.name,
+          projectName: typedResource.Deployer.name,
         });
 
         const response = await codebuild.send(command);
@@ -214,7 +225,7 @@ export const tools: Record<string, ITool> = {
           // Store Build ID -> UserID mapping for the BuildMonitor
           await db.send(
             new PutCommand({
-              TableName: Resource.MemoryTable.name,
+              TableName: typedResource.MemoryTable.name,
               Item: {
                 userId: `BUILD#${buildId}`,
                 timestamp: Date.now(),
@@ -227,7 +238,7 @@ export const tools: Record<string, ITool> = {
         // Update stats
         await db.send(
           new UpdateCommand({
-            TableName: Resource.MemoryTable.name,
+            TableName: typedResource.MemoryTable.name,
             Key: {
               userId: 'SYSTEM#DEPLOY_STATS',
               timestamp: 0,
@@ -299,6 +310,7 @@ export const tools: Record<string, ITool> = {
     },
     execute: async (args: Record<string, unknown>) => {
       const { url } = args as { url: string };
+      const typedResource = Resource as unknown as ToolsResource;
       try {
         console.log(`Checking health at ${url}`);
         const response = await fetch(url as string);
@@ -306,7 +318,7 @@ export const tools: Record<string, ITool> = {
           // Reward: Decrement daily limit by 1 on a healthy response
           await db.send(
             new UpdateCommand({
-              TableName: Resource.MemoryTable.name,
+              TableName: typedResource.MemoryTable.name,
               Key: {
                 userId: 'SYSTEM#DEPLOY_STATS',
                 timestamp: 0,
@@ -336,11 +348,12 @@ export const tools: Record<string, ITool> = {
     },
     execute: async (args: Record<string, unknown>) => {
       const { reason } = args as { reason: string };
+      const typedResource = Resource as unknown as ToolsResource;
       try {
         console.log(`ROLLBACK INITIATED: ${reason}`);
         await execAsync('git revert HEAD --no-edit');
         const command = new StartBuildCommand({
-          projectName: Resource.Deployer.name,
+          projectName: typedResource.Deployer.name,
         });
         await codebuild.send(command);
         return `ROLLBACK_SUCCESSFUL: Last commit reverted and deployment re-triggered. Reason: ${reason}`;
@@ -385,16 +398,17 @@ export const tools: Record<string, ITool> = {
     },
     execute: async (args: Record<string, unknown>) => {
       const { provider, model } = args as { provider: string; model: string };
+      const typedResource = Resource as unknown as ToolsResource;
       try {
         await db.send(
           new PutCommand({
-            TableName: (Resource as any).ConfigTable.name,
+            TableName: typedResource.ConfigTable.name,
             Item: { key: 'active_provider', value: provider },
           })
         );
         await db.send(
           new PutCommand({
-            TableName: (Resource as any).ConfigTable.name,
+            TableName: typedResource.ConfigTable.name,
             Item: { key: 'active_model', value: model },
           })
         );

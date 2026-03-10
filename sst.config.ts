@@ -54,7 +54,16 @@ export default $config({
     });
 
     // 6. Admin Dashboard (Next.js 16)
-    const { dashboard } = createDashboard({ memoryTable, traceTable, configTable, api });
+    const { dashboard } = createDashboard({
+      memoryTable,
+      traceTable,
+      configTable,
+      stagingBucket,
+      secrets,
+      bus,
+      deployer,
+      api,
+    });
 
     return {
       apiUrl: api.url,

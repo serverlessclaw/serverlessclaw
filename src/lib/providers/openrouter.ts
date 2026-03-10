@@ -1,11 +1,15 @@
 import { IProvider, Message, ITool } from '../types';
 import { Resource } from 'sst';
 
+interface OpenRouterResource {
+  OpenRouterApiKey: { value: string };
+}
+
 export class OpenRouterProvider implements IProvider {
   constructor(private model: string = 'google/gemini-3-flash-preview') {}
 
   async call(messages: Message[], tools?: ITool[]): Promise<Message> {
-    const apiKey = (Resource as any).OpenRouterApiKey?.value || '';
+    const apiKey = (Resource as unknown as OpenRouterResource).OpenRouterApiKey?.value || '';
     const baseUrl = 'https://openrouter.ai/api/v1';
 
     const body: {

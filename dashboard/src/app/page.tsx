@@ -23,8 +23,27 @@ async function getTraces() {
   }
 }
 
+async function getConfig() {
+  try {
+    const client = new DynamoDBClient({});
+    const docClient = DynamoDBDocumentClient.from(client);
+    
+    const [providerRes, modelRes] = await Promise.all([
+      docClient.send(new GetCommand({ TableName: (Resource as any).ConfigTable.name, Key: { key: 'active_provider' } })),
+      docClient.send(new GetCommand({ TableName: (Resource as any).ConfigTable.name, Key: { key: 'active_model' } }))
+    ]);
+
+    return {
+      provider: providerRes.Item?.value || 'openai',
+      model: modelRes.Item?.value || 'gpt-5.4'
+    };
+  } catch (e) {
+    return { provider: 'unknown', model: 'unknown' };
+  }
+}
+
 export default async function Dashboard() {
-  const traces = await getTraces();
+  const [traces, config] = await Promise.all([getTraces(), getConfig()]);
 
   return (
     <main className="flex-1 overflow-y-auto p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-green/5 via-transparent to-transparent">
@@ -35,12 +54,16 @@ export default async function Dashboard() {
           </div>
           <div className="flex gap-4">
             <div className="glass-card px-4 py-2 text-[12px]">
-              <div className="text-white/30 mb-1">TOTAL_OPS</div>
-              <div className="font-bold">{traces.length}</div>
+              <div className="text-white/30 mb-1">ACTIVE_PROVIDER</div>
+              <div className="font-bold text-cyber-blue uppercase">{config.provider}</div>
+            </div>
+            <div className="glass-card px-4 py-2 text-[12px]">
+              <div className="text-white/30 mb-1">ACTIVE_MODEL</div>
+              <div className="font-bold truncate max-w-[120px]">{config.model}</div>
             </div>
             <div className="glass-card px-4 py-2 text-[12px] border-cyber-green/30">
-              <div className="text-white/30 mb-1 text-cyber-green/60">ACTIVE_AGENTS</div>
-              <div className="font-bold">3</div>
+              <div className="text-white/30 mb-1 text-cyber-green/60 text-[10px]">TOTAL_OPS</div>
+              <div className="font-bold">{traces.length}</div>
             </div>
           </div>
         </header>

@@ -1,6 +1,10 @@
 import { IProvider, Message, ITool } from '../types';
 import { Resource } from 'sst';
 
+interface BedrockResource {
+  AwsRegion: { value: string };
+}
+
 export class BedrockProvider implements IProvider {
   constructor(private modelId: string = 'anthropic.claude-4-6-sonnet-20260215-v1:0') {}
 
@@ -8,8 +12,9 @@ export class BedrockProvider implements IProvider {
     const { BedrockRuntimeClient, ConverseCommand } =
       await import('@aws-sdk/client-bedrock-runtime');
 
+    const typedResource = Resource as unknown as BedrockResource;
     const client = new BedrockRuntimeClient({
-      region: (Resource as any).AwsRegion?.value || 'us-east-1',
+      region: typedResource.AwsRegion?.value || 'us-east-1',
     });
 
     const bedrockMessages = messages
@@ -28,16 +33,19 @@ export class BedrockProvider implements IProvider {
         name: t.name,
         description: t.description,
         inputSchema: {
-          json: t.parameters,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          json: t.parameters as any,
         },
       },
     }));
 
     const command = new ConverseCommand({
       modelId: this.modelId,
-      messages: bedrockMessages as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      messages: bedrockMessages as any[],
       system,
-      toolConfig: bedrockTools ? { tools: bedrockTools as any } : undefined,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      toolConfig: bedrockTools ? { tools: bedrockTools as any[] } : undefined,
     });
 
     const response = await client.send(command);
@@ -48,8 +56,8 @@ export class BedrockProvider implements IProvider {
         role: 'assistant',
         content: msg.content?.[0]?.text || '',
         tool_calls: msg.content
-          ?.filter((c: any) => c.toolUse)
-          .map((c: any) => ({
+          ?.filter((c) => c.toolUse)
+          .map((c) => ({
             id: c.toolUse!.toolUseId!,
             type: 'function',
             function: {
