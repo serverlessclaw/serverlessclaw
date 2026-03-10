@@ -18,21 +18,21 @@ export function createApi(ctx: ApiContext) {
 
   // Main Webhook
   api.route('ANY /webhook', {
-    handler: 'src/core/handlers/webhook.handler',
+    handler: 'core/handlers/webhook.handler',
     link: [memoryTable, traceTable, configTable, stagingBucket, ...validSecrets, deployer, bus],
     timeout: '29 seconds',
   });
 
   // GitHub Webhook for Renovate/MendBot
   api.route('POST /github/webhook', {
-    handler: 'src/core/handlers/renobot.handler',
+    handler: 'core/handlers/renobot.handler',
     link: [memoryTable, traceTable, configTable, ...validSecrets, deployer, bus],
     timeout: '29 seconds',
   });
 
   // Health Probe
   api.route('GET /health', {
-    handler: 'src/core/handlers/health.handler',
+    handler: 'core/handlers/health.handler',
     link: [memoryTable],
   });
 

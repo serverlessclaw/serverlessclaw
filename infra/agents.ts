@@ -19,7 +19,7 @@ export function createAgents(ctx: AgentContext) {
 
   // 1. Coder Agent
   const coderAgent = new sst.aws.Function('CoderAgent', {
-    handler: 'src/core/agents/coder.handler',
+    handler: 'core/agents/coder.handler',
     dev: liveInLocalOnly,
     link: [memoryTable, traceTable, configTable, stagingBucket, ...validSecrets],
     memory: '1024 MB',
@@ -31,7 +31,7 @@ export function createAgents(ctx: AgentContext) {
 
   // 2. Build Monitor
   const buildMonitor = new sst.aws.Function('BuildMonitor', {
-    handler: 'src/core/handlers/monitor.handler',
+    handler: 'core/handlers/monitor.handler',
     dev: liveInLocalOnly,
     link: [memoryTable, bus],
     memory: '256 MB',
@@ -40,7 +40,7 @@ export function createAgents(ctx: AgentContext) {
 
   // 4. Dead Man's Switch (Recovery Agent)
   const deadMansSwitch = new sst.aws.Function('DeadMansSwitch', {
-    handler: 'src/core/handlers/recovery.handler',
+    handler: 'core/handlers/recovery.handler',
     dev: liveInLocalOnly,
     link: [memoryTable, deployer],
     memory: '256 MB',
@@ -100,7 +100,7 @@ export function createAgents(ctx: AgentContext) {
 
   // 5. Planner Agent
   const plannerAgent = new sst.aws.Function('PlannerAgent', {
-    handler: 'src/core/agents/planner.handler',
+    handler: 'core/agents/planner.handler',
     dev: liveInLocalOnly,
     link: [memoryTable, traceTable, configTable, ...validSecrets, bus],
     memory: '1024 MB',
@@ -112,7 +112,7 @@ export function createAgents(ctx: AgentContext) {
 
   // 3. Event Handler (System errors)
   const eventHandler = new sst.aws.Function('EventHandler', {
-    handler: 'src/core/handlers/events.handler',
+    handler: 'core/handlers/events.handler',
     dev: liveInLocalOnly,
     link: [memoryTable, traceTable, configTable, ...validSecrets, bus],
     memory: '512 MB',
@@ -124,7 +124,7 @@ export function createAgents(ctx: AgentContext) {
 
   // 6. Reflector Agent
   const reflectorAgent = new sst.aws.Function('ReflectorAgent', {
-    handler: 'src/core/agents/reflector.handler',
+    handler: 'core/agents/reflector.handler',
     dev: liveInLocalOnly,
     link: [memoryTable, traceTable, configTable, ...validSecrets, bus],
     memory: '512 MB',
@@ -136,7 +136,7 @@ export function createAgents(ctx: AgentContext) {
 
   // 7. Notifier
   const notifier = new sst.aws.Function('Notifier', {
-    handler: 'src/core/handlers/notifier.handler',
+    handler: 'core/handlers/notifier.handler',
     dev: liveInLocalOnly,
     link: [configTable, secrets.TelegramBotToken],
     memory: '256 MB',
@@ -148,7 +148,7 @@ export function createAgents(ctx: AgentContext) {
 
   // 8. Generic Worker Agent (Handles dynamic user-defined agents)
   const workerAgent = new sst.aws.Function('WorkerAgent', {
-    handler: 'src/core/agents/worker.handler',
+    handler: 'core/agents/worker.handler',
     dev: liveInLocalOnly,
     link: [memoryTable, traceTable, configTable, ...validSecrets, bus],
     memory: '1024 MB',

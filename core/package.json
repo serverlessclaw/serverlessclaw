@@ -5,9 +5,9 @@
   "type": "module",
   "main": "./lib/index.js",
   "exports": {
-    "./lib/*": "./lib/*.ts",
-    "./agents/*": "./agents/*.ts",
-    "./tools/*": "./tools/*.ts",
-    "./handlers/*": "./handlers/*.ts"
+    "./lib/*": "./lib/*.js",
+    "./agents/*": "./agents/*.js",
+    "./tools/*": "./tools/*.js",
+    "./handlers/*": "./handlers/*.js"
   }
 }

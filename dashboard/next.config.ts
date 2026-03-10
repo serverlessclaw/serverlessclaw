@@ -1,19 +1,15 @@
 import type { NextConfig } from "next";
+import path from "path";
 
-const nextConfig: NextConfig = {
-  webpack: (config) => {
-    config.resolve.extensionAlias = {
-      ...config.resolve.extensionAlias,
-      ".js": [".ts", ".tsx", ".js", ".jsx"],
-      ".mjs": [".mts", ".mjs"],
-      ".cjs": [".cts", ".cjs"],
-    };
-    return config;
-  },
-  transpilePackages: ['@claw/core'],
+const nextConfig: any = {
+  output: 'standalone',
   reactStrictMode: true,
   typescript: {
     ignoreBuildErrors: true,
+  },
+  // Setting turbopack config at the top level for monorepo root discovery
+  turbopack: {
+    root: path.resolve(__dirname, ".."),
   },
 };
 

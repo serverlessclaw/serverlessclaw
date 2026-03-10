@@ -12,7 +12,8 @@
     "types": ["node", "aws-lambda"]
   },
   "include": [
-    "src/**/*.ts", 
+    "core/**/*.ts",
+    "infra/**/*.ts",
     "sst.config.ts",
     ".sst/platform/config.d.ts",
     "sst-env.d.ts"

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Bot, Save, Plus, Trash2, Shield, Settings2 } from 'lucide-react';
+import { Bot, Save, Plus, Trash2, Shield, Settings2, RefreshCw } from 'lucide-react';
 
 interface AgentConfig {
   id: string;

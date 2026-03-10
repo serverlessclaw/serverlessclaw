@@ -9,7 +9,7 @@
     "test:ui": "vitest --ui",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write \"src/**/*.ts\"",
+    "format": "prettier --write \"core/**/*.ts\" \"infra/**/*.ts\"",
     "prepare": "husky"
   },
   "keywords": [
@@ -19,10 +19,6 @@
     "aws",
     "lambda",
     "ai-agent"
-  ],
-  "workspaces": [
-    "src/core",
-    "dashboard"
   ],
   "author": "Peng Cao",
   "license": "MIT",

@@ -26,7 +26,7 @@ format: ## Run Prettier to format code
 
 format-check: ## Check if code is formatted with Prettier
 	@$(call log_info,Checking formatting...)
-	@$(PNPM) exec prettier --check "src/**/*.ts"
+	@$(PNPM) exec prettier --check "core/**/*.ts" "infra/**/*.ts"
 
 type-check: ## Run TypeScript type checking
 	@$(call log_info,Type checking with tsc...)

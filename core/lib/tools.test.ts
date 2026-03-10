@@ -64,7 +64,7 @@ describe('Tools', () => {
       const definitions = getToolDefinitions();
       expect(definitions).toHaveLength(12);
 
-      const names = definitions.map((d) => d.function.name);
+      const names = definitions.map((d: { function: { name: string } }) => d.function.name);
       expect(names).toContain('calculator');
       expect(names).toContain('get_weather');
       expect(names).toContain('dispatch_task');

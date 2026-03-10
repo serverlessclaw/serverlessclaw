@@ -30,7 +30,7 @@ export const handler = async () => {
   try {
     console.log('Triggering CodeBuild Deployer for emergency recovery...');
     const command = new StartBuildCommand({
-      projectName: Resource.Deployer.name,
+      projectName: (Resource as unknown as { Deployer: { name: string } }).Deployer.name,
       // We could pass an environment variable to the build to tell it to revert first
       environmentVariablesOverride: [{ name: 'EMERGENCY_ROLLBACK', value: 'true' }],
     });

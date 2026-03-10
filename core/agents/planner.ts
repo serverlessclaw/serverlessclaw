@@ -78,7 +78,9 @@ export const handler = async (event: {
     : '';
 
   const agentTools = await getAgentTools('planner');
-  const toolsList = agentTools.map((t) => `- ${t.name}: ${t.description}`).join('\n    ');
+  const toolsList = agentTools
+    .map((t: { name: string; description: string }) => `- ${t.name}: ${t.description}`)
+    .join('\n    ');
   const telemetry = `
     [SYSTEM_TELEMETRY]:
     - ACTIVE_AGENTS: ${Object.values(AgentType).join(', ')}
