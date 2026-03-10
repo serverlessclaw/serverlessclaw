@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mockClient } from 'aws-sdk-client-mock';
 import { DynamoDBDocumentClient, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { DynamoMemory } from './memory';
-import { Message } from './types';
+import { Message, MessageRole } from './types';
 
 // Mock Resource from sst
 vi.mock('sst', () => ({
@@ -26,8 +26,8 @@ describe('DynamoMemory', () => {
   describe('getHistory', () => {
     it('should return history from DynamoDB', async () => {
       const mockItems = [
-        { role: 'user', content: 'hello', timestamp: 123 },
-        { role: 'assistant', content: 'hi', timestamp: 124 },
+        { role: MessageRole.USER, content: 'hello', timestamp: 123 },
+        { role: MessageRole.ASSISTANT, content: 'hi', timestamp: 124 },
       ];
 
       ddbMock.on(QueryCommand).resolves({
@@ -37,8 +37,8 @@ describe('DynamoMemory', () => {
       const history = await memory.getHistory('user-1');
 
       expect(history).toEqual([
-        { role: 'user', content: 'hello' },
-        { role: 'assistant', content: 'hi' },
+        { role: MessageRole.USER, content: 'hello' },
+        { role: MessageRole.ASSISTANT, content: 'hi' },
       ]);
       expect(ddbMock.calls()).toHaveLength(1);
     });
@@ -70,7 +70,7 @@ describe('DynamoMemory', () => {
     it('should call PutCommand with correct parameters', async () => {
       ddbMock.on(PutCommand).resolves({});
 
-      const message: Message = { role: 'user', content: 'test message' };
+      const message: Message = { role: MessageRole.USER, content: 'test message' };
       await memory.addMessage('user-1', message);
 
       const calls = ddbMock.commandCalls(PutCommand);
@@ -90,7 +90,7 @@ describe('DynamoMemory', () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       ddbMock.on(PutCommand).rejects(new Error('Put Error'));
 
-      await memory.addMessage('user-1', { role: 'user', content: 'fails' });
+      await memory.addMessage('user-1', { role: MessageRole.USER, content: 'fails' });
 
       expect(consoleSpy).toHaveBeenCalledWith(
         'Error saving message to DynamoDB:',

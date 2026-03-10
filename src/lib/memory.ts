@@ -1,7 +1,7 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
-import { IMemory, Message } from './types';
+import { IMemory, Message, MessageRole } from './types';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -22,7 +22,7 @@ export class DynamoMemory implements IMemory {
     try {
       const response = await docClient.send(command);
       return (response.Items || []).map((item) => ({
-        role: item.role as 'user' | 'assistant' | 'system' | 'tool',
+        role: item.role as MessageRole,
         content: item.content,
         tool_calls: item.tool_calls,
         tool_call_id: item.tool_call_id,
