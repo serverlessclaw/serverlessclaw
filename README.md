@@ -7,10 +7,12 @@
 - **Zero Idle Costs** — powered by AWS Lambda, pay per invocation only
 - **Evolutionary Tiered Memory** — Separates long-term **Facts** from dynamic **Tactical Lessons** with ROI-based prioritization and "Smart Recall" tool-based retrieval.
 - **Self-Evolving (Code & Infra)** — the agent can write application code, modify its own AWS infrastructure via SST, validate, and redeploy itself safely
+- **Evolution Control** — seamlessly toggle between "Human-In-The-Loop" capability upgrades or fully "Autonomous" direct-to-CodeBuild evolution.
 - **Self-Healing & Resilient** — autonomously detects build failures, analyzes logs, and recovers from fatal errors with a 100% automated rollback loop
 - **Native Observability** — built-in, serverless tracing engine (Claw-Trace) and Next.js 16 Admin Dashboard
 - **Multi-Model & Hot-Config** — Unified hub for OpenAI, Bedrock, and OpenRouter with zero-downtime model switching via ConfigTable
 - **Multi-Agent Orchestration** — Main Agent delegates to specialized sub-agents (Coder, Reflector, Planner) via EventBridge
+- **Multi-Channel Fan-Out** — Centralized `Notifier` decoupling agent LLM execution from messaging platforms (Telegram, Slack, etc.)
 - **Safety-First** — circuit breakers, protected resource labeling, health probes, and rollback
 - **Pluggable** — swap memory backends, LLM providers, or messaging channels
 

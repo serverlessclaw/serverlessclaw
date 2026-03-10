@@ -57,15 +57,24 @@ Our goal: the most customizable, cost-effective, and self-evolving personal AI a
 ## ✅ Phase 9: Evolutionary Memory (Tiered)
 - [x] **Tiered Memory**: Separate Long-Term **Facts** from dynamic **Tactical Lessons**.
 - [x] **Reflector Agent**: Decoupled asynchronous reflection loop via EventBridge.
-- [x] **ROI-Driven Logic**: Automatic ROI (1-10) and Priority estimation for capability gaps.
 - [x] **Smart Recall**: Agents selectively retrieve knowledge via `recall_knowledge` tool.
 
-## 🏢 Phase 10: Advanced Autonomy
+## ✅ Phase 10: Intelligent Prioritization
+- [x] **Granular Metrics**: Added Confidence, Impact, Complexity, Risk, and Urgency signals.
+- [x] **ROI-Driven Logic**: Reflector estimates actionable signals for capability gaps.
+- [x] **Strategic Telemetry**: Planner dynamically checks `ACTIVE_AGENTS` and `AVAILABLE_TOOLS` to prevent hallucinations.
+
+## ✅ Phase 11: Evolution Control & Multi-Channel
+- [x] **Evolution Mode**: Toggle between Human-in-the-Loop (`hitl`) and self-coding (`auto`) via `ConfigTable`.
+- [x] **Notifier Subsystem**: Centralized EventBridge-driven (`OUTBOUND_MESSAGE`) handler decoupling LLM execution from messaging platforms.
+
+## 🏢 Phase 12: Advanced Autonomy
 - [ ] **Browser Automation**: Playwright Lambda Layer for autonomous web browsing.
 - [ ] **Promotion Manager**: Agent-driven promotion of validated `dev` builds to `prod`.
 - [ ] **Skill Marketplace**: CLI-based installation of community tools.
 
-## 🏢 Phase 11: Enterprise Scale
+## 🏢 Phase 13: Enterprise Scale
 - [ ] Agent Swarm Isolation by `employerId`.
 - [ ] Per-tenant EventBridge filtering.
+- [ ] Implement Dashboard UI for Evolution Control.
 - [ ] Multi-Channel Adapters: Slack and Discord support.

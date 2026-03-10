@@ -17,9 +17,9 @@ This document covers the AWS topology and data flow. For agent logic and orchest
 
 ```text
 +-------------------+       +-----------------------+       +-------------------+
-|                   |       |                       |       |                   |
 | Messaging Client  +<----->+   AWS API Gateway     +------>+   AWS Lambda      |
-| (Telegram/Discord)|       | (Webhook Endpoint)    |       | (Agent Brain)     |
+| (Telegram/Slack)  |       | (Webhook Endpoint)    |       | (Agent Brain)     |
+|                   |       |                       |       |         +         |
 |                   |       |                       |       |         +         |
 +-------------------+       +-----------+-----------+       +---------|---------+
                                         |                             |
@@ -100,8 +100,8 @@ Unlike traditional agent servers that process messages serially, Serverless Claw
 
 Agents communicate asynchronously using **AWS EventBridge (The AgentBus)**. This is the **spine** of the system, allowing components to remain decoupled.
 
-```text
- [ Telegram ]      [ ClawCenter ]
+ ```text
+ [ Messaging ]     [ ClawCenter ]
       |                 |
       +--------+--------+
                |
@@ -111,16 +111,20 @@ Agents communicate asynchronously using **AWS EventBridge (The AgentBus)**. This
      |___________________|
                |
      (1) DISPATCH_TASK (via AgentBus)
-                |
+               |
        _________V_________           (3) [ BUILD_MONITOR ]
       |    EVENT_BUS      | <-------  (Observes CodeBuild)
       |   (AgentBus)      |
       |___________________|          (4) [ REFLECTOR_AGENT ]
-          |         |                 (Analyzes Convos, ROI)
+          |         |                 (Analyzes Convos, Signals)
           |         |
      (2) CODER_AGENT|                (5) [ PLANNER_AGENT ]
-         (Writes Code)                (Strategic Backlog)
-```
+         (Writes Code)                (Designs STRATEGIC_PLAN)
+                    |
+                    |                (6) [ NOTIFIER (Fan-Out) ]
+                    +-----------------> (Listens for OUTBOUND_MESSAGE)
+                                         (Sends to Telegram/Slack)
+ ```
 
 - **Pattern**: The Main Agent emits a `coder_task` event. The Coder Agent is subscribed to this event, processes the work, and updates the system state.
 - **Visualization**: The `SYSTEM_PULSE` dashboard page provides an interactive node graph of this topography.
@@ -153,16 +157,21 @@ While the default uses DynamoDB, the system can be adapted to use:
 - **PostgreSQL (Drizzle/Prisma)** for complex relational memory.
 - **S3** for long-term archival.
 
-### 3. Channel Adapters
-The webhook handler can be extended to support multiple messaging platforms simultaneously.
-- **Routing**: Detect platform from payload headers/body.
-- **Formatting**: Platform-specific markdown/rich text conversion.
+### 3. Channel Adapters (Fan-Out)
+Instead of hardcoding API requests to a single platform, agents emit an `OUTBOUND_MESSAGE` event onto the AgentBus.
+- **Notifier Handler**: A dedicated lightweight Lambda (`src/handlers/notifier.ts`) listens to these events.
+- **Multi-Channel**: The Notifier reads user preferences from the `ConfigTable` and fans the message out to the appropriate adapters (Telegram, Slack, Dashboard WebSocket).
 
 ## Self-Management & Orchestration
 
 Serverless Claw is designed to evolve itself and manage complex agent hierarchies.
 
-### 1. Self-Evolution (The Persistence Loop)
+### 1. Evolution Control (Auto vs HITL)
+The `evolution_mode` key in the `ConfigTable` dictates how the system upgrades itself:
+- **`hitl` (Default)**: The Planner designs a capability upgrade but requires the user to explicitly reply "APPROVE" on messaging channels.
+- **`auto` (Dangerous)**: The Planner agent directly publishes a `CODER_TASK` to the AgentBus, initiating the build immediately and merely notifying the user.
+
+### 2. Self-Evolution (The Persistence Loop)
 
 The stack evolves by bridging the gap between temporary Lambda execution and persistent Git storage.
 
