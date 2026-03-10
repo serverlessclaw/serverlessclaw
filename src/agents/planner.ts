@@ -1,12 +1,32 @@
 import { DynamoMemory } from '../lib/memory';
 import { Agent } from '../lib/agent';
 import { ProviderManager } from '../lib/providers';
-import { AgentType, ReasoningProfile } from '../lib/types';
+import { AgentType, ReasoningProfile, EventType } from '../lib/types';
 import { getToolDefinitions } from '../tools/index';
 import { Resource } from 'sst';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
+import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 
+const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+const eventbridge = new EventBridgeClient({});
 const memory = new DynamoMemory();
 const providerManager = new ProviderManager();
+
+async function getEvolutionMode(): Promise<'auto' | 'hitl'> {
+  try {
+    const response = await db.send(
+      new GetCommand({
+        TableName: (Resource as any).ConfigTable.name,
+        Key: { key: 'evolution_mode' },
+      })
+    );
+    return response.Item?.value === 'auto' ? 'auto' : 'hitl';
+  } catch (e) {
+    console.warn('Failed to fetch evolution_mode, defaulting to hitl:', e);
+    return 'hitl';
+  }
+}
 
 const plannerAgent = new Agent(
   memory,
@@ -66,11 +86,38 @@ export const handler = async (event: {
 
   console.log('Strategic Plan Generated:', result);
 
-  // Send plan to Telegram
-  await notifyUserOnTelegram(
-    contextUserId,
-    `🚀 **NEW STRATEGIC PLAN PROPOSED**\n\n${result}\n\nReply with 'APPROVE' to execute.`
-  );
+  const evolutionMode = await getEvolutionMode();
+
+  if (evolutionMode === 'auto') {
+    console.log('Evolution mode is auto, dispatching CODER_TASK directly.');
+    await notifyUserOnTelegram(
+      contextUserId,
+      `🚀 **Autonomous Evolution Triggered**\n\nI have identified a capability gap and designed a plan to fix it. The Coder Agent is now executing the following STRATEGIC_PLAN:\n\n${result}`
+    );
+
+    await eventbridge.send(
+      new PutEventsCommand({
+        Entries: [
+          {
+            Source: 'planner.agent',
+            DetailType: EventType.CODER_TASK,
+            Detail: JSON.stringify({
+              userId: contextUserId,
+              task: result,
+            }),
+            EventBusName: (Resource as any).AgentBus.name,
+          },
+        ],
+      })
+    );
+  } else {
+    console.log('Evolution mode is hitl, asking for approval.');
+    // Send plan to Telegram
+    await notifyUserOnTelegram(
+      contextUserId,
+      `🚀 **NEW STRATEGIC PLAN PROPOSED**\n\n${result}\n\nReply with 'APPROVE' to execute.`
+    );
+  }
 
   return { gapId, plan: result };
 };
