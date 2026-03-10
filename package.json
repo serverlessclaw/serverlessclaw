@@ -24,7 +24,7 @@
   "license": "MIT",
   "type": "commonjs",
   "dependencies": {
-    "@aws-sdk/client-bedrock-runtime": "^3.1004.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.1005.0",
     "@aws-sdk/client-cloudwatch-logs": "^3.1004.0",
     "@aws-sdk/client-codebuild": "^3.1004.0",
     "@aws-sdk/client-dynamodb": "^3.1004.0",

@@ -8,7 +8,9 @@ export class BedrockProvider implements IProvider {
     const { BedrockRuntimeClient, ConverseCommand } =
       await import('@aws-sdk/client-bedrock-runtime');
 
-    const client = new BedrockRuntimeClient({ region: Resource.AwsRegion.value || 'us-east-1' });
+    const client = new BedrockRuntimeClient({
+      region: (Resource as any).AwsRegion?.value || 'us-east-1',
+    });
 
     const bedrockMessages = messages
       .filter((m) => m.role !== 'system')
@@ -46,8 +48,8 @@ export class BedrockProvider implements IProvider {
         role: 'assistant',
         content: msg.content?.[0]?.text || '',
         tool_calls: msg.content
-          ?.filter((c) => c.toolUse)
-          .map((c) => ({
+          ?.filter((c: any) => c.toolUse)
+          .map((c: any) => ({
             id: c.toolUse!.toolUseId!,
             type: 'function',
             function: {

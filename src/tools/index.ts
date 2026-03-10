@@ -388,13 +388,13 @@ export const tools: Record<string, ITool> = {
       try {
         await db.send(
           new PutCommand({
-            TableName: Resource.ConfigTable.name,
+            TableName: (Resource as any).ConfigTable.name,
             Item: { key: 'active_provider', value: provider },
           })
         );
         await db.send(
           new PutCommand({
-            TableName: Resource.ConfigTable.name,
+            TableName: (Resource as any).ConfigTable.name,
             Item: { key: 'active_model', value: model },
           })
         );

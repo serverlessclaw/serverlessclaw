@@ -11,13 +11,13 @@ const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
 export class ProviderManager implements IProvider {
   static async getActiveProvider(): Promise<IProvider> {
-    let providerType = Resource.ActiveProvider?.value || 'openai';
-    let model = Resource.ActiveModel?.value;
+    let providerType = (Resource as any).ActiveProvider?.value || 'openai';
+    let model = (Resource as any).ActiveModel?.value;
 
     try {
       const { Item } = await db.send(
         new GetCommand({
-          TableName: Resource.ConfigTable.name,
+          TableName: (Resource as any).ConfigTable.name,
           Key: { key: 'active_provider' },
         })
       );
@@ -27,7 +27,7 @@ export class ProviderManager implements IProvider {
 
       const { Item: modelItem } = await db.send(
         new GetCommand({
-          TableName: Resource.ConfigTable.name,
+          TableName: (Resource as any).ConfigTable.name,
           Key: { key: 'active_model' },
         })
       );
