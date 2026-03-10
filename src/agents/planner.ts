@@ -1,7 +1,8 @@
 import { DynamoMemory } from '../lib/memory';
 import { Agent } from '../lib/agent';
 import { ProviderManager } from '../lib/providers';
-import { ReasoningProfile } from '../lib/types';
+import { AgentType, ReasoningProfile } from '../lib/types';
+import { getToolDefinitions } from '../tools/index';
 import { Resource } from 'sst';
 
 const memory = new DynamoMemory();
@@ -21,7 +22,9 @@ const plannerAgent = new Agent(
    3. SAFETY: Identify any [PROTECTED] files or high-risk infrastructure changes that will require manual approval.
    4. OUTPUT: Return a markdown-formatted STRATEGIC_PLAN.
    
-   Your plan will be reviewed by the user. Once approved, it will be executed by the Coder Agent.`
+   Your plan will be reviewed by the user. Once approved, it will be executed by the Coder Agent.
+   
+   CRUCIAL: Review the provided [SYSTEM_TELEMETRY] block before proposing a plan. DO NOT propose building a new tool if a similar tool already exists in the AVAILABLE_TOOLS registry. DO NOT propose a new agent if an existing ACTIVE_AGENT can handle the task.`
 );
 
 export const handler = async (event: {
@@ -44,9 +47,20 @@ export const handler = async (event: {
     - PRIORITY: ${metadata.priority}/10 (Confidence: ${metadata.confidence}/10)
   `
     : '';
+
+  const toolsList = getToolDefinitions()
+    .map((t) => `- ${t.function.name}: ${t.function.description}`)
+    .join('\n    ');
+  const telemetry = `
+    [SYSTEM_TELEMETRY]:
+    - ACTIVE_AGENTS: ${Object.values(AgentType).join(', ')}
+    - AVAILABLE_TOOLS:
+    ${toolsList}
+  `;
+
   const result = await plannerAgent.process(
     `SYSTEM#PLANNER#${gapId}`,
-    `GAP IDENTIFIED: ${details}\n${signals}\n\nUSER CONTEXT: Please design a STRATEGIC_PLAN to fix this gap for user ${contextUserId}.`,
+    `GAP IDENTIFIED: ${details}\n${signals}\n${telemetry}\n\nUSER CONTEXT: Please design a STRATEGIC_PLAN to fix this gap for user ${contextUserId}.`,
     ReasoningProfile.DEEP
   );
 
