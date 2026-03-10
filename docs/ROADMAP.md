@@ -35,24 +35,31 @@ Our goal: the most customizable, cost-effective, and self-evolving personal AI a
 
 ---
 
-## 🚀 Phase 6: Visibility & Native Observability
+## ✅ Phase 6: Visibility & Native Observability
 - [x] **Claw-Trace**: Built-in tracing engine logging to DynamoDB.
-- [/] **Claw-Monitor Dashboard**: Next.js 16 (Canary) + Tailwind v4 UI (Scaffolded & Themed).
+- [x] **Claw-Monitor Dashboard**: Next.js 16 (Canary) + Tailwind v4 UI.
 - [x] **Milestone 1: High-Fidelity Tracing**: Trace detail views with raw prompt/response/payload inspection.
 - [x] **Milestone 2: Neural Path Visualizer**: XYFlow integration for branching agent logic diagrams.
 - [x] **Resilience Hub**: Dedicated views for self-healing logs and Dead Man's Switch status.
 - [x] **Memory Browser**: Inspect distilled facts, session history, and tool registry.
 
-## 🔥 Phase 7: Autonomous Self-Improvement Loop
+## ✅ Phase 7: Multi-Model & Hot-Config
+- [x] **Provider Hub**: Unified interface for OpenAI, Bedrock (Claude 4.6), and OpenRouter (Gemini/GLM/Minimax).
+- [x] **Dynamic Routing**: `ProviderManager` for runtime model selection without redeploys.
+- [x] **Config Table**: DynamoDB-backed persistent application settings.
+- [x] **Direct Chat**: Dashboard-integrated neural interface for real-time agent interaction.
+- [x] **Session Traffic Control**: Manual lock management and zombie session cleanup.
+
+## 🔥 Phase 8: Autonomous Self-Improvement Loop
 - [ ] **Git Push Integration**: Enable CodeBuild to push approved code changes back to GitHub.
 - [ ] **Iteration Manager**: Allow the Coder agent to create branches and trigger tests.
 - [ ] **PR Bot**: Agent opens GitHub Pull Requests for its own improvements.
 
-## 🏢 Phase 8: Power Capabilities
+## 🏢 Phase 9: Power Capabilities
 - [ ] **Browser Automation**: Playwright Lambda Layer for autonomous web browsing/actions.
 - [ ] **Skill Marketplace**: CLI-based installation of community-contributed tools.
 - [ ] **Multi-Channel Adapters**: Slack and Discord support.
 
-## 🏢 Phase 9: Multi-Tenancy & Scale
+## 🏢 Phase 10: Multi-Tenancy & Scale
 - [ ] Agent Swarm Isolation by `employerId`.
 - [ ] Per-tenant EventBridge filtering.

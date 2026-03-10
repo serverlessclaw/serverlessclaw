@@ -62,6 +62,19 @@ All inter-agent state is tracked in **DynamoDB** (`MemoryTable`).
 
 ---
 
+## Hot Configuration & Dynamic Providers
+
+Serverless Claw supports zero-downtime model switching via the `ProviderManager`.
+
+- **Mechanism**: The `ProviderManager` checks `ConfigTable` (DynamoDB) for `active_provider` and `active_model` before every LLM call.
+- **Fallbacks**: If no config is found in the database, it falls back to SST `Resource` secrets.
+- **Provider Hubs**:
+    - **OpenAI**: Native access to GPT-5.4 and GPT-5-mini.
+    - **Bedrock**: High-performance, AWS-native Claude 4.6 Sonnet.
+    - **OpenRouter**: Cost-effective hub for Gemini 3 Flash, GLM-5, and Minimax 2.5.
+
+---
+
 ## Main Agent System Prompt (Summary)
 
 Key obligations (see `src/agent.ts` for the full prompt):

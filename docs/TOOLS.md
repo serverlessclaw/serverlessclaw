@@ -14,6 +14,7 @@
 | `trigger_deployment` | Starts a CodeBuild deploy (circuit-breaker protected) | ✅ Labelled | ✅ |
 | `check_health` | Hits `GET /health`. On success: decrements deploy counter | — | ✅ |
 | `trigger_rollback` | `git revert HEAD` + redeploy. Emergency use only | — | ✅ |
+| `switch_model` | Updates active provider/model in DynamoDB (Hot Config) | — | ✅ |
 
 ---
 
