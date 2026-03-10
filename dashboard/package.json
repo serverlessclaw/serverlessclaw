@@ -4,28 +4,31 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 7777",
-    "build": "next build --webpack",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
-    "@claw/core": "workspace:*",
+    "@aws-sdk/client-codebuild": "^3.1004.0",
     "@aws-sdk/client-dynamodb": "^3.1004.0",
+    "@aws-sdk/client-eventbridge": "^3.1004.0",
+    "@aws-sdk/client-s3": "^3.1004.0",
     "@aws-sdk/lib-dynamodb": "^3.1004.0",
+    "@claw/core": "workspace:*",
     "@xyflow/react": "^12.10.1",
     "lucide-react": "^0.577.0",
-    "next": "16.2.0-canary.85",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
+    "next": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "sst": "^4.2.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.0-canary.85",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^10.0.0",
+    "eslint-config-next": "^16.0.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
