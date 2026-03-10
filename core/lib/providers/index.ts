@@ -7,14 +7,14 @@ import {
   OpenAIModel,
   BedrockModel,
   OpenRouterModel,
-} from '../types/index.js';
+} from '../types/index';
 import { Resource } from 'sst';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
 
-import { OpenAIProvider } from './openai.js';
-import { OpenRouterProvider } from './openrouter.js';
-import { BedrockProvider } from './bedrock.js';
+import { OpenAIProvider } from './openai';
+import { OpenRouterProvider } from './openrouter';
+import { BedrockProvider } from './bedrock';
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 

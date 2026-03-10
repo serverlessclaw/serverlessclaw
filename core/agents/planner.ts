@@ -1,13 +1,13 @@
-import { DynamoMemory } from '../lib/memory.js';
-import { Agent } from '../lib/agent.js';
-import { ProviderManager } from '../lib/providers/index.js';
-import { AgentType, ReasoningProfile, EventType, EvolutionMode } from '../lib/types/index.js';
-import { getAgentTools } from '../tools/index.js';
+import { DynamoMemory } from '../lib/memory';
+import { Agent } from '../lib/agent';
+import { ProviderManager } from '../lib/providers/index';
+import { AgentType, ReasoningProfile, EventType, EvolutionMode } from '../lib/types/index';
+import { getAgentTools } from '../tools/index';
 import { Resource } from 'sst';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
-import { sendOutboundMessage } from '../lib/outbound.js';
+import { sendOutboundMessage } from '../lib/outbound';
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const eventbridge = new EventBridgeClient({});

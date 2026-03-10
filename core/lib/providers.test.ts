@@ -39,10 +39,10 @@ vi.mock('sst', () => ({
   },
 }));
 
-import { ProviderManager } from './providers/index.js';
-import { OpenAIProvider } from './providers/openai.js';
-import { BedrockProvider } from './providers/bedrock.js';
-import { OpenRouterProvider } from './providers/openrouter.js';
+import { ProviderManager } from './providers/index';
+import { OpenAIProvider } from './providers/openai';
+import { BedrockProvider } from './providers/bedrock';
+import { OpenRouterProvider } from './providers/openrouter';
 
 describe('ProviderManager', () => {
   beforeEach(() => {

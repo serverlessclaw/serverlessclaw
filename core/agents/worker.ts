@@ -1,9 +1,9 @@
-import { DynamoMemory } from '../lib/memory.js';
-import { Agent } from '../lib/agent.js';
-import { ProviderManager } from '../lib/providers/index.js';
-import { getAgentTools } from '../tools/index.js';
-import { AgentRegistry } from '../lib/registry.js';
-import { sendOutboundMessage } from '../lib/outbound.js';
+import { DynamoMemory } from '../lib/memory';
+import { Agent } from '../lib/agent';
+import { ProviderManager } from '../lib/providers/index';
+import { getAgentTools } from '../tools/index';
+import { AgentRegistry } from '../lib/registry';
+import { sendOutboundMessage } from '../lib/outbound';
 
 const memory = new DynamoMemory();
 const provider = new ProviderManager();

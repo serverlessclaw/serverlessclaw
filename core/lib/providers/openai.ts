@@ -6,7 +6,7 @@ import {
   ReasoningProfile,
   MessageRole,
   OpenAIModel,
-} from '../types/index.js';
+} from '../types/index';
 import { Resource } from 'sst';
 
 export class OpenAIProvider implements IProvider {

@@ -8,7 +8,7 @@ import {
   InsightMetadata,
   MemoryInsight,
   InsightCategory,
-} from './types/index.js';
+} from './types/index';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);

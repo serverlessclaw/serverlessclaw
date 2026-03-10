@@ -13,7 +13,7 @@ import {
   ReasoningProfile,
   MessageRole,
   BedrockModel,
-} from '../types/index.js';
+} from '../types/index';
 import { Resource } from 'sst';
 
 interface BedrockResource {

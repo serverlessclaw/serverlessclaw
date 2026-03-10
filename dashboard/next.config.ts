@@ -11,6 +11,7 @@ const nextConfig: any = {
   turbopack: {
     root: path.resolve(__dirname, ".."),
   },
+  transpilePackages: ["@claw/core"],
 };
 
 export default nextConfig;

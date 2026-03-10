@@ -1,4 +1,4 @@
-import { ITool } from '../lib/types/index.js';
+import { ITool } from '../lib/types/index';
 
 export const my_new_tool: ITool = {
   name: 'my_new_tool',

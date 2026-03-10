@@ -1,10 +1,10 @@
-import { DynamoMemory } from '../lib/memory.js';
-import { Agent } from '../lib/agent.js';
-import { ProviderManager } from '../lib/providers/index.js';
-import { getAgentTools } from '../tools/index.js';
-import { EventType } from '../lib/types/index.js';
-import { sendOutboundMessage } from '../lib/outbound.js';
-import { MANAGER_SYSTEM_PROMPT } from '../agents/manager.js';
+import { DynamoMemory } from '../lib/memory';
+import { Agent } from '../lib/agent';
+import { ProviderManager } from '../lib/providers/index';
+import { getAgentTools } from '../tools/index';
+import { EventType } from '../lib/types/index';
+import { sendOutboundMessage } from '../lib/outbound';
+import { MANAGER_SYSTEM_PROMPT } from '../agents/manager';
 
 const memory = new DynamoMemory();
 const provider = new ProviderManager();

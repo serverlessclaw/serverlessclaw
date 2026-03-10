@@ -1,6 +1,6 @@
 import { Resource } from 'sst';
-import { DynamoMemory } from '../lib/memory.js';
-import { MessageRole } from '../lib/types/index.js';
+import { DynamoMemory } from '../lib/memory';
+import { MessageRole } from '../lib/types/index';
 
 const memory = new DynamoMemory();
 

@@ -41,7 +41,7 @@ vi.mock('sst', () => ({
   },
 }));
 
-import { tools } from '../tools/index.js';
+import { tools } from '../tools/index';
 import { GetCommand, UpdateCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 
 describe('Deployment Circuit Breaker', () => {

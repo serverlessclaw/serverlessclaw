@@ -1,7 +1,7 @@
-import { DynamoMemory } from '../lib/memory.js';
-import { Agent } from '../lib/agent.js';
-import { ProviderManager } from '../lib/providers/index.js';
-import { tools } from '../tools/index.js';
+import { DynamoMemory } from '../lib/memory';
+import { Agent } from '../lib/agent';
+import { ProviderManager } from '../lib/providers/index';
+import { tools } from '../tools/index';
 
 const memory = new DynamoMemory();
 const provider = new ProviderManager();

@@ -1,8 +1,8 @@
 import { Resource } from 'sst';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
-import { IAgentConfig, AgentType } from './types/agent.js';
-import { MANAGER_SYSTEM_PROMPT } from '../agents/manager.js';
+import { IAgentConfig, AgentType } from './types/agent';
+import { MANAGER_SYSTEM_PROMPT } from '../agents/manager';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);

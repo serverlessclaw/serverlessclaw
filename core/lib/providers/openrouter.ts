@@ -5,7 +5,7 @@ import {
   ReasoningProfile,
   MessageRole,
   OpenRouterModel,
-} from '../types/index.js';
+} from '../types/index';
 import { Resource } from 'sst';
 
 interface OpenRouterResource {

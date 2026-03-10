@@ -1,7 +1,7 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
-import { ILockManager } from './types/index.js';
+import { ILockManager } from './types/index';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);

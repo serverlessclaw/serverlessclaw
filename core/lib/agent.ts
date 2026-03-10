@@ -7,8 +7,8 @@ import {
   MessageRole,
   EventType,
   SSTResource,
-} from './types/index.js';
-import { ClawTracer } from './tracer.js';
+} from './types/index';
+import { ClawTracer } from './tracer';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import { Resource } from 'sst';
 

@@ -1,4 +1,4 @@
-import { Message } from './llm.js';
+import { Message } from './llm';
 
 export enum InsightCategory {
   USER_PREFERENCE = 'user_preference',

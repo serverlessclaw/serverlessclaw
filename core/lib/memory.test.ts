@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mockClient } from 'aws-sdk-client-mock';
 import { DynamoDBDocumentClient, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
-import { DynamoMemory } from './memory.js';
-import { Message, MessageRole } from './types/index.js';
+import { DynamoMemory } from './memory';
+import { Message, MessageRole } from './types/index';
 
 // Mock Resource from sst
 vi.mock('sst', () => ({

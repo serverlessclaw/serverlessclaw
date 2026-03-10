@@ -9,7 +9,7 @@ import {
   PutCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
-import { ITool, InsightCategory } from '../lib/types/index.js';
+import { ITool, InsightCategory } from '../lib/types/index';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { exec } from 'child_process';
@@ -114,7 +114,7 @@ export const tools: Record<string, ITool> = {
 
       // Dynamic lookup to validate agent exists and is enabled
       // Dynamic import to avoid circular dependency. Explicit .js extension for node16.
-      const { AgentRegistry } = await import('../lib/registry.js');
+      const { AgentRegistry } = await import('../lib/registry');
       const config = await AgentRegistry.getAgentConfig(agentId);
 
       if (!config) {
@@ -477,7 +477,7 @@ export const tools: Record<string, ITool> = {
         category?: string;
       };
       // Dynamic import to avoid circular dependency. Explicit .js extension for node16.
-      const { DynamoMemory } = await import('../lib/memory.js');
+      const { DynamoMemory } = await import('../lib/memory');
       const memory = new DynamoMemory();
       const results = await memory.searchInsights(userId, query, category as InsightCategory);
 
@@ -508,7 +508,7 @@ export const tools: Record<string, ITool> = {
  */
 export async function getAgentTools(agentId: string): Promise<ITool[]> {
   // Dynamic import to avoid circular dependency
-  const { AgentRegistry } = await import('../lib/registry.js');
+  const { AgentRegistry } = await import('../lib/registry');
   const config = await AgentRegistry.getAgentConfig(agentId);
 
   if (!config || !config.tools) {

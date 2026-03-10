@@ -1,7 +1,7 @@
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
-import { sendOutboundMessage } from '../lib/outbound.js';
+import { sendOutboundMessage } from '../lib/outbound';
 import { Resource } from 'sst';
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));

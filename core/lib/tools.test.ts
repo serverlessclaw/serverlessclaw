@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { tools, getToolDefinitions } from '../tools/index.js';
+import { tools, getToolDefinitions } from '../tools/index';
 
 // Mock DynamoDB for tool execution tests
 vi.mock('@aws-sdk/lib-dynamodb', () => ({

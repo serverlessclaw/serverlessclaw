@@ -1,4 +1,4 @@
-import { EventType } from '../core/lib/types/agent.js';
+import { EventType } from '../core/lib/types/agent';
 
 interface AgentContext {
   memoryTable: sst.aws.Dynamo;

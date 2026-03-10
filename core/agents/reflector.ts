@@ -1,13 +1,13 @@
-import { DynamoMemory } from '../lib/memory.js';
-import { Agent } from '../lib/agent.js';
-import { ProviderManager } from '../lib/providers/index.js';
+import { DynamoMemory } from '../lib/memory';
+import { Agent } from '../lib/agent';
+import { ProviderManager } from '../lib/providers/index';
 import {
   ReasoningProfile,
   Message,
   EventType,
   SSTResource,
   InsightCategory,
-} from '../lib/types/index.js';
+} from '../lib/types/index';
 import { Resource } from 'sst';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 
