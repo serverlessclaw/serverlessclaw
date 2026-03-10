@@ -24,15 +24,23 @@ const plannerAgent = new Agent(
    Your plan will be reviewed by the user. Once approved, it will be executed by the Coder Agent.`
 );
 
-export const handler = async (event: { gapId: string; details: string; contextUserId: string }) => {
+export const handler = async (event: {
+  gapId: string;
+  details: string;
+  contextUserId: string;
+  metadata?: any;
+}) => {
   console.log('Planner Agent received gap:', JSON.stringify(event, null, 2));
 
-  const { gapId, details, contextUserId } = event;
+  const { gapId, details, contextUserId, metadata } = event;
 
   // Planner always uses high-reasoning for deep thinking
+  const roiInfo = metadata
+    ? `\n(ESTIMATED ROI: ${metadata.estimatedROI}, PRIORITY: ${metadata.priority})`
+    : '';
   const result = await plannerAgent.process(
     `SYSTEM#PLANNER#${gapId}`,
-    `GAP IDENTIFIED: ${details}\n\nUSER CONTEXT: Please design a STRATEGIC_PLAN to fix this gap for user ${contextUserId}.`,
+    `GAP IDENTIFIED: ${details}${roiInfo}\n\nUSER CONTEXT: Please design a STRATEGIC_PLAN to fix this gap for user ${contextUserId}.`,
     ReasoningProfile.DEEP
   );
 

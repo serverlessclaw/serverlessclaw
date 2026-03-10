@@ -1,7 +1,14 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
-import { IMemory, Message, MessageRole } from './types';
+import {
+  IMemory,
+  Message,
+  MessageRole,
+  InsightMetadata,
+  MemoryInsight,
+  InsightCategory,
+} from './types';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -90,7 +97,7 @@ export class DynamoMemory implements IMemory {
     }
   }
 
-  async setGap(gapId: string, details: string): Promise<void> {
+  async setGap(gapId: string, details: string, metadata?: InsightMetadata): Promise<void> {
     const command = new PutCommand({
       TableName: this.tableName,
       Item: {
@@ -98,6 +105,11 @@ export class DynamoMemory implements IMemory {
         timestamp: Date.now(),
         content: details,
         status: 'OPEN',
+        metadata: metadata || {
+          category: InsightCategory.STRATEGIC_GAP,
+          estimatedROI: 5,
+          priority: 5,
+        },
       },
     });
 
@@ -108,13 +120,18 @@ export class DynamoMemory implements IMemory {
     }
   }
 
-  async addLesson(userId: string, lesson: string): Promise<void> {
+  async addLesson(userId: string, lesson: string, metadata?: InsightMetadata): Promise<void> {
     const command = new PutCommand({
       TableName: this.tableName,
       Item: {
         userId: `LESSON#${userId}`,
         timestamp: Date.now(),
         content: lesson,
+        metadata: metadata || {
+          category: InsightCategory.TACTICAL_LESSON,
+          estimatedROI: 3,
+          priority: 3,
+        },
       },
     });
 
@@ -132,7 +149,7 @@ export class DynamoMemory implements IMemory {
       ExpressionAttributeValues: {
         ':userId': `LESSON#${userId}`,
       },
-      Limit: 5, // Only get the 5 most recent lessons
+      Limit: 10,
       ScanIndexForward: false, // Newest first
     });
 
@@ -143,5 +160,57 @@ export class DynamoMemory implements IMemory {
       console.error('Error retrieving lessons from DynamoDB:', error);
       return [];
     }
+  }
+
+  async searchInsights(
+    userId: string,
+    query: string,
+    category?: InsightCategory
+  ): Promise<MemoryInsight[]> {
+    // For now, we perform a simple query to get recent insights for the user.
+    // In a real high-volume system, we would use a Global Secondary Index or full-text search.
+    const prefixes = [`LESSON#${userId}`, `GAP#`, `DISTILLED#${userId}`];
+    let allInsights: MemoryInsight[] = [];
+
+    for (const prefix of prefixes) {
+      const command = new QueryCommand({
+        TableName: this.tableName,
+        KeyConditionExpression: 'userId = :userId',
+        ExpressionAttributeValues: {
+          ':userId': prefix,
+        },
+        Limit: 50,
+      });
+
+      try {
+        const response = await docClient.send(command);
+        const insights = (response.Items || []).map((item) => ({
+          id: item.userId,
+          content: item.content,
+          metadata: item.metadata || {
+            category: InsightCategory.SYSTEM_KNOWLEDGE,
+            estimatedROI: 0,
+            priority: 0,
+          },
+          timestamp: item.timestamp,
+        }));
+        allInsights = [...allInsights, ...insights];
+      } catch (e) {
+        console.error(`Error searching insights for ${prefix}:`, e);
+      }
+    }
+
+    // Filter by category if provided
+    if (category) {
+      allInsights = allInsights.filter((i) => i.metadata.category === category);
+    }
+
+    // Simple keyword filtering based on the query
+    if (query && query !== '*' && query !== '') {
+      const lowerQuery = query.toLowerCase();
+      allInsights = allInsights.filter((i) => i.content.toLowerCase().includes(lowerQuery));
+    }
+
+    return allInsights.sort((a, b) => b.timestamp - a.timestamp);
   }
 }

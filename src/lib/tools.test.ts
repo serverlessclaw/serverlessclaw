@@ -62,7 +62,7 @@ describe('Tools', () => {
   describe('getToolDefinitions', () => {
     it('should return formatted tool definitions', () => {
       const definitions = getToolDefinitions();
-      expect(definitions).toHaveLength(11);
+      expect(definitions).toHaveLength(12);
 
       const names = definitions.map((d) => d.function.name);
       expect(names).toContain('calculator');

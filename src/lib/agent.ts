@@ -72,13 +72,18 @@ export class Agent {
     const userMessage: Message = { role: MessageRole.USER, content: userText };
     await this.memory.addMessage(userId, userMessage);
 
-    // 4. Complete context (inject distilled facts and lessons as system instructions)
+    // 4. Complete context (Smart Recall Index)
     let contextPrompt = this.systemPrompt;
     if (recoveryContext) contextPrompt += recoveryContext;
-    if (distilled) contextPrompt += `\n\nLONG-TERM USER FACTS:\n${distilled}`;
-    if (lessons.length > 0) {
-      contextPrompt += `\n\nRECENT TACTICAL LESSONS (Heuristics to follow):\n${lessons.map((l) => `- ${l}`).join('\n')}`;
-    }
+
+    const memoryIndex = `
+      [MEMORY_INDEX]:
+      - DISTILLED FACTS: ${distilled ? 'Available (load with recall_knowledge)' : 'None'}
+      - TACTICAL LESSONS: ${lessons.length} recent available.
+      
+      USE 'recall_knowledge' to retrieve details if they are relevant to the user request.
+    `;
+    contextPrompt += `\n\n${memoryIndex}`;
 
     const messages: Message[] = [
       { role: MessageRole.SYSTEM, content: contextPrompt },

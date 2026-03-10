@@ -435,6 +435,47 @@ export const tools: Record<string, ITool> = {
       }
     },
   },
+  recall_knowledge: {
+    name: 'recall_knowledge',
+    description:
+      "Searches the agent's long-term memory for relevant facts, lessons, or capability gaps.",
+    parameters: {
+      type: 'object',
+      properties: {
+        userId: { type: 'string', description: 'The user ID context.' },
+        query: {
+          type: 'string',
+          description: 'The search query or keyword (use "*" for all recent).',
+        },
+        category: {
+          type: 'string',
+          enum: ['user_preference', 'tactical_lesson', 'strategic_gap', 'system_knowledge'],
+          description: 'Optional category filter.',
+        },
+      },
+      required: ['userId', 'query'],
+    },
+    execute: async (args: Record<string, unknown>) => {
+      const { userId, query, category } = args as {
+        userId: string;
+        query: string;
+        category?: any;
+      };
+      // Dynamic import to avoid circular dependency. Explicit .js extension for node16.
+      const { DynamoMemory } = await import('../lib/memory.js');
+      const memory = new DynamoMemory();
+      const results = await memory.searchInsights(userId, query, category);
+
+      if (results.length === 0) return 'No relevant knowledge found.';
+
+      return results
+        .map(
+          (r: any) =>
+            `[${r.metadata.category.toUpperCase()}] (ROI: ${r.metadata.estimatedROI}) ${r.content}`
+        )
+        .join('\n');
+    },
+  },
 };
 
 export function getToolDefinitions() {

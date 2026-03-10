@@ -83,12 +83,33 @@ export enum BedrockModel {
 }
 
 /**
- * Standardized Model IDs for OpenRouter.
+ * Insight Categories for memory and evolution.
  */
-export enum OpenRouterModel {
-  GLM_5 = 'zhipu/glm-5',
-  MINIMAX_2_5 = 'minimax/minimax-2.5',
-  GEMINI_3_FLASH = 'google/gemini-3-flash-preview',
+export enum InsightCategory {
+  USER_PREFERENCE = 'user_preference',
+  TACTICAL_LESSON = 'tactical_lesson',
+  STRATEGIC_GAP = 'strategic_gap',
+  SYSTEM_KNOWLEDGE = 'system_knowledge',
+}
+
+/**
+ * Metadata for insights (Facts, Lessons, Gaps).
+ */
+export interface InsightMetadata {
+  category: InsightCategory;
+  estimatedROI: number; // 1-10
+  priority: number; // 1-10
+  expiration?: number; // timestamp
+}
+
+/**
+ * Structured memory item.
+ */
+export interface MemoryInsight {
+  id: string;
+  content: string;
+  metadata: InsightMetadata;
+  timestamp: number;
 }
 
 /**
@@ -98,11 +119,24 @@ export interface IMemory {
   getHistory(userId: string): Promise<Message[]>;
   addMessage(userId: string, message: Message): Promise<void>;
   clearHistory(userId: string): Promise<void>;
+
+  // Facts (Long-term)
   getDistilledMemory(userId: string): Promise<string>;
   updateDistilledMemory(userId: string, facts: string): Promise<void>;
-  setGap(gapId: string, details: string): Promise<void>;
-  addLesson(userId: string, lesson: string): Promise<void>;
+
+  // Gaps & Evolution
+  setGap(gapId: string, details: string, metadata?: InsightMetadata): Promise<void>;
+
+  // Lessons (Tactical)
+  addLesson(userId: string, lesson: string, metadata?: InsightMetadata): Promise<void>;
   getLessons(userId: string): Promise<string[]>;
+
+  // Smart Recall (Search)
+  searchInsights(
+    userId: string,
+    query: string,
+    category?: InsightCategory
+  ): Promise<MemoryInsight[]>;
 }
 
 /**
