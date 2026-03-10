@@ -34,6 +34,7 @@
     "@aws-sdk/lib-dynamodb": "^3.1004.0",
     "archiver": "^7.0.1",
     "lucide-react": "^0.577.0",
+    "openai": "^6.27.0",
     "sst": "^4.2.2",
     "uuid": "^13.0.0"
   },

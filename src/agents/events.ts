@@ -3,6 +3,7 @@ import { Agent } from '../lib/agent';
 import { ProviderManager } from '../lib/providers';
 import { tools } from '../tools/index';
 import { Resource } from 'sst';
+import { EventType } from '../lib/types';
 
 const memory = new DynamoMemory();
 const provider = new ProviderManager();
@@ -20,7 +21,7 @@ export const handler = async (event: {
     errorLogs?: string;
   };
 
-  if (event['detail-type'] === 'system_build_failed') {
+  if (event['detail-type'] === EventType.SYSTEM_BUILD_FAILED) {
     const task = `CRITICAL: Deployment ${buildId} failed. 
     Here are the last few lines of the logs:
     ---

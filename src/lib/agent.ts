@@ -1,4 +1,4 @@
-import { IMemory, IProvider, ITool, Message, ReasoningProfile } from './types';
+import { IMemory, IProvider, ITool, Message, ReasoningProfile, MessageRole } from './types';
 import { ClawTracer } from './tracer';
 
 export class Agent {
@@ -31,7 +31,7 @@ export class Agent {
   async process(
     userId: string,
     userText: string,
-    profile: ReasoningProfile = 'standard'
+    profile: ReasoningProfile = ReasoningProfile.STANDARD
   ): Promise<string> {
     const tracer = new ClawTracer(userId);
     await tracer.startTrace({ userText });
@@ -53,7 +53,7 @@ export class Agent {
     }
 
     // 3. Add user message
-    const userMessage: Message = { role: 'user', content: userText };
+    const userMessage: Message = { role: MessageRole.USER, content: userText };
     await this.memory.addMessage(userId, userMessage);
 
     // 4. Complete context (inject distilled facts as a system instruction)
@@ -63,7 +63,7 @@ export class Agent {
         : this.systemPrompt;
 
     const messages: Message[] = [
-      { role: 'system', content: contextPrompt },
+      { role: MessageRole.SYSTEM, content: contextPrompt },
       ...history,
       userMessage,
     ];
@@ -91,7 +91,7 @@ export class Agent {
               await tracer.addStep({ type: 'tool_result', content: { tool: tool.name, result } });
 
               messages.push({
-                role: 'tool',
+                role: MessageRole.TOOL,
                 tool_call_id: toolCall.id,
                 name: toolCall.function.name,
                 content: result,
@@ -113,15 +113,16 @@ export class Agent {
     if (!responseText) responseText = 'Sorry, I reached my iteration limit.';
 
     // 5. Save response
-    await this.memory.addMessage(userId, { role: 'assistant', content: responseText });
+    await this.memory.addMessage(userId, { role: MessageRole.ASSISTANT, content: responseText });
 
     // 6. Finalize Trace
     await tracer.endTrace(responseText);
 
     // 7. Trigger Reflection (async)
-    this.reflect(userId, [...messages, { role: 'assistant', content: responseText }]).catch(
-      console.error
-    );
+    this.reflect(userId, [
+      ...messages,
+      { role: MessageRole.ASSISTANT, content: responseText },
+    ]).catch(console.error);
 
     return responseText;
   }
@@ -146,9 +147,9 @@ export class Agent {
 
     // Reflection is a background task, using 'fast' profile for efficiency
     const summaryResponse = await this.provider.call(
-      [{ role: 'system', content: reflectionPrompt }],
+      [{ role: MessageRole.SYSTEM, content: reflectionPrompt }],
       undefined,
-      'fast'
+      ReasoningProfile.FAST
     );
 
     if (summaryResponse.content) {

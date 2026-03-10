@@ -2,6 +2,7 @@ import { DynamoMemory } from '../lib/memory';
 import { Agent } from '../lib/agent';
 import { ProviderManager } from '../lib/providers';
 import { tools } from '../tools/index';
+import { ReasoningProfile } from '../lib/types';
 
 const memory = new DynamoMemory();
 const provider = new ProviderManager();
@@ -35,7 +36,7 @@ export const handler = async (event: { userId: string; task: string }) => {
 
   // 1. Process the task
   // 2026 Optimization: Use 'thinking' profile for coding tasks
-  const response = await agent.process(userId, `CODER TASK: ${task}`, 'thinking');
+  const response = await agent.process(userId, `CODER TASK: ${task}`, ReasoningProfile.THINKING);
 
   console.log('Coder Agent completed task:', response);
 

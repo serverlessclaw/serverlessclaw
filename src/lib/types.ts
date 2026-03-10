@@ -7,12 +7,84 @@ export interface ToolCall {
   };
 }
 
+export enum MessageRole {
+  USER = 'user',
+  ASSISTANT = 'assistant',
+  SYSTEM = 'system',
+  TOOL = 'tool',
+  DEVELOPER = 'developer',
+}
+
 export interface Message {
-  role: 'user' | 'assistant' | 'system' | 'tool';
+  role: MessageRole;
   content?: string;
   tool_calls?: ToolCall[];
   tool_call_id?: string;
   name?: string;
+}
+
+/**
+ * Agent Types for orchestration.
+ */
+export enum AgentType {
+  MAIN = 'main',
+  CODER = 'coder',
+  BUILD_MONITOR = 'monitor',
+  EVENT_HANDLER = 'events',
+  RECOVERY = 'recovery',
+}
+
+/**
+ * Event Detail Types for the AgentBus.
+ */
+export enum EventType {
+  CODER_TASK = 'coder_task',
+  SYSTEM_BUILD_FAILED = 'system_build_failed',
+  MONITOR_BUILD = 'monitor_build',
+  RECOVERY_LOG = 'recovery_log',
+}
+
+/**
+ * reasoning profiles for LLM providers.
+ */
+export enum ReasoningProfile {
+  FAST = 'fast',
+  STANDARD = 'standard',
+  THINKING = 'thinking',
+  DEEP = 'deep',
+}
+
+/**
+ * Provider interface for LLM backends.
+ */
+export enum LLMProvider {
+  OPENAI = 'openai',
+  BEDROCK = 'bedrock',
+  OPENROUTER = 'openrouter',
+}
+
+/**
+ * Standardized Model IDs for OpenAI.
+ */
+export enum OpenAIModel {
+  GPT_5_4 = 'gpt-5.4',
+  GPT_5_MINI = 'gpt-5-mini',
+}
+
+/**
+ * Standardized Model IDs for Bedrock.
+ */
+export enum BedrockModel {
+  CLAUDE_4_6 = 'anthropic.claude-4-6-sonnet-20260215-v1:0',
+}
+
+/**
+ * Standardized Model IDs for OpenRouter.
+ */
+export enum OpenRouterModel {
+  GLM_5 = 'zhipu/glm-5',
+  MINIMAX_2_5 = 'minimax/minimax-2.5',
+  GEMINI_3_FLASH = 'google/gemini-3-flash-preview',
 }
 
 /**
@@ -44,19 +116,23 @@ export interface IChannel {
 }
 
 /**
- * Reasoning profiles for LLM providers.
- * fast: Low reasoning, high speed (e.g., gpt-5-mini, flash models)
- * standard: Balanced reasoning (e.g., gpt-5.4 default)
- * thinking: High reasoning for complex logic (e.g., gpt-5.4 high)
- * deep: Maximum reasoning for architecture or recovery (e.g., gpt-5.4 xhigh)
+ * Provider capabilities.
  */
-export type ReasoningProfile = 'fast' | 'standard' | 'thinking' | 'deep';
+export interface ICapabilities {
+  supportedReasoningProfiles: ReasoningProfile[];
+}
 
-/**
- * Provider interface for LLM backends.
- */
 export interface IProvider {
   call(messages: Message[], tools?: ITool[], profile?: ReasoningProfile): Promise<Message>;
+  getCapabilities(): Promise<ICapabilities>;
+}
+
+/**
+ * Lock Manager for session isolation.
+ */
+export interface ILockManager {
+  acquire(lockId: string, ttlSeconds: number): Promise<boolean>;
+  release(lockId: string): Promise<void>;
 }
 
 /**

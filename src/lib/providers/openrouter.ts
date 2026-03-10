@@ -1,4 +1,11 @@
-import { IProvider, Message, ITool, ReasoningProfile } from '../types';
+import {
+  IProvider,
+  Message,
+  ITool,
+  ReasoningProfile,
+  MessageRole,
+  OpenRouterModel,
+} from '../types';
 import { Resource } from 'sst';
 
 interface OpenRouterResource {
@@ -6,22 +13,31 @@ interface OpenRouterResource {
 }
 
 export class OpenRouterProvider implements IProvider {
-  constructor(private model: string = 'google/gemini-3-flash-preview') {}
+  constructor(private model: string = OpenRouterModel.GEMINI_3_FLASH) {}
 
   async call(
     messages: Message[],
     tools?: ITool[],
-    profile: ReasoningProfile = 'standard'
+    profile: ReasoningProfile = ReasoningProfile.STANDARD
   ): Promise<Message> {
     const apiKey = (Resource as unknown as OpenRouterResource).OpenRouterApiKey?.value || '';
     const baseUrl = 'https://openrouter.ai/api/v1';
+
+    // Fallback if profile not supported
+    const capabilities = await this.getCapabilities();
+    if (!capabilities.supportedReasoningProfiles.includes(profile)) {
+      console.warn(
+        `Profile ${profile} not supported for OpenRouter model ${this.model}, falling back to STANDARD`
+      );
+      profile = ReasoningProfile.STANDARD;
+    }
 
     const body: Record<string, unknown> = {
       model: this.model,
       messages: messages,
       // 2026 OpenRouter Enhancements:
       // Provider routing preferences (prefer speed/cost)
-      route: profile === 'fast' ? 'latency' : 'fallback',
+      route: profile === ReasoningProfile.FAST ? 'latency' : 'fallback',
       // Allow provider-specific transformations (e.g. prompt caching)
       provider: {
         allow_fallbacks: true,
@@ -30,7 +46,9 @@ export class OpenRouterProvider implements IProvider {
         prompt_cache: true,
       },
       // Map profile to provider-specific reasoning if supported
-      ...(profile === 'thinking' || profile === 'deep' ? { include_reasoning: true } : {}),
+      ...(profile === ReasoningProfile.THINKING || profile === ReasoningProfile.DEEP
+        ? { include_reasoning: true }
+        : {}),
     };
 
     if (tools && tools.length > 0) {
@@ -68,13 +86,25 @@ export class OpenRouterProvider implements IProvider {
     const message = data.choices?.[0]?.message;
 
     if (!message) {
-      return { role: 'assistant', content: 'Empty response from provider.' };
+      return { role: MessageRole.ASSISTANT, content: 'Empty response from provider.' } as Message;
     }
 
     return {
-      role: message.role,
+      role: MessageRole.ASSISTANT,
       content: message.content || '',
       tool_calls: message.tool_calls,
+    } as Message;
+  }
+
+  async getCapabilities() {
+    // OpenRouter is a passthrough; we can either have a generic set or a specific list
+    // For standardized models, we allow standard and fast.
+    const isStandardized = Object.values(OpenRouterModel).includes(this.model as any);
+
+    return {
+      supportedReasoningProfiles: isStandardized
+        ? [ReasoningProfile.FAST, ReasoningProfile.STANDARD]
+        : [ReasoningProfile.FAST, ReasoningProfile.STANDARD],
     };
   }
 }

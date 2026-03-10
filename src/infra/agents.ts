@@ -1,3 +1,5 @@
+import { EventType } from '../lib/types';
+
 interface AgentContext {
   memoryTable: sst.aws.Dynamo;
   traceTable: sst.aws.Dynamo;
@@ -17,7 +19,7 @@ export function createAgents(ctx: AgentContext) {
     handler: 'src/agents/coder.handler',
     link: [memoryTable, traceTable, configTable, stagingBucket, ...Object.values(secrets)],
   });
-  bus.subscribe('coder_task', coderAgent.arn);
+  bus.subscribe(EventType.CODER_TASK, coderAgent.arn);
 
   // 2. Build Monitor
   const buildMonitor = new sst.aws.Function('BuildMonitor', {
@@ -38,7 +40,7 @@ export function createAgents(ctx: AgentContext) {
       bus,
     ],
   });
-  bus.subscribe('system_build_failed', eventHandler.arn);
+  bus.subscribe(EventType.SYSTEM_BUILD_FAILED, eventHandler.arn);
 
   // 4. Dead Man's Switch
   const deadMansSwitch = new sst.aws.Function('DeadMansSwitch', {
