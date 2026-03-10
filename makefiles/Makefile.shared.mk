@@ -2,6 +2,9 @@
 # Makefile.shared: Common macros, variables, and environment configuration
 ###############################################################################
 
+ifndef _SHARED_MK_INCLUDED
+_SHARED_MK_INCLUDED := 1
+
 # Colors
 RED        := $(shell printf '\033[0;31m')
 GREEN      := $(shell printf '\033[0;32m')
@@ -88,3 +91,6 @@ define track_time
 	fi; \
 	exit $$status
 endef
+
+endif
+

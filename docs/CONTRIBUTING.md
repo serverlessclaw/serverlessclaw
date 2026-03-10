@@ -17,21 +17,21 @@
 # 1. Install deps
 pnpm install
 
-# 2. Run tests
-npx vitest run
+# 2. Run quality checks
+make check
 
-# 3. Local dev
-pnpm exec sst dev
+# 3. Run tests
+make test
 
-# 4. Type check
-npx tsc --noEmit
+# 4. Local dev
+make dev
 ```
 
 ---
 
 ## Pre-push Hooks
 
-Husky runs `npx vitest run` and `npx tsc --noEmit` before every push. These must pass.
+Husky triggers `make pre-push` before every push. This runs full quality checks (`make check`), all unit tests (`make test`), and an AI-readiness scan (`make aiready`) ensuring a score of **80+**.
 
 ---
 
@@ -78,5 +78,6 @@ serverlessclaw/
 │   ├── ROADMAP.md    ← Future plans
 │   └── CONTRIBUTING.md ← This file
 ├── src/              ← TypeScript source
+├── makefiles/        ← Modular DevOps spokes
 └── sst.config.ts     ← Infrastructure definition
 ```

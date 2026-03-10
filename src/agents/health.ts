@@ -36,6 +36,7 @@ export const handler: APIGatewayProxyHandlerV2 = async () => {
       }),
     };
   } catch (error) {
+    console.error('Health check failed:', error);
     return {
       statusCode: 503,
       headers: { 'Content-Type': 'application/json' },

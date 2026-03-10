@@ -25,9 +25,8 @@ No human intervention required. No more midnight wake-up calls for broken deploy
 
 ```bash
 pnpm install
-npx sst secret set OpenAIApiKey YOUR_KEY
-npx sst secret set TelegramBotToken YOUR_TOKEN
-pnpm exec sst deploy
+# Populate .env with SST_SECRET_ prefixes (e.g. SST_SECRET_OpenAIApiKey)
+make dev
 ```
 
 ## Documentation
@@ -38,6 +37,7 @@ pnpm exec sst deploy
 |-----|---------|
 | [INDEX.md](./INDEX.md) | **Hub** — start here, progressive context loading map |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System topology & AWS resource diagram |
+| [docs/DEVOPS.md](./docs/DEVOPS.md) | **DevOps Hub** — automation, make targets, & CI/CD |
 | [docs/AGENTS.md](./docs/AGENTS.md) | Agent roster, orchestration flow, prompt summaries |
 | [docs/TOOLS.md](./docs/TOOLS.md) | Full tool registry & deployment lifecycle |
 | [docs/SAFETY.md](./docs/SAFETY.md) | Circuit breakers, rollback, HITL guardrails |

@@ -7,6 +7,7 @@
 | Spoke | Load When You Need To... |
 |-------|--------------------------|
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Understand system structure, data flow, or AWS topology |
+| [docs/DEVOPS.md](./docs/DEVOPS.md) | Run quality checks, tests, deployments, or releases |
 | [AGENTS.md](./docs/AGENTS.md) | Work on agent logic, prompts, orchestration, or sub-agents |
 | [TOOLS.md](./docs/TOOLS.md) | Add, modify, or understand any agent tool |
 | [SAFETY.md](./docs/SAFETY.md) | Understand guardrails, circuit breakers, rollback, or HITL |
@@ -26,9 +27,8 @@
 
 ```bash
 pnpm install
-npx sst secret set OpenAIApiKey YOUR_KEY
-npx sst secret set TelegramBotToken YOUR_TOKEN
-pnpm exec sst deploy
+# Load secrets from .env or npx sst secret set
+make dev
 ```
 
 ---
@@ -44,6 +44,7 @@ pnpm exec sst deploy
 | `src/infra/` | [ARCHITECTURE.md](./ARCHITECTURE.md) |
 | `src/tools/index.ts` (guardrails) | [SAFETY.md](./docs/SAFETY.md) |
 | `sst.config.ts` | [ARCHITECTURE.md](./ARCHITECTURE.md) |
+| `makefiles/` | [DEVOPS.md](./docs/DEVOPS.md) |
 
 ---
 

@@ -14,7 +14,11 @@ import {
 async function getHealth() {
   try {
     const response = await fetch(`${Resource.WebhookApi.url}/health`, { cache: 'no-store' });
-    if (!response.ok) throw new Error('Health check failed');
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Health check failed. Status:', response.status, 'Body:', errorText);
+      throw new Error(`Health check failed: ${response.status}`);
+    }
     return await response.json();
   } catch (e) {
     console.error('Error fetching health status:', e);
