@@ -36,8 +36,8 @@ const nodeTypes = {
         </div>
       </div>
       
-      {/* Description Tooltip on Hover */}
-      <div className="absolute inset-0 bg-black/95 p-3 flex flex-col justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none">
+      {/* Description Tooltip Above on Hover */}
+      <div className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 w-[220px] bg-black border border-cyber-green/30 p-3 rounded-md shadow-[0_0_20px_rgba(0,255,163,0.1)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50 pointer-events-none after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-8 after:border-transparent after:border-t-black">
         <div className="flex items-center gap-2 mb-1">
           <Info size={10} className="text-cyber-green" />
           <span className="text-[8px] font-bold text-cyber-green uppercase tracking-widest">Documentation</span>
@@ -57,8 +57,8 @@ const nodeTypes = {
             <Zap size={14} className="text-orange-500" /> {data.label}
         </div>
 
-        {/* Description Tooltip on Hover */}
-        <div className="absolute inset-0 bg-black/95 p-3 flex flex-col justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none text-left">
+        {/* Description Tooltip Above on Hover */}
+        <div className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 w-[240px] bg-black border border-orange-500/30 p-3 rounded-md shadow-[0_0_20px_rgba(249,115,22,0.1)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50 pointer-events-none text-left after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-8 after:border-transparent after:border-t-black">
           <div className="flex items-center gap-2 mb-1">
             <Info size={10} className="text-orange-500" />
             <span className="text-[8px] font-bold text-orange-500 uppercase tracking-widest">Protocol_Info</span>
@@ -87,8 +87,8 @@ const nodeTypes = {
         </div>
       </div>
 
-      {/* Description Tooltip on Hover */}
-      <div className="absolute inset-0 bg-black/95 p-3 flex flex-col justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none">
+      {/* Description Tooltip Above on Hover */}
+      <div className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 w-[220px] bg-black border border-cyber-blue/30 p-3 rounded-md shadow-[0_0_20px_rgba(0,224,255,0.1)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50 pointer-events-none after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-8 after:border-transparent after:border-t-black">
         <div className="flex items-center gap-2 mb-1">
           <Info size={10} className="text-cyber-blue" />
           <span className="text-[8px] font-bold text-cyber-blue uppercase tracking-widest">Resource_Spec</span>
