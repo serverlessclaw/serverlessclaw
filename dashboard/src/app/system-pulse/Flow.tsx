@@ -17,12 +17,12 @@ import '@xyflow/react/dist/style.css';
 import { 
   Bot, Zap, Code, ShieldCheck, Terminal, Cpu, 
   Database, Brain, Activity, Search, FlaskConical, 
-  Settings2, RefreshCw, Radio
+  Settings2, RefreshCw, Radio, Info
 } from 'lucide-react';
 
 const nodeTypes = {
   agent: ({ data }: any) => (
-    <div className="px-4 py-3 shadow-lg rounded-md bg-black border border-cyber-green/50 min-w-[180px] max-w-[240px] relative overflow-hidden group">
+    <div className="px-4 py-3 shadow-lg rounded-md bg-black border border-cyber-green/50 min-w-[180px] max-w-[240px] relative overflow-hidden group transition-all duration-300">
       <div className="absolute top-0 right-0 w-16 h-16 bg-cyber-green/5 rounded-full blur-xl -mr-8 -mt-8"></div>
       <div className="flex items-center gap-3">
         <div className={`p-2 rounded-sm shrink-0 ${data.enabled ? 'bg-cyber-green/10 text-cyber-green' : 'bg-red-500/10 text-red-500'}`}>
@@ -35,17 +35,37 @@ const nodeTypes = {
           <div className="text-sm font-bold text-white/90 break-words leading-tight">{data.label}</div>
         </div>
       </div>
+      
+      {/* Description Tooltip on Hover */}
+      <div className="absolute inset-0 bg-black/95 p-3 flex flex-col justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none">
+        <div className="flex items-center gap-2 mb-1">
+          <Info size={10} className="text-cyber-green" />
+          <span className="text-[8px] font-bold text-cyber-green uppercase tracking-widest">Documentation</span>
+        </div>
+        <p className="text-[10px] text-white/80 leading-relaxed italic">{data.description}</p>
+      </div>
+
       <Handle type="target" position={Position.Top} className="!bg-cyber-green/50 !border-none !w-2 !h-2" />
       <Handle type="source" position={Position.Bottom} className="!bg-cyber-green/50 !border-none !w-2 !h-2" />
     </div>
   ),
   bus: ({ data }: any) => (
-    <div className="px-4 py-2 shadow-lg rounded-md bg-black border border-orange-500/50 min-w-[220px] text-center relative overflow-hidden">
+    <div className="px-4 py-2 shadow-lg rounded-md bg-black border border-orange-500/50 min-w-[220px] text-center relative overflow-hidden group transition-all duration-300">
         <div className="absolute inset-0 bg-orange-500/5 animate-pulse"></div>
         <div className="text-[8px] font-bold text-orange-500 uppercase tracking-[0.3em] mb-1 relative z-10">Central_Orchestrator</div>
         <div className="text-xs font-bold text-white flex items-center justify-center gap-2 relative z-10">
             <Zap size={14} className="text-orange-500" /> {data.label}
         </div>
+
+        {/* Description Tooltip on Hover */}
+        <div className="absolute inset-0 bg-black/95 p-3 flex flex-col justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none text-left">
+          <div className="flex items-center gap-2 mb-1">
+            <Info size={10} className="text-orange-500" />
+            <span className="text-[8px] font-bold text-orange-500 uppercase tracking-widest">Protocol_Info</span>
+          </div>
+          <p className="text-[10px] text-white/80 leading-relaxed italic">{data.description}</p>
+        </div>
+
         <Handle type="target" position={Position.Top} className="!bg-orange-500/50" />
         <Handle type="source" position={Position.Bottom} id="bottom" className="!bg-orange-500/50" />
         <Handle type="source" position={Position.Left} id="left" className="!bg-orange-500/50" />
@@ -53,7 +73,7 @@ const nodeTypes = {
     </div>
   ),
   infra: ({ data }: any) => (
-    <div className="px-4 py-2 shadow-lg rounded-md bg-[#0a0a0a] border border-cyber-blue/30 min-w-[150px] relative overflow-hidden">
+    <div className="px-4 py-2 shadow-lg rounded-md bg-[#0a0a0a] border border-cyber-blue/30 min-w-[150px] relative overflow-hidden group transition-all duration-300">
       <div className="absolute top-0 right-0 w-12 h-12 bg-cyber-blue/5 rounded-full blur-lg -mr-6 -mt-6"></div>
       <div className="flex items-center gap-3">
         <div className="p-2 bg-cyber-blue/10 rounded-sm text-cyber-blue">
@@ -66,6 +86,16 @@ const nodeTypes = {
           <div className="text-sm font-bold text-white/90">{data.label}</div>
         </div>
       </div>
+
+      {/* Description Tooltip on Hover */}
+      <div className="absolute inset-0 bg-black/95 p-3 flex flex-col justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none">
+        <div className="flex items-center gap-2 mb-1">
+          <Info size={10} className="text-cyber-blue" />
+          <span className="text-[8px] font-bold text-cyber-blue uppercase tracking-widest">Resource_Spec</span>
+        </div>
+        <p className="text-[10px] text-white/80 leading-relaxed italic">{data.description}</p>
+      </div>
+
       <Handle type="target" position={Position.Top} className="!bg-cyber-blue/50" />
       <Handle type="source" position={Position.Bottom} className="!bg-cyber-blue/50" />
     </div>
@@ -80,6 +110,18 @@ const getAgentIcon = (id: string) => {
   if (id === 'monitor') return <Activity size={16} />;
   if (id === 'qa') return <FlaskConical size={16} />;
   return <Settings2 size={16} />;
+};
+
+const getAgentDescription = (id: string) => {
+  const descMap: Record<string, string> = {
+    'main': 'SuperClaw. Processes input, retrieves long-term memory, and decides when to delegate tasks to spokes.',
+    'coder': 'Specialised agent that performs heavy lifting like writing code, modifying infra, and triggering builds.',
+    'strategic-planner': 'Strategic intelligence node. Analyzes capability gaps and designs long-term evolution plans.',
+    'cognition-reflector': 'Cognitive audit node. Distills facts, lessons, and capability gaps from interaction traces.',
+    'monitor': 'Real-time observability node. Watches AWS CodeBuild events and triggers fix tasks on failure.',
+    'qa': 'Verification node. Audits recently deployed code to ensure it actually solves the intended capability gap.',
+  };
+  return descMap[id] || 'Neural spoke for dynamic task execution and decentralized intelligence.';
 };
 
 export default function SystemPulseFlow() {
@@ -100,28 +142,46 @@ export default function SystemPulseFlow() {
         id: 'bus',
         type: 'bus',
         position: { x: 400, y: 100 },
-        data: { label: 'EventBridge AgentBus' },
+        data: { 
+          label: 'EventBridge AgentBus',
+          description: 'AWS EventBridge. The asynchronous backbone that allows decoupled agents to communicate via event patterns.'
+        },
       });
 
       newNodes.push({
         id: 'memory',
         type: 'infra',
         position: { x: 100, y: 500 },
-        data: { label: 'DynamoDB Memory', type: 'DATA_STORE', icon: <Database size={16} /> },
+        data: { 
+          label: 'DynamoDB Memory', 
+          type: 'DATA_STORE', 
+          icon: <Database size={16} />,
+          description: 'Single-table DynamoDB. Stores session history, distilled knowledge, tactical lessons, and strategic gaps.'
+        },
       });
 
       newNodes.push({
         id: 'codebuild',
         type: 'infra',
         position: { x: 400, y: 500 },
-        data: { label: 'AWS CodeBuild', type: 'COMPUTE', icon: <Terminal size={16} /> },
+        data: { 
+          label: 'AWS CodeBuild', 
+          type: 'COMPUTE', 
+          icon: <Terminal size={16} />,
+          description: 'Autonomous deployment engine. Runs "sst deploy" in isolated environments to update the system stack.'
+        },
       });
 
       newNodes.push({
         id: 's3',
         type: 'infra',
         position: { x: 700, y: 500 },
-        data: { label: 'Staging Bucket', type: 'STORAGE', icon: <Cpu size={16} /> },
+        data: { 
+          label: 'Staging Bucket', 
+          type: 'STORAGE', 
+          icon: <Cpu size={16} />,
+          description: 'Temporary storage for zipped source code before deployment. Shared between Coder Agent and CodeBuild.'
+        },
       });
 
       // 2. Map Agents
@@ -139,7 +199,8 @@ export default function SystemPulseFlow() {
             label: agent.name, 
             enabled: agent.enabled,
             type: isMain ? 'Logic_Core' : 'Neural_Worker',
-            icon: getAgentIcon(agent.id) 
+            icon: getAgentIcon(agent.id),
+            description: getAgentDescription(agent.id)
           },
         });
 
@@ -152,6 +213,8 @@ export default function SystemPulseFlow() {
             animated: agent.enabled,
             label: 'ORCHESTRATE',
             labelStyle: { fill: '#00ffa3', fontSize: 10, fontWeight: 'bold' },
+            labelBgStyle: { fill: 'transparent', strokeWidth: 0 },
+            labelBgPadding: [0, 0],
             style: { stroke: '#00ffa3', strokeWidth: 2 },
             markerEnd: { type: MarkerType.ArrowClosed, color: '#00ffa3' }
           });
@@ -162,7 +225,9 @@ export default function SystemPulseFlow() {
             target: agent.id,
             animated: agent.enabled,
             label: 'SIGNAL',
-            labelStyle: { fill: agent.enabled ? '#f97316' : '#444', fontSize: 8 },
+            labelStyle: { fill: agent.enabled ? '#f97316' : '#444', fontSize: 8, fontWeight: 'bold' },
+            labelBgStyle: { fill: 'transparent', strokeWidth: 0 },
+            labelBgPadding: [0, 0],
             style: { stroke: agent.enabled ? '#f97316' : '#444' },
             markerEnd: { type: MarkerType.ArrowClosed, color: agent.enabled ? '#f97316' : '#444' }
           });
@@ -181,14 +246,14 @@ export default function SystemPulseFlow() {
           }
 
           if (agent.id === 'coder') {
-
             newEdges.push({ 
               id: 'coder-s3', 
               source: 'coder', 
               target: 's3', 
               label: 'UPLOAD', 
               labelStyle: { fill: '#00f3ff', fontSize: 8, fontWeight: 'bold' }, 
-              labelBgStyle: { fill: 'transparent' },
+              labelBgStyle: { fill: 'transparent', strokeWidth: 0 },
+              labelBgPadding: [0, 0],
               style: { stroke: '#00f3ff' } 
             });
             newEdges.push({ 
@@ -197,7 +262,8 @@ export default function SystemPulseFlow() {
               target: 'codebuild', 
               label: 'TRIGGER', 
               labelStyle: { fill: '#00f3ff', fontSize: 8, fontWeight: 'bold' }, 
-              labelBgStyle: { fill: 'transparent' },
+              labelBgStyle: { fill: 'transparent', strokeWidth: 0 },
+              labelBgPadding: [0, 0],
               style: { stroke: '#00f3ff', strokeDasharray: '2,2' } 
             });
           }
@@ -208,7 +274,8 @@ export default function SystemPulseFlow() {
               target: 'codebuild', 
               label: 'WATCH', 
               labelStyle: { fill: '#00f3ff', fontSize: 8, fontWeight: 'bold' }, 
-              labelBgStyle: { fill: 'transparent' },
+              labelBgStyle: { fill: 'transparent', strokeWidth: 0 },
+              labelBgPadding: [0, 0],
               style: { stroke: '#00f3ff' } 
             });
           }
@@ -222,7 +289,8 @@ export default function SystemPulseFlow() {
         target: 'codebuild',
         label: 'SOURCE_PULL',
         labelStyle: { fill: '#00f3ff', fontSize: 7, fontWeight: 'bold' },
-        labelBgStyle: { fill: 'transparent' },
+        labelBgStyle: { fill: 'transparent', strokeWidth: 0 },
+        labelBgPadding: [0, 0],
         style: { stroke: '#00f3ff', opacity: 0.4 }
       });
 
@@ -238,7 +306,7 @@ export default function SystemPulseFlow() {
   useEffect(() => { fetchBlueprint(); }, [fetchBlueprint]);
 
   return (
-    <div className="h-[700px] w-full bg-[#050505] rounded-lg border border-white/5 relative overflow-hidden">
+    <div className="h-full w-full bg-[#050505] rounded-lg border border-white/5 relative overflow-hidden">
       {loading ? (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-4">
@@ -268,7 +336,7 @@ export default function SystemPulseFlow() {
         </ReactFlow>
       )}
       
-      <div className="absolute top-4 left-4 z-10 space-y-2 pointer-events-none">
+      <div className="absolute top-4 right-4 z-10 space-y-2 pointer-events-none">
           <div className="flex items-center gap-2 px-3 py-1 bg-black/80 border border-cyber-green/30 rounded-full">
               <Radio size={12} className="text-cyber-green animate-pulse" />
               <span className="text-[10px] font-bold text-cyber-green uppercase tracking-wider">LIVE_ARCHITECTURE_FEED</span>
