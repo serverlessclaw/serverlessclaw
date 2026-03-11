@@ -13,11 +13,11 @@ import {
   Menu, 
   X,
   ChevronRight,
-  Wrench,
   Users
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { THEME } from '@/lib/theme';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -47,7 +47,7 @@ export default function Sidebar() {
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 border-b border-white/10 bg-black/80 backdrop-blur-md z-40 px-6 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-8 h-8 bg-cyber-green rounded-sm flex items-center justify-center text-black font-bold">
+          <div className={`w-8 h-8 bg-${THEME.COLORS.PRIMARY} rounded-sm flex items-center justify-center text-black font-bold`}>
             C
           </div>
           <h1 className="text-lg font-bold tracking-tighter">CLAW_CENTER</h1>
@@ -75,7 +75,7 @@ export default function Sidebar() {
       `}>
         <div className="flex items-center justify-between lg:justify-start gap-3">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-8 h-8 bg-cyber-green rounded-sm flex items-center justify-center text-black font-bold group-hover:scale-105 transition-transform">
+            <div className={`w-8 h-8 bg-${THEME.COLORS.PRIMARY} rounded-sm flex items-center justify-center text-black font-bold group-hover:scale-105 transition-transform`}>
               C
             </div>
             <h1 className="text-xl font-bold tracking-tighter">CLAW_CENTER</h1>
@@ -107,15 +107,15 @@ export default function Sidebar() {
                 href={item.href!} 
                 className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded transition-all group ${
                   isActive 
-                    ? 'bg-cyber-green/10 text-cyber-green border-l-2 border-cyber-green' 
+                    ? `bg-${THEME.COLORS.PRIMARY}/10 text-${THEME.COLORS.PRIMARY} border-l-2 border-${THEME.COLORS.PRIMARY}` 
                     : 'text-white/100 hover:bg-white/5 hover:text-white'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  {Icon && <Icon size={16} className={isActive ? 'text-cyber-green' : 'text-white/100 group-hover:text-white/100'} />}
+                  {Icon && <Icon size={16} className={isActive ? `text-${THEME.COLORS.PRIMARY}` : 'text-white/100 group-hover:text-white/100'} />}
                   <span className="font-medium tracking-tight uppercase text-xs">{item.label}</span>
                 </div>
-                {isActive && <ChevronRight size={12} className="text-cyber-green" />}
+                {isActive && <ChevronRight size={12} className={`text-${THEME.COLORS.PRIMARY}`} />}
               </Link>
             );
           })}
@@ -124,10 +124,10 @@ export default function Sidebar() {
         <div className="pt-6 border-t border-white/5 space-y-4">
           <div className="bg-white/5 rounded p-3">
             <div className="text-[10px] text-white/90 font-bold uppercase tracking-wider">Node Status</div>
-            <div className="text-[10px] text-cyber-green mt-1.5 flex items-center gap-2">
+            <div className={`text-[10px] text-${THEME.COLORS.PRIMARY} mt-1.5 flex items-center gap-2`}>
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyber-green opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-cyber-green"></span>
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full bg-${THEME.COLORS.PRIMARY} opacity-75`}></span>
+                <span className={`relative inline-flex rounded-full h-2 w-2 bg-${THEME.COLORS.PRIMARY}`}></span>
               </span>
               SYSTEM_ONLINE
             </div>
@@ -141,4 +141,3 @@ export default function Sidebar() {
     </>
   );
 }
-

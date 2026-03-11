@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Settings, Save, RefreshCw, Zap } from 'lucide-react';
 import CyberSelect from '@/components/CyberSelect';
+import { THEME } from '@/lib/theme';
 
 const PROVIDERS = {
   openai: {
@@ -34,7 +35,7 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
     <>
       <form id="settings-form" action={updateConfig} className="glass-card p-6 lg:p-8 space-y-8 cyber-border relative">
         <div className="space-y-4">
-          <h3 className="text-sm font-bold flex items-center gap-2 text-cyber-blue uppercase tracking-wider">
+          <h3 className={`text-sm font-bold flex items-center gap-2 text-${THEME.COLORS.INTEL} uppercase tracking-wider`}>
             <Settings size={16} /> LLM_PROVIDER_ROUTING
           </h3>
 
@@ -77,7 +78,7 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
         </div>
 
         <div className="pt-8 border-t border-white/5 space-y-4">
-          <h3 className="text-sm font-bold flex items-center gap-2 text-cyber-green uppercase tracking-wider">
+          <h3 className={`text-sm font-bold flex items-center gap-2 text-${THEME.COLORS.PRIMARY} uppercase tracking-wider`}>
             <Zap size={16} /> EVOLUTION_ENGINE_CONTROL
           </h3>
 
@@ -121,7 +122,7 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
                 name="maxToolIterations"
                 type="number"
                 defaultValue={config.maxToolIterations}
-                className="w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-cyber-green transition-colors font-mono"
+                className={`w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-${THEME.COLORS.PRIMARY} transition-colors font-mono`}
               />
               <p className="text-[9px] text-white/50 italic">
                 Maximum number of tool-calling loops per request.
@@ -132,7 +133,7 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
                 <span>Circuit Breaker Threshold</span>
                 <span
                   className={
-                    Number(config.consecutiveBuildFailures) > 0 ? 'text-red-500' : 'text-cyber-green'
+                    Number(config.consecutiveBuildFailures) > 0 ? `text-${THEME.COLORS.DANGER}` : `text-${THEME.COLORS.PRIMARY}`
                   }
                 >
                   Failures: {config.consecutiveBuildFailures}
@@ -142,7 +143,7 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
                 name="circuitBreakerThreshold"
                 type="number"
                 defaultValue={config.circuitBreakerThreshold}
-                className="w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-cyber-green transition-colors font-mono"
+                className={`w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-${THEME.COLORS.PRIMARY} transition-colors font-mono`}
               />
             </div>
           </div>
@@ -154,7 +155,7 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
               name="protectedResources"
               type="text"
               defaultValue={config.protectedResources}
-              className="w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-cyber-green transition-colors font-mono"
+              className={`w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-${THEME.COLORS.PRIMARY} transition-colors font-mono`}
             />
             <p className="text-[9px] text-white/50 italic">
               Comma-separated list of protected files or paths.
@@ -163,7 +164,7 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
         </div>
 
         <div className="pt-8 border-t border-white/5 space-y-4">
-          <h3 className="text-sm font-bold flex items-center gap-2 text-purple-400 uppercase tracking-wider">
+          <h3 className={`text-sm font-bold flex items-center gap-2 text-${THEME.COLORS.REFLECT} uppercase tracking-wider`}>
             <RefreshCw size={16} /> NEURAL_REFLECTION_CONFIG
           </h3>
 
@@ -176,7 +177,7 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
                 name="reflectionFrequency"
                 type="number"
                 defaultValue={config.reflectionFrequency}
-                className="w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-purple-400 transition-colors font-mono"
+                className={`w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-${THEME.COLORS.REFLECT} transition-colors font-mono`}
               />
             </div>
             <div className="space-y-2">
@@ -187,7 +188,7 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
                 name="strategicReviewFrequency"
                 type="number"
                 defaultValue={config.strategicReviewFrequency}
-                className="w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-purple-400 transition-colors font-mono"
+                className={`w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-${THEME.COLORS.REFLECT} transition-colors font-mono`}
               />
             </div>
             <div className="space-y-2">
@@ -198,7 +199,7 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
                 name="minGapsForReview"
                 type="number"
                 defaultValue={config.minGapsForReview}
-                className="w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-purple-400 transition-colors font-mono"
+                className={`w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-${THEME.COLORS.REFLECT} transition-colors font-mono`}
               />
             </div>
           </div>
@@ -210,7 +211,7 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
         <button
           type="submit"
           form="settings-form"
-          className="bg-cyber-green text-black px-8 py-4 rounded text-xs font-black flex items-center gap-3 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-[0_0_30px_rgba(0,255,163,0.4)] uppercase tracking-widest border border-white/20"
+          className={`${THEME.CLASSES.BUTTON_PRIMARY} px-8 py-4 rounded text-xs font-black flex items-center gap-3 hover:scale-105 active:scale-95 transition-all cursor-pointer border border-white/20`}
         >
           <Save size={16} />
           SAVE_SYSTEM_CONFIG
