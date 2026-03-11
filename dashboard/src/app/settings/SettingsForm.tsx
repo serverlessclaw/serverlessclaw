@@ -30,6 +30,24 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
   const [activeModel, setActiveModel] = useState(config.model || 'gpt-5.4');
   const [evolutionMode, setEvolutionMode] = useState(config.evolutionMode || 'hitl');
   const [optimizationPolicy, setOptimizationPolicy] = useState(config.optimizationPolicy || 'balanced');
+  const [maxToolIterations, setMaxToolIterations] = useState(config.maxToolIterations || '5');
+  const [circuitBreakerThreshold, setCircuitBreakerThreshold] = useState(config.circuitBreakerThreshold || '3');
+  const [protectedResources, setProtectedResources] = useState(config.protectedResources || '');
+  const [reflectionFrequency, setReflectionFrequency] = useState(config.reflectionFrequency || '3');
+  const [strategicReviewFrequency, setStrategicReviewFrequency] = useState(config.strategicReviewFrequency || '12');
+  const [minGapsForReview, setMinGapsForReview] = useState(config.minGapsForReview || '3');
+
+  const hasChanges = 
+    activeProvider !== config.provider ||
+    activeModel !== config.model ||
+    evolutionMode !== config.evolutionMode ||
+    optimizationPolicy !== config.optimizationPolicy ||
+    String(maxToolIterations) !== String(config.maxToolIterations) ||
+    String(circuitBreakerThreshold) !== String(config.circuitBreakerThreshold) ||
+    protectedResources !== config.protectedResources ||
+    String(reflectionFrequency) !== String(config.reflectionFrequency) ||
+    String(strategicReviewFrequency) !== String(config.strategicReviewFrequency) ||
+    String(minGapsForReview) !== String(config.minGapsForReview);
 
   return (
     <>
@@ -121,7 +139,8 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
               <input
                 name="maxToolIterations"
                 type="number"
-                defaultValue={config.maxToolIterations}
+                value={maxToolIterations}
+                onChange={(e) => setMaxToolIterations(e.target.value)}
                 className={`w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-${THEME.COLORS.PRIMARY} transition-colors font-mono`}
               />
               <p className="text-[9px] text-white/50 italic">
@@ -142,7 +161,8 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
               <input
                 name="circuitBreakerThreshold"
                 type="number"
-                defaultValue={config.circuitBreakerThreshold}
+                value={circuitBreakerThreshold}
+                onChange={(e) => setCircuitBreakerThreshold(e.target.value)}
                 className={`w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-${THEME.COLORS.PRIMARY} transition-colors font-mono`}
               />
             </div>
@@ -154,7 +174,8 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
             <input
               name="protectedResources"
               type="text"
-              defaultValue={config.protectedResources}
+              value={protectedResources}
+              onChange={(e) => setProtectedResources(e.target.value)}
               className={`w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-${THEME.COLORS.PRIMARY} transition-colors font-mono`}
             />
             <p className="text-[9px] text-white/50 italic">
@@ -176,7 +197,8 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
               <input
                 name="reflectionFrequency"
                 type="number"
-                defaultValue={config.reflectionFrequency}
+                value={reflectionFrequency}
+                onChange={(e) => setReflectionFrequency(e.target.value)}
                 className={`w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-${THEME.COLORS.REFLECT} transition-colors font-mono`}
               />
             </div>
@@ -187,7 +209,8 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
               <input
                 name="strategicReviewFrequency"
                 type="number"
-                defaultValue={config.strategicReviewFrequency}
+                value={strategicReviewFrequency}
+                onChange={(e) => setStrategicReviewFrequency(e.target.value)}
                 className={`w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-${THEME.COLORS.REFLECT} transition-colors font-mono`}
               />
             </div>
@@ -198,7 +221,8 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
               <input
                 name="minGapsForReview"
                 type="number"
-                defaultValue={config.minGapsForReview}
+                value={minGapsForReview}
+                onChange={(e) => setMinGapsForReview(e.target.value)}
                 className={`w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-${THEME.COLORS.REFLECT} transition-colors font-mono`}
               />
             </div>
@@ -211,7 +235,8 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
         <button
           type="submit"
           form="settings-form"
-          className={`${THEME.CLASSES.BUTTON_PRIMARY} px-8 py-4 rounded text-xs font-black flex items-center gap-3 hover:scale-105 active:scale-95 transition-all cursor-pointer border border-white/20`}
+          disabled={!hasChanges}
+          className={`${THEME.CLASSES.BUTTON_PRIMARY} px-8 py-4 rounded text-xs font-black flex items-center gap-3 hover:scale-105 active:scale-95 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:grayscale disabled:scale-100 border border-white/20`}
         >
           <Save size={16} />
           SAVE_SYSTEM_CONFIG

@@ -162,9 +162,9 @@ export function FlowContent() {
         
         // Use known positions for core infra, layout others dynamically below
         if (infra.id === 'bus') { xPos = 400; yPos = 100; }
-        else if (infra.id === 'memory') { xPos = 100; yPos = 500; }
+        else if (infra.id === 'memory') { xPos = 700; yPos = 500; }
         else if (infra.id === 'codebuild') { xPos = 400; yPos = 500; }
-        else if (infra.id === 's3') { xPos = 700; yPos = 500; }
+        else if (infra.id === 's3') { xPos = 100; yPos = 500; }
         else if (infra.id === 'api') { xPos = 100; yPos = 100; }
         else if (infra.id === 'dashboard') { xPos = 700; yPos = 100; }
         else { xPos = 100 + (index * 150); yPos = 700; }

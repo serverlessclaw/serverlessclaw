@@ -32,6 +32,7 @@ const PROVIDERS = {
 
 export default function AgentsPage() {
   const [agents, setAgents] = useState<Record<string, AgentConfig>>({});
+  const [initialAgents, setInitialAgents] = useState<Record<string, AgentConfig>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -40,6 +41,7 @@ export default function AgentsPage() {
       .then((res) => res.json())
       .then((data) => {
         setAgents(data);
+        setInitialAgents(JSON.parse(JSON.stringify(data)));
         setLoading(false);
       })
       .catch((err) => {
@@ -57,6 +59,7 @@ export default function AgentsPage() {
         body: JSON.stringify(agents),
       });
       if (!response.ok) throw new Error('Failed to save');
+      setInitialAgents(JSON.parse(JSON.stringify(agents)));
       alert('Neural nodes synchronized successfully');
     } catch (err) {
       alert('Failed to save neural states');
@@ -92,6 +95,8 @@ export default function AgentsPage() {
     delete next[id];
     setAgents(next);
   };
+
+  const hasChanges = JSON.stringify(agents) !== JSON.stringify(initialAgents);
 
   if (loading)
     return (
@@ -261,8 +266,8 @@ export default function AgentsPage() {
       <div className="fixed bottom-10 right-10 z-30">
         <button
           onClick={handleSave}
-          disabled={saving}
-          className={`${THEME.CLASSES.BUTTON_PRIMARY} px-8 py-4 rounded text-xs font-black flex items-center gap-3 hover:scale-105 active:scale-95 transition-all cursor-pointer disabled:opacity-50 uppercase tracking-widest border border-white/20`}
+          disabled={saving || !hasChanges}
+          className={`${THEME.CLASSES.BUTTON_PRIMARY} px-8 py-4 rounded text-xs font-black flex items-center gap-3 hover:scale-105 active:scale-95 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:grayscale disabled:scale-100 uppercase tracking-widest border border-white/20`}
         >
           {saving ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
           SAVE_AGENT_CONFIG
