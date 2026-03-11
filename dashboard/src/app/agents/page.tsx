@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Bot, Save, Plus, Trash2, Shield, Settings2, RefreshCw, Cpu, ChevronRight } from 'lucide-react';
+import CyberSelect from '@/components/CyberSelect';
 
 interface AgentConfig {
   id: string;
@@ -204,31 +205,37 @@ export default function AgentsPage() {
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <label className="text-[9px] uppercase text-white/100 tracking-widest font-bold opacity-60">LLM Provider</label>
-                        <select
+                        <CyberSelect
                           value={agent.provider || ''}
-                          onChange={(e) => updateAgent(agent.id, { provider: e.target.value, model: '' })}
-                          className="w-full cyber-select"
-                        >
-                          <option value="">INHERIT_SYSTEM_DEFAULT</option>
-                          {Object.entries(PROVIDERS).map(([id, p]) => (
-                            <option key={id} value={id}>{p.label}</option>
-                          ))}
-                        </select>
+                          onChange={(val) => updateAgent(agent.id, { provider: val, model: '' })}
+                          options={[
+                            { value: '', label: 'INHERIT_SYSTEM_DEFAULT' },
+                            ...Object.entries(PROVIDERS).map(([id, p]) => ({
+                              value: id,
+                              label: p.label,
+                            })),
+                          ]}
+                          className="w-full"
+                        />
                       </div>
 
                       <div className="space-y-2">
                         <label className="text-[9px] uppercase text-white/100 tracking-widest font-bold opacity-60">Neural Model ID</label>
-                        <select
+                        <CyberSelect
                           value={agent.model || ''}
-                          onChange={(e) => updateAgent(agent.id, { model: e.target.value })}
-                          className="w-full cyber-select"
+                          onChange={(val) => updateAgent(agent.id, { model: val })}
+                          options={
+                            agent.provider
+                              ? PROVIDERS[agent.provider as keyof typeof PROVIDERS]?.models.map((m) => ({
+                                  value: m,
+                                  label: m,
+                                }))
+                              : []
+                          }
                           disabled={!agent.provider}
-                        >
-                          <option value="">{agent.provider ? 'SELECT_MODEL' : 'SELECT_PROVIDER_FIRST'}</option>
-                          {agent.provider && PROVIDERS[agent.provider as keyof typeof PROVIDERS]?.models.map(m => (
-                            <option key={m} value={m}>{m}</option>
-                          ))}
-                        </select>
+                          placeholder={agent.provider ? 'SELECT_MODEL' : 'SELECT_PROVIDER_FIRST'}
+                          className="w-full"
+                        />
                       </div>
                     </div>
                   </div>

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Settings, Save, RefreshCw, Zap } from 'lucide-react';
+import CyberSelect from '@/components/CyberSelect';
 
 const PROVIDERS = {
   openai: {
@@ -25,9 +26,12 @@ interface SettingsFormProps {
 
 export default function SettingsForm({ config, updateConfig }: SettingsFormProps) {
   const [activeProvider, setActiveProvider] = useState(config.provider || 'openai');
+  const [activeModel, setActiveModel] = useState(config.model || 'gpt-5.4');
+  const [evolutionMode, setEvolutionMode] = useState(config.evolutionMode || 'hitl');
+  const [optimizationPolicy, setOptimizationPolicy] = useState(config.optimizationPolicy || 'balanced');
 
   return (
-    <form action={updateConfig} className="glass-card p-6 lg:p-8 space-y-8 cyber-border">
+    <form action={updateConfig} className="glass-card p-6 lg:p-8 space-y-8 cyber-border relative">
       <div className="space-y-4">
         <h3 className="text-sm font-bold flex items-center gap-2 text-cyber-blue uppercase tracking-wider">
           <Settings size={16} /> LLM_PROVIDER_ROUTING
@@ -38,34 +42,35 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
             <label className="text-[10px] uppercase text-white/100 tracking-widest font-bold">
               Active Provider
             </label>
-            <select
+            <CyberSelect
               name="provider"
               value={activeProvider}
-              onChange={(e) => setActiveProvider(e.target.value)}
-              className="w-full cyber-select"
-            >
-              {Object.entries(PROVIDERS).map(([id, p]) => (
-                <option key={id} value={id}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => {
+                setActiveProvider(val);
+                const firstModel = PROVIDERS[val as keyof typeof PROVIDERS]?.models[0];
+                if (firstModel) setActiveModel(firstModel);
+              }}
+              options={Object.entries(PROVIDERS).map(([id, p]) => ({
+                value: id,
+                label: p.label,
+              }))}
+              className="w-full"
+            />
           </div>
           <div className="space-y-2">
             <label className="text-[10px] uppercase text-white/100 tracking-widest font-bold">
               Default Model ID
             </label>
-            <select
+            <CyberSelect
               name="model"
-              defaultValue={config.model}
-              className="w-full cyber-select font-mono"
-            >
-              {PROVIDERS[activeProvider as keyof typeof PROVIDERS]?.models.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
+              value={activeModel}
+              onChange={setActiveModel}
+              options={PROVIDERS[activeProvider as keyof typeof PROVIDERS]?.models.map((m) => ({
+                value: m,
+                label: m,
+              }))}
+              className="w-full"
+            />
           </div>
         </div>
       </div>
@@ -80,28 +85,32 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
             <label className="text-[10px] uppercase text-white/100 tracking-widest font-bold">
               Evolution Mode
             </label>
-            <select
+            <CyberSelect
               name="evolutionMode"
-              defaultValue={config.evolutionMode}
-              className="w-full cyber-select"
-            >
-              <option value="hitl">Human-in-the-Loop (Safe)</option>
-              <option value="auto">Fully Autonomous (Live)</option>
-            </select>
+              value={evolutionMode}
+              onChange={setEvolutionMode}
+              options={[
+                { value: 'hitl', label: 'Human-in-the-Loop (Safe)' },
+                { value: 'auto', label: 'Fully Autonomous (Live)' },
+              ]}
+              className="w-full"
+            />
           </div>
           <div className="space-y-2">
             <label className="text-[10px] uppercase text-white/100 tracking-widest font-bold">
               Optimization Policy
             </label>
-            <select
+            <CyberSelect
               name="optimizationPolicy"
-              defaultValue={config.optimizationPolicy}
-              className="w-full cyber-select"
-            >
-              <option value="aggressive">Aggressive (Velocity)</option>
-              <option value="balanced">Balanced (Stability)</option>
-              <option value="conservative">Conservative (Safety)</option>
-            </select>
+              value={optimizationPolicy}
+              onChange={setOptimizationPolicy}
+              options={[
+                { value: 'aggressive', label: 'Aggressive (Velocity)' },
+                { value: 'balanced', label: 'Balanced (Stability)' },
+                { value: 'conservative', label: 'Conservative (Safety)' },
+              ]}
+              className="w-full"
+            />
           </div>
           <div className="space-y-2">
             <label className="text-[10px] uppercase text-white/100 tracking-widest font-bold">

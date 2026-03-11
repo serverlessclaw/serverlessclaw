@@ -35,36 +35,3 @@ body {
   border-left: 2px solid var(--color-cyber-green);
 }
 
-/* Standardized Cyber Dropdown */
-.cyber-select {
-  appearance: none;
-  background-color: #000;
-  border: 1px solid var(--color-cyber-green);
-  border-radius: 4px;
-  color: #fff;
-  padding: 0.5rem 2.5rem 0.5rem 0.75rem;
-  font-size: 0.75rem;
-  font-family: var(--font-mono);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2300ffa3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  outline: none;
-}
-
-.cyber-select:hover {
-  background-color: rgba(0, 255, 163, 0.05);
-  box-shadow: 0 0 10px rgba(0, 255, 163, 0.15);
-}
-
-.cyber-select:focus {
-  border-color: var(--color-cyber-blue);
-  box-shadow: 0 0 15px rgba(0, 224, 255, 0.2);
-}
-
-.cyber-select option {
-  background-color: #000;
-  color: #fff;
-  padding: 10px;
-}
