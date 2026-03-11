@@ -116,7 +116,7 @@ Agents communicate asynchronously using **AWS EventBridge (The AgentBus)**. This
       |    EVENT_BUS      | <-------  (Observes CodeBuild)
       |   (AgentBus)      |
       |___________________|          (4) [ REFLECTOR_AGENT ]
-          |         |                 (Analyzes Convos, Signals)
+          |         |                 (Mechanical Audit via Traces)
           |         |
      (2) CODER_AGENT|                (5) [ PLANNER_AGENT ]
          (Writes Code)                (Designs STRATEGIC_PLAN)

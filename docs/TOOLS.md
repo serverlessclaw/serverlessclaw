@@ -17,14 +17,15 @@
 | `switch_model` | Updates active provider/model in DynamoDB (Hot Config) | — | ✅ |
 | `run_tests` | Executes project unit tests (vitest) | — | — |
 | `recall_knowledge` | Retrieves distilled facts/lessons from memory | — | — |
+| `list_agents` | Discovers available specialized agents in the system | — | — |
 
 ---
 
 ## Adding a New Tool
 
-1. Open `src/tools/index.ts`.
+1. Open `core/tools/index.ts`.
 2. Add an entry to the `tools` record following the `ITool` interface.
-3. If this should be available to a backbone agent by default, add it to their `tools` array in `src/lib/registry.ts`.
+3. If this should be available to a backbone agent by default, add it to their `tools` array in `core/lib/backbone.ts`.
 4. Run `validate_code` to check for regressions.
 5. Update the table above.
 6. Update `src/lib/tools.test.ts` to include the new tool name.

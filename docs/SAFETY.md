@@ -6,13 +6,13 @@
 
 | Guardrail | Where Implemented | Trigger |
 |-----------|-------------------|---------|
-| **Resource Labeling** | `src/tools/index.ts → file_write` | Any write to a protected file |
-| **Circuit Breaker** | `src/tools/index.ts → trigger_deployment` | > 5 deployments/day (UTC) |
-| **Self-Healing Loop** | `src/handlers/monitor.ts` | CodeBuild FAILED event |
-| **Dead Man's Switch** | `src/handlers/recovery.ts` | 15-min health probe failure |
-| **Pre-flight Validation** | `src/tools/index.ts → validate_code` | Called by Coder Agent after writes |
-| **Health Probe** | `src/handlers/health.ts` → `GET /health` | Called by SuperClaw after deployment |
-| **Rollback Signal** | `src/tools/index.ts → trigger_rollback` | Circuit breaker active or health failed |
+| **Resource Labeling** | `core/tools/index.ts → file_write` | Any write to a protected file |
+| **Circuit Breaker** | `core/tools/index.ts → trigger_deployment` | > 5 deployments/day (UTC) |
+| **Self-Healing Loop** | `core/handlers/monitor.ts` | CodeBuild FAILED event |
+| **Dead Man's Switch** | `core/handlers/recovery.ts` | 15-min health probe failure |
+| **Pre-flight Validation** | `core/tools/index.ts → validate_code` | Called by Coder Agent after writes |
+| **Health Probe** | `core/handlers/health.ts` → `GET /health` | Called by SuperClaw after deployment |
+| **Rollback Signal** | `core/tools/index.ts → trigger_rollback` | Circuit breaker active or health failed |
 | **Human-in-the-Loop** | SuperClaw system prompt | `MANUAL_APPROVAL_REQUIRED` returned |
 | **Dashboard Auth** | `dashboard/src/proxy.ts` | Unauthorized access to ClawCenter |
 
@@ -86,10 +86,11 @@ Writes to these files return `PERMISSION_DENIED` from `file_write`:
 
 ```
 sst.config.ts
-src/tools.ts
-src/agent.ts
+core/tools/index.ts
+core/agents/superclaw.ts
+core/lib/agent.ts
 buildspec.yml
-infra/bootstrap/**
+infra/**
 ```
 
 **Agent directive**: Surface the proposed change to the human as `MANUAL_APPROVAL_REQUIRED`.
@@ -98,7 +99,7 @@ infra/bootstrap/**
 
 ## Health Probe
 
-- **Endpoint**: `GET /health` (handled by `src/health.ts`)
+- **Endpoint**: `GET /health` (handled by `core/handlers/health.ts`)
 - **Checks**: DynamoDB connectivity, returns `deployCountToday`
 - **Response shape**:
   ```json
@@ -124,6 +125,6 @@ Returns `ROLLBACK_SUCCESSFUL` or `ROLLBACK_FAILED` (requires human intervention)
 
 ## Adding a New Guardrail
 
-1. Implement logic in `src/tools.ts` (or a new file).
-2. Add a unit test in `src/tools.circuit.test.ts` or a new `*.test.ts`.
+1. Implement logic in `core/tools/index.ts` (or a new file).
+2. Add a unit test in `core/tools/index.test.ts` or a new `*.test.ts`.
 3. Update this document and `INDEX.md`.

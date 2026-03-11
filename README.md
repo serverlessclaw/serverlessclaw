@@ -6,8 +6,8 @@
 
 ## 🧬 Core Philosophies
 
-### 1. Self-Evolving (Verified & Audited)
-The system is never static. Through the **Cognition Reflector**, **Strategic Planner**, **Coder**, and **QA Auditor** agents, Serverless Claw autonomously discovers gaps, designs plans, writes new tools, and modifies its own infrastructure.
+### 1. Git-Driven Dynamic Evolution
+As a serverless stack, the deployed infrastructure is immutable between releases, but the system's *capabilities* are never static. Through the **Cognition Reflector**, **Strategic Planner**, **Coder**, and **QA Auditor** agents, Serverless Claw autonomously discovers gaps and designs plans that result in verified git-commits and redeployments.
  Evolution follows a strict, verified lifecycle (**OPEN** → **PLANNED** → **PROGRESS** → **DEPLOYED** → **DONE**). No change is marked as complete until the **QA Auditor** verifies its real-world satisfaction in subsequent user interactions. **[Read more about the Evolutionary Lifecycle ↗](./docs/AGENTS.md#the-evolutionary-lifecycle-self-evolution-loop)**
 
 ### 2. Self-Healing & Resilient
