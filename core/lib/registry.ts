@@ -20,6 +20,9 @@ export class AgentRegistry {
       id: AgentType.MAIN,
       name: 'SuperClaw',
       systemPrompt: SUPERCLAW_SYSTEM_PROMPT,
+      description:
+        'SuperClaw. Processes input, retrieves long-term memory, and decides when to delegate tasks to spokes.',
+      icon: 'Bot',
       enabled: true,
       isBackbone: true,
       tools: ['dispatch_task', 'recall_knowledge', 'switch_model', 'check_health', 'manage_gap'],
@@ -35,7 +38,10 @@ export class AgentRegistry {
       2. PERSISTENCE: After a successful 'validate_code', you MUST call 'stage_changes' with the list of files you modified.
       3. PROTECTED FILES: If 'file_write' returns PERMISSION_DENIED, do NOT try to bypass it. 
       4. ATOMICITY: Do not leave the codebase in a broken state. 
-      5. DOCUMENTATION: Update relevant spoke in 'docs/' in the same step.`,
+      6. KEEP IT VERY CONCISE. It should be only an explanation without the plan.`,
+      description:
+        'Specialised agent that performs heavy lifting like writing code, modifying infra, and triggering builds.',
+      icon: 'Code',
       enabled: true,
       isBackbone: true,
       tools: ['file_write', 'validate_code', 'stage_changes', 'trigger_deployment', 'run_tests'],
@@ -54,6 +60,9 @@ export class AgentRegistry {
       OUTPUT: Return a VERIFICATION_REPORT summary.
       - If satisfied: State "VERIFICATION_SUCCESSFUL".
       - If not: State "REOPEN_REQUIRED" and explain why implementation failed or was incomplete.`,
+      description:
+        'Verification node. Audits recently deployed code to ensure it actually solves the intended capability gap.',
+      icon: 'FlaskConical',
       enabled: true,
       isBackbone: true,
       tools: ['recall_knowledge', 'check_health'],
@@ -67,6 +76,9 @@ export class AgentRegistry {
       1. FACTS: Verified technical or user-specific information.
       2. LESSONS: Tactical advice to avoid repeat mistakes.
       3. GAPS: Functional requirements that currently fail.`,
+      description:
+        'Cognitive audit node. Distills facts, lessons, and capability gaps from interaction traces.',
+      icon: 'Search',
       enabled: true,
       isBackbone: true,
       tools: ['recall_knowledge', 'manage_gap'],
@@ -77,6 +89,9 @@ export class AgentRegistry {
       systemPrompt: `You are the Strategic Planner.
       Your mission: Analyze the list of Capability Gaps and the Current System Index to prioritize evolution.
       Output a 'STRATEGIC_PLAN' that guides the Coder Agent.`,
+      description:
+        'Strategic intelligence node. Analyzes capability gaps and designs long-term evolution plans.',
+      icon: 'Brain',
       enabled: true,
       isBackbone: true,
       tools: ['recall_knowledge', 'manage_gap', 'dispatch_task'],

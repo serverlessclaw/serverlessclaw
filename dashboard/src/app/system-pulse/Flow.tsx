@@ -17,8 +17,9 @@ import '@xyflow/react/dist/style.css';
 import { 
   Bot, Zap, Code, ShieldCheck, Terminal, Cpu, 
   Database, Brain, Activity, Search, FlaskConical, 
-  Settings2, RefreshCw, Radio, Info
+  Settings2, RefreshCw, Radio, Info, Plus, Minus, Maximize, Lock
 } from 'lucide-react';
+import { useReactFlow } from '@xyflow/react';
 
 const nodeTypes = {
   agent: ({ data }: any) => (
@@ -105,7 +106,15 @@ const nodeTypes = {
   ),
 };
 
-const getAgentIcon = (id: string) => {
+const getAgentIcon = (id: string, iconName?: string) => {
+  if (iconName === 'Bot') return <Bot size={16} />;
+  if (iconName === 'Code') return <Code size={16} />;
+  if (iconName === 'Brain') return <Brain size={16} />;
+  if (iconName === 'Search') return <Search size={16} />;
+  if (iconName === 'Activity') return <Activity size={16} />;
+  if (iconName === 'FlaskConical') return <FlaskConical size={16} />;
+  
+  // Fallbacks if not provided in config
   if (id === 'main') return <Bot size={16} />;
   if (id === 'coder') return <Code size={16} />;
   if (id === 'strategic-planner') return <Brain size={16} />;
@@ -131,6 +140,7 @@ export default function SystemPulseFlow() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [loading, setLoading] = useState(true);
+  const { zoomIn, zoomOut, fitView } = useReactFlow();
 
   const fetchBlueprint = useCallback(async () => {
     try {
@@ -189,8 +199,8 @@ export default function SystemPulseFlow() {
             label: agent.name, 
             enabled: agent.enabled,
             type: isMain ? 'Logic_Core' : 'Neural_Worker',
-            icon: getAgentIcon(agent.id),
-            description: getAgentDescription(agent.id)
+            icon: getAgentIcon(agent.id, agent.icon),
+            description: agent.description || getAgentDescription(agent.id)
           },
         });
 
@@ -315,16 +325,39 @@ export default function SystemPulseFlow() {
           className="bg-dot-pattern"
         >
           <Background color="#222" gap={20} />
-          <Controls 
-            className="!bg-black !border !border-white/10 !fill-white !rounded-md overflow-hidden"
-            style={{ 
-              backgroundColor: '#000', 
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '4px' 
-            }}
-          />
         </ReactFlow>
       )}
+      
+      {/* Custom Themed Map Controls */}
+      <div className="absolute bottom-6 left-6 z-20 flex flex-col gap-2">
+          <div className="flex flex-col bg-black/80 border border-white/10 rounded-lg overflow-hidden backdrop-blur-md shadow-2xl">
+              <button 
+                onClick={() => zoomIn()}
+                className="p-3 text-white/60 hover:text-cyber-green hover:bg-white/5 transition-all border-b border-white/5 group pointer-events-auto"
+                title="Zoom In"
+              >
+                  <Plus size={18} className="group-active:scale-90 transition-transform" />
+              </button>
+              <button 
+                onClick={() => zoomOut()}
+                className="p-3 text-white/60 hover:text-cyber-green hover:bg-white/5 transition-all border-b border-white/5 group pointer-events-auto"
+                title="Zoom Out"
+              >
+                  <Minus size={18} className="group-active:scale-90 transition-transform" />
+              </button>
+              <button 
+                onClick={() => fitView()}
+                className="p-3 text-white/60 hover:text-cyber-green hover:bg-white/5 transition-all group pointer-events-auto"
+                title="Fit View"
+              >
+                  <Maximize size={18} className="group-active:scale-90 transition-transform" />
+              </button>
+          </div>
+          
+          <div className="bg-black/80 border border-white/10 rounded-lg p-3 backdrop-blur-md shadow-2xl flex items-center justify-center">
+              <Lock size={14} className="text-white/30" />
+          </div>
+      </div>
       
       <div className="absolute top-4 right-4 z-10 space-y-2 pointer-events-none">
           <div className="flex items-center gap-2 px-3 py-1 bg-black/80 border border-cyber-green/30 rounded-full">

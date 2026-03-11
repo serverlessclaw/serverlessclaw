@@ -2,6 +2,8 @@ export interface IAgentConfig {
   id: string;
   name: string;
   systemPrompt: string;
+  description?: string;
+  icon?: string;
   model?: string;
   tools?: string[]; // Names of tools this agent can use
   enabled: boolean;
