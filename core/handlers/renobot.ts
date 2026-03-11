@@ -98,7 +98,12 @@ I have verified the daily run schedule. Would you like me to run 'validate_code'
       if (mergeTool) {
         logger.info(`Auto-merging PR #${pr.number} as requested by Renobot policy.`);
         const result = await mergeTool.execute({ prNumber: pr.number, strategy: 'merge' });
-        await sendOutboundMessage('renobot.handler', adminChatId, `🤖 **Auto-Merge Result for PR #${pr.number}**:\n${result}`, [adminChatId]);
+        await sendOutboundMessage(
+          'renobot.handler',
+          adminChatId,
+          `🤖 **Auto-Merge Result for PR #${pr.number}**:\n${result}`,
+          [adminChatId]
+        );
       }
     }
   }
