@@ -61,6 +61,60 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
         await memory.updateGapStatus(gapId, GapStatus.DEPLOYED);
       }
 
+      // Record live infrastructure explicitly from the deployed bindings
+      const infraNodes = [];
+
+      // Known supported Infra Mappings
+      if (typedResource.AgentBus)
+        infraNodes.push({
+          id: 'bus',
+          type: 'bus',
+          label: 'EventBridge AgentBus',
+          description:
+            'AWS EventBridge. The asynchronous backbone that allows decoupled agents to communicate via event patterns.',
+        });
+      if (typedResource.MemoryTable)
+        infraNodes.push({
+          id: 'memory',
+          type: 'infra',
+          iconType: 'Database',
+          label: 'DynamoDB Memory',
+          description:
+            'Single-table DynamoDB. Stores session history, distilled knowledge, tactical lessons, and strategic gaps.',
+        });
+      if (typedResource.StagingBucket)
+        infraNodes.push({
+          id: 's3',
+          type: 'infra',
+          iconType: 'Cpu',
+          label: 'Staging Bucket',
+          description:
+            'Temporary storage for zipped source code before deployment. Shared between Coder Agent and CodeBuild.',
+        });
+
+      // Hardcoded implicit infra
+      infraNodes.push({
+        id: 'codebuild',
+        type: 'infra',
+        iconType: 'Terminal',
+        label: 'AWS CodeBuild',
+        description:
+          'Autonomous deployment engine. Runs "sst deploy" in isolated environments to update the system stack.',
+      });
+
+      try {
+        const { PutCommand } = await import('@aws-sdk/lib-dynamodb');
+        await db.send(
+          new PutCommand({
+            TableName: typedResource.ConfigTable.name,
+            Item: { key: 'infra_config', value: infraNodes },
+          })
+        );
+        logger.info('Infrastructure Configuration successfully saved to ConfigTable');
+      } catch (e) {
+        logger.error('Failed to save infra_config to ConfigTable', e);
+      }
+
       // Notify success
       await eventbridge.send(
         new PutEventsCommand({

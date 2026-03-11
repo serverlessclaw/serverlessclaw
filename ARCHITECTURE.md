@@ -132,7 +132,7 @@ Agents communicate asynchronously using **AWS EventBridge (The AgentBus)**. This
 
 - **Pattern**: The SuperClaw emits a `coder_task` or `custom_task` event. Specialized tasks go to backbone agents, while generic tasks are picked up by the **Worker Agent**.
 - **Discovery**: The `AgentRegistry` merges backbone logic with user-defined personas from DynamoDB.
-- **Visualization**: The `SYSTEM_PULSE` dashboard page provides an interactive node graph of this topography.
+- **Visualization**: The `SYSTEM_PULSE` dashboard page provides an interactive node graph, dynamically rendering both Agent structures and live Infrastructure state polled from DynamoDB (populated by the Monitor Agent post-deployment).
 
 ---
 

@@ -1,8 +1,16 @@
 import { Resource } from 'sst';
 import { NextResponse } from 'next/server';
+import { AgentRegistry } from '@claw/core/lib/registry';
 
 export async function GET() {
   try {
+    // 1. Try to load dynamic infra from DynamoDB (written by Monitor agent)
+    const dynamicInfra = await AgentRegistry.getInfraConfig();
+    if (dynamicInfra && dynamicInfra.length > 0) {
+      return NextResponse.json(dynamicInfra);
+    }
+
+    // 2. Fallback to reading static linked resources if DB is empty
     const infraNodes = [];
     
     // Process EventBus

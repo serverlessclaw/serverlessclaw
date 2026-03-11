@@ -152,12 +152,22 @@ export class AgentRegistry {
   }
 
   /**
+   * Retrieves infrastructure configurations from the ConfigTable.
+   *
+   * @returns A promise that resolves to an array of infrastructure node objects.
+   */
+  static async getInfraConfig(): Promise<unknown[]> {
+    const ddbConfig = await this.getRawConfig('infra_config');
+    return Array.isArray(ddbConfig) ? ddbConfig : [];
+  }
+
+  /**
    * Fetches a raw value from the ConfigTable by key.
    *
    * @param key - The key to fetch from the ConfigTable.
    * @returns A promise that resolves to the value associated with the key, or undefined.
    */
-  public static async getRawConfig(key: string): Promise<any> {
+  public static async getRawConfig(key: string): Promise<unknown> {
     try {
       const { Item } = await docClient.send(
         new GetCommand({

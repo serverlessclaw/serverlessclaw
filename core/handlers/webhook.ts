@@ -1,4 +1,4 @@
-import { APIGatewayProxyEventV2 } from 'aws-lambda';
+import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 import { sendOutboundMessage } from '../lib/outbound';
 import { logger } from '../lib/logger';
 
@@ -20,7 +20,7 @@ const lockManager = new DynamoLockManager();
  * @param event - The API Gateway event containing the Telegram update.
  * @returns A promise that resolves to an API Gateway response.
  */
-export const handler = async (event: APIGatewayProxyEventV2): Promise<any> => {
+export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
   logger.info('Received event:', JSON.stringify(event, null, 2));
 
   if (!event.body) {

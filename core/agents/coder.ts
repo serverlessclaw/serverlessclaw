@@ -2,7 +2,13 @@ import { DynamoMemory } from '../lib/memory';
 import { Agent } from '../lib/agent';
 import { ProviderManager } from '../lib/providers/index';
 import { getAgentTools } from '../tools/index';
-import { ReasoningProfile, GapStatus, EventType, SSTResource } from '../lib/types/index';
+import {
+  ReasoningProfile,
+  GapStatus,
+  EventType,
+  SSTResource,
+  MessageRole,
+} from '../lib/types/index';
 import { logger } from '../lib/logger';
 import { Resource } from 'sst';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
@@ -77,7 +83,7 @@ export const handler = async (event: {
       logger.info(`Deployment triggered (${buildId}). Mapping gaps to build for monitor.`);
       // Save the mapping so Build Monitor can transition them to DONE/FAILED
       await memory.addMessage(`BUILD_GAPS#${buildId}`, {
-        role: 'system' as any,
+        role: MessageRole.SYSTEM,
         content: JSON.stringify(metadata.gapIds),
       });
     } else {

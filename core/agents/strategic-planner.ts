@@ -63,6 +63,12 @@ interface PlannerMetadata {
   confidence: number;
 }
 
+interface PlannerResult {
+  gapId?: string;
+  plan?: string;
+  status?: string;
+}
+
 /**
  * Planner Agent handler. Analyzes capability gaps and generates strategic plans.
  *
@@ -75,7 +81,7 @@ export const handler = async (event: {
   contextUserId: string;
   metadata?: PlannerMetadata;
   isScheduledReview?: boolean;
-}): Promise<any> => {
+}): Promise<PlannerResult> => {
   logger.info('Planner Agent received task:', JSON.stringify(event, null, 2));
 
   const { gapId, details, contextUserId, metadata, isScheduledReview } = event;
