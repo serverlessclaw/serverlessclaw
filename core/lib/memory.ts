@@ -101,7 +101,7 @@ export class DynamoMemory implements IMemory {
   }
 
   async getAllGaps(
-    status: 'OPEN' | 'PLANNED' | 'DONE' | 'ARCHIVED' = 'OPEN'
+    status: 'OPEN' | 'PLANNED' | 'PROGRESS' | 'DONE' | 'FAILED' | 'ARCHIVED' = 'OPEN'
   ): Promise<MemoryInsight[]> {
     // In a real system, we would have a GSI for Category=GAP
     // For now, we query with the GAP# prefix using a Scan
@@ -169,7 +169,7 @@ export class DynamoMemory implements IMemory {
 
   async updateGapStatus(
     gapId: string,
-    status: 'OPEN' | 'PLANNED' | 'DONE' | 'ARCHIVED'
+    status: 'OPEN' | 'PLANNED' | 'PROGRESS' | 'DONE' | 'FAILED' | 'ARCHIVED'
   ): Promise<void> {
     const { UpdateCommand } = await import('@aws-sdk/lib-dynamodb');
     const numericId = gapId.replace('GAP#', '');
@@ -190,10 +190,12 @@ export class DynamoMemory implements IMemory {
 
     // Try to find the exact item if timestamp is not in gapId or if 0 doesn't work
     if (isNaN(parseInt(numericId, 10)) || command.input.Key?.timestamp === 0) {
-      const statuses: Array<'OPEN' | 'PLANNED' | 'DONE' | 'ARCHIVED'> = [
+      const statuses: Array<'OPEN' | 'PLANNED' | 'PROGRESS' | 'DONE' | 'FAILED' | 'ARCHIVED'> = [
         'OPEN',
         'PLANNED',
+        'PROGRESS',
         'DONE',
+        'FAILED',
         'ARCHIVED',
       ];
       for (const s of statuses) {
@@ -213,6 +215,7 @@ export class DynamoMemory implements IMemory {
       logger.error(`Error updating gap ${gapId} status to ${status}:`, error);
     }
   }
+
 
   async addLesson(userId: string, lesson: string, metadata?: InsightMetadata): Promise<void> {
     const command = new PutCommand({

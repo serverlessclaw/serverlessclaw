@@ -74,13 +74,13 @@ export function createAgents(ctx: AgentContext) {
     principal: 'scheduler.amazonaws.com',
   });
 
-  // 5. CodeBuild Event Rule
+  // 5. CodeBuild Event Rule (Monitor both success and failure for gap lifecycle)
   const buildRule = new aws.cloudwatch.EventRule('BuildRule', {
     eventPattern: JSON.stringify({
       source: ['aws.codebuild'],
       'detail-type': ['CodeBuild Build State Change'],
       detail: {
-        'build-status': ['FAILED'],
+        'build-status': ['FAILED', 'SUCCEEDED'],
         'project-name': [deployer.name],
       },
     }),
@@ -150,7 +150,7 @@ export function createAgents(ctx: AgentContext) {
     timeout: '600 seconds',
   });
   bus.subscribe('SystemBuildFailedSubscriber', eventHandler.arn, {
-    pattern: { detailType: [EventType.SYSTEM_BUILD_FAILED] },
+    pattern: { detailType: [EventType.SYSTEM_BUILD_FAILED, EventType.SYSTEM_BUILD_SUCCESS] },
   });
 
   // 6. Reflector Agent

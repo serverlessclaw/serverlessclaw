@@ -20,7 +20,9 @@ export enum AgentType {
 
 export enum EventType {
   CODER_TASK = 'coder_task',
+  CODER_TASK_COMPLETED = 'coder_task_completed',
   SYSTEM_BUILD_FAILED = 'system_build_failed',
+  SYSTEM_BUILD_SUCCESS = 'system_build_success',
   MONITOR_BUILD = 'monitor_build',
   RECOVERY_LOG = 'recovery_log',
   EVOLUTION_PLAN = 'evolution_plan',

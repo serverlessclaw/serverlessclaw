@@ -22,7 +22,15 @@ export const handler = async (event: {
     return;
   }
 
-  // 1. Process the task
+  // 1. Transition gaps to PROGRESS
+  if (metadata?.gapIds && metadata.gapIds.length > 0) {
+    logger.info(`Picking up task. Marking ${metadata.gapIds.length} gaps as PROGRESS.`);
+    for (const gapId of metadata.gapIds) {
+      await memory.updateGapStatus(gapId, 'PROGRESS');
+    }
+  }
+
+  // 2. Process the task
   // 2026 Optimization: Use 'thinking' profile for coding tasks
   const agentTools = await getAgentTools('coder');
   const agent = new Agent(
@@ -45,15 +53,27 @@ export const handler = async (event: {
 
   logger.info('Coder Agent completed task:', response);
 
-  // 2. Mark gaps as DONE if successful
-  // We assume success if the agent successfully staged changes and didn't hit a manual approval gate
+  // 2. Mark gaps as DONE if successful or map them to a build
   const isSuccess =
     response.includes('Successfully staged') && !response.includes('MANUAL_APPROVAL_REQUIRED');
 
   if (isSuccess && metadata?.gapIds && metadata.gapIds.length > 0) {
-    logger.info(`Task successful. Marking ${metadata.gapIds.length} gaps as DONE.`);
-    for (const gapId of metadata.gapIds) {
-      await memory.updateGapStatus(gapId, 'DONE');
+    // Check if a deployment was triggered
+    const buildMatch = response.match(/Build ID: ([a-zA-Z0-9:-]+)/);
+    const buildId = buildMatch ? buildMatch[1] : null;
+
+    if (buildId) {
+      logger.info(`Deployment triggered (${buildId}). Mapping gaps to build for monitor.`);
+      // Save the mapping so Build Monitor can transition them to DONE/FAILED
+      await memory.addMessage(`BUILD_GAPS#${buildId}`, {
+        role: 'system' as any,
+        content: JSON.stringify(metadata.gapIds),
+      });
+    } else {
+      logger.info(`Task successful without deployment. Marking ${metadata.gapIds.length} gaps as DONE.`);
+      for (const gapId of metadata.gapIds) {
+        await memory.updateGapStatus(gapId, 'DONE');
+      }
     }
   }
 

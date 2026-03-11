@@ -38,5 +38,13 @@ export const handler = async (event: {
 
     // Notify user via Notifier
     await sendOutboundMessage('events.handler', userId, responseText);
+  } else if (event['detail-type'] === EventType.SYSTEM_BUILD_SUCCESS) {
+    const message = `✅ **DEPLOYMENT SUCCESSFUL**
+Build ID: ${buildId}
+
+The system has successfully evolved and all planned gaps have been marked as DONE. 
+I am ready for further tasks or instructions.`;
+
+    await sendOutboundMessage('events.handler', userId, message);
   }
 };
