@@ -22,82 +22,85 @@ import {
 
 const nodeTypes = {
   agent: ({ data }: any) => (
-    <div className="px-4 py-3 shadow-lg rounded-md bg-black border border-cyber-green/50 min-w-[180px] max-w-[240px] relative overflow-hidden group transition-all duration-300">
-      <div className="absolute top-0 right-0 w-16 h-16 bg-cyber-green/5 rounded-full blur-xl -mr-8 -mt-8"></div>
-      <div className="flex items-center gap-3">
-        <div className={`p-2 rounded-sm shrink-0 ${data.enabled ? 'bg-cyber-green/10 text-cyber-green' : 'bg-red-500/10 text-red-500'}`}>
-          {data.icon}
-        </div>
-        <div className="overflow-hidden">
-          <div className={`text-[10px] font-bold uppercase tracking-tighter truncate ${data.enabled ? 'text-cyber-green' : 'text-red-500'}`}>
-            {data.type || 'NEURAL_NODE'} {!data.enabled && '[OFFLINE]'}
+    <div className="relative group transition-all duration-300 z-10 hover:z-50">
+      <div className="px-4 py-3 shadow-lg rounded-md bg-black border border-cyber-green/50 min-w-[180px] max-w-[240px] relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-16 h-16 bg-cyber-green/5 rounded-full blur-xl -mr-8 -mt-8"></div>
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-sm shrink-0 ${data.enabled ? 'bg-cyber-green/10 text-cyber-green' : 'bg-red-500/10 text-red-500'}`}>
+            {data.icon}
           </div>
-          <div className="text-sm font-bold text-white/90 break-words leading-tight">{data.label}</div>
+          <div className="overflow-hidden">
+            <div className={`text-[10px] font-bold uppercase tracking-tighter truncate ${data.enabled ? 'text-cyber-green' : 'text-red-500'}`}>
+              {data.type || 'NEURAL_NODE'} {!data.enabled && '[OFFLINE]'}
+            </div>
+            <div className="text-sm font-bold text-white/90 break-words leading-tight">{data.label}</div>
+          </div>
         </div>
+        <Handle type="target" position={Position.Top} className="!bg-cyber-green/50 !border-none !w-2 !h-2" />
+        <Handle type="source" position={Position.Bottom} className="!bg-cyber-green/50 !border-none !w-2 !h-2" />
       </div>
       
       {/* Description Tooltip Above on Hover */}
-      <div className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 w-[220px] bg-black border border-cyber-green/30 p-3 rounded-md shadow-[0_0_20px_rgba(0,255,163,0.1)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50 pointer-events-none after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-8 after:border-transparent after:border-t-black">
+      <div className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 w-[220px] bg-[#0a0a0a] border border-cyber-green/30 p-3 rounded-md shadow-[0_10px_30px_rgba(0,0,0,0.8)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-[100] pointer-events-none after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-8 after:border-transparent after:border-t-[#0a0a0a]">
         <div className="flex items-center gap-2 mb-1">
           <Info size={10} className="text-cyber-green" />
           <span className="text-[8px] font-bold text-cyber-green uppercase tracking-widest">Documentation</span>
         </div>
         <p className="text-[10px] text-white/80 leading-relaxed italic">{data.description}</p>
       </div>
-
-      <Handle type="target" position={Position.Top} className="!bg-cyber-green/50 !border-none !w-2 !h-2" />
-      <Handle type="source" position={Position.Bottom} className="!bg-cyber-green/50 !border-none !w-2 !h-2" />
     </div>
   ),
   bus: ({ data }: any) => (
-    <div className="px-4 py-2 shadow-lg rounded-md bg-black border border-orange-500/50 min-w-[220px] text-center relative overflow-hidden group transition-all duration-300">
-        <div className="absolute inset-0 bg-orange-500/5 animate-pulse"></div>
-        <div className="text-[8px] font-bold text-orange-500 uppercase tracking-[0.3em] mb-1 relative z-10">Central_Orchestrator</div>
-        <div className="text-xs font-bold text-white flex items-center justify-center gap-2 relative z-10">
-            <Zap size={14} className="text-orange-500" /> {data.label}
-        </div>
-
-        {/* Description Tooltip Above on Hover */}
-        <div className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 w-[240px] bg-black border border-orange-500/30 p-3 rounded-md shadow-[0_0_20px_rgba(249,115,22,0.1)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50 pointer-events-none text-left after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-8 after:border-transparent after:border-t-black">
-          <div className="flex items-center gap-2 mb-1">
-            <Info size={10} className="text-orange-500" />
-            <span className="text-[8px] font-bold text-orange-500 uppercase tracking-widest">Protocol_Info</span>
+    <div className="relative group transition-all duration-300 z-10 hover:z-50">
+      <div className="px-4 py-2 shadow-lg rounded-md bg-black border border-orange-500/50 min-w-[220px] text-center relative overflow-hidden">
+          <div className="absolute inset-0 bg-orange-500/5 animate-pulse"></div>
+          <div className="text-[8px] font-bold text-orange-500 uppercase tracking-[0.3em] mb-1 relative z-10">Central_Orchestrator</div>
+          <div className="text-xs font-bold text-white flex items-center justify-center gap-2 relative z-10">
+              <Zap size={14} className="text-orange-500" /> {data.label}
           </div>
-          <p className="text-[10px] text-white/80 leading-relaxed italic">{data.description}</p>
-        </div>
-
-        <Handle type="target" position={Position.Top} className="!bg-orange-500/50" />
-        <Handle type="source" position={Position.Bottom} id="bottom" className="!bg-orange-500/50" />
-        <Handle type="source" position={Position.Left} id="left" className="!bg-orange-500/50" />
-        <Handle type="source" position={Position.Right} id="right" className="!bg-orange-500/50" />
-    </div>
-  ),
-  infra: ({ data }: any) => (
-    <div className="px-4 py-2 shadow-lg rounded-md bg-[#0a0a0a] border border-cyber-blue/30 min-w-[150px] relative overflow-hidden group transition-all duration-300">
-      <div className="absolute top-0 right-0 w-12 h-12 bg-cyber-blue/5 rounded-full blur-lg -mr-6 -mt-6"></div>
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-cyber-blue/10 rounded-sm text-cyber-blue">
-          {data.icon}
-        </div>
-        <div>
-          <div className="text-[10px] font-bold text-cyber-blue uppercase tracking-tighter">
-            {data.type || 'INFRA_SPOKE'}
-          </div>
-          <div className="text-sm font-bold text-white/90">{data.label}</div>
-        </div>
+          <Handle type="target" position={Position.Top} className="!bg-orange-500/50" />
+          <Handle type="source" position={Position.Bottom} id="bottom" className="!bg-orange-500/50" />
+          <Handle type="source" position={Position.Left} id="left" className="!bg-orange-500/50" />
+          <Handle type="source" position={Position.Right} id="right" className="!bg-orange-500/50" />
       </div>
 
       {/* Description Tooltip Above on Hover */}
-      <div className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 w-[220px] bg-black border border-cyber-blue/30 p-3 rounded-md shadow-[0_0_20px_rgba(0,224,255,0.1)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50 pointer-events-none after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-8 after:border-transparent after:border-t-black">
+      <div className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 w-[240px] bg-[#0a0a0a] border border-orange-500/30 p-3 rounded-md shadow-[0_10px_30px_rgba(0,0,0,0.8)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-[100] pointer-events-none text-left after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-8 after:border-transparent after:border-t-[#0a0a0a]">
+        <div className="flex items-center gap-2 mb-1">
+          <Info size={10} className="text-orange-500" />
+          <span className="text-[8px] font-bold text-orange-500 uppercase tracking-widest">Protocol_Info</span>
+        </div>
+        <p className="text-[10px] text-white/80 leading-relaxed italic">{data.description}</p>
+      </div>
+    </div>
+  ),
+  infra: ({ data }: any) => (
+    <div className="relative group transition-all duration-300 z-10 hover:z-50">
+      <div className="px-4 py-2 shadow-lg rounded-md bg-[#0a0a0a] border border-cyber-blue/30 min-w-[150px] relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-12 h-12 bg-cyber-blue/5 rounded-full blur-lg -mr-6 -mt-6"></div>
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-cyber-blue/10 rounded-sm text-cyber-blue">
+            {data.icon}
+          </div>
+          <div>
+            <div className="text-[10px] font-bold text-cyber-blue uppercase tracking-tighter">
+              {data.type || 'INFRA_SPOKE'}
+            </div>
+            <div className="text-sm font-bold text-white/90">{data.label}</div>
+          </div>
+        </div>
+        <Handle type="target" position={Position.Top} className="!bg-cyber-blue/50" />
+        <Handle type="source" position={Position.Bottom} className="!bg-cyber-blue/50" />
+      </div>
+
+      {/* Description Tooltip Above on Hover */}
+      <div className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 w-[220px] bg-[#0a0a0a] border border-cyber-blue/30 p-3 rounded-md shadow-[0_10px_30px_rgba(0,0,0,0.8)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-[100] pointer-events-none after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-8 after:border-transparent after:border-t-[#0a0a0a]">
         <div className="flex items-center gap-2 mb-1">
           <Info size={10} className="text-cyber-blue" />
           <span className="text-[8px] font-bold text-cyber-blue uppercase tracking-widest">Resource_Spec</span>
         </div>
         <p className="text-[10px] text-white/80 leading-relaxed italic">{data.description}</p>
       </div>
-
-      <Handle type="target" position={Position.Top} className="!bg-cyber-blue/50" />
-      <Handle type="source" position={Position.Bottom} className="!bg-cyber-blue/50" />
     </div>
   ),
 };
