@@ -1,385 +1,186 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useMemo } from 'react';
 import {
   ReactFlow,
   Background,
   Controls,
   Handle,
   Position,
-  Node,
+  NodeProps,
   Edge,
   MarkerType,
-  useNodesState,
-  useEdgesState,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { 
-  Bot, Zap, Code, ShieldCheck, Terminal, Cpu, 
-  Database, Brain, Activity, Search, FlaskConical, 
-  Settings2, RefreshCw, Radio, Info, Plus, Minus, Maximize, Lock
-} from 'lucide-react';
-import { useReactFlow, ReactFlowProvider } from '@xyflow/react';
+import { Zap, Bot, Database, Server, Info, Terminal, LayoutDashboard } from 'lucide-react';
+import { THEME } from '@/lib/theme';
+
+// --- Custom Node Components ---
+
+const AgentNode = ({ data }: NodeProps) => (
+  <div className={`px-4 py-3 shadow-[0_0_20px_rgba(0,224,255,0.1)] rounded-sm bg-black border border-cyber-blue/40 min-w-[180px] group transition-all hover:border-cyber-blue hover:shadow-[0_0_30px_rgba(0,224,255,0.2)]`}>
+    <Handle type="target" position={Position.Top} className="!bg-cyber-blue/50" />
+    <div className="flex items-center gap-3">
+      <div className="p-2 rounded bg-cyber-blue/10 text-cyber-blue">
+        <Bot size={16} />
+      </div>
+      <div className="text-left">
+        <div className="text-[8px] font-bold text-cyber-blue uppercase tracking-widest opacity-70 mb-0.5">Neural_Node</div>
+        <div className="text-[11px] font-bold text-white/90">{data.label as string}</div>
+      </div>
+    </div>
+    <Handle type="source" position={Position.Bottom} className="!bg-cyber-blue/50" />
+    
+    {/* Tooltip on hover */}
+    <div className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 w-[200px] bg-[#0a0a0a] border border-white/10 p-2 rounded-md shadow-[0_10px_30px_rgba(0,0,0,0.8)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50 pointer-events-none text-left">
+        <p className="text-[10px] text-white/70 italic leading-relaxed">
+            {data.description as string}
+        </p>
+    </div>
+  </div>
+);
+
+const CentralNode = ({ data }: NodeProps) => (
+  <div className="group relative">
+      <div className={`px-4 py-2 shadow-lg rounded-md bg-black border border-${THEME.COLORS.INTEL}/50 min-w-[220px] text-center relative overflow-hidden`}>
+          <div className={`absolute inset-0 bg-${THEME.COLORS.INTEL}/5 animate-pulse`}></div>
+          <div className={`text-[8px] font-bold text-${THEME.COLORS.INTEL} uppercase tracking-[0.3em] mb-1 relative z-10`}>Central_Orchestrator</div>
+          <div className="text-sm font-black text-white tracking-tighter flex items-center justify-center gap-2 relative z-10">
+              <Zap size={14} className={`text-${THEME.COLORS.INTEL}`} /> {data.label as string}
+          </div>
+          <Handle type="target" position={Position.Top} className={`!bg-${THEME.COLORS.INTEL}/50`} />
+          <Handle type="source" position={Position.Bottom} id="bottom" className={`!bg-${THEME.COLORS.INTEL}/50`} />
+          <Handle type="source" position={Position.Left} id="left" className={`!bg-${THEME.COLORS.INTEL}/50`} />
+          <Handle type="source" position={Position.Right} id="right" className={`!bg-${THEME.COLORS.INTEL}/50`} />
+      </div>
+
+      {/* Expanded Details on Hover */}
+      <div className={`absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 w-[240px] bg-[#0a0a0a] border border-${THEME.COLORS.INTEL}/30 p-3 rounded-md shadow-[0_10px_30px_rgba(0,0,0,0.8)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-[100] pointer-events-none text-left after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-8 after:border-transparent after:border-t-[#0a0a0a]`}>
+        <div className="flex items-center gap-2 mb-2">
+          <Info size={10} className={`text-${THEME.COLORS.INTEL}`} />
+          <span className={`text-[8px] font-bold text-${THEME.COLORS.INTEL} uppercase tracking-widest`}>Protocol_Info</span>
+        </div>
+        <p className="text-[10px] text-white/70 leading-relaxed">
+            {data.description as string}
+        </p>
+      </div>
+  </div>
+);
+
+const InfraNode = ({ data }: NodeProps) => {
+    const Icon = data.iconType === 'Terminal' ? Terminal : data.iconType === 'Dashboard' ? LayoutDashboard : Database;
+    return (
+        <div className="px-4 py-2 rounded bg-black border border-white/10 min-w-[160px] flex items-center gap-3">
+            <Handle type="target" position={Position.Top} className="!bg-white/20" />
+            <div className="p-1.5 rounded bg-white/5 text-white/40">
+                <Icon size={14} />
+            </div>
+            <div className="text-left">
+                <div className="text-[7px] font-bold text-white/30 uppercase tracking-widest">Hardware_Node</div>
+                <div className="text-[10px] font-bold text-white/60">{data.label as string}</div>
+            </div>
+            <Handle type="source" position={Position.Bottom} className="!bg-white/20" />
+        </div>
+    );
+};
+
+const BusNode = ({ data }: NodeProps) => (
+  <div className="px-6 py-2 shadow-[0_0_15px_rgba(0,255,163,0.1)] rounded-full bg-black border border-cyber-green/30 min-w-[140px] text-center">
+    <Handle type="target" position={Position.Top} className="!bg-cyber-green/50" />
+    <div className="text-[7px] font-bold text-cyber-green uppercase tracking-[0.4em] mb-0.5">High_Speed_Bus</div>
+    <div className="text-[10px] font-bold text-white/80">{data.label as string}</div>
+    <Handle type="source" position={Position.Bottom} id="out" className="!bg-cyber-green/50" />
+    <Handle type="source" position={Position.Left} id="out-left" className="!bg-cyber-green/50" />
+    <Handle type="source" position={Position.Right} id="out-right" className="!bg-cyber-green/50" />
+  </div>
+);
 
 const nodeTypes = {
-  agent: ({ data }: any) => (
-    <div className="relative group transition-all duration-300 z-10 hover:z-50">
-      <div className="px-4 py-3 shadow-lg rounded-md bg-black border border-cyber-green/50 min-w-[180px] max-w-[240px] relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-16 h-16 bg-cyber-green/5 rounded-full blur-xl -mr-8 -mt-8"></div>
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-sm shrink-0 ${data.enabled ? 'bg-cyber-green/10 text-cyber-green' : 'bg-red-500/10 text-red-500'}`}>
-            {data.icon}
-          </div>
-          <div className="overflow-hidden">
-            <div className={`text-[10px] font-bold uppercase tracking-tighter truncate ${data.enabled ? 'text-cyber-green' : 'text-red-500'}`}>
-              {data.type || 'NEURAL_NODE'} {!data.enabled && '[OFFLINE]'}
-            </div>
-            <div className="text-sm font-bold text-white/90 break-words leading-tight">{data.label}</div>
-          </div>
-        </div>
-        <Handle type="target" position={Position.Top} className="!bg-cyber-green/50 !border-none !w-2 !h-2" />
-        <Handle type="source" position={Position.Bottom} className="!bg-cyber-green/50 !border-none !w-2 !h-2" />
-      </div>
-      
-      {/* Description Tooltip Above on Hover */}
-      <div className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 w-[220px] bg-[#0a0a0a] border border-cyber-green/30 p-3 rounded-md shadow-[0_10px_30px_rgba(0,0,0,0.8)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-[100] pointer-events-none after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-8 after:border-transparent after:border-t-[#0a0a0a]">
-        <div className="flex items-center gap-2 mb-1">
-          <Info size={10} className="text-cyber-green" />
-          <span className="text-[8px] font-bold text-cyber-green uppercase tracking-widest">Documentation</span>
-        </div>
-        <p className="text-[10px] text-white/100 leading-relaxed italic">{data.description}</p>
-      </div>
-    </div>
-  ),
-  bus: ({ data }: any) => (
-    <div className="relative group transition-all duration-300 z-10 hover:z-50">
-      <div className="px-4 py-2 shadow-lg rounded-md bg-black border border-orange-500/50 min-w-[220px] text-center relative overflow-hidden">
-          <div className="absolute inset-0 bg-orange-500/5 animate-pulse"></div>
-          <div className="text-[8px] font-bold text-orange-500 uppercase tracking-[0.3em] mb-1 relative z-10">Central_Orchestrator</div>
-          <div className="text-xs font-bold text-white flex items-center justify-center gap-2 relative z-10">
-              <Zap size={14} className="text-orange-500" /> {data.label}
-          </div>
-          <Handle type="target" position={Position.Top} className="!bg-orange-500/50" />
-          <Handle type="source" position={Position.Bottom} id="bottom" className="!bg-orange-500/50" />
-          <Handle type="source" position={Position.Left} id="left" className="!bg-orange-500/50" />
-          <Handle type="source" position={Position.Right} id="right" className="!bg-orange-500/50" />
-      </div>
-
-      {/* Description Tooltip Above on Hover */}
-      <div className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 w-[240px] bg-[#0a0a0a] border border-orange-500/30 p-3 rounded-md shadow-[0_10px_30px_rgba(0,0,0,0.8)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-[100] pointer-events-none text-left after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-8 after:border-transparent after:border-t-[#0a0a0a]">
-        <div className="flex items-center gap-2 mb-1">
-          <Info size={10} className="text-orange-500" />
-          <span className="text-[8px] font-bold text-orange-500 uppercase tracking-widest">Protocol_Info</span>
-        </div>
-        <p className="text-[10px] text-white/100 leading-relaxed italic">{data.description}</p>
-      </div>
-    </div>
-  ),
-  infra: ({ data }: any) => (
-    <div className="relative group transition-all duration-300 z-10 hover:z-50">
-      <div className="px-4 py-2 shadow-lg rounded-md bg-[#0a0a0a] border border-cyber-blue/30 min-w-[150px] relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-12 h-12 bg-cyber-blue/5 rounded-full blur-lg -mr-6 -mt-6"></div>
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-cyber-blue/10 rounded-sm text-cyber-blue">
-            {data.icon}
-          </div>
-          <div>
-            <div className="text-[10px] font-bold text-cyber-blue uppercase tracking-tighter">
-              {data.type || 'INFRA_SPOKE'}
-            </div>
-            <div className="text-sm font-bold text-white/90">{data.label}</div>
-          </div>
-        </div>
-        <Handle type="target" position={Position.Top} className="!bg-cyber-blue/50" />
-        <Handle type="source" position={Position.Bottom} className="!bg-cyber-blue/50" />
-      </div>
-
-      {/* Description Tooltip Above on Hover */}
-      <div className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 w-[220px] bg-[#0a0a0a] border border-cyber-blue/30 p-3 rounded-md shadow-[0_10px_30px_rgba(0,0,0,0.8)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-[100] pointer-events-none after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-8 after:border-transparent after:border-t-[#0a0a0a]">
-        <div className="flex items-center gap-2 mb-1">
-          <Info size={10} className="text-cyber-blue" />
-          <span className="text-[8px] font-bold text-cyber-blue uppercase tracking-widest">Resource_Spec</span>
-        </div>
-        <p className="text-[10px] text-white/100 leading-relaxed italic">{data.description}</p>
-      </div>
-    </div>
-  ),
+  central: CentralNode,
+  agent: AgentNode,
+  infra: InfraNode,
+  bus: BusNode,
 };
 
-const getAgentIcon = (id: string, iconName?: string) => {
-  if (iconName === 'Bot') return <Bot size={16} />;
-  if (iconName === 'Code') return <Code size={16} />;
-  if (iconName === 'Brain') return <Brain size={16} />;
-  if (iconName === 'Search') return <Search size={16} />;
-  if (iconName === 'Activity') return <Activity size={16} />;
-  if (iconName === 'FlaskConical') return <FlaskConical size={16} />;
-  
-  // Fallbacks if not provided in config
-  if (id === 'main') return <Bot size={16} />;
-  if (id === 'coder') return <Code size={16} />;
-  if (id === 'strategic-planner') return <Brain size={16} />;
-  if (id === 'cognition-reflector') return <Search size={16} />;
-  if (id === 'monitor') return <Activity size={16} />;
-  if (id === 'qa') return <FlaskConical size={16} />;
-  return <Settings2 size={16} />;
-};
+// --- Initial Nodes & Edges ---
 
-const getAgentDescription = (id: string) => {
-  const descMap: Record<string, string> = {
-    'main': 'SuperClaw. Processes input, retrieves long-term memory, and decides when to delegate tasks to spokes.',
-    'coder': 'Specialised agent that performs heavy lifting like writing code, modifying infra, and triggering builds.',
-    'strategic-planner': 'Strategic intelligence node. Analyzes capability gaps and designs long-term evolution plans.',
-    'cognition-reflector': 'Cognitive audit node. Distills facts, lessons, and capability gaps from interaction traces.',
-    'monitor': 'Real-time observability node. Watches AWS CodeBuild events and triggers fix tasks on failure.',
-    'qa': 'Verification node. Audits recently deployed code to ensure it actually solves the intended capability gap.',
-  };
-  return descMap[id] || 'Neural spoke for dynamic task execution and decentralized intelligence.';
-};
+const initialNodes = [
+  {
+    id: 'superclaw',
+    type: 'central',
+    position: { x: 250, y: 0 },
+    data: { 
+        label: 'SuperClaw',
+        description: 'Primary decision engine and task orchestrator. Dispatches logic to specialized agents via the AgentBus.'
+    },
+  },
+  {
+    id: 'bus',
+    type: 'bus',
+    position: { x: 280, y: 150 },
+    data: { label: 'AgentBus' },
+  },
+  {
+    id: 'memory',
+    type: 'infra',
+    position: { x: 0, y: 100 },
+    data: { label: 'MemoryTable', description: 'DynamoDB cluster storing long-term memory and capability gaps.' },
+  },
+  {
+    id: 'coder',
+    type: 'agent',
+    position: { x: 50, y: 300 },
+    data: { label: 'Coder Agent', description: 'Implements code changes and infrastructure updates autonomously.' },
+  },
+  {
+    id: 'planner',
+    type: 'agent',
+    position: { x: 280, y: 300 },
+    data: { label: 'Strategic Planner', description: 'Analyzes gaps and designs multi-step evolution plans.' },
+  },
+  {
+    id: 'reflector',
+    type: 'agent',
+    position: { x: 510, y: 300 },
+    data: { label: 'Cognition Reflector', description: 'Extracts facts and lessons from raw interaction traces.' },
+  },
+  {
+    id: 'codebuild',
+    type: 'infra',
+    position: { x: 50, y: 450 },
+    data: { 
+        iconType: 'Terminal', 
+        label: 'AWS CodeBuild', 
+        description: 'Execution environment for "sst deploy" and automated tests.' 
+    },
+  },
+];
 
-export function FlowContent() {
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-  const [loading, setLoading] = useState(true);
-  const { zoomIn, zoomOut, fitView } = useReactFlow();
+const initialEdges: Edge[] = [
+  { id: 'e1-2', source: 'superclaw', target: 'bus', sourceHandle: 'bottom', animated: true, style: { stroke: '#00ffa3' } },
+  { id: 'e-mem', source: 'superclaw', target: 'memory', sourceHandle: 'left', animated: true, style: { stroke: '#00e0ff' } },
+  { id: 'e-bus-coder', source: 'bus', target: 'coder', sourceHandle: 'out-left', markerEnd: { type: MarkerType.ArrowClosed, color: '#00ffa3' } },
+  { id: 'e-bus-planner', source: 'bus', target: 'planner', sourceHandle: 'out', markerEnd: { type: MarkerType.ArrowClosed, color: '#00ffa3' } },
+  { id: 'e-bus-reflector', source: 'bus', target: 'reflector', sourceHandle: 'out-right', markerEnd: { type: MarkerType.ArrowClosed, color: '#00ffa3' } },
+  { id: 'e-coder-build', source: 'coder', target: 'codebuild', animated: true },
+];
 
-  const fetchBlueprint = useCallback(async () => {
-    try {
-      const [agentsRes, infraRes] = await Promise.all([
-        fetch('/api/agents'),
-        fetch('/api/infrastructure')
-      ]);
-      const agents: Record<string, any> = await agentsRes.json();
-      const infraData: any[] = await infraRes.json();
-      
-      const newNodes: Node[] = [];
-      const newEdges: Edge[] = [];
-
-      // 1. Add Infrastructure Core
-      infraData.forEach((infra, index) => {
-        let xPos = 400;
-        let yPos = 500;
-        
-        // Use known positions for core infra, layout others dynamically below
-        if (infra.id === 'bus') { xPos = 400; yPos = 100; }
-        else if (infra.id === 'memory') { xPos = 100; yPos = 500; }
-        else if (infra.id === 'codebuild') { xPos = 400; yPos = 500; }
-        else if (infra.id === 's3') { xPos = 700; yPos = 500; }
-        else { xPos = 100 + (index * 150); yPos = 700; }
-
-        let icon = undefined;
-        if (infra.iconType === 'Database') icon = <Database size={16} />;
-        else if (infra.iconType === 'Terminal') icon = <Terminal size={16} />;
-        else if (infra.iconType === 'Cpu') icon = <Cpu size={16} />;
-
-        newNodes.push({
-          id: infra.id,
-          type: infra.type,
-          position: { x: xPos, y: yPos },
-          data: { 
-            label: infra.label,
-            description: infra.description,
-            icon,
-            type: infra.id === 'bus' ? undefined : (infra.id === 'memory' ? 'DATA_STORE' : (infra.id === 's3' ? 'STORAGE' : 'COMPUTE'))
-          },
-        });
-      });
-
-      // 2. Map Agents
-      const agentList = Object.values(agents);
-      agentList.forEach((agent, index) => {
-        // Dynamic layout spacing
-        const xPos = 100 + (index * 220);
-        const isMain = agent.id === 'main';
-        
-        newNodes.push({
-          id: agent.id,
-          type: 'agent',
-          position: { x: isMain ? 425 : xPos, y: isMain ? -50 : 300 },
-          data: { 
-            label: agent.name, 
-            enabled: agent.enabled,
-            type: isMain ? 'Logic_Core' : 'Neural_Worker',
-            icon: getAgentIcon(agent.id, agent.icon),
-            description: agent.description || getAgentDescription(agent.id)
-          },
-        });
-
-        // MANDATORY: Every agent is connected to the Bus (Input/Output)
-        if (isMain) {
-          newEdges.push({
-            id: `main-bus`,
-            source: 'main',
-            target: 'bus',
-            animated: agent.enabled,
-            label: 'ORCHESTRATE',
-            labelStyle: { fill: '#00ffa3', fontSize: 10, fontWeight: 'bold' },
-            labelBgStyle: { fill: 'transparent', strokeWidth: 0 },
-            labelBgPadding: [0, 0],
-            style: { stroke: '#00ffa3', strokeWidth: 2 },
-            markerEnd: { type: MarkerType.ArrowClosed, color: '#00ffa3' }
-          });
-        } else {
-          newEdges.push({
-            id: `bus-${agent.id}`,
-            source: 'bus',
-            target: agent.id,
-            animated: agent.enabled,
-            label: 'SIGNAL',
-            labelStyle: { fill: agent.enabled ? '#f97316' : '#444', fontSize: 8, fontWeight: 'bold' },
-            labelBgStyle: { fill: 'transparent', strokeWidth: 0 },
-            labelBgPadding: [0, 0],
-            style: { stroke: agent.enabled ? '#f97316' : '#444' },
-            markerEnd: { type: MarkerType.ArrowClosed, color: agent.enabled ? '#f97316' : '#444' }
-          });
-        }
-
-        // INFRASTRUCTURE CONNECTIONS
-        if (agent.enabled) {
-          // Connections based on ID
-          if (['strategic-planner', 'cognition-reflector', 'qa', 'main', 'coder'].includes(agent.id)) {
-            newEdges.push({ 
-              id: `${agent.id}-mem`, 
-              source: agent.id, 
-              target: 'memory', 
-              style: { stroke: '#00f3ff', strokeDasharray: '5,5', opacity: 0.3 } 
-            });
-          }
-
-          if (agent.id === 'coder') {
-            newEdges.push({ 
-              id: 'coder-s3', 
-              source: 'coder', 
-              target: 's3', 
-              label: 'UPLOAD', 
-              labelStyle: { fill: '#00f3ff', fontSize: 8, fontWeight: 'bold' }, 
-              labelBgStyle: { fill: 'transparent', strokeWidth: 0 },
-              labelBgPadding: [0, 0],
-              style: { stroke: '#00f3ff' } 
-            });
-            newEdges.push({ 
-              id: 'coder-build', 
-              source: 'coder', 
-              target: 'codebuild', 
-              label: 'TRIGGER', 
-              labelStyle: { fill: '#00f3ff', fontSize: 8, fontWeight: 'bold' }, 
-              labelBgStyle: { fill: 'transparent', strokeWidth: 0 },
-              labelBgPadding: [0, 0],
-              style: { stroke: '#00f3ff', strokeDasharray: '2,2' } 
-            });
-          }
-          if (agent.id === 'monitor') {
-            newEdges.push({ 
-              id: 'monitor-build', 
-              source: 'monitor', 
-              target: 'codebuild', 
-              label: 'WATCH', 
-              labelStyle: { fill: '#00f3ff', fontSize: 8, fontWeight: 'bold' }, 
-              labelBgStyle: { fill: 'transparent', strokeWidth: 0 },
-              labelBgPadding: [0, 0],
-              style: { stroke: '#00f3ff' } 
-            });
-          }
-        }
-      });
-
-      // Add edge between Infra components
-      newEdges.push({
-        id: 's3-codebuild',
-        source: 's3',
-        target: 'codebuild',
-        label: 'SOURCE_PULL',
-        labelStyle: { fill: '#00f3ff', fontSize: 7, fontWeight: 'bold' },
-        labelBgStyle: { fill: 'transparent', strokeWidth: 0 },
-        labelBgPadding: [0, 0],
-        style: { stroke: '#00f3ff', opacity: 0.4 }
-      });
-
-      setNodes(newNodes);
-      setEdges(newEdges);
-      setLoading(false);
-    } catch (e) {
-      console.error('Failed to fetch system blueprint:', e);
-      setLoading(false);
-    }
-  }, [setNodes, setEdges]);
-
-  useEffect(() => { fetchBlueprint(); }, [fetchBlueprint]);
+export default function Flow() {
+  const nodes = useMemo(() => initialNodes, []);
+  const edges = useMemo(() => initialEdges, []);
 
   return (
-    <div className="h-full w-full bg-[#050505] rounded-lg border border-white/5 relative overflow-hidden">
-      {loading ? (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-4">
-            <RefreshCw size={32} className="text-cyber-green animate-spin" />
-            <div className="text-xs font-bold text-cyber-green animate-pulse tracking-[0.3em]">SYNCHRONIZING_NEURAL_MAP...</div>
-          </div>
-        </div>
-      ) : (
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          nodeTypes={nodeTypes}
-          fitView
-          className="bg-dot-pattern"
-        >
-          <Background color="#222" gap={20} />
-        </ReactFlow>
-      )}
-      
-      {/* Custom Themed Map Controls */}
-      <div className="absolute bottom-6 left-6 z-20 flex flex-col gap-2">
-          <div className="flex flex-col bg-black/80 border border-white/10 rounded-lg overflow-hidden backdrop-blur-md shadow-2xl">
-              <button 
-                onClick={() => zoomIn()}
-                className="p-3 text-white/60 hover:text-cyber-green hover:bg-white/5 transition-all border-b border-white/5 group pointer-events-auto"
-                title="Zoom In"
-              >
-                  <Plus size={18} className="group-active:scale-90 transition-transform" />
-              </button>
-              <button 
-                onClick={() => zoomOut()}
-                className="p-3 text-white/60 hover:text-cyber-green hover:bg-white/5 transition-all border-b border-white/5 group pointer-events-auto"
-                title="Zoom Out"
-              >
-                  <Minus size={18} className="group-active:scale-90 transition-transform" />
-              </button>
-              <button 
-                onClick={() => fitView()}
-                className="p-3 text-white/60 hover:text-cyber-green hover:bg-white/5 transition-all group pointer-events-auto"
-                title="Fit View"
-              >
-                  <Maximize size={18} className="group-active:scale-90 transition-transform" />
-              </button>
-          </div>
-          
-          <div className="bg-black/80 border border-white/10 rounded-lg p-3 backdrop-blur-md shadow-2xl flex items-center justify-center">
-              <Lock size={14} className="text-white/30" />
-          </div>
-      </div>
-      
-      <div className="absolute top-4 right-4 z-10 space-y-2 pointer-events-none">
-          <div className="flex items-center gap-2 px-3 py-1 bg-black/80 border border-cyber-green/30 rounded-full">
-              <Radio size={12} className="text-cyber-green animate-pulse" />
-              <span className="text-[10px] font-bold text-cyber-green uppercase tracking-wider">LIVE_ARCHITECTURE_FEED</span>
-          </div>
-          <button 
-            onClick={() => { setLoading(true); fetchBlueprint(); }}
-            className="flex items-center gap-2 px-3 py-1 bg-black/80 border border-white/10 rounded-full hover:bg-white/5 transition-colors pointer-events-auto cursor-pointer group"
-          >
-              <RefreshCw size={10} className="text-white/90 group-hover:rotate-180 transition-transform duration-500" />
-              <span className="text-[10px] font-bold text-white/90 uppercase">Manual_Resync</span>
-          </button>
-      </div>
+    <div style={{ width: '100%', height: '100%' }}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        fitView
+        colorMode="dark"
+      >
+        <Background color="#333" gap={20} />
+        <Controls />
+      </ReactFlow>
     </div>
-  );
-}
-
-export default function SystemPulseFlow() {
-  return (
-    <ReactFlowProvider>
-      <FlowContent />
-    </ReactFlowProvider>
   );
 }
