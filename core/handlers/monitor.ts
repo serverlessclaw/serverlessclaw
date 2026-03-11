@@ -47,11 +47,11 @@ export const handler = async (event: { detail: Record<string, unknown> }) => {
     }
 
     if (status === 'SUCCEEDED') {
-      logger.info(`Build ${buildId} SUCCEEDED. Completing lifecycle for ${gapIds.length} gaps.`);
+      logger.info(`Build ${buildId} SUCCEEDED. Marking ${gapIds.length} gaps as DEPLOYED.`);
 
-      // Transition gaps to DONE
+      // Transition gaps to DEPLOYED (Verification phase starts)
       for (const gapId of gapIds) {
-        await memory.updateGapStatus(gapId, 'DONE');
+        await memory.updateGapStatus(gapId, 'DEPLOYED');
       }
 
       // Notify success

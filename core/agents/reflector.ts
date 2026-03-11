@@ -49,36 +49,23 @@ export const handler = async (event: { userId: string; conversation: Message[] }
      RETURN FORMAT (STRICT JSON):
      {
        "facts": "updated facts string",
-       "lessons": [
-         { 
-           "content": "lesson content", 
-           "confidence": number, 
-           "impact": number, 
-           "complexity": number, 
-           "risk": number, 
-           "urgency": number,
-           "priority": number,
-           "category": "user_preference" | "tactical_lesson" 
-         }
-       ],
-       "gaps": [
-         { 
-           "content": "gap description", 
-           "confidence": number, 
-           "impact": number, 
-           "complexity": number, 
-           "risk": number, 
-           "urgency": number,
-           "priority": number,
-           "category": "strategic_gap" 
-         }
-       ]
+       "lessons": [...],
+       "gaps": [...],
+       "resolvedGapIds": ["gapId1", "gapId2"]
      }
      
      Keep "facts" as a single cohesive string representing all available knowledge about the user.`
   );
 
   const existingFacts = await memory.getDistilledMemory(userId);
+  const deployedGaps = await memory.getAllGaps('DEPLOYED');
+  
+  const deployedGapsContext = deployedGaps.length > 0 
+    ? `\nRECENTLY DEPLOYED CHANGES (Audit required):
+       ${deployedGaps.map(g => `- [ID: ${g.id.replace('GAP#', '')}] ${g.content}`).join('\n')}
+       
+       TASK: Look at the CONVERSATION. If the user successfully used these new capabilities or if the conversation proves these gaps are now filled, include their IDs in "resolvedGapIds".`
+    : '';
 
   const reflectionPrompt = `
     EXISTING FACTS:
@@ -86,9 +73,10 @@ export const handler = async (event: { userId: string; conversation: Message[] }
 
     CONVERSATION:
     ${conversation.map((m) => `${m.role.toUpperCase()}: ${m.content || (m.tool_calls ? '[Tool Calls]' : '')}`).join('\n')}
+    ${deployedGapsContext}
 
     Update the EXISTING FACTS with any new information found in the CONVERSATION.
-    Identify any CAPABILITY GAPS.
+    Identify any NEW CAPABILITY GAPS.
   `;
 
   // Use 'fast' profile for cost-effective reflection
@@ -168,6 +156,14 @@ export const handler = async (event: { userId: string; conversation: Message[] }
               logger.error('Failed to emit evolution plan event from Reflector:', e);
             }
           }
+        }
+      }
+
+      // 4. Handle Resolved Gaps
+      if (Array.isArray(parsed.resolvedGapIds)) {
+        for (const rId of parsed.resolvedGapIds) {
+          logger.info(`Verification successful for gap ${rId}. Marking as DONE.`);
+          await memory.updateGapStatus(rId, 'DONE');
         }
       }
     } catch (e) {
