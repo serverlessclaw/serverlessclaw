@@ -77,7 +77,8 @@ serverlessclaw/
 │   ├── RESEARCH.md   ← Design decisions
 │   ├── ROADMAP.md    ← Future plans
 │   └── CONTRIBUTING.md ← This file
-├── src/              ← TypeScript source
+├── core/             ← TypeScript logic & handlers
+├── infra/            ← SST infrastructure code
 ├── makefiles/        ← Modular DevOps spokes
 └── sst.config.ts     ← Infrastructure definition
 ```

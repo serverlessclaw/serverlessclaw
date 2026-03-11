@@ -1,6 +1,6 @@
 # Serverless Claw
 
-**Serverless Claw** is a fully autonomous, serverless implementation of the **OpenClaw** AI agent platform. It is designed from the ground up to be **Self-Evolving**, **Self-Healing**, and **Self-Cost Optimizing**. Deployed entirely on AWS using [SST (v3/Ion)](https://sst.dev), Serverless Claw features an orchestrated swarm of intelligent agents capable of writing code, modifying their own AWS infrastructure, and deploying updates with zero human intervention.
+**Serverless Claw** is a fully autonomous, serverless implementation of the **OpenClaw** AI agent platform. It is designed from the ground up to be **Self-Evolving**, **Self-Healing**, and **Self-Cost Optimizing**. Deployed entirely on AWS using [SST (v4)](https://sst.dev), Serverless Claw features an orchestrated swarm of intelligent agents capable of writing code, modifying their own AWS infrastructure, and deploying updates with zero human intervention.
 
 ![Serverless Claw Dashboard](./dashboard/public/clawcenter.png)
 
@@ -11,7 +11,7 @@ The system is never static. Through the **Cognition Reflector**, **Strategic Pla
  Evolution follows a strict, verified lifecycle (**OPEN** → **PLANNED** → **PROGRESS** → **DEPLOYED** → **DONE**). No change is marked as complete until the **QA Auditor** verifies its real-world satisfaction in subsequent user interactions. **[Read more about the Evolutionary Lifecycle ↗](./docs/AGENTS.md#the-evolutionary-lifecycle-self-evolution-loop)**
 
 ### 2. Self-Healing & Resilient
-Designed to be "un-killable." If an autonomous deployment introduces a bug or causes a build failure, the **Build Monitor** intercepts the error logs and tasks the agent swarm to investigate and apply a fix. If the "brain" (SuperClaw Lambda) becomes unresponsive, an immutable **Dead Man's Switch** (health probe) triggers a 100% automated git-revert and redeploys the last known stable state. No midnight wake-up calls.
+Designed to be "un-killable." If an autonomous deployment introduces a bug or causes a build failure, the **Monitor Agent** intercepts the error logs and tasks the agent swarm to investigate and apply a fix. If the "brain" (SuperClaw Lambda) becomes unresponsive, an immutable **Dead Man's Switch** (health probe) triggers a 100% automated git-revert and redeploys the last known stable state. No midnight wake-up calls.
 
 ### 3. Self-Cost Optimizing (Zero Idle Costs)
 Traditional AI agents run on expensive, always-on instances. Serverless Claw is 100% serverless. Powered by AWS Lambda, DynamoDB, and EventBridge, **you pay strictly per invocation**. When the agent is idle, your infrastructure cost is exactly $0.00. The system also dynamically hot-swaps between LLM models (e.g., OpenAI, Anthropic Bedrock) based on the task's complexity, optimizing token costs on the fly.
@@ -58,10 +58,10 @@ Avoid the "black box" of agent long-term memory. Through the **ClawCenter Dashbo
                                   +-----------------------------------+
                                    /        |            |        \
                                   /         |            |         \
-                  +----------------+ +----------------+ +-------------+ +-------------+
-                  |  Coder Agent   | |Strategic Planr | |Cognition Ref| | QA Auditor  |
-                  |  (AWS Lambda)  | | (AWS Lambda) | | (AWS Lambda)| | (AWS Lambda)|
-                  +----------------+ +----------------+ +-------------+ +-------------+
+                  +----------------+ +------------------+ +------------------+ +---------------+
+                  |  Coder Agent   | |Strategic Planner | |Cognition Reflector| | QA Auditor    |
+                  |  (AWS Lambda)  | |   (AWS Lambda)   | |   (AWS Lambda)    | | (AWS Lambda)  |
+                  +----------------+ +------------------+ +------------------+ +---------------+
                            |                |                |               |
                            +----------------+-------+--------+---------------+
                                                     |
@@ -73,7 +73,7 @@ Avoid the "black box" of agent long-term memory. Through the **ClawCenter Dashbo
                    +------------------------------------------------------------------+
                                                    |
                    +------------------------------------------------------------------+
-                   |                 Build Monitor & Dead Man's Switch                |
+                   |                 Monitor Agent & Dead Man's Switch                |
                    |                (Self-Healing & Rollback Mechanisms)              |
                    +------------------------------------------------------------------+
 ```

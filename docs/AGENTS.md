@@ -6,12 +6,12 @@
 
 | Agent | Runtime | Config Source | Responsibilities |
 |-------|---------|---------------|-----------------|
-| **SuperClaw** | `src/handlers/webhook.ts` | `src/agents/superclaw.ts` | Interprets user intent, delegates, deploys |
-| **Coder Agent** | `src/agents/coder.ts` | `AgentRegistry` (Backbone) | Writes code, runs pre-flight checks |
-| **Worker Agent** | `src/agents/worker.ts` | `AgentRegistry` (Dynamic) | Generic runner for any user-defined agent |
-| **Strategic Planner** | `src/agents/strategic-planner.ts` | `AgentRegistry` (Backbone) | Designs strategic evolution plans |
-| **Cognition Reflector** | `src/agents/cognition-reflector.ts` | `AgentRegistry` (Backbone) | Distills memory and extracts gaps |
-| **QA Auditor** | `src/agents/qa.ts` | `AgentRegistry` (Backbone) | Verifies satisfaction of deployed changes |
+| **SuperClaw** | `core/handlers/webhook.ts` | `core/agents/superclaw.ts` | Interprets user intent, delegates, deploys |
+| **Coder Agent** | `core/agents/coder.ts` | `AgentRegistry` (Backbone) | Writes code, runs pre-flight checks |
+| **Worker Agent** | `core/agents/worker.ts` | `AgentRegistry` (Dynamic) | Generic runner for any user-defined agent |
+| **Strategic Planner** | `core/agents/strategic-planner.ts` | `AgentRegistry` (Backbone) | Designs strategic evolution plans |
+| **Cognition Reflector** | `core/agents/cognition-reflector.ts` | `AgentRegistry` (Backbone) | Distills memory and extracts gaps |
+| **QA Auditor** | `core/agents/qa.ts` | `AgentRegistry` (Backbone) | Verifies satisfaction of deployed changes |
 | **Deployer** | AWS CodeBuild | `buildspec.yml` | Runs `sst deploy` in isolated environment |
 
 ---

@@ -26,22 +26,30 @@ phases:
             rm staged_changes.zip
           fi
         fi
+      - echo "Running quality checks..."
+      - make check test-silent
   build:
     commands:
       - echo "Starting autonomous deployment..."
-      - npx sst deploy --stage $SST_STAGE
+      - make deploy ENV=$SST_STAGE
   post_build:
     commands:
       - |
-        if [ "$CODEBUILD_BUILD_SUCCEEDING" = "1" ] && [ -n "$GITHUB_TOKEN" ]; then
-          echo "Deployment successful. Pushing changes back to GitHub..."
-          git config --global user.email "agent@serverlessclaw.local"
-          git config --global user.name "Claw Coder Agent"
-          git add .
-          if git commit -m "chore: autonomous improvement by Claw Coder Agent [skip ci]"; then
-            git push https://$GITHUB_TOKEN@github.com/caopengau/serverlessclaw.git HEAD:main
-          else
-            echo "No changes to commit."
+        if [ "$CODEBUILD_BUILD_SUCCEEDING" = "1" ]; then
+          echo "Deployment successful. Verifying health..."
+          API_URL=$(python3 -c "import json; print(json.load(open('.sst/outputs.json'))['apiUrl'])")
+          make verify URL=$API_URL
+          
+          if [ -n "$GITHUB_TOKEN" ]; then
+            echo "Pushing changes back to GitHub..."
+            git config --global user.email "agent@serverlessclaw.local"
+            git config --global user.name "Claw Coder Agent"
+            git add .
+            if git commit -m "chore: autonomous improvement by Claw Coder Agent [skip ci]"; then
+              git push https://$GITHUB_TOKEN@github.com/caopengau/serverlessclaw.git HEAD:main
+            else
+              echo "No changes to commit."
+            fi
           fi
         fi
 artifacts:

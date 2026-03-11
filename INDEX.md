@@ -45,10 +45,10 @@ make dev
 
 | Changed File | Update This Spoke |
 |---|---|
-| `src/tools/index.ts` | [TOOLS.md](./docs/TOOLS.md) |
-| `src/agents/` | [AGENTS.md](./docs/AGENTS.md) |
-| `src/infra/` | [ARCHITECTURE.md](./ARCHITECTURE.md) |
-| `src/tools/index.ts` (guardrails) | [SAFETY.md](./docs/SAFETY.md) |
+| `core/tools/index.ts` | [TOOLS.md](./docs/TOOLS.md) |
+| `core/agents/` | [AGENTS.md](./docs/AGENTS.md) |
+| `infra/` | [ARCHITECTURE.md](./ARCHITECTURE.md) |
+| `core/tools/index.ts` (guardrails) | [SAFETY.md](./docs/SAFETY.md) |
 | `sst.config.ts` | [ARCHITECTURE.md](./ARCHITECTURE.md) |
 | `makefiles/` | [DEVOPS.md](./docs/DEVOPS.md) |
 

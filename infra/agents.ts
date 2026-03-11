@@ -41,7 +41,19 @@ export function createAgents(ctx: SharedContext): {
   const buildMonitor = new sst.aws.Function('BuildMonitor', {
     handler: 'core/handlers/monitor.handler',
     dev: liveInLocalOnly,
-    link: [memoryTable, bus],
+    link: [memoryTable, configTable, bus],
+    permissions: [
+      {
+        actions: ['codebuild:BatchGetBuilds'],
+        resources: [deployer.arn],
+      },
+      {
+        actions: ['logs:GetLogEvents'],
+        resources: [
+          $util.interpolate`arn:aws:logs:${aws.getRegionOutput().name}:${aws.getCallerIdentityOutput().accountId}:log-group:/aws/codebuild/${deployer.name}:*`,
+        ],
+      },
+    ],
     memory: AGENT_CONFIG.memory.SMALL,
     timeout: AGENT_CONFIG.timeout.MEDIUM,
   });
