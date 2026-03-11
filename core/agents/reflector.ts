@@ -7,7 +7,6 @@ import {
   EventType,
   SSTResource,
   InsightCategory,
-  GapStatus,
 } from '../lib/types/index';
 import { Resource } from 'sst';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';

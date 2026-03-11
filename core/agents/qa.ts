@@ -2,13 +2,7 @@ import { DynamoMemory } from '../lib/memory';
 import { Agent } from '../lib/agent';
 import { ProviderManager } from '../lib/providers/index';
 import { getAgentTools } from '../tools/index';
-import {
-  ReasoningProfile,
-  EventType,
-  EvolutionMode,
-  GapStatus,
-  SSTResource,
-} from '../lib/types/index';
+import { ReasoningProfile, EvolutionMode, GapStatus, SSTResource } from '../lib/types/index';
 import { Resource } from 'sst';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
@@ -53,7 +47,6 @@ export const handler = async (event: {
       Key: { userId: `BUILD_GAPS#${buildId}`, timestamp: 0 },
     })
   );
-
 
   const gapIds: string[] = gapsMeta.Item ? JSON.parse(gapsMeta.Item.content) : [];
   if (gapIds.length === 0) {
