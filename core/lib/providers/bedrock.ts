@@ -88,7 +88,7 @@ export class BedrockProvider implements IProvider {
         name: t.name,
         description: t.description,
         inputSchema: {
-          json: t.parameters as Record<string, unknown>,
+          json: t.parameters as unknown as Record<string, unknown>,
         },
       },
     })) as unknown as BedrockTool[];

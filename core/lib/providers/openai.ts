@@ -67,7 +67,7 @@ export class OpenAIProvider implements IProvider {
         function: {
           name: t.name,
           description: t.description,
-          parameters: t.parameters as Record<string, unknown>,
+          parameters: t.parameters as unknown as Record<string, unknown>,
           strict: true,
         },
       }));
