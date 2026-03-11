@@ -92,6 +92,17 @@ define track_time
 	exit $$status
 endef
 
+# Usage: $(call verify_clean)
+# Fails if there are uncommitted or untracked changes
+define verify_clean
+	if [ -n "$$(git status --porcelain)" ]; then \
+		$(call log_error,Git working directory is not clean. Commit or stash changes before proceeding.); \
+		git status; \
+		exit 1; \
+	fi; \
+	$(call log_success,Working directory is clean.)
+endef
+
 endif
 
 
