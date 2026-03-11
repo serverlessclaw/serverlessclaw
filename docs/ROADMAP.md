@@ -64,17 +64,26 @@ Our goal: the most customizable, cost-effective, and self-evolving personal AI a
 - [x] **ROI-Driven Logic**: Reflector estimates actionable signals for capability gaps.
 - [x] **Strategic Telemetry**: Planner dynamically checks `ACTIVE_AGENTS` and `AVAILABLE_TOOLS` to prevent hallucinations.
 
-## ✅ Phase 11: Evolution Control & Multi-Channel
+## ✅ Phase 11: Evolution Control & Verified Lifecycle
 - [x] **Evolution Mode**: Toggle between Human-in-the-Loop (`hitl`) and self-coding (`auto`) via `ConfigTable`.
 - [x] **Notifier Subsystem**: Centralized EventBridge-driven (`OUTBOUND_MESSAGE`) handler decoupling LLM execution from messaging platforms.
+- [x] **Verified Lifecycle**: Full status state machine (`OPEN` -> `PLANNED` -> `PROGRESS` -> `DEPLOYED` -> `DONE`).
+- [x] **QA Auditor Agent**: Specialized node for satisfaction verification and loop closure.
+- [x] **Deterministic Review**: Scheduled strategic reviews based on gap volume and frequency thresholds.
 
-## 🏢 Phase 12: Advanced Autonomy
+## 🏗️ Phase 12: Evolutionary Command Center (ClawCenter v2)
+- [ ] **Evolution Pipeline Board**: Kanban visualization of the 5-stage gap lifecycle.
+- [ ] **Neural Map**: Dependency graph visualization of agent-to-agent delegation paths.
+- [ ] **Granular Safety Tiers**: Multi-level trust settings (Sandbox, Staged, Autonomous) instead of binary toggle.
+- [ ] **Real-time Resilience Gauge**: Dashboard HUD for Circuit Breaker status and token burn-rate monitoring.
+- [ ] **Interactive Gap Refinement**: Feedback loop for users to edit and improve strategic plans before implementation.
+
+## 🏢 Phase 13: Advanced Autonomy
 - [ ] **Browser Automation**: Playwright Lambda Layer for autonomous web browsing.
 - [ ] **Promotion Manager**: Agent-driven promotion of validated `dev` builds to `prod`.
 - [ ] **Skill Marketplace**: CLI-based installation of community tools.
 
-## 🏢 Phase 13: Enterprise Scale
+## 🏢 Phase 14: Enterprise Scale
 - [ ] Agent Swarm Isolation by `employerId`.
 - [ ] Per-tenant EventBridge filtering.
-- [ ] Implement Dashboard UI for Evolution Control.
 - [ ] Multi-Channel Adapters: Slack and Discord support.
