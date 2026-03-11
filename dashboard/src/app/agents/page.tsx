@@ -105,7 +105,7 @@ export default function AgentsPage() {
       <header className="flex justify-between items-end border-b border-white/5 pb-6">
         <div>
           <h2 className="text-2xl lg:text-3xl font-bold tracking-tight glow-text uppercase">
-            NEURAL_NODES
+            AGENTS
           </h2>
           <p className="text-white/100 text-xs lg:text-sm mt-2 font-light">
             Manage backbone orchestrators and specialized autonomous agents.
@@ -115,7 +115,7 @@ export default function AgentsPage() {
           onClick={addAgent}
           className="bg-white/5 hover:bg-white/10 text-white/100 px-4 py-2 rounded text-xs font-bold border border-white/10 flex items-center gap-2 transition-all hover:border-cyber-blue/50 uppercase tracking-widest shadow-[0_0_15px_rgba(255,255,255,0.02)]"
         >
-          <Plus size={14} /> REGISTER_NEW_NODE
+          <Plus size={14} /> NEW_AGENT
         </button>
       </header>
 
@@ -257,7 +257,7 @@ export default function AgentsPage() {
           className="bg-cyber-blue text-black px-8 py-4 rounded text-xs font-black flex items-center gap-3 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-[0_0_30px_rgba(0,243,255,0.4)] disabled:opacity-50 uppercase tracking-widest border border-white/20"
         >
           {saving ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
-          Synchronize_Neural_States
+          SAVE_AGENT_CONFIG
         </button>
       </div>
 

@@ -194,12 +194,14 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
         </div>
       </div>
 
-      <div className="pt-4 border-t border-white/5 flex justify-end">
+      {/* Floating Save Button */}
+      <div className="fixed bottom-10 right-10 z-30">
         <button
           type="submit"
-          className="bg-cyber-blue text-black px-6 py-2.5 rounded text-xs font-bold flex items-center gap-2 hover:scale-105 transition-transform cursor-pointer shadow-[0_0_15px_rgba(0,243,243,0.3)] uppercase tracking-widest"
+          className="bg-cyber-green text-black px-8 py-4 rounded text-xs font-black flex items-center gap-3 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-[0_0_30px_rgba(0,255,163,0.4)] uppercase tracking-widest border border-white/20"
         >
-          <Save size={14} /> COMMIT_SYSTEM_CHANGES
+          <Save size={16} />
+          SAVE_SYSTEM_CONFIG
         </button>
       </div>
 

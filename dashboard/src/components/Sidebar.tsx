@@ -13,7 +13,8 @@ import {
   Menu, 
   X,
   ChevronRight,
-  Wrench
+  Wrench,
+  Users
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -31,7 +32,7 @@ export default function Sidebar() {
     { label: 'Intelligence', type: 'header' },
     { href: '/chat', label: 'CHAT_DIRECT', icon: MessageSquare },
     { href: '/', label: 'TRACE_INTEL', icon: Activity, activePaths: ['/', '/trace'] },
-    { href: '/agents', label: 'NEURAL_NODES', icon: Cpu },
+    { href: '/agents', label: 'AGENTS', icon: Users },
     { label: 'System', type: 'header', className: 'pt-4' },
     { href: '/system-pulse', label: 'SYSTEM_PULSE', icon: Share2 },
     { href: '/locks', label: 'SESSION_TRAFFIC', icon: Lock },
