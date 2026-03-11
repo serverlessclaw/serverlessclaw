@@ -32,11 +32,31 @@ export const handler = async (event: {
 }): Promise<string | undefined> => {
   logger.info('Reflector Agent received task:', JSON.stringify(event, null, 2));
 
-  const { userId, conversation } = event;
+  const { userId, conversation, traceId } = event as {
+    userId: string;
+    conversation: Message[];
+    traceId?: string;
+  };
 
   if (!userId || !conversation) {
     logger.error('Invalid event payload');
     return;
+  }
+
+  // 1. Fetch Execution Trace (Deeper detail than conversation)
+  let traceContext = '';
+  if (traceId) {
+    try {
+      const { ClawTracer } = await import('../lib/tracer');
+      const trace = await ClawTracer.getTrace(traceId);
+      if (trace && trace.steps) {
+        traceContext = `\nEXECUTION TRACE (Mechanical Steps):
+        ${trace.steps.map((s) => `[${s.type.toUpperCase()}] ${JSON.stringify(s.content)}`).join('\n')}
+        `;
+      }
+    } catch (e) {
+      logger.warn('Failed to fetch trace for Reflector:', e);
+    }
   }
 
   // Reflector Agent is a specialized Agent instance
@@ -77,11 +97,12 @@ export const handler = async (event: {
 
     CONVERSATION:
     ${conversation.map((m) => `${m.role.toUpperCase()}: ${m.content || (m.tool_calls ? '[Tool Calls]' : '')}`).join('\n')}
+    ${traceContext}
     ${deployedGapsContext}
     ${activeGapsContext}
 
-    Update the EXISTING FACTS with any new information found in the CONVERSATION.
-    Identify any NEW CAPABILITY GAPS (that are not already listed as in progress).
+    Update the EXISTING FACTS with any new information found in the CONVERSATION or EXECUTION TRACE.
+    Identify any NEW CAPABILITY GAPS (errors in trace, missing tools, or user frustrations).
   `;
 
   // Use 'fast' profile for cost-effective reflection

@@ -210,6 +210,7 @@ export class Agent {
                 DetailType: EventType.REFLECT_TASK,
                 Detail: JSON.stringify({
                   userId,
+                  traceId: tracer.getTraceId(),
                   conversation: [
                     ...messages,
                     { role: MessageRole.ASSISTANT, content: responseText },

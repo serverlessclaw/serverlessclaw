@@ -16,6 +16,19 @@ export interface TraceStep {
   metadata?: Record<string, unknown>;
 }
 
+export interface Trace {
+  traceId: string;
+  userId: string;
+  timestamp: number;
+  status: string;
+  initialContext: Record<string, unknown>;
+  steps: TraceStep[];
+  expiresAt: number;
+  finalResponse?: string;
+  endTime?: number;
+  metadata?: Record<string, unknown>;
+}
+
 export class ClawTracer {
   private tableName = typedResource.TraceTable.name;
   private traceId: string;
@@ -113,5 +126,21 @@ export class ClawTracer {
    */
   getTraceId(): string {
     return this.traceId;
+  }
+
+  /**
+   * Retrieves a full trace from DynamoDB.
+   */
+  static async getTrace(traceId: string): Promise<Trace | undefined> {
+    const { QueryCommand } = await import('@aws-sdk/lib-dynamodb');
+    const response = await docClient.send(
+      new QueryCommand({
+        TableName: typedResource.TraceTable.name,
+        KeyConditionExpression: 'traceId = :tid',
+        ExpressionAttributeValues: { ':tid': traceId },
+        Limit: 1,
+      })
+    );
+    return response.Items?.[0] as Trace | undefined;
   }
 }
