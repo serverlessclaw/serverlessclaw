@@ -78,77 +78,25 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
         await memory.updateGapStatus(gapId, GapStatus.DEPLOYED);
       }
 
-      // Record live infrastructure explicitly from the deployed bindings
-      const infraNodes = [];
-
-      // Known supported Infra Mappings
-      if (typedResource.AgentBus)
-        infraNodes.push({
-          id: 'bus',
-          type: 'bus',
-          label: 'EventBridge AgentBus',
-          description:
-            'AWS EventBridge. The asynchronous backbone that allows decoupled agents to communicate via event patterns.',
-        });
-      if (typedResource.MemoryTable)
-        infraNodes.push({
-          id: 'memory',
-          type: 'infra',
-          iconType: 'Database',
-          label: 'DynamoDB Memory',
-          description:
-            'Single-table DynamoDB. Stores session history, distilled knowledge, tactical lessons, and strategic gaps.',
-        });
-      if (typedResource.StagingBucket)
-        infraNodes.push({
-          id: 's3',
-          type: 'infra',
-          iconType: 'Cpu',
-          label: 'Staging Bucket',
-          description:
-            'Temporary storage for zipped source code before deployment. Shared between Coder Agent and CodeBuild.',
-        });
-
-      if (typedResource.WebhookApi)
-        infraNodes.push({
-          id: 'api',
-          type: 'api',
-          label: 'SuperClaw Webhook',
-          description: 'The primary entry point for user interactions via Telegram.',
-        });
-
-      // Hardcoded implicit infra
-      infraNodes.push({
-        id: 'codebuild',
-        type: 'infra',
-        iconType: 'Terminal',
-        label: 'AWS CodeBuild',
-        description:
-          'Autonomous deployment engine. Runs "sst deploy" in isolated environments to update the system stack.',
-      });
-
-      infraNodes.push({
-        id: 'build-monitor',
-        type: 'infra',
-        label: 'Build Monitor',
-        description: 'Observes builds, updates gap status, and triggers circuit breakers.',
-      });
-
-      infraNodes.push({
-        id: 'dead-mans-switch',
-        type: 'infra',
-        label: "Dead Man's Switch",
-        description: 'Hourly health checks and emergency git rollback mechanism.',
-      });
-
-      infraNodes.push({
-        id: 'dashboard',
-        type: 'dashboard',
-        label: 'ClawCenter',
-        description: 'Next.js management console for monitoring and evolving the system.',
-      });
+      // Self-Aware Topology Discovery
+      const topology = await discoverSystemTopology();
 
       try {
+        await db.send(
+          new PutCommand({
+            TableName: typedResource.ConfigTable.name,
+            Item: {
+              key: 'system_topology',
+              value: topology,
+            },
+          })
+        );
+        logger.info('System topology updated successfully.');
+
+        // Legacy infrastructure migration (optional but keeps old UI working for now)
+        const infraNodes = topology.nodes.filter(
+          (n: any) => n.type === 'infra' || n.type === 'dashboard'
+        );
         await db.send(
           new PutCommand({
             TableName: typedResource.ConfigTable.name,
@@ -157,7 +105,7 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
         );
         logger.info('Infrastructure Configuration successfully saved to ConfigTable');
       } catch (e) {
-        logger.error('Failed to save infra_config to ConfigTable', e);
+        logger.error('Failed to update system topology in ConfigTable:', e);
       }
 
       // Notify success
@@ -267,3 +215,94 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
     logger.error('Error in BuildMonitor:', error);
   }
 };
+
+/**
+ * Dynamically discovers the system topology by scanning SST Resources and the AgentRegistry.
+ * Generates a graph of nodes and edges for the System Pulse dashboard.
+ */
+async function discoverSystemTopology(): Promise<{ nodes: any[]; edges: any[] }> {
+  try {
+    const nodes: any[] = [];
+    const edges: any[] = [];
+
+    // 1. Discover Infrastructure from SST Resource
+    const typedResource = Resource as any;
+    const infraMap: Record<string, string> = {
+      AgentBus: 'bus',
+      ConfigTable: 'config',
+      MemoryTable: 'memory',
+      TraceTable: 'trace',
+      StagingBucket: 'storage',
+      Deployer: 'codebuild',
+    };
+
+    // Special hardcoded nodes that always exist
+    nodes.push({
+      id: 'dashboard',
+      type: 'dashboard',
+      label: 'ClawCenter',
+      description: 'Next.js management console for monitoring and evolving the system.',
+    });
+
+    Object.keys(infraMap).forEach((resKey) => {
+      if (typedResource[resKey]) {
+        const id = infraMap[resKey];
+        nodes.push({
+          id,
+          type: 'infra',
+          label: resKey.replace(/([A-Z])/g, ' $1').trim(),
+          iconType: resKey === 'Deployer' ? 'Terminal' : 'Database',
+          description: `AWS Resource: ${resKey}`,
+        });
+      }
+    });
+
+    // 2. Discover Agents from Registry
+    const { AgentRegistry } = await import('../lib/registry');
+    const agents = await AgentRegistry.getAllConfigs();
+    Object.values(agents).forEach((agent) => {
+      nodes.push({
+        id: agent.id,
+        type: 'agent',
+        label: agent.name,
+        description: agent.description,
+        icon: agent.icon,
+        enabled: agent.enabled,
+        isBackbone: agent.isBackbone,
+      });
+
+      // 3. Generate Edges based on connectionProfile
+      if (agent.connectionProfile && agent.enabled) {
+        agent.connectionProfile.forEach((targetId) => {
+          // Map common resource aliases to node IDs
+          let actualTarget = targetId;
+          if (targetId === 'bus') actualTarget = 'bus';
+          if (targetId === 'memoryTable') actualTarget = 'memory';
+          if (targetId === 'configTable') actualTarget = 'config';
+          if (targetId === 'stagingBucket') actualTarget = 'storage';
+          if (targetId === 'deployer') actualTarget = 'codebuild';
+
+          edges.push({
+            id: `${agent.id}-${actualTarget}`,
+            source: agent.id,
+            target: actualTarget,
+          });
+        });
+      }
+
+      // Every agent connects to the bus by default if not specified
+      if (!agent.connectionProfile?.includes('bus') && agent.id !== 'main' && agent.enabled) {
+        edges.push({
+          id: `bus-${agent.id}`,
+          source: 'bus',
+          target: agent.id,
+        });
+      }
+    });
+
+    return { nodes, edges };
+  } catch (e) {
+    logger.error('Failed to discover system topology:', e);
+    return { nodes: [], edges: [] };
+  }
+}

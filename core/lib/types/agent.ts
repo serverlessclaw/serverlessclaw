@@ -9,6 +9,7 @@ export interface IAgentConfig {
   tools?: string[]; // Names of tools this agent can use
   enabled: boolean;
   isBackbone?: boolean;
+  connectionProfile?: string[]; // IDs of resources this agent connects to (e.g., 'bus', 'memory')
 }
 
 export enum AgentType {

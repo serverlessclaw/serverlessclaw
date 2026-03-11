@@ -145,156 +145,75 @@ export function FlowContent() {
 
   const fetchBlueprint = useCallback(async () => {
     try {
-      const [agentsRes, infraRes] = await Promise.all([
-        fetch('/api/agents'),
-        fetch('/api/infrastructure')
-      ]);
-      const agents: Record<string, any> = await agentsRes.json();
-      const infraData: any[] = await infraRes.json();
+      const infraRes = await fetch('/api/infrastructure');
+      const topology: { nodes: any[]; edges: any[] } = await infraRes.json();
       
       const newNodes: Node[] = [];
       const newEdges: Edge[] = [];
 
-      // 1. Add Infrastructure Core
-      infraData.forEach((infra, index) => {
-        let xPos = 400;
-        let yPos = 500;
+      // 1. Process Nodes
+      topology.nodes.forEach((node: any, index: number) => {
+        let xPos = 100 + (index % 4) * 250;
+        let yPos = 100 + Math.floor(index / 4) * 200;
         
-        // Use known positions for core infra, layout others dynamically below
-        if (infra.id === 'bus') { xPos = 400; yPos = 100; }
-        else if (infra.id === 'memory') { xPos = 700; yPos = 500; }
-        else if (infra.id === 'codebuild') { xPos = 400; yPos = 500; }
-        else if (infra.id === 's3') { xPos = 100; yPos = 500; }
-        else if (infra.id === 'api') { xPos = 100; yPos = 100; }
-        else if (infra.id === 'dashboard') { xPos = 700; yPos = 100; }
-        else { xPos = 100 + (index * 150); yPos = 700; }
+        // Logical clustering for core resources
+        if (node.id === 'bus') { xPos = 400; yPos = 150; }
+        else if (node.id === 'memory') { xPos = 700; yPos = 550; }
+        else if (node.id === 'codebuild') { xPos = 400; yPos = 550; }
+        else if (node.id === 'storage') { xPos = 100; yPos = 550; }
+        else if (node.id === 'api') { xPos = 100; yPos = 150; }
+        else if (node.id === 'dashboard') { xPos = 700; yPos = 150; }
+        else if (node.id === 'main') { xPos = 425; yPos = -50; }
+        else if (node.type === 'agent') {
+            const agentIndex = topology.nodes.filter(n => n.type === 'agent' && n.id !== 'main').indexOf(node);
+            xPos = 100 + (agentIndex * 220);
+            yPos = 300;
+        }
 
         let icon = <Database size={16} />;
-        if (infra.iconType === 'Terminal') icon = <Terminal size={16} />;
-        else if (infra.iconType === 'Dashboard') icon = <LayoutDashboard size={16} />;
-        else if (infra.id === 'api') icon = <Radio size={16} />;
+        if (node.iconType === 'Terminal' || node.id === 'codebuild') icon = <Terminal size={16} />;
+        else if (node.iconType === 'Dashboard' || node.id === 'dashboard') icon = <LayoutDashboard size={16} />;
+        else if (node.iconType === 'Radio' || node.id === 'api') icon = <Radio size={16} />;
+        else if (node.type === 'agent') icon = getAgentIcon(node.id, node.icon);
 
         newNodes.push({
-          id: infra.id,
-          type: infra.type === 'dashboard' ? 'infra' : infra.type,
+          id: node.id,
+          type: node.type === 'dashboard' ? 'infra' : node.type,
           position: { x: xPos, y: yPos },
           data: { 
-            label: infra.label,
-            description: infra.description,
+            label: node.label,
+            description: node.description || getAgentDescription(node.id),
             icon,
-            type: infra.id === 'bus' ? undefined : (infra.id === 'memory' ? 'DATA_STORE' : (infra.id === 's3' ? 'STORAGE' : 'COMPUTE'))
+            enabled: node.enabled !== undefined ? node.enabled : true,
+            type: node.id === 'main' ? 'Logic_Core' : (node.type === 'agent' ? 'Neural_Worker' : (node.id === 'memory' ? 'DATA_STORE' : (node.id === 'storage' ? 'STORAGE' : 'COMPUTE')))
           },
         });
       });
 
-      // 2. Map Agents
-      const agentList = Object.values(agents);
-      agentList.forEach((agent, index) => {
-        // Dynamic layout spacing
-        const xPos = 100 + (index * 220);
-        const isMain = agent.id === 'main';
+      // 2. Process Edges
+      topology.edges.forEach((edge: any) => {
+        const isMainOrch = edge.source === 'main' && edge.target === 'bus';
+        const isBusSignal = edge.source === 'bus';
         
-        newNodes.push({
-          id: agent.id,
-          type: 'agent',
-          position: { x: isMain ? 425 : xPos, y: isMain ? -50 : 300 },
-          data: { 
-            label: agent.name, 
-            enabled: agent.enabled,
-            type: isMain ? 'Logic_Core' : 'Neural_Worker',
-            icon: getAgentIcon(agent.id, agent.icon),
-            description: agent.description || getAgentDescription(agent.id)
+        newEdges.push({
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          animated: true,
+          label: isMainOrch ? 'ORCHESTRATE' : (isBusSignal ? 'SIGNAL' : undefined),
+          labelStyle: { fill: isMainOrch ? '#00ffa3' : (isBusSignal ? '#f97316' : '#00f3ff'), fontSize: isMainOrch ? 10 : 8, fontWeight: 'bold' },
+          labelBgStyle: { fill: 'transparent', strokeWidth: 0 },
+          style: { 
+            stroke: isMainOrch ? '#00ffa3' : (isBusSignal ? '#f97316' : '#00f3ff'), 
+            strokeWidth: isMainOrch ? 2 : 1,
+            opacity: (isMainOrch || isBusSignal) ? 1 : 0.4,
+            strokeDasharray: (isMainOrch || isBusSignal) ? undefined : '5,5'
           },
+          markerEnd: { 
+            type: MarkerType.ArrowClosed, 
+            color: isMainOrch ? '#00ffa3' : (isBusSignal ? '#f97316' : '#00f3ff') 
+          }
         });
-
-        // MANDATORY: Every agent is connected to the Bus (Input/Output)
-        if (isMain) {
-          newEdges.push({
-            id: `main-bus`,
-            source: 'main',
-            target: 'bus',
-            animated: agent.enabled,
-            label: 'ORCHESTRATE',
-            labelStyle: { fill: '#00ffa3', fontSize: 10, fontWeight: 'bold' },
-            labelBgStyle: { fill: 'transparent', strokeWidth: 0 },
-            labelBgPadding: [0, 0],
-            style: { stroke: '#00ffa3', strokeWidth: 2 },
-            markerEnd: { type: MarkerType.ArrowClosed, color: '#00ffa3' }
-          });
-        } else {
-          newEdges.push({
-            id: `bus-${agent.id}`,
-            source: 'bus',
-            target: agent.id,
-            animated: agent.enabled,
-            label: 'SIGNAL',
-            labelStyle: { fill: agent.enabled ? '#f97316' : '#444', fontSize: 8, fontWeight: 'bold' },
-            labelBgStyle: { fill: 'transparent', strokeWidth: 0 },
-            labelBgPadding: [0, 0],
-            style: { stroke: agent.enabled ? '#f97316' : '#444' },
-            markerEnd: { type: MarkerType.ArrowClosed, color: agent.enabled ? '#f97316' : '#444' }
-          });
-        }
-
-        // INFRASTRUCTURE CONNECTIONS
-        if (agent.enabled) {
-          // Connections based on ID
-          if (['strategic-planner', 'cognition-reflector', 'qa', 'main', 'coder'].includes(agent.id)) {
-            newEdges.push({ 
-              id: `${agent.id}-mem`, 
-              source: agent.id, 
-              target: 'memory', 
-              style: { stroke: '#00f3ff', strokeDasharray: '5,5', opacity: 0.3 } 
-            });
-          }
-
-          if (agent.id === 'coder') {
-            newEdges.push({ 
-              id: 'coder-s3', 
-              source: 'coder', 
-              target: 's3', 
-              label: 'UPLOAD', 
-              labelStyle: { fill: '#00f3ff', fontSize: 8, fontWeight: 'bold' }, 
-              labelBgStyle: { fill: 'transparent', strokeWidth: 0 },
-              labelBgPadding: [0, 0],
-              style: { stroke: '#00f3ff' } 
-            });
-            newEdges.push({ 
-              id: 'coder-build', 
-              source: 'coder', 
-              target: 'codebuild', 
-              label: 'TRIGGER', 
-              labelStyle: { fill: '#00f3ff', fontSize: 8, fontWeight: 'bold' }, 
-              labelBgStyle: { fill: 'transparent', strokeWidth: 0 },
-              labelBgPadding: [0, 0],
-              style: { stroke: '#00f3ff', strokeDasharray: '2,2' } 
-            });
-          }
-          if (agent.id === 'monitor') {
-            newEdges.push({ 
-              id: 'monitor-build', 
-              source: 'monitor', 
-              target: 'codebuild', 
-              label: 'WATCH', 
-              labelStyle: { fill: '#00f3ff', fontSize: 8, fontWeight: 'bold' }, 
-              labelBgStyle: { fill: 'transparent', strokeWidth: 0 },
-              labelBgPadding: [0, 0],
-              style: { stroke: '#00f3ff' } 
-            });
-          }
-        }
-      });
-
-      // Add edge between Infra components
-      newEdges.push({
-        id: 's3-codebuild',
-        source: 's3',
-        target: 'codebuild',
-        label: 'SOURCE_PULL',
-        labelStyle: { fill: '#00f3ff', fontSize: 7, fontWeight: 'bold' },
-        labelBgStyle: { fill: 'transparent', strokeWidth: 0 },
-        labelBgPadding: [0, 0],
-        style: { stroke: '#00f3ff', opacity: 0.4 }
       });
 
       setNodes(newNodes);

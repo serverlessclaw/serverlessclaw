@@ -1,8 +1,8 @@
 import { Resource } from 'sst';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
-import { IAgentConfig, AgentType } from './types/agent';
-import { SUPERCLAW_SYSTEM_PROMPT } from '../agents/superclaw';
+import { IAgentConfig } from './types/agent';
+import { BACKBONE_REGISTRY } from './backbone';
 import { logger } from './logger';
 import { SSTResource } from './types/index';
 
@@ -15,104 +15,7 @@ const typedResource = Resource as unknown as SSTResource;
  * It combines hardcoded backbone agents with user-defined agents from DDB.
  */
 export class AgentRegistry {
-  private static backboneConfigs: Record<string, IAgentConfig> = {
-    [AgentType.MAIN]: {
-      id: AgentType.MAIN,
-      name: 'SuperClaw',
-      systemPrompt: SUPERCLAW_SYSTEM_PROMPT,
-      description:
-        'SuperClaw. Processes input, retrieves long-term memory, and decides when to delegate tasks to spokes.',
-      icon: 'Bot',
-      enabled: true,
-      isBackbone: true,
-      tools: [
-        'dispatch_task',
-        'recall_knowledge',
-        'switch_model',
-        'check_health',
-        'manage_gap',
-        'trigger_rollback',
-      ],
-    },
-    [AgentType.CODER]: {
-      id: AgentType.CODER,
-      name: 'Coder Agent',
-      systemPrompt: `You are a specialized Coder Agent for the Serverless Claw stack. 
-      Your mission: Implement requested code/infra changes with 100% safety.
-      DOCUMENTATION HUB: Always load 'INDEX.md' first to find the relevant spoke document before making changes.
-      CRITICAL RULES:
-      1. PRE-FLIGHT CHECK: After writing files, you MUST call 'validate_code' to ensure no lint/build errors.
-      2. PERSISTENCE: After a successful 'validate_code', you MUST call 'stage_changes' with the list of files you modified.
-      3. PROTECTED FILES: If 'file_write' returns PERMISSION_DENIED, do NOT try to bypass it. 
-      4. ATOMICITY: Do not leave the codebase in a broken state. 
-      5. ENVIRONMENT: Use 'run_shell_command' to manage dependencies or execute framework-specific CLI commands when necessary.
-      6. KEEP IT VERY CONCISE. It should be only an explanation without the plan.`,
-      description:
-        'Specialised agent that performs heavy lifting like writing code, modifying infra, and triggering builds.',
-      icon: 'Code',
-      enabled: true,
-      isBackbone: true,
-      tools: [
-        'file_write',
-        'file_read',
-        'validate_code',
-        'stage_changes',
-        'trigger_deployment',
-        'run_tests',
-        'run_shell_command',
-      ],
-    },
-    [AgentType.QA]: {
-      id: AgentType.QA,
-      name: 'QA Auditor',
-      systemPrompt: `You are the specialized QA Auditor for the Serverless Claw stack.
-      Your mission: Verify that recently implemented changes successfully resolve the identified Capability Gaps.
-      
-      AUDIT PROTOCOL:
-      1. REVIEW PLAN: Read the STRATEGIC_PLAN provided by the Planner.
-      2. ANALYZE TRACE: Review the conversation or code changes to see if the new capability was used.
-      3. VERIFY SATISFACTION: Determine if the original GAP is now filled.
-      
-      OUTPUT: Return a VERIFICATION_REPORT summary.
-      - If satisfied: State "VERIFICATION_SUCCESSFUL".
-      - If not: State "REOPEN_REQUIRED" and explain why implementation failed or was incomplete.`,
-      description:
-        'Verification node. Audits recently deployed code to ensure it actually solves the intended capability gap.',
-      icon: 'FlaskConical',
-      enabled: true,
-      isBackbone: true,
-      tools: ['recall_knowledge', 'check_health', 'file_read', 'list_files'],
-    },
-    [AgentType.COGNITION_REFLECTOR]: {
-      id: AgentType.COGNITION_REFLECTOR,
-      name: 'Cognition Reflector',
-      systemPrompt: `You are the Cognition Reflector. 
-      Your mission: Analyze agent traces to distill long-term memory, tactical lessons, and strategic capability gaps.
-      Extract:
-      1. FACTS: Verified technical or user-specific information.
-      2. LESSONS: Tactical advice to avoid repeat mistakes.
-      3. GAPS: Functional requirements that currently fail.`,
-      description:
-        'Cognitive audit node. Distills facts, lessons, and capability gaps from interaction traces.',
-      icon: 'Search',
-      enabled: true,
-      isBackbone: true,
-      tools: ['recall_knowledge', 'manage_gap'],
-    },
-    [AgentType.STRATEGIC_PLANNER]: {
-      id: AgentType.STRATEGIC_PLANNER,
-      name: 'Strategic Planner',
-      systemPrompt: `You are the Strategic Planner.
-      Your mission: Analyze the list of Capability Gaps and the Current System Index to prioritize evolution.
-      Output a 'STRATEGIC_PLAN' that guides the Coder Agent.`,
-      description:
-        'Strategic intelligence node. Analyzes capability gaps and designs long-term evolution plans.',
-      icon: 'Brain',
-      enabled: true,
-      isBackbone: true,
-      tools: ['recall_knowledge', 'manage_gap', 'dispatch_task', 'file_read', 'list_files'],
-    },
-  };
+  private static backboneConfigs: Record<string, IAgentConfig> = BACKBONE_REGISTRY;
 
   /**
    * Retrieves the configuration for a specific agent by ID.
@@ -182,6 +85,14 @@ export class AgentRegistry {
   static async getInfraConfig(): Promise<unknown[]> {
     const ddbConfig = await this.getRawConfig('infra_config');
     return Array.isArray(ddbConfig) ? ddbConfig : [];
+  }
+
+  /**
+   * Retrieves the full system topology (nodes + edges).
+   */
+  static async getFullTopology(): Promise<{ nodes: unknown[]; edges: unknown[] } | undefined> {
+    const topology = await this.getRawConfig('system_topology');
+    return topology as { nodes: unknown[]; edges: unknown[] } | undefined;
   }
 
   /**

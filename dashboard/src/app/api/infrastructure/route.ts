@@ -4,59 +4,32 @@ import { AgentRegistry } from '@claw/core/lib/registry';
 
 export async function GET() {
   try {
-    // 1. Try to load dynamic infra from DynamoDB (written by Monitor agent)
+    // 1. Try to load full system topology from DynamoDB (written by Build Monitor)
+    const topology = await AgentRegistry.getFullTopology();
+    if (topology && topology.nodes.length > 0) {
+      return NextResponse.json(topology);
+    }
+
+    // 2. Fallback to legacy infra_config if topology isn't generated yet
     const dynamicInfra = await AgentRegistry.getInfraConfig();
     if (dynamicInfra && dynamicInfra.length > 0) {
-      return NextResponse.json(dynamicInfra);
+      return NextResponse.json({ nodes: dynamicInfra, edges: [] });
     }
 
-    // 2. Fallback to reading static linked resources if DB is empty
+    // 3. Static Fallback for initial deployment
     const infraNodes = [];
-    
-    // Process EventBus
     if (Resource.AgentBus) {
-      infraNodes.push({
-        id: 'bus',
-        type: 'bus',
-        label: 'EventBridge AgentBus',
-        description: 'AWS EventBridge. The asynchronous backbone that allows decoupled agents to communicate via event patterns.'
-      });
+      infraNodes.push({ id: 'bus', type: 'bus', label: 'EventBridge AgentBus' });
     }
-
-    // Process Memory
     if (Resource.MemoryTable) {
-      infraNodes.push({
-        id: 'memory',
-        type: 'infra',
-        iconType: 'Database',
-        label: 'DynamoDB Memory',
-        description: 'Single-table DynamoDB. Stores session history, distilled knowledge, tactical lessons, and strategic gaps.'
-      });
+      infraNodes.push({ id: 'memory', type: 'infra', label: 'DynamoDB Memory' });
     }
-
-    // CodeBuild isn't fully linked via Resource yet in SST v3, but Deployer role/project exists
-    // We can assume if the system is running, the Deployer exists based on our architecture.
-    // If we later add Deployer to Resource somehow, we'd check it here. Let's just include it.
-    infraNodes.push({
-      id: 'codebuild',
-      type: 'infra',
-      iconType: 'Terminal',
-      label: 'AWS CodeBuild',
-      description: 'Autonomous deployment engine. Runs "sst deploy" in isolated environments to update the system stack.'
-    });
-
-    // Process Staging Bucket
+    infraNodes.push({ id: 'codebuild', type: 'infra', label: 'AWS CodeBuild' });
     if (Resource.StagingBucket) {
-      infraNodes.push({
-        id: 's3',
-        type: 'infra',
-        iconType: 'Cpu',
-        label: 'Staging Bucket',
-        description: 'Temporary storage for zipped source code before deployment. Shared between Coder Agent and CodeBuild.'
-      });
+      infraNodes.push({ id: 'storage', type: 'infra', label: 'Staging Bucket' });
     }
 
-    return NextResponse.json(infraNodes);
+    return NextResponse.json({ nodes: infraNodes, edges: [] });
   } catch (error) {
     console.error('Failed to fetch infrastructure:', error);
     return NextResponse.json({ error: 'Failed to fetch infrastructure' }, { status: 500 });

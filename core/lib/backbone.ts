@@ -1,0 +1,100 @@
+import { AgentType, IAgentConfig } from './types/agent';
+import { SUPERCLAW_SYSTEM_PROMPT } from '../agents/superclaw';
+
+/**
+ * Backbone Registry: The single source of truth for essential system components.
+ * Reserved for LLM-based Agents and logic-based Handlers.
+ */
+export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
+  [AgentType.MAIN]: {
+    id: AgentType.MAIN,
+    name: 'SuperClaw',
+    systemPrompt: SUPERCLAW_SYSTEM_PROMPT,
+    description: 'Orchestrator node. Directs traffic, retrieves memory, and delegates tasks.',
+    icon: 'Bot',
+    enabled: true,
+    isBackbone: true,
+    tools: [
+      'dispatch_task',
+      'recall_knowledge',
+      'switch_model',
+      'check_health',
+      'manage_gap',
+      'trigger_rollback',
+    ],
+    connectionProfile: ['bus', 'memoryTable', 'configTable'],
+  },
+  [AgentType.CODER]: {
+    id: AgentType.CODER,
+    name: 'Coder Agent',
+    systemPrompt: 'Specialized for writing code and modifying infra.',
+    description: 'Autonomous builder. Implements changes and validates via pre-flight checks.',
+    icon: 'Code',
+    enabled: true,
+    isBackbone: true,
+    tools: [
+      'file_write',
+      'file_read',
+      'validate_code',
+      'stage_changes',
+      'trigger_deployment',
+      'run_tests',
+      'run_shell_command',
+    ],
+    connectionProfile: ['bus', 'memoryTable', 'stagingBucket', 'deployer'],
+  },
+  [AgentType.STRATEGIC_PLANNER]: {
+    id: AgentType.STRATEGIC_PLANNER,
+    name: 'Strategic Planner',
+    systemPrompt: 'Designs evolution plans based on capability gaps.',
+    description: 'Design node. Identifies missing features and architecting upgrades.',
+    icon: 'Brain',
+    enabled: true,
+    isBackbone: true,
+    tools: ['recall_knowledge', 'manage_gap', 'dispatch_task', 'file_read', 'list_files'],
+    connectionProfile: ['bus', 'memoryTable', 'configTable'],
+  },
+  [AgentType.COGNITION_REFLECTOR]: {
+    id: AgentType.COGNITION_REFLECTOR,
+    name: 'Cognition Reflector',
+    systemPrompt: 'Distills memory and extracts gaps from traces.',
+    description: 'Intelligence audit node. Extracts facts, lessons, and gaps from logs.',
+    icon: 'Search',
+    enabled: true,
+    isBackbone: true,
+    tools: ['recall_knowledge', 'manage_gap'],
+    connectionProfile: ['bus', 'memoryTable'],
+  },
+  [AgentType.QA]: {
+    id: AgentType.QA,
+    name: 'QA Auditor',
+    systemPrompt: 'Verifies satisfaction of deployed changes.',
+    description: 'Validation node. Audits deployments to ensure they actually solve the gaps.',
+    icon: 'FlaskConical',
+    enabled: true,
+    isBackbone: true,
+    tools: ['recall_knowledge', 'check_health', 'file_read', 'list_files'],
+    connectionProfile: ['bus', 'memoryTable'],
+  },
+  // Handlers (Logic-only, but registered for topology awareness)
+  [AgentType.BUILD_MONITOR]: {
+    id: AgentType.BUILD_MONITOR,
+    name: 'Build Monitor',
+    systemPrompt: 'LOGIC_ONLY',
+    description: 'Observability node. Watches builds, updates gaps, and discovers infra.',
+    icon: 'Activity',
+    enabled: true,
+    isBackbone: true,
+    connectionProfile: ['bus', 'configTable', 'deployer'],
+  },
+  [AgentType.RECOVERY]: {
+    id: AgentType.RECOVERY,
+    name: "Dead Man's Switch",
+    systemPrompt: 'LOGIC_ONLY',
+    description: 'Resilience node. Performs health probes and emergency git-reverts.',
+    icon: 'ShieldCheck',
+    enabled: true,
+    isBackbone: true,
+    connectionProfile: ['deployer', 'memoryTable'],
+  },
+};
