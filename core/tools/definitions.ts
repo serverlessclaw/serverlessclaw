@@ -211,4 +211,28 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
       required: ['gapId', 'status'],
     },
   },
+  file_read: {
+    name: 'file_read',
+    description: 'Reads the content of a file from the codebase.',
+    parameters: {
+      type: 'object',
+      properties: {
+        filePath: { type: 'string', description: 'The relative path to the file.' },
+      },
+      required: ['filePath'],
+    },
+  },
+  list_files: {
+    name: 'list_files',
+    description: 'Lists files in a directory to explore the project structure.',
+    parameters: {
+      type: 'object',
+      properties: {
+        dirPath: {
+          type: 'string',
+          description: 'The relative path to the directory (defaults to root).',
+        },
+      },
+    },
+  },
 };

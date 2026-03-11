@@ -92,6 +92,14 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
             'Temporary storage for zipped source code before deployment. Shared between Coder Agent and CodeBuild.',
         });
 
+      if (typedResource.WebhookApi)
+        infraNodes.push({
+          id: 'api',
+          type: 'api',
+          label: 'SuperClaw Webhook',
+          description: 'The primary entry point for user interactions via Telegram.',
+        });
+
       // Hardcoded implicit infra
       infraNodes.push({
         id: 'codebuild',
@@ -100,6 +108,13 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
         label: 'AWS CodeBuild',
         description:
           'Autonomous deployment engine. Runs "sst deploy" in isolated environments to update the system stack.',
+      });
+
+      infraNodes.push({
+        id: 'dashboard',
+        type: 'dashboard',
+        label: 'ClawCenter',
+        description: 'Next.js management console for monitoring and evolving the system.',
       });
 
       try {

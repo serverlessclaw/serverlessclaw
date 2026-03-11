@@ -25,7 +25,14 @@ export class AgentRegistry {
       icon: 'Bot',
       enabled: true,
       isBackbone: true,
-      tools: ['dispatch_task', 'recall_knowledge', 'switch_model', 'check_health', 'manage_gap'],
+      tools: [
+        'dispatch_task',
+        'recall_knowledge',
+        'switch_model',
+        'check_health',
+        'manage_gap',
+        'trigger_rollback',
+      ],
     },
     [AgentType.CODER]: {
       id: AgentType.CODER,
@@ -47,6 +54,7 @@ export class AgentRegistry {
       isBackbone: true,
       tools: [
         'file_write',
+        'file_read',
         'validate_code',
         'stage_changes',
         'trigger_deployment',
@@ -73,7 +81,7 @@ export class AgentRegistry {
       icon: 'FlaskConical',
       enabled: true,
       isBackbone: true,
-      tools: ['recall_knowledge', 'check_health'],
+      tools: ['recall_knowledge', 'check_health', 'file_read', 'list_files'],
     },
     [AgentType.COGNITION_REFLECTOR]: {
       id: AgentType.COGNITION_REFLECTOR,
@@ -102,7 +110,7 @@ export class AgentRegistry {
       icon: 'Brain',
       enabled: true,
       isBackbone: true,
-      tools: ['recall_knowledge', 'manage_gap', 'dispatch_task'],
+      tools: ['recall_knowledge', 'manage_gap', 'dispatch_task', 'file_read', 'list_files'],
     },
   };
 

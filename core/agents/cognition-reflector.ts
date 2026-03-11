@@ -39,10 +39,11 @@ export const handler = async (event: {
   }
 
   // Reflector Agent is a specialized Agent instance
+  const agentTools = await (await import('../tools/index')).getAgentTools('cognition-reflector');
   const reflector = new Agent(
     memory,
     provider,
-    [], // No tools needed for reflection
+    agentTools,
     `You are the specialized Reflector Agent for the Serverless Claw stack.
      Your goal is to analyze conversations and extract insights.
 

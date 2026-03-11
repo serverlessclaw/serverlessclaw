@@ -12,6 +12,8 @@ import {
 import { logger } from '../lib/logger';
 import { Resource } from 'sst';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 
 const memory = new DynamoMemory();
 const provider = new ProviderManager();
@@ -81,11 +83,19 @@ export const handler = async (event: {
 
     if (buildId) {
       logger.info(`Deployment triggered (${buildId}). Mapping gaps to build for monitor.`);
-      // Save the mapping so Build Monitor can transition them to DONE/FAILED
-      await memory.addMessage(`BUILD_GAPS#${buildId}`, {
-        role: MessageRole.SYSTEM,
-        content: JSON.stringify(metadata.gapIds),
-      });
+      // 2026 Fix: Use timestamp 0 for fixed lookup compatibility with QA Auditor
+      const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+      await db.send(
+        new PutCommand({
+          TableName: typedResource.MemoryTable.name,
+          Item: {
+            userId: `BUILD_GAPS#${buildId}`,
+            timestamp: 0,
+            role: MessageRole.SYSTEM,
+            content: JSON.stringify(metadata.gapIds),
+          },
+        })
+      );
     } else {
       logger.info(
         `Task successful without deployment. Marking ${metadata.gapIds.length} gaps as DEPLOYED.`

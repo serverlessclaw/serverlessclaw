@@ -95,10 +95,11 @@ export const tools: Record<string, ITool> = {
   dispatch_task: {
     ...toolDefinitions.dispatch_task,
     execute: async (args: Record<string, unknown>): Promise<string> => {
-      const { agentId, userId, task } = args as {
+      const { agentId, userId, task, metadata } = args as {
         agentId: string;
         userId: string;
         task: string;
+        metadata?: Record<string, unknown>;
       };
 
       // Dynamic lookup to validate agent exists and is enabled
@@ -120,7 +121,7 @@ export const tools: Record<string, ITool> = {
           {
             Source: 'main.agent',
             DetailType: `${agentId}_task`,
-            Detail: JSON.stringify({ userId, task }),
+            Detail: JSON.stringify({ userId, task, metadata }),
             EventBusName: typedResource.AgentBus.name,
           },
         ],
@@ -442,6 +443,32 @@ export const tools: Record<string, ITool> = {
         return `Successfully updated gap ${gapId} to ${status}`;
       } catch (error) {
         return `Failed to update gap ${gapId}: ${error instanceof Error ? error.message : String(error)}`;
+      }
+    },
+  },
+  file_read: {
+    ...toolDefinitions.file_read,
+    execute: async (args: Record<string, unknown>) => {
+      const { filePath } = args as { filePath: string };
+      try {
+        const fullPath = path.resolve(process.cwd(), filePath);
+        const content = await fs.readFile(fullPath, 'utf8');
+        return content;
+      } catch (error) {
+        return `Failed to read file: ${error instanceof Error ? error.message : String(error)}`;
+      }
+    },
+  },
+  list_files: {
+    ...toolDefinitions.list_files,
+    execute: async (args: Record<string, unknown>) => {
+      const { dirPath } = args as { dirPath?: string };
+      try {
+        const targetDir = dirPath ? path.resolve(process.cwd(), dirPath) : process.cwd();
+        const files = await fs.readdir(targetDir);
+        return files.join('\n');
+      } catch (error) {
+        return `Failed to list files: ${error instanceof Error ? error.message : String(error)}`;
       }
     },
   },

@@ -1,23 +1,15 @@
 import { DynamoMemory } from '../lib/memory';
 import { Agent } from '../lib/agent';
 import { ProviderManager } from '../lib/providers/index';
-import {
-  AgentType,
-  ReasoningProfile,
-  EventType,
-  EvolutionMode,
-  GapStatus,
-} from '../lib/types/index';
+import { AgentType, ReasoningProfile, EvolutionMode, GapStatus } from '../lib/types/index';
 import { getAgentTools } from '../tools/index';
 import { Resource } from 'sst';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
-import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import { sendOutboundMessage } from '../lib/outbound';
 import { logger } from '../lib/logger';
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
-const eventbridge = new EventBridgeClient({});
 const memory = new DynamoMemory();
 const providerManager = new ProviderManager();
 
@@ -230,24 +222,18 @@ export const handler = async (event: {
       [contextUserId]
     );
 
-    await eventbridge.send(
-      new PutEventsCommand({
-        Entries: [
-          {
-            Source: 'planner.agent',
-            DetailType: EventType.CODER_TASK,
-            Detail: JSON.stringify({
-              userId: contextUserId,
-              task: result,
-              metadata: {
-                gapIds: processedGapIds,
-              },
-            }),
-            EventBusName: (Resource as unknown as { AgentBus: { name: string } }).AgentBus.name,
-          },
-        ],
-      })
-    );
+    // 2026 Optimization: Use the dispatch_task tool logic via EventBridge directly
+    // but keep it compatible with the AgentBus pattern.
+    const { tools } = await import('../tools/index');
+    const dispatcher = tools.dispatch_task;
+    await dispatcher.execute({
+      agentId: AgentType.CODER,
+      userId: contextUserId,
+      task: result,
+      metadata: {
+        gapIds: processedGapIds,
+      },
+    });
   } else {
     logger.info('Evolution mode is hitl, asking for approval.');
     // Send plan to user
