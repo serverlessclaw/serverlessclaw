@@ -5,6 +5,7 @@ import { IAgentConfig } from './types/agent';
 import { BACKBONE_REGISTRY } from './backbone';
 import { logger } from './logger';
 import { SSTResource, Topology, TopologyNode } from './types/index';
+import { DYNAMO_KEYS } from './constants';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -12,7 +13,7 @@ const typedResource = Resource as unknown as SSTResource;
 
 /**
  * AgentRegistry handles discovery and configuration of agents.
- * It combines hardcoded backbone agents with user-defined agents from DDB.
+ * It combines hardcoded backbone agents with user-defined agents from DynamoDB.
  */
 export class AgentRegistry {
   private static backboneConfigs: Record<string, IAgentConfig> = BACKBONE_REGISTRY;
@@ -20,8 +21,9 @@ export class AgentRegistry {
 
   /**
    * Retrieves the configuration for a specific agent by ID.
+   * Merges hardcoded backbone defaults with dynamic overrides from DynamoDB.
    *
-   * @param id - The unique ID of the agent.
+   * @param id - The unique ID of the agent (e.g., 'main', 'coder').
    * @returns A promise that resolves to the agent configuration or undefined if not found.
    */
   static async getAgentConfig(id: string): Promise<IAgentConfig | undefined> {
@@ -33,7 +35,7 @@ export class AgentRegistry {
 
       // Apply overrides from agents_config (This allows hot-swapping prompts/models for backbone agents)
       const ddbAgents =
-        ((await this.getRawConfig('agents_config')) as Record<string, Partial<IAgentConfig>>) || {};
+        ((await this.getRawConfig(DYNAMO_KEYS.AGENTS_CONFIG)) as Record<string, Partial<IAgentConfig>>) || {};
       if (ddbAgents[id]) {
         if (ddbAgents[id].systemPrompt) config.systemPrompt = ddbAgents[id].systemPrompt!;
         if (ddbAgents[id].description) config.description = ddbAgents[id].description;
@@ -48,7 +50,7 @@ export class AgentRegistry {
     } else {
       // User-defined from DDB
       const ddbAgents =
-        ((await this.getRawConfig('agents_config')) as Record<string, unknown>) || {};
+        ((await this.getRawConfig(DYNAMO_KEYS.AGENTS_CONFIG)) as Record<string, unknown>) || {};
       config = ddbAgents[id] as IAgentConfig;
     }
 
@@ -74,7 +76,7 @@ export class AgentRegistry {
    * @returns A promise that resolves to a record of agent IDs to their configurations.
    */
   static async getAllConfigs(): Promise<Record<string, IAgentConfig>> {
-    const ddbConfig = (await this.getRawConfig('agents_config')) || {};
+    const ddbConfig = (await this.getRawConfig(DYNAMO_KEYS.AGENTS_CONFIG)) || {};
     const all: Record<string, IAgentConfig> = { ...this.backboneConfigs };
 
     // Merge in DDB agents
@@ -102,15 +104,17 @@ export class AgentRegistry {
    * @returns A promise that resolves to an array of infrastructure node objects.
    */
   static async getInfraConfig(): Promise<TopologyNode[]> {
-    const ddbConfig = await this.getRawConfig('infra_config');
+    const ddbConfig = await this.getRawConfig(DYNAMO_KEYS.INFRA_CONFIG);
     return Array.isArray(ddbConfig) ? (ddbConfig as TopologyNode[]) : [];
   }
 
   /**
    * Retrieves the full system topology (nodes + edges).
+   *
+   * @returns A promise that resolves to the system topology or undefined if not recorded.
    */
   static async getFullTopology(): Promise<Topology | undefined> {
-    const topology = await this.getRawConfig('system_topology');
+    const topology = await this.getRawConfig(DYNAMO_KEYS.SYSTEM_TOPOLOGY);
     return topology as Topology | undefined;
   }
 
@@ -143,13 +147,13 @@ export class AgentRegistry {
    * @returns A promise that resolves when the configuration is saved.
    */
   static async saveConfig(id: string, config: IAgentConfig): Promise<void> {
-    const all = ((await this.getRawConfig('agents_config')) as Record<string, unknown>) || {};
+    const all = ((await this.getRawConfig(DYNAMO_KEYS.AGENTS_CONFIG)) as Record<string, unknown>) || {};
     all[id] = config;
 
     await docClient.send(
       new PutCommand({
         TableName: typedResource.ConfigTable.name,
-        Item: { key: 'agents_config', value: all },
+        Item: { key: DYNAMO_KEYS.AGENTS_CONFIG, value: all },
       })
     );
   }

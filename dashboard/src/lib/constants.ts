@@ -43,6 +43,32 @@ export const UI_STRINGS = {
   EXECUTION_TIMELINE: 'Execution Timeline',
   RAW_PAYLOAD: 'RAW_PAYLOAD',
   FINAL_OUTPUT: 'Final Output',
+  INTELLIGENCE_HEADER: 'Intelligence',
+  SYSTEM_HEADER: 'System',
+  OBSERVABILITY_HEADER: 'Observability',
+  CHAT_DIRECT: 'CHAT_DIRECT',
+  TRACE_INTEL: 'TRACE_INTEL',
+  AGENTS: 'AGENTS',
+  SYSTEM_PULSE: 'SYSTEM_PULSE',
+  SESSION_TRAFFIC: 'SESSION_TRAFFIC',
+  CONFIG: 'CONFIG',
+  SECURITY_MANIFEST: 'SECURITY_MANIFEST',
+  SELF_HEALING: 'SELF_HEALING',
+  NODE_STATUS: 'Node Status',
+  SYSTEM_ONLINE: 'SYSTEM_ONLINE',
+  VERSION_PROTOTYPE: 'v1.0.0-PROTOTYPE',
+  BUILD_YEAR: '2026',
+} as const;
+
+export const ROUTES = {
+  HOME: '/',
+  CHAT: '/chat',
+  AGENTS: '/agents',
+  SYSTEM_PULSE: '/system-pulse',
+  LOCKS: '/locks',
+  SETTINGS: '/settings',
+  SECURITY: '/security',
+  RESILIENCE: '/resilience',
 } as const;
 
 export const TRACE_TYPES = {
