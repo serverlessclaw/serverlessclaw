@@ -387,6 +387,24 @@ export const tools: Record<string, ITool> = {
       }
     },
   },
+  merge_pr: {
+    ...toolDefinitions.merge_pr,
+    execute: async (args: Record<string, unknown>) => {
+      const { prNumber, strategy = 'merge' } = args as {
+        prNumber: number;
+        strategy?: 'merge' | 'squash' | 'rebase';
+      };
+      try {
+        logger.info(`Merging PR #${prNumber} with strategy ${strategy}...`);
+        const { stdout, stderr } = await execAsync(
+          `gh pr merge ${prNumber} --${strategy} --delete-branch`
+        );
+        return `PR #${prNumber} merged successfully:\n${stdout}\n${stderr}`;
+      } catch (error) {
+        return `Failed to merge PR #${prNumber}: ${error instanceof Error ? error.message : String(error)}`;
+      }
+    },
+  },
 };
 
 /**

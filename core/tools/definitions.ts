@@ -176,4 +176,20 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
       required: ['agentId', 'toolNames'],
     },
   },
+  merge_pr: {
+    name: 'merge_pr',
+    description: 'Merges a GitHub pull request.',
+    parameters: {
+      type: 'object',
+      properties: {
+        prNumber: { type: 'number', description: 'The number of the pull request to merge.' },
+        strategy: {
+          type: 'string',
+          enum: ['merge', 'squash', 'rebase'],
+          description: 'The merge strategy to use.',
+        },
+      },
+      required: ['prNumber'],
+    },
+  },
 };

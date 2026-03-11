@@ -54,6 +54,20 @@ export const handler = async (event: APIGatewayProxyEventV2) => {
     return { statusCode: 200, body: 'No admin configured' };
   }
 
+  // Fetch Auto-Merge configuration
+  let autoMergeEnabled = false;
+  try {
+    const { Item } = await db.send(
+      new GetCommand({
+        TableName: (Resource as unknown as { ConfigTable: { name: string } }).ConfigTable.name,
+        Key: { key: 'renobot_auto_merge' },
+      })
+    );
+    autoMergeEnabled = Item?.value === true || Item?.value === 'true';
+  } catch (e) {
+    logger.warn('Could not fetch renobot_auto_merge from ConfigTable:', e);
+  }
+
   // Notify on creation or update
   if (action === 'opened' || action === 'synchronize') {
     const isAutomerge =
@@ -64,7 +78,7 @@ PR ${action}: ${pr.title}
 Repo: ${payload.repository.full_name}
 Link: ${pr.html_url}\n\n`;
 
-    if (isAutomerge) {
+    if (isAutomerge || autoMergeEnabled) {
       message += `✅ AUTOMERGE ENABLED: I will monitor this PR and it will be merged once CI passes.`;
     } else {
       message += `⚠️ MANUAL REVIEW REQUIRED: This is a major update or could not be automerged. 
@@ -72,6 +86,21 @@ I have verified the daily run schedule. Would you like me to run 'validate_code'
     }
 
     await sendOutboundMessage('renobot.handler', adminChatId, message, [adminChatId]);
+  }
+
+  // Auto-merge if CI passes
+  if (action === 'status' || (action === 'completed' && payload.check_run)) {
+    // Note: status events have a different structure, we need to handle them carefully.
+    // For simplicity in this demo, we check if the PR is mergeable and auto-merge is on.
+    if (autoMergeEnabled && pr.mergeable_state === 'clean') {
+      const { tools } = await import('../tools/index');
+      const mergeTool = tools.merge_pr;
+      if (mergeTool) {
+        logger.info(`Auto-merging PR #${pr.number} as requested by Renobot policy.`);
+        const result = await mergeTool.execute({ prNumber: pr.number, strategy: 'merge' });
+        await sendOutboundMessage('renobot.handler', adminChatId, `🤖 **Auto-Merge Result for PR #${pr.number}**:\n${result}`, [adminChatId]);
+      }
+    }
   }
 
   return { statusCode: 200, body: 'OK' };
