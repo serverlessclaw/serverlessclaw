@@ -10,7 +10,14 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
 import { logger } from '../lib/logger';
-import { SSTResource, EventType, GapStatus } from '../lib/types/index';
+import {
+  SSTResource,
+  EventType,
+  GapStatus,
+  TopologyNode,
+  TopologyEdge,
+  Topology,
+} from '../lib/types/index';
 import { DynamoMemory } from '../lib/memory';
 
 const codebuild = new CodeBuildClient({});
@@ -95,7 +102,7 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
 
         // Legacy infrastructure migration (optional but keeps old UI working for now)
         const infraNodes = topology.nodes.filter(
-          (n: any) => n.type === 'infra' || n.type === 'dashboard'
+          (n: TopologyNode) => n.type === 'infra' || n.type === 'dashboard'
         );
         await db.send(
           new PutCommand({
@@ -220,13 +227,13 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
  * Dynamically discovers the system topology by scanning SST Resources and the AgentRegistry.
  * Generates a graph of nodes and edges for the System Pulse dashboard.
  */
-async function discoverSystemTopology(): Promise<{ nodes: any[]; edges: any[] }> {
+async function discoverSystemTopology(): Promise<Topology> {
   try {
-    const nodes: any[] = [];
-    const edges: any[] = [];
+    const nodes: TopologyNode[] = [];
+    const edges: TopologyEdge[] = [];
 
     // 1. Discover Infrastructure from SST Resource
-    const typedResource = Resource as any;
+    const resourceMap = Resource as unknown as Record<string, unknown>;
     const infraMap: Record<string, string> = {
       AgentBus: 'bus',
       ConfigTable: 'config',
@@ -245,7 +252,7 @@ async function discoverSystemTopology(): Promise<{ nodes: any[]; edges: any[] }>
     });
 
     Object.keys(infraMap).forEach((resKey) => {
-      if (typedResource[resKey]) {
+      if (resourceMap[resKey]) {
         const id = infraMap[resKey];
         nodes.push({
           id,
@@ -274,9 +281,8 @@ async function discoverSystemTopology(): Promise<{ nodes: any[]; edges: any[] }>
       // 3. Generate Edges based on connectionProfile
       if (agent.connectionProfile && agent.enabled) {
         agent.connectionProfile.forEach((targetId) => {
-          // Map common resource aliases to node IDs
+          // Map common resource aliases to node IDs (Backward compatibility)
           let actualTarget = targetId;
-          if (targetId === 'bus') actualTarget = 'bus';
           if (targetId === 'memoryTable') actualTarget = 'memory';
           if (targetId === 'configTable') actualTarget = 'config';
           if (targetId === 'stagingBucket') actualTarget = 'storage';

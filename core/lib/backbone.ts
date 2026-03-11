@@ -22,7 +22,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       'manage_gap',
       'trigger_rollback',
     ],
-    connectionProfile: ['bus', 'memoryTable', 'configTable'],
+    connectionProfile: ['bus', 'memory', 'config', 'trace'],
   },
   [AgentType.CODER]: {
     id: AgentType.CODER,
@@ -41,7 +41,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       'run_tests',
       'run_shell_command',
     ],
-    connectionProfile: ['bus', 'memoryTable', 'stagingBucket', 'deployer'],
+    connectionProfile: ['bus', 'memory', 'storage', 'codebuild', 'config', 'trace'],
   },
   [AgentType.STRATEGIC_PLANNER]: {
     id: AgentType.STRATEGIC_PLANNER,
@@ -52,7 +52,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     enabled: true,
     isBackbone: true,
     tools: ['recall_knowledge', 'manage_gap', 'dispatch_task', 'file_read', 'list_files'],
-    connectionProfile: ['bus', 'memoryTable', 'configTable'],
+    connectionProfile: ['bus', 'memory', 'config', 'trace'],
   },
   [AgentType.COGNITION_REFLECTOR]: {
     id: AgentType.COGNITION_REFLECTOR,
@@ -63,7 +63,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     enabled: true,
     isBackbone: true,
     tools: ['recall_knowledge', 'manage_gap'],
-    connectionProfile: ['bus', 'memoryTable'],
+    connectionProfile: ['bus', 'memory', 'config', 'trace'],
   },
   [AgentType.QA]: {
     id: AgentType.QA,
@@ -74,7 +74,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     enabled: true,
     isBackbone: true,
     tools: ['recall_knowledge', 'check_health', 'file_read', 'list_files'],
-    connectionProfile: ['bus', 'memoryTable'],
+    connectionProfile: ['bus', 'memory', 'config', 'trace'],
   },
   // Handlers (Logic-only, but registered for topology awareness)
   [AgentType.BUILD_MONITOR]: {
@@ -85,7 +85,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     icon: 'Activity',
     enabled: true,
     isBackbone: true,
-    connectionProfile: ['bus', 'configTable', 'deployer'],
+    connectionProfile: ['bus', 'config', 'codebuild', 'memory'],
   },
   [AgentType.RECOVERY]: {
     id: AgentType.RECOVERY,

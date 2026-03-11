@@ -16,3 +16,25 @@ export interface SSTResource {
   OpenRouterApiKey: { value: string };
   AwsRegion: { value: string };
 }
+
+export interface TopologyNode {
+  id: string;
+  type: 'dashboard' | 'infra' | 'agent';
+  label: string;
+  description?: string;
+  icon?: string;
+  iconType?: string;
+  enabled?: boolean;
+  isBackbone?: boolean;
+}
+
+export interface TopologyEdge {
+  id: string;
+  source: string;
+  target: string;
+}
+
+export interface Topology {
+  nodes: TopologyNode[];
+  edges: TopologyEdge[];
+}

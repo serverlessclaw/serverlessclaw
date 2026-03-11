@@ -204,6 +204,16 @@ The **Build Monitor** uses this registry to dynamically generate the neural map 
 
 ---
 
+### 4. Permissions vs. Topology
+
+It is critical to distinguish between **Topology Connectivity** and **IAM Permissions**:
+
+- **Topology Connectivity**: Declared in `backbone.ts` (for backbone nodes) or via the Dashboard (for custom nodes). This is used only for **visualization** in System Pulse and for providing **context** to agents about what they *should* be able to access.
+- **IAM Permissions**: Managed in `infra/agents.ts` via the `link` property. This is the **hard security layer**.
+
+> [!WARNING]
+> Adding a connection in the Dashboard or `backbone.ts` does **NOT** automatically grant AWS permissions. If a new agent type requires access to a new resource (e.g., a specific S3 bucket), you must still modify `infra/agents.ts` to link that resource to the `Worker Agent` (for custom agents) or the specific backbone agent.
+
 ## 🛠️ Adding a New Agent
 
 To evolve the system with a new specialized node:

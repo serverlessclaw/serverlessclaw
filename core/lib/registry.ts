@@ -4,7 +4,7 @@ import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dyn
 import { IAgentConfig } from './types/agent';
 import { BACKBONE_REGISTRY } from './backbone';
 import { logger } from './logger';
-import { SSTResource } from './types/index';
+import { SSTResource, Topology, TopologyNode } from './types/index';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -86,17 +86,17 @@ export class AgentRegistry {
    *
    * @returns A promise that resolves to an array of infrastructure node objects.
    */
-  static async getInfraConfig(): Promise<unknown[]> {
+  static async getInfraConfig(): Promise<TopologyNode[]> {
     const ddbConfig = await this.getRawConfig('infra_config');
-    return Array.isArray(ddbConfig) ? ddbConfig : [];
+    return Array.isArray(ddbConfig) ? (ddbConfig as TopologyNode[]) : [];
   }
 
   /**
    * Retrieves the full system topology (nodes + edges).
    */
-  static async getFullTopology(): Promise<{ nodes: unknown[]; edges: unknown[] } | undefined> {
+  static async getFullTopology(): Promise<Topology | undefined> {
     const topology = await this.getRawConfig('system_topology');
-    return topology as { nodes: unknown[]; edges: unknown[] } | undefined;
+    return topology as Topology | undefined;
   }
 
   /**
