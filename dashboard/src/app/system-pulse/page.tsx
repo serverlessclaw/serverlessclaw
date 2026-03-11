@@ -44,13 +44,13 @@ export default function SystemPulsePage() {
           </div>
           <div className="flex items-center gap-4 text-[9px] text-white/40">
             <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-cyber-blue"></div> AGENT_NODE
+              <div className="w-2 h-2 rounded-full bg-cyber-green"></div> AGENT_NODE
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-cyber-green"></div> PRIMARY_BUS
+              <div className="w-2 h-2 rounded-full bg-orange-500"></div> PRIMARY_BUS
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-white/20"></div> INFRA_NODE
+              <div className="w-2 h-2 rounded-full bg-cyber-blue"></div> INFRA_NODE
             </div>
           </div>
         </div>
