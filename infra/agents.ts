@@ -175,8 +175,7 @@ export function createAgents(ctx: AgentContext) {
   });
   bus.subscribe('QaVerificationSubscriber', qaAgent.arn, {
     pattern: {
-      source: ['build.monitor'],
-      detailType: [EventType.SYSTEM_BUILD_SUCCESS],
+      detailType: [EventType.SYSTEM_BUILD_SUCCESS, EventType.CODER_TASK_COMPLETED],
     },
   });
 

@@ -2,7 +2,13 @@ import { DynamoMemory } from '../lib/memory';
 import { Agent } from '../lib/agent';
 import { ProviderManager } from '../lib/providers/index';
 import { getAgentTools } from '../tools/index';
-import { ReasoningProfile, EvolutionMode, GapStatus, SSTResource } from '../lib/types/index';
+import {
+  ReasoningProfile,
+  EventType,
+  EvolutionMode,
+  GapStatus,
+  SSTResource,
+} from '../lib/types/index';
 import { Resource } from 'sst';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
@@ -30,29 +36,41 @@ async function getEvolutionMode(): Promise<'auto' | 'hitl'> {
 }
 
 export const handler = async (event: {
+  'detail-type': string;
   detail: {
     userId: string;
-    buildId: string;
-    projectName: string;
+    buildId?: string;
+    gapIds?: string[];
+    task?: string;
+    result?: string;
   };
 }) => {
-  logger.info('QA Agent triggered for build:', event.detail.buildId);
+  const detail = event.detail;
+  const isBuildSuccess = event['detail-type'] === EventType.SYSTEM_BUILD_SUCCESS;
 
-  const { userId, buildId } = event.detail;
+  logger.info(`QA Agent triggered via ${event['detail-type']}`, detail.buildId || 'no-build');
 
-  // 1. Fetch Gaps associated with this build
-  const gapsMeta = await db.send(
-    new GetCommand({
-      TableName: typedResource.MemoryTable.name,
-      Key: { userId: `BUILD_GAPS#${buildId}`, timestamp: 0 },
-    })
-  );
+  const { userId, buildId } = detail;
+  let gapIds: string[] = detail.gapIds || [];
 
-  const gapIds: string[] = gapsMeta.Item ? JSON.parse(gapsMeta.Item.content) : [];
+  // 1. Fetch Gaps (from mapping if via BuildMonitor)
+  if (isBuildSuccess && buildId) {
+    const gapsMeta = await db.send(
+      new GetCommand({
+        TableName: typedResource.MemoryTable.name,
+        Key: { userId: `BUILD_GAPS#${buildId}`, timestamp: 0 },
+      })
+    );
+    if (gapsMeta.Item) {
+      gapIds = JSON.parse(gapsMeta.Item.content);
+    }
+  }
+
   if (gapIds.length === 0) {
-    logger.info('No gaps associated with this build. QA cycle complete.');
+    logger.info('No gaps found to verify. QA cycle complete.');
     return;
   }
+
 
   // 2. Fetch Strategic Plans for these gaps
   const plans = [];

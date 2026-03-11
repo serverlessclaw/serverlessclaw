@@ -2,11 +2,15 @@ import { DynamoMemory } from '../lib/memory';
 import { Agent } from '../lib/agent';
 import { ProviderManager } from '../lib/providers/index';
 import { getAgentTools } from '../tools/index';
-import { ReasoningProfile, GapStatus } from '../lib/types/index';
+import { ReasoningProfile, GapStatus, EventType, SSTResource } from '../lib/types/index';
 import { logger } from '../lib/logger';
+import { Resource } from 'sst';
+import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 
 const memory = new DynamoMemory();
 const provider = new ProviderManager();
+const eventbridge = new EventBridgeClient({});
+const typedResource = Resource as unknown as SSTResource;
 
 export const handler = async (event: {
   userId: string;
@@ -71,12 +75,36 @@ export const handler = async (event: {
       });
     } else {
       logger.info(
-        `Task successful without deployment. Marking ${metadata.gapIds.length} gaps as DONE.`
+        `Task successful without deployment. Marking ${metadata.gapIds.length} gaps as DEPLOYED.`
       );
       for (const gapId of metadata.gapIds) {
-        await memory.updateGapStatus(gapId, GapStatus.DONE);
+        await memory.updateGapStatus(gapId, GapStatus.DEPLOYED);
+      }
+
+      // Notify QA Agent directly since BuildMonitor won't be triggered
+      try {
+        await eventbridge.send(
+          new PutEventsCommand({
+            Entries: [
+              {
+                Source: 'coder.agent',
+                DetailType: EventType.CODER_TASK_COMPLETED,
+                Detail: JSON.stringify({
+                  userId,
+                  gapIds: metadata.gapIds,
+                  task,
+                  result: response,
+                }),
+                EventBusName: typedResource.AgentBus.name,
+              },
+            ],
+          })
+        );
+      } catch (e) {
+        logger.error('Failed to emit CODER_TASK_COMPLETED:', e);
       }
     }
+
   }
 
   return response;
