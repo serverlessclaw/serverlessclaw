@@ -227,7 +227,7 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
  * Dynamically discovers the system topology by scanning SST Resources and the AgentRegistry.
  * Generates a graph of nodes and edges for the System Pulse dashboard.
  */
-async function discoverSystemTopology(): Promise<Topology> {
+export async function discoverSystemTopology(): Promise<Topology> {
   try {
     const nodes: TopologyNode[] = [];
     const edges: TopologyEdge[] = [];

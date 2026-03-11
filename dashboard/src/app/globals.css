@@ -103,7 +103,7 @@ body {
   background-color: var(--color-cyber-green);
 }
 
-.peer:checked ~ .peer-checked\:after\:translate-x-5::after {
-  transform: translateX(1rem);
+.peer:checked ~ .peer-checked\:after\:toggle-move::after {
+  transform: translateX(1.25rem); /* Exactly 20px */
 }
 

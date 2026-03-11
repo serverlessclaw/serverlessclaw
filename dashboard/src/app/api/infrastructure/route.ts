@@ -1,16 +1,24 @@
 import { Resource } from 'sst';
 import { NextResponse } from 'next/server';
 import { AgentRegistry } from '@claw/core/lib/registry';
+import { discoverSystemTopology } from '@claw/core/handlers/monitor';
 
 export async function GET() {
   try {
-    // 1. Try to load full system topology from DynamoDB (written by Build Monitor)
+    // 1. Try to load full system topology from DynamoDB (persisted by Build Monitor)
     const topology = await AgentRegistry.getFullTopology();
     if (topology && topology.nodes.length > 0) {
       return NextResponse.json(topology);
     }
 
-    // 2. Fallback to legacy infra_config if topology isn't generated yet
+    // 2. Fallback: Live Discovery (Crucial for Local Dev)
+    console.log('No persisted topology found. Performing live discovery...');
+    const liveTopology = await discoverSystemTopology();
+    if (liveTopology && liveTopology.nodes.length > 0) {
+      return NextResponse.json(liveTopology);
+    }
+
+    // 3. Last Resort Fallback (Should rarely be hit now)
     const dynamicInfra = await AgentRegistry.getInfraConfig();
     if (dynamicInfra && dynamicInfra.length > 0) {
       return NextResponse.json({ nodes: dynamicInfra, edges: [] });

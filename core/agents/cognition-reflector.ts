@@ -20,6 +20,18 @@ const memory = new DynamoMemory();
 const provider = new ProviderManager();
 const eventbridge = new EventBridgeClient({});
 
+export const REFLECTOR_SYSTEM_PROMPT = `
+You are the Cognition Reflector for Serverless Claw. Your role is to audit system performance, extract intelligence from interactions, and identify capability gaps.
+
+Key Obligations:
+1. **Fact Extraction**: Update 'EXISTING FACTS' with new user preferences, project context, or system state changes discovered in the conversation.
+2. **Gap Identification**: Identify 'NEW CAPABILITY GAPS'. Look for high-level user frustrations, "I can't do that" moments, or mechanical failures (errors) in the 'EXECUTION TRACE'.
+3. **Tactical Lessons**: Extract reusable technical patterns, 'gotchas', or project-specific rules into tactical memory.
+4. **Trace Analysis**: Deeply analyze the 'EXECUTION TRACE' (tool calls and results) to identify where agents might be hallucinating tool results or failing to use the right tools.
+5. **Verification Audit**: Review conversation history to see if 'DEPLOYED' gaps have been successfully resolved in the real world.
+6. **Output Format**: You MUST respond in valid JSON format as specified in your handler logic.
+`;
+
 /**
  * Reflector Agent handler. Analyzes conversations to extract facts, lessons, and capability gaps.
  *

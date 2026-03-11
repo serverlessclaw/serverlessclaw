@@ -1,5 +1,9 @@
 import { AgentType, IAgentConfig } from './types/agent';
 import { SUPERCLAW_SYSTEM_PROMPT } from '../agents/superclaw';
+import { CODER_SYSTEM_PROMPT } from '../agents/coder';
+import { PLANNER_SYSTEM_PROMPT } from '../agents/strategic-planner';
+import { REFLECTOR_SYSTEM_PROMPT } from '../agents/cognition-reflector';
+import { QA_SYSTEM_PROMPT } from '../agents/qa';
 
 /**
  * Backbone Registry: The single source of truth for essential system components.
@@ -28,7 +32,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
   [AgentType.CODER]: {
     id: AgentType.CODER,
     name: 'Coder Agent',
-    systemPrompt: 'Specialized for writing code and modifying infra.',
+    systemPrompt: CODER_SYSTEM_PROMPT,
     description: 'Autonomous builder. Implements changes and validates via pre-flight checks.',
     icon: 'Code',
     enabled: true,
@@ -48,7 +52,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
   [AgentType.STRATEGIC_PLANNER]: {
     id: AgentType.STRATEGIC_PLANNER,
     name: 'Strategic Planner',
-    systemPrompt: 'Designs evolution plans based on capability gaps.',
+    systemPrompt: PLANNER_SYSTEM_PROMPT,
     description: 'Design node. Identifies missing features and architecting upgrades.',
     icon: 'Brain',
     enabled: true,
@@ -59,7 +63,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
   [AgentType.COGNITION_REFLECTOR]: {
     id: AgentType.COGNITION_REFLECTOR,
     name: 'Cognition Reflector',
-    systemPrompt: 'Distills memory and extracts gaps from traces.',
+    systemPrompt: REFLECTOR_SYSTEM_PROMPT,
     description: 'Intelligence audit node. Extracts facts, lessons, and gaps from logs.',
     icon: 'Search',
     enabled: true,
@@ -70,7 +74,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
   [AgentType.QA]: {
     id: AgentType.QA,
     name: 'QA Auditor',
-    systemPrompt: 'Verifies satisfaction of deployed changes.',
+    systemPrompt: QA_SYSTEM_PROMPT,
     description: 'Validation node. Audits deployments to ensure they actually solve the gaps.',
     icon: 'FlaskConical',
     enabled: true,
