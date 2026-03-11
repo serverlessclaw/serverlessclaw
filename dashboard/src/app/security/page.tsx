@@ -55,11 +55,11 @@ export default function SecurityManifestPage() {
       <header className="flex justify-between items-end border-b border-white/5 pb-6">
         <div>
           <h2 className="text-3xl font-bold tracking-tight glow-text">SECURITY_MANIFEST</h2>
-          <p className="text-white/80 text-sm mt-2 font-light">Governance boundaries and autonomous permission boundaries.</p>
+          <p className="text-white/100 text-sm mt-2 font-light">Governance boundaries and autonomous permission boundaries.</p>
         </div>
         <div className="flex gap-4">
           <div className="glass-card px-4 py-2 text-[12px] border-cyber-green/30">
-            <div className="text-white/30 mb-1">COMPLIANCE_MODE</div>
+            <div className="text-white/90 mb-1">COMPLIANCE_MODE</div>
             <div className="font-bold text-cyber-green">STRICT_ENFORCEMENT</div>
           </div>
         </div>
@@ -69,7 +69,7 @@ export default function SecurityManifestPage() {
         {/* Left: Agent Capabilities */}
         <div className="lg:col-span-7 space-y-8">
           <section>
-            <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-white/80 flex items-center gap-2 mb-6">
+            <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-white/100 flex items-center gap-2 mb-6">
               <Globe size={14} className="text-cyber-green" /> Agent Capability Matrix
             </h3>
             <div className="space-y-4">
@@ -91,20 +91,20 @@ export default function SecurityManifestPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-6">
                     <div>
-                      <div className="text-[10px] text-white/20 uppercase font-bold mb-2">Capabilities</div>
+                      <div className="text-[10px] text-white/50 uppercase font-bold mb-2">Capabilities</div>
                       <ul className="space-y-1">
                         {policy.capabilities.map((cap, j) => (
-                          <li key={j} className="text-xs text-white/80 flex items-center gap-2">
+                          <li key={j} className="text-xs text-white/100 flex items-center gap-2">
                             <Eye size={10} className="text-cyber-green/40" /> {cap}
                           </li>
                         ))}
                       </ul>
                     </div>
                     <div>
-                      <div className="text-[10px] text-white/20 uppercase font-bold mb-2">Linked Resources</div>
+                      <div className="text-[10px] text-white/50 uppercase font-bold mb-2">Linked Resources</div>
                       <div className="flex flex-wrap gap-2">
                         {policy.resources.map((res, j) => (
-                          <span key={j} className="text-[9px] px-2 py-0.5 rounded bg-black/40 border border-white/10 text-white/80">
+                          <span key={j} className="text-[9px] px-2 py-0.5 rounded bg-black/40 border border-white/10 text-white/100">
                             {res}
                           </span>
                         ))}
@@ -120,19 +120,19 @@ export default function SecurityManifestPage() {
         {/* Right: Protected Resources */}
         <div className="lg:col-span-5 space-y-8">
           <section className="glass-card p-6 border-white/10 bg-black/40 sticky top-10">
-            <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-white/80 flex items-center gap-2 mb-6">
+            <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-white/100 flex items-center gap-2 mb-6">
               <Lock size={14} className="text-red-500" /> Protected Resource Labeling
             </h3>
             <div className="space-y-3">
               {PROTECTED_RESOURCES.map((res, i) => (
                 <div key={i} className="flex flex-col p-3 rounded bg-red-500/[0.02] border border-red-500/10 group hover:border-red-500/30 transition-all">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-[11px] font-mono text-white/80">{res.path}</span>
+                    <span className="text-[11px] font-mono text-white/100">{res.path}</span>
                     <span className="text-[9px] font-bold text-red-500">{res.protection}</span>
                   </div>
                   <div className="flex justify-between items-center text-[9px]">
-                    <span className="text-white/30 italic">{res.reason}</span>
-                    <span className="text-white/20 uppercase tracking-tighter px-1 rounded border border-white/5">{res.type}</span>
+                    <span className="text-white/90 italic">{res.reason}</span>
+                    <span className="text-white/50 uppercase tracking-tighter px-1 rounded border border-white/5">{res.type}</span>
                   </div>
                 </div>
               ))}
@@ -148,10 +148,10 @@ export default function SecurityManifestPage() {
           </section>
 
           <section className="glass-card p-6 border-white/10 bg-black/40">
-            <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-white/80 flex items-center gap-2 mb-4">
+            <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-white/100 flex items-center gap-2 mb-4">
               <Database size={14} className="text-cyber-blue" /> Infrastructure Boundaries (IAM)
             </h3>
-            <p className="text-xs text-white/80 leading-relaxed mb-4 font-light">
+            <p className="text-xs text-white/100 leading-relaxed mb-4 font-light">
                 Permissions are hardware-enforced at the AWS IAM level. Agents only have access to the specific resources linked in <code className="text-cyber-blue font-bold">sst.config.ts</code>.
             </p>
             <div className="flex flex-wrap gap-2">

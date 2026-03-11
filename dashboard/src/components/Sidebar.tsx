@@ -78,7 +78,7 @@ export default function Sidebar() {
             </div>
             <h1 className="text-xl font-bold tracking-tighter">CLAW_CENTER</h1>
           </Link>
-          <button className="lg:hidden p-1 text-white/80" onClick={() => setIsOpen(false)}>
+          <button className="lg:hidden p-1 text-white/100" onClick={() => setIsOpen(false)}>
             <X size={20} />
           </button>
         </div>
@@ -87,7 +87,7 @@ export default function Sidebar() {
           {navItems.map((item, idx) => {
             if (item.type === 'header') {
               return (
-                <div key={idx} className={`text-white/80 px-2 uppercase text-[10px] tracking-widest font-bold mb-2 ${item.className || ''}`}>
+                <div key={idx} className={`text-white/100 px-2 uppercase text-[10px] tracking-widest font-bold mb-2 ${item.className || ''}`}>
                   {item.label}
                 </div>
               );
@@ -106,11 +106,11 @@ export default function Sidebar() {
                 className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded transition-all group ${
                   isActive 
                     ? 'bg-cyber-green/10 text-cyber-green border-l-2 border-cyber-green' 
-                    : 'text-white/80 hover:bg-white/5 hover:text-white'
+                    : 'text-white/100 hover:bg-white/5 hover:text-white'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  {Icon && <Icon size={16} className={isActive ? 'text-cyber-green' : 'text-white/80 group-hover:text-white/80'} />}
+                  {Icon && <Icon size={16} className={isActive ? 'text-cyber-green' : 'text-white/100 group-hover:text-white/100'} />}
                   <span className="font-medium tracking-tight uppercase text-xs">{item.label}</span>
                 </div>
                 {isActive && <ChevronRight size={12} className="text-cyber-green" />}
@@ -121,7 +121,7 @@ export default function Sidebar() {
 
         <div className="pt-6 border-t border-white/5 space-y-4">
           <div className="bg-white/5 rounded p-3">
-            <div className="text-[10px] text-white/30 font-bold uppercase tracking-wider">Node Status</div>
+            <div className="text-[10px] text-white/90 font-bold uppercase tracking-wider">Node Status</div>
             <div className="text-[10px] text-cyber-green mt-1.5 flex items-center gap-2">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyber-green opacity-75"></span>
@@ -130,7 +130,7 @@ export default function Sidebar() {
               SYSTEM_ONLINE
             </div>
           </div>
-          <div className="flex items-center justify-between text-[10px] text-white/20 font-bold tracking-widest">
+          <div className="flex items-center justify-between text-[10px] text-white/50 font-bold tracking-widest">
             <span>v1.0.0-PROTOTYPE</span>
             <span className="text-white/10 px-1 border border-white/10 rounded">2026</span>
           </div>

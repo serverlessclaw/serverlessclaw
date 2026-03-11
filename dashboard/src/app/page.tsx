@@ -61,19 +61,19 @@ export default async function Dashboard() {
         <header className="flex flex-col lg:flex-row lg:justify-between lg:items-end border-b border-white/5 pb-6 gap-6">
           <div className="max-w-xl">
             <h2 className="text-2xl lg:text-3xl font-bold tracking-tight glow-text uppercase">TRACE_INTELLIGENCE</h2>
-            <p className="text-white/80 text-xs lg:text-sm mt-2 font-light leading-relaxed">Neural observation of autonomous agent logic paths and decision matrices.</p>
+            <p className="text-white/100 text-xs lg:text-sm mt-2 font-light leading-relaxed">Neural observation of autonomous agent logic paths and decision matrices.</p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:flex gap-3 lg:gap-4">
             <div className="glass-card px-4 py-2.5 text-[11px] lg:text-[12px]">
-              <div className="text-white/30 mb-1 font-bold tracking-widest text-[9px]">PROVIDER</div>
+              <div className="text-white/90 mb-1 font-bold tracking-widest text-[9px]">PROVIDER</div>
               <div className="font-bold text-cyber-blue uppercase truncate">{config.provider}</div>
             </div>
             <div className="glass-card px-4 py-2.5 text-[11px] lg:text-[12px]">
-              <div className="text-white/30 mb-1 font-bold tracking-widest text-[9px]">MODEL</div>
+              <div className="text-white/90 mb-1 font-bold tracking-widest text-[9px]">MODEL</div>
               <div className="font-bold truncate max-w-[100px] lg:max-w-[120px] uppercase">{config.model}</div>
             </div>
             <div className="glass-card px-4 py-2.5 text-[11px] lg:text-[12px] border-cyber-green/30 col-span-2 md:col-span-1">
-              <div className="text-white/30 mb-1 text-cyber-green/60 font-bold tracking-widest text-[9px]">TOTAL_OPS</div>
+              <div className="text-white/90 mb-1 text-cyber-green/60 font-bold tracking-widest text-[9px]">TOTAL_OPS</div>
               <div className="font-bold flex items-center gap-2">
                 {traces.length}
                 <span className="w-1.5 h-1.5 bg-cyber-green rounded-full animate-pulse"></span>
@@ -85,10 +85,10 @@ export default async function Dashboard() {
         {/* Traces Grid */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-white/80 flex items-center gap-2">
+            <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-white/100 flex items-center gap-2">
               <Terminal size={14} className="text-cyber-green" /> Recent Neural Paths
             </h3>
-            <span className="text-[9px] text-white/20 font-mono hidden md:block">LAST_UPDATE: {new Date().toISOString()}</span>
+            <span className="text-[9px] text-white/50 font-mono hidden md:block">LAST_UPDATE: {new Date().toISOString()}</span>
           </div>
           
           <div className="grid gap-3">
@@ -108,7 +108,7 @@ export default async function Dashboard() {
                       </div>
                       <div className="text-sm font-medium text-white/90 truncate max-w-[200px] md:max-w-md">{trace.initialContext?.userText || 'System Task'}</div>
                     </div>
-                    <div className="flex items-center justify-between md:justify-end gap-6 text-[11px] text-white/30">
+                    <div className="flex items-center justify-between md:justify-end gap-6 text-[11px] text-white/90">
                       <div className="flex items-center gap-2 font-mono">
                         <Clock size={12} /> {new Date(trace.timestamp).toLocaleTimeString()}
                       </div>
@@ -125,19 +125,19 @@ export default async function Dashboard() {
                         step.type === 'tool_call' ? 'border-cyber-blue/20 bg-cyber-blue/5 text-cyber-blue' : 
                         step.type === 'error' ? 'border-red-500/20 bg-red-500/5 text-red-400' : 
                         step.type === 'llm_call' ? 'border-purple-500/20 bg-purple-500/5 text-purple-400' :
-                        'border-white/5 bg-white/5 text-white/80'
+                        'border-white/5 bg-white/5 text-white/100'
                       }`}>
                         {step.type.toUpperCase()}
                       </span>
                     ))}
                     {trace.steps?.length > 6 && (
-                      <span className="text-[9px] text-white/20 flex items-center">+{trace.steps.length - 6} MORE</span>
+                      <span className="text-[9px] text-white/50 flex items-center">+{trace.steps.length - 6} MORE</span>
                     )}
                   </div>
                 </Link>
               ))
             ) : (
-              <div className="h-40 flex flex-col items-center justify-center text-white/20 border border-dashed border-white/10 rounded-lg bg-white/[0.02]">
+              <div className="h-40 flex flex-col items-center justify-center text-white/50 border border-dashed border-white/10 rounded-lg bg-white/[0.02]">
                 <Terminal size={32} className="mb-3 opacity-20 animate-pulse" />
                 <p className="text-[10px] tracking-[0.2em] font-bold">NO_TRACES_FOUND // SYSTEM_IDLE</p>
               </div>

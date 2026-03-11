@@ -104,19 +104,19 @@ export default async function MemoryVault() {
       <header className="flex justify-between items-end border-b border-white/5 pb-6">
         <div>
           <h2 className="text-3xl font-bold tracking-tight glow-text-blue uppercase">NEURAL_RESERVE</h2>
-          <p className="text-white/80 text-sm mt-2 font-light">Human-Agent Collaborative Memory Tiering & Prioritization Hub.</p>
+          <p className="text-white/100 text-sm mt-2 font-light">Human-Agent Collaborative Memory Tiering & Prioritization Hub.</p>
         </div>
         <div className="flex gap-4 text-center">
             <div className="glass-card px-4 py-2 text-[10px]">
-                <div className="text-white/30 mb-1 uppercase font-bold tracking-widest">Facts</div>
+                <div className="text-white/90 mb-1 uppercase font-bold tracking-widest">Facts</div>
                 <div className="font-bold text-cyber-blue text-lg">{distilled.length}</div>
             </div>
             <div className="glass-card px-4 py-2 text-[10px]">
-                <div className="text-white/30 mb-1 uppercase font-bold tracking-widest">Lessons</div>
+                <div className="text-white/90 mb-1 uppercase font-bold tracking-widest">Lessons</div>
                 <div className="font-bold text-cyber-green text-lg">{lessons.length}</div>
             </div>
             <div className="glass-card px-4 py-2 text-[10px]">
-                <div className="text-white/30 mb-1 uppercase font-bold tracking-widest">Gaps</div>
+                <div className="text-white/90 mb-1 uppercase font-bold tracking-widest">Gaps</div>
                 <div className="font-bold text-amber-500 text-lg">{gaps.length}</div>
             </div>
         </div>
@@ -130,7 +130,7 @@ export default async function MemoryVault() {
               <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-amber-500/60 flex items-center gap-2">
                 <Target size={14} className="text-amber-500" /> Strategic Capability Gaps (Co-Managed)
               </h3>
-              <div className="text-[9px] text-white/20 font-bold uppercase tracking-widest bg-white/5 px-2 py-1 rounded">
+              <div className="text-[9px] text-white/50 font-bold uppercase tracking-widest bg-white/5 px-2 py-1 rounded">
                 Collaboration Mode: Active
               </div>
             </div>
@@ -145,14 +145,14 @@ export default async function MemoryVault() {
                               <div className="text-[10px] text-amber-500 font-bold uppercase tracking-widest bg-amber-500/10 px-2 py-0.5 rounded w-fit">
                                   {gap.metadata?.category || 'STRATEGIC_GAP'}
                               </div>
-                              <span className="text-[9px] text-white/20 font-mono">ID: {gap.userId.split('#')[1]}</span>
+                              <span className="text-[9px] text-white/50 font-mono">ID: {gap.userId.split('#')[1]}</span>
                             </div>
                             
                             <div className="flex items-center gap-4">
                                <form action={prioritizeMemory} className="flex items-center gap-2 bg-black/40 px-2 py-1 rounded border border-white/5">
                                   <input type="hidden" name="userId" value={gap.userId} />
                                   <input type="hidden" name="timestamp" value={gap.timestamp} />
-                                  <label className="text-[9px] text-white/30 uppercase font-bold tracking-tighter">Prio:</label>
+                                  <label className="text-[9px] text-white/90 uppercase font-bold tracking-tighter">Prio:</label>
                                   <select 
                                     name="priority" 
                                     defaultValue={gap.metadata?.priority || 5}
@@ -168,7 +168,7 @@ export default async function MemoryVault() {
                                <form action={pruneMemory} className="opacity-0 group-hover:opacity-100 transition-opacity">
                                   <input type="hidden" name="userId" value={gap.userId} />
                                   <input type="hidden" name="timestamp" value={gap.timestamp} />
-                                  <button type="submit" className="text-white/20 hover:text-red-500 transition-colors">
+                                  <button type="submit" className="text-white/50 hover:text-red-500 transition-colors">
                                       <Trash2 size={14} />
                                   </button>
                                </form>
@@ -179,7 +179,7 @@ export default async function MemoryVault() {
                             {gap.content}
                         </p>
 
-                        <div className="mt-4 flex gap-4 text-[9px] text-white/30 uppercase font-mono relative z-10 border-t border-white/5 pt-3">
+                        <div className="mt-4 flex gap-4 text-[9px] text-white/90 uppercase font-mono relative z-10 border-t border-white/5 pt-3">
                             <div className="flex items-center gap-1.5">
                               <TrendingUp size={10} className="text-cyber-green" /> 
                               <span>Impact: {gap.metadata?.impact || 5}/10</span>
@@ -227,7 +227,7 @@ export default async function MemoryVault() {
                         <form action={pruneMemory}>
                             <input type="hidden" name="userId" value={lesson.userId} />
                             <input type="hidden" name="timestamp" value={lesson.timestamp} />
-                            <button type="submit" className="text-white/20 hover:text-red-500 transition-colors">
+                            <button type="submit" className="text-white/50 hover:text-red-500 transition-colors">
                                 <Trash2 size={14} />
                             </button>
                         </form>
@@ -258,7 +258,7 @@ export default async function MemoryVault() {
                     <form action={pruneMemory} className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                         <input type="hidden" name="userId" value={fact.userId} />
                         <input type="hidden" name="timestamp" value={fact.timestamp} />
-                        <button type="submit" className="text-white/20 hover:text-red-500 transition-colors">
+                        <button type="submit" className="text-white/50 hover:text-red-500 transition-colors">
                             <Trash2 size={14} />
                         </button>
                     </form>
@@ -284,7 +284,7 @@ export default async function MemoryVault() {
         <div className="xl:col-span-4 space-y-10">
           <section className="glass-card p-6 border-white/10 bg-black/40">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-white/80 flex items-center gap-2">
+              <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-white/100 flex items-center gap-2">
                 <Wrench size={14} className="text-yellow-500" /> Active Arsenal
               </h3>
               <span className="text-[8px] text-cyber-green font-bold animate-pulse">CAPABLE</span>
@@ -292,12 +292,12 @@ export default async function MemoryVault() {
             <div className="space-y-3">
               {toolList.slice(0, 12).map((tool, i) => (
                 <div key={i} className="px-3 py-2 bg-white/[0.02] border border-white/5 rounded flex items-center justify-between group">
-                  <span className="text-[11px] font-bold text-white/80 group-hover:text-yellow-500/80 transition-colors uppercase tracking-tight">{tool.name}</span>
+                  <span className="text-[11px] font-bold text-white/100 group-hover:text-yellow-500/80 transition-colors uppercase tracking-tight">{tool.name}</span>
                   <Shield size={10} className="text-white/10 group-hover:text-cyber-green" />
                 </div>
               ))}
               {toolList.length > 12 && (
-                <div className="text-center text-[9px] text-white/20 pt-2 border-t border-white/5 mt-4 capitalize font-mono">
+                <div className="text-center text-[9px] text-white/50 pt-2 border-t border-white/5 mt-4 capitalize font-mono">
                   + {toolList.length - 12} more specialized nodes
                 </div>
               )}
@@ -305,15 +305,15 @@ export default async function MemoryVault() {
           </section>
 
           <section className="glass-card p-6 border-white/5 bg-black/20">
-            <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-white/30 flex items-center gap-2 mb-6">
-              <History size={14} className="text-white/30" /> Cognitive Sessions
+            <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-white/90 flex items-center gap-2 mb-6">
+              <History size={14} className="text-white/90" /> Cognitive Sessions
             </h3>
             <div className="space-y-3">
               {sessions.map((session, i) => (
                 <div key={i} className="flex justify-between items-center text-[10px] p-2.5 hover:bg-white/5 rounded transition-colors group border border-transparent hover:border-white/5">
                   <span className="text-white/50 truncate max-w-[120px] font-mono uppercase tracking-tighter">{session.userId}</span>
                   <div className="flex items-center gap-3">
-                    <span className="text-white/20 font-mono group-hover:text-cyber-green">{new Date(session.lastActive).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="text-white/50 font-mono group-hover:text-cyber-green">{new Date(session.lastActive).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     <div className="w-1 h-1 bg-cyber-green rounded-full shadow-[0_0_5px_rgba(52,211,153,0.5)]"></div>
                   </div>
                 </div>

@@ -74,7 +74,7 @@ export default function AgentsManager() {
     setAgents(next);
   };
 
-  if (loading) return <div className="text-white/20 animate-pulse">Initializing Neural Hub...</div>;
+  if (loading) return <div className="text-white/50 animate-pulse">Initializing Neural Hub...</div>;
 
   return (
     <div className="space-y-6">
@@ -84,7 +84,7 @@ export default function AgentsManager() {
         </h3>
         <button 
           onClick={addAgent}
-          className="bg-white/5 hover:bg-white/10 text-white/80 px-3 py-1.5 rounded text-[10px] font-bold border border-white/10 flex items-center gap-2 transition-all"
+          className="bg-white/5 hover:bg-white/10 text-white/100 px-3 py-1.5 rounded text-[10px] font-bold border border-white/10 flex items-center gap-2 transition-all"
         >
           <Plus size={14} /> REGISTER_NEW_NODE
         </button>
@@ -95,7 +95,7 @@ export default function AgentsManager() {
           <div key={agent.id} className={`glass-card p-6 border-l-2 ${agent.isBackbone ? 'border-cyber-blue shadow-[0_0_15px_rgba(0,224,255,0.05)]' : 'border-white/10'}`}>
             <div className="flex justify-between items-start mb-4">
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded ${agent.isBackbone ? 'bg-cyber-blue/20 text-cyber-blue' : 'bg-white/5 text-white/80'}`}>
+                <div className={`p-2 rounded ${agent.isBackbone ? 'bg-cyber-blue/20 text-cyber-blue' : 'bg-white/5 text-white/100'}`}>
                   {agent.isBackbone ? <Shield size={18} /> : <Bot size={18} />}
                 </div>
                 <div>
@@ -105,12 +105,12 @@ export default function AgentsManager() {
                     className="bg-transparent border-none text-white font-bold outline-none focus:ring-1 focus:ring-white/20 rounded px-1 text-sm uppercase tracking-tight"
                     disabled={agent.isBackbone}
                   />
-                  <div className="text-[10px] text-white/20 mt-1 font-mono">{agent.id} {agent.isBackbone && '[PROTECTED_BACKBONE]'}</div>
+                  <div className="text-[10px] text-white/50 mt-1 font-mono">{agent.id} {agent.isBackbone && '[PROTECTED_BACKBONE]'}</div>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <span className="text-[9px] font-bold text-white/80 tracking-widest">ACTIVE</span>
+                  <span className="text-[9px] font-bold text-white/100 tracking-widest">ACTIVE</span>
                   <input 
                     type="checkbox"
                     checked={agent.enabled}
@@ -122,7 +122,7 @@ export default function AgentsManager() {
                 {!agent.isBackbone && (
                   <button 
                     onClick={() => deleteAgent(agent.id)}
-                    className="p-1.5 hover:bg-red-500/20 text-white/20 hover:text-red-500 rounded transition-colors"
+                    className="p-1.5 hover:bg-red-500/20 text-white/50 hover:text-red-500 rounded transition-colors"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -132,24 +132,24 @@ export default function AgentsManager() {
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-[10px] uppercase text-white/30 tracking-widest font-bold flex items-center gap-2">
+                <label className="text-[10px] uppercase text-white/90 tracking-widest font-bold flex items-center gap-2">
                   <Settings2 size={10} /> Neural Instructions (System Prompt)
                 </label>
                 <textarea 
                   value={agent.systemPrompt}
                   onChange={e => updateAgent(agent.id, { systemPrompt: e.target.value })}
-                  className="w-full bg-black/40 border border-white/5 rounded p-3 text-xs text-white/80 font-mono min-h-[120px] outline-none focus:border-cyber-green/30 transition-colors leading-relaxed"
+                  className="w-full bg-black/40 border border-white/5 rounded p-3 text-xs text-white/100 font-mono min-h-[120px] outline-none focus:border-cyber-green/30 transition-colors leading-relaxed"
                   disabled={agent.isBackbone}
                 />
               </div>
               <div className="flex gap-4">
                 <div className="flex-1 space-y-2">
-                  <label className="text-[10px] uppercase text-white/30 tracking-widest font-bold">Neural Model Alignment</label>
+                  <label className="text-[10px] uppercase text-white/90 tracking-widest font-bold">Neural Model Alignment</label>
                   <div className="relative group">
                     <select 
                       value={agent.model || ''}
                       onChange={e => updateAgent(agent.id, { model: e.target.value })}
-                      className="w-full bg-black/60 border border-white/10 rounded px-3 py-2 text-[11px] text-white/80 outline-none focus:border-cyber-green/50 transition-all appearance-none cursor-pointer hover:bg-white/5"
+                      className="w-full bg-black/60 border border-white/10 rounded px-3 py-2 text-[11px] text-white/100 outline-none focus:border-cyber-green/50 transition-all appearance-none cursor-pointer hover:bg-white/5"
                       disabled={agent.isBackbone}
                     >
                       <option value="">INHERIT_SYSTEM_DEFAULT</option>
@@ -159,7 +159,7 @@ export default function AgentsManager() {
                       <option value="anthropic/claude-3-5-sonnet">Claude 3.5 Sonnet</option>
                       <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash</option>
                     </select>
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/20">
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/50">
                       <Settings2 size={12} />
                     </div>
                   </div>

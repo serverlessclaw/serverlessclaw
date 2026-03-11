@@ -72,7 +72,7 @@ export default async function CapabilitiesPage() {
       <header className="flex justify-between items-end border-b border-white/5 pb-6">
         <div>
           <h2 className="text-3xl font-bold tracking-tight glow-text-yellow">CAPABILITIES_ROSTER</h2>
-          <p className="text-white/80 text-sm mt-2 font-light">Real-time management of agent toolsets and autonomous permissions.</p>
+          <p className="text-white/100 text-sm mt-2 font-light">Real-time management of agent toolsets and autonomous permissions.</p>
         </div>
       </header>
 
@@ -102,7 +102,7 @@ export default async function CapabilitiesPage() {
                     className={`flex items-start gap-3 p-3 rounded border transition-all cursor-pointer group ${
                       isEnabled 
                         ? 'bg-yellow-500/5 border-yellow-500/20 text-white' 
-                        : 'bg-white/[0.02] border-white/5 text-white/80 opacity-60 grayscale hover:grayscale-0 hover:opacity-100'
+                        : 'bg-white/[0.02] border-white/5 text-white/100 opacity-60 grayscale hover:grayscale-0 hover:opacity-100'
                     }`}
                   >
                     <input 
@@ -131,12 +131,12 @@ export default async function CapabilitiesPage() {
         ))}
       </div>
 
-      <div className="glass-card p-6 border-white/5 text-white/80 flex items-center gap-4">
+      <div className="glass-card p-6 border-white/5 text-white/100 flex items-center gap-4">
         <AlertCircle size={20} className="text-yellow-500/60 shrink-0" />
         <p className="text-xs italic leading-relaxed">
           [SYSTEM_ADVISORY]: Toggling tools takes effect immediately on the next agent turn. Removing core tools like 
-          <span className="text-white/80 mx-1 font-mono">dispatch_task</span> from the Main agent or 
-          <span className="text-white/80 mx-1 font-mono">file_write</span> from the Coder may cause severe system degradation.
+          <span className="text-white/100 mx-1 font-mono">dispatch_task</span> from the Main agent or 
+          <span className="text-white/100 mx-1 font-mono">file_write</span> from the Coder may cause severe system degradation.
         </p>
       </div>
     </main>

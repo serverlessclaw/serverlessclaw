@@ -50,12 +50,12 @@ export default function LoginPage() {
             <Lock size={32} />
           </div>
           <h1 className="text-2xl font-bold tracking-tighter glow-text uppercase">CLAW_CENTER_AUTH</h1>
-          <p className="text-white/80 text-[10px] mt-2 tracking-[0.2em]">RESTRICTED_ACCESS // NEURAL_GATEWAY_V1.0</p>
+          <p className="text-white/100 text-[10px] mt-2 tracking-[0.2em]">RESTRICTED_ACCESS // NEURAL_GATEWAY_V1.0</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-[10px] text-white/80 font-bold uppercase tracking-widest block ml-1">
+            <label className="text-[10px] text-white/100 font-bold uppercase tracking-widest block ml-1">
               Neural Keyphrase
             </label>
             <div className="relative">
@@ -69,7 +69,7 @@ export default function LoginPage() {
                 disabled={loading}
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                <Zap size={16} className={loading ? 'text-cyber-green animate-pulse' : 'text-white/20'} />
+                <Zap size={16} className={loading ? 'text-cyber-green animate-pulse' : 'text-white/50'} />
               </div>
             </div>
           </div>
@@ -95,7 +95,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-white/5 flex justify-between items-center text-[9px] text-white/20 font-bold tracking-widest">
+        <div className="mt-8 pt-6 border-t border-white/5 flex justify-between items-center text-[9px] text-white/50 font-bold tracking-widest">
           <span>SERVERLESS_CLAW_OS</span>
           <span>EST_2026</span>
         </div>

@@ -55,7 +55,7 @@ export default function ChatPage() {
           <h2 className="text-xl font-bold tracking-tight flex items-center gap-2">
             <MessageSquare size={20} className="text-cyber-green" /> CHAT_DIRECT
           </h2>
-          <p className="text-[10px] text-white/30 uppercase tracking-widest mt-1">Real-time interaction with CLAW_CORE</p>
+          <p className="text-[10px] text-white/90 uppercase tracking-widest mt-1">Real-time interaction with CLAW_CORE</p>
         </div>
         <div className="flex gap-2">
             <div className="text-[10px] px-2 py-1 bg-cyber-green/10 text-cyber-green border border-cyber-green/20 rounded font-bold">
@@ -70,7 +70,7 @@ export default function ChatPage() {
         className="flex-1 overflow-y-auto p-6 space-y-6 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/[0.02] via-transparent to-transparent"
       >
         {messages.length === 0 && (
-            <div className="h-full flex flex-col items-center justify-center text-white/20">
+            <div className="h-full flex flex-col items-center justify-center text-white/50">
                 <Terminal size={48} className="mb-4 opacity-10" />
                 <p className="text-sm font-light">SYSTEM_READY // WAITING_FOR_INPUT</p>
                 <p className="text-[10px] mt-2 opacity-50">Authorized personnel only.</p>
@@ -81,7 +81,7 @@ export default function ChatPage() {
           <div key={i} className={`flex gap-4 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`flex gap-4 max-w-[80%] ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
               <div className={`w-8 h-8 rounded shrink-0 flex items-center justify-center border ${
-                m.role === 'user' ? 'bg-white/5 border-white/10 text-white/80' : 'bg-cyber-green/10 border-cyber-green/30 text-cyber-green'
+                m.role === 'user' ? 'bg-white/5 border-white/10 text-white/100' : 'bg-cyber-green/10 border-cyber-green/30 text-cyber-green'
               }`}>
                 {m.role === 'user' ? <User size={16} /> : <Bot size={16} />}
               </div>
@@ -115,7 +115,7 @@ export default function ChatPage() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Enter command or query for CLAW_CORE..."
-            className="w-full bg-black border border-white/10 rounded-lg py-4 pl-6 pr-16 text-sm outline-none focus:border-cyber-green/50 transition-all placeholder:text-white/20"
+            className="w-full bg-black border border-white/10 rounded-lg py-4 pl-6 pr-16 text-sm outline-none focus:border-cyber-green/50 transition-all placeholder:text-white/50"
             disabled={isLoading}
           />
           <button 
@@ -126,7 +126,7 @@ export default function ChatPage() {
             <Send size={18} />
           </button>
         </form>
-        <p className="text-center text-[9px] text-white/20 mt-4 uppercase tracking-[0.2em]">
+        <p className="text-center text-[9px] text-white/50 mt-4 uppercase tracking-[0.2em]">
           Secured Neural Interface v2.6 // Session ID: {Math.random().toString(36).substring(7).toUpperCase()}
         </p>
       </div>

@@ -46,7 +46,7 @@ const nodeTypes = {
           <Info size={10} className="text-cyber-green" />
           <span className="text-[8px] font-bold text-cyber-green uppercase tracking-widest">Documentation</span>
         </div>
-        <p className="text-[10px] text-white/80 leading-relaxed italic">{data.description}</p>
+        <p className="text-[10px] text-white/100 leading-relaxed italic">{data.description}</p>
       </div>
     </div>
   ),
@@ -70,7 +70,7 @@ const nodeTypes = {
           <Info size={10} className="text-orange-500" />
           <span className="text-[8px] font-bold text-orange-500 uppercase tracking-widest">Protocol_Info</span>
         </div>
-        <p className="text-[10px] text-white/80 leading-relaxed italic">{data.description}</p>
+        <p className="text-[10px] text-white/100 leading-relaxed italic">{data.description}</p>
       </div>
     </div>
   ),
@@ -99,7 +99,7 @@ const nodeTypes = {
           <Info size={10} className="text-cyber-blue" />
           <span className="text-[8px] font-bold text-cyber-blue uppercase tracking-widest">Resource_Spec</span>
         </div>
-        <p className="text-[10px] text-white/80 leading-relaxed italic">{data.description}</p>
+        <p className="text-[10px] text-white/100 leading-relaxed italic">{data.description}</p>
       </div>
     </div>
   ),
@@ -128,63 +128,50 @@ const getAgentDescription = (id: string) => {
 };
 
 export default function SystemPulseFlow() {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchBlueprint = useCallback(async () => {
     try {
-      const res = await fetch('/api/agents');
-      const agents: Record<string, any> = await res.json();
+      const [agentsRes, infraRes] = await Promise.all([
+        fetch('/api/agents'),
+        fetch('/api/infrastructure')
+      ]);
+      const agents: Record<string, any> = await agentsRes.json();
+      const infraData: any[] = await infraRes.json();
       
       const newNodes: Node[] = [];
       const newEdges: Edge[] = [];
 
       // 1. Add Infrastructure Core
-      newNodes.push({
-        id: 'bus',
-        type: 'bus',
-        position: { x: 400, y: 100 },
-        data: { 
-          label: 'EventBridge AgentBus',
-          description: 'AWS EventBridge. The asynchronous backbone that allows decoupled agents to communicate via event patterns.'
-        },
-      });
+      infraData.forEach((infra, index) => {
+        let xPos = 400;
+        let yPos = 500;
+        
+        // Use known positions for core infra, layout others dynamically below
+        if (infra.id === 'bus') { xPos = 400; yPos = 100; }
+        else if (infra.id === 'memory') { xPos = 100; yPos = 500; }
+        else if (infra.id === 'codebuild') { xPos = 400; yPos = 500; }
+        else if (infra.id === 's3') { xPos = 700; yPos = 500; }
+        else { xPos = 100 + (index * 150); yPos = 700; }
 
-      newNodes.push({
-        id: 'memory',
-        type: 'infra',
-        position: { x: 100, y: 500 },
-        data: { 
-          label: 'DynamoDB Memory', 
-          type: 'DATA_STORE', 
-          icon: <Database size={16} />,
-          description: 'Single-table DynamoDB. Stores session history, distilled knowledge, tactical lessons, and strategic gaps.'
-        },
-      });
+        let icon = undefined;
+        if (infra.iconType === 'Database') icon = <Database size={16} />;
+        else if (infra.iconType === 'Terminal') icon = <Terminal size={16} />;
+        else if (infra.iconType === 'Cpu') icon = <Cpu size={16} />;
 
-      newNodes.push({
-        id: 'codebuild',
-        type: 'infra',
-        position: { x: 400, y: 500 },
-        data: { 
-          label: 'AWS CodeBuild', 
-          type: 'COMPUTE', 
-          icon: <Terminal size={16} />,
-          description: 'Autonomous deployment engine. Runs "sst deploy" in isolated environments to update the system stack.'
-        },
-      });
-
-      newNodes.push({
-        id: 's3',
-        type: 'infra',
-        position: { x: 700, y: 500 },
-        data: { 
-          label: 'Staging Bucket', 
-          type: 'STORAGE', 
-          icon: <Cpu size={16} />,
-          description: 'Temporary storage for zipped source code before deployment. Shared between Coder Agent and CodeBuild.'
-        },
+        newNodes.push({
+          id: infra.id,
+          type: infra.type,
+          position: { x: xPos, y: yPos },
+          data: { 
+            label: infra.label,
+            description: infra.description,
+            icon,
+            type: infra.id === 'bus' ? undefined : (infra.id === 'memory' ? 'DATA_STORE' : (infra.id === 's3' ? 'STORAGE' : 'COMPUTE'))
+          },
+        });
       });
 
       // 2. Map Agents
@@ -239,7 +226,7 @@ export default function SystemPulseFlow() {
         // INFRASTRUCTURE CONNECTIONS
         if (agent.enabled) {
           // Connections based on ID
-          if (['strategic-planner', 'cognition-reflector', 'qa', 'main'].includes(agent.id)) {
+          if (['strategic-planner', 'cognition-reflector', 'qa', 'main', 'coder'].includes(agent.id)) {
             newEdges.push({ 
               id: `${agent.id}-mem`, 
               source: agent.id, 
@@ -348,8 +335,8 @@ export default function SystemPulseFlow() {
             onClick={() => { setLoading(true); fetchBlueprint(); }}
             className="flex items-center gap-2 px-3 py-1 bg-black/80 border border-white/10 rounded-full hover:bg-white/5 transition-colors pointer-events-auto cursor-pointer group"
           >
-              <RefreshCw size={10} className="text-white/60 group-hover:rotate-180 transition-transform duration-500" />
-              <span className="text-[10px] font-bold text-white/60 uppercase">Manual_Resync</span>
+              <RefreshCw size={10} className="text-white/90 group-hover:rotate-180 transition-transform duration-500" />
+              <span className="text-[10px] font-bold text-white/90 uppercase">Manual_Resync</span>
           </button>
       </div>
     </div>

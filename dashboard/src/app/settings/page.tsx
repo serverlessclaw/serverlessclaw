@@ -164,7 +164,7 @@ export default async function SettingsPage() {
           <h2 className="text-2xl lg:text-3xl font-bold tracking-tight glow-text uppercase">
             SYSTEM_CONFIG
           </h2>
-          <p className="text-white/80 text-xs lg:text-sm mt-2 font-light">
+          <p className="text-white/100 text-xs lg:text-sm mt-2 font-light">
             Hot-swappable neural architecture and provider routing.
           </p>
         </div>
@@ -179,7 +179,7 @@ export default async function SettingsPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-[10px] uppercase text-white/80 tracking-widest font-bold">
+                <label className="text-[10px] uppercase text-white/100 tracking-widest font-bold">
                   Active Provider
                 </label>
                 <select
@@ -193,7 +193,7 @@ export default async function SettingsPage() {
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] uppercase text-white/80 tracking-widest font-bold">
+                <label className="text-[10px] uppercase text-white/100 tracking-widest font-bold">
                   Default Model ID
                 </label>
                 <input
@@ -214,7 +214,7 @@ export default async function SettingsPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-[10px] uppercase text-white/80 tracking-widest font-bold">
+                <label className="text-[10px] uppercase text-white/100 tracking-widest font-bold">
                   Evolution Mode
                 </label>
                 <select
@@ -227,7 +227,7 @@ export default async function SettingsPage() {
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] uppercase text-white/80 tracking-widest font-bold">
+                <label className="text-[10px] uppercase text-white/100 tracking-widest font-bold">
                   Optimization Policy
                 </label>
                 <select
@@ -250,7 +250,7 @@ export default async function SettingsPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-[10px] uppercase text-white/80 tracking-widest font-bold">
+                <label className="text-[10px] uppercase text-white/100 tracking-widest font-bold">
                   Reflection Frequency (msgs)
                 </label>
                 <input
@@ -259,12 +259,12 @@ export default async function SettingsPage() {
                   defaultValue={config.reflectionFrequency}
                   className="w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-purple-400 transition-colors font-mono"
                 />
-                <p className="text-[9px] text-white/20 italic">
+                <p className="text-[9px] text-white/50 italic">
                   How many messages before triggering Reflector agent. 0 to disable.
                 </p>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] uppercase text-white/80 tracking-widest font-bold">
+                <label className="text-[10px] uppercase text-white/100 tracking-widest font-bold">
                   Strategic Review Interval (hrs)
                 </label>
                 <input
@@ -273,12 +273,12 @@ export default async function SettingsPage() {
                   defaultValue={config.strategicReviewFrequency}
                   className="w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-purple-400 transition-colors font-mono"
                 />
-                <p className="text-[9px] text-white/20 italic">
+                <p className="text-[9px] text-white/50 italic">
                   How often to aggregate all gaps and design evolution plans.
                 </p>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] uppercase text-white/80 tracking-widest font-bold">
+                <label className="text-[10px] uppercase text-white/100 tracking-widest font-bold">
                   Min Gaps for Review
                 </label>
                 <input
@@ -287,7 +287,7 @@ export default async function SettingsPage() {
                   defaultValue={config.minGapsForReview}
                   className="w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-purple-400 transition-colors font-mono"
                 />
-                <p className="text-[9px] text-white/20 italic">
+                <p className="text-[9px] text-white/50 italic">
                   Minimum number of OPEN gaps required to trigger a scheduled review.
                 </p>
               </div>
@@ -315,7 +315,7 @@ export default async function SettingsPage() {
               <div className="text-xs font-bold text-white/90 uppercase tracking-tight">
                 FORCE_INFRA_REBUILD
               </div>
-              <div className="text-[10px] text-white/80 mt-1 font-medium">
+              <div className="text-[10px] text-white/100 mt-1 font-medium">
                 Triggers a full SST deploy via CodeBuild. Use only if sst.config.ts changed.
               </div>
             </div>
