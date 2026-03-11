@@ -1,0 +1,152 @@
+import { CodeBuildClient, StartBuildCommand } from '@aws-sdk/client-codebuild';
+import { Resource } from 'sst';
+import { GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
+import { toolDefinitions } from './definitions';
+import { logger } from '../lib/logger';
+import { SYSTEM, DYNAMO_KEYS } from '../lib/constants';
+import {
+  getDeployCountToday,
+  incrementDeployCount,
+  rewardDeployLimit,
+} from '../lib/deploy-stats';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
+const codebuild = new CodeBuildClient({});
+const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+
+interface ToolsResource {
+  ConfigTable: { name: string };
+  Deployer: { name: string };
+  MemoryTable: { name: string };
+}
+
+/**
+ * Triggers a new CodeBuild deployment, with daily limits and circuit breaking.
+ */
+export const trigger_deployment = {
+  ...toolDefinitions.trigger_deployment,
+  execute: async (args: Record<string, unknown>): Promise<string> => {
+    const { reason, userId } = args as { reason: string; userId: string };
+    const today = new Date().toISOString().split('T')[0];
+    const typedResource = Resource as unknown as ToolsResource;
+
+    try {
+      const count = await getDeployCountToday();
+
+      const { Item: configItem } = await db.send(
+        new GetCommand({
+          TableName: typedResource.ConfigTable.name,
+          Key: { key: DYNAMO_KEYS.DEPLOY_LIMIT },
+        })
+      );
+
+      let LIMIT: number = SYSTEM.DEFAULT_DEPLOY_LIMIT;
+      if (configItem?.value) {
+        const customLimit = parseInt(configItem.value, 10);
+        if (!isNaN(customLimit)) {
+          LIMIT = Math.min(SYSTEM.MAX_DEPLOY_LIMIT, Math.max(1, customLimit));
+        }
+      }
+
+      if (count >= LIMIT) {
+        return `CIRCUIT_BREAKER_ACTIVE: Daily deployment limit reached (${LIMIT}). Autonomous deployment blocked for today (${today}). Reason for attempt: ${reason}`;
+      }
+
+      const warning =
+        LIMIT > 20
+          ? `\n⚠️ WARNING: High deployment limit (${LIMIT}) may result in significant LLM token consumption and AWS costs.`
+          : '';
+
+      logger.info(`Triggering deployment for reason: ${reason}${warning}`);
+      const command = new StartBuildCommand({
+        projectName: typedResource.Deployer.name,
+      });
+
+      const response = await codebuild.send(command);
+      const buildId = response.build?.id;
+
+      if (buildId) {
+        await db.send(
+          new PutCommand({
+            TableName: typedResource.MemoryTable.name,
+            Item: {
+              userId: `BUILD#${buildId}`,
+              timestamp: Date.now(),
+              initiatorUserId: userId,
+            },
+          })
+        );
+      }
+
+      await incrementDeployCount(today, count);
+
+      return `Deployment started successfully. Build ID: ${buildId}. Build counter: ${count + 1}/${LIMIT}. Reason: ${reason}${warning}`;
+    } catch (error) {
+      return `Failed to trigger deployment: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  },
+};
+
+/**
+ * Checks system health at a given URL and rewards deployment limits on success.
+ */
+export const check_health = {
+  ...toolDefinitions.check_health,
+  execute: async (args: Record<string, unknown>): Promise<string> => {
+    const { url } = args as { url: string };
+    try {
+      logger.info(`Checking health at ${url}`);
+      const response = await fetch(url as string);
+      if (response.ok) {
+        await rewardDeployLimit();
+        return `HEALTH_OK: System is responsive. Deployment limit rewarded (-1).`;
+      }
+      return `HEALTH_FAILED: Received status ${response.status}.`;
+    } catch (error) {
+      return `HEALTH_ERROR: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  },
+};
+
+/**
+ * Reverts the last commit and re-triggers a deployment.
+ */
+export const trigger_rollback = {
+  ...toolDefinitions.trigger_rollback,
+  execute: async (args: Record<string, unknown>): Promise<string> => {
+    const { reason } = args as { reason: string };
+    const typedResource = Resource as unknown as ToolsResource;
+    try {
+      logger.info(`ROLLBACK INITIATED: ${reason}`);
+      await execAsync('git revert HEAD --no-edit');
+      const command = new StartBuildCommand({
+        projectName: typedResource.Deployer.name,
+      });
+      await codebuild.send(command);
+      return `ROLLBACK_SUCCESSFUL: Last commit reverted and deployment re-triggered. Reason: ${reason}`;
+    } catch (error) {
+      return `ROLLBACK_FAILED: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  },
+};
+
+/**
+ * Validates the current codebase using type checking and linting.
+ */
+export const validate_code = {
+  ...toolDefinitions.validate_code,
+  execute: async (): Promise<string> => {
+    try {
+      logger.info('Running pre-flight validation...');
+      const { stdout: tscOut } = await execAsync('npx tsc --noEmit');
+      const { stdout: lintOut } = await execAsync('npx eslint . --fix-dry-run');
+      return `Validation Successful:\n${tscOut}\n${lintOut}`;
+    } catch (error) {
+      return `Validation FAILED:\n${error instanceof Error ? error.message : String(error)}`;
+    }
+  },
+};
