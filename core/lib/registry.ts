@@ -16,6 +16,7 @@ const typedResource = Resource as unknown as SSTResource;
  */
 export class AgentRegistry {
   private static backboneConfigs: Record<string, IAgentConfig> = BACKBONE_REGISTRY;
+  private static DEFAULT_AGENT_TOOLS = ['recall_knowledge', 'list_agents', 'dispatch_task'];
 
   /**
    * Retrieves the configuration for a specific agent by ID.
@@ -55,6 +56,9 @@ export class AgentRegistry {
     if (toolOverride && Array.isArray(toolOverride)) {
       logger.info(`Applying dynamic tool override for agent ${id}:`, toolOverride);
       config.tools = toolOverride;
+    } else if (!config.tools || config.tools.length === 0) {
+      // Inject standard support profile if no tools are defined
+      config.tools = [...AgentRegistry.DEFAULT_AGENT_TOOLS];
     }
 
     return config;
@@ -71,11 +75,18 @@ export class AgentRegistry {
 
     // Merge in DDB agents
     for (const [id, config] of Object.entries(ddbConfig as Record<string, IAgentConfig>)) {
-      all[id] = {
+      const mergedConfig = {
         isBackbone: false, // Default for dynamic agents
         ...all[id],
         ...config,
       };
+
+      // Inject defaults if still missing tools after merge
+      if (!mergedConfig.tools || mergedConfig.tools.length === 0) {
+        mergedConfig.tools = [...AgentRegistry.DEFAULT_AGENT_TOOLS];
+      }
+
+      all[id] = mergedConfig;
     }
 
     return all;
