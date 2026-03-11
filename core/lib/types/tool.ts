@@ -5,6 +5,7 @@ export interface JsonSchema {
   required?: string[];
   items?: JsonSchema;
   enum?: string[];
+  additionalProperties?: boolean;
 }
 
 export interface IToolDefinition {

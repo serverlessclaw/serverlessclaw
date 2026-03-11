@@ -18,6 +18,7 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
         },
       },
       required: ['modifiedFiles'],
+      additionalProperties: false,
     },
   },
   dispatch_task: {
@@ -35,6 +36,7 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
         task: { type: 'string', description: 'The specific task for the sub-agent.' },
       },
       required: ['agentId', 'userId', 'task'],
+      additionalProperties: false,
     },
   },
   file_write: {
@@ -47,6 +49,7 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
         content: { type: 'string', description: 'The content to write.' },
       },
       required: ['filePath', 'content'],
+      additionalProperties: false,
     },
   },
   trigger_deployment: {
@@ -65,6 +68,7 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
         },
       },
       required: ['reason', 'userId'],
+      additionalProperties: false,
     },
   },
   calculator: {
@@ -76,6 +80,7 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
         expression: { type: 'string', description: 'The expression to evaluate.' },
       },
       required: ['expression'],
+      additionalProperties: false,
     },
   },
   validate_code: {
@@ -84,6 +89,7 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     parameters: {
       type: 'object',
       properties: {},
+      additionalProperties: false,
     },
   },
   check_health: {
@@ -95,6 +101,7 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
         url: { type: 'string', description: 'The health check endpoint URL.' },
       },
       required: ['url'],
+      additionalProperties: false,
     },
   },
   trigger_rollback: {
@@ -106,6 +113,7 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
         reason: { type: 'string', description: 'The reason for the rollback.' },
       },
       required: ['reason'],
+      additionalProperties: false,
     },
   },
   get_weather: {
@@ -117,6 +125,7 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
         location: { type: 'string', description: 'The city and state, e.g. San Francisco, CA' },
       },
       required: ['location'],
+      additionalProperties: false,
     },
   },
   run_tests: {
@@ -125,6 +134,7 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     parameters: {
       type: 'object',
       properties: {},
+      additionalProperties: false,
     },
   },
   run_shell_command: {
@@ -140,6 +150,7 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
         },
       },
       required: ['command'],
+      additionalProperties: false,
     },
   },
   switch_model: {
@@ -160,6 +171,7 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
         },
       },
       required: ['provider', 'model'],
+      additionalProperties: false,
     },
   },
   recall_knowledge: {
@@ -181,6 +193,7 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
         },
       },
       required: ['userId', 'query'],
+      additionalProperties: false,
     },
   },
   manage_agent_tools: {
@@ -193,6 +206,7 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
         toolNames: { type: 'array', items: { type: 'string' }, description: 'List of tool names.' },
       },
       required: ['agentId', 'toolNames'],
+      additionalProperties: false,
     },
   },
   manage_gap: {
@@ -209,6 +223,7 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
         },
       },
       required: ['gapId', 'status'],
+      additionalProperties: false,
     },
   },
   file_read: {
@@ -220,6 +235,7 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
         filePath: { type: 'string', description: 'The relative path to the file.' },
       },
       required: ['filePath'],
+      additionalProperties: false,
     },
   },
   list_files: {
@@ -233,6 +249,7 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
           description: 'The relative path to the directory (defaults to root).',
         },
       },
+      additionalProperties: false,
     },
   },
   set_system_config: {
@@ -248,6 +265,7 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
         value: { type: 'any', description: 'The new value for the configuration.' },
       },
       required: ['key', 'value'],
+      additionalProperties: false,
     },
   },
   list_agents: {
@@ -256,6 +274,7 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     parameters: {
       type: 'object',
       properties: {},
+      additionalProperties: false,
     },
   },
 };
