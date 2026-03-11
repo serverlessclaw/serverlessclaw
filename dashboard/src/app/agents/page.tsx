@@ -261,7 +261,7 @@ export default function AgentsPage() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="bg-cyber-blue text-black px-8 py-4 rounded text-xs font-black flex items-center gap-3 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-[0_0_30px_rgba(0,243,255,0.4)] disabled:opacity-50 uppercase tracking-widest border border-white/20"
+          className="bg-cyber-green text-black px-8 py-4 rounded text-xs font-black flex items-center gap-3 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-[0_0_30px_rgba(0,255,163,0.4)] disabled:opacity-50 uppercase tracking-widest border border-white/20"
         >
           {saving ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
           SAVE_AGENT_CONFIG
