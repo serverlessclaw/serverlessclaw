@@ -103,9 +103,6 @@ define verify_clean
 	$(call log_success,Working directory is clean.)
 endef
 
-endif
-
-
 # kill_port
 # usage: $(call kill_port_without_prompt,8888)
 define kill_port
@@ -113,7 +110,4 @@ define kill_port
 	@$(call log_success,Port $(1) is now free)
 endef
 
-seed-config: ## Seed the DynamoDB ConfigTable with hardcoded defaults (bootstrapping)
-	@$(call log_step,Seeding ConfigTable with defaults...)
-	@npx sst shell "tsx scripts/seed-config.ts"
-	@$(call log_success,ConfigTable seeded successfully)
+endif
