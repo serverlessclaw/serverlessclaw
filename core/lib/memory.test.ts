@@ -3,6 +3,7 @@ import { mockClient } from 'aws-sdk-client-mock';
 import { DynamoDBDocumentClient, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { DynamoMemory } from './memory';
 import { Message, MessageRole } from './types/index';
+import { logger } from './logger';
 
 // Mock Resource from sst
 vi.mock('sst', () => ({
@@ -44,17 +45,17 @@ describe('DynamoMemory', () => {
     });
 
     it('should return empty array on overflow or error', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const loggerSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
       ddbMock.on(QueryCommand).rejects(new Error('DynamoDB Error'));
 
       const history = await memory.getHistory('user-1');
 
       expect(history).toEqual([]);
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(loggerSpy).toHaveBeenCalledWith(
         'Error retrieving history from DynamoDB:',
         expect.any(Error)
       );
-      consoleSpy.mockRestore();
+      loggerSpy.mockRestore();
     });
 
     it('should handle undefined Items from DynamoDB', async () => {
@@ -87,16 +88,16 @@ describe('DynamoMemory', () => {
     });
 
     it('should handle errors gracefully during PutCommand', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const loggerSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
       ddbMock.on(PutCommand).rejects(new Error('Put Error'));
 
       await memory.addMessage('user-1', { role: MessageRole.USER, content: 'fails' });
 
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(loggerSpy).toHaveBeenCalledWith(
         'Error saving message to DynamoDB:',
         expect.any(Error)
       );
-      consoleSpy.mockRestore();
+      loggerSpy.mockRestore();
     });
   });
 });

@@ -15,6 +15,10 @@ test: ## Run unit tests with vitest
 	@$(call log_step,Running unit tests...)
 	@$(PNPM) run test
 
+test-silent: ## Run unit tests in silent mode for hooks
+	@$(call log_step,Running unit tests (silent)...)
+	@$(PNPM) run test:silent
+
 test-watch: ## Run unit tests in watch mode
 	@$(PNPM) run test:watch
 

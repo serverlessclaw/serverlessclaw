@@ -2,6 +2,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
 import { ILockManager } from './types/index';
+import { logger } from './logger';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -49,7 +50,7 @@ export class DynamoLockManager implements ILockManager {
     try {
       await docClient.send(command);
     } catch (error) {
-      console.error('Error releasing lock:', error);
+      logger.error('Error releasing lock:', error);
     }
   }
 }

@@ -3,11 +3,12 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { sendOutboundMessage } from '../lib/outbound';
 import { Resource } from 'sst';
+import { logger } from '../lib/logger';
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
 export const handler = async (event: APIGatewayProxyEventV2) => {
-  console.log('GitHub Webhook Event:', JSON.stringify(event, null, 2));
+  logger.info('GitHub Webhook Event:', JSON.stringify(event, null, 2));
 
   if (!event.body) {
     return { statusCode: 400, body: 'Missing body' };
@@ -45,11 +46,11 @@ export const handler = async (event: APIGatewayProxyEventV2) => {
     );
     adminChatId = Item?.value;
   } catch (e) {
-    console.warn('Could not fetch admin_chat_id from ConfigTable:', e);
+    logger.warn('Could not fetch admin_chat_id from ConfigTable:', e);
   }
 
   if (!adminChatId) {
-    console.warn('No admin_chat_id configured. Skipping notification.');
+    logger.warn('No admin_chat_id configured. Skipping notification.');
     return { statusCode: 200, body: 'No admin configured' };
   }
 

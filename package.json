@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "vitest run",
+    "test:silent": "LOG_LEVEL=none vitest run --reporter=dot",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "lint": "eslint .",

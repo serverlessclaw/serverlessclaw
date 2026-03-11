@@ -10,6 +10,7 @@ import {
 } from '../lib/types/index';
 import { Resource } from 'sst';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
+import { logger } from '../lib/logger';
 
 const typedResource = Resource as unknown as SSTResource;
 
@@ -18,12 +19,12 @@ const provider = new ProviderManager();
 const eventbridge = new EventBridgeClient({});
 
 export const handler = async (event: { userId: string; conversation: Message[] }) => {
-  console.log('Reflector Agent received task:', JSON.stringify(event, null, 2));
+  logger.info('Reflector Agent received task:', JSON.stringify(event, null, 2));
 
   const { userId, conversation } = event;
 
   if (!userId || !conversation) {
-    console.error('Invalid event payload');
+    logger.error('Invalid event payload');
     return;
   }
 
@@ -106,7 +107,7 @@ export const handler = async (event: { userId: string; conversation: Message[] }
       // 1. Handle Facts
       if (parsed.facts && parsed.facts !== existingFacts) {
         await memory.updateDistilledMemory(userId, parsed.facts);
-        console.log('Facts updated for user:', userId);
+        logger.info('Facts updated for user:', userId);
       }
 
       // 2. Handle Lessons
@@ -122,7 +123,7 @@ export const handler = async (event: { userId: string; conversation: Message[] }
               urgency: lesson.urgency || 5,
               priority: lesson.priority || 5,
             });
-            console.log('Lesson saved with impact:', lesson.impact);
+            logger.info('Lesson saved with impact:', lesson.impact);
           }
         }
       }
@@ -142,7 +143,7 @@ export const handler = async (event: { userId: string; conversation: Message[] }
               priority: gap.priority || 5,
             };
             await memory.setGap(gapId, gap.content, metadata);
-            console.log('Strategic Gap saved with impact:', gap.impact);
+            logger.info('Strategic Gap saved with impact:', gap.impact);
 
             // Notify Planner Agent via EventBridge
             try {
@@ -164,14 +165,14 @@ export const handler = async (event: { userId: string; conversation: Message[] }
                 })
               );
             } catch (e) {
-              console.error('Failed to emit evolution plan event from Reflector:', e);
+              logger.error('Failed to emit evolution plan event from Reflector:', e);
             }
           }
         }
       }
     } catch (e) {
-      console.error('Failed to parse Reflector JSON response:', e);
-      console.log('Raw response was:', response);
+      logger.error('Failed to parse Reflector JSON response:', e);
+      logger.info('Raw response was:', response);
     }
   }
 

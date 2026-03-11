@@ -8,6 +8,7 @@ import {
   OpenAIModel,
 } from '../types/index';
 import { Resource } from 'sst';
+import { logger } from '../logger';
 
 export class OpenAIProvider implements IProvider {
   constructor(private model: string = OpenAIModel.GPT_5_4) {}
@@ -23,7 +24,7 @@ export class OpenAIProvider implements IProvider {
     // Fallback if profile not supported
     const capabilities = await this.getCapabilities();
     if (!capabilities.supportedReasoningProfiles.includes(profile)) {
-      console.warn(
+      logger.warn(
         `Profile ${profile} not supported for model ${this.model}, falling back to STANDARD`
       );
       profile = ReasoningProfile.STANDARD;

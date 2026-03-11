@@ -1,5 +1,6 @@
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { sendOutboundMessage } from '../lib/outbound';
+import { logger } from '../lib/logger';
 
 import { DynamoMemory } from '../lib/memory';
 import { Agent } from '../lib/agent';
@@ -13,7 +14,7 @@ const provider = new ProviderManager();
 const lockManager = new DynamoLockManager();
 
 export const handler = async (event: APIGatewayProxyEventV2) => {
-  console.log('Received event:', JSON.stringify(event, null, 2));
+  logger.info('Received event:', JSON.stringify(event, null, 2));
 
   if (!event.body) {
     return { statusCode: 400, body: 'Missing body' };
@@ -32,7 +33,7 @@ export const handler = async (event: APIGatewayProxyEventV2) => {
   // 1. Acquire Lock
   const acquired = await lockManager.acquire(chatId, 60);
   if (!acquired) {
-    console.log(`Could not acquire lock for session ${chatId}. Task probably in progress.`);
+    logger.info(`Could not acquire lock for session ${chatId}. Task probably in progress.`);
     return { statusCode: 200, body: 'Task in progress' };
   }
 

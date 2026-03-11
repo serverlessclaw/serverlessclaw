@@ -5,6 +5,7 @@ import { getAgentTools } from '../tools/index';
 import { EventType } from '../lib/types/index';
 import { sendOutboundMessage } from '../lib/outbound';
 import { MANAGER_SYSTEM_PROMPT } from '../agents/manager';
+import { logger } from '../lib/logger';
 
 const memory = new DynamoMemory();
 const provider = new ProviderManager();
@@ -13,7 +14,7 @@ export const handler = async (event: {
   'detail-type': string;
   detail: Record<string, unknown>;
 }) => {
-  console.log('EventHandler received event:', JSON.stringify(event, null, 2));
+  logger.info('EventHandler received event:', JSON.stringify(event, null, 2));
 
   const { userId, buildId, errorLogs } = event.detail as {
     userId: string;

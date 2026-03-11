@@ -1,6 +1,7 @@
 import { Resource } from 'sst';
 import { DynamoMemory } from '../lib/memory';
 import { MessageRole } from '../lib/types/index';
+import { logger } from '../lib/logger';
 
 const memory = new DynamoMemory();
 
@@ -13,12 +14,12 @@ interface NotifierEvent {
 }
 
 export const handler = async (event: NotifierEvent) => {
-  console.log('NotifierAgent received event:', JSON.stringify(event, null, 2));
+  logger.info('NotifierAgent received event:', JSON.stringify(event, null, 2));
 
   // The event is wrapped by EventBridge, the actual payload is in event.detail
   const payload = event.detail;
   if (!payload || !payload.userId || !payload.message) {
-    console.error('Missing userId or message in OUTBOUND_MESSAGE event');
+    logger.error('Missing userId or message in OUTBOUND_MESSAGE event');
     return;
   }
 
@@ -30,7 +31,7 @@ export const handler = async (event: NotifierEvent) => {
       try {
         await memory.addMessage(contextId, { role: MessageRole.ASSISTANT, content: message });
       } catch (e) {
-        console.error(`Failed to sync context to ${contextId}:`, e);
+        logger.error(`Failed to sync context to ${contextId}:`, e);
       }
     }
   }
@@ -60,9 +61,9 @@ async function sendTelegramMessage(chatId: string, text: string) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Telegram API error:', errorText);
+      logger.error('Telegram API error:', errorText);
     }
   } catch (e) {
-    console.error('Failed to send Telegram message:', e);
+    logger.error('Failed to send Telegram message:', e);
   }
 }

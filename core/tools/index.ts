@@ -11,6 +11,7 @@ import {
 import { Resource } from 'sst';
 import { ITool, InsightCategory } from '../lib/types/index';
 import { toolDefinitions } from './definitions';
+import { logger } from '../lib/logger';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { exec } from 'child_process';
@@ -99,7 +100,7 @@ export const tools: Record<string, ITool> = {
         return `FAILED: Agent '${agentId}' is currently disabled.`;
       }
 
-      console.log(`Dispatching ${agentId} task for user ${userId}: ${task}`);
+      logger.info(`Dispatching ${agentId} task for user ${userId}: ${task}`);
       const typedResource = Resource as unknown as ToolsResource;
       const command = new PutEventsCommand({
         Entries: [
@@ -174,7 +175,7 @@ export const tools: Record<string, ITool> = {
           return `CIRCUIT_BREAKER_ACTIVE: Daily deployment limit reached (${LIMIT}). Autonomous deployment blocked for today (${today}). Reason for attempt: ${reason}`;
         }
 
-        console.log(`Triggering deployment for reason: ${reason}`);
+        logger.info(`Triggering deployment for reason: ${reason}`);
         const command = new StartBuildCommand({
           projectName: typedResource.Deployer.name,
         });
@@ -235,7 +236,7 @@ export const tools: Record<string, ITool> = {
     ...toolDefinitions.validate_code,
     execute: async () => {
       try {
-        console.log('Running pre-flight validation...');
+        logger.info('Running pre-flight validation...');
         const { stdout: tscOut } = await execAsync('npx tsc --noEmit');
         const { stdout: lintOut } = await execAsync('npx eslint . --fix-dry-run');
         return `Validation Successful:\n${tscOut}\n${lintOut}`;
@@ -250,7 +251,7 @@ export const tools: Record<string, ITool> = {
       const { url } = args as { url: string };
       const typedResource = Resource as unknown as ToolsResource;
       try {
-        console.log(`Checking health at ${url}`);
+        logger.info(`Checking health at ${url}`);
         const response = await fetch(url as string);
         if (response.ok) {
           await db.send(
@@ -279,7 +280,7 @@ export const tools: Record<string, ITool> = {
       const { reason } = args as { reason: string };
       const typedResource = Resource as unknown as ToolsResource;
       try {
-        console.log(`ROLLBACK INITIATED: ${reason}`);
+        logger.info(`ROLLBACK INITIATED: ${reason}`);
         await execAsync('git revert HEAD --no-edit');
         const command = new StartBuildCommand({
           projectName: typedResource.Deployer.name,
@@ -302,7 +303,7 @@ export const tools: Record<string, ITool> = {
     ...toolDefinitions.run_tests,
     execute: async () => {
       try {
-        console.log('Running autonomous test suite...');
+        logger.info('Running autonomous test suite...');
         const { stdout, stderr } = await execAsync('npm test');
         return `Test Results:\n${stdout}\n${stderr}`;
       } catch (error) {
@@ -397,7 +398,7 @@ export async function getAgentTools(agentId: string): Promise<ITool[]> {
   const config = await AgentRegistry.getAgentConfig(agentId);
 
   if (!config || !config.tools) {
-    console.warn(`No tools configured for agent ${agentId}, returning empty set.`);
+    logger.warn(`No tools configured for agent ${agentId}, returning empty set.`);
     return [];
   }
 

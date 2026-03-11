@@ -2,6 +2,7 @@ import { APIGatewayProxyHandlerV2 } from 'aws-lambda';
 import { Resource } from 'sst';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
+import { logger } from '../lib/logger';
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
@@ -36,7 +37,7 @@ export const handler: APIGatewayProxyHandlerV2 = async () => {
       }),
     };
   } catch (error) {
-    console.error('Health check failed:', error);
+    logger.error('Health check failed:', error);
     return {
       statusCode: 503,
       headers: { 'Content-Type': 'application/json' },

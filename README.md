@@ -28,7 +28,7 @@ Avoid the "black box" of agent long-term memory. Through the **ClawCenter Dashbo
 - **Event Bus**: AWS EventBridge
 - **CI/CD**: AWS CodeBuild
 - **Admin Dashboard**: Next.js 16 (React 19), TailwindCSS v4, deployed via OpenNext
-- **AI / LLMs**: OpenAI (GPT-5.4, GPT-5-mini), Anthropic Claude 3.7 Sonnet (via Amazon Bedrock), OpenRouter
+- **AI / LLMs**: OpenAI (GPT-5.4, GPT-5-mini), Anthropic Claude 4.6 Sonnet (via Amazon Bedrock), OpenRouter (Gemini-3 Flash, GLM-5, Minimax 2.5)
 - **Language**: TypeScript
 
 ### ASCII Architecture Diagram

@@ -280,5 +280,5 @@ Replacing legacy GitHub Actions cost controls with in-AWS equivalents:
 Provider-agnostic interface supporting:
 - OpenAI (GPT-5.4 / GPT-5-mini)
 - Anthropic (Claude 4.6 Sonnet)
-- Google (Gemini 3.1 / Gemini 3 Flash)
+- Google (Gemini-3 Flash, GLM-5, Minimax 2.5)
 - Local models (via Ollama or AWS Bedrock)

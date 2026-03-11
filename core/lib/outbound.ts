@@ -1,6 +1,7 @@
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import { Resource } from 'sst';
 import { EventType } from './types/index';
+import { logger } from './logger';
 
 const eventbridge = new EventBridgeClient({});
 
@@ -24,6 +25,6 @@ export async function sendOutboundMessage(
       })
     );
   } catch (e) {
-    console.error(`Failed to send outbound message from ${source}:`, e);
+    logger.error(`Failed to send outbound message from ${source}:`, e);
   }
 }

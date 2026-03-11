@@ -4,6 +4,7 @@ import { ProviderManager } from '../lib/providers/index';
 import { getAgentTools } from '../tools/index';
 import { AgentRegistry } from '../lib/registry';
 import { sendOutboundMessage } from '../lib/outbound';
+import { logger } from '../lib/logger';
 
 const memory = new DynamoMemory();
 const provider = new ProviderManager();
@@ -17,7 +18,7 @@ interface WorkerEvent {
 }
 
 export const handler = async (event: WorkerEvent) => {
-  console.log('Worker Agent received event:', JSON.stringify(event, null, 2));
+  logger.info('Worker Agent received event:', JSON.stringify(event, null, 2));
 
   // Extract agentId from the event source or detail-type
   // Pattern: <agentId>_task
@@ -25,14 +26,14 @@ export const handler = async (event: WorkerEvent) => {
   const agentId = detailType.replace('_task', '');
 
   if (!agentId) {
-    console.error('Could not determine agentId from event');
+    logger.error('Could not determine agentId from event');
     return;
   }
 
   const { userId, task } = event.detail;
 
   if (!userId || !task) {
-    console.error('Invalid event payload: missing userId or task');
+    logger.error('Invalid event payload: missing userId or task');
     return;
   }
 
@@ -40,12 +41,12 @@ export const handler = async (event: WorkerEvent) => {
   const config = await AgentRegistry.getAgentConfig(agentId);
 
   if (!config) {
-    console.error(`Agent configuration for '${agentId}' not found in Registry.`);
+    logger.error(`Agent configuration for '${agentId}' not found in Registry.`);
     return;
   }
 
   if (!config.enabled) {
-    console.warn(`Agent '${agentId}' is disabled. Skipping task.`);
+    logger.warn(`Agent '${agentId}' is disabled. Skipping task.`);
     return;
   }
 
@@ -62,7 +63,7 @@ export const handler = async (event: WorkerEvent) => {
 
   const response = await agent.process(userId, task);
 
-  console.log(`Worker Agent [${agentId}] completed task:`, response);
+  logger.info(`Worker Agent [${agentId}] completed task:`, response);
 
   // 4. Notification (Optional: Worker could be silent or chatty)
   await sendOutboundMessage(`worker.agent.${agentId}`, userId, response, [userId]);

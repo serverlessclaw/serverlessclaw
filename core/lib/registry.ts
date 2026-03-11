@@ -3,6 +3,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { IAgentConfig, AgentType } from './types/agent';
 import { MANAGER_SYSTEM_PROMPT } from '../agents/manager';
+import { logger } from './logger';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -70,7 +71,7 @@ export class AgentRegistry {
       );
       return Item?.value || {};
     } catch (e) {
-      console.warn('Failed to fetch agents_config from DDB:', e);
+      logger.warn('Failed to fetch agents_config from DDB:', e);
       return {};
     }
   }

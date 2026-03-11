@@ -7,6 +7,7 @@ import {
   OpenRouterModel,
 } from '../types/index';
 import { Resource } from 'sst';
+import { logger } from '../logger';
 
 interface OpenRouterResource {
   OpenRouterApiKey: { value: string };
@@ -26,7 +27,7 @@ export class OpenRouterProvider implements IProvider {
     // Fallback if profile not supported
     const capabilities = await this.getCapabilities();
     if (!capabilities.supportedReasoningProfiles.includes(profile)) {
-      console.warn(
+      logger.warn(
         `Profile ${profile} not supported for OpenRouter model ${this.model}, falling back to STANDARD`
       );
       profile = ReasoningProfile.STANDARD;
@@ -109,7 +110,7 @@ export class OpenRouterProvider implements IProvider {
 
     // 2026 Log reasoning details for observability if present
     if (message.reasoning_details) {
-      console.debug(
+      logger.debug(
         `[OpenRouter Reasoning] for ${this.model}:`,
         JSON.stringify(message.reasoning_details)
       );

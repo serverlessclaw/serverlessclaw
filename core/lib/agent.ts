@@ -11,6 +11,7 @@ import {
 import { ClawTracer } from './tracer';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import { Resource } from 'sst';
+import { logger } from './logger';
 
 const typedResource = Resource as unknown as SSTResource;
 
@@ -46,7 +47,7 @@ export class Agent {
         await this.memory.updateDistilledMemory('RECOVERY', '');
       }
     } catch (e) {
-      console.error('Error checking recovery context:', e);
+      logger.error('Error checking recovery context:', e);
     }
 
     // 3. Add user message
@@ -139,9 +140,9 @@ export class Agent {
           ],
         })
       );
-      console.log('Reflection task emitted for user:', userId);
+      logger.info('Reflection task emitted for user:', userId);
     } catch (e) {
-      console.error('Failed to emit reflection task:', e);
+      logger.error('Failed to emit reflection task:', e);
     }
 
     return responseText;

@@ -11,6 +11,7 @@ import {
 import { Resource } from 'sst';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
+import { logger } from '../logger';
 
 import { OpenAIProvider } from './openai';
 import { OpenRouterProvider } from './openrouter';
@@ -51,7 +52,7 @@ export class ProviderManager implements IProvider {
         model = modelItem.value;
       }
     } catch (e) {
-      console.warn('Could not fetch hot config from ConfigTable, falling back to secrets:', e);
+      logger.warn('Could not fetch hot config from ConfigTable, falling back to secrets:', e);
     }
 
     switch (providerType) {

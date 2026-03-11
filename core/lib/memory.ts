@@ -9,6 +9,7 @@ import {
   MemoryInsight,
   InsightCategory,
 } from './types/index';
+import { logger } from './logger';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -36,7 +37,7 @@ export class DynamoMemory implements IMemory {
         name: item.name,
       }));
     } catch (error) {
-      console.error('Error retrieving history from DynamoDB:', error);
+      logger.error('Error retrieving history from DynamoDB:', error);
       return [];
     }
   }
@@ -54,12 +55,12 @@ export class DynamoMemory implements IMemory {
     try {
       await docClient.send(command);
     } catch (error) {
-      console.error('Error saving message to DynamoDB:', error);
+      logger.error('Error saving message to DynamoDB:', error);
     }
   }
 
   async clearHistory(userId: string) {
-    console.log('Clear history requested for', userId);
+    logger.info('Clear history requested for', userId);
   }
 
   async getDistilledMemory(userId: string): Promise<string> {
@@ -75,7 +76,7 @@ export class DynamoMemory implements IMemory {
       const response = await docClient.send(command);
       return response.Items?.[0]?.content || '';
     } catch (error) {
-      console.error('Error retrieving distilled memory from DynamoDB:', error);
+      logger.error('Error retrieving distilled memory from DynamoDB:', error);
       return '';
     }
   }
@@ -93,7 +94,7 @@ export class DynamoMemory implements IMemory {
     try {
       await docClient.send(command);
     } catch (error) {
-      console.error('Error updating distilled memory in DynamoDB:', error);
+      logger.error('Error updating distilled memory in DynamoDB:', error);
     }
   }
 
@@ -120,7 +121,7 @@ export class DynamoMemory implements IMemory {
     try {
       await docClient.send(command);
     } catch (error) {
-      console.error('Error setting capablity gap in DynamoDB:', error);
+      logger.error('Error setting capablity gap in DynamoDB:', error);
     }
   }
 
@@ -146,7 +147,7 @@ export class DynamoMemory implements IMemory {
     try {
       await docClient.send(command);
     } catch (error) {
-      console.error('Error saving lesson to DynamoDB:', error);
+      logger.error('Error saving lesson to DynamoDB:', error);
     }
   }
 
@@ -165,7 +166,7 @@ export class DynamoMemory implements IMemory {
       const response = await docClient.send(command);
       return (response.Items || []).map((item) => item.content);
     } catch (error) {
-      console.error('Error retrieving lessons from DynamoDB:', error);
+      logger.error('Error retrieving lessons from DynamoDB:', error);
       return [];
     }
   }
@@ -208,7 +209,7 @@ export class DynamoMemory implements IMemory {
         }));
         allInsights = [...allInsights, ...insights];
       } catch (e) {
-        console.error(`Error searching insights for ${prefix}:`, e);
+        logger.error(`Error searching insights for ${prefix}:`, e);
       }
     }
 
@@ -249,7 +250,7 @@ export class DynamoMemory implements IMemory {
       const item = response.Items?.[0];
 
       if (!item) {
-        console.error('Item not found for update:', userId, timestamp);
+        logger.error('Item not found for update:', userId, timestamp);
         return;
       }
 
@@ -268,7 +269,7 @@ export class DynamoMemory implements IMemory {
 
       await docClient.send(putCommand);
     } catch (error) {
-      console.error('Error updating insight metadata in DynamoDB:', error);
+      logger.error('Error updating insight metadata in DynamoDB:', error);
     }
   }
 }

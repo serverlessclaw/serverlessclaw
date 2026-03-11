@@ -2,6 +2,7 @@ import { DynamoMemory } from '../lib/memory';
 import { Agent } from '../lib/agent';
 import { ProviderManager } from '../lib/providers/index';
 import { tools } from '../tools/index';
+import { logger } from '../lib/logger';
 
 const memory = new DynamoMemory();
 const provider = new ProviderManager();
@@ -18,7 +19,7 @@ const agent = new Agent(
 );
 
 export const handler = async (event: { userId: string; data: string }) => {
-  console.log('<NAME> Agent received event:', JSON.stringify(event, null, 2));
+  logger.info('<NAME> Agent received event:', JSON.stringify(event, null, 2));
 
   // Extract necessary data from event
   const { userId, data } = event;

@@ -15,6 +15,7 @@ import {
   BedrockModel,
 } from '../types/index';
 import { Resource } from 'sst';
+import { logger } from '../logger';
 
 interface BedrockResource {
   AwsRegion: { value: string };
@@ -36,7 +37,7 @@ export class BedrockProvider implements IProvider {
     // Fallback if profile not supported
     const capabilities = await this.getCapabilities();
     if (!capabilities.supportedReasoningProfiles.includes(profile)) {
-      console.warn(
+      logger.warn(
         `Profile ${profile} not supported for model ${this.modelId}, falling back to STANDARD`
       );
       profile = ReasoningProfile.STANDARD;
@@ -153,7 +154,7 @@ export class BedrockProvider implements IProvider {
         .join('\n\n');
 
       if (reasoning) {
-        console.debug(`[Bedrock Reasoning] for ${this.modelId}:`, reasoning);
+        logger.debug(`[Bedrock Reasoning] for ${this.modelId}:`, reasoning);
       }
 
       // Aggregate all text blocks (model might return multiple)

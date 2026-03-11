@@ -8,6 +8,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import { sendOutboundMessage } from '../lib/outbound';
+import { logger } from '../lib/logger';
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const eventbridge = new EventBridgeClient({});
@@ -24,7 +25,7 @@ async function getEvolutionMode(): Promise<'auto' | 'hitl'> {
     );
     return response.Item?.value === 'auto' ? 'auto' : 'hitl';
   } catch (e) {
-    console.warn('Failed to fetch evolution_mode, defaulting to hitl:', e);
+    logger.warn('Failed to fetch evolution_mode, defaulting to hitl:', e);
     return 'hitl';
   }
 }
@@ -62,7 +63,7 @@ export const handler = async (event: {
   contextUserId: string;
   metadata?: PlannerMetadata;
 }) => {
-  console.log('Planner Agent received gap:', JSON.stringify(event, null, 2));
+  logger.info('Planner Agent received gap:', JSON.stringify(event, null, 2));
 
   const { gapId, details, contextUserId, metadata } = event;
 
@@ -94,12 +95,12 @@ export const handler = async (event: {
     ReasoningProfile.DEEP
   );
 
-  console.log('Strategic Plan Generated:', result);
+  logger.info('Strategic Plan Generated:', result);
 
   const evolutionMode = await getEvolutionMode();
 
   if (evolutionMode === EvolutionMode.AUTO) {
-    console.log('Evolution mode is auto, dispatching CODER_TASK directly.');
+    logger.info('Evolution mode is auto, dispatching CODER_TASK directly.');
     await sendOutboundMessage(
       'planner.agent',
       contextUserId,
@@ -123,7 +124,7 @@ export const handler = async (event: {
       })
     );
   } else {
-    console.log('Evolution mode is hitl, asking for approval.');
+    logger.info('Evolution mode is hitl, asking for approval.');
     // Send plan to user
     await sendOutboundMessage(
       'planner.agent',

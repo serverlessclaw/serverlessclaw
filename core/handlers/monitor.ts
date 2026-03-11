@@ -4,6 +4,7 @@ import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
+import { logger } from '../lib/logger';
 
 const codebuild = new CodeBuildClient({});
 const logs = new CloudWatchLogsClient({});
@@ -11,7 +12,7 @@ const eventbridge = new EventBridgeClient({});
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
 export const handler = async (event: { detail: Record<string, unknown> }) => {
-  console.log('BuildMonitor received event:', JSON.stringify(event, null, 2));
+  logger.info('BuildMonitor received event:', JSON.stringify(event, null, 2));
 
   const buildId = event.detail['build-id'] as string;
   const projectName = event.detail['project-name'] as string;
@@ -30,7 +31,7 @@ export const handler = async (event: { detail: Record<string, unknown> }) => {
 
     const userId = Item?.initiatorUserId;
     if (!userId) {
-      console.warn(`No initiator found for build ${buildId}`);
+      logger.warn(`No initiator found for build ${buildId}`);
       return;
     }
 
@@ -78,8 +79,8 @@ export const handler = async (event: { detail: Record<string, unknown> }) => {
     });
 
     await eventbridge.send(command);
-    console.log(`Build failure event dispatched for user ${userId}`);
+    logger.info(`Build failure event dispatched for user ${userId}`);
   } catch (error) {
-    console.error('Error in BuildMonitor:', error);
+    logger.error('Error in BuildMonitor:', error);
   }
 };

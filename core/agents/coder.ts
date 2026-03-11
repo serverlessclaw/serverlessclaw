@@ -3,17 +3,18 @@ import { Agent } from '../lib/agent';
 import { ProviderManager } from '../lib/providers/index';
 import { getAgentTools } from '../tools/index';
 import { ReasoningProfile } from '../lib/types/index';
+import { logger } from '../lib/logger';
 
 const memory = new DynamoMemory();
 const provider = new ProviderManager();
 
 export const handler = async (event: { userId: string; task: string }) => {
-  console.log('Coder Agent received task:', JSON.stringify(event, null, 2));
+  logger.info('Coder Agent received task:', JSON.stringify(event, null, 2));
 
   const { userId, task } = event;
 
   if (!userId || !task) {
-    console.error('Invalid event payload');
+    logger.error('Invalid event payload');
     return;
   }
 
@@ -38,7 +39,7 @@ export const handler = async (event: { userId: string; task: string }) => {
   );
   const response = await agent.process(userId, `CODER TASK: ${task}`, ReasoningProfile.THINKING);
 
-  console.log('Coder Agent completed task:', response);
+  logger.info('Coder Agent completed task:', response);
 
   // 2. Future: Emit completion event back to the bus
   return response;
