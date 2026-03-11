@@ -2,7 +2,12 @@ import { CodeBuildClient, BatchGetBuildsCommand } from '@aws-sdk/client-codebuil
 import { CloudWatchLogsClient, GetLogEventsCommand } from '@aws-sdk/client-cloudwatch-logs';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import {
+  DynamoDBDocumentClient,
+  QueryCommand,
+  GetCommand,
+  PutCommand,
+} from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
 import { logger } from '../lib/logger';
 import { SSTResource, EventType, GapStatus } from '../lib/types/index';
@@ -58,7 +63,6 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
 
       // Reset failure counter on success
       try {
-        const { PutCommand } = await import('@aws-sdk/lib-dynamodb');
         await db.send(
           new PutCommand({
             TableName: typedResource.ConfigTable.name,
@@ -131,7 +135,6 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
       });
 
       try {
-        const { PutCommand } = await import('@aws-sdk/lib-dynamodb');
         await db.send(
           new PutCommand({
             TableName: typedResource.ConfigTable.name,
@@ -156,12 +159,11 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
           ],
         })
       );
-    } else if (status === 'FAILED') {
-      logger.info(`Build ${buildId} FAILED. Marking ${gapIds.length} gaps as FAILED.`);
+    } else if (['FAILED', 'STOPPED', 'TIMED_OUT', 'FAULT'].includes(status)) {
+      logger.info(`Build ${buildId} ${status}. Marking ${gapIds.length} gaps as FAILED.`);
 
       // 2026 Circuit Breaker Logic
       try {
-        const { GetCommand, PutCommand } = await import('@aws-sdk/lib-dynamodb');
         const { Item } = await db.send(
           new GetCommand({
             TableName: typedResource.ConfigTable.name,
