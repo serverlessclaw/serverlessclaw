@@ -4,9 +4,11 @@ import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dyn
 import { IAgentConfig, AgentType } from './types/agent';
 import { MANAGER_SYSTEM_PROMPT } from '../agents/manager';
 import { logger } from './logger';
+import { SSTResource } from './types/index';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
+const typedResource = Resource as unknown as SSTResource;
 
 /**
  * AgentRegistry handles discovery and configuration of agents.
@@ -41,48 +43,72 @@ export class AgentRegistry {
   };
 
   static async getAgentConfig(id: string): Promise<IAgentConfig | undefined> {
-    // 1. Check Backbone first
+    let config: IAgentConfig | undefined;
+
+    // 1. Resolve Base Config
     if (this.backboneConfigs[id]) {
-      // Allow DDB to override parts of backbone config (like model)
-      const ddbConfig = await this.getFromDDB();
-      if (ddbConfig[id]) {
-        return { ...this.backboneConfigs[id], ...ddbConfig[id] };
+      config = { ...this.backboneConfigs[id] };
+      // Apply backbone-level overrides from DDB if any
+      const ddbAgents = (await this.getRawConfig('agents_config')) || {};
+      if (ddbAgents[id]) {
+        config = { ...config, ...ddbAgents[id] };
       }
-      return this.backboneConfigs[id];
+    } else {
+      // User-defined from DDB
+      const ddbAgents = (await this.getRawConfig('agents_config')) || {};
+      config = ddbAgents[id];
     }
 
-    // 2. Check User-defined from DDB
-    const ddbConfig = await this.getFromDDB();
-    return ddbConfig[id];
+    if (!config) return undefined;
+
+    // 2. Resolve Tool Overrides (Higher Priority)
+    // This unifies the manage_agent_tools logic which saves to ${id}_tools
+    const toolOverride = await this.getRawConfig(`${id}_tools`);
+    if (toolOverride && Array.isArray(toolOverride)) {
+      logger.info(`Applying dynamic tool override for agent ${id}:`, toolOverride);
+      config.tools = toolOverride;
+    }
+
+    return config;
   }
 
   static async getAllConfigs(): Promise<Record<string, IAgentConfig>> {
-    const ddbConfig = await this.getFromDDB();
-    return { ...this.backboneConfigs, ...ddbConfig };
+    const ddbConfig = (await this.getRawConfig('agents_config')) || {};
+    const all: Record<string, IAgentConfig> = { ...this.backboneConfigs };
+
+    // Merge in DDB agents
+    for (const [id, config] of Object.entries(ddbConfig as Record<string, IAgentConfig>)) {
+      all[id] = { ...all[id], ...config };
+    }
+
+    return all;
   }
 
-  private static async getFromDDB(): Promise<Record<string, IAgentConfig>> {
+  /**
+   * Fetches a raw value from the ConfigTable by key.
+   */
+  private static async getRawConfig(key: string): Promise<any> {
     try {
       const { Item } = await docClient.send(
         new GetCommand({
-          TableName: (Resource as unknown as { ConfigTable: { name: string } }).ConfigTable.name,
-          Key: { key: 'agents_config' },
+          TableName: typedResource.ConfigTable.name,
+          Key: { key },
         })
       );
-      return Item?.value || {};
+      return Item?.value;
     } catch (e) {
-      logger.warn('Failed to fetch agents_config from DDB:', e);
-      return {};
+      logger.warn(`Failed to fetch ${key} from DDB:`, e);
+      return undefined;
     }
   }
 
   static async saveConfig(id: string, config: IAgentConfig): Promise<void> {
-    const all = await this.getFromDDB();
+    const all = (await this.getRawConfig('agents_config')) || {};
     all[id] = config;
 
     await docClient.send(
       new PutCommand({
-        TableName: (Resource as unknown as { ConfigTable: { name: string } }).ConfigTable.name,
+        TableName: typedResource.ConfigTable.name,
         Item: { key: 'agents_config', value: all },
       })
     );
