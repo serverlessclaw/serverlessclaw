@@ -58,7 +58,7 @@ export function createAgents(ctx: SharedContext): {
     timeout: AGENT_CONFIG.timeout.MEDIUM,
   });
 
-  // 4. Dead Man's Switch (Recovery Agent)
+  // 4. Dead Man's Switch
   const deadMansSwitch = new sst.aws.Function('DeadMansSwitch', {
     handler: 'core/handlers/recovery.handler',
     dev: liveInLocalOnly,

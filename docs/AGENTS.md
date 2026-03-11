@@ -4,6 +4,12 @@
 
 ## Agent Roster
 
+## 🤖 Agent Roster
+
+We distinguish between **Autonomous Agents** (LLM-powered decision-makers) and **System Handlers** (deterministic logic for monitoring and recovery).
+
+### 1. Autonomous Agents (LLM-Powered)
+
 | Agent | Runtime | Config Source | Responsibilities |
 |-------|---------|---------------|-----------------|
 | **SuperClaw** | `core/handlers/webhook.ts` | `core/agents/superclaw.ts` | Interprets user intent, delegates, deploys |
@@ -12,6 +18,14 @@
 | **Strategic Planner** | `core/agents/strategic-planner.ts` | `AgentRegistry` (Backbone) | Designs strategic evolution plans |
 | **Cognition Reflector** | `core/agents/cognition-reflector.ts` | `AgentRegistry` (Backbone) | Distills memory and extracts gaps |
 | **QA Auditor** | `core/agents/qa.ts` | `AgentRegistry` (Backbone) | Verifies satisfaction of deployed changes |
+
+### 2. System Handlers (Logic-Powered)
+
+| Component | Runtime | Trigger | Responsibilities |
+|-----------|---------|---------|------------------|
+| **Build Monitor** | `core/handlers/monitor.ts` | CodeBuild Event | Observes builds, updates gap status, circuit breaking |
+| **Dead Man's Switch** | `core/handlers/recovery.ts` | EventBridge Schedule | Hourly health checks, emergency git rollback |
+| **Notifier** | `core/handlers/notifier.ts` | AgentBus Event | Formats and sends messages to Telegram/Slack |
 | **Deployer** | AWS CodeBuild | `buildspec.yml` | Runs `sst deploy` in isolated environment |
 
 ---

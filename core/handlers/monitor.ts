@@ -128,6 +128,20 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
       });
 
       infraNodes.push({
+        id: 'build-monitor',
+        type: 'infra',
+        label: 'Build Monitor',
+        description: 'Observes builds, updates gap status, and triggers circuit breakers.',
+      });
+
+      infraNodes.push({
+        id: 'dead-mans-switch',
+        type: 'infra',
+        label: "Dead Man's Switch",
+        description: 'Hourly health checks and emergency git rollback mechanism.',
+      });
+
+      infraNodes.push({
         id: 'dashboard',
         type: 'dashboard',
         label: 'ClawCenter',
