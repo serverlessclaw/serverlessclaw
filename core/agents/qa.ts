@@ -113,6 +113,8 @@ export const handler = async (event: {
   const auditReport = await qaAgent.process(userId, auditPrompt, {
     profile: ReasoningProfile.STANDARD,
     isIsolated: true,
+    initiatorId: (event.detail as any).initiatorId,
+    depth: (event.detail as any).depth,
   });
 
   logger.info('QA Audit Report:', auditReport);
@@ -152,5 +154,33 @@ export const handler = async (event: {
       `⚠️ **QA Audit Failed: Implementation Unsatisfactory**\n\nI have reopened ${gapIds.length} gaps for further work.\n\n**REASON:**\n${auditReport}`,
       [userId]
     );
+  }
+
+  // Universal Coordination: Notify Initiator of Audit Completion
+  try {
+    const { EventBridgeClient, PutEventsCommand } = await import('@aws-sdk/client-eventbridge');
+    const eb = new EventBridgeClient({});
+    await eb.send(
+      new PutEventsCommand({
+        Entries: [
+          {
+            Source: 'qa.agent',
+            DetailType: EventType.TASK_COMPLETED,
+            Detail: JSON.stringify({
+              userId,
+              agentId: AgentType.QA,
+              task: `QA Audit for Gaps: ${gapIds.join(', ')}`,
+              response: auditReport,
+              traceId: (event.detail as any).traceId,
+              initiatorId: (event.detail as any).initiatorId,
+              depth: (event.detail as any).depth,
+            }),
+            EventBusName: typedResource.AgentBus.name,
+          },
+        ],
+      })
+    );
+  } catch (e) {
+    logger.error('Failed to emit TASK_COMPLETED from QA:', e);
   }
 };

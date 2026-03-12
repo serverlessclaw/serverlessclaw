@@ -40,12 +40,14 @@ export const listAgents = {
 export const dispatchTask = {
   ...toolDefinitions.dispatchTask,
   execute: async (args: Record<string, unknown>): Promise<string> => {
-    const { agentId, userId, task, metadata, traceId } = args as {
+    const { agentId, userId, task, metadata, traceId, initiatorId, depth } = args as {
       agentId: string;
       userId: string;
       task: string;
       metadata?: Record<string, unknown>;
       traceId?: string;
+      initiatorId?: string;
+      depth?: number;
     };
 
     const { AgentRegistry } = await import('../lib/registry');
@@ -59,14 +61,25 @@ export const dispatchTask = {
       return `FAILED: Agent '${agentId}' is currently disabled.`;
     }
 
-    logger.info(`Dispatching ${agentId} task for user ${userId}: ${task}`);
+    const nextDepth = (depth || 0) + 1;
+
+    logger.info(
+      `Dispatching ${agentId} task (Depth: ${nextDepth}, Initiator: ${initiatorId || 'N/A'}) for user ${userId}: ${task}`
+    );
     const typedResource = Resource as unknown as ToolsResource;
     const command = new PutEventsCommand({
       Entries: [
         {
-          Source: 'main.agent',
+          Source: initiatorId || 'main.agent',
           DetailType: `${agentId}_task`,
-          Detail: JSON.stringify({ userId, task, metadata, traceId }),
+          Detail: JSON.stringify({
+            userId,
+            task,
+            metadata,
+            traceId,
+            initiatorId: initiatorId || 'main.agent',
+            depth: nextDepth,
+          }),
           EventBusName: typedResource.AgentBus.name,
         },
       ],

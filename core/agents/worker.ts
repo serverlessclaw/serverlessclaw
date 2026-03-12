@@ -76,6 +76,8 @@ export const handler = async (
     context,
     isContinuation: !!isContinuation,
     isIsolated: true,
+    initiatorId: (event.detail as any).initiatorId,
+    depth: (event.detail as any).depth,
   });
 
   logger.info(`Worker Agent [${agentId}] completed task:`, response);
@@ -99,6 +101,8 @@ export const handler = async (
                 task,
                 response,
                 traceId,
+                initiatorId: (event.detail as any).initiatorId,
+                depth: (event.detail as any).depth,
               }),
               EventBusName: (Resource as any).AgentBus.name,
             },

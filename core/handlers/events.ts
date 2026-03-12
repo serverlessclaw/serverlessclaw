@@ -94,17 +94,38 @@ I am ready for further tasks or instructions.`;
       await sendOutboundMessage('events.handler', userId, responseText);
     }
   } else if (event['detail-type'] === EventType.TASK_COMPLETED) {
-    const { userId, agentId, task, response, traceId } = event.detail as {
+    const { userId, agentId, task, response, traceId, initiatorId, depth } = event.detail as {
       userId: string;
       agentId: string;
       task: string;
       response: string;
       traceId: string;
+      initiatorId?: string;
+      depth?: number;
     };
 
-    logger.info(`Relaying completion from ${agentId} to Orchestrator (User: ${userId})`);
+    const currentDepth = depth || 1;
+    logger.info(
+      `Relaying completion from ${agentId} to Initiator: ${initiatorId || 'Orchestrator'} (Depth: ${currentDepth})`
+    );
 
-    // Signal SuperClaw to resume with the delegated task result
+    // 1. Loop Protection
+    if (currentDepth >= 5) {
+      logger.error(
+        `Recursion Limit Exceeded (Depth: ${currentDepth}) for user ${userId}. Aborting.`
+      );
+      await sendOutboundMessage(
+        'events.handler',
+        userId,
+        `⚠️ **Recursion Limit Exceeded**\n\nI have detected an infinite loop between agents (Depth: ${currentDepth}). I've intervened to stop the process. Please check the orchestration logic.`
+      );
+      return;
+    }
+
+    // 2. Dynamic Routing
+    // If the initiator is not the main agent, we route back to that specific agent
+    const targetAgentId = initiatorId && initiatorId !== 'main.agent' ? initiatorId : 'main.agent';
+
     const { EventBridgeClient, PutEventsCommand } = await import('@aws-sdk/client-eventbridge');
     const { Resource } = await import('sst');
     const eb = new EventBridgeClient({});
@@ -122,8 +143,10 @@ I am ready for further tasks or instructions.`;
               ---
               ${response}
               ---
-              Please continue your orchestration loop based on this result.`,
+              Please continue your logic based on this result.`,
               traceId,
+              initiatorId: targetAgentId,
+              depth: currentDepth,
             }),
             EventBusName: (Resource as any).AgentBus.name,
           },

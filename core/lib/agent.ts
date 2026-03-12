@@ -56,6 +56,14 @@ export interface AgentProcessOptions {
    * @default false
    */
   isIsolated?: boolean;
+  /**
+   * The agent ID that initiated this task.
+   */
+  initiatorId?: string;
+  /**
+   * The current recursion depth.
+   */
+  depth?: number;
 }
 
 /**
@@ -98,10 +106,14 @@ export class Agent {
       context,
       isContinuation = false,
       isIsolated = false,
+      initiatorId,
+      depth = 0,
     } = options;
 
     const tracer = new ClawTracer(userId);
     const traceId = tracer.getTraceId();
+
+    const currentInitiator = initiatorId || this.config?.id || 'unknown';
 
     if (!isContinuation) {
       await tracer.startTrace({ userText });
@@ -201,7 +213,10 @@ export class Agent {
               remainingTime,
               iterations,
             });
-            await this.emitContinuation(userId, userText, tracer.getTraceId());
+            await this.emitContinuation(userId, userText, tracer.getTraceId(), {
+              initiatorId: currentInitiator,
+              depth,
+            });
             return AGENT_LOG_MESSAGES.TASK_PAUSED_TIMEOUT;
           }
         }
@@ -225,6 +240,8 @@ export class Agent {
               // Inject traceId for propagation and peeking
               if (args && typeof args === 'object') {
                 args.traceId = traceId;
+                args.initiatorId = currentInitiator;
+                args.depth = depth;
               }
               await tracer.addStep({ type: 'tool_call', content: { toolName: tool.name, args } });
 
@@ -258,7 +275,10 @@ export class Agent {
     if (!responseText) {
       if (iterations >= maxIterations) {
         logger.info('Iteration limit reached, pausing task...', { iterations });
-        await this.emitContinuation(userId, userText, tracer.getTraceId());
+        await this.emitContinuation(userId, userText, tracer.getTraceId(), {
+          initiatorId: currentInitiator,
+          depth,
+        });
         return AGENT_LOG_MESSAGES.TASK_PAUSED_ITERATION_LIMIT;
       }
       responseText = 'Sorry, I reached my iteration limit.';
@@ -314,6 +334,8 @@ export class Agent {
                       traceId,
                     },
                   ],
+                  initiatorId: currentInitiator,
+                  depth,
                 }),
                 EventBusName: typedResource.AgentBus.name,
               },
@@ -334,20 +356,28 @@ export class Agent {
    * @param userId - Unique identifier for the user or session
    * @param task - The raw input message or task description
    * @param traceId - The trace identifier for linking continued executions
+   * @param metadata - Routing metadata (initiatorId, depth)
    */
-  private async emitContinuation(userId: string, task: string, traceId: string): Promise<void> {
+  private async emitContinuation(
+    userId: string,
+    task: string,
+    traceId: string,
+    metadata: { initiatorId?: string; depth?: number } = {}
+  ): Promise<void> {
     try {
       await this.eventbridge.send(
         new PutEventsCommand({
           Entries: [
             {
-              Source: 'main.agent',
+              Source: this.config?.id || 'main.agent',
               DetailType: EventType.CONTINUATION_TASK,
               Detail: JSON.stringify({
                 userId,
                 task,
                 isContinuation: true,
                 traceId,
+                initiatorId: metadata.initiatorId,
+                depth: metadata.depth,
               }),
               EventBusName: typedResource.AgentBus.name,
             },

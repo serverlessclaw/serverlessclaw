@@ -48,7 +48,7 @@ export const handler = async (event: {
 }): Promise<string | undefined> => {
   logger.info('Coder Agent received task:', JSON.stringify(event, null, 2));
 
-  const { userId, task, metadata } = event;
+  const { userId, task, metadata, traceId } = event;
 
   if (!userId || !task) {
     logger.error('Invalid event payload');
@@ -74,9 +74,13 @@ export const handler = async (event: {
 
   const agentTools = await getAgentTools('coder');
   const agent = new Agent(memory, provider, agentTools, config.systemPrompt, config);
-  const response = await agent.process(userId, `CODER TASK: ${task}`, {
+  const response = await agent.process(userId, task, {
     profile: ReasoningProfile.THINKING,
     isIsolated: true,
+    context: (event as any).context,
+    isContinuation: !!(event as any).isContinuation,
+    initiatorId: (event as any).initiatorId,
+    depth: (event as any).depth,
   });
 
   logger.info('Coder Agent completed task:', response);
@@ -113,19 +117,22 @@ export const handler = async (event: {
         await memory.updateGapStatus(gapId, GapStatus.DEPLOYED);
       }
 
-      // Notify QA Agent directly since BuildMonitor won't be triggered
+      // Notify Resumption Loop (Universal Coordination)
       try {
         await eventbridge.send(
           new PutEventsCommand({
             Entries: [
               {
                 Source: 'coder.agent',
-                DetailType: EventType.CODER_TASK_COMPLETED,
+                DetailType: EventType.TASK_COMPLETED,
                 Detail: JSON.stringify({
                   userId,
-                  gapIds: metadata.gapIds,
+                  agentId: AgentType.CODER,
                   task,
-                  result: response,
+                  response,
+                  traceId,
+                  initiatorId: (event as any).initiatorId,
+                  depth: (event as any).depth,
                 }),
                 EventBusName: typedResource.AgentBus.name,
               },
@@ -133,7 +140,7 @@ export const handler = async (event: {
           })
         );
       } catch (e) {
-        logger.error('Failed to emit CODER_TASK_COMPLETED:', e);
+        logger.error('Failed to emit TASK_COMPLETED from Coder:', e);
       }
     }
   }

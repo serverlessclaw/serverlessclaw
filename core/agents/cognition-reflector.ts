@@ -209,5 +209,33 @@ export const handler = async (event: {
     }
   }
 
+  // Universal Coordination: Notify Initiator (if any)
+  try {
+    const { EventBridgeClient, PutEventsCommand } = await import('@aws-sdk/client-eventbridge');
+    const eb = new EventBridgeClient({});
+    await eb.send(
+      new PutEventsCommand({
+        Entries: [
+          {
+            Source: 'reflector.agent',
+            DetailType: EventType.TASK_COMPLETED,
+            Detail: JSON.stringify({
+              userId,
+              agentId: AgentType.COGNITION_REFLECTOR,
+              task: 'Session Reflection',
+              response: response || 'No insights extracted.',
+              traceId,
+              initiatorId: (event as any).initiatorId,
+              depth: (event as any).depth,
+            }),
+            EventBusName: typedResource.AgentBus.name,
+          },
+        ],
+      })
+    );
+  } catch (e) {
+    logger.error('Failed to emit TASK_COMPLETED from Reflector:', e);
+  }
+
   return response;
 };

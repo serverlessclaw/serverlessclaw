@@ -1,6 +1,21 @@
 /**
  * Configuration for an agent instance.
  */
+export interface BaseEvent {
+  userId: string;
+  traceId?: string;
+  initiatorId?: string; // The agent ID that started this task
+  depth?: number; // To prevent infinite loops
+}
+
+/**
+ * Task delegation event.
+ */
+export interface TaskEvent extends BaseEvent {
+  task: string;
+  isContinuation?: boolean;
+  metadata?: Record<string, unknown>;
+}
 export interface IAgentConfig {
   /** Unique ID of the agent. */
   id: string;

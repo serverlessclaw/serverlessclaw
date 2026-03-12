@@ -1,17 +1,25 @@
 import { DynamoMemory } from '../lib/memory';
 import { Agent } from '../lib/agent';
 import { ProviderManager } from '../lib/providers/index';
-import { AgentType, ReasoningProfile, EvolutionMode, GapStatus } from '../lib/types/index';
+import {
+  AgentType,
+  ReasoningProfile,
+  EvolutionMode,
+  GapStatus,
+  EventType,
+} from '../lib/types/index';
 import { getAgentTools } from '../tools/index';
 import { Resource } from 'sst';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { sendOutboundMessage } from '../lib/outbound';
 import { logger } from '../lib/logger';
+import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const memory = new DynamoMemory();
 const providerManager = new ProviderManager();
+const eventbridge = new EventBridgeClient({});
 
 export const PLANNER_SYSTEM_PROMPT = `
 You are the Strategic Planner for Serverless Claw. Your role is to analyze capability gaps identified by the Reflector and design detailed architectural evolutions.
@@ -65,10 +73,22 @@ export const handler = async (event: {
   contextUserId: string;
   metadata?: PlannerMetadata;
   isScheduledReview?: boolean;
+  traceId?: string;
+  initiatorId?: string;
+  depth?: number;
 }): Promise<PlannerResult> => {
   logger.info('Planner Agent received task:', JSON.stringify(event, null, 2));
 
-  const { gapId, details, contextUserId, metadata, isScheduledReview } = event;
+  const {
+    gapId,
+    details,
+    contextUserId,
+    metadata,
+    isScheduledReview,
+    traceId,
+    initiatorId,
+    depth,
+  } = event;
 
   // 1. Fetch System Context
   const { AgentRegistry } = await import('../lib/registry');
@@ -178,13 +198,40 @@ export const handler = async (event: {
   }
 
   // 3. Process with High Reasoning
-  // 3. Process with High Reasoning
   const result = await plannerAgent.process(contextUserId, plannerPrompt, {
     profile: ReasoningProfile.DEEP,
     isIsolated: true,
+    initiatorId,
+    depth,
   });
 
   logger.info('Strategic Plan Generated:', result);
+
+  // Emit Task Completion for Universal Coordination
+  try {
+    await eventbridge.send(
+      new PutEventsCommand({
+        Entries: [
+          {
+            Source: 'planner.agent',
+            DetailType: EventType.TASK_COMPLETED,
+            Detail: JSON.stringify({
+              userId: contextUserId,
+              agentId: AgentType.STRATEGIC_PLANNER,
+              task: isScheduledReview ? 'Scheduled Review' : details,
+              response: result,
+              traceId,
+              initiatorId: (event as any).initiatorId,
+              depth: (event as any).depth,
+            }),
+            EventBusName: (Resource as any).AgentBus.name,
+          },
+        ],
+      })
+    );
+  } catch (e) {
+    logger.error('Failed to emit TASK_COMPLETED from Planner:', e);
+  }
 
   // 4. Record evolution attempt in history for cooldown logic
   if (details) {
@@ -228,7 +275,6 @@ export const handler = async (event: {
     );
 
     // 2026 Optimization: Use the dispatchTask tool logic via EventBridge directly
-    // but keep it compatible with the AgentBus pattern.
     const { tools } = await import('../tools/index');
     const dispatcher = tools.dispatchTask;
     await dispatcher.execute({
@@ -238,6 +284,7 @@ export const handler = async (event: {
       metadata: {
         gapIds: processedGapIds,
       },
+      traceId, // Propagate traceId
     });
   } else {
     logger.info('Evolution mode is hitl, asking for approval.');
