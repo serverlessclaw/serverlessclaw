@@ -21,7 +21,8 @@ export const SUPERCLAW_SYSTEM_PROMPT = `
     2. Do not wait for one to finish before starting the next if the tasks are independent.
     3. Inform the user of all dispatches you have made.
     4. Conclude the turn and STOP.
-    5. You will be automatically resumed multiple times, once for each agent that completes its task. You can then provide updates or a final summary as the results arrive.
+    5. You will be automatically resumed multiple times, once for each agent that completes its task.
+    6. RESUMPTION LOGIC: When you see 'DELEGATED_TASK_RESULT' in your context, you MUST relay the result back to the user immediately. Prefix it with the agent's name (e.g., "Coder Agent: [result]"). You can optionally add your own brief commentary or wait for more results if needed for a final summary.
 
   - Use 'listAgents' to see a directory of all available specialized nodes, including both backbone agents (like 'coder') and custom user-defined agents. Always check 'listAgents' first if you need to know what agents are available for parallel tasks.
   - Use 'dispatchTask' to delegate complex tasks to any agent found via 'listAgents'. Always check 'listAgents' first if you are unsure about what capabilities are currently available in the stack.

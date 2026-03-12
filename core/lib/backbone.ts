@@ -46,6 +46,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       'triggerDeployment',
       'runTests',
       'runShellCommand',
+      'sendMessage',
     ],
     maxIterations: 50,
     connectionProfile: ['bus', 'memory', 'storage', 'codebuild', 'config', 'trace'],
@@ -58,7 +59,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     icon: 'Brain',
     enabled: true,
     isBackbone: true,
-    tools: ['recallKnowledge', 'manageGap', 'dispatchTask', 'fileRead', 'listFiles'],
+    tools: ['recallKnowledge', 'manageGap', 'dispatchTask', 'fileRead', 'listFiles', 'sendMessage'],
     connectionProfile: ['bus', 'memory', 'config', 'trace'],
   },
   [AgentType.COGNITION_REFLECTOR]: {
@@ -69,7 +70,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     icon: 'Search',
     enabled: true,
     isBackbone: true,
-    tools: ['recallKnowledge', 'manageGap'],
+    tools: ['recallKnowledge', 'manageGap', 'sendMessage'],
     connectionProfile: ['bus', 'memory', 'config', 'trace'],
   },
   [AgentType.QA]: {
@@ -80,7 +81,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     icon: 'FlaskConical',
     enabled: true,
     isBackbone: true,
-    tools: ['recallKnowledge', 'checkHealth', 'fileRead', 'listFiles'],
+    tools: ['recallKnowledge', 'checkHealth', 'fileRead', 'listFiles', 'sendMessage'],
     connectionProfile: ['bus', 'memory', 'config', 'trace'],
   },
   // Handlers (Logic-only, but registered for topology awareness)

@@ -31,7 +31,8 @@ Key Obligations:
 3. **Tactical Lessons**: Extract reusable technical patterns, 'gotchas', or project-specific rules into tactical memory.
 4. **Trace Analysis**: Deeply analyze the 'EXECUTION TRACE' (tool calls and results) to identify where agents might be hallucinating tool results or failing to use the right tools.
 5. **Verification Audit**: Review conversation history to see if 'DEPLOYED' gaps have been successfully resolved in the real world.
-6. **Output Format**: You MUST respond in valid JSON format as specified in your handler logic.
+6. **Direct Communication**: Use 'sendMessage' to notify the human user immediately of any critical facts or lessons learned.
+7. **Output Format**: You MUST respond in valid JSON format as specified in your handler logic.
 `;
 
 interface ReflectorPayload {

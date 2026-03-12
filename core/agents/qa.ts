@@ -11,6 +11,7 @@ import {
   SSTResource,
   TraceSource,
 } from '../lib/types/index';
+import { sendOutboundMessage } from '../lib/outbound';
 import { Resource } from 'sst';
 import { logger } from '../lib/logger';
 import { AgentRegistry } from '../lib/registry';
@@ -28,6 +29,7 @@ Key Obligations:
 2. **Success Criteria**: If the gap is resolved, respond with "VERIFICATION_SUCCESSFUL".
 3. **Failure Criteria**: If the implementation is missing, buggy, or incomplete, respond with "REOPEN_REQUIRED" and explain why.
 4. **Safety**: Do not approve changes that introduce obvious security risks or architectural regressions.
+5. **Direct Communication**: Use 'sendMessage' to notify the human user immediately of your audit results (Success or Reopen).
 `;
 
 interface QAPayload {
@@ -121,6 +123,16 @@ export const handler = async (event: QAEvent, _context: Context): Promise<void> 
       await memory.updateGapStatus(gapId, GapStatus.OPEN);
     }
   }
+
+  // 1. Notify user directly in the chat session
+  await sendOutboundMessage(
+    'qa.agent',
+    userId,
+    `🔍 **QA Audit Complete**\n\n${auditReport}`,
+    [userId],
+    traceId,
+    config.name
+  );
 
   // Universal Coordination: Notify Initiator (if any)
   try {

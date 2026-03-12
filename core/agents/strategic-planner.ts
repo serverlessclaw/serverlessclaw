@@ -16,13 +16,11 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { sendOutboundMessage } from '../lib/outbound';
 import { logger } from '../lib/logger';
-import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import { Context } from 'aws-lambda';
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const memory = new DynamoMemory();
 const providerManager = new ProviderManager();
-const eventbridge = new EventBridgeClient({});
 const typedResource = Resource as unknown as SSTResource;
 
 export const PLANNER_SYSTEM_PROMPT = `
@@ -34,6 +32,7 @@ Key Obligations:
 3. **System Awareness**: Use 'listAgents', 'listFiles', and 'recallKnowledge' to understand the current system topology and existing logic before proposing changes.
 4. **Co-Management**: Clearly state if a plan requires human 'APPROVE' or if it will be executed autonomously based on the current 'evolution_mode'.
 5. **Evolutionary Integrity**: Ensure your plans follow the project's 'ARCHITECTURE.md' guidelines and don't introduce redundant components.
+6. **Direct Communication**: Use 'sendMessage' to notify the human user immediately when you have generated a new plan or identified a critical gap.
 `;
 
 async function getEvolutionMode(): Promise<'auto' | 'hitl'> {
@@ -225,9 +224,21 @@ export const handler = async (event: PlannerEvent, _context: Context): Promise<P
 
   logger.info('Strategic Plan Generated:', result);
 
-  // Emit Task Completion for Universal Coordination
+  // 1. Notify user directly in the chat session
+  await sendOutboundMessage(
+    'planner.agent',
+    contextUserId,
+    `🚀 **Strategic Plan Generated**\n\n${result}`,
+    [contextUserId],
+    sessionId,
+    config.name
+  );
+
+  // 2. Emit Task Completion for Universal Coordination
   try {
-    await eventbridge.send(
+    const { EventBridgeClient, PutEventsCommand } = await import('@aws-sdk/client-eventbridge');
+    const eb = new EventBridgeClient({});
+    await eb.send(
       new PutEventsCommand({
         Entries: [
           {

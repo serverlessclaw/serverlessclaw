@@ -286,4 +286,19 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
   },
+  sendMessage: {
+    name: 'sendMessage',
+    description: 'Sends a direct message to the human user in their current chat session.',
+    parameters: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          description: 'The content of the message to send.',
+        },
+      },
+      required: ['message'],
+      additionalProperties: false,
+    },
+  },
 };

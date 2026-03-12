@@ -5,6 +5,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { toolDefinitions } from './definitions';
 import { logger } from '../lib/logger';
+import { sendOutboundMessage } from '../lib/outbound';
 import { SYSTEM, DYNAMO_KEYS } from '../lib/constants';
 import { getDeployCountToday, incrementDeployCount, rewardDeployLimit } from '../lib/deploy-stats';
 import { exec } from 'child_process';
@@ -143,6 +144,29 @@ export const validateCode = {
       return `Validation Successful:\n${tscOut}\n${lintOut}`;
     } catch (error) {
       return `Validation FAILED:\n${error instanceof Error ? error.message : String(error)}`;
+    }
+  },
+};
+
+/**
+ * Sends a direct message to the user chat session.
+ * Used by agents to communicate findings, status, or greetings directly.
+ */
+export const sendMessage = {
+  ...toolDefinitions.sendMessage,
+  execute: async (args: Record<string, unknown>): Promise<string> => {
+    const { message, userId, sessionId } = args as {
+      message: string;
+      userId: string;
+      sessionId?: string;
+    };
+
+    try {
+      // source is hardcoded to 'tool.sendMessage' but we could propagate agentId if needed
+      await sendOutboundMessage('tool.sendMessage', userId, message, [userId], sessionId);
+      return 'Message sent successfully to user.';
+    } catch (error) {
+      return `Failed to send message: ${error instanceof Error ? error.message : String(error)}`;
     }
   },
 };
