@@ -35,15 +35,23 @@ This document covers the AWS topology and data flow. For agent logic and orchest
                             +-----------+-----------+                 |
                             |                       |                 |
                             |   EventBridge Bus     |<----------------+
-                            |     (AgentBus)        |
-                            |                       |
-                            +-----------+-----------+
-                                        |
-                                        v
-                            +-----------+-----------+
-                            |                       |
-                            |   Managed Services    |
-                            | (DynamoDB / S3)       |
+                            |     (AgentBus)        |                 |
+                            |           +           |                 |
+                            +-----------|-----------+                 |
+                                        |                             |
+                                        v                             |
+                            +-----------+-----------+                 |
+                            |                       |                 |
+                            |   Managed Services    |                 |
+                            | (DynamoDB / S3)       |                 |
+                            |                       |                 |
+                            +-----------+-----------+                 |
+                                        |                             |
+                                        v                             |
+                            +-----------+-----------+                 |
+                            |                       |                 |
+                            |  IoT Core (Realtime)  |<----------------+
+                            |     (Dashboard)       |
                             |                       |
                             +-----------------------+
 ```
@@ -53,28 +61,24 @@ This document covers the AWS topology and data flow. For agent logic and orchest
 ## Message Processing Flow
 
 ```text
-User Event      Webhook         LLM Agent        ConfigTable        Memory           Tool Plugin
-    |              |                |                |                |                 |
-    +------------->|                |                |                |                 |
-    |              +--------------->|                |                |                 |
-    |              |                +-------------------------------->|                 |
-    |              |                |      (Get History)              |                 |
-    |              |                |<--------------------------------+                 |
-    |              |                |                |                |                 |
-    |              |                +-------------------------------->|                 |
-    |              |                |      (Save Message)             |                 |
-    |              |                |                |                |                 |
-    |              |                +-------------------------------------------------->|
-    |              |                |           (Execute Tool if needed)                |
-    |              |                |<--------------------------------------------------+
-    |              |                |                |                |                 |
-    |              |                +--------------->|                |                 |
-    |              |                | (Emit Event)   |                |                 |
-    |              |                |                |                |                 |
-    |              |                +-------------------------------->|                 |
-    |              |                | (Save Response)|                |                 |
-    |              |<---------------+                |                |                 |
-    |<-------------+                |                |                |                 |
+User Event      Webhook         AgentBus         LLM Agent        Memory           IoT Bridge       Dashboard
+    |              |                |                |                |                 |               |
+    +------------->|                |                |                |                 |               |
+    |              +--------------->|                |                |                 |               |
+    |              |   (Msg Event)  |                |                |                 |               |
+    |              |                +--------------->|                |                 |               |
+    |              |                |  (Task Event)  |                |                 |               |
+    |              |                |                +--------------->|                 |               |
+    |              |                |                |  (Get History) |                 |               |
+    |              |                |                |<---------------+                 |               |
+    |              |                |                |                |                 |               |
+    |              |                |                +--------------------------------->|               |
+    |              |                |                |       (Emit Signaling Event)    |               |
+    |              |                |                |                |                 +-------------->|
+    |              |                |                |                |                 |    (Push)     |
+    |              |                |                |                |                 |               |
+    |              |<---------------+                |                |                 |               |
+    |<-------------+  (HTTP 200)    |                |                |                 |               |
 Response
 ```
 
@@ -177,10 +181,37 @@ While the default uses DynamoDB, the system can be adapted to use:
 - **PostgreSQL (Drizzle/Prisma)** for complex relational memory.
 - **S3** for long-term archival.
 
-### 3. Channel Adapters (Fan-Out)
+## 📡 Real-time Communication (IoT Core)
+
+To ensure the **ClawCenter Dashboard** receives instantaneous updates without polling, we use a **Real-time Bridge** pattern over AWS IoT Core.
+
+```text
+ [ Agent / Handler ]
+          |
+   (Publish Event)
+          |
+          v
+ [ AgentBus (EventBridge) ]
+          |
+      (Rule Match)
+          |
+          v
+ [ Realtime Bridge (Lambda) ]
+          |
+   (re-wrap & publish)
+          |
+          v
+ [ AWS IoT Core (MQTT) ] ----> [ Dashboard (React Flow) ]
+ (Topic: users/{id}/signal)      (Instant Neural Pulse)
+```
+
+- **Efficiency**: Reduces latency from seconds (polling) to milliseconds (push).
+- **Scale**: Supports thousands of concurrent dashboard users via MQTT.
+
+### 5. Channel Adapters (Fan-Out)
 Instead of hardcoding API requests to a single platform, agents emit an `OUTBOUND_MESSAGE` event onto the AgentBus.
 - **Notifier Handler**: A dedicated lightweight Lambda (`src/handlers/notifier.ts`) listens to these events.
-- **Multi-Channel**: The Notifier reads user preferences from the `ConfigTable` and fans the message out to the appropriate adapters (Telegram, Slack, Dashboard WebSocket).
+- **Multi-Channel**: The Notifier reads user preferences from the `ConfigTable` and fans the message out to the appropriate adapters (Telegram, Slack, and the **Real-time Signal Bridge**).
 
 ## Self-Management & Orchestration
 

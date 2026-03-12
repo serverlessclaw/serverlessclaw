@@ -26,6 +26,7 @@ We distinguish between **Autonomous Agents** (LLM-powered decision-makers) and *
 | **Build Monitor** | `core/handlers/monitor.ts` | CodeBuild Event | Observes builds, updates gap status, circuit breaking |
 | **Dead Man's Switch** | `core/handlers/recovery.ts` | EventBridge Schedule | Hourly health checks, emergency git rollback |
 | **Notifier** | `core/handlers/notifier.ts` | AgentBus Event | Formats and sends messages to Telegram/Slack |
+| **Real-time Bridge** | `core/handlers/bridge.ts` | AgentBus Event | Bridges EventBridge signals to AWS IoT Core (MQTT) |
 | **Deployer** | AWS CodeBuild | `buildspec.yml` | Runs `sst deploy` in isolated environment |
 
 ---
@@ -33,18 +34,21 @@ We distinguish between **Autonomous Agents** (LLM-powered decision-makers) and *
 ## Orchestration Flow
 
 ```
-User (Telegram)
-      │
-      ▼
+User (Telegram)       Dashboard (Web/IoT)
+      │                      ▲
+      ▼                      │ (Push: IoT Core)
 POST /webhook → SuperClaw (Lambda)
       │
       ├──dispatchTask(agentId, task)─► EventBridge AgentBus
       │                                         │
-      │                                         ▼
-      │                                  Worker Agent (Lambda)
-      │                                    │ 1. Load Persona (Registry)
-      │                                    │ 2. Load Tools (Registry)
-      │                                    └─► 3. Execute & Report
+      │                                         ├──► Worker Agent (Lambda)
+      │                                         │      │ 1. Load Persona (Registry)
+      │                                         │      │ 2. Load Tools (Registry)
+      │                                         │      └─► 3. Execute & Report
+      │                                         │
+      │                                         └──► Real-time Bridge (Lambda)
+      │                                                │
+      │                                                └─► Publish to users/{id}/signal
       │
       ├──triggerDeployment──► CodeBuild Deployer
       │                               │
