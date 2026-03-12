@@ -418,7 +418,7 @@ function ChatContent() {
             {sessions.length > 0 && (
               <button 
                 onClick={() => setShowDeleteAllConfirm(true)}
-                className="hover:text-red-500 transition-colors flex items-center gap-1 group/purge"
+                className="text-red-500/60 hover:text-red-500 transition-colors flex items-center gap-1 group/purge"
                 title="Purge All Conversations"
               >
                 <Trash2 size={10} className="group-hover/purge:scale-110 transition-transform" />
@@ -456,7 +456,7 @@ function ChatContent() {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={(e) => deleteSession(e, s.sessionId)}
-                      className="opacity-0 group-hover:opacity-40 hover:!opacity-100 p-1 text-white transition-all hover:text-red-500"
+                      className="opacity-0 group-hover:opacity-60 hover:!opacity-100 p-1 text-red-500 transition-all"
                       title="Delete Conversation"
                     >
                       <Trash2 size={12} />
