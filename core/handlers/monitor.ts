@@ -38,6 +38,23 @@ const memory = new DynamoMemory();
 export const handler = async (event: { detail: Record<string, unknown> }): Promise<void> => {
   logger.info('BuildMonitor received event:', JSON.stringify(event, null, 2));
 
+  // 1. Handle Direct Tasks (e.g. Greetings)
+  if (event.detail?.task && event.detail.userId) {
+    const task = (event.detail.task as string).toLowerCase();
+    if (task.includes('greet') || task.includes('say hi') || task.includes('hello')) {
+      const { sendOutboundMessage } = await import('../lib/outbound');
+      await sendOutboundMessage(
+        'monitor.handler',
+        event.detail.userId as string,
+        "👋 Hello! I'm the Build Monitor. I'm currently watching your CI/CD pipelines.",
+        undefined,
+        event.detail.sessionId as string,
+        'Build Monitor'
+      );
+      return;
+    }
+  }
+
   const buildId = event.detail['build-id'] as string;
   const projectName = event.detail['project-name'] as string;
   const status = event.detail['build-status'] as string;

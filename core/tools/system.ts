@@ -155,15 +155,23 @@ export const validateCode = {
 export const sendMessage = {
   ...toolDefinitions.sendMessage,
   execute: async (args: Record<string, unknown>): Promise<string> => {
-    const { message, userId, sessionId } = args as {
+    const { message, userId, sessionId, agentName } = args as {
       message: string;
       userId: string;
       sessionId?: string;
+      agentName?: string;
     };
 
     try {
       // source is hardcoded to 'tool.sendMessage' but we could propagate agentId if needed
-      await sendOutboundMessage('tool.sendMessage', userId, message, [userId], sessionId);
+      await sendOutboundMessage(
+        'tool.sendMessage',
+        userId,
+        message,
+        [userId],
+        sessionId,
+        agentName
+      );
       return 'Message sent successfully to user.';
     } catch (error) {
       return `Failed to send message: ${error instanceof Error ? error.message : String(error)}`;

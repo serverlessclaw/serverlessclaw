@@ -11,10 +11,29 @@ const typedResource = Resource as unknown as SSTResource;
 
 /**
  * Performs a health check on the system and triggers an emergency recovery (rollback) if unhealthy.
+ * Also handles direct tasks like greetings.
  *
+ * @param event - Optional event payload.
  * @returns A promise that resolves when the recovery check is complete.
  */
-export const handler = async (): Promise<void> => {
+export const handler = async (event?: { detail: Record<string, unknown> }): Promise<void> => {
+  // 1. Handle Direct Tasks (e.g. Greetings)
+  if (event?.detail?.task && event.detail.userId) {
+    const task = (event.detail.task as string).toLowerCase();
+    if (task.includes('greet') || task.includes('say hi') || task.includes('hello')) {
+      const { sendOutboundMessage } = await import('../lib/outbound');
+      await sendOutboundMessage(
+        'recovery.handler',
+        event.detail.userId as string,
+        "🛡️ Greetings! I am the Dead Man's Switch. I monitor system health and perform emergency rollbacks if needed.",
+        undefined,
+        event.detail.sessionId as string,
+        "Dead Man's Switch"
+      );
+      return;
+    }
+  }
+
   const healthUrl = `${typedResource.WebhookApi.url}/health`;
   logger.info(`Dead Man's Switch checking health at: ${healthUrl}`);
 

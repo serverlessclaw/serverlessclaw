@@ -40,6 +40,7 @@ interface ReflectorPayload {
   conversation: Message[];
   traceId?: string;
   sessionId?: string;
+  task?: string;
   initiatorId?: string;
   depth?: number;
 }
@@ -113,6 +114,20 @@ export const handler = async (
 
   const agentTools = await (await import('../tools/index')).getAgentTools('cognition-reflector');
   const reflector = new Agent(memory, provider, agentTools, config.systemPrompt, config);
+
+  // 2. Handle simple direct tasks (e.g. greetings)
+  if (payload.task) {
+    const taskLower = payload.task.toLowerCase();
+    if (taskLower.includes('greet') || taskLower.includes('hi') || taskLower.includes('hello')) {
+      return await reflector.process(userId, payload.task, {
+        profile: ReasoningProfile.FAST,
+        isIsolated: true,
+        traceId,
+        sessionId,
+        source: TraceSource.SYSTEM,
+      });
+    }
+  }
 
   const existingFacts = await memory.getDistilledMemory(userId);
   const deployedGaps = await memory.getAllGaps(GapStatus.DEPLOYED);
