@@ -30,7 +30,7 @@ export function createAgents(ctx: SharedContext): {
   const coderAgent = new sst.aws.Function('CoderAgent', {
     handler: 'core/agents/coder.handler',
     dev: liveInLocalOnly,
-    link: [memoryTable, traceTable, configTable, stagingBucket, ...validSecrets],
+    link: [memoryTable, traceTable, configTable, stagingBucket, bus, ...validSecrets],
     memory: AGENT_CONFIG.memory.LARGE,
     timeout: AGENT_CONFIG.timeout.MAX,
   });
@@ -63,7 +63,7 @@ export function createAgents(ctx: SharedContext): {
   const deadMansSwitch = new sst.aws.Function('DeadMansSwitch', {
     handler: 'core/handlers/recovery.handler',
     dev: liveInLocalOnly,
-    link: [memoryTable, deployer],
+    link: [memoryTable, deployer, bus],
     memory: AGENT_CONFIG.memory.SMALL,
     timeout: AGENT_CONFIG.timeout.MEDIUM,
   });
