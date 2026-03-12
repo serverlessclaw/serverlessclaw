@@ -112,6 +112,7 @@ export const handler = async (event: {
 
   const auditReport = await qaAgent.process(userId, auditPrompt, {
     profile: ReasoningProfile.STANDARD,
+    isIsolated: true,
   });
 
   logger.info('QA Audit Report:', auditReport);

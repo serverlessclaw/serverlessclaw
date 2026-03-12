@@ -44,10 +44,11 @@ export const handler = async (event: {
   userId: string;
   task: string;
   metadata?: { gapIds?: string[] };
+  traceId?: string;
 }): Promise<string | undefined> => {
   logger.info('Coder Agent received task:', JSON.stringify(event, null, 2));
 
-  const { userId, task, metadata } = event;
+  const { userId, task, metadata, traceId } = event;
 
   if (!userId || !task) {
     logger.error('Invalid event payload');
@@ -75,6 +76,7 @@ export const handler = async (event: {
   const agent = new Agent(memory, provider, agentTools, config.systemPrompt, config);
   const response = await agent.process(userId, `CODER TASK: ${task}`, {
     profile: ReasoningProfile.THINKING,
+    isIsolated: true,
   });
 
   logger.info('Coder Agent completed task:', response);

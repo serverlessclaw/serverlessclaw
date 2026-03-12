@@ -40,11 +40,12 @@ export const listAgents = {
 export const dispatchTask = {
   ...toolDefinitions.dispatchTask,
   execute: async (args: Record<string, unknown>): Promise<string> => {
-    const { agentId, userId, task, metadata } = args as {
+    const { agentId, userId, task, metadata, traceId } = args as {
       agentId: string;
       userId: string;
       task: string;
       metadata?: Record<string, unknown>;
+      traceId?: string;
     };
 
     const { AgentRegistry } = await import('../lib/registry');
@@ -65,7 +66,7 @@ export const dispatchTask = {
         {
           Source: 'main.agent',
           DetailType: `${agentId}_task`,
-          Detail: JSON.stringify({ userId, task, metadata }),
+          Detail: JSON.stringify({ userId, task, metadata, traceId }),
           EventBusName: typedResource.AgentBus.name,
         },
       ],
@@ -73,9 +74,45 @@ export const dispatchTask = {
 
     try {
       await eventbridge.send(command);
-      return `Task successfully dispatched to ${agentId} agent.`;
+      return `Task successfully dispatched to ${agentId} agent. Trace ID: ${traceId || 'N/A'}`;
     } catch (error) {
       return `Failed to dispatch task: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  },
+};
+
+/**
+ * Inspects a mechanical trace by ID.
+ */
+export const inspectTrace = {
+  ...toolDefinitions.inspectTrace,
+  execute: async (args: Record<string, unknown>): Promise<string> => {
+    const { traceId } = args as { traceId: string };
+    if (!traceId) return 'FAILED: No traceId provided.';
+
+    try {
+      const { ClawTracer } = await import('../lib/tracer');
+      const trace = await ClawTracer.getTrace(traceId);
+      if (!trace) return `FAILED: Trace with ID '${traceId}' not found.`;
+
+      const summary = `
+[TRACE_INSPECTION]
+ID: ${traceId}
+STATUS: ${trace.status}
+USER: ${trace.userId}
+STEPS:
+${trace.steps
+  .map(
+    (s) =>
+      `- [${new Date(s.timestamp).toISOString()}] [${s.type.toUpperCase()}] ${
+        typeof s.content === 'string' ? s.content : JSON.stringify(s.content)
+      }`
+  )
+  .join('\n')}
+      `;
+      return summary;
+    } catch (error) {
+      return `Failed to inspect trace: ${error instanceof Error ? error.message : String(error)}`;
     }
   },
 };

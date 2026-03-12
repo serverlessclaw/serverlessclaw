@@ -51,6 +51,11 @@ export interface AgentProcessOptions {
    * @default false
    */
   isContinuation?: boolean;
+  /**
+   * Whether to work in a private memory namespace: <AGENT_ID>#<userId>#<traceId>
+   * @default false
+   */
+  isIsolated?: boolean;
 }
 
 /**
@@ -88,15 +93,30 @@ export class Agent {
     userText: string,
     options: AgentProcessOptions = {}
   ): Promise<string> {
-    const { profile = ReasoningProfile.STANDARD, context, isContinuation = false } = options;
+    const {
+      profile = ReasoningProfile.STANDARD,
+      context,
+      isContinuation = false,
+      isIsolated = false,
+    } = options;
 
     const tracer = new ClawTracer(userId);
+    const traceId = tracer.getTraceId();
+
     if (!isContinuation) {
       await tracer.startTrace({ userText });
     }
 
+    // Determine storage identifier (Namespaced if isolated)
+    const agentId = this.config?.id || 'unknown';
+    const storageId = isIsolated ? `${agentId.toUpperCase()}#${userId}#${traceId}` : userId;
+
+    if (isIsolated) {
+      logger.info(`Using isolated memory namespace: ${storageId}`);
+    }
+
     // 1. Get history, distilled facts, and tactical lessons
-    const history = await this.memory.getHistory(userId);
+    const history = await this.memory.getHistory(storageId);
     const distilled = await this.memory.getDistilledMemory(userId);
     const lessons = await this.memory.getLessons(userId);
 
@@ -115,7 +135,7 @@ export class Agent {
     // 3. Add user message (Skip if continuation as it's already in history)
     const userMessage: Message = { role: MessageRole.USER, content: userText };
     if (!isContinuation) {
-      await this.memory.addMessage(userId, userMessage);
+      await this.memory.addMessage(storageId, userMessage);
     }
 
     // 2026 Hot-Swap Strategy: Resolve Model/Provider from DDB
@@ -202,6 +222,10 @@ export class Agent {
             const tool = this.tools.find((t) => t.name === toolCall.function.name);
             if (tool) {
               const args = JSON.parse(toolCall.function.arguments);
+              // Inject traceId for propagation and peeking
+              if (args && typeof args === 'object') {
+                args.traceId = traceId;
+              }
               await tracer.addStep({ type: 'tool_call', content: { toolName: tool.name, args } });
 
               const result = await tool.execute(args);
@@ -241,10 +265,11 @@ export class Agent {
     }
 
     // 5. Save response
-    await this.memory.addMessage(userId, {
+    await this.memory.addMessage(storageId, {
       role: MessageRole.ASSISTANT,
       content: responseText,
       agentName: this.config?.name || 'ClawAgent',
+      traceId, // Link this message to its mechanical trace
     });
 
     // 6. Finalize Trace
@@ -282,8 +307,12 @@ export class Agent {
                   traceId: tracer.getTraceId(),
                   conversation: [
                     ...messages,
-                    { role: MessageRole.ASSISTANT, content: responseText },
-                    { role: MessageRole.ASSISTANT, content: responseText },
+                    {
+                      role: MessageRole.ASSISTANT,
+                      content: responseText,
+                      agentName: this.config?.name,
+                      traceId,
+                    },
                   ],
                 }),
                 EventBusName: typedResource.AgentBus.name,

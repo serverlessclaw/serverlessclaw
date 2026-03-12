@@ -118,8 +118,9 @@ export const handler = async (event: {
   `;
 
   // Use 'fast' profile for cost-effective reflection
-  const response = await reflector.process(`SYSTEM#REFLECTOR#${userId}`, reflectionPrompt, {
+  const response = await reflector.process(userId, reflectionPrompt, {
     profile: ReasoningProfile.FAST,
+    isIsolated: true,
   });
 
   if (response) {

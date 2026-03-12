@@ -49,6 +49,8 @@ export interface Message {
   name?: string;
   /** Optional human-readable name of the agent that generated this message. */
   agentName?: string;
+  /** Link to the isolated mechanical monologue for this message */
+  traceId?: string;
 }
 
 /**

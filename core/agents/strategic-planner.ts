@@ -103,7 +103,7 @@ export const handler = async (event: {
       const frequencyHrs = parseInt(String(customFreq || '12'), 10);
       const minGaps = parseInt(String(customMinGaps || '3'), 10);
 
-      const lastReviewStr = await memory.getDistilledMemory('LAST#STRATEGIC_REVIEW');
+      const lastReviewStr = await memory.getDistilledMemory(`LAST#STRATEGIC_REVIEW#${contextUserId}`);
       const lastReview = lastReviewStr ? parseInt(lastReviewStr, 10) : 0;
       const now = Date.now();
 
@@ -148,7 +148,7 @@ export const handler = async (event: {
     `;
 
     // Update last review timestamp
-    await memory.updateDistilledMemory('LAST#STRATEGIC_REVIEW', Date.now().toString());
+    await memory.updateDistilledMemory(`LAST#STRATEGIC_REVIEW#${contextUserId}`, Date.now().toString());
   } else {
     // Reactionary single gap handling
     const signals = metadata
@@ -165,7 +165,7 @@ export const handler = async (event: {
 
   // 2. Self-Evolution Loop Protection (Cool-down)
   // Logic: Check if we have tried to evolve a similar gap recently
-  const evolutionHistory = await memory.getDistilledMemory('EVOLUTION#HISTORY');
+  const evolutionHistory = await memory.getDistilledMemory(`EVOLUTION#HISTORY#${contextUserId}`);
   const isDuplicate = details && evolutionHistory?.includes(details.substring(0, 50));
   if (isDuplicate) {
     logger.warn('Evolution loop detected or cooldown active for this gap. Aborting.');
@@ -176,6 +176,7 @@ export const handler = async (event: {
   // 3. Process with High Reasoning
   const result = await plannerAgent.process(contextUserId, plannerPrompt, {
     profile: ReasoningProfile.DEEP,
+    isIsolated: true,
   });
 
   logger.info('Strategic Plan Generated:', result);
@@ -186,7 +187,7 @@ export const handler = async (event: {
       0,
       500
     );
-    await memory.updateDistilledMemory('EVOLUTION#HISTORY', updatedHistory);
+    await memory.updateDistilledMemory(`EVOLUTION#HISTORY#${contextUserId}`, updatedHistory);
   }
 
   // 5. Gap Sink: Mark gaps as PLANNED after review to prevent re-planning

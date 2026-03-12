@@ -43,7 +43,7 @@ export const handler = async (
     return;
   }
 
-  const { userId, task, isContinuation } = event.detail;
+  const { userId, task, isContinuation, traceId } = event.detail;
 
   if (!userId || !task) {
     logger.error('Invalid event payload: missing userId or task');
@@ -71,6 +71,7 @@ export const handler = async (
   const response = await agent.process(userId, task, {
     context,
     isContinuation: !!isContinuation,
+    isIsolated: true,
   });
 
   logger.info(`Worker Agent [${agentId}] completed task:`, response);
