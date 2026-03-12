@@ -238,7 +238,7 @@ export function createAgents(ctx: SharedContext): {
 
   // 9. Realtime Bridge (EventBridge -> IoT Core)
   const bridge = new sst.aws.Function('RealtimeBridge', {
-    handler: 'core/handlers/bridge.ts.handler',
+    handler: 'core/handlers/bridge.handler',
     dev: liveInLocalOnly,
     link: [ctx.realtime!],
   });
