@@ -50,6 +50,28 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 }
 
 /**
+ * Updates conversation metadata (like title)
+ */
+export async function PATCH(req: NextRequest): Promise<NextResponse> {
+  try {
+    const { sessionId, title } = await req.json();
+    const userId = 'dashboard-user';
+    const memory = new DynamoMemory();
+
+    if (!sessionId || !title) {
+      return NextResponse.json({ error: 'Missing sessionId or title' }, { status: 400 });
+    }
+
+    await memory.saveConversationMeta(userId, sessionId, { title, updatedAt: Date.now() });
+    
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Failed to update session:', error);
+    return NextResponse.json({ error: 'Failed to update session' }, { status: 500 });
+  }
+}
+
+/**
  * Retrieves chat sessions or history
  */
 export async function GET(req: NextRequest): Promise<NextResponse> {

@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot, Loader2, MessageSquare, Terminal, Plus, Clock, ChevronRight, Zap } from 'lucide-react';
+import React, { useState, useRef, useEffect, Suspense } from 'react';
+import { Send, User, Bot, Loader2, MessageSquare, Terminal, Plus, Clock, ChevronRight, Zap, Edit2, Check, X } from 'lucide-react';
 import { THEME } from '@/lib/theme';
 import mqtt from 'mqtt';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -18,14 +19,65 @@ interface ConversationMeta {
   updatedAt: number;
 }
 
-export default function ChatPage() {
+function ChatContent() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sessions, setSessions] = useState<ConversationMeta[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>('');
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
+  const [isShaking, setIsShaking] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const currentSession = sessions.find(s => s.sessionId === activeSessionId);
+
+  // Sync activeSessionId with URL param
+  useEffect(() => {
+    const sessionFromUrl = searchParams.get('session');
+    if (sessionFromUrl && sessionFromUrl !== activeSessionId) {
+      setActiveSessionId(sessionFromUrl);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (activeSessionId) {
+      const currentParams = new URLSearchParams(window.location.search);
+      if (currentParams.get('session') !== activeSessionId) {
+        router.push(`?session=${activeSessionId}`, { scroll: false });
+      }
+    }
+  }, [activeSessionId, router]);
+
+  useEffect(() => {
+    if (currentSession) {
+      setEditedTitle(currentSession.title || 'Untitled_Trace');
+    }
+  }, [currentSession]);
+
+  const saveTitle = async () => {
+    if (!activeSessionId || !editedTitle.trim()) return;
+    try {
+      await fetch('/api/chat', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: activeSessionId, title: editedTitle.trim() }),
+      });
+      setIsEditingTitle(false);
+      fetchSessions();
+    } catch (error) {
+      console.error('Failed to save title:', error);
+    }
+  };
+
+  const triggerShake = () => {
+    setIsShaking(true);
+    setTimeout(() => setIsShaking(false), 400);
+  };
 
   // Fetch session list on mount
   useEffect(() => {
@@ -174,6 +226,10 @@ export default function ChatPage() {
   };
 
   const createNewChat = () => {
+    if (messages.length === 0) {
+      triggerShake();
+      return;
+    }
     const newId = `session_${Date.now()}`;
     setActiveSessionId(newId);
     setMessages([]);
@@ -227,17 +283,19 @@ export default function ChatPage() {
       {/* Session Sidebar */}
       <aside className="w-80 border-r border-white/5 flex flex-col bg-black/20 shrink-0">
         <div className="p-6 shrink-0">
-          <button 
+          <button
             onClick={createNewChat}
             className={`w-full py-4 border border-${THEME.COLORS.PRIMARY}/30 bg-${THEME.COLORS.PRIMARY}/5 hover:bg-${THEME.COLORS.PRIMARY}/10 text-${THEME.COLORS.PRIMARY} rounded-sm flex items-center justify-center gap-2 transition-all group shadow-[0_0_15px_rgba(0,255,163,0.05)]`}
           >
             <Plus size={16} className="group-hover:rotate-90 transition-transform" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] italic">Initialize_New_Path</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] italic">
+              Start New Chat
+            </span>
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-6 space-y-2">
-          <div className="text-[9px] uppercase text-white/30 tracking-[0.3em] font-bold mb-4 px-2 flex items-center gap-2">
+          <div className="text-[9px] uppercase text-white/60 tracking-[0.3em] font-bold mb-4 px-2 flex items-center gap-2">
             <Clock size={10} /> RECENT_NEURAL_LOGS
           </div>
           
@@ -283,11 +341,54 @@ export default function ChatPage() {
       {/* Main Chat Area */}
       <main className="flex-1 flex flex-col min-w-0 bg-[#0a0a0a]">
         <header className="p-6 border-b border-white/5 flex justify-between items-center shrink-0">
-          <div>
-            <h2 className="text-xl font-bold tracking-tight flex items-center gap-2">
-              <MessageSquare size={20} className="text-cyber-green" /> CHAT_DIRECT
-            </h2>
-            <p className="text-[10px] text-white/90 uppercase tracking-widest mt-1">Real-time interaction with CLAW_CORE</p>
+          <div className="flex-1 min-w-0 mr-4">
+            {activeSessionId && sessions.find(s => s.sessionId === activeSessionId) ? (
+              <div className="flex items-center gap-3 group/title">
+                {isEditingTitle ? (
+                  <div className="flex items-center gap-2 flex-1 max-w-xl">
+                    <input
+                      autoFocus
+                      type="text"
+                      value={editedTitle}
+                      onChange={(e) => setEditedTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') saveTitle();
+                        if (e.key === 'Escape') {
+                          setIsEditingTitle(false);
+                          setEditedTitle(currentSession?.title || 'Untitled_Trace');
+                        }
+                      }}
+                      className="bg-white/5 border border-cyber-green/30 rounded px-2 py-1 text-lg font-bold text-white outline-none w-full"
+                    />
+                    <button onClick={saveTitle} className="p-1 hover:text-cyber-green transition-colors">
+                      <Check size={18} />
+                    </button>
+                    <button onClick={() => setIsEditingTitle(false)} className="p-1 hover:text-red-500 transition-colors">
+                      <X size={18} />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <h2 className="text-xl font-bold tracking-tight text-white/90 truncate">
+                      {currentSession?.title || 'Untitled_Trace'}
+                    </h2>
+                    <button 
+                      onClick={() => setIsEditingTitle(true)}
+                      className="p-1 opacity-0 group-hover/title:opacity-50 hover:opacity-100 transition-all text-white"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div>
+                <h2 className="text-xl font-bold tracking-tight flex items-center gap-2">
+                  <MessageSquare size={20} className="text-cyber-green" /> CHAT_DIRECT
+                </h2>
+                <p className="text-[10px] text-white/90 uppercase tracking-widest mt-1">Real-time interaction with SUPER_CLAW</p>
+              </div>
+            )}
           </div>
           <div className="flex gap-2 items-center">
               {isRealtimeActive && (
@@ -308,10 +409,10 @@ export default function ChatPage() {
           className="flex-1 overflow-y-auto p-6 space-y-6 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/[0.02] via-transparent to-transparent custom-scrollbar"
         >
           {messages.length === 0 && !isLoading && (
-              <div className="h-full flex flex-col items-center justify-center text-white/50">
+              <div className="h-full flex flex-col items-center justify-center text-white/80">
                   <Terminal size={48} className="mb-4 opacity-10" />
                   <p className="text-sm font-light uppercase tracking-widest">SYSTEM_READY // WAITING_FOR_INPUT</p>
-                  <p className="text-[10px] mt-2 opacity-50 uppercase tracking-tighter font-mono">Input signal to initialize neural translation</p>
+                  <p className="text-[10px] mt-2 opacity-80 uppercase tracking-tighter font-mono">Input signal to initialize neural translation</p>
               </div>
           )}
 
@@ -360,8 +461,10 @@ export default function ChatPage() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Enter command or query for CLAW_CORE..."
-              className="w-full bg-black border border-white/10 rounded-lg py-4 pl-6 pr-16 text-sm outline-none focus:border-cyber-green/50 transition-all placeholder:text-white/50"
+              placeholder="Enter command or query for SUPER_CLAW..."
+              className={`w-full bg-black border border-white/10 rounded-lg py-4 pl-6 pr-16 text-sm outline-none focus:border-cyber-green/50 transition-all placeholder:text-white/50 ${
+                isShaking ? 'animate-shake border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : ''
+              }`}
               disabled={isLoading}
             />
             <button 
@@ -372,11 +475,23 @@ export default function ChatPage() {
               <Send size={18} />
             </button>
           </form>
-          <p className="text-center text-[9px] text-white/50 mt-4 uppercase tracking-[0.2em] font-mono">
+          <p className="text-center text-[9px] text-white/80 mt-4 uppercase tracking-[0.2em] font-mono">
             Secure Neural Translink Active // Latency: 22ms // Node: Core_Manager
           </p>
         </div>
       </main>
     </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={
+      <div className="h-screen w-full bg-[#0a0a0a] flex items-center justify-center">
+        <Loader2 className="animate-spin text-cyber-green" size={32} />
+      </div>
+    }>
+      <ChatContent />
+    </Suspense>
   );
 }
