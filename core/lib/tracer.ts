@@ -12,7 +12,11 @@ import { TRACE_TYPES, TRACE_STATUS } from './constants';
 import { logger } from './logger';
 
 const client = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(client);
+const docClient = DynamoDBDocumentClient.from(client, {
+  marshallOptions: {
+    removeUndefinedValues: true,
+  },
+});
 const typedResource = Resource as unknown as SSTResource;
 
 const TRACE_CONFIG = {
@@ -44,6 +48,8 @@ export interface Trace {
   traceId: string;
   /** The ID of the user or session the trace belongs to. */
   userId: string;
+  /** The origin of the request (e.g., 'dashboard', 'telegram', 'system'). */
+  source: string;
   /** Start timestamp of the trace. */
   timestamp: number;
   /** Current status of the trace. */
@@ -70,16 +76,19 @@ export class ClawTracer {
   private tableName: string = typedResource.TraceTable.name;
   private traceId: string;
   private userId: string;
+  private source: string;
   private startTime: number;
 
   /**
    * Initializes a new ClawTracer instance.
    *
    * @param userId - Unique identifier for the user or session.
+   * @param source - Origin of the request.
    * @param traceId - Optional override for the trace ID.
    */
-  constructor(userId: string, traceId?: string) {
+  constructor(userId: string, source: string = 'unknown', traceId?: string) {
     this.userId = userId;
+    this.source = source;
     this.traceId = traceId || uuidv4();
     this.startTime = Date.now();
   }
@@ -101,6 +110,7 @@ export class ClawTracer {
           Item: {
             traceId: this.traceId,
             userId: this.userId,
+            source: this.source,
             timestamp: this.startTime,
             status: TRACE_STATUS.STARTED,
             initialContext,

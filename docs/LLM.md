@@ -62,8 +62,8 @@ Instead of provider-specific logic scattered throughout the codebase, we use a *
 ### 1. OpenAI (Strategic Branching)
 The **OpenAIProvider** dynamically switches between the legacy `Chat Completions` API and the modern `Responses` API depending on the model and reasoning requirements.
 
-- **Condition**: `isGpt54 && (hasTools || isReasoning)`
-- **Behavior**: Uses `/v1/responses` to bypass the 400 error where standard Chat Completions would fail when reasoning effort is paired with tool definitions.
+- **Condition**: `isReasoningModel` (includes `gpt-5.4` and `gpt-5-mini`)
+- **Behavior**: Uses `/v1/responses` for all gpt-5 reasoning models to ensure consistent support for `reasoning_effort` and tool use.
 - **Mapping**: Our internal `ReasoningProfile` maps to OpenAI's native `ReasoningEffort` levels (`low`, `medium`, `high`, `xhigh`).
 
 ### 2. AWS Bedrock (Thinking Budgets)

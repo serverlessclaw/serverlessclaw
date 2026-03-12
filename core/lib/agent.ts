@@ -64,6 +64,19 @@ export interface AgentProcessOptions {
    * The current recursion depth.
    */
   depth?: number;
+  /**
+   * The current trace identifier (for linking executions).
+   */
+  traceId?: string;
+  /**
+   * The current dashboard session ID (if applicable).
+   */
+  sessionId?: string;
+  /**
+   * The origin of the request (e.g., 'dashboard', 'telegram', 'system').
+   * @default 'unknown'
+   */
+  source?: string;
 }
 
 /**
@@ -108,15 +121,24 @@ export class Agent {
       isIsolated = false,
       initiatorId,
       depth = 0,
+      traceId: incomingTraceId,
+      sessionId,
+      source = 'unknown',
     } = options;
 
-    const tracer = new ClawTracer(userId);
+    // Extract base userId for tool context and tracing (remove CONV# prefix if present)
+    const baseUserId = userId.startsWith('CONV#') ? userId.split('#')[1] : userId;
+
+    const tracer = new ClawTracer(baseUserId, source, incomingTraceId);
     const traceId = tracer.getTraceId();
 
     const currentInitiator = initiatorId || this.config?.id || 'unknown';
 
+    // For outbound messages, we need the original full userId (which might be CONV#...)
+    const mainConversationId = userId;
+
     if (!isContinuation) {
-      await tracer.startTrace({ userText });
+      await tracer.startTrace({ userText, sessionId });
     }
 
     // Determine storage identifier (Namespaced if isolated)
@@ -213,11 +235,23 @@ export class Agent {
               remainingTime,
               iterations,
             });
+
+            const pauseMsg = AGENT_LOG_MESSAGES.TASK_PAUSED_TIMEOUT;
+
+            // Save pause message to memory so it doesn't disappear on refresh
+            await this.memory.addMessage(storageId, {
+              role: MessageRole.ASSISTANT,
+              content: pauseMsg,
+              agentName: this.config?.name || 'SuperClaw',
+              traceId,
+            });
+
             await this.emitContinuation(userId, userText, tracer.getTraceId(), {
               initiatorId: currentInitiator,
               depth,
+              sessionId,
             });
-            return AGENT_LOG_MESSAGES.TASK_PAUSED_TIMEOUT;
+            return pauseMsg;
           }
         }
 
@@ -256,6 +290,9 @@ export class Agent {
                 args.traceId = traceId;
                 args.initiatorId = currentInitiator;
                 args.depth = depth;
+                args.sessionId = sessionId;
+                args.userId = args.userId || baseUserId;
+                args.mainConversationId = mainConversationId;
               }
               await tracer.addStep({
                 type: 'tool_call',
@@ -292,11 +329,23 @@ export class Agent {
     if (!responseText) {
       if (iterations >= maxIterations) {
         logger.info('Iteration limit reached, pausing task...', { iterations });
+
+        const pauseMsg = AGENT_LOG_MESSAGES.TASK_PAUSED_ITERATION_LIMIT;
+
+        // Save pause message to memory so it doesn't disappear on refresh
+        await this.memory.addMessage(storageId, {
+          role: MessageRole.ASSISTANT,
+          content: pauseMsg,
+          agentName: this.config?.name || 'SuperClaw',
+          traceId,
+        });
+
         await this.emitContinuation(userId, userText, tracer.getTraceId(), {
           initiatorId: currentInitiator,
           depth,
+          sessionId,
         });
-        return AGENT_LOG_MESSAGES.TASK_PAUSED_ITERATION_LIMIT;
+        return pauseMsg;
       }
       responseText = 'Sorry, I reached my iteration limit.';
     }
@@ -305,7 +354,7 @@ export class Agent {
     await this.memory.addMessage(storageId, {
       role: MessageRole.ASSISTANT,
       content: responseText,
-      agentName: this.config?.name || 'ClawAgent',
+      agentName: this.config?.name || 'SuperClaw',
       traceId, // Link this message to its mechanical trace
     });
 
@@ -342,6 +391,7 @@ export class Agent {
                 Detail: JSON.stringify({
                   userId,
                   traceId: tracer.getTraceId(),
+                  sessionId,
                   conversation: [
                     ...messages,
                     {
@@ -373,13 +423,13 @@ export class Agent {
    * @param userId - Unique identifier for the user or session
    * @param task - The raw input message or task description
    * @param traceId - The trace identifier for linking continued executions
-   * @param metadata - Routing metadata (initiatorId, depth)
+   * @param metadata - Routing metadata (initiatorId, depth, sessionId)
    */
   private async emitContinuation(
     userId: string,
     task: string,
     traceId: string,
-    metadata: { initiatorId?: string; depth?: number } = {}
+    metadata: { initiatorId?: string; depth?: number; sessionId?: string } = {}
   ): Promise<void> {
     try {
       await this.eventbridge.send(
@@ -395,6 +445,7 @@ export class Agent {
                 traceId,
                 initiatorId: metadata.initiatorId,
                 depth: metadata.depth,
+                sessionId: metadata.sessionId,
               }),
               EventBusName: typedResource.AgentBus.name,
             },

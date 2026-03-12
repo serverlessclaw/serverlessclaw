@@ -12,12 +12,16 @@ import {
   ShieldAlert,
   ChevronDown,
   ChevronUp,
-  LayoutGrid
+  LayoutGrid,
+  Bot,
+  Zap
 } from 'lucide-react';
 import Link from 'next/link';
 import PathVisualizer from '@/components/PathVisualizer';
 import { UI_STRINGS, TRACE_TYPES, TRACE_STATUS } from '@/lib/constants';
 import { SSTResource } from '@claw/core/lib/types/index';
+
+export const dynamic = 'force-dynamic';
 
 /**
  * Interface representing a trace record and its nested steps
@@ -33,6 +37,7 @@ interface Trace {
   traceId: string;
   timestamp: number;
   userId: string;
+  source: string;
   status: string;
   initialContext?: {
     userText: string;
@@ -44,7 +49,7 @@ interface Trace {
 /**
  * Fetches a specific trace record from DynamoDB
  */
-async function getTrace(traceId: string, timestamp: number): Promise<Trace | null> {
+async function getTrace(traceId: string): Promise<Trace | null> {
   try {
     const typedResource = Resource as unknown as SSTResource;
     const tableName = typedResource.TraceTable?.name;
@@ -53,12 +58,16 @@ async function getTrace(traceId: string, timestamp: number): Promise<Trace | nul
       return null;
     }
     const client = new DynamoDBClient({});
-    const docClient = DynamoDBDocumentClient.from(client);
+    const docClient = DynamoDBDocumentClient.from(client, {
+      marshallOptions: {
+        removeUndefinedValues: true,
+      },
+    });
     
     const { Item } = await docClient.send(
       new GetCommand({
         TableName: tableName,
-        Key: { traceId, timestamp },
+        Key: { traceId },
       })
     );
     
@@ -75,7 +84,9 @@ async function getTrace(traceId: string, timestamp: number): Promise<Trace | nul
 function StepIcon({ type }: { type: string }): React.ReactElement {
   switch (type) {
     case TRACE_TYPES.LLM_CALL:
-      return <MessageSquare size={16} className="text-cyber-blue" />;
+      return <MessageSquare size={16} className="text-purple-400" />;
+    case TRACE_TYPES.LLM_RESPONSE:
+      return <Zap size={16} className="text-cyber-green" />;
     case TRACE_TYPES.TOOL_CALL:
       return <Wrench size={16} className="text-yellow-400" />;
     case TRACE_TYPES.TOOL_RESULT:
@@ -98,8 +109,7 @@ export default async function TraceDetailPage({
   searchParams: Promise<{ t: string }>;
 }): Promise<React.ReactElement> {
   const { id } = await params;
-  const { t } = await searchParams;
-  const trace = await getTrace(id, parseInt(t));
+  const trace = await getTrace(id);
 
   if (!trace) {
     return (
@@ -139,6 +149,7 @@ export default async function TraceDetailPage({
             <div className="flex items-center justify-end gap-2">
               <Clock size={12} /> {new Date(trace.timestamp).toLocaleString()}
             </div>
+            <div>SOURCE: <span className="text-cyber-blue uppercase font-bold">{trace.source || 'UNKNOWN'}</span></div>
             <div>USER_ID: {trace.userId}</div>
           </div>
         </div>
@@ -171,7 +182,8 @@ export default async function TraceDetailPage({
                     <div className="text-sm font-medium">
                       {step.type === TRACE_TYPES.TOOL_CALL ? `Executing ${step.content.tool || step.content.toolName || ''}` : 
                        step.type === TRACE_TYPES.TOOL_RESULT ? `Observation from ${step.content.tool || step.content.toolName || 'tool'}` :
-                       step.type === TRACE_TYPES.LLM_CALL ? 'LLM Synthesis' : 'Error detected'}
+                       step.type === TRACE_TYPES.LLM_CALL ? 'Neural Core Synthesis (Input)' : 
+                       step.type === TRACE_TYPES.LLM_RESPONSE ? 'Neural Core Generation (Output)' : 'Error detected'}
                     </div>
                   </div>
                 </div>
@@ -181,6 +193,31 @@ export default async function TraceDetailPage({
               </div>
               
               <div className="p-4 bg-black/40 border-t border-white/5">
+                {step.type === 'llm_response' && step.content.content ? (
+                  <div className="mb-4 p-4 bg-cyber-green/[0.03] border border-cyber-green/10 rounded">
+                    <div className="text-[10px] text-cyber-green/60 uppercase font-bold mb-2 tracking-widest flex items-center gap-2">
+                       <Bot size={12} /> Generated_Response
+                    </div>
+                    <div className="text-xs text-white/90 leading-relaxed whitespace-pre-wrap font-mono">
+                      {step.content.content}
+                    </div>
+                    {step.content.tool_calls && step.content.tool_calls.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-cyber-green/10">
+                         <div className="text-[10px] text-yellow-500/60 uppercase font-bold mb-2 tracking-widest">
+                           Requested_Tools
+                         </div>
+                         <div className="space-y-2">
+                           {step.content.tool_calls.map((tc: any, tci: number) => (
+                             <div key={tci} className="text-[10px] bg-yellow-500/5 border border-yellow-500/10 p-2 rounded font-mono text-yellow-500/80">
+                               {tc.function.name}({tc.function.arguments})
+                             </div>
+                           ))}
+                         </div>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+
                 <details className="group">
                   <summary className="list-none cursor-pointer flex items-center justify-between text-[10px] text-cyber-green/60 hover:text-cyber-green transition-colors">
                     <span className="flex items-center gap-1 uppercase tracking-widest font-bold">

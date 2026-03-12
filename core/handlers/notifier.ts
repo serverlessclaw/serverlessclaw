@@ -10,6 +10,8 @@ interface NotifierEvent {
     userId: string;
     message: string;
     memoryContexts?: string[];
+    sessionId?: string;
+    agentName?: string;
   };
 }
 
@@ -29,16 +31,23 @@ export const handler = async (event: NotifierEvent): Promise<void> => {
     return;
   }
 
-  const { userId, message, memoryContexts } = payload;
+  const { userId, message, memoryContexts, sessionId, agentName } = payload;
 
-  if (Array.isArray(memoryContexts)) {
-    for (const contextId of memoryContexts) {
-      // 1. Sync context
-      try {
-        await memory.addMessage(contextId, { role: MessageRole.ASSISTANT, content: message });
-      } catch (e) {
-        logger.error(`Failed to sync context to ${contextId}:`, e);
-      }
+  const contextsToSync = new Set<string>(memoryContexts || []);
+  if (sessionId) {
+    contextsToSync.add(`CONV#${userId}#${sessionId}`);
+  }
+
+  for (const contextId of contextsToSync) {
+    // 1. Sync context
+    try {
+      await memory.addMessage(contextId, {
+        role: MessageRole.ASSISTANT,
+        content: message,
+        agentName: agentName,
+      });
+    } catch (e) {
+      logger.error(`Failed to sync context to ${contextId}:`, e);
     }
   }
 

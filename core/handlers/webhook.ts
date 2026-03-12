@@ -73,9 +73,8 @@ export const handler = async (
     const responseText = await agent.process(chatId, cleanText, {
       profile,
       context,
+      source: 'telegram',
       // isContinuation is not directly applicable to APIGatewayProxyEventV2 from Telegram
-      // If this was an internal event, event.detail might exist.
-      // For Telegram, we assume it's a new interaction unless state implies otherwise.
     });
 
     // 3. Send response to Notifier via AgentBus

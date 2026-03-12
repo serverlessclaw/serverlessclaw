@@ -67,18 +67,11 @@ interface PlannerResult {
  * @param event - The event containing gap details or scheduling information.
  * @returns A promise that resolves to an object with gapId and the plan, or a status object.
  */
-export const handler = async (event: {
-  gapId?: string;
-  details?: string;
-  contextUserId: string;
-  metadata?: PlannerMetadata;
-  isScheduledReview?: boolean;
-  traceId?: string;
-  initiatorId?: string;
-  depth?: number;
-}): Promise<PlannerResult> => {
+export const handler = async (event: any): Promise<PlannerResult> => {
   logger.info('Planner Agent received task:', JSON.stringify(event, null, 2));
 
+  // EventBridge wraps the payload in 'detail'
+  const payload = event.detail || event;
   const {
     gapId,
     details,
@@ -88,7 +81,18 @@ export const handler = async (event: {
     traceId,
     initiatorId,
     depth,
-  } = event;
+    sessionId,
+  } = payload as {
+    gapId?: string;
+    details?: string;
+    contextUserId: string;
+    metadata?: PlannerMetadata;
+    isScheduledReview?: boolean;
+    traceId?: string;
+    initiatorId?: string;
+    depth?: number;
+    sessionId?: string;
+  };
 
   // 1. Fetch System Context
   const { AgentRegistry } = await import('../lib/registry');
@@ -203,6 +207,8 @@ export const handler = async (event: {
     isIsolated: true,
     initiatorId,
     depth,
+    traceId,
+    sessionId,
   });
 
   logger.info('Strategic Plan Generated:', result);
@@ -221,8 +227,9 @@ export const handler = async (event: {
               task: isScheduledReview ? 'Scheduled Review' : details,
               response: result,
               traceId,
-              initiatorId: (event as any).initiatorId,
-              depth: (event as any).depth,
+              initiatorId: payload.initiatorId,
+              depth: payload.depth,
+              sessionId,
             }),
             EventBusName: (Resource as any).AgentBus.name,
           },
@@ -271,7 +278,9 @@ export const handler = async (event: {
       'planner.agent',
       contextUserId,
       `🚀 **Autonomous Evolution Triggered**\n\nI have identified a capability gap and designed a plan to fix it. The Coder Agent is now executing the following STRATEGIC_PLAN:\n\n${result}`,
-      [contextUserId]
+      [contextUserId],
+      sessionId,
+      config.name
     );
 
     // 2026 Optimization: Use the dispatchTask tool logic via EventBridge directly
@@ -285,6 +294,7 @@ export const handler = async (event: {
         gapIds: processedGapIds,
       },
       traceId, // Propagate traceId
+      sessionId,
     });
   } else {
     logger.info('Evolution mode is hitl, asking for approval.');
@@ -293,7 +303,9 @@ export const handler = async (event: {
       'planner.agent',
       contextUserId,
       `🚀 **NEW STRATEGIC PLAN PROPOSED**\n\n${result}\n\nReply with 'APPROVE' to execute.`,
-      [contextUserId]
+      [contextUserId],
+      sessionId,
+      config.name
     );
   }
 

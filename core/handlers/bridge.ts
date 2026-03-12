@@ -1,4 +1,3 @@
-import { realtime } from 'sst/aws/realtime';
 import { Resource } from 'sst';
 
 /**
@@ -9,10 +8,17 @@ export const handler = async (event: any) => {
   console.log('[RealtimeBridge] Received event:', event['detail-type']);
 
   const userId = event.detail.userId || 'dashboard-user';
-  const topic = `users/${userId}/signal`;
+  const sessionId = event.detail.sessionId;
+
+  // If we have a sessionId, we can target the specific chat session
+  // Otherwise fallback to the generic user signal topic
+  const topic = sessionId
+    ? `users/${userId}/sessions/${sessionId}/signal`
+    : `users/${userId}/signal`;
 
   try {
-    await (realtime as any).publish((Resource as any).RealtimeBus, {
+    // SST v3+ uses Resource.<Name>.publish for Realtime resources
+    await (Resource as any).RealtimeBus.publish({
       topic,
       payload: event.detail,
     });

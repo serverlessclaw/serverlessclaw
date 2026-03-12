@@ -134,6 +134,7 @@ export default function AgentsPage() {
 
   const deleteAgent = (id: string) => {
     if (agents[id].isBackbone) return;
+    if (!confirm(`Are you sure you want to decommission specialized node '${agents[id].name}'?`)) return;
     const next = { ...agents };
     delete next[id];
     setAgents(next);

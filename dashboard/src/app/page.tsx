@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState, useRef, useEffect, Suspense } from 'react';
-import { Send, User, Bot, Loader2, MessageSquare, Terminal, Plus, Clock, ChevronRight, Zap, Edit2, Check, X } from 'lucide-react';
+import { Send, User, Bot, Loader2, MessageSquare, Terminal, Plus, Clock, ChevronRight, Zap, Edit2, Check, X, Trash2, AlertTriangle } from 'lucide-react';
 import { THEME } from '@/lib/theme';
 import mqtt from 'mqtt';
 import { useSearchParams, useRouter } from 'next/navigation';
-
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -29,18 +28,31 @@ function ChatContent() {
   const [isShaking, setIsShaking] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const activeSessionRef = useRef<string>('');
+  const skipNextHistoryFetch = useRef<boolean>(false);
 
   const searchParams = useSearchParams();
   const router = useRouter();
 
   const currentSession = sessions.find(s => s.sessionId === activeSessionId);
 
+  // Keep ref in sync
+  useEffect(() => {
+    activeSessionRef.current = activeSessionId;
+  }, [activeSessionId]);
+
   // Sync activeSessionId with URL param
   useEffect(() => {
     const sessionFromUrl = searchParams.get('session');
     if (sessionFromUrl && sessionFromUrl !== activeSessionId) {
       setActiveSessionId(sessionFromUrl);
+    } else if (!sessionFromUrl && activeSessionId) {
+      // If URL is cleared externally, clear local state
+      setActiveSessionId('');
     }
   }, [searchParams]);
 
@@ -74,6 +86,53 @@ function ChatContent() {
     }
   };
 
+  const deleteSession = (e: React.MouseEvent, sessionId: string) => {
+    e.stopPropagation();
+    setSessionToDelete(sessionId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!sessionToDelete) return;
+    
+    try {
+      const response = await fetch(`/api/chat?sessionId=${sessionToDelete}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        if (activeSessionId === sessionToDelete) {
+          setActiveSessionId('');
+          setMessages([]);
+          router.push('/', { scroll: false });
+        }
+        fetchSessions();
+      }
+    } catch (error) {
+      console.error('Failed to delete session:', error);
+    } finally {
+      setShowDeleteConfirm(false);
+      setSessionToDelete(null);
+    }
+  };
+
+  const confirmDeleteAll = async () => {
+    try {
+      const response = await fetch('/api/chat?sessionId=all', {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        setActiveSessionId('');
+        setMessages([]);
+        router.push('/', { scroll: false });
+        fetchSessions();
+      }
+    } catch (error) {
+      console.error('Failed to delete all sessions:', error);
+    } finally {
+      setShowDeleteAllConfirm(false);
+    }
+  };
+
   const triggerShake = () => {
     setIsShaking(true);
     setTimeout(() => setIsShaking(false), 400);
@@ -84,24 +143,23 @@ function ChatContent() {
     fetchSessions();
   }, []);
 
-  // Setup Realtime Push Notifications
+  const mqttClientRef = useRef<any>(null);
+
+  // Setup Realtime Push Notifications (Connection)
   useEffect(() => {
     const userId = 'dashboard-user';
-    const topic = `users/${userId}/signal`;
-    let client: any;
-
+    
     const connect = async () => {
       try {
         const res = await fetch('/api/config');
         const config = await res.json();
-        
         if (!config.realtime?.url) return;
 
         console.log('[Realtime] Connecting with MQTT...');
-        client = mqtt.connect(config.realtime.url, {
+        const client = mqtt.connect(config.realtime.url, {
           protocol: 'wss',
           clientId: `dashboard-${Math.random().toString(16).slice(2, 10)}`,
-          password: 'auth-token', // Token placeholder for authorizer
+          password: 'auth-token',
           clean: true,
           connectTimeout: 10000,
           reconnectPeriod: 5000,
@@ -109,21 +167,35 @@ function ChatContent() {
         
         client.on('connect', () => {
           console.log('[Realtime] Connected to push bus');
-          client.subscribe(topic, (err: any) => {
-            if (err) console.error('[Realtime] Subscription error:', err);
-            else {
-              console.log('[Realtime] Subscribed to:', topic);
-              setIsRealtimeActive(true);
-            }
-          });
+          setIsRealtimeActive(true);
+          
+          // Subscribe to generic user signals
+          const userTopic = `users/${userId}/signal`;
+          client.subscribe(userTopic);
         });
 
         client.on('message', (t: string, payload: any) => {
           try {
-            const message = JSON.parse(payload.toString());
-            console.log('[Realtime] Received signal:', message);
-            if (activeSessionId) {
-              fetchHistorySilently(activeSessionId);
+            const data = JSON.parse(payload.toString());
+            console.log('[Realtime] Received signal on:', t, data);
+            
+            const currentActiveId = activeSessionRef.current;
+            
+            // If the signal matches our active session (or is generic), refresh
+            if (!data.sessionId || data.sessionId === currentActiveId) {
+              if (data.message && data.userId === userId) {
+                setMessages(prev => {
+                  const alreadyExists = prev.some(m => m.content === data.message && m.role === 'assistant');
+                  if (alreadyExists) return prev;
+                  return [...prev, {
+                    role: 'assistant',
+                    content: data.message,
+                    agentName: data.agentName || 'SuperClaw'
+                  }];
+                });
+              } else if (currentActiveId) {
+                fetchHistorySilently(currentActiveId);
+              }
             }
           } catch (e) {
             console.error('[Realtime] Failed to parse message:', e);
@@ -135,9 +207,9 @@ function ChatContent() {
           setIsRealtimeActive(false);
         });
 
-        client.on('close', () => {
-          setIsRealtimeActive(false);
-        });
+        client.on('close', () => setIsRealtimeActive(false));
+        
+        mqttClientRef.current = client;
       } catch (e) {
         console.error('[Realtime] Setup failed:', e);
       }
@@ -146,16 +218,41 @@ function ChatContent() {
     connect();
 
     return () => {
-      if (client) {
+      if (mqttClientRef.current) {
         console.log('[Realtime] Disconnecting...');
-        client.end();
+        mqttClientRef.current.end();
       }
     };
-  }, [activeSessionId]);
+  }, []);
+
+  // Manage dynamic session subscriptions
+  useEffect(() => {
+    const client = mqttClientRef.current;
+    if (!client || !client.connected) return;
+
+    const userId = 'dashboard-user';
+    const topic = `users/${userId}/sessions/${activeSessionId}/signal`;
+
+    if (activeSessionId) {
+      console.log('[Realtime] Subscribing to session:', activeSessionId);
+      client.subscribe(topic);
+    }
+
+    return () => {
+      if (activeSessionId) {
+        console.log('[Realtime] Unsubscribing from session:', activeSessionId);
+        client.unsubscribe(topic);
+      }
+    };
+  }, [activeSessionId, isRealtimeActive]);
 
   // Fetch history when active session changes
   useEffect(() => {
     if (activeSessionId) {
+      if (skipNextHistoryFetch.current) {
+        skipNextHistoryFetch.current = false;
+        return;
+      }
       fetchHistory(activeSessionId);
     } else {
       setMessages([]);
@@ -183,7 +280,7 @@ function ChatContent() {
         setMessages(data.history.map((m: any) => ({
           role: m.role === 'assistant' || m.role === 'system' ? 'assistant' : 'user',
           content: m.content,
-          agentName: m.agentName,
+          agentName: m.agentName || (m.role === 'assistant' || m.role === 'system' ? 'SuperClaw' : undefined),
         })).filter((m: any) => m.content)); // Filter out tool calls for simplicity in UI
       }
     } catch (error) {
@@ -217,7 +314,7 @@ function ChatContent() {
         setMessages(data.history.map((m: any) => ({
           role: m.role === 'assistant' || m.role === 'system' ? 'assistant' : 'user',
           content: m.content,
-          agentName: m.agentName,
+          agentName: m.agentName || (m.role === 'assistant' || m.role === 'system' ? 'SuperClaw' : undefined),
         })).filter((m: any) => m.content));
       }
     } catch (e) {
@@ -226,19 +323,29 @@ function ChatContent() {
   };
 
   const createNewChat = () => {
-    if (messages.length === 0) {
+    if (messages.length === 0 && !activeSessionId) {
       triggerShake();
       return;
     }
-    const newId = `session_${Date.now()}`;
-    setActiveSessionId(newId);
+    setActiveSessionId('');
     setMessages([]);
+    router.push('/', { scroll: false });
   };
 
   // Auto-scroll to bottom
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      const container = scrollRef.current;
+      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+      
+      // Always scroll if we just started loading (user sent a message)
+      // or if we were already near the bottom when new messages arrived
+      if (isNearBottom || (isLoading && messages.length > 0 && messages[messages.length - 1].role === 'user')) {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: 'smooth'
+        });
+      }
     }
   }, [messages, isLoading]);
 
@@ -255,7 +362,10 @@ function ChatContent() {
     let currentSessionId = activeSessionId;
     if (!currentSessionId) {
        currentSessionId = `session_${Date.now()}`;
+       skipNextHistoryFetch.current = true;
        setActiveSessionId(currentSessionId);
+       // We don't wait for router.push here as it's async, 
+       // but we've updated the state which will trigger the URL sync effect
     }
 
     try {
@@ -266,13 +376,19 @@ function ChatContent() {
       });
 
       const data = await response.json();
-      setMessages(prev => [...prev, { role: 'assistant', content: data.reply, agentName: data.agentName }]);
+      
+      // If the session ID hasn't changed while we were waiting (e.g. user switched chats)
+      if (currentSessionId === activeSessionRef.current) {
+        setMessages(prev => [...prev, { role: 'assistant', content: data.reply, agentName: data.agentName }]);
+      }
       
       // Refresh session list to show updated last message/title
       fetchSessions();
     } catch (error) {
       console.error('Chat error:', error);
-      setMessages(prev => [...prev, { role: 'assistant', content: 'SYSTEM_ERROR: Neural path interrupted. Check logs.' }]);
+      if (currentSessionId === activeSessionRef.current) {
+        setMessages(prev => [...prev, { role: 'assistant', content: 'SYSTEM_ERROR: Neural path interrupted. Check logs.' }]);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -295,8 +411,20 @@ function ChatContent() {
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-6 space-y-2">
-          <div className="text-[9px] uppercase text-white/60 tracking-[0.3em] font-bold mb-4 px-2 flex items-center gap-2">
-            <Clock size={10} /> RECENT_NEURAL_LOGS
+          <div className="text-[9px] uppercase text-white/60 tracking-[0.3em] font-bold mb-4 px-2 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Clock size={10} /> RECENT_NEURAL_LOGS
+            </div>
+            {sessions.length > 0 && (
+              <button 
+                onClick={() => setShowDeleteAllConfirm(true)}
+                className="hover:text-red-500 transition-colors flex items-center gap-1 group/purge"
+                title="Purge All Conversations"
+              >
+                <Trash2 size={10} className="group-hover/purge:scale-110 transition-transform" />
+                <span className="text-[8px] tracking-tighter">PURGE_ALL</span>
+              </button>
+            )}
           </div>
           
           {sessions.length === 0 ? (
@@ -307,7 +435,12 @@ function ChatContent() {
             sessions.map((s) => (
               <button
                 key={s.sessionId}
-                onClick={() => setActiveSessionId(s.sessionId)}
+                onClick={() => {
+                  if (activeSessionId !== s.sessionId) {
+                    setMessages([]);
+                    setActiveSessionId(s.sessionId);
+                  }
+                }}
                 className={`w-full p-4 rounded-sm border transition-all text-left space-y-2 group ${
                   activeSessionId === s.sessionId
                     ? `bg-${THEME.COLORS.PRIMARY}/5 border-${THEME.COLORS.PRIMARY}/30 shadow-[0_0_20px_rgba(0,255,163,0.02)]`
@@ -320,7 +453,16 @@ function ChatContent() {
                   }`}>
                     {s.title || 'Untitled_Trace'}
                   </span>
-                  <ChevronRight size={12} className={activeSessionId === s.sessionId ? `text-${THEME.COLORS.PRIMARY}` : 'text-white/10'} />
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={(e) => deleteSession(e, s.sessionId)}
+                      className="opacity-0 group-hover:opacity-40 hover:!opacity-100 p-1 text-white transition-all hover:text-red-500"
+                      title="Delete Conversation"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                    <ChevronRight size={12} className={activeSessionId === s.sessionId ? `text-${THEME.COLORS.PRIMARY}` : 'text-white/10'} />
+                  </div>
                 </div>
                 <div className="text-[9px] text-white/40 font-mono truncate h-4 italic">
                   {s.lastMessage || 'Waiting_for_signal...'}
@@ -480,6 +622,76 @@ function ChatContent() {
           </p>
         </div>
       </main>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(false)} />
+          <div className="relative w-full max-w-md bg-[#0a0a0a] border border-red-500/30 shadow-[0_0_50px_rgba(239,68,68,0.1)] rounded-sm p-8 space-y-6">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.2)]">
+                <AlertTriangle size={32} />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-lg font-black uppercase tracking-[0.2em] text-white">Decommission Trace?</h3>
+                <p className="text-xs text-white/60 leading-relaxed font-mono">
+                  You are about to purge this neural path from the permanent record. This action is irreversible and will fragment the historical context.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <button
+                onClick={confirmDelete}
+                className="flex-1 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/50 py-3 rounded-sm text-[10px] font-black uppercase tracking-[0.2em] transition-all"
+              >
+                CONFIRM_PURGE
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 bg-white/5 hover:bg-white/10 text-white/60 border border-white/10 py-3 rounded-sm text-[10px] font-black uppercase tracking-[0.2em] transition-all"
+              >
+                ABORT_ACTION
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete All Confirmation Modal */}
+      {showDeleteAllConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowDeleteAllConfirm(false)} />
+          <div className="relative w-full max-w-md bg-[#0a0a0a] border border-red-500/30 shadow-[0_0_50px_rgba(239,68,68,0.1)] rounded-sm p-8 space-y-6">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.2)]">
+                <AlertTriangle size={32} />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-lg font-black uppercase tracking-[0.2em] text-white">Purge All Neural Logs?</h3>
+                <p className="text-xs text-white/60 leading-relaxed font-mono">
+                  You are about to permanently erase ALL conversation histories from the database. This action is irreversible.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <button
+                onClick={confirmDeleteAll}
+                className="flex-1 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/50 py-3 rounded-sm text-[10px] font-black uppercase tracking-[0.2em] transition-all"
+              >
+                CONFIRM_TOTAL_PURGE
+              </button>
+              <button
+                onClick={() => setShowDeleteAllConfirm(false)}
+                className="flex-1 bg-white/5 hover:bg-white/10 text-white/60 border border-white/10 py-3 rounded-sm text-[10px] font-black uppercase tracking-[0.2em] transition-all"
+              >
+                ABORT_ACTION
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

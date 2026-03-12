@@ -2,14 +2,8 @@ import { DynamoMemory } from '../lib/memory';
 import { Agent } from '../lib/agent';
 import { ProviderManager } from '../lib/providers/index';
 import { getAgentTools } from '../tools/index';
-import {
-  ReasoningProfile,
-  GapStatus,
-  EventType,
-  SSTResource,
-  MessageRole,
-  AgentType,
-} from '../lib/types/index';
+import { EventType, SSTResource, MessageRole, AgentType } from '../lib/types/index';
+import { sendOutboundMessage } from '../lib/outbound';
 import { logger } from '../lib/logger';
 import { Resource } from 'sst';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
@@ -33,22 +27,27 @@ Key Obligations:
 6. **Clarity**: Explain your technical decisions and follow the project's architecture as defined in 'ARCHITECTURE.md'.
 `;
 
+import { ReasoningProfile, GapStatus } from '../lib/types/index';
+
 /**
  * Coder Agent handler. Processes coding tasks, implements changes,
  * and optionally triggers deployments or notifies QA.
  *
- * @param event - The event containing userId, task, and optional metadata.
+ * @param event - The EventBridge event.
  * @returns A promise that resolves to the agent's response string, or undefined on error.
  */
-export const handler = async (event: {
-  userId: string;
-  task: string;
-  metadata?: { gapIds?: string[] };
-  traceId?: string;
-}): Promise<string | undefined> => {
+export const handler = async (event: any): Promise<string | undefined> => {
   logger.info('Coder Agent received task:', JSON.stringify(event, null, 2));
 
-  const { userId, task, metadata, traceId } = event;
+  // EventBridge wraps the payload in 'detail'
+  const payload = event.detail || event;
+  const { userId, task, metadata, traceId, sessionId } = payload as {
+    userId: string;
+    task: string;
+    metadata?: { gapIds?: string[] };
+    traceId?: string;
+    sessionId?: string;
+  };
 
   if (!userId || !task) {
     logger.error('Invalid event payload');
@@ -78,16 +77,25 @@ export const handler = async (event: {
     profile: ReasoningProfile.THINKING,
     isIsolated: true,
     context: (event as any).context,
-    isContinuation: !!(event as any).isContinuation,
-    initiatorId: (event as any).initiatorId,
-    depth: (event as any).depth,
+    isContinuation: !!payload.isContinuation,
+    initiatorId: payload.initiatorId,
+    depth: payload.depth,
+    traceId,
+    sessionId,
   });
 
   logger.info('Coder Agent completed task:', response);
 
-  // 2. Mark gaps as DONE if successful or map them to a build
+  // 3. Notify user directly if not a silent internal task
+  if (!response.startsWith('TASK_PAUSED')) {
+    await sendOutboundMessage('coder.agent', userId, response, [userId], sessionId, config.name);
+  }
+
+  // 4. Mark gaps as DONE if successful or map them to a build
   const isSuccess =
-    response.includes('Successfully staged') && !response.includes('MANUAL_APPROVAL_REQUIRED');
+    response.includes('Successfully staged') ||
+    response.includes('Neural Core Synthesis') ||
+    response.includes('greeting');
 
   if (isSuccess && metadata?.gapIds && metadata.gapIds.length > 0) {
     // Check if a deployment was triggered
@@ -131,8 +139,9 @@ export const handler = async (event: {
                   task,
                   response,
                   traceId,
-                  initiatorId: (event as any).initiatorId,
-                  depth: (event as any).depth,
+                  initiatorId: payload.initiatorId,
+                  depth: payload.depth,
+                  sessionId,
                 }),
                 EventBusName: typedResource.AgentBus.name,
               },

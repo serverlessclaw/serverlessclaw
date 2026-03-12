@@ -75,10 +75,10 @@ export class OpenAIProvider implements IProvider {
 
     // Determining if we should use the new Responses API (/v1/responses)
     // gpt-5.4 doesn't support reasoning_effort + tools on /chat/completions
-    const isGpt54 = activeModel.includes(OpenAIModel.GPT_5_4);
+    const isReasoningModel =
+      activeModel.includes(OpenAIModel.GPT_5_4) || activeModel.includes(OpenAIModel.GPT_5_MINI);
     const hasTools = tools && tools.length > 0;
-    const isReasoning = profile !== ReasoningProfile.STANDARD;
-    const useResponsesAPI = isGpt54 && (hasTools || isReasoning);
+    const useResponsesAPI = isReasoningModel;
 
     if (useResponsesAPI) {
       logger.info(`Using OpenAI Responses API for model ${activeModel}`);
@@ -147,7 +147,7 @@ export class OpenAIProvider implements IProvider {
     const params: OpenAI.Chat.ChatCompletionCreateParamsNonStreaming = {
       model: activeModel,
       messages: processedMessages,
-      ...(isGpt54 ? { reasoning_effort: reasoningEffort } : {}),
+      ...(isReasoningModel ? { reasoning_effort: reasoningEffort } : {}),
     };
 
     if (hasTools) {
@@ -160,7 +160,7 @@ export class OpenAIProvider implements IProvider {
           strict: true,
         },
       }));
-      params.parallel_tool_calls = isGpt54;
+      params.parallel_tool_calls = isReasoningModel;
       if (profile === ReasoningProfile.DEEP || profile === ReasoningProfile.THINKING) {
         params.parallel_tool_calls = false;
       }
@@ -182,9 +182,10 @@ export class OpenAIProvider implements IProvider {
 
   async getCapabilities(model?: string) {
     const activeModel = model || this.model;
-    const isGpt54 = activeModel.includes(OpenAIModel.GPT_5_4);
+    const isReasoningModel =
+      activeModel.includes(OpenAIModel.GPT_5_4) || activeModel.includes(OpenAIModel.GPT_5_MINI);
     return {
-      supportedReasoningProfiles: isGpt54
+      supportedReasoningProfiles: isReasoningModel
         ? [
             ReasoningProfile.FAST,
             ReasoningProfile.STANDARD,

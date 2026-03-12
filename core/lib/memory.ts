@@ -15,7 +15,11 @@ import {
 import { logger } from './logger';
 
 const client = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(client);
+const docClient = DynamoDBDocumentClient.from(client, {
+  marshallOptions: {
+    removeUndefinedValues: true,
+  },
+});
 const typedResource = Resource as unknown as SSTResource;
 
 /**
@@ -48,6 +52,8 @@ export class DynamoMemory implements IMemory {
         tool_calls: item.tool_calls,
         tool_call_id: item.tool_call_id,
         name: item.name,
+        agentName: item.agentName,
+        traceId: item.traceId,
       }));
     } catch (error) {
       logger.error('Error retrieving history from DynamoDB:', error);
@@ -79,10 +85,70 @@ export class DynamoMemory implements IMemory {
   }
 
   /**
-   * Placeholder for clearing user history (not fully implemented)
+   * Clears the conversation history for a specific user or session
    */
   async clearHistory(userId: string): Promise<void> {
-    logger.info('Clear history requested for', userId);
+    const { DeleteCommand } = await import('@aws-sdk/lib-dynamodb');
+
+    // Query to get all items (with their sort keys)
+    const command = new QueryCommand({
+      TableName: this.tableName,
+      KeyConditionExpression: 'userId = :userId',
+      ExpressionAttributeValues: {
+        ':userId': userId,
+      },
+    });
+
+    try {
+      const response = await docClient.send(command);
+      const items = response.Items || [];
+
+      for (const item of items) {
+        await docClient.send(
+          new DeleteCommand({
+            TableName: this.tableName,
+            Key: {
+              userId: item.userId,
+              timestamp: item.timestamp,
+            },
+          })
+        );
+      }
+      logger.info(`Cleared history for ${userId} (${items.length} items)`);
+    } catch (error) {
+      logger.error('Error clearing history from DynamoDB:', error);
+    }
+  }
+
+  /**
+   * Deletes a conversation session and its history
+   */
+  async deleteConversation(userId: string, sessionId: string): Promise<void> {
+    const { DeleteCommand } = await import('@aws-sdk/lib-dynamodb');
+
+    // 1. Delete session metadata from SESSIONS#userId
+    const conversations = await this.listConversations(userId);
+    const existing = conversations.find((c) => c.sessionId === sessionId);
+
+    if (existing) {
+      try {
+        await docClient.send(
+          new DeleteCommand({
+            TableName: this.tableName,
+            Key: {
+              userId: `SESSIONS#${userId}`,
+              timestamp: existing.updatedAt,
+            },
+          })
+        );
+        console.log(`[DynamoMemory] Deleted session meta for ${sessionId}`);
+      } catch (error) {
+        logger.error(`Error deleting session meta for ${sessionId}:`, error);
+      }
+    }
+
+    // 2. Delete all history messages from CONV#userId#sessionId
+    await this.clearHistory(`CONV#${userId}#${sessionId}`);
   }
 
   /**

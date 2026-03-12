@@ -21,6 +21,7 @@ interface WorkerEvent {
     task: string;
     isContinuation?: boolean;
     traceId?: string;
+    sessionId?: string;
   };
 }
 
@@ -42,12 +43,22 @@ export const handler = async (
   const detailType = event['detail-type'] || '';
   const agentId = detailType.replace('_task', '');
 
-  if (!agentId) {
-    logger.error('Could not determine agentId from event');
+  // Safety list of system events that the Worker should NEVER try to process as an agent
+  const systemEvents = [
+    'continuation',
+    'task_completed',
+    'task_failed',
+    'outbound_message',
+    'system_build_failed',
+    'system_build_success',
+  ];
+
+  if (!agentId || systemEvents.includes(agentId)) {
+    logger.info('Skipping system event in Worker Agent:', agentId);
     return;
   }
 
-  const { userId, task, isContinuation, traceId } = event.detail;
+  const { userId, task, isContinuation, traceId, sessionId } = event.detail;
 
   if (!userId || !task) {
     logger.error('Invalid event payload: missing userId or task');
@@ -78,6 +89,9 @@ export const handler = async (
     isIsolated: true,
     initiatorId: (event.detail as any).initiatorId,
     depth: (event.detail as any).depth,
+    traceId: traceId,
+    sessionId,
+    source: 'system',
   });
 
   logger.info(`Worker Agent [${agentId}] completed task:`, response);
@@ -85,7 +99,18 @@ export const handler = async (
   // 4. Notification (Optional: Worker could be silent or chatty)
   // Only send if not paused (Agent returns a specific string if paused)
   if (!response.startsWith('TASK_PAUSED')) {
-    await sendOutboundMessage(`worker.agent.${agentId}`, userId, response, [userId]);
+    // The userId here is the main conversation ID (e.g. CONV#user#session)
+    // We want to sync the message to this context so the user sees it.
+    const memoryContexts = [userId];
+
+    await sendOutboundMessage(
+      `worker.agent.${agentId}`,
+      userId,
+      response,
+      memoryContexts,
+      sessionId,
+      config.name
+    );
 
     // Emit Task Completion for Orchestrator Resumption
     try {
@@ -103,6 +128,7 @@ export const handler = async (
                 traceId,
                 initiatorId: (event.detail as any).initiatorId,
                 depth: (event.detail as any).depth,
+                sessionId,
               }),
               EventBusName: (Resource as any).AgentBus.name,
             },

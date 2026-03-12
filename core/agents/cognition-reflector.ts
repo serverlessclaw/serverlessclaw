@@ -38,20 +38,24 @@ Key Obligations:
  * @param event - The event containing userId and the conversation history.
  * @returns A promise that resolves to the reflection report string, or undefined on error.
  */
-export const handler = async (event: {
-  userId: string;
-  conversation: Message[];
-}): Promise<string | undefined> => {
+export const handler = async (event: any): Promise<string | undefined> => {
   logger.info('Reflector Agent received task:', JSON.stringify(event, null, 2));
 
-  const { userId, conversation, traceId } = event as {
+  // EventBridge wraps the payload in 'detail'
+  const payload = event.detail || event;
+  const { userId, conversation, traceId, sessionId } = payload as {
     userId: string;
     conversation: Message[];
     traceId?: string;
+    sessionId?: string;
   };
 
   if (!userId || !conversation) {
-    logger.error('Invalid event payload');
+    logger.warn('Reflector received incomplete payload, skipping audit.', {
+      hasUserId: !!userId,
+      hasConversation: !!conversation,
+      source: event.source,
+    });
     return;
   }
 
@@ -227,6 +231,7 @@ export const handler = async (event: {
               traceId,
               initiatorId: (event as any).initiatorId,
               depth: (event as any).depth,
+              sessionId,
             }),
             EventBusName: typedResource.AgentBus.name,
           },

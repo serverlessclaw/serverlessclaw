@@ -40,7 +40,7 @@ export const listAgents = {
 export const dispatchTask = {
   ...toolDefinitions.dispatchTask,
   execute: async (args: Record<string, unknown>): Promise<string> => {
-    const { agentId, userId, task, metadata, traceId, initiatorId, depth } = args as {
+    const { agentId, userId, task, metadata, traceId, initiatorId, depth, sessionId } = args as {
       agentId: string;
       userId: string;
       task: string;
@@ -48,6 +48,7 @@ export const dispatchTask = {
       traceId?: string;
       initiatorId?: string;
       depth?: number;
+      sessionId?: string;
     };
 
     const { AgentRegistry } = await import('../lib/registry');
@@ -63,8 +64,11 @@ export const dispatchTask = {
 
     const nextDepth = (depth || 0) + 1;
 
+    // The Agent core now injects the correct baseUserId if this is missing or generic.
+    // We trust the injected 'userId' argument here.
+
     logger.info(
-      `Dispatching ${agentId} task (Depth: ${nextDepth}, Initiator: ${initiatorId || 'N/A'}) for user ${userId}: ${task}`
+      `Dispatching ${agentId} task (Depth: ${nextDepth}, Initiator: ${initiatorId || 'N/A'}, Session: ${sessionId}) for user ${userId}: ${task}`
     );
     const typedResource = Resource as unknown as ToolsResource;
     const command = new PutEventsCommand({
@@ -79,6 +83,7 @@ export const dispatchTask = {
             traceId,
             initiatorId: initiatorId || 'main.agent',
             depth: nextDepth,
+            sessionId,
           }),
           EventBusName: typedResource.AgentBus.name,
         },

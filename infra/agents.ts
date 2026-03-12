@@ -211,7 +211,7 @@ export function createAgents(ctx: SharedContext): {
   const notifier = new sst.aws.Function('Notifier', {
     handler: 'core/handlers/notifier.handler',
     dev: liveInLocalOnly,
-    link: [configTable, secrets.TelegramBotToken],
+    link: [memoryTable, configTable, secrets.TelegramBotToken],
     memory: AGENT_CONFIG.memory.SMALL,
     timeout: AGENT_CONFIG.timeout.SHORT,
   });

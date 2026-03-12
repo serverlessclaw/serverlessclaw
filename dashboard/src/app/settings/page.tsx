@@ -99,7 +99,7 @@ async function getConfig() {
       reflectionFrequency: reflectRes.Item?.value || '3',
       strategicReviewFrequency: reviewRes.Item?.value || '12',
       minGapsForReview: minGapsRes.Item?.value || '3',
-      maxToolIterations: maxIterRes.Item?.value || '5',
+      maxToolIterations: maxIterRes.Item?.value || '15',
       circuitBreakerThreshold: cbThresholdRes.Item?.value || '3',
       consecutiveBuildFailures: cbFailuresRes.Item?.value || 0,
       protectedResources: Array.isArray(protectedRes.Item?.value)
@@ -116,7 +116,7 @@ async function getConfig() {
       reflectionFrequency: '3',
       strategicReviewFrequency: '12',
       minGapsForReview: '3',
-      maxToolIterations: '5',
+      maxToolIterations: '15',
       circuitBreakerThreshold: '3',
       consecutiveBuildFailures: 0,
       protectedResources: 'sst.config.ts, buildspec.yml, infra/',

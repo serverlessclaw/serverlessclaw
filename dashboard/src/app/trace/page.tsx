@@ -4,6 +4,11 @@ import { DynamoDBDocumentClient, ScanCommand, GetCommand } from '@aws-sdk/lib-dy
 import { Activity, ShieldCheck, Cpu, Terminal, Clock, ChevronRight, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { SSTResource } from '@claw/core/lib/types/index';
+import DeleteTraceButton from '@/components/DeleteTraceButton';
+import DeleteAllTracesButton from '@/components/DeleteAllTracesButton';
+import { TRACE_TYPES } from '@/lib/constants';
+
+export const dynamic = 'force-dynamic';
 
 async function getTraces() {
   try {
@@ -16,14 +21,23 @@ async function getTraces() {
     const client = new DynamoDBClient({});
     const docClient = DynamoDBDocumentClient.from(client);
     
-    const { Items } = await docClient.send(
+    // 1. Fetch generic dashboard-user traces via GSI (Fast & Precise)
+    // 2026 update: we scan for everything to ensure interleaved sorting for all user types
+    const generalScan = docClient.send(
       new ScanCommand({
         TableName: tableName,
-        Limit: 50,
+        Limit: 1000,
       })
     );
+
+    const scanRes = await generalScan;
     
-    return (Items || []).sort((a, b) => (Number(b.timestamp) || 0) - (Number(a.timestamp) || 0));
+    // Merge and deduplicate by traceId
+    const merged = [...(scanRes.Items || [])];
+    const uniqueMap = new Map();
+    merged.forEach(item => uniqueMap.set(item.traceId, item));
+    
+    return Array.from(uniqueMap.values()).sort((a, b) => (Number(b.timestamp) || 0) - (Number(a.timestamp) || 0));
   } catch (e) {
     console.error('Error fetching traces:', e);
     return [];
@@ -67,6 +81,7 @@ export default async function Dashboard() {
             <p className="text-white/100 text-xs lg:text-sm mt-2 font-light leading-relaxed">Neural observation of autonomous agent logic paths and decision matrices.</p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:flex gap-3 lg:gap-4">
+            <DeleteAllTracesButton />
             <div className="glass-card px-4 py-2.5 text-[11px] lg:text-[12px]">
               <div className="text-white/90 mb-1 font-bold tracking-widest text-[9px]">PROVIDER</div>
               <div className="font-bold text-cyber-blue uppercase truncate">{config.provider}</div>
@@ -109,14 +124,20 @@ export default async function Dashboard() {
                       }`}>
                         {trace.status.toUpperCase()}
                       </div>
+                      <div className="text-[10px] font-bold px-1.5 py-0.5 rounded border border-cyber-blue/20 text-cyber-blue/80 uppercase">
+                        {trace.source || 'UNKNOWN'}
+                      </div>
                       <div className="text-sm font-medium text-white/90 truncate max-w-[200px] md:max-w-md">{trace.initialContext?.userText || 'System Task'}</div>
                     </div>
-                    <div className="flex items-center justify-between md:justify-end gap-6 text-[11px] text-white/90">
+                    <div className="flex items-center justify-between md:justify-end gap-3 md:gap-6 text-[11px] text-white/90">
                       <div className="flex items-center gap-2 font-mono">
                         <Clock size={12} /> {new Date(trace.timestamp).toLocaleTimeString()}
                       </div>
-                      <div className="group-hover:text-cyber-green transition-all transform group-hover:translate-x-1">
-                        <ChevronRight size={18} />
+                      <div className="flex items-center gap-2">
+                        <DeleteTraceButton traceId={trace.traceId} />
+                        <div className="group-hover:text-cyber-green transition-all transform group-hover:translate-x-1">
+                          <ChevronRight size={18} />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -125,9 +146,10 @@ export default async function Dashboard() {
                   <div className="mt-4 flex flex-wrap gap-2">
                     {trace.steps?.slice(0, 6).map((step: any, i: number) => (
                       <span key={i} className={`text-[9px] px-2 py-0.5 rounded border font-bold tracking-tight ${
-                        step.type === 'tool_call' ? 'border-cyber-blue/20 bg-cyber-blue/5 text-cyber-blue' : 
-                        step.type === 'error' ? 'border-red-500/20 bg-red-500/5 text-red-400' : 
-                        step.type === 'llm_call' ? 'border-purple-500/20 bg-purple-500/5 text-purple-400' :
+                        step.type === TRACE_TYPES.TOOL_CALL ? 'border-cyber-blue/20 bg-cyber-blue/5 text-cyber-blue' : 
+                        step.type === TRACE_TYPES.ERROR ? 'border-red-500/20 bg-red-500/5 text-red-400' : 
+                        step.type === TRACE_TYPES.LLM_CALL ? 'border-purple-500/20 bg-purple-500/5 text-purple-400' :
+                        step.type === TRACE_TYPES.LLM_RESPONSE ? 'border-cyber-green/20 bg-cyber-green/5 text-cyber-green' :
                         'border-white/5 bg-white/5 text-white/100'
                       }`}>
                         {step.type.toUpperCase()}

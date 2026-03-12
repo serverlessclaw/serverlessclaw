@@ -27,13 +27,21 @@ export const handler = async (
 ): Promise<void> => {
   logger.info('EventHandler received event:', JSON.stringify(event, null, 2));
 
-  const { userId, buildId, errorLogs } = event.detail as {
-    userId: string;
-    buildId?: string;
-    errorLogs?: string;
-  };
-
   if (event['detail-type'] === EventType.SYSTEM_BUILD_FAILED) {
+    const {
+      userId,
+      buildId,
+      errorLogs,
+      traceId: incomingTraceId,
+      sessionId,
+    } = event.detail as {
+      userId: string;
+      buildId?: string;
+      errorLogs?: string;
+      traceId?: string;
+      sessionId?: string;
+    };
+
     const task = `CRITICAL: Deployment ${buildId} failed. 
     Here are the last few lines of the logs:
     ---
@@ -54,28 +62,45 @@ export const handler = async (
     const agent = new Agent(memory, provider, agentTools, config.systemPrompt, config);
     const responseText = await agent.process(userId, `SYSTEM_NOTIFICATION: ${task}`, {
       context,
+      traceId: incomingTraceId,
+      sessionId,
+      source: 'system',
     });
 
     // Notify user via Notifier (if not paused)
     if (!responseText.startsWith('TASK_PAUSED')) {
-      await sendOutboundMessage('events.handler', userId, responseText);
+      await sendOutboundMessage(
+        'events.handler',
+        userId,
+        responseText,
+        undefined,
+        sessionId,
+        'SuperClaw'
+      );
     }
   } else if (event['detail-type'] === EventType.SYSTEM_BUILD_SUCCESS) {
+    const { userId, buildId, sessionId } = event.detail as {
+      userId: string;
+      buildId?: string;
+      sessionId?: string;
+    };
+
     const message = `✅ **DEPLOYMENT SUCCESSFUL**
 Build ID: ${buildId}
 
 The system has successfully evolved and all planned gaps have been marked as DONE. 
 I am ready for further tasks or instructions.`;
 
-    await sendOutboundMessage('events.handler', userId, message);
+    await sendOutboundMessage('events.handler', userId, message, undefined, sessionId, 'SuperClaw');
   } else if (event['detail-type'] === EventType.CONTINUATION_TASK) {
-    const { userId, task, traceId } = event.detail as {
+    const { userId, task, traceId, sessionId } = event.detail as {
       userId: string;
       task: string;
       traceId: string;
+      sessionId?: string;
     };
 
-    logger.info('Handling continuation task for user:', userId, { traceId });
+    logger.info('Handling continuation task for user:', userId, { traceId, sessionId });
 
     const { AgentRegistry } = await import('../lib/registry');
     const config = await AgentRegistry.getAgentConfig('main');
@@ -88,25 +113,37 @@ I am ready for further tasks or instructions.`;
     const responseText = await agent.process(userId, task, {
       context,
       isContinuation: true,
+      traceId,
+      sessionId,
+      source: 'system',
     });
 
     if (!responseText.startsWith('TASK_PAUSED')) {
-      await sendOutboundMessage('events.handler', userId, responseText);
+      await sendOutboundMessage(
+        'events.handler',
+        userId,
+        responseText,
+        undefined,
+        sessionId,
+        'SuperClaw'
+      );
     }
   } else if (event['detail-type'] === EventType.TASK_COMPLETED) {
-    const { userId, agentId, task, response, traceId, initiatorId, depth } = event.detail as {
-      userId: string;
-      agentId: string;
-      task: string;
-      response: string;
-      traceId: string;
-      initiatorId?: string;
-      depth?: number;
-    };
+    const { userId, agentId, task, response, traceId, initiatorId, depth, sessionId } =
+      event.detail as {
+        userId: string;
+        agentId: string;
+        task: string;
+        response: string;
+        traceId: string;
+        initiatorId?: string;
+        depth?: number;
+        sessionId?: string;
+      };
 
     const currentDepth = depth || 1;
     logger.info(
-      `Relaying completion from ${agentId} to Initiator: ${initiatorId || 'Orchestrator'} (Depth: ${currentDepth})`
+      `Relaying completion from ${agentId} to Initiator: ${initiatorId || 'Orchestrator'} (Depth: ${currentDepth}, Session: ${sessionId})`
     );
 
     // 1. Loop Protection
@@ -117,7 +154,10 @@ I am ready for further tasks or instructions.`;
       await sendOutboundMessage(
         'events.handler',
         userId,
-        `⚠️ **Recursion Limit Exceeded**\n\nI have detected an infinite loop between agents (Depth: ${currentDepth}). I've intervened to stop the process. Please check the orchestration logic.`
+        `⚠️ **Recursion Limit Exceeded**\n\nI have detected an infinite loop between agents (Depth: ${currentDepth}). I've intervened to stop the process. Please check the orchestration logic.`,
+        undefined,
+        sessionId,
+        'SuperClaw'
       );
       return;
     }
@@ -147,6 +187,7 @@ I am ready for further tasks or instructions.`;
               traceId,
               initiatorId: targetAgentId,
               depth: currentDepth,
+              sessionId,
             }),
             EventBusName: (Resource as any).AgentBus.name,
           },

@@ -13,13 +13,17 @@ const typedResource = Resource as unknown as SSTResource;
  * @param userId - The ID of the user to receive the message.
  * @param message - The content of the message.
  * @param memoryContexts - Optional array of context IDs to sync the message to.
+ * @param sessionId - Optional dashboard session ID for targeted delivery.
+ * @param agentName - Optional name of the agent sending the message.
  * @returns A promise that resolves when the event has been sent.
  */
 export async function sendOutboundMessage(
   source: string,
   userId: string,
   message: string,
-  memoryContexts?: string[]
+  memoryContexts?: string[],
+  sessionId?: string,
+  agentName?: string
 ): Promise<void> {
   try {
     await eventbridge.send(
@@ -28,7 +32,7 @@ export async function sendOutboundMessage(
           {
             Source: source,
             DetailType: EventType.OUTBOUND_MESSAGE,
-            Detail: JSON.stringify({ userId, message, memoryContexts }),
+            Detail: JSON.stringify({ userId, message, memoryContexts, sessionId, agentName }),
             EventBusName: typedResource.AgentBus.name,
           },
         ],

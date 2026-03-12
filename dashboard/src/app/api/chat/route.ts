@@ -5,6 +5,7 @@ import { ProviderManager } from '@claw/core/lib/providers/index';
 import { getAgentTools } from '@claw/core/tools/index';
 import { SUPERCLAW_SYSTEM_PROMPT } from '@claw/core/agents/superclaw';
 import { UI_STRINGS, HTTP_STATUS } from '@/lib/constants';
+import { revalidatePath } from 'next/cache';
 
 /**
  * Handles chat messages from the dashboard UI using the Manager agent
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const agentTools = await getAgentTools('main');
     const agent = new Agent(memory, provider, agentTools, SUPERCLAW_SYSTEM_PROMPT);
 
-    const reply = await agent.process(storageId, text);
+    const reply = await agent.process(storageId, text, { sessionId, source: 'dashboard' });
 
     // Update conversation metadata for the sidebar
     if (sessionId) {
@@ -68,6 +69,36 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
   } catch (error) {
     console.error('Failed to update session:', error);
     return NextResponse.json({ error: 'Failed to update session' }, { status: 500 });
+  }
+}
+
+/**
+ * Deletes one or all conversation sessions
+ */
+export async function DELETE(req: NextRequest): Promise<NextResponse> {
+  try {
+    const sessionId = req.nextUrl.searchParams.get('sessionId');
+    const userId = 'dashboard-user';
+    const memory = new DynamoMemory();
+
+    if (!sessionId) {
+      return NextResponse.json({ error: 'Missing sessionId' }, { status: 400 });
+    }
+
+    if (sessionId === 'all') {
+      const sessions = await memory.listConversations(userId);
+      await Promise.all(sessions.map(s => memory.deleteConversation(userId, s.sessionId)));
+      revalidatePath('/');
+      return NextResponse.json({ success: true, count: sessions.length });
+    }
+
+    await memory.deleteConversation(userId, sessionId);
+    revalidatePath('/');
+    
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Failed to delete session:', error);
+    return NextResponse.json({ error: 'Failed to delete session' }, { status: 500 });
   }
 }
 

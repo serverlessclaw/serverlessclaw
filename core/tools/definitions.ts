@@ -33,10 +33,9 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
           description:
             'The unique ID of the agent to invoke (e.g., coder, planner, or a custom agent ID).',
         },
-        userId: { type: 'string', description: 'The user ID context for the task.' },
         task: { type: 'string', description: 'The specific task for the sub-agent.' },
       },
-      required: ['agentId', 'userId', 'task'],
+      required: ['agentId', 'task'],
       additionalProperties: false,
     },
   },
@@ -63,12 +62,8 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
           type: 'string',
           description: 'The reason for the deployment (e.g., added a new tool).',
         },
-        userId: {
-          type: 'string',
-          description: 'The user ID context for the deployment.',
-        },
       },
-      required: ['reason', 'userId'],
+      required: ['reason'],
       additionalProperties: false,
     },
   },
@@ -182,7 +177,6 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     parameters: {
       type: 'object',
       properties: {
-        userId: { type: 'string', description: 'The user ID context.' },
         query: {
           type: 'string',
           description: 'The search query or keyword (use "*" for all recent).',
@@ -193,7 +187,7 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
           description: 'Optional category filter.',
         },
       },
-      required: ['userId', 'query', 'category'],
+      required: ['query', 'category'],
       additionalProperties: false,
     },
   },

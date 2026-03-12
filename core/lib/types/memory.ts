@@ -82,6 +82,8 @@ export interface IHistoryStore {
     sessionId: string,
     meta: Partial<ConversationMeta>
   ): Promise<void>;
+  /** Deletes a conversation session and its history. */
+  deleteConversation(userId: string, sessionId: string): Promise<void>;
 }
 
 /**
