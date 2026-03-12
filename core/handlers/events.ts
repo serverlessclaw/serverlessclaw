@@ -93,5 +93,42 @@ I am ready for further tasks or instructions.`;
     if (!responseText.startsWith('TASK_PAUSED')) {
       await sendOutboundMessage('events.handler', userId, responseText);
     }
+  } else if (event['detail-type'] === EventType.TASK_COMPLETED) {
+    const { userId, agentId, task, response, traceId } = event.detail as {
+      userId: string;
+      agentId: string;
+      task: string;
+      response: string;
+      traceId: string;
+    };
+
+    logger.info(`Relaying completion from ${agentId} to Orchestrator (User: ${userId})`);
+
+    // Signal SuperClaw to resume with the delegated task result
+    const { EventBridgeClient, PutEventsCommand } = await import('@aws-sdk/client-eventbridge');
+    const { Resource } = await import('sst');
+    const eb = new EventBridgeClient({});
+
+    await eb.send(
+      new PutEventsCommand({
+        Entries: [
+          {
+            Source: 'events.handler',
+            DetailType: EventType.CONTINUATION_TASK,
+            Detail: JSON.stringify({
+              userId,
+              task: `DELEGATED_TASK_RESULT: Agent '${agentId}' has completed the task: "${task}". 
+              Result:
+              ---
+              ${response}
+              ---
+              Please continue your orchestration loop based on this result.`,
+              traceId,
+            }),
+            EventBusName: (Resource as any).AgentBus.name,
+          },
+        ],
+      })
+    );
   }
 };

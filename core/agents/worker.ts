@@ -6,9 +6,13 @@ import { AgentRegistry } from '../lib/registry';
 import { sendOutboundMessage } from '../lib/outbound';
 import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
+import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
+import { Resource } from 'sst';
+import { EventType } from '../lib/types/index';
 
 const memory = new DynamoMemory();
 const provider = new ProviderManager();
+const eventbridge = new EventBridgeClient({});
 
 interface WorkerEvent {
   'detail-type': string;
@@ -43,7 +47,7 @@ export const handler = async (
     return;
   }
 
-  const { userId, task, isContinuation } = event.detail;
+  const { userId, task, isContinuation, traceId } = event.detail;
 
   if (!userId || !task) {
     logger.error('Invalid event payload: missing userId or task');
@@ -80,6 +84,30 @@ export const handler = async (
   // Only send if not paused (Agent returns a specific string if paused)
   if (!response.startsWith('TASK_PAUSED')) {
     await sendOutboundMessage(`worker.agent.${agentId}`, userId, response, [userId]);
+
+    // Emit Task Completion for Orchestrator Resumption
+    try {
+      await eventbridge.send(
+        new PutEventsCommand({
+          Entries: [
+            {
+              Source: `worker.agent.${agentId}`,
+              DetailType: EventType.TASK_COMPLETED,
+              Detail: JSON.stringify({
+                userId,
+                agentId,
+                task,
+                response,
+                traceId,
+              }),
+              EventBusName: (Resource as any).AgentBus.name,
+            },
+          ],
+        })
+      );
+    } catch (e) {
+      logger.error('Failed to emit TASK_COMPLETED:', e);
+    }
   }
 
   return response;

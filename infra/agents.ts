@@ -171,7 +171,14 @@ export function createAgents(ctx: SharedContext): {
     timeout: AGENT_CONFIG.timeout.LONG,
   });
   bus.subscribe('SystemBuildFailedSubscriber', eventHandler.arn, {
-    pattern: { detailType: [EventType.SYSTEM_BUILD_FAILED, EventType.SYSTEM_BUILD_SUCCESS] },
+    pattern: {
+      detailType: [
+        EventType.SYSTEM_BUILD_FAILED,
+        EventType.SYSTEM_BUILD_SUCCESS,
+        EventType.TASK_COMPLETED,
+        EventType.TASK_FAILED,
+      ],
+    },
   });
 
   // 6. Reflector Agent
@@ -249,6 +256,8 @@ export function createAgents(ctx: SharedContext): {
         EventType.CODER_TASK_COMPLETED,
         EventType.SYSTEM_BUILD_SUCCESS,
         EventType.SYSTEM_BUILD_FAILED,
+        EventType.TASK_COMPLETED,
+        EventType.TASK_FAILED,
       ],
     },
   });

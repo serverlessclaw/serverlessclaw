@@ -76,6 +76,10 @@ export enum EventType {
   OUTBOUND_MESSAGE = 'outbound_message',
   /** Signal to resume a complex task in a new execution context. */
   CONTINUATION_TASK = 'continuation_task',
+  /** Generic task completion signal. */
+  TASK_COMPLETED = 'task_completed',
+  /** Generic task failure signal. */
+  TASK_FAILED = 'task_failed',
 }
 
 /**
