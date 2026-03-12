@@ -154,7 +154,7 @@ export class OpenAIProvider implements IProvider {
       }
     }
 
-    const response = await client.chat.completions.create(params);
+    const response = await client.chat.completions.create(params) as OpenAI.Chat.ChatCompletion;
     const message = response.choices[0].message;
 
     if (!message) {
