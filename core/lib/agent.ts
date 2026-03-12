@@ -206,7 +206,10 @@ export class Agent {
 
               const result = await tool.execute(args);
 
-              await tracer.addStep({ type: 'tool_result', content: { toolName: tool.name, result } });
+              await tracer.addStep({
+                type: 'tool_result',
+                content: { toolName: tool.name, result },
+              });
 
               messages.push({
                 role: MessageRole.TOOL,
