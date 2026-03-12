@@ -245,7 +245,7 @@ export class Agent {
 
     // 7. Trigger Reflection (async via EventBridge)
     // 2026 Optimization: Reflection frequency is now configurable.
-    let reflectionFrequency = AGENT_DEFAULTS.REFLECTION_FREQUENCY;
+    let reflectionFrequency: number = AGENT_DEFAULTS.REFLECTION_FREQUENCY;
     try {
       const { AgentRegistry } = await import('./registry');
       const customFreq = await AgentRegistry.getRawConfig('reflection_frequency');

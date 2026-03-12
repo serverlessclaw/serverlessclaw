@@ -2,7 +2,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
 import { SSTResource } from './types/index';
-import { DYNAMO_KEYS } from './constants';
+import { SYSTEM } from './constants';
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const typedResource = Resource as unknown as SSTResource;
@@ -18,7 +18,7 @@ export async function getDeployCountToday(): Promise<number> {
     new GetCommand({
       TableName: typedResource.MemoryTable.name,
       Key: {
-        userId: DYNAMO_KEYS.DEPLOY_STATS_KEY || 'SYSTEM#DEPLOY_STATS',
+        userId: SYSTEM.DEPLOY_STATS_KEY || 'SYSTEM#DEPLOY_STATS',
         timestamp: 0,
       },
     })
@@ -39,7 +39,7 @@ export async function incrementDeployCount(today: string, currentCount: number):
     new UpdateCommand({
       TableName: typedResource.MemoryTable.name,
       Key: {
-        userId: DYNAMO_KEYS.DEPLOY_STATS_KEY || 'SYSTEM#DEPLOY_STATS',
+        userId: SYSTEM.DEPLOY_STATS_KEY || 'SYSTEM#DEPLOY_STATS',
         timestamp: 0,
       },
       UpdateExpression:
@@ -64,7 +64,7 @@ export async function rewardDeployLimit(): Promise<void> {
     new UpdateCommand({
       TableName: typedResource.MemoryTable.name,
       Key: {
-        userId: DYNAMO_KEYS.DEPLOY_STATS_KEY || 'SYSTEM#DEPLOY_STATS',
+        userId: SYSTEM.DEPLOY_STATS_KEY || 'SYSTEM#DEPLOY_STATS',
         timestamp: 0,
       },
       UpdateExpression: 'SET #count = if_not_exists(#count, :zero) - :one',
