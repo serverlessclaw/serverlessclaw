@@ -93,20 +93,28 @@ I am ready for further tasks or instructions.`;
 
     await sendOutboundMessage('events.handler', userId, message, undefined, sessionId, 'SuperClaw');
   } else if (event['detail-type'] === EventType.CONTINUATION_TASK) {
-    const { userId, task, traceId, sessionId } = event.detail as {
+    const { userId, agentId, task, traceId, sessionId } = event.detail as {
       userId: string;
+      agentId?: string;
       task: string;
       traceId: string;
       sessionId?: string;
     };
 
-    logger.info('Handling continuation task for user:', userId, { traceId, sessionId });
+    const targetAgentId = agentId || 'main';
+    logger.info(`Handling continuation task for agent ${targetAgentId}, user:`, userId, {
+      traceId,
+      sessionId,
+    });
 
     const { AgentRegistry } = await import('../lib/registry');
-    const config = await AgentRegistry.getAgentConfig('main');
-    if (!config) return;
+    const config = await AgentRegistry.getAgentConfig(targetAgentId);
+    if (!config) {
+      logger.error(`Agent configuration for '${targetAgentId}' not found during continuation.`);
+      return;
+    }
 
-    const agentTools = await getAgentTools('events');
+    const agentTools = await getAgentTools(targetAgentId === 'main' ? 'events' : targetAgentId);
     const agent = new Agent(memory, provider, agentTools, config.systemPrompt, config);
 
     // Resume with isContinuation = true
@@ -164,7 +172,10 @@ I am ready for further tasks or instructions.`;
 
     // 2. Dynamic Routing
     // If the initiator is not the main agent, we route back to that specific agent
-    const targetAgentId = initiatorId && initiatorId !== 'main.agent' ? initiatorId : 'main.agent';
+    const initiatorAgentId =
+      initiatorId && initiatorId.endsWith('.agent')
+        ? initiatorId.replace('.agent', '')
+        : initiatorId || 'main';
 
     const { EventBridgeClient, PutEventsCommand } = await import('@aws-sdk/client-eventbridge');
     const { Resource } = await import('sst');
@@ -178,6 +189,7 @@ I am ready for further tasks or instructions.`;
             DetailType: EventType.CONTINUATION_TASK,
             Detail: JSON.stringify({
               userId,
+              agentId: initiatorAgentId,
               task: `DELEGATED_TASK_RESULT: Agent '${agentId}' has completed the task: "${task}". 
               Result:
               ---
@@ -185,7 +197,7 @@ I am ready for further tasks or instructions.`;
               ---
               Please continue your logic based on this result.`,
               traceId,
-              initiatorId: targetAgentId,
+              initiatorId,
               depth: currentDepth,
               sessionId,
             }),

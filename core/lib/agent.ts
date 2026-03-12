@@ -442,6 +442,7 @@ export class Agent {
               DetailType: EventType.CONTINUATION_TASK,
               Detail: JSON.stringify({
                 userId,
+                agentId: this.config?.id || 'main',
                 task,
                 isContinuation: true,
                 traceId,
