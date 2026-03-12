@@ -134,8 +134,8 @@ export const handler = async (event: PlannerEvent, _context: Context): Promise<P
       const customFreq = await AgentRegistry.getRawConfig('strategic_review_frequency');
       const customMinGaps = await AgentRegistry.getRawConfig('min_gaps_for_review');
 
-      const frequencyHrs = parseInt(String(customFreq || '12'), 10);
-      const minGaps = parseInt(String(customMinGaps || '3'), 10);
+      const frequencyHrs = parseInt(String(customFreq || '24'), 10);
+      const minGaps = parseInt(String(customMinGaps || '10'), 10);
 
       const lastReviewStr = await memory.getDistilledMemory(
         `LAST#STRATEGIC_REVIEW#${contextUserId}`

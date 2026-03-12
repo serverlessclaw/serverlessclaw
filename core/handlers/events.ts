@@ -7,6 +7,7 @@ import { sendOutboundMessage } from '../lib/outbound';
 import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
 import { Resource } from 'sst';
+import { SYSTEM, DYNAMO_KEYS } from '../lib/constants';
 
 const memory = new DynamoMemory();
 const provider = new ProviderManager();
@@ -157,14 +158,26 @@ I am ready for further tasks or instructions.`;
     );
 
     // 1. Loop Protection
-    if (currentDepth >= 5) {
+    // Resolve recursion limit from DDB or fallback to default
+    let RECURSION_LIMIT: number = SYSTEM.DEFAULT_RECURSION_LIMIT;
+    try {
+      const { AgentRegistry } = await import('../lib/registry');
+      const customLimit = await AgentRegistry.getRawConfig(DYNAMO_KEYS.RECURSION_LIMIT);
+      if (customLimit !== undefined) {
+        RECURSION_LIMIT = parseInt(String(customLimit), 10);
+      }
+    } catch {
+      logger.warn('Failed to fetch recursion_limit from DDB, using default.');
+    }
+
+    if (currentDepth >= RECURSION_LIMIT) {
       logger.error(
         `Recursion Limit Exceeded (Depth: ${currentDepth}) for user ${userId}. Aborting.`
       );
       await sendOutboundMessage(
         'events.handler',
         userId,
-        `⚠️ **Recursion Limit Exceeded**\n\nI have detected an infinite loop between agents (Depth: ${currentDepth}). I've intervened to stop the process. Please check the orchestration logic.`,
+        `⚠️ **Recursion Limit Exceeded**\n\nI have detected an infinite loop between agents (Depth: ${currentDepth}). I've intervened to stop the process. Please check the orchestration logic. You can increase this limit in the System Config.`,
         undefined,
         sessionId,
         'SuperClaw'

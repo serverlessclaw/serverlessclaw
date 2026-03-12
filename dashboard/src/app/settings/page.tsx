@@ -32,6 +32,7 @@ async function getConfig() {
       cbThresholdRes,
       cbFailuresRes,
       protectedRes,
+      recursionRes,
     ] = await Promise.all([
       docClient.send(
         new GetCommand({
@@ -89,6 +90,12 @@ async function getConfig() {
           Key: { key: 'protected_resources' },
         })
       ),
+      docClient.send(
+        new GetCommand({
+          TableName: tableName,
+          Key: { key: 'recursion_limit' },
+        })
+      ),
     ]);
 
     return {
@@ -96,11 +103,12 @@ async function getConfig() {
       model: modelRes.Item?.value || 'gpt-5.4',
       evolutionMode: modeRes.Item?.value || 'hitl',
       optimizationPolicy: policyRes.Item?.value || 'balanced',
-      reflectionFrequency: reflectRes.Item?.value || '3',
-      strategicReviewFrequency: reviewRes.Item?.value || '12',
-      minGapsForReview: minGapsRes.Item?.value || '3',
+      reflectionFrequency: reflectRes.Item?.value || '10',
+      strategicReviewFrequency: reviewRes.Item?.value || '24',
+      minGapsForReview: minGapsRes.Item?.value || '10',
       maxToolIterations: maxIterRes.Item?.value || '15',
-      circuitBreakerThreshold: cbThresholdRes.Item?.value || '3',
+      circuitBreakerThreshold: cbThresholdRes.Item?.value || '5',
+      recursionLimit: recursionRes.Item?.value || '50',
       consecutiveBuildFailures: cbFailuresRes.Item?.value || 0,
       protectedResources: Array.isArray(protectedRes.Item?.value)
         ? protectedRes.Item.value.join(', ')
@@ -117,7 +125,8 @@ async function getConfig() {
       strategicReviewFrequency: '12',
       minGapsForReview: '3',
       maxToolIterations: '15',
-      circuitBreakerThreshold: '3',
+      circuitBreakerThreshold: '5',
+      recursionLimit: '50',
       consecutiveBuildFailures: 0,
       protectedResources: 'sst.config.ts, buildspec.yml, infra/',
     };
@@ -135,6 +144,7 @@ async function updateConfig(formData: FormData) {
   const minGapsForReview = formData.get('minGapsForReview') as string;
   const maxToolIterations = formData.get('maxToolIterations') as string;
   const circuitBreakerThreshold = formData.get('circuitBreakerThreshold') as string;
+  const recursionLimit = formData.get('recursionLimit') as string;
   const protectedResources = (formData.get('protectedResources') as string)
     .split(',')
     .map((s) => s.trim())
@@ -212,6 +222,15 @@ async function updateConfig(formData: FormData) {
           Item: {
             key: 'circuit_breaker_threshold',
             value: circuitBreakerThreshold,
+          },
+        })
+      ),
+      docClient.send(
+        new PutCommand({
+          TableName: tableName,
+          Item: {
+            key: 'recursion_limit',
+            value: recursionLimit,
           },
         })
       ),

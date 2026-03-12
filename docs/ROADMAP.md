@@ -87,3 +87,15 @@ Our goal: the most customizable, cost-effective, and self-evolving personal AI a
 - [ ] Agent Swarm Isolation by `employerId`.
 - [ ] Per-tenant EventBridge filtering.
 - [ ] Multi-Channel Adapters: Slack and Discord support.
+
+## 🏢 Phase 15: Evolution Analytics & Tool ROI
+- [ ] **Quantitative Tool Dashboard**: Frequency, success rates, and token cost per tool.
+- [ ] **Negative Memory Tier**: `FAILED_PLANS#` storage to prevent the Strategic Planner from repeating unsuccessful designs.
+- [ ] **Optimizer Agent**: Specialized auditor that suggests tool pruning or splitting based on usage patterns.
+- [ ] **Automated Cost Guardrails**: Budget-aware planning that prioritizes cheaper models for low-impact gaps.
+
+## 🏢 Phase 16: Advanced Cognitive Resilience
+- [ ] **Static Analysis Feed**: Inject `package.json` and environmental constraints directly into the Planner's telemetry.
+- [ ] **Interactive Strategic Planning**: "Reject with Reason" feedback loop in dashboard that converts into immediate `TACTICAL_LESSONS`.
+- [ ] **Multi-Agent Conflict Resolution**: Detection and mediation of overlapping plans between different autonomous nodes.
+- [ ] **Continuous Knowledge Reconciliation**: Automated periodic audits to merge redundant facts and lessons.

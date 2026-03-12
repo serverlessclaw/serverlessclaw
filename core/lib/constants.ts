@@ -10,6 +10,7 @@ export const SYSTEM = {
   RECOVERY_KEY: 'SYSTEM#RECOVERY',
   DEFAULT_DEPLOY_LIMIT: 5,
   MAX_DEPLOY_LIMIT: 100,
+  DEFAULT_RECURSION_LIMIT: 50,
 } as const;
 
 export const PROTECTED_FILES = [
@@ -28,6 +29,7 @@ export const STORAGE = {
 
 export const DYNAMO_KEYS = {
   DEPLOY_LIMIT: 'deploy_limit',
+  RECURSION_LIMIT: 'recursion_limit',
   AGENTS_CONFIG: 'agents_config',
   INFRA_CONFIG: 'infra_config',
   SYSTEM_TOPOLOGY: 'system_topology',

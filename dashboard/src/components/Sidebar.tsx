@@ -12,7 +12,10 @@ import {
   Menu, 
   X,
   ChevronRight,
-  Users
+  Users,
+  Brain,
+  Wrench,
+  Server
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -37,11 +40,17 @@ export default function Sidebar() {
     { label: UI_STRINGS.INTELLIGENCE_HEADER, type: 'header' },
     { href: ROUTES.CHAT, label: UI_STRINGS.CHAT_DIRECT, icon: MessageSquare },
     { href: ROUTES.TRACE, label: UI_STRINGS.TRACE_INTEL, icon: Activity, activePaths: [ROUTES.TRACE, '/trace'] },
+    
+    { label: UI_STRINGS.EVOLUTION_HEADER, type: 'header', className: 'pt-4' },
     { href: ROUTES.AGENTS, label: UI_STRINGS.AGENTS, icon: Users },
-    { label: UI_STRINGS.SYSTEM_HEADER, type: 'header', className: 'pt-4' },
+    { href: ROUTES.MEMORY, label: UI_STRINGS.MEMORY_RESERVE, icon: Brain },
+    { href: ROUTES.CAPABILITIES, label: UI_STRINGS.CAPABILITIES, icon: Wrench },
+    
+    { label: UI_STRINGS.INFRA_HEADER, type: 'header', className: 'pt-4' },
     { href: ROUTES.SYSTEM_PULSE, label: UI_STRINGS.SYSTEM_PULSE, icon: Share2 },
     { href: ROUTES.LOCKS, label: UI_STRINGS.SESSION_TRAFFIC, icon: Lock },
     { href: ROUTES.SETTINGS, label: UI_STRINGS.CONFIG, icon: Settings },
+    
     { label: UI_STRINGS.OBSERVABILITY_HEADER, type: 'header', className: 'pt-4' },
     { href: ROUTES.SECURITY, label: UI_STRINGS.SECURITY_MANIFEST, icon: ShieldCheck },
     { href: ROUTES.RESILIENCE, label: UI_STRINGS.SELF_HEALING, icon: Zap },

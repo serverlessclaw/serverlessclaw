@@ -176,21 +176,31 @@ export class Agent {
     // 2026 Hot-Swap Strategy: Resolve Model/Provider from DDB
     let activeModel: string | undefined = this.config?.model;
     const activeProvider: string | undefined = this.config?.provider;
+    let activeProfile = profile;
 
     try {
       const { AgentRegistry } = await import('./registry');
-      // If agent doesn't have a specific model, fallback to reasoning profile mapping
+
+      // 1. Resolve Optimization Policy (System-wide profile override)
+      const policy = await AgentRegistry.getRawConfig('optimization_policy');
+      if (policy === 'aggressive') {
+        activeProfile = ReasoningProfile.DEEP;
+      } else if (policy === 'conservative') {
+        activeProfile = ReasoningProfile.FAST;
+      }
+
+      // 2. Resolve Model mapping based on (potentially overridden) profile
       if (!activeModel) {
         const profileMap = (await AgentRegistry.getRawConfig('reasoning_profiles')) as Record<
           string,
           string
         >;
-        if (profileMap && profileMap[profile]) {
-          activeModel = profileMap[profile];
+        if (profileMap && profileMap[activeProfile]) {
+          activeModel = profileMap[activeProfile];
         }
       }
     } catch {
-      logger.warn('Failed to fetch reasoning_profiles from DDB, using hardcoded defaults.');
+      logger.warn('Failed to fetch config from DDB, using defaults.');
     }
 
     // 4. Complete context (Smart Recall Index)
@@ -266,7 +276,7 @@ export class Agent {
         const aiResponse = await this.provider.call(
           messages,
           this.tools,
-          profile,
+          activeProfile,
           activeModel,
           activeProvider
         );
