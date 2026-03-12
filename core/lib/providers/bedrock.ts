@@ -21,14 +21,6 @@ interface BedrockResource {
   AwsRegion: { value: string };
 }
 
-interface IReasoningContentBlock {
-  reasoningContent?: {
-    reasoningText?: {
-      text?: string;
-    };
-  };
-}
-
 interface BedrockReasoningConfig {
   thinkingBudget: number;
   thinkingEnabled: boolean;
@@ -167,9 +159,9 @@ export class BedrockProvider implements IProvider {
     if (response.output?.message) {
       const msg = response.output.message;
 
-      const reasoning = msg.content
-        ?.filter((c) => (c as IReasoningContentBlock).reasoningContent)
-        .map((c) => (c as IReasoningContentBlock).reasoningContent?.reasoningText?.text || '')
+      const reasoning = (msg.content as any[])
+        ?.filter((c) => !!c.reasoningContent)
+        .map((c) => c.reasoningContent?.reasoningText?.text || '')
         .join('\n\n');
 
       if (reasoning) {

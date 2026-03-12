@@ -72,7 +72,7 @@ export class OpenAIProvider implements IProvider {
 
     if (useResponsesAPI) {
       logger.info(`Using OpenAI Responses API for model ${activeModel}`);
-      const response = await client.responses.create({
+      const response = (await client.responses.create({
         model: activeModel as OpenAI.ResponsesModel,
         input: messages.map((m) => {
           if (m.role === MessageRole.TOOL) {
@@ -80,7 +80,7 @@ export class OpenAIProvider implements IProvider {
               type: 'tool_call_output',
               call_id: m.tool_call_id || '',
               output: m.content || '',
-            } as any;
+            };
           }
           let role: 'user' | 'assistant' | 'system' | 'developer' = 'user';
           if (m.role === MessageRole.SYSTEM) role = 'developer';
@@ -92,8 +92,8 @@ export class OpenAIProvider implements IProvider {
             role,
             content: m.content || '',
             ...(m.tool_calls ? { tool_calls: m.tool_calls } : {}),
-          } as any;
-        }),
+          };
+        }) as any[],
         reasoning: { effort: reasoningEffort },
         ...(hasTools
           ? {
@@ -101,27 +101,29 @@ export class OpenAIProvider implements IProvider {
                 type: 'function',
                 name: t.name,
                 description: t.description,
-                parameters: t.parameters as any,
+                parameters: t.parameters as unknown as Record<string, unknown>,
                 strict: true,
-              })) as any,
+              })),
             }
           : {}),
-      });
+      })) as any; // Cast to any once at the boundary to isolate unsafe access
 
       // Extract output
-      let content = response.output_text || '';
-      const toolCalls: any[] = [];
+      const content = (response.output_text as string) || '';
+      const toolCalls: Message['tool_calls'] = [];
 
-      for (const item of response.output) {
-        if (item.type === 'function_call') {
-          toolCalls.push({
-            id: item.call_id,
-            type: 'function',
-            function: {
-              name: item.name,
-              arguments: item.arguments,
-            },
-          });
+      if (Array.isArray(response.output)) {
+        for (const item of response.output) {
+          if (item.type === 'function_call') {
+            toolCalls.push({
+              id: item.call_id as string,
+              type: 'function',
+              function: {
+                name: item.name as string,
+                arguments: item.arguments as string,
+              },
+            });
+          }
         }
       }
 
@@ -154,8 +156,9 @@ export class OpenAIProvider implements IProvider {
       }
     }
 
-    const response = await client.chat.completions.create(params) as OpenAI.Chat.ChatCompletion;
-    const message = response.choices[0].message;
+    const response = (await client.chat.completions.create(params)) as any;
+    const choices = response.choices as any[];
+    const message = choices?.[0]?.message;
 
     if (!message) {
       return { role: MessageRole.ASSISTANT, content: 'Empty response from OpenAI.' };
@@ -163,7 +166,7 @@ export class OpenAIProvider implements IProvider {
 
     return {
       role: MessageRole.ASSISTANT,
-      content: message.content || '',
+      content: (message.content as string) || '',
       tool_calls: message.tool_calls as Message['tool_calls'],
     } as Message;
   }
