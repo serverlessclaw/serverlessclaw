@@ -70,6 +70,20 @@ export default function ChatPage() {
     }
   };
 
+  // Passive Polling for background updates (Coder/QA completions)
+  useEffect(() => {
+    if (!activeSessionId) return;
+
+    const interval = setInterval(() => {
+      // Only poll if we're not currently doing an explicit action
+      if (!isLoading && !document.hidden) {
+        fetchHistory(activeSessionId);
+      }
+    }, 10000); // 10 seconds
+
+    return () => clearInterval(interval);
+  }, [activeSessionId, isLoading]);
+
   const createNewChat = () => {
     const newId = `session_${Date.now()}`;
     setActiveSessionId(newId);

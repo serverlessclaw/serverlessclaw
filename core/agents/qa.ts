@@ -129,14 +129,16 @@ export const handler = async (event: {
       await sendOutboundMessage(
         'qa.agent',
         userId,
-        `✅ **Evolution Verified Successful**\n\nI have audited the implementation for ${gapIds.length} gaps and confirmed they are successfully resolved.\n\n${auditReport}`
+        `✅ **Evolution Verified Successful**\n\nI have audited the implementation for ${gapIds.length} gaps and confirmed they are successfully resolved.\n\n${auditReport}`,
+        [userId]
       );
     } else {
       logger.info('Verification successful. Asking user for final satisfaction sign-off.');
       await sendOutboundMessage(
         'qa.agent',
         userId,
-        `🔍 **QA Audit Complete: Success**\n\nI have verified the implementation for ${gapIds.length} gaps. It looks correct to me.\n\n**Does this meet your expectations?**\n(Reply with "COMPLETE [Gap IDs]" to close or "REOPEN [Gap IDs]" to send back to backlog).`
+        `🔍 **QA Audit Complete: Success**\n\nI have verified the implementation for ${gapIds.length} gaps. It looks correct to me.\n\n**Does this meet your expectations?**\n(Reply with "COMPLETE [Gap IDs]" to close or "REOPEN [Gap IDs]" to send back to backlog).`,
+        [userId]
       );
     }
   } else {
@@ -147,7 +149,8 @@ export const handler = async (event: {
     await sendOutboundMessage(
       'qa.agent',
       userId,
-      `⚠️ **QA Audit Failed: Implementation Unsatisfactory**\n\nI have reopened ${gapIds.length} gaps for further work.\n\n**REASON:**\n${auditReport}`
+      `⚠️ **QA Audit Failed: Implementation Unsatisfactory**\n\nI have reopened ${gapIds.length} gaps for further work.\n\n**REASON:**\n${auditReport}`,
+      [userId]
     );
   }
 };
