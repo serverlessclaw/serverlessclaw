@@ -62,7 +62,8 @@ export const UI_STRINGS = {
 
 export const ROUTES = {
   HOME: '/',
-  CHAT: '/chat',
+  CHAT: '/',
+  TRACE: '/trace',
   AGENTS: '/agents',
   SYSTEM_PULSE: '/system-pulse',
   LOCKS: '/locks',

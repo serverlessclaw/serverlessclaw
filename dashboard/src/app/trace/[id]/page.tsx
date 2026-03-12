@@ -106,7 +106,7 @@ export default async function TraceDetailPage({
       <div className="flex flex-col items-center justify-center h-screen bg-[#0a0a0a] text-white/100">
         <ShieldAlert size={48} className="mb-4 opacity-20" />
         <h1 className="text-xl font-bold">{UI_STRINGS.TRACE_NOT_FOUND}</h1>
-        <Link href="/" className="mt-4 text-cyber-green hover:underline flex items-center gap-2">
+        <Link href="/trace" className="mt-4 text-cyber-green hover:underline flex items-center gap-2">
           <ArrowLeft size={16} /> {UI_STRINGS.RETURN_TO_BASE}
         </Link>
       </div>
@@ -116,7 +116,7 @@ export default async function TraceDetailPage({
   return (
     <div className="flex-1 overflow-y-auto p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-blue/5 via-transparent to-transparent">
       <header className="max-w-5xl mx-auto mb-10">
-        <Link href="/" className="text-white/100 hover:text-cyber-green transition-colors flex items-center gap-2 text-xs mb-6 group">
+        <Link href="/trace" className="text-white/100 hover:text-cyber-green transition-colors flex items-center gap-2 text-xs mb-6 group">
           <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> {UI_STRINGS.BACK_TO_INTELLIGENCE}
         </Link>
         

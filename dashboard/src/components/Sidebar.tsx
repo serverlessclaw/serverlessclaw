@@ -36,7 +36,7 @@ export default function Sidebar() {
   const navItems = [
     { label: UI_STRINGS.INTELLIGENCE_HEADER, type: 'header' },
     { href: ROUTES.CHAT, label: UI_STRINGS.CHAT_DIRECT, icon: MessageSquare },
-    { href: ROUTES.HOME, label: UI_STRINGS.TRACE_INTEL, icon: Activity, activePaths: [ROUTES.HOME, '/trace'] },
+    { href: ROUTES.TRACE, label: UI_STRINGS.TRACE_INTEL, icon: Activity, activePaths: [ROUTES.TRACE, '/trace'] },
     { href: ROUTES.AGENTS, label: UI_STRINGS.AGENTS, icon: Users },
     { label: UI_STRINGS.SYSTEM_HEADER, type: 'header', className: 'pt-4' },
     { href: ROUTES.SYSTEM_PULSE, label: UI_STRINGS.SYSTEM_PULSE, icon: Share2 },
