@@ -1,7 +1,6 @@
 import { Resource } from 'sst';
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
-import { AgentRegistry } from '@claw/core/lib/registry';
-import { discoverSystemTopology } from '@claw/core/handlers/monitor';
 
 const INFRA_IDS = {
   BUS: 'bus',
@@ -25,6 +24,9 @@ const INFRA_LABELS = {
  */
 export async function GET(): Promise<NextResponse> {
   try {
+    const { AgentRegistry } = await import('@claw/core/lib/registry');
+    const { discoverSystemTopology } = await import('@claw/core/handlers/monitor');
+
     // 1. Try to load full system topology from DynamoDB (persisted by Build Monitor)
     const topology = await AgentRegistry.getFullTopology();
     

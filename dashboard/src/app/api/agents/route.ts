@@ -1,9 +1,8 @@
 import { Resource } from 'sst';
+export const dynamic = 'force-dynamic';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { NextResponse } from 'next/server';
-
-import { AgentRegistry } from '@claw/core/lib/registry';
 import { HTTP_STATUS, DYNAMO_KEYS } from '@/lib/constants';
 
 const client = new DynamoDBClient({});
@@ -17,6 +16,7 @@ const docClient = DynamoDBDocumentClient.from(client);
  */
 export async function GET(): Promise<NextResponse> {
   try {
+    const { AgentRegistry } = await import('@claw/core/lib/registry');
     const configs = await AgentRegistry.getAllConfigs();
     return NextResponse.json(configs);
   } catch (error) {

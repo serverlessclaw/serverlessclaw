@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { Resource } from 'sst';
+export const dynamic = 'force-dynamic';
 
 /**
  * Returns public configuration for the dashboard.

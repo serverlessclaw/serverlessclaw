@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { DynamoMemory } from '@claw/core/lib/memory';
-import { Agent } from '@claw/core/lib/agent';
-import { ProviderManager } from '@claw/core/lib/providers/index';
-import { getAgentTools } from '@claw/core/tools/index';
-import { SUPERCLAW_SYSTEM_PROMPT } from '@claw/core/agents/superclaw';
+export const dynamic = 'force-dynamic';
 import { UI_STRINGS, HTTP_STATUS } from '@/lib/constants';
 import { revalidatePath } from 'next/cache';
-import { TraceSource } from '@claw/core/lib/types/index';
 
 /**
  * Handles chat messages from the dashboard UI using the Manager agent
@@ -25,6 +20,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     console.log(`[Chat API] POST request - text: ${text.substring(0, 20)}..., sessionId: ${sessionId}`);
     console.log(`[Chat API] Using storageId: ${storageId}`);
+    
+    const { DynamoMemory } = await import('@claw/core/lib/memory');
+    const { ProviderManager } = await import('@claw/core/lib/providers/index');
+    const { getAgentTools } = await import('@claw/core/tools/index');
+    const { Agent } = await import('@claw/core/lib/agent');
+    const { SUPERCLAW_SYSTEM_PROMPT } = await import('@claw/core/agents/superclaw');
+    const { TraceSource } = await import('@claw/core/lib/types/index');
 
     const memory = new DynamoMemory();
     const provider = new ProviderManager();
@@ -58,6 +60,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
   try {
     const { sessionId, title } = await req.json();
     const userId = 'dashboard-user';
+    const { DynamoMemory } = await import('@claw/core/lib/memory');
     const memory = new DynamoMemory();
 
     if (!sessionId || !title) {
@@ -80,6 +83,7 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
   try {
     const sessionId = req.nextUrl.searchParams.get('sessionId');
     const userId = 'dashboard-user';
+    const { DynamoMemory } = await import('@claw/core/lib/memory');
     const memory = new DynamoMemory();
 
     if (!sessionId) {
@@ -110,6 +114,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     const userId = 'dashboard-user';
     const sessionId = req.nextUrl.searchParams.get('sessionId');
+    const { DynamoMemory } = await import('@claw/core/lib/memory');
     const memory = new DynamoMemory();
 
     if (sessionId) {

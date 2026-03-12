@@ -44,6 +44,7 @@ export default function Sidebar() {
     { label: UI_STRINGS.EVOLUTION_HEADER, type: 'header', className: 'pt-4' },
     { href: ROUTES.AGENTS, label: UI_STRINGS.AGENTS, icon: Users },
     { href: ROUTES.MEMORY, label: UI_STRINGS.MEMORY_RESERVE, icon: Brain },
+    { href: ROUTES.PIPELINE, label: UI_STRINGS.EVOLUTION_PIPELINE, icon: Server },
     { href: ROUTES.CAPABILITIES, label: UI_STRINGS.CAPABILITIES, icon: Wrench },
     
     { label: UI_STRINGS.INFRA_HEADER, type: 'header', className: 'pt-4' },

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
 import { DynamoMemory } from '@claw/core/lib/memory';
 import { HTTP_STATUS } from '@/lib/constants';
 

@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
@@ -5,5 +6,9 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['**/*.test.ts'],
+    alias: {
+      '@': path.resolve(__dirname, './dashboard/src'),
+      '@claw/core': path.resolve(__dirname, './core'),
+    },
   },
 });

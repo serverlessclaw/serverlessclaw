@@ -1,4 +1,5 @@
 import { Resource } from 'sst';
+export const dynamic = 'force-dynamic';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, ScanCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { 

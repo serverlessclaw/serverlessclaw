@@ -16,6 +16,7 @@ export const API_ROUTES = {
   AGENTS: '/api/agents',
   CHAT: '/api/chat',
   MEMORY_PRIORITIZE: '/api/memory/prioritize',
+  MEMORY_STATUS: '/api/memory/status',
 } as const;
 
 export const DYNAMO_KEYS = {
@@ -50,6 +51,7 @@ export const UI_STRINGS = {
   OBSERVABILITY_HEADER: 'Observability',
   CHAT_DIRECT: 'CHAT_DIRECT',
   TRACE_INTEL: 'TRACE_INTEL',
+  EVOLUTION_PIPELINE: 'EVOLUTION_PIPELINE',
   AGENTS: 'AGENTS',
   MEMORY_RESERVE: 'NEURAL_RESERVE',
   CAPABILITIES: 'CAPABILITIES',
@@ -70,6 +72,7 @@ export const ROUTES = {
   TRACE: '/trace',
   AGENTS: '/agents',
   MEMORY: '/memory',
+  PIPELINE: '/pipeline',
   CAPABILITIES: '/capabilities',
   SYSTEM_PULSE: '/system-pulse',
   LOCKS: '/locks',
