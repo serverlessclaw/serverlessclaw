@@ -3,8 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, User, Bot, Loader2, MessageSquare, Terminal, Plus, Clock, ChevronRight, Zap } from 'lucide-react';
 import { THEME } from '@/lib/theme';
-// @ts-ignore
-import { realtime } from 'sst/realtime/client';
+import mqtt from 'mqtt';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -46,19 +45,46 @@ export default function ChatPage() {
         
         if (!config.realtime?.url) return;
 
-        console.log('[Realtime] Connecting...');
-        client = realtime.connect(config.realtime.url);
+        console.log('[Realtime] Connecting with MQTT...');
+        client = mqtt.connect(config.realtime.url, {
+          protocol: 'wss',
+          clientId: `dashboard-${Math.random().toString(16).slice(2, 10)}`,
+          password: 'auth-token', // Token placeholder for authorizer
+          clean: true,
+          connectTimeout: 10000,
+          reconnectPeriod: 5000,
+        });
         
-        client.on('connected', () => {
+        client.on('connect', () => {
           console.log('[Realtime] Connected to push bus');
-          setIsRealtimeActive(true);
+          client.subscribe(topic, (err: any) => {
+            if (err) console.error('[Realtime] Subscription error:', err);
+            else {
+              console.log('[Realtime] Subscribed to:', topic);
+              setIsRealtimeActive(true);
+            }
+          });
         });
 
-        client.subscribe(topic, (message: any) => {
-          console.log('[Realtime] Received signal:', message);
-          if (activeSessionId) {
-            fetchHistorySilently(activeSessionId);
+        client.on('message', (t: string, payload: any) => {
+          try {
+            const message = JSON.parse(payload.toString());
+            console.log('[Realtime] Received signal:', message);
+            if (activeSessionId) {
+              fetchHistorySilently(activeSessionId);
+            }
+          } catch (e) {
+            console.error('[Realtime] Failed to parse message:', e);
           }
+        });
+
+        client.on('error', (err: any) => {
+          console.error('[Realtime] MQTT Error:', err);
+          setIsRealtimeActive(false);
+        });
+
+        client.on('close', () => {
+          setIsRealtimeActive(false);
         });
       } catch (e) {
         console.error('[Realtime] Setup failed:', e);
@@ -68,7 +94,10 @@ export default function ChatPage() {
     connect();
 
     return () => {
-      if (client) client.disconnect();
+      if (client) {
+        console.log('[Realtime] Disconnecting...');
+        client.end();
+      }
     };
   }, [activeSessionId]);
 
