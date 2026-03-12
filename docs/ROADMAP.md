@@ -72,8 +72,9 @@ Our goal: the most customizable, cost-effective, and self-evolving personal AI a
 - [x] **Deterministic Review**: Scheduled strategic reviews based on gap volume and frequency thresholds.
 
 ## 🏗️ Phase 12: Evolutionary Command Center (ClawCenter v2)
-- [ ] **Evolution Pipeline Board**: Kanban visualization of the 5-stage gap lifecycle.
+- [x] **Evolution Pipeline Board**: Kanban visualization of the 5-stage gap lifecycle.
 - [/] **Neural Map**: Dependency graph visualization of agent-to-agent delegation paths and dynamic infrastructure state from DynamoDB.
+- [x] **Capabilities Discovery**: Real-time multi-agent tool search and automated roster management.
 - [ ] **Granular Safety Tiers**: Multi-level trust settings (Sandbox, Staged, Autonomous) instead of binary toggle.
 - [ ] **Real-time Resilience Gauge**: Dashboard HUD for Circuit Breaker status and token burn-rate monitoring.
 - [ ] **Interactive Gap Refinement**: Feedback loop for users to edit and improve strategic plans before implementation.
