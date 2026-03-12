@@ -209,6 +209,7 @@ export const handler = async (event: any): Promise<PlannerResult> => {
     depth,
     traceId,
     sessionId,
+    source: 'system',
   });
 
   logger.info('Strategic Plan Generated:', result);

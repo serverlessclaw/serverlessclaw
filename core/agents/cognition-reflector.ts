@@ -125,6 +125,7 @@ export const handler = async (event: any): Promise<string | undefined> => {
   const response = await reflector.process(userId, reflectionPrompt, {
     profile: ReasoningProfile.FAST,
     isIsolated: true,
+    source: 'system',
   });
 
   if (response) {
