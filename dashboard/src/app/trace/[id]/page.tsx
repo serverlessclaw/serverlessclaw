@@ -172,7 +172,7 @@ export default async function TraceDetailPage({
               USER_ID: {rootNode.userId}
             </Typography>
             <Typography variant="mono" color="white" className="flex items-center justify-end gap-2 text-[10px]">
-              NODES: <Typography variant="mono" weight="bold" color="primary">{nodes.length}</Typography>
+              TOTAL STEPS: <Typography variant="mono" weight="bold" color="primary">{nodes.length}</Typography>
             </Typography>
           </div>
         </div>
@@ -191,7 +191,7 @@ export default async function TraceDetailPage({
         {nodes.sort((a, b) => a.timestamp - b.timestamp).map((node) => (
           <section key={node.nodeId} className="space-y-6">
             <Typography variant="caption" weight="black" className="tracking-[0.2em] flex items-center gap-2 mb-4">
-              <Activity size={14} className={`text-${THEME.COLORS.PRIMARY}`} /> Node::{node.nodeId} {node.parentId ? `(Parent: ${node.parentId.slice(0,8)})` : '(Root)'}
+              <Activity size={14} className={`text-${THEME.COLORS.PRIMARY}`} /> Step::{node.nodeId} {node.parentId ? `(Parent: ${node.parentId.slice(0,8)})` : '(Root)'}
             </Typography>
 
             <div className="space-y-4">
@@ -204,11 +204,11 @@ export default async function TraceDetailPage({
                       </div>
                       <div>
                         <Typography variant="caption" weight="bold" color="white" className="tracking-wider block">{step.type}</Typography>
-                        <Typography variant="caption" weight="medium" color="white" className="block">
+                         <Typography variant="caption" weight="medium" color="white" className="block">
                           {step.type === TRACE_TYPES.TOOL_CALL ? `Executing ${step.content.tool || step.content.toolName || ''}` : 
                            step.type === TRACE_TYPES.TOOL_RESULT ? `Observation from ${step.content.tool || step.content.toolName || 'tool'}` :
-                           step.type === TRACE_TYPES.LLM_CALL ? 'Neural Core Synthesis (Input)' : 
-                           step.type === TRACE_TYPES.LLM_RESPONSE ? 'Neural Core Generation (Output)' : 'Error detected'}
+                           step.type === TRACE_TYPES.LLM_CALL ? 'Agent Processing (Input)' : 
+                           step.type === TRACE_TYPES.LLM_RESPONSE ? 'Agent Response (Output)' : 'Error detected'}
                         </Typography>
                       </div>
                     </div>

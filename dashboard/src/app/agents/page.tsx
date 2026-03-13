@@ -109,10 +109,10 @@ export default function AgentsPage() {
       });
       if (!response.ok) throw new Error('Failed to save');
       setInitialAgents(JSON.parse(JSON.stringify(agents)));
-      toast.success('Neural nodes synchronized successfully');
+      toast.success('Agent configurations synchronized successfully');
       setShowBackboneWarning(false);
     } catch (err) {
-      toast.error('Failed to save neural states');
+      toast.error('Failed to save agent configuration');
     } finally {
       setSaving(false);
     }
@@ -128,7 +128,7 @@ export default function AgentsPage() {
   const addAgent = () => {
     setShowNewAgentModal(true);
     setNewAgent({
-      name: 'New Specialized Node',
+      name: 'New Specialized Agent',
       id: `agent_${Date.now()}`,
       systemPrompt: 'You are a specialized agent that...',
       enabled: true,
@@ -171,9 +171,9 @@ export default function AgentsPage() {
 
   if (loading)
     return (
-      <main className="flex-1 p-10 flex items-center justify-center">
+      <main className="flex-1 p-10 flex items-center justify-center text-white/40">
         <Typography variant="mono" color="intel" uppercase className="flex items-center gap-3 animate-pulse">
-          <RefreshCw className="animate-spin" size={20} /> Initializing Neural Hub...
+          <RefreshCw className="animate-spin" size={20} /> Initializing Agent Manager...
         </Typography>
       </main>
     );
@@ -182,8 +182,8 @@ export default function AgentsPage() {
     <main className={`flex-1 overflow-y-auto p-6 lg:p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-${THEME.COLORS.INTEL}/5 via-transparent to-transparent`}>
       <CyberConfirm 
         isOpen={confirmModal.isOpen}
-        title="Node Decommissioning"
-        message={`Are you sure you want to decommission specialized node '${confirmModal.agentName}'? This will remove it from the neural network.`}
+        title="Agent Decommissioning"
+        message={`Are you sure you want to decommission specialized agent '${confirmModal.agentName}'? This will remove it from the system.`}
         variant="danger"
         onConfirm={executeDeleteAgent}
         onCancel={() => setConfirmModal({ isOpen: false, agentId: '', agentName: '' })}
@@ -292,12 +292,12 @@ export default function AgentsPage() {
                   <div className="lg:col-span-7 space-y-3">
                     <Typography variant="caption" weight="bold" color="white" uppercase className="flex items-center gap-2">
                       <Settings2 size={12} className={`text-${THEME.COLORS.INTEL}`} /> 
-                      {isLogicOnly ? 'Execution Parameters' : 'Neural Core Instructions (System Prompt)'}
+                      {isLogicOnly ? 'Execution Parameters' : 'System Instructions (System Prompt)'}
                     </Typography>
                     <div className="relative">
                       {isLogicOnly ? (
                         <Card variant="solid" padding="md" className="w-full text-[10px] text-white/40 font-mono italic leading-relaxed min-h-[280px]">
-                          This node operates on deterministic system logic rather than neural inference. 
+                          This agent operates on deterministic system logic rather than autonomous reasoning. 
                           Instructions are hardcoded in the codebase for maximum reliability and safety.
                           <br /><br />
                           <Typography variant="mono" weight="bold" color="white" uppercase className="flex items-center gap-2 mt-4 opacity-60">
@@ -309,7 +309,7 @@ export default function AgentsPage() {
                           value={agent.systemPrompt}
                           onChange={(e) => updateAgent(agent.id, { systemPrompt: e.target.value })}
                           className={`w-full bg-black/40 border border-white/10 rounded p-4 text-xs text-white/90 font-mono min-h-[280px] outline-none focus:border-${THEME.COLORS.INTEL}/40 transition-all leading-relaxed custom-scrollbar`}
-                          placeholder="Enter the system instructions for this node..."
+                          placeholder="Enter the system instructions for this agent..."
                         />
                       )}
                     </div>
@@ -340,7 +340,7 @@ export default function AgentsPage() {
                           </div>
 
                           <div className="space-y-2">
-                            <Typography variant="mono" weight="bold" color="white" uppercase className="text-[9px] opacity-60">Neural Model ID</Typography>
+                            <Typography variant="mono" weight="bold" color="white" uppercase className="text-[9px] opacity-60">Model ID</Typography>
                             <CyberSelect
                               value={agent.model || ''}
                               onChange={(val) => updateAgent(agent.id, { model: val })}
@@ -366,7 +366,7 @@ export default function AgentsPage() {
                           <ChevronRight size={12} /> Execution Context
                       </Typography>
                       <Typography variant="caption" color="white" className="italic block opacity-70">
-                          Node type: {agent.isBackbone ? 'PERSISTENT_BACKBONE' : 'DYNAMIC_SPOKE'}.
+                          Agent Type: {agent.isBackbone ? 'PERSISTENT_BACKBONE' : 'DYNAMIC_SPOKE'}.
                           {isLogicOnly ? ' Core resilience logic.' : ' Authorized to interact with global bus and session memory.'}
                       </Typography>
                     </Card>
@@ -414,7 +414,7 @@ export default function AgentsPage() {
                 ))}
               </div>
               <p className="text-white/60">
-                Backbone agents are critical to the system's neural connectivity and core logic. 
+                Backbone agents are critical to the system's connectivity and core logic. 
                 Unauthorized or incorrect modifications can lead to cascading failures, deadlocked tasks, 
                 or loss of system autonomy.
               </p>
@@ -469,7 +469,7 @@ export default function AgentsPage() {
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Typography variant="mono" weight="bold" color="white" uppercase className="text-[10px] opacity-50">Node Name</Typography>
+                  <Typography variant="mono" weight="bold" color="white" uppercase className="text-[10px] opacity-50">Agent Name</Typography>
                   <input
                     value={newAgent.name}
                     onChange={(e) => setNewAgent(prev => ({ ...prev, name: e.target.value }))}
@@ -489,7 +489,7 @@ export default function AgentsPage() {
               </div>
 
               <div className="space-y-2">
-                <Typography variant="mono" weight="bold" color="white" uppercase className="text-[10px] opacity-50">Neural Core Instructions (System Prompt)</Typography>
+                <Typography variant="mono" weight="bold" color="white" uppercase className="text-[10px] opacity-50">System Instructions (System Prompt)</Typography>
                 <textarea
                   value={newAgent.systemPrompt}
                   onChange={(e) => setNewAgent(prev => ({ ...prev, systemPrompt: e.target.value }))}
@@ -544,7 +544,7 @@ export default function AgentsPage() {
                 fullWidth
                 className="shadow-[0_0_20px_rgba(0,255,163,0.2)] hover:scale-[1.02]"
               >
-                Authorize Node Initialization
+                Authorize Agent Initialization
               </Button>
               <Button
                 onClick={() => setShowNewAgentModal(false)}

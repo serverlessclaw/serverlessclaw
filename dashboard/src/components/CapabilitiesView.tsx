@@ -76,8 +76,8 @@ export default function CapabilitiesView({ agents: initialAgents, allTools, mcpS
     if (isEnabled) {
       setConfirmModal({
         isOpen: true,
-        title: 'Neural Decoupling',
-        message: `Are you sure you want to remove '${toolName}' from ${agent.name}? This will immediately revoke its access to this capability.`,
+        title: 'Remove Tool',
+        message: `Are you sure you want to remove '${toolName}' from ${agent.name}? This will immediately revoke its access to this tool.`,
         variant: 'warning',
         onConfirm: () => executeToggle(agentId, toolName, true)
       });
@@ -107,7 +107,7 @@ export default function CapabilitiesView({ agents: initialAgents, allTools, mcpS
     formData.append('agentId', agentId);
     newTools.forEach(t => formData.append('tools', t));
 
-    console.log(`Syncing neural roster for ${agentId}...`, newTools);
+    console.log(`Syncing tools for ${agentId}...`, newTools);
 
     startTransition(async () => {
       try {
@@ -115,11 +115,11 @@ export default function CapabilitiesView({ agents: initialAgents, allTools, mcpS
         if (result?.error) {
           throw new Error(result.error);
         }
-        toast.success(`Neural roster synced for ${agentId}`);
+        toast.success(`Agent tools updated for ${agentId}`);
         router.refresh();
       } catch (error) {
         console.error('Failed to update tools:', error);
-        toast.error(`Failed to sync neural roster: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        toast.error(`Failed to update agent tools: ${error instanceof Error ? error.message : 'Unknown error'}`);
         // Revert optimistic update on failure
         setOptimisticAgents(initialAgents);
       }
@@ -130,7 +130,7 @@ export default function CapabilitiesView({ agents: initialAgents, allTools, mcpS
     setConfirmModal({
       isOpen: true,
       title: 'Bridge Deactivation',
-      message: `You are about to unregister the neural bridge '${name}'. All associated dynamic tools will be purged from the system. Proceed?`,
+      message: `You are about to unregister the skill bridge '${name}'. All associated tools will be removed from the system. Proceed?`,
       variant: 'danger',
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
@@ -139,7 +139,7 @@ export default function CapabilitiesView({ agents: initialAgents, allTools, mcpS
           if (result?.error) {
             toast.error(`Failed to deactivate bridge: ${result.error}`);
           } else {
-            toast.success(`Neural bridge '${name}' deactivated`);
+            toast.success(`Skill bridge '${name}' deactivated`);
             router.refresh();
           }
         });
@@ -164,8 +164,8 @@ export default function CapabilitiesView({ agents: initialAgents, allTools, mcpS
           <Card variant="glass" padding="lg" className="flex flex-col items-center gap-6 border-yellow-500/20 shadow-[0_0_50px_rgba(234,179,8,0.1)]">
             <Zap size={48} className="text-yellow-500 animate-pulse" />
             <div className="space-y-2 text-center">
-               <Typography variant="caption" weight="black" color="primary" className="tracking-[0.5em] block">Syncing Neural Roster...</Typography>
-              <Typography variant="mono" color="muted" className="tracking-[0.3em] block text-[8px]">Rewriting Cognitive Pathways</Typography>
+               <Typography variant="caption" weight="black" color="primary" className="tracking-[0.5em] block">Updating Agent Tools...</Typography>
+              <Typography variant="mono" color="muted" className="tracking-[0.3em] block text-[8px]">Synchronizing System Capabilities</Typography>
             </div>
           </Card>
         </div>
@@ -174,9 +174,9 @@ export default function CapabilitiesView({ agents: initialAgents, allTools, mcpS
       <div className="flex flex-col lg:flex-row gap-6 justify-between items-start lg:items-center sticky top-0 z-20 bg-black/80 backdrop-blur-xl p-4 -m-4 border-b border-white/5">
         <nav className="flex gap-1 bg-white/5 p-1 rounded-sm border border-white/5">
           {[
-            { id: 'agents', label: 'Neural Assignments', icon: Cpu },
+            { id: 'agents', label: 'Agent Assignments', icon: Cpu },
             { id: 'library', label: 'Tool Library', icon: BookOpen },
-            { id: 'mcp', label: 'Neural Bridges', icon: ExternalLink },
+            { id: 'mcp', label: 'Skill Bridges', icon: ExternalLink },
           ].map(tab => (
             <Button
               key={tab.id}
@@ -201,7 +201,7 @@ export default function CapabilitiesView({ agents: initialAgents, allTools, mcpS
           </div>
           <input
             type="text"
-            placeholder="Search neural capabilities..."
+            placeholder="Search tools & skills..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-black/60 border border-white/10 focus:border-yellow-500/40 rounded-sm py-3 pl-12 pr-4 text-[10px] outline-none transition-all placeholder:text-white/20 font-mono tracking-widest"
@@ -248,7 +248,7 @@ export default function CapabilitiesView({ agents: initialAgents, allTools, mcpS
               ))}
               {Object.keys(mcpServers).length === 0 && (
                   <Card variant="solid" padding="lg" className="col-span-full py-20 text-center border-dashed border-white/10">
-                      <Typography variant="caption" color="muted" uppercase className="tracking-[0.5em]">No active neural bridges detected.</Typography>
+                      <Typography variant="caption" color="muted" uppercase className="tracking-[0.5em]">No active skill bridges detected.</Typography>
                   </Card>
               )}
           </div>
@@ -274,7 +274,7 @@ export default function CapabilitiesView({ agents: initialAgents, allTools, mcpS
                         {agent.name}
                       </Typography>
                       <Typography variant="caption" color="muted" className="tracking-widest max-w-xl leading-relaxed block">
-                        {agent.description || 'Specialized Neural Node'}
+                        {agent.description || 'Specialized Agent'}
                       </Typography>
                     </div>
                   </div>
@@ -287,11 +287,11 @@ export default function CapabilitiesView({ agents: initialAgents, allTools, mcpS
                         className="bg-white/5 text-white/40 border-white/10 hover:text-[var(--cyber-blue)] hover:border-[var(--cyber-blue)]/50 tracking-widest px-3"
                         icon={<Settings size={12} />}
                       >
-                        <span className="text-[10px] font-bold uppercase">Configure Node</span>
+                        <span className="text-[10px] font-bold uppercase">Configure Agent</span>
                       </Button>
                     </Link>
                     <Badge variant="primary" className="bg-white/5 text-white/20 border border-white/5 tracking-widest px-4 py-2">
-                      {agent.tools.length} active chips
+                      {agent.tools.length} active tools
                     </Badge>
                   </div>
                 </div>
@@ -300,7 +300,7 @@ export default function CapabilitiesView({ agents: initialAgents, allTools, mcpS
                   <div>
                     <Typography variant="caption" weight="black" color="muted" className="tracking-[0.3em] mb-4 flex items-center gap-2">
                       <Activity size={12} className="text-yellow-500/50" /> 
-                      Active Neural Chips
+                      Active Tools & Skills
                     </Typography>
                     <div className="flex flex-wrap gap-2">
                       {agent.tools.map(toolName => {
@@ -335,7 +335,7 @@ export default function CapabilitiesView({ agents: initialAgents, allTools, mcpS
                                   : 'hover:bg-red-500/10 hover:text-red-500 opacity-40 group-hover:opacity-100'
                               }`}
                               icon={<X size={10} />}
-                              title={isUniversal ? "Universal Core Skill" : "Remove Tool"}
+                              title={isUniversal ? "Core Skill" : "Remove Tool"}
                             />
                           </div>
                         );

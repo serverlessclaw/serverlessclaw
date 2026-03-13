@@ -392,7 +392,7 @@ function ChatContent() {
     } catch (error) {
       console.error('Chat error:', error);
       if (currentSessionId === activeSessionRef.current) {
-        setMessages(prev => [...prev, { role: 'assistant', content: 'SYSTEM_ERROR: Neural path interrupted. Check logs.' }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: 'SYSTEM_ERROR: Connection interrupted. Check logs.' }]);
       }
     } finally {
       setIsLoading(false);
@@ -418,7 +418,7 @@ function ChatContent() {
             <div className="flex items-center gap-2">
               <Clock size={10} className="text-white/60" /> 
               <Typography variant="caption" weight="bold" color="muted">
-                Recent Neural Logs
+                Recent Logs
               </Typography>
             </div>
             {sessions.length > 0 && (
@@ -436,7 +436,7 @@ function ChatContent() {
           
           {sessions.length === 0 ? (
             <Card variant="solid" padding="sm" className="text-center italic text-white/20">
-              <Typography variant="caption">No active session traces found.</Typography>
+              <Typography variant="caption">No active logs found.</Typography>
             </Card>
           ) : (
             sessions.map((s) => (
@@ -488,7 +488,7 @@ function ChatContent() {
         </div>
 
         <div className="p-6 border-t border-white/5 font-mono">
-           <Typography variant="mono" color="muted">Core Interface Node: v2.6.4</Typography>
+           <Typography variant="mono" color="muted">Application Interface: v2.6.4</Typography>
         </div>
       </aside>
 
@@ -579,7 +579,7 @@ function ChatContent() {
                     System Ready // Waiting for Input
                   </Typography>
                   <Typography variant="mono" color="muted" className="mt-2 block">
-                    Input signal to initialize neural translation
+                    Initialise interaction by sending a message
                   </Typography>
               </div>
           )}
@@ -617,7 +617,7 @@ function ChatContent() {
               <Card variant="glass" padding="md" className="flex items-center gap-3">
                 <Loader2 size={16} className="animate-spin text-cyber-green" />
                 <Typography variant="caption" weight="bold" color="primary" className="animate-pulse">
-                  Processing neural path...
+                  Processing...
                 </Typography>
               </Card>
             </div>
@@ -654,7 +654,7 @@ function ChatContent() {
       <CyberConfirm 
         isOpen={showDeleteConfirm}
         title="Trace Erasure"
-        message="You are about to purge this neural path from the permanent record. This action is irreversible and will fragment the historical context."
+        message="You are about to purge this trace from the permanent record. This action is irreversible."
         variant="danger"
         confirmText="Confirm Purge"
         onConfirm={confirmDelete}

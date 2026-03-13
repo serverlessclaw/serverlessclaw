@@ -51,7 +51,7 @@ const LLMNode = ({ data }: any) => (
     <Handle type="target" position={Position.Top} className="w-2 h-2 !bg-cyber-blue border-none" />
     <div className="flex items-center mb-2">
       <MessageSquare size={14} className="text-cyber-blue mr-2" />
-      <span className="text-[10px] font-bold uppercase tracking-widest text-cyber-blue/80">{data.type === TRACE_TYPES.LLM_CALL ? 'LLM Request' : 'LLM Synthesis'}</span>
+      <span className="text-[10px] font-bold uppercase tracking-widest text-cyber-blue/80">{data.type === TRACE_TYPES.LLM_CALL ? 'Agent Request' : 'Agent Processing'}</span>
     </div>
     <div className="text-[11px] font-mono text-white/100 leading-tight line-clamp-2">
       {data.label || 'Reasoning...'}
@@ -338,7 +338,7 @@ function PathVisualizerContent({ trace }: PathVisualizerProps) {
     <div className="h-[600px] w-full bg-black/40 rounded-lg border border-white/5 relative group overflow-hidden cyber-border">
       <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
          <div className="text-[10px] text-cyber-green/60 font-mono tracking-widest uppercase bg-black/80 px-2 py-1 border border-cyber-green/30">
-           Neural_Path_Visualizer
+           Trace_Visualizer
          </div>
       </div>
       
@@ -363,7 +363,7 @@ function PathVisualizerContent({ trace }: PathVisualizerProps) {
           <header className="p-4 border-b border-white/10 flex justify-between items-center bg-black/40 shrink-0">
             <div className="flex items-center gap-2">
               <Brain size={16} className={`text-${THEME.COLORS.PRIMARY}`} />
-              <Typography variant="caption" weight="black" uppercase className="tracking-[0.2em]">Neural Inspect</Typography>
+              <Typography variant="caption" weight="black" uppercase className="tracking-[0.2em]">Step Details</Typography>
             </div>
             <Button 
               variant="ghost"
