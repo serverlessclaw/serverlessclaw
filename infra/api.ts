@@ -1,4 +1,4 @@
-import { SharedContext, getValidSecrets, AGENT_CONFIG } from './shared';
+import { SharedContext, getValidSecrets, AGENT_CONFIG, getDomainConfig } from './shared';
 
 /**
  * Initializes the main API Gateway and its routes.
@@ -9,7 +9,10 @@ import { SharedContext, getValidSecrets, AGENT_CONFIG } from './shared';
 export function createApi(ctx: SharedContext): { api: sst.aws.ApiGatewayV2 } {
   const { memoryTable, traceTable, configTable, stagingBucket, secrets, bus, deployer } = ctx;
 
-  const api = new sst.aws.ApiGatewayV2('WebhookApi');
+  const apiDomain = getDomainConfig('api');
+  const api = new sst.aws.ApiGatewayV2('WebhookApi', {
+    domain: apiDomain,
+  });
 
   const validSecrets = getValidSecrets(secrets);
 
@@ -19,7 +22,7 @@ export function createApi(ctx: SharedContext): { api: sst.aws.ApiGatewayV2 } {
     link: [memoryTable, traceTable, configTable, stagingBucket, ...validSecrets, deployer, bus],
     timeout: AGENT_CONFIG.timeout.SHORT,
     logging: {
-      retention: '30 days',
+      retention: '1 month',
     },
   });
 
@@ -28,7 +31,7 @@ export function createApi(ctx: SharedContext): { api: sst.aws.ApiGatewayV2 } {
     handler: 'core/handlers/health.handler',
     link: [memoryTable],
     logging: {
-      retention: '30 days',
+      retention: '1 month',
     },
   });
 

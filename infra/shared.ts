@@ -36,3 +36,18 @@ export const AGENT_CONFIG = {
     MAX: '900 seconds',
   },
 } as const;
+
+/**
+ * Returns the optional domain configuration for a component.
+ *
+ * @param component - The component to get the domain for ('api' | 'dashboard').
+ * @returns The domain configuration or undefined if not set.
+ */
+export function getDomainConfig(component: 'api' | 'dashboard'): string | undefined {
+  const envVar = component === 'api' ? 'CLAW_DOMAIN_API' : 'CLAW_DOMAIN_DASHBOARD';
+  const domain = process.env[envVar];
+
+  if (!domain) return undefined;
+
+  return domain;
+}
