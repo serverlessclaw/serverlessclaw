@@ -77,40 +77,50 @@ export class MCPBridge {
       string | { command: string; env?: Record<string, string> }
     >;
 
-    // 2026: Bootstrap default servers if none exists
-    if (!serversConfig || Object.keys(serversConfig).length === 0) {
-      logger.info('No MCP servers found. Bootstrapping default neural bridges.');
-      serversConfig = {
-        filesystem: {
-          command: 'npx -y @modelcontextprotocol/server-filesystem .',
-          env: {},
-        },
-        git: {
-          command: 'npx -y @modelcontextprotocol/server-git',
-          env: {},
-        },
-        'google-search': {
-          command: 'npx -y @modelcontextprotocol/server-google-search',
-          env: {},
-        },
-        puppeteer: {
-          command: 'npx -y @modelcontextprotocol/server-puppeteer',
-          env: {},
-        },
-        fetch: {
-          command: 'npx -y @modelcontextprotocol/server-fetch',
-          env: {},
-        },
-        aws: {
-          command: 'npx -y @modelcontextprotocol/server-aws',
-          env: {},
-        },
-      };
-      // Persist it for future runs/dashboard visibility
-      await AgentRegistry.saveRawConfig('mcp_servers', serversConfig);
+    const allTools: ITool[] = [];
+    let configUpdated = false;
+
+    // 2026: Ensure default servers exist individually
+    const defaultServers: Record<string, { command: string; env: Record<string, string> }> = {
+      filesystem: {
+        command: 'npx -y @modelcontextprotocol/server-filesystem .',
+        env: {},
+      },
+      git: {
+        command: 'npx -y @modelcontextprotocol/server-git',
+        env: {},
+      },
+      'google-search': {
+        command: 'npx -y @modelcontextprotocol/server-google-search',
+        env: {},
+      },
+      puppeteer: {
+        command: 'npx -y @modelcontextprotocol/server-puppeteer',
+        env: {},
+      },
+      fetch: {
+        command: 'npx -y @modelcontextprotocol/server-fetch',
+        env: {},
+      },
+      aws: {
+        command: 'npx -y @modelcontextprotocol/server-aws',
+        env: {},
+      },
+    };
+
+    if (!serversConfig) serversConfig = {};
+
+    for (const [name, defaultConfig] of Object.entries(defaultServers)) {
+      if (!serversConfig[name]) {
+        logger.info(`Bootstrapping missing default bridge: ${name}`);
+        serversConfig[name] = defaultConfig;
+        configUpdated = true;
+      }
     }
 
-    const allTools: ITool[] = [];
+    if (configUpdated) {
+      await AgentRegistry.saveRawConfig('mcp_servers', serversConfig);
+    }
 
     for (const [name, config] of Object.entries(serversConfig)) {
       const connectionString = typeof config === 'string' ? config : config.command;

@@ -34,6 +34,7 @@ vi.mock('@modelcontextprotocol/sdk/client/stdio.js', () => {
 vi.mock('./registry', () => ({
   AgentRegistry: {
     getRawConfig: vi.fn(),
+    saveRawConfig: vi.fn().mockResolvedValue(undefined),
   },
 }));
 

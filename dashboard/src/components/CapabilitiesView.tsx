@@ -40,7 +40,7 @@ interface CapabilitiesViewProps {
 export default function CapabilitiesView({ allTools, mcpServers, agents }: CapabilitiesViewProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'library' | 'analytics' | 'mcp'>('analytics');
+  const [activeTab, setActiveTab] = useState<'agents' | 'library' | 'analytics' | 'mcp'>('analytics');
   const [isPending, startTransition] = useTransition();
   const [optimisticAgents, setOptimisticAgents] = useState(agents);
   const [newBridge, setNewBridge] = useState({ name: '', command: '', env: '{}' });
@@ -72,25 +72,35 @@ export default function CapabilitiesView({ allTools, mcpServers, agents }: Capab
     tool.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleDetachTool = (agentId: string, toolName: string) => {
+  const handleToggleTool = (agentId: string, toolName: string) => {
     const agent = optimisticAgents.find(a => a.id === agentId);
     if (!agent) return;
 
-    setConfirmModal({
-      isOpen: true,
-      title: 'Neural Decoupling',
-      message: `Are you sure you want to detach '${toolName}' from ${agent.name}? This will immediately revoke its access to this capability.`,
-      variant: 'warning',
-      onConfirm: () => executeDetach(agentId, toolName)
-    });
+    const isEnabled = agent.tools.includes(toolName);
+    
+    if (isEnabled) {
+      setConfirmModal({
+        isOpen: true,
+        title: 'Neural Decoupling',
+        message: `Are you sure you want to remove '${toolName}' from ${agent.name}? This will immediately revoke its access to this capability.`,
+        variant: 'warning',
+        onConfirm: () => executeToggle(agentId, toolName, true)
+      });
+      return;
+    }
+
+    executeToggle(agentId, toolName, false);
   };
 
-  const executeDetach = (agentId: string, toolName: string) => {
+  const executeToggle = (agentId: string, toolName: string, isRemoval: boolean) => {
     setConfirmModal(prev => ({ ...prev, isOpen: false }));
+    
     const agent = optimisticAgents.find(a => a.id === agentId);
     if (!agent) return;
 
-    const newTools = agent.tools.filter(t => t !== toolName);
+    const newTools = isRemoval 
+      ? agent.tools.filter(t => t !== toolName)
+      : [...agent.tools, toolName];
     
     // 1. Optimistic Update
     setOptimisticAgents(prev => prev.map(a => 
@@ -108,14 +118,19 @@ export default function CapabilitiesView({ allTools, mcpServers, agents }: Capab
         if (result?.error) {
           throw new Error(result.error);
         }
-        toast.success(`Tool detached from ${agentId}`);
+        toast.success(`Neural roster synced for ${agentId}`);
         router.refresh();
       } catch (error) {
-        console.error('Failed to detach tool:', error);
-        toast.error('Failed to sync neural roster.');
+        console.error('Failed to update tools:', error);
+        toast.error(`Failed to sync neural roster: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        // Revert optimistic update on failure
         setOptimisticAgents(agents);
       }
     });
+  };
+
+  const handleDetachTool = (agentId: string, toolName: string) => {
+    handleToggleTool(agentId, toolName);
   };
 
   const handleRemoveMCPServer = (name: string) => {
@@ -158,6 +173,8 @@ export default function CapabilitiesView({ allTools, mcpServers, agents }: Capab
     });
   };
 
+  const universalSkills = ['discoverSkills', 'installSkill'];
+
   return (
     <div className={`space-y-10 transition-all duration-500 ${isPending ? 'opacity-80' : 'opacity-100'}`}>
       <CyberConfirm 
@@ -181,9 +198,10 @@ export default function CapabilitiesView({ allTools, mcpServers, agents }: Capab
       )}
 
       {/* Navigation & Search */}
-      <div className="flex flex-col lg:flex-row gap-6 justify-between items-start lg:items-center sticky top-0 z-20 bg-black/80 backdrop-blur-xl p-4 -m-4 border-b border-white/5">
+      <div className="flex flex-col lg:flex-row gap-6 justify-between items-start lg:items-center sticky top-0 z-20 bg-black/90 backdrop-blur-xl p-6 border-b border-white/5 -mx-6 lg:-mx-10 -mt-10 mb-10">
         <nav className="flex gap-1 bg-white/5 p-1 rounded-sm border border-white/5">
           {[
+            { id: 'agents', label: 'Neural Assignments', icon: Cpu },
             { id: 'analytics', label: 'Neural Analytics', icon: Activity },
             { id: 'library', label: 'Capability Library', icon: BookOpen },
             { id: 'mcp', label: 'Skill Bridges', icon: ExternalLink },
@@ -385,6 +403,132 @@ export default function CapabilitiesView({ allTools, mcpServers, agents }: Capab
                 </table>
               </Card>
             </div>
+          </div>
+        </section>
+      )}
+
+      {activeTab === 'agents' && (
+        <section className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="grid grid-cols-1 gap-8">
+            {optimisticAgents.map(agent => (
+              <Card variant="glass" padding="lg" key={agent.id} className="cyber-border border-yellow-500/10 hover:border-yellow-500/20 transition-all relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-2 opacity-5">
+                   <Zap size={120} className="text-yellow-500" />
+                </div>
+                
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 relative">
+                  <div className="flex items-center gap-5">
+                    <div className="w-14 h-14 rounded-sm bg-yellow-500/10 flex items-center justify-center text-yellow-500 border border-yellow-500/20 shadow-[0_0_30px_rgba(234,179,8,0.1)]">
+                       {agent.id === 'main' ? <Zap size={28} /> : agent.id === 'coder' ? <Cpu size={28} /> : <Settings size={28} />}
+                    </div>
+                    <div>
+                      <Typography variant="h3" weight="black" color="primary" className="tracking-[0.3em] mb-1">
+                        {agent.name}
+                      </Typography>
+                      <Typography variant="caption" color="muted" className="uppercase tracking-widest max-w-xl block leading-relaxed">
+                        Neural Core Node: Configured for specialized operations.
+                      </Typography>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-3">
+                    <Badge variant="outline" className="px-4 py-2 border-white/5 text-white/20 font-bold uppercase tracking-widest">
+                      {agent.tools.length} ACTIVE_CHIPS
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="space-y-6 relative border-t border-white/5 pt-8">
+                  <div>
+                    <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40 mb-4 flex items-center gap-2">
+                      <Activity size={12} className="text-yellow-500/50" /> 
+                      Active_Neural_Chips
+                    </h5>
+                    <div className="flex flex-wrap gap-2">
+                      {agent.tools.map(toolName => {
+                        const tool = allTools.find(t => t.name === toolName);
+                        const isUniversal = universalSkills.includes(toolName);
+                        const isExternal = tool?.isExternal;
+
+                        return (
+                          <div 
+                            key={toolName} 
+                            className={`group flex items-center gap-3 pl-4 pr-2 py-2 border transition-all ${
+                              isUniversal 
+                                ? 'bg-blue-500/5 border-blue-500/20 text-blue-400' 
+                                : isExternal
+                                ? 'bg-purple-500/5 border-purple-500/20 text-purple-400'
+                                : 'bg-yellow-500/5 border-yellow-500/20 text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.02)]'
+                            }`}
+                          >
+                            <span className="text-[10px] font-black uppercase tracking-widest">
+                              {toolName}
+                              {isUniversal && <span className="ml-2 text-[8px] opacity-40">(CORE)</span>}
+                              {isExternal && <span className="ml-2 text-[8px] opacity-40">(EXTERNAL)</span>}
+                            </span>
+                            <button
+                              onClick={() => handleToggleTool(agent.id, toolName)}
+                              disabled={isPending || isUniversal}
+                              className={`p-1 transition-all rounded-sm ${
+                                isUniversal 
+                                  ? 'opacity-20 cursor-not-allowed' 
+                                  : 'hover:bg-red-500 hover:text-white opacity-40 group-hover:opacity-100'
+                              }`}
+                              title={isUniversal ? "Universal Core Skill" : "Remove Tool"}
+                            >
+                              <X size={10} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="pt-6 border-t border-white/5">
+                    <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40 mb-4 flex items-center gap-2">
+                      <Plus size={12} className="text-yellow-500/50" /> 
+                      Available_Insertions
+                    </h5>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {allTools
+                        .filter(t => !agent.tools.includes(t.name))
+                        .filter(t => !searchQuery || t.name.toLowerCase().includes(searchQuery.toLowerCase()) || t.description.toLowerCase().includes(searchQuery.toLowerCase()))
+                        .map(tool => (
+                          <button
+                            key={tool.name}
+                            onClick={() => handleToggleTool(agent.id, tool.name)}
+                            disabled={isPending}
+                            className={`flex flex-col items-start text-left p-3 rounded-sm border transition-all group/item ${
+                              tool.isExternal 
+                                ? 'border-purple-500/10 bg-purple-500/[0.02] hover:bg-purple-500/10 hover:border-purple-500/30'
+                                : 'border-white/5 bg-white/[0.02] hover:bg-yellow-500/10 hover:border-yellow-500/30'
+                            }`}
+                          >
+                            <div className="flex justify-between items-center w-full mb-1">
+                              <span className={`text-[10px] font-black uppercase tracking-widest transition-colors ${
+                                tool.isExternal ? 'text-purple-400/60 group-hover/item:text-purple-400' : 'text-white/60 group-hover/item:text-yellow-500'
+                              }`}>
+                                {tool.name}
+                              </span>
+                              <Plus size={10} className={`${tool.isExternal ? 'text-purple-400/20 group-hover/item:text-purple-400' : 'text-white/20 group-hover/item:text-yellow-500'}`} />
+                            </div>
+                            <p className="text-[8px] text-white/20 leading-tight line-clamp-2 uppercase tracking-tighter">
+                              {tool.description}
+                            </p>
+                          </button>
+                        ))
+                      }
+                      {allTools.filter(t => !agent.tools.includes(t.name)).length === 0 && (
+                        <div className="col-span-full py-4 text-center border border-dashed border-white/5 rounded-sm">
+                           <span className="text-[8px] text-white/10 uppercase tracking-[0.3em]">Full_Potential_Reached</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
           </div>
         </section>
       )}
