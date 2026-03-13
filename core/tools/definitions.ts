@@ -251,6 +251,16 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
   },
+  checkConfig: {
+    name: 'checkConfig',
+    description: 'Retrieves the current runtime configuration, including active LLM provider and model.',
+    parameters: {
+      type: 'object',
+      properties: {},
+      required: [],
+      additionalProperties: false,
+    },
+  },
   fileRead: {
     name: 'fileRead',
     description: 'Reads the content of a file from the codebase.',

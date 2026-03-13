@@ -31,6 +31,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       'discoverSkills',
       'installSkill',
       'reportGap',
+      'checkConfig',
     ],
     connectionProfile: ['bus', 'memory', 'config', 'trace'],
   },

@@ -250,6 +250,18 @@ export class Agent {
     `;
     contextPrompt += `\n\n${memoryIndex}`;
 
+    // 5. Inject System Identity (Self-Awareness)
+    const identityBlock = `
+      [SYSTEM_IDENTITY]:
+      - AGENT_NAME: ${this.config?.name || 'SuperClaw'}
+      - AGENT_ID: ${this.config?.id || 'main'}
+      - ACTIVE_PROVIDER: ${activeProvider || 'openai (default)'}
+      - ACTIVE_MODEL: ${activeModel || 'gpt-4o-mini (default)'}
+      - REASONING_PROFILE: ${activeProfile}
+      - RECURSION_DEPTH: ${depth}
+    `;
+    contextPrompt += `\n\n${identityBlock}`;
+
     const messages: Message[] = [
       { role: MessageRole.SYSTEM, content: contextPrompt },
       ...history,
