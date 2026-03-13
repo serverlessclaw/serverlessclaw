@@ -365,10 +365,8 @@ export const registerMCPServer = {
 
     try {
       const { AgentRegistry } = await import('../lib/registry');
-      const mcpServers = ((await AgentRegistry.getRawConfig('mcp_servers')) as Record<
-        string,
-        unknown
-      >) || {};
+      const mcpServers =
+        ((await AgentRegistry.getRawConfig('mcp_servers')) as Record<string, unknown>) || {};
 
       mcpServers[serverName] = env ? { command, env } : command;
 
