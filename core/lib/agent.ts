@@ -338,6 +338,7 @@ export class Agent {
                 args.userId = args.userId || baseUserId;
                 args.mainConversationId = mainConversationId;
                 args.agentName = this.config?.name || 'SuperClaw';
+                args.task = userText;
               }
               await tracer.addStep({
                 type: 'tool_call',

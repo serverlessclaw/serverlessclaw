@@ -96,11 +96,51 @@ export const handler = async (
         'SuperClaw'
       );
     }
+
+    // WAKE UP INITIATOR
+    const initiatorId = (event.detail as any).initiatorId;
+    const originalTask = (event.detail as any).task;
+    if (initiatorId && originalTask) {
+      const initiatorAgentId = initiatorId.endsWith('.agent')
+        ? initiatorId.replace('.agent', '')
+        : initiatorId;
+
+      const { EventBridgeClient, PutEventsCommand } = await import('@aws-sdk/client-eventbridge');
+      const eb = new EventBridgeClient({});
+
+      await eb.send(
+        new PutEventsCommand({
+          Entries: [
+            {
+              Source: 'events.handler',
+              DetailType: EventType.CONTINUATION_TASK,
+              Detail: JSON.stringify({
+                userId,
+                agentId: initiatorAgentId,
+                task: `BUILD_FAILURE_NOTIFICATION: The deployment for your task "${originalTask}" failed. 
+                Error details:
+                ---
+                ${errorLogs}
+                ---
+                Please decide on the next course of action.`,
+                traceId: incomingTraceId,
+                initiatorId,
+                sessionId,
+              }),
+              EventBusName: typedResource.AgentBus.name,
+            },
+          ],
+        })
+      );
+    }
   } else if (event['detail-type'] === EventType.SYSTEM_BUILD_SUCCESS) {
-    const { userId, buildId, sessionId } = event.detail as {
+    const { userId, buildId, sessionId, initiatorId, task, traceId } = event.detail as {
       userId: string;
       buildId?: string;
       sessionId?: string;
+      initiatorId?: string;
+      task?: string;
+      traceId?: string;
     };
 
     const message = `✅ **DEPLOYMENT SUCCESSFUL**
@@ -110,6 +150,36 @@ The system has successfully evolved and all planned gaps have been marked as DON
 I am ready for further tasks or instructions.`;
 
     await sendOutboundMessage('events.handler', userId, message, undefined, sessionId, 'SuperClaw');
+
+    // WAKE UP INITIATOR
+    if (initiatorId && task) {
+      const initiatorAgentId = initiatorId.endsWith('.agent')
+        ? initiatorId.replace('.agent', '')
+        : initiatorId;
+
+      const { EventBridgeClient, PutEventsCommand } = await import('@aws-sdk/client-eventbridge');
+      const eb = new EventBridgeClient({});
+
+      await eb.send(
+        new PutEventsCommand({
+          Entries: [
+            {
+              Source: 'events.handler',
+              DetailType: EventType.CONTINUATION_TASK,
+              Detail: JSON.stringify({
+                userId,
+                agentId: initiatorAgentId,
+                task: `BUILD_SUCCESS_NOTIFICATION: The deployment for your task "${task}" was successful (Build: ${buildId}). Please perform any post-deployment configuration or verification steps.`,
+                traceId,
+                initiatorId,
+                sessionId,
+              }),
+              EventBusName: typedResource.AgentBus.name,
+            },
+          ],
+        })
+      );
+    }
   } else if (event['detail-type'] === EventType.CONTINUATION_TASK) {
     const { userId, agentId, task, traceId, sessionId } = event.detail as {
       userId: string;

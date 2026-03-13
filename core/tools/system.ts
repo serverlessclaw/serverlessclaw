@@ -36,6 +36,14 @@ export const triggerDeployment = {
     const typedResource = Resource as unknown as ToolsResource;
 
     try {
+      const { reason, userId, traceId, initiatorId, sessionId, task } = args as {
+        reason: string;
+        userId: string;
+        traceId?: string;
+        initiatorId?: string;
+        sessionId?: string;
+        task?: string;
+      };
       const count = await getDeployCountToday();
 
       const { Item: configItem } = await db.send(
@@ -79,6 +87,9 @@ export const triggerDeployment = {
               timestamp: Date.now(),
               initiatorUserId: userId,
               traceId: traceId,
+              initiatorId: initiatorId,
+              sessionId: sessionId,
+              task: task,
             },
           })
         );

@@ -73,6 +73,9 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
     const gapsMeta = gapsItems?.[0];
 
     const userId = buildMeta?.initiatorUserId;
+    const initiatorId = buildMeta?.initiatorId;
+    const sessionId = buildMeta?.sessionId;
+    const originalTask = buildMeta?.task;
     const breakingTraceId = buildMeta?.traceId;
     const gapIds: string[] = gapsMeta?.content ? JSON.parse(gapsMeta.content) : [];
 
@@ -138,7 +141,15 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
             {
               Source: 'build.monitor',
               DetailType: EventType.SYSTEM_BUILD_SUCCESS,
-              Detail: JSON.stringify({ userId, buildId, projectName }),
+              Detail: JSON.stringify({
+                userId,
+                buildId,
+                projectName,
+                initiatorId,
+                sessionId,
+                task: originalTask,
+                traceId: breakingTraceId,
+              }),
               EventBusName: typedResource.AgentBus.name,
             },
           ],
@@ -237,6 +248,9 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
                 errorLogs: errorLogs.substring(Math.max(0, errorLogs.length - 3000)),
                 gapIds,
                 breakingTraceId,
+                initiatorId,
+                sessionId,
+                task: originalTask,
               }),
               EventBusName: typedResource.AgentBus.name,
             },
