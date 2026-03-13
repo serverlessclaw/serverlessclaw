@@ -31,6 +31,39 @@ async function getMCPServers() {
   }
 }
 
+async function getAllTools(usage: Record<string, { count: number; lastUsed: number }>) {
+  try {
+    const { MCPBridge } = await import('@claw/core/lib/mcp');
+    
+    // 1. Local tools
+    const localTools = Object.values(tools).map(t => ({
+      name: t.name,
+      description: t.description,
+      usage: usage[t.name] || { count: 0, lastUsed: 0 },
+      isExternal: false
+    }));
+
+    // 2. MCP tools
+    const externalTools = await MCPBridge.getAllExternalTools();
+    const mcpTools = externalTools.map(t => ({
+      name: t.name,
+      description: t.description,
+      usage: usage[t.name] || { count: 0, lastUsed: 0 },
+      isExternal: true
+    }));
+
+    return [...localTools, ...mcpTools];
+  } catch (e) {
+    console.error('Error fetching all tools:', e);
+    return Object.values(tools).map(t => ({
+      name: t.name,
+      description: t.description,
+      usage: usage[t.name] || { count: 0, lastUsed: 0 },
+      isExternal: false
+    }));
+  }
+}
+
 async function getToolUsage() {
   try {
     const { AgentRegistry } = await import('@claw/core/lib/registry');
@@ -45,11 +78,7 @@ export default async function CapabilitiesPage() {
   const agents = await getAgentConfigs();
   const usage = await getToolUsage();
   const mcpServers = await getMCPServers();
-  const allTools = Object.values(tools).map(t => ({
-    name: t.name,
-    description: t.description,
-    usage: usage[t.name] || { count: 0, lastUsed: 0 }
-  }));
+  const allTools = await getAllTools(usage);
 
   return (
     <main className="flex-1 overflow-y-auto p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-yellow-500/5 via-transparent to-transparent">

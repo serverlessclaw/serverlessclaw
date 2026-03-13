@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 interface Tool {
   name: string;
   description: string;
+  isExternal?: boolean;
   usage?: {
     count: number;
     lastUsed: number;
@@ -287,18 +288,23 @@ export default function CapabilitiesView({ agents: initialAgents, allTools, mcpS
                       {agent.tools.map(toolName => {
                         const tool = allTools.find(t => t.name === toolName);
                         const isUniversal = universalSkills.includes(toolName);
+                        const isExternal = tool?.isExternal;
+
                         return (
                           <div 
                             key={toolName} 
                             className={`group flex items-center gap-3 pl-4 pr-2 py-2 border transition-all ${
                               isUniversal 
                                 ? 'bg-blue-500/5 border-blue-500/20 text-blue-400' 
+                                : isExternal
+                                ? 'bg-purple-500/5 border-purple-500/20 text-purple-400'
                                 : 'bg-yellow-500/5 border-yellow-500/20 text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.02)]'
                             }`}
                           >
                             <span className="text-[10px] font-black uppercase tracking-widest">
                               {toolName}
                               {isUniversal && <span className="ml-2 text-[8px] opacity-40">(CORE)</span>}
+                              {isExternal && <span className="ml-2 text-[8px] opacity-40">(EXTERNAL)</span>}
                             </span>
                             <button
                               onClick={() => handleToggleTool(agent.id, toolName)}
@@ -333,13 +339,19 @@ export default function CapabilitiesView({ agents: initialAgents, allTools, mcpS
                             key={tool.name}
                             onClick={() => handleToggleTool(agent.id, tool.name)}
                             disabled={isPending}
-                            className="flex flex-col items-start text-left p-3 rounded-sm border border-white/5 bg-white/[0.02] hover:bg-yellow-500/10 hover:border-yellow-500/30 transition-all group/item"
+                            className={`flex flex-col items-start text-left p-3 rounded-sm border transition-all group/item ${
+                              tool.isExternal 
+                                ? 'border-purple-500/10 bg-purple-500/[0.02] hover:bg-purple-500/10 hover:border-purple-500/30'
+                                : 'border-white/5 bg-white/[0.02] hover:bg-yellow-500/10 hover:border-yellow-500/30'
+                            }`}
                           >
                             <div className="flex justify-between items-center w-full mb-1">
-                              <span className="text-[10px] font-black uppercase tracking-widest text-white/60 group-hover/item:text-yellow-500">
+                              <span className={`text-[10px] font-black uppercase tracking-widest transition-colors ${
+                                tool.isExternal ? 'text-purple-400/60 group-hover/item:text-purple-400' : 'text-white/60 group-hover/item:text-yellow-500'
+                              }`}>
                                 {tool.name}
                               </span>
-                              <Plus size={10} className="text-white/20 group-hover/item:text-yellow-500" />
+                              <Plus size={10} className={`${tool.isExternal ? 'text-purple-400/20 group-hover/item:text-purple-400' : 'text-white/20 group-hover/item:text-yellow-500'}`} />
                             </div>
                             <p className="text-[8px] text-white/20 leading-tight line-clamp-2 uppercase tracking-tighter">
                               {tool.description}
@@ -365,12 +377,15 @@ export default function CapabilitiesView({ agents: initialAgents, allTools, mcpS
         <section className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredTools.map(tool => (
-                <div key={tool.name} className="glass-card p-6 border-white/5 flex flex-col justify-between hover:border-yellow-500/20 transition-all">
+                <div key={tool.name} className={`glass-card p-6 border-white/5 flex flex-col justify-between hover:border-yellow-500/20 transition-all ${tool.isExternal ? 'border-purple-500/10' : ''}`}>
                   <div className="space-y-4">
                     <div className="flex justify-between items-start">
-                      <span className="text-[12px] font-black text-yellow-500 uppercase tracking-widest">
-                        {tool.name}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className={`text-[12px] font-black uppercase tracking-widest ${tool.isExternal ? 'text-purple-400' : 'text-yellow-500'}`}>
+                          {tool.name}
+                        </span>
+                        {tool.isExternal && <span className="text-[7px] font-bold text-purple-400/40 uppercase tracking-tighter">EXTERNAL_MCP_BRIDGE</span>}
+                      </div>
                       {tool.usage && tool.usage.count > 0 && (
                         <div className="flex items-center gap-1 text-white/20">
                           <Activity size={10} />
