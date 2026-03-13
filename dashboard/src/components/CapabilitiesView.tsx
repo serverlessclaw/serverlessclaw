@@ -3,7 +3,7 @@
 import React, { useState, useTransition, useEffect } from 'react';
 import { 
   Wrench, Search, Trash2, X, Plus, 
-  Activity, BookOpen, ExternalLink, Globe, Loader2, Zap, Cpu 
+  Activity, BookOpen, ExternalLink, Globe, Loader2, Zap, Cpu, Settings 
 } from 'lucide-react';
 import { updateAgentTools, deleteMCPServer, registerMCPServer } from '../app/capabilities/actions';
 import { toast } from 'sonner';
