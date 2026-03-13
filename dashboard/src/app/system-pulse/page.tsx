@@ -40,7 +40,7 @@ export default function SystemPulsePage() {
       <div className="flex-1 min-h-0 glass-card border-white/5 overflow-hidden flex flex-col">
         <div className="px-6 py-3 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
           <div className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-[0.2em] text-white/70">
-            <Zap size={14} className={`text-${THEME.COLORS.INTEL}`} /> Neural Architecture Map
+            <Zap size={14} className={`text-${THEME.COLORS.INTEL}`} /> Architecture Map
           </div>
           <div className="flex items-center gap-4 text-[9px] text-white/40">
             <div className="flex items-center gap-1.5">

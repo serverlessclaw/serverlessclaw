@@ -164,14 +164,14 @@ export function FlowContent() {
         else if (node.id === 'memory') { xPos = 700; yPos = 700; }
         else if (node.id === 'codebuild') { xPos = 400; yPos = 700; }
         else if (node.id === 'storage') { xPos = 100; yPos = 700; }
-        else if (node.id === 'config') { xPos = 900; yPos = 700; }
-        else if (node.id === 'trace') { xPos = -200; yPos = 700; }
+        else if (node.id === 'config') { xPos = 1050; yPos = 700; }
+        else if (node.id === 'trace') { xPos = -250; yPos = 700; }
         else if (node.id === 'api') { xPos = 100; yPos = -100; }
         else if (node.id === 'dashboard') { xPos = -200; yPos = -100; }
         else if (node.id === 'main') { xPos = 400; yPos = -100; }
-        else if (node.id === 'monitor') { xPos = -200; yPos = 400; }
+        else if (node.id === 'monitor') { xPos = -400; yPos = 400; }
         else if (node.type === 'agent') {
-            const agentsList = topology.nodes.filter(n => n.type === 'agent' && n.id !== 'main');
+            const agentsList = topology.nodes.filter(n => n.type === 'agent' && n.id !== 'main' && n.id !== 'monitor');
             const agentIndex = agentsList.indexOf(node);
             const totalAgents = agentsList.length;
             const startX = 400 - ((totalAgents - 1) * 125);
@@ -219,8 +219,10 @@ export function FlowContent() {
           target: edge.target,
           animated: true,
           label: edge.label || (isMainOrch ? 'ORCHESTRATE' : (isBusSignal ? 'SIGNAL' : undefined)),
-          labelStyle: { fill: strokeColor, fontSize: isMainOrch ? 10 : 8, fontWeight: 'bold' },
-          labelBgStyle: { fill: 'transparent', strokeWidth: 0 },
+          labelStyle: { fill: strokeColor, fontSize: isMainOrch ? 10 : 8, fontWeight: 'black', fontFamily: 'monospace' },
+          labelBgStyle: { fill: '#050505', fillOpacity: 0.8 },
+          labelBgPadding: [4, 2],
+          labelBgBorderRadius: 2,
           style: { 
             stroke: strokeColor, 
             strokeWidth: isMainOrch ? 2 : (isBusSignal ? 1.5 : 1),
