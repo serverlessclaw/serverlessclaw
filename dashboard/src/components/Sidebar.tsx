@@ -133,7 +133,7 @@ export default function Sidebar() {
             if (item.type === 'header') {
               return (
                 <div key={idx} className={`px-3 mb-2 ${idx === 0 ? 'mt-0' : 'mt-8'}`}>
-                  <Typography variant="mono" weight="black" color="muted" className="text-[10px] uppercase tracking-[0.3em] opacity-40">
+                  <Typography variant="mono" weight="black" color="muted" className="text-[10px] uppercase tracking-[0.3em] opacity-70">
                     {item.label}
                   </Typography>
                 </div>

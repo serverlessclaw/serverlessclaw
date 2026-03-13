@@ -10,6 +10,7 @@ import { TRACE_TYPES } from '@/lib/constants';
 import { TraceSource } from '@claw/core/lib/types/index';
 import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
+import Badge from '@/components/ui/Badge';
 import { THEME } from '@/lib/theme';
 
 export const dynamic = 'force-dynamic';
