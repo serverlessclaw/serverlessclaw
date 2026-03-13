@@ -1,6 +1,6 @@
 {
   "name": "serverlessclaw",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "A serverless implementation of OpenClaw AI agent using SST, AWS Lambda, and DynamoDB.",
   "main": "index.js",
   "scripts": {
