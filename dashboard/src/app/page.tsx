@@ -39,6 +39,7 @@ function ChatContent() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeSessionRef = useRef<string>('');
   const skipNextHistoryFetch = useRef<boolean>(false);
+  const hasProcessedPrompt = useRef<boolean>(false);
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -58,6 +59,15 @@ function ChatContent() {
     } else if (!sessionFromUrl && activeSessionId) {
       // If URL is cleared externally, clear local state
       setActiveSessionId('');
+    }
+
+    const prompt = searchParams.get('prompt');
+    if (prompt && !hasProcessedPrompt.current) {
+      hasProcessedPrompt.current = true;
+      // Small delay to ensure state and handlers are ready
+      setTimeout(() => {
+        sendMessage(prompt);
+      }, 500);
     }
   }, [searchParams]);
 
@@ -357,20 +367,23 @@ function ChatContent() {
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
-
-    const userMsg = input.trim();
+    sendMessage(input.trim());
     setInput('');
+  };
+
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || isLoading) return;
+
+    const userMsg = text.trim();
     setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
     setIsLoading(true);
 
     // Ensure we have a session ID
-    let currentSessionId = activeSessionId;
+    let currentSessionId = activeSessionRef.current;
     if (!currentSessionId) {
        currentSessionId = `session_${Date.now()}`;
        skipNextHistoryFetch.current = true;
        setActiveSessionId(currentSessionId);
-       // We don't wait for router.push here as it's async, 
-       // but we've updated the state which will trigger the URL sync effect
     }
 
     try {
@@ -382,12 +395,10 @@ function ChatContent() {
 
       const data = await response.json();
       
-      // If the session ID hasn't changed while we were waiting (e.g. user switched chats)
       if (currentSessionId === activeSessionRef.current) {
         setMessages(prev => [...prev, { role: 'assistant', content: data.reply, agentName: data.agentName }]);
       }
       
-      // Refresh session list to show updated last message/title
       fetchSessions();
     } catch (error) {
       console.error('Chat error:', error);
