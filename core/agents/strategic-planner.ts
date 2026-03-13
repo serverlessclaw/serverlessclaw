@@ -234,37 +234,41 @@ export const handler = async (event: PlannerEvent, _context: Context): Promise<P
     config.name
   );
 
-  // 2. Emit Task Completion for Universal Coordination
-  try {
-    const { EventBridgeClient, PutEventsCommand } = await import('@aws-sdk/client-eventbridge');
-    const eb = new EventBridgeClient({});
-    await eb.send(
-      new PutEventsCommand({
-        Entries: [
-          {
-            Source: 'planner.agent',
-            DetailType: EventType.TASK_COMPLETED,
-            Detail: JSON.stringify({
-              userId: contextUserId,
-              agentId: AgentType.STRATEGIC_PLANNER,
-              task: isScheduledReview ? 'Scheduled Review' : details,
-              response: result,
-              traceId,
-              initiatorId: payload.initiatorId,
-              depth: payload.depth,
-              sessionId,
-            }),
-            EventBusName: typedResource.AgentBus.name,
-          },
-        ],
-      })
-    );
-  } catch (e) {
-    logger.error('Failed to emit TASK_COMPLETED from Planner:', e);
+  const isFailure = result.startsWith('I encountered an internal error');
+
+  // 2. Emit Task Result for Universal Coordination
+  if (!result.startsWith('TASK_PAUSED')) {
+    try {
+      const { EventBridgeClient, PutEventsCommand } = await import('@aws-sdk/client-eventbridge');
+      const eb = new EventBridgeClient({});
+      await eb.send(
+        new PutEventsCommand({
+          Entries: [
+            {
+              Source: 'planner.agent',
+              DetailType: isFailure ? EventType.TASK_FAILED : EventType.TASK_COMPLETED,
+              Detail: JSON.stringify({
+                userId: contextUserId,
+                agentId: AgentType.STRATEGIC_PLANNER,
+                task: isScheduledReview ? 'Scheduled Review' : details,
+                [isFailure ? 'error' : 'response']: result,
+                traceId,
+                initiatorId: payload.initiatorId,
+                depth: payload.depth,
+                sessionId,
+              }),
+              EventBusName: typedResource.AgentBus.name,
+            },
+          ],
+        })
+      );
+    } catch (e) {
+      logger.error('Failed to emit result from Planner:', e);
+    }
   }
 
   // 4. Record evolution attempt in history for cooldown logic
-  if (details) {
+  if (details && !isFailure) {
     const updatedHistory = `${details.substring(0, 50)} | ${evolutionHistory || ''}`.substring(
       0,
       500

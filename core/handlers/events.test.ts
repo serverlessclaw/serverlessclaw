@@ -48,6 +48,21 @@ vi.mock('../tools', () => ({
   getAgentTools: vi.fn().mockResolvedValue([]),
 }));
 
+const { mockSend } = vi.hoisted(() => ({
+  mockSend: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock('@aws-sdk/client-eventbridge', () => {
+  return {
+    EventBridgeClient: vi.fn().mockImplementation(function () {
+      return { send: mockSend };
+    }),
+    PutEventsCommand: vi.fn().mockImplementation(function (args) {
+      return { input: args };
+    }),
+  };
+});
+
 vi.mock('../lib/outbound', () => ({
   sendOutboundMessage: vi.fn().mockResolvedValue({}),
 }));
@@ -127,6 +142,187 @@ describe('EventHandler', () => {
 
       const { sendOutboundMessage } = await import('../lib/outbound');
       expect(sendOutboundMessage).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('SYSTEM_BUILD_FAILED', () => {
+    it('should triage build failure and wake up initiator', async () => {
+      const event = {
+        'detail-type': EventType.SYSTEM_BUILD_FAILED,
+        detail: {
+          userId: 'user-1',
+          buildId: 'build-123',
+          errorLogs: 'Syntax error at line 10',
+          traceId: 'trace-1',
+          initiatorId: 'planner.agent',
+          task: 'Improve system',
+        },
+      };
+
+      mockProcess.mockResolvedValue('Investigating failure...');
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await handler(event as any, {} as any);
+
+      // Verify Agent.process was called
+      expect(mockProcess).toHaveBeenCalledWith(
+        'user-1',
+        expect.stringContaining('CRITICAL: Deployment build-123 failed'),
+        expect.objectContaining({ traceId: 'trace-1' })
+      );
+
+      // Verify initiator wakeup
+      const { EventBridgeClient } = await import('@aws-sdk/client-eventbridge');
+      const eb = new EventBridgeClient({});
+      expect(eb.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: expect.objectContaining({
+            Entries: [
+              expect.objectContaining({
+                DetailType: EventType.CONTINUATION_TASK,
+                Detail: expect.stringContaining('BUILD_FAILURE_NOTIFICATION'),
+              }),
+            ],
+          }),
+        })
+      );
+    });
+  });
+
+  describe('SYSTEM_BUILD_SUCCESS', () => {
+    it('should notify success and wake up initiator', async () => {
+      const event = {
+        'detail-type': EventType.SYSTEM_BUILD_SUCCESS,
+        detail: {
+          userId: 'user-1',
+          buildId: 'build-123',
+          initiatorId: 'planner',
+          task: 'Improve system',
+          traceId: 'trace-1',
+        },
+      };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await handler(event as any, {} as any);
+
+      const { sendOutboundMessage } = await import('../lib/outbound');
+      expect(sendOutboundMessage).toHaveBeenCalledWith(
+        'events.handler',
+        'user-1',
+        expect.stringContaining('DEPLOYMENT SUCCESSFUL'),
+        undefined,
+        undefined,
+        'SuperClaw'
+      );
+
+      // Verify initiator wakeup
+      const { EventBridgeClient } = await import('@aws-sdk/client-eventbridge');
+      const eb = new EventBridgeClient({});
+      expect(eb.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: expect.objectContaining({
+            Entries: [
+              expect.objectContaining({
+                DetailType: EventType.CONTINUATION_TASK,
+                Detail: expect.stringContaining('BUILD_SUCCESS_NOTIFICATION'),
+              }),
+            ],
+          }),
+        })
+      );
+    });
+  });
+
+  describe('TASK_COMPLETED / TASK_FAILED', () => {
+    it('should relay completion to initiator', async () => {
+      const event = {
+        'detail-type': EventType.TASK_COMPLETED,
+        detail: {
+          userId: 'user-1',
+          agentId: 'coder',
+          task: 'Fix bug',
+          response: 'Bug fixed!',
+          initiatorId: 'main',
+          depth: 1,
+        },
+      };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await handler(event as any, {} as any);
+
+      const { EventBridgeClient } = await import('@aws-sdk/client-eventbridge');
+      const eb = new EventBridgeClient({});
+      expect(eb.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: expect.objectContaining({
+            Entries: [
+              expect.objectContaining({
+                DetailType: EventType.CONTINUATION_TASK,
+                Detail: expect.stringContaining('DELEGATED_TASK_RESULT'),
+              }),
+            ],
+          }),
+        })
+      );
+    });
+
+    it('should relay failure to initiator', async () => {
+      const event = {
+        'detail-type': EventType.TASK_FAILED,
+        detail: {
+          userId: 'user-1',
+          agentId: 'coder',
+          task: 'Fix bug',
+          error: 'Timeout',
+          initiatorId: 'main',
+          depth: 1,
+        },
+      };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await handler(event as any, {} as any);
+
+      const { EventBridgeClient } = await import('@aws-sdk/client-eventbridge');
+      const eb = new EventBridgeClient({});
+      expect(eb.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: expect.objectContaining({
+            Entries: [
+              expect.objectContaining({
+                DetailType: EventType.CONTINUATION_TASK,
+                Detail: expect.stringContaining('DELEGATED_TASK_FAILURE'),
+              }),
+            ],
+          }),
+        })
+      );
+    });
+
+    it('should abort if recursion limit reached', async () => {
+      const event = {
+        'detail-type': EventType.TASK_COMPLETED,
+        detail: {
+          userId: 'user-1',
+          agentId: 'coder',
+          task: 'Fix bug',
+          response: 'Done',
+          initiatorId: 'main',
+          depth: 100, // Very high
+        },
+      };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await handler(event as any, {} as any);
+
+      const { sendOutboundMessage } = await import('../lib/outbound');
+      expect(sendOutboundMessage).toHaveBeenCalledWith(
+        'events.handler',
+        'user-1',
+        expect.stringContaining('Recursion Limit Exceeded'),
+        undefined,
+        undefined,
+        'SuperClaw'
+      );
     });
   });
 });

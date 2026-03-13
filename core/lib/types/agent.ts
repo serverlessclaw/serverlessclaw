@@ -17,6 +17,46 @@ export interface TaskEvent extends BaseEvent {
   isContinuation?: boolean;
   metadata?: Record<string, unknown>;
 }
+
+/**
+ * System build event (success or failure).
+ */
+export interface BuildEvent extends BaseEvent {
+  buildId: string;
+  projectName: string;
+  task?: string;
+  errorLogs?: string;
+  gapIds?: string[];
+}
+
+/**
+ * Task completion event.
+ */
+export interface CompletionEvent extends BaseEvent {
+  agentId: string;
+  task: string;
+  response: string;
+}
+
+/**
+ * Task failure event.
+ */
+export interface FailureEvent extends BaseEvent {
+  agentId: string;
+  task: string;
+  error: string;
+}
+
+/**
+ * System health report event.
+ */
+export interface HealthReportEvent extends BaseEvent {
+  component: string;
+  issue: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  context?: Record<string, unknown>;
+}
+
 /**
  * Categorization of agents to guide orchestration.
  */

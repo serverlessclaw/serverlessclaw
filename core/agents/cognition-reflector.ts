@@ -172,10 +172,14 @@ export const handler = async (
   const response = await reflector.process(userId, reflectionPrompt, {
     profile: ReasoningProfile.FAST,
     isIsolated: true,
+    traceId,
+    sessionId,
     source: TraceSource.SYSTEM,
   });
 
-  if (response) {
+  const isFailure = response.startsWith('I encountered an internal error');
+
+  if (response && !isFailure) {
     try {
       // Clean potential markdown formatting from JSON
       const jsonContent = response.replace(/```json\n?|\n?```/g, '').trim();
@@ -263,32 +267,34 @@ export const handler = async (
   }
 
   // Universal Coordination: Notify Initiator (if any)
-  try {
-    const { EventBridgeClient, PutEventsCommand } = await import('@aws-sdk/client-eventbridge');
-    const eb = new EventBridgeClient({});
-    await eb.send(
-      new PutEventsCommand({
-        Entries: [
-          {
-            Source: 'reflector.agent',
-            DetailType: EventType.TASK_COMPLETED,
-            Detail: JSON.stringify({
-              userId,
-              agentId: AgentType.COGNITION_REFLECTOR,
-              task: 'Session Reflection',
-              response: response || 'No insights extracted.',
-              traceId,
-              initiatorId: payload.initiatorId,
-              depth: payload.depth,
-              sessionId,
-            }),
-            EventBusName: typedResource.AgentBus.name,
-          },
-        ],
-      })
-    );
-  } catch (e) {
-    logger.error('Failed to emit TASK_COMPLETED from Reflector:', e);
+  if (!response.startsWith('TASK_PAUSED')) {
+    try {
+      const { EventBridgeClient, PutEventsCommand } = await import('@aws-sdk/client-eventbridge');
+      const eb = new EventBridgeClient({});
+      await eb.send(
+        new PutEventsCommand({
+          Entries: [
+            {
+              Source: 'reflector.agent',
+              DetailType: isFailure ? EventType.TASK_FAILED : EventType.TASK_COMPLETED,
+              Detail: JSON.stringify({
+                userId,
+                agentId: AgentType.COGNITION_REFLECTOR,
+                task: payload.task || 'Session Reflection',
+                [isFailure ? 'error' : 'response']: response || 'No insights extracted.',
+                traceId,
+                initiatorId: payload.initiatorId,
+                depth: payload.depth,
+                sessionId,
+              }),
+              EventBusName: typedResource.AgentBus.name,
+            },
+          ],
+        })
+      );
+    } catch (e) {
+      logger.error('Failed to emit result from Reflector:', e);
+    }
   }
 
   return response;

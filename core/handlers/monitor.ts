@@ -76,7 +76,7 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
     const initiatorId = buildMeta?.initiatorId;
     const sessionId = buildMeta?.sessionId;
     const originalTask = buildMeta?.task;
-    const breakingTraceId = buildMeta?.traceId;
+    const traceId = buildMeta?.traceId;
     const gapIds: string[] = gapsMeta?.content ? JSON.parse(gapsMeta.content) : [];
 
     if (!userId) {
@@ -148,7 +148,7 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
                 initiatorId,
                 sessionId,
                 task: originalTask,
-                traceId: breakingTraceId,
+                traceId: traceId,
               }),
               EventBusName: typedResource.AgentBus.name,
             },
@@ -198,7 +198,7 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
           issue: 'Failed to update circuit breaker counter in ConfigTable',
           severity: 'medium',
           userId: userId || 'SYSTEM',
-          traceId: breakingTraceId,
+          traceId: traceId,
           context: { error: String(e), buildId },
         });
       }
@@ -247,7 +247,7 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
                 projectName,
                 errorLogs: errorLogs.substring(Math.max(0, errorLogs.length - 3000)),
                 gapIds,
-                breakingTraceId,
+                traceId,
                 initiatorId,
                 sessionId,
                 task: originalTask,

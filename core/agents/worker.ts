@@ -47,6 +47,7 @@ export const handler = async (
     EventType.CODER_TASK_COMPLETED,
     EventType.MONITOR_BUILD,
     EventType.RECOVERY_LOG,
+    EventType.SYSTEM_HEALTH_REPORT,
   ];
 
   if (!detailType || (systemEvents as string[]).includes(detailType)) {
@@ -95,18 +96,19 @@ export const handler = async (
 
   // 4. Notification (Optional: Worker could be silent or chatty)
   if (!response.startsWith('TASK_PAUSED')) {
+    const isFailure = response.startsWith('I encountered an internal error');
     try {
       await eventbridge.send(
         new PutEventsCommand({
           Entries: [
             {
               Source: `${agentId}.agent`,
-              DetailType: EventType.TASK_COMPLETED,
+              DetailType: isFailure ? EventType.TASK_FAILED : EventType.TASK_COMPLETED,
               Detail: JSON.stringify({
                 userId,
                 agentId,
                 task,
-                response,
+                [isFailure ? 'error' : 'response']: response,
                 traceId,
                 sessionId,
                 initiatorId: event.detail.initiatorId,
@@ -118,7 +120,7 @@ export const handler = async (
         })
       );
     } catch (e) {
-      logger.error('Failed to emit TASK_COMPLETED:', e);
+      logger.error(`Failed to emit ${isFailure ? 'TASK_FAILED' : 'TASK_COMPLETED'}:`, e);
     }
   }
 

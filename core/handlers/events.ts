@@ -2,16 +2,66 @@ import { DynamoMemory } from '../lib/memory';
 import { Agent } from '../lib/agent';
 import { ProviderManager } from '../lib/providers/index';
 import { getAgentTools } from '../tools/index';
-import { EventType, TraceSource, SSTResource } from '../lib/types/index';
+import {
+  EventType,
+  TraceSource,
+  SSTResource,
+  BuildEvent,
+  TaskEvent,
+  CompletionEvent,
+  FailureEvent,
+  HealthReportEvent,
+} from '../lib/types/index';
 import { sendOutboundMessage } from '../lib/outbound';
 import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
 import { Resource } from 'sst';
 import { SYSTEM, DYNAMO_KEYS } from '../lib/constants';
+import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 
 const memory = new DynamoMemory();
 const provider = new ProviderManager();
 const typedResource = Resource as unknown as SSTResource;
+const eb = new EventBridgeClient({});
+
+/**
+ * Wake up the initiator agent when a delegated task or system event completes.
+ */
+async function wakeupInitiator(
+  userId: string,
+  initiatorId: string | undefined,
+  task: string,
+  traceId: string | undefined,
+  sessionId: string | undefined,
+  depth: number = 0
+) {
+  if (!initiatorId || !task) return;
+
+  const initiatorAgentId = initiatorId.endsWith('.agent')
+    ? initiatorId.replace('.agent', '')
+    : initiatorId;
+
+  await eb.send(
+    new PutEventsCommand({
+      Entries: [
+        {
+          Source: 'events.handler',
+          DetailType: EventType.CONTINUATION_TASK,
+          Detail: JSON.stringify({
+            userId,
+            agentId: initiatorAgentId,
+            task,
+            traceId,
+            initiatorId,
+            sessionId,
+            depth: depth + 1,
+          }),
+          EventBusName: typedResource.AgentBus.name,
+        },
+      ],
+    })
+  );
+}
 
 /**
  * Handles system-level events such as build successes or failures.
@@ -35,26 +85,19 @@ export const handler = async (
       userId,
       buildId,
       errorLogs,
-      traceId: incomingTraceId,
-      breakingTraceId,
+      traceId,
       gapIds,
       sessionId,
-    } = event.detail as {
-      userId: string;
-      buildId?: string;
-      errorLogs?: string;
-      traceId?: string;
-      breakingTraceId?: string;
-      gapIds?: string[];
-      sessionId?: string;
-    };
+      initiatorId,
+      task: originalTask,
+    } = event.detail as unknown as BuildEvent;
 
     const gapsContext =
       gapIds && gapIds.length > 0
         ? `This deployment was addressing the following gaps: ${gapIds.join(', ')}.`
         : '';
-    const traceContext = breakingTraceId
-      ? `Refer to the previous reasoning trace for context: ${breakingTraceId}`
+    const traceContext = traceId
+      ? `Refer to the previous reasoning trace for context: ${traceId}`
       : '';
 
     const task = `CRITICAL: Deployment ${buildId} failed. 
@@ -80,7 +123,7 @@ export const handler = async (
     const agent = new Agent(memory, provider, agentTools, config.systemPrompt, config);
     const responseText = await agent.process(userId, `SYSTEM_NOTIFICATION: ${task}`, {
       context,
-      traceId: incomingTraceId,
+      traceId,
       sessionId,
       source: TraceSource.SYSTEM,
     });
@@ -98,50 +141,23 @@ export const handler = async (
     }
 
     // WAKE UP INITIATOR
-    const initiatorId = (event.detail as any).initiatorId;
-    const originalTask = (event.detail as any).task;
     if (initiatorId && originalTask) {
-      const initiatorAgentId = initiatorId.endsWith('.agent')
-        ? initiatorId.replace('.agent', '')
-        : initiatorId;
-
-      const { EventBridgeClient, PutEventsCommand } = await import('@aws-sdk/client-eventbridge');
-      const eb = new EventBridgeClient({});
-
-      await eb.send(
-        new PutEventsCommand({
-          Entries: [
-            {
-              Source: 'events.handler',
-              DetailType: EventType.CONTINUATION_TASK,
-              Detail: JSON.stringify({
-                userId,
-                agentId: initiatorAgentId,
-                task: `BUILD_FAILURE_NOTIFICATION: The deployment for your task "${originalTask}" failed. 
-                Error details:
-                ---
-                ${errorLogs}
-                ---
-                Please decide on the next course of action.`,
-                traceId: incomingTraceId,
-                initiatorId,
-                sessionId,
-              }),
-              EventBusName: typedResource.AgentBus.name,
-            },
-          ],
-        })
+      await wakeupInitiator(
+        userId,
+        initiatorId,
+        `BUILD_FAILURE_NOTIFICATION: The deployment for your task "${originalTask}" failed. 
+        Error details:
+        ---
+        ${errorLogs}
+        ---
+        Please decide on the next course of action.`,
+        traceId,
+        sessionId
       );
     }
   } else if (event['detail-type'] === EventType.SYSTEM_BUILD_SUCCESS) {
-    const { userId, buildId, sessionId, initiatorId, task, traceId } = event.detail as {
-      userId: string;
-      buildId?: string;
-      sessionId?: string;
-      initiatorId?: string;
-      task?: string;
-      traceId?: string;
-    };
+    const { userId, buildId, sessionId, initiatorId, task, traceId } =
+      event.detail as unknown as BuildEvent;
 
     const message = `✅ **DEPLOYMENT SUCCESSFUL**
 Build ID: ${buildId}
@@ -153,41 +169,17 @@ I am ready for further tasks or instructions.`;
 
     // WAKE UP INITIATOR
     if (initiatorId && task) {
-      const initiatorAgentId = initiatorId.endsWith('.agent')
-        ? initiatorId.replace('.agent', '')
-        : initiatorId;
-
-      const { EventBridgeClient, PutEventsCommand } = await import('@aws-sdk/client-eventbridge');
-      const eb = new EventBridgeClient({});
-
-      await eb.send(
-        new PutEventsCommand({
-          Entries: [
-            {
-              Source: 'events.handler',
-              DetailType: EventType.CONTINUATION_TASK,
-              Detail: JSON.stringify({
-                userId,
-                agentId: initiatorAgentId,
-                task: `BUILD_SUCCESS_NOTIFICATION: The deployment for your task "${task}" was successful (Build: ${buildId}). Please perform any post-deployment configuration or verification steps.`,
-                traceId,
-                initiatorId,
-                sessionId,
-              }),
-              EventBusName: typedResource.AgentBus.name,
-            },
-          ],
-        })
+      await wakeupInitiator(
+        userId,
+        initiatorId,
+        `BUILD_SUCCESS_NOTIFICATION: The deployment for your task "${task}" was successful (Build: ${buildId}). Please perform any post-deployment configuration or verification steps.`,
+        traceId,
+        sessionId
       );
     }
   } else if (event['detail-type'] === EventType.CONTINUATION_TASK) {
-    const { userId, agentId, task, traceId, sessionId } = event.detail as {
-      userId: string;
-      agentId?: string;
-      task: string;
-      traceId: string;
-      sessionId?: string;
-    };
+    const { userId, agentId, task, traceId, sessionId, isContinuation, depth, initiatorId } =
+      event.detail as unknown as TaskEvent & { agentId?: string };
 
     const targetAgentId = agentId || 'main';
     logger.info(`Handling continuation task for agent ${targetAgentId}, user:`, userId, {
@@ -208,9 +200,11 @@ I am ready for further tasks or instructions.`;
     // Resume with isContinuation = true
     const responseText = await agent.process(userId, task, {
       context,
-      isContinuation: true,
+      isContinuation: isContinuation !== false, // Default to true for CONTINUATION_TASK
       traceId,
       sessionId,
+      depth,
+      initiatorId,
       source: TraceSource.SYSTEM,
     });
 
@@ -233,15 +227,7 @@ I am ready for further tasks or instructions.`;
       userId,
       traceId,
       sessionId,
-    } = event.detail as {
-      component: string;
-      issue: string;
-      severity: string;
-      context?: Record<string, unknown>;
-      userId: string;
-      traceId?: string;
-      sessionId?: string;
-    };
+    } = event.detail as unknown as HealthReportEvent;
 
     const triageTask = `SYSTEM HEALTH ALERT: A component has reported an internal issue.
     
@@ -281,22 +267,21 @@ I am ready for further tasks or instructions.`;
         'SuperClaw'
       );
     }
-  } else if (event['detail-type'] === EventType.TASK_COMPLETED) {
-    const { userId, agentId, task, response, traceId, initiatorId, depth, sessionId } =
-      event.detail as {
-        userId: string;
-        agentId: string;
-        task: string;
-        response: string;
-        traceId: string;
-        initiatorId?: string;
-        depth?: number;
-        sessionId?: string;
-      };
+  } else if (
+    event['detail-type'] === EventType.TASK_COMPLETED ||
+    event['detail-type'] === EventType.TASK_FAILED
+  ) {
+    const isFailure = event['detail-type'] === EventType.TASK_FAILED;
+    const { userId, agentId, task, traceId, initiatorId, depth, sessionId } =
+      event.detail as unknown as CompletionEvent & FailureEvent;
+
+    const response = isFailure
+      ? (event.detail as unknown as FailureEvent).error
+      : (event.detail as unknown as CompletionEvent).response;
 
     const currentDepth = depth || 1;
     logger.info(
-      `Relaying completion from ${agentId} to Initiator: ${initiatorId || 'Orchestrator'} (Depth: ${currentDepth}, Session: ${sessionId})`
+      `Relaying ${isFailure ? 'failure' : 'completion'} from ${agentId} to Initiator: ${initiatorId || 'Orchestrator'} (Depth: ${currentDepth}, Session: ${sessionId})`
     );
 
     // 1. Loop Protection
@@ -329,38 +314,20 @@ I am ready for further tasks or instructions.`;
 
     // 2. Dynamic Routing
     // If the initiator is not the main agent, we route back to that specific agent
-    const initiatorAgentId =
-      initiatorId && initiatorId.endsWith('.agent')
-        ? initiatorId.replace('.agent', '')
-        : initiatorId || 'main';
+    const resultPrefix = isFailure ? 'DELEGATED_TASK_FAILURE' : 'DELEGATED_TASK_RESULT';
 
-    const { EventBridgeClient, PutEventsCommand } = await import('@aws-sdk/client-eventbridge');
-    const eb = new EventBridgeClient({});
-
-    await eb.send(
-      new PutEventsCommand({
-        Entries: [
-          {
-            Source: 'events.handler',
-            DetailType: EventType.CONTINUATION_TASK,
-            Detail: JSON.stringify({
-              userId,
-              agentId: initiatorAgentId,
-              task: `DELEGATED_TASK_RESULT: Agent '${agentId}' has completed the task: "${task}". 
-              Result:
-              ---
-              ${response}
-              ---
-              Please continue your logic based on this result.`,
-              traceId,
-              initiatorId,
-              depth: currentDepth,
-              sessionId,
-            }),
-            EventBusName: typedResource.AgentBus.name,
-          },
-        ],
-      })
+    await wakeupInitiator(
+      userId,
+      initiatorId || 'main',
+      `${resultPrefix}: Agent '${agentId}' has ${isFailure ? 'failed' : 'completed'} the task: "${task}". 
+      ${isFailure ? 'Error' : 'Result'}:
+      ---
+      ${response}
+      ---
+      Please continue your logic based on this result.`,
+      traceId,
+      sessionId,
+      currentDepth
     );
   }
 };

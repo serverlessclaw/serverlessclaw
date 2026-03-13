@@ -103,11 +103,14 @@ export const handler = async (event: CoderEvent, context: Context): Promise<stri
     await sendOutboundMessage('coder.agent', userId, response, [userId], sessionId, config.name);
   }
 
+  const isFailure = response.startsWith('I encountered an internal error');
+
   // 4. Mark gaps as DONE if successful or map them to a build
   const isSuccess =
-    response.includes('Successfully staged') ||
-    response.includes('Neural Core Synthesis') ||
-    response.includes('greeting');
+    !isFailure &&
+    (response.includes('Successfully staged') ||
+      response.includes('Neural Core Synthesis') ||
+      response.includes('greeting'));
 
   if (isSuccess && metadata?.gapIds && metadata.gapIds.length > 0) {
     // Check if a deployment was triggered
@@ -136,33 +139,35 @@ export const handler = async (event: CoderEvent, context: Context): Promise<stri
       for (const gapId of metadata.gapIds) {
         await memory.updateGapStatus(gapId, GapStatus.DEPLOYED);
       }
+    }
+  }
 
-      // Notify Resumption Loop (Universal Coordination)
-      try {
-        await eventbridge.send(
-          new PutEventsCommand({
-            Entries: [
-              {
-                Source: 'coder.agent',
-                DetailType: EventType.TASK_COMPLETED,
-                Detail: JSON.stringify({
-                  userId,
-                  agentId: AgentType.CODER,
-                  task,
-                  response,
-                  traceId,
-                  initiatorId: payload.initiatorId,
-                  depth: payload.depth,
-                  sessionId,
-                }),
-                EventBusName: typedResource.AgentBus.name,
-              },
-            ],
-          })
-        );
-      } catch (e) {
-        logger.error('Failed to emit TASK_COMPLETED from Coder:', e);
-      }
+  // 5. Notify Resumption Loop (Universal Coordination)
+  if (!response.startsWith('TASK_PAUSED')) {
+    try {
+      await eventbridge.send(
+        new PutEventsCommand({
+          Entries: [
+            {
+              Source: 'coder.agent',
+              DetailType: isFailure ? EventType.TASK_FAILED : EventType.TASK_COMPLETED,
+              Detail: JSON.stringify({
+                userId,
+                agentId: AgentType.CODER,
+                task,
+                [isFailure ? 'error' : 'response']: response,
+                traceId,
+                initiatorId: payload.initiatorId,
+                depth: payload.depth,
+                sessionId,
+              }),
+              EventBusName: typedResource.AgentBus.name,
+            },
+          ],
+        })
+      );
+    } catch (e) {
+      logger.error('Failed to emit result from Coder:', e);
     }
   }
 
