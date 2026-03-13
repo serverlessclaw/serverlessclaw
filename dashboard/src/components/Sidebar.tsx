@@ -131,30 +131,29 @@ export default function Sidebar() {
           </div>
         </div>
 
-        <nav className="flex-1 text-sm overflow-y-auto pr-2 custom-scrollbar mt-4">
+        <nav className="flex-1 text-sm overflow-y-auto pr-2 custom-scrollbar mt-2">
           {navItems.map((item, idx) => {
             if (item.type === 'header') {
               return (
-                <div key={idx} className={`px-3 mb-2 ${idx === 0 ? 'mt-0' : 'mt-8'}`}>
+                <div key={idx} className={`px-3 mb-1 ${idx === 0 ? 'mt-0' : 'mt-4'}`}>
                   <Typography variant="mono" weight="black" color="muted" className="text-[10px] uppercase tracking-[0.3em] opacity-70">
                     {item.label}
                   </Typography>
                 </div>
               );
             }
-// ... rest of map code unchanged ...
 
             const isActive = item.activePaths 
               ? item.activePaths.some(p => p === pathname || (p !== ROUTES.HOME && pathname?.startsWith(p)))
               : pathname === item.href;
-            
+
             const Icon = item.icon;
 
             return (
               <Link 
                 key={idx}
                 href={item.href!} 
-                className={`flex items-center justify-between gap-3 px-3 py-2 rounded-sm transition-all group mb-1 ${
+                className={`flex items-center justify-between gap-3 px-3 py-1.5 rounded-sm transition-all group mb-0.5 ${
                   isActive 
                     ? `bg-${THEME.COLORS.PRIMARY}/10 text-${THEME.COLORS.PRIMARY} border-l-2 border-${THEME.COLORS.PRIMARY} shadow-[inset_0_0_10px_rgba(0,255,163,0.05)]` 
                     : 'text-white/60 hover:bg-white/5 hover:text-white'
