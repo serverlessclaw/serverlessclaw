@@ -57,13 +57,9 @@ export default function Sidebar() {
     { label: UI_STRINGS.INFRA_HEADER, type: 'header' },
     { href: ROUTES.SYSTEM_PULSE, label: UI_STRINGS.SYSTEM_PULSE, icon: Share2 },
     { href: ROUTES.LOCKS, label: UI_STRINGS.SESSION_TRAFFIC, icon: Lock },
-    
-    { label: UI_STRINGS.CONFIGURATION_HEADER, type: 'header' },
-    { href: ROUTES.SETTINGS, label: UI_STRINGS.CONFIG, icon: Settings },
-    
-    { label: UI_STRINGS.OBSERVABILITY_HEADER, type: 'header' },
     { href: ROUTES.SECURITY, label: UI_STRINGS.SECURITY_MANIFEST, icon: ShieldCheck },
     { href: ROUTES.RESILIENCE, label: UI_STRINGS.SELF_HEALING, icon: Zap },
+    { href: ROUTES.SETTINGS, label: UI_STRINGS.CONFIG, icon: Settings },
   ];
 
   return (

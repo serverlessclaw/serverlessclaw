@@ -47,8 +47,6 @@ export const UI_STRINGS = {
   INTELLIGENCE_HEADER: 'Intelligence',
   EVOLUTION_HEADER: 'Evolution',
   INFRA_HEADER: 'Infrastructure',
-  CONFIGURATION_HEADER: 'Configuration',
-  OBSERVABILITY_HEADER: 'Observability',
   CHAT_DIRECT: 'Direct Chat',
   TRACE_INTEL: 'Traces',
   EVOLUTION_PIPELINE: 'Pipeline',
