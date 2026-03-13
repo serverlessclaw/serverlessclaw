@@ -124,13 +124,15 @@ export class AgentRegistry {
       // Ensure universal skills are always present even in overrides
       const universalSkills = ['discoverSkills', 'installSkill'];
       config.tools = Array.from(new Set([...toolOverride, ...universalSkills]));
-    } else if (!config.tools || config.tools.length === 0) {
-      // Inject standard support profile if no tools are defined
-      config.tools = [...AgentRegistry.DEFAULT_AGENT_TOOLS];
     } else {
-      // Ensure universal skills are present even if not in the base config
+      // Ensure universal skills are present even if not in the base config or no override
       const universalSkills = ['discoverSkills', 'installSkill'];
-      config.tools = Array.from(new Set([...config.tools, ...universalSkills]));
+      config.tools = Array.from(new Set([...(config.tools || []), ...universalSkills]));
+    }
+
+    // Inject defaults if still missing tools
+    if (!config.tools || config.tools.length === 0) {
+      config.tools = [...AgentRegistry.DEFAULT_AGENT_TOOLS];
     }
 
     return config;
@@ -145,20 +147,14 @@ export class AgentRegistry {
     const ddbConfig = (await this.getRawConfig(DYNAMO_KEYS.AGENTS_CONFIG)) || {};
     const all: Record<string, IAgentConfig> = { ...this.backboneConfigs };
 
-    // Merge in DDB agents
-    for (const [id, config] of Object.entries(ddbConfig as Record<string, IAgentConfig>)) {
-      const mergedConfig = {
-        isBackbone: false, // Default for dynamic agents
-        ...all[id],
-        ...config,
-      };
+    // Merge in DDB agents and resolve ALL tool overrides
+    const agentIds = Array.from(new Set([...Object.keys(all), ...Object.keys(ddbConfig as any)]));
 
-      // Inject defaults if still missing tools after merge
-      if (!mergedConfig.tools || mergedConfig.tools.length === 0) {
-        mergedConfig.tools = [...AgentRegistry.DEFAULT_AGENT_TOOLS];
+    for (const id of agentIds) {
+      const config = await this.getAgentConfig(id);
+      if (config) {
+        all[id] = config;
       }
-
-      all[id] = mergedConfig;
     }
 
     return all;
