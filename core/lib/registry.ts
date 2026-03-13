@@ -22,6 +22,7 @@ export class AgentRegistry {
     'listAgents',
     'dispatchTask',
     'discoverSkills',
+    'installSkill',
     'fileUpload',
     'fileDelete',
     'listUploadedFiles',
@@ -31,6 +32,7 @@ export class AgentRegistry {
     'recallKnowledge',
     'listAgents',
     'discoverSkills',
+    'installSkill',
     'sendMessage',
     'checkConfig',
   ];
@@ -97,11 +99,17 @@ export class AgentRegistry {
     const isDiscoveryMode = (await this.getRawConfig('selective_discovery_mode')) === true;
     if (isDiscoveryMode && config.tools) {
       // Core system tools that should never be removed from backbone agents
-      const coreTools = ['dispatchTask', 'recallKnowledge', 'discoverSkills', 'checkConfig'];
+      const coreTools = [
+        'dispatchTask',
+        'recallKnowledge',
+        'discoverSkills',
+        'installSkill',
+        'checkConfig',
+      ];
       config.tools = config.tools.filter((t: string) => coreTools.includes(t));
 
       // Inject bootloader set if toolset becomes too empty
-      if (config.tools.length < 3) {
+      if (config.tools.length < 4) {
         config.tools = Array.from(
           new Set([...config.tools, ...AgentRegistry.DISCOVERY_BOOTLOADER_TOOLS])
         );
@@ -113,10 +121,16 @@ export class AgentRegistry {
     const toolOverride = await this.getRawConfig(`${id}_tools`);
     if (toolOverride && Array.isArray(toolOverride)) {
       logger.info(`Applying dynamic tool override for agent ${id}:`, toolOverride);
-      config.tools = toolOverride;
+      // Ensure universal skills are always present even in overrides
+      const universalSkills = ['discoverSkills', 'installSkill'];
+      config.tools = Array.from(new Set([...toolOverride, ...universalSkills]));
     } else if (!config.tools || config.tools.length === 0) {
       // Inject standard support profile if no tools are defined
       config.tools = [...AgentRegistry.DEFAULT_AGENT_TOOLS];
+    } else {
+      // Ensure universal skills are present even if not in the base config
+      const universalSkills = ['discoverSkills', 'installSkill'];
+      config.tools = Array.from(new Set([...config.tools, ...universalSkills]));
     }
 
     return config;
