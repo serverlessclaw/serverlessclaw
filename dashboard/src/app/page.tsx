@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, Suspense } from 'react';
-import { Send, User, Bot, Loader2, MessageSquare, Terminal, Plus, Clock, ChevronRight, Zap, Edit2, Check, X, Trash2, AlertTriangle } from 'lucide-react';
+import { Send, User, Bot, Loader2, MessageSquare, Terminal, Plus, Clock, ChevronRight, Zap, Edit2, Check, X, Trash2, AlertTriangle, Paperclip, File, Image as ImageIcon } from 'lucide-react';
 import { THEME } from '@/lib/theme';
 import mqtt from 'mqtt';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -14,6 +14,12 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   agentName?: string;
+  attachments?: Array<{
+    type: 'image' | 'file';
+    url?: string;
+    name?: string;
+    mimeType?: string;
+  }>;
 }
 
 interface ConversationMeta {
@@ -21,6 +27,12 @@ interface ConversationMeta {
   title: string;
   lastMessage: string;
   updatedAt: number;
+}
+
+interface AttachmentPreview {
+  file: File;
+  preview: string;
+  type: 'image' | 'file';
 }
 
 function ChatContent() {
@@ -36,13 +48,53 @@ function ChatContent() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [attachments, setAttachments] = useState<AttachmentPreview[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const activeSessionRef = useRef<string>('');
   const skipNextHistoryFetch = useRef<boolean>(false);
   const hasProcessedPrompt = useRef<boolean>(false);
 
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files);
+    handleFiles(files);
+  };
+
+  const handleFiles = async (files: File[]) => {
+    const newAttachments = await Promise.all(files.map(async (file) => {
+      const type = file.type.startsWith('image/') ? 'image' : 'file';
+      let preview = '';
+      if (type === 'image') {
+        preview = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+      }
+      return { file, preview, type };
+    }));
+    setAttachments(prev => [...prev, ...newAttachments]);
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
 
   const currentSession = sessions.find(s => s.sessionId === activeSessionId);
 
@@ -296,7 +348,8 @@ function ChatContent() {
           role: m.role === 'assistant' || m.role === 'system' ? 'assistant' : 'user',
           content: m.content,
           agentName: m.agentName || (m.role === 'assistant' || m.role === 'system' ? 'SuperClaw' : undefined),
-        })).filter((m: any) => m.content)); // Filter out tool calls for simplicity in UI
+          attachments: m.attachments,
+        })).filter((m: any) => m.content || (m.attachments && m.attachments.length > 0))); // Filter out tool calls for simplicity in UI
       }
     } catch (error) {
       console.error('Failed to fetch history:', error);
@@ -330,7 +383,8 @@ function ChatContent() {
           role: m.role === 'assistant' || m.role === 'system' ? 'assistant' : 'user',
           content: m.content,
           agentName: m.agentName || (m.role === 'assistant' || m.role === 'system' ? 'SuperClaw' : undefined),
-        })).filter((m: any) => m.content));
+          attachments: m.attachments,
+        })).filter((m: any) => m.content || (m.attachments && m.attachments.length > 0)));
       }
     } catch (e) {
       console.warn('Silent History fetch failed:', e);
@@ -344,6 +398,7 @@ function ChatContent() {
     }
     setActiveSessionId('');
     setMessages([]);
+    setAttachments([]);
     router.push('/', { scroll: false });
   };
 
@@ -366,17 +421,32 @@ function ChatContent() {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if ((!input.trim() && attachments.length === 0) || isLoading) return;
     sendMessage(input.trim());
     setInput('');
   };
 
   const sendMessage = async (text: string) => {
-    if (!text.trim() || isLoading) return;
+    if (!text.trim() && attachments.length === 0) return;
+    if (isLoading) return;
 
     const userMsg = text.trim();
-    setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+    const currentAttachments = [...attachments];
+    
+    // UI optimistic update
+    setMessages(prev => [...prev, { 
+      role: 'user', 
+      content: userMsg,
+      attachments: currentAttachments.map(a => ({
+        type: a.type,
+        name: a.file.name,
+        mimeType: a.file.type,
+        url: a.preview // Use preview URL for local display
+      }))
+    }]);
+    
     setIsLoading(true);
+    setAttachments([]); // Clear pending attachments
 
     // Ensure we have a session ID
     let currentSessionId = activeSessionRef.current;
@@ -387,10 +457,32 @@ function ChatContent() {
     }
 
     try {
+      // Prepare attachments for API (base64)
+      const apiAttachments = await Promise.all(currentAttachments.map(async (a) => {
+        const base64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const result = reader.result as string;
+            resolve(result.split(',')[1]); // Only base64 part
+          };
+          reader.readAsDataURL(a.file);
+        });
+        return {
+          type: a.type,
+          name: a.file.name,
+          mimeType: a.file.type,
+          base64
+        };
+      }));
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: userMsg, sessionId: currentSessionId }),
+        body: JSON.stringify({ 
+          text: userMsg, 
+          sessionId: currentSessionId,
+          attachments: apiAttachments
+        }),
       });
 
       const data = await response.json();
@@ -504,7 +596,22 @@ function ChatContent() {
       </aside>
 
       {/* Main Chat Area */}
-      <main className="flex-1 flex flex-col min-w-0 bg-[#0a0a0a]">
+      <main 
+        className={`flex-1 flex flex-col min-w-0 bg-[#0a0a0a] transition-colors relative ${isDragging ? 'bg-cyber-green/5' : ''}`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {isDragging && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-cyber-green/10 border-2 border-dashed border-cyber-green pointer-events-none">
+            <div className="flex flex-col items-center gap-4 bg-black/80 p-12 rounded-2xl border border-cyber-green/30 shadow-[0_0_50px_rgba(0,255,163,0.2)]">
+              <Paperclip size={64} className="text-cyber-green animate-bounce" />
+              <Typography variant="h2" weight="bold" color="primary" glow>
+                DROP FILES TO UPLOAD
+              </Typography>
+            </div>
+          </div>
+        )}
         <header className="px-6 py-4 border-b border-white/5 flex justify-between items-center shrink-0 min-h-[70px]">
           <div className="flex-1 min-w-0 mr-4">
             {activeSessionId && sessions.find(s => s.sessionId === activeSessionId) ? (
@@ -604,11 +711,34 @@ function ChatContent() {
                       {m.agentName}
                     </Typography>
                   )}
-                  <Card variant="glass" padding="sm" className={`rounded-lg ${
-                    m.role === 'user' ? 'bg-white/5 text-white/90 border border-white/10' : 'text-cyber-green/90 border-cyber-green/20 shadow-[0_0_20px_rgba(0,255,145,0.05)]'
-                  }`}>
-                    <Typography variant="body">{m.content}</Typography>
-                  </Card>
+                  <div className="flex flex-col gap-2">
+                    {m.content && (
+                      <Card variant="glass" padding="sm" className={`rounded-lg ${
+                        m.role === 'user' ? 'bg-white/5 text-white/90 border border-white/10' : 'text-cyber-green/90 border-cyber-green/20 shadow-[0_0_20px_rgba(0,255,145,0.05)]'
+                      }`}>
+                        <Typography variant="body">{m.content}</Typography>
+                      </Card>
+                    )}
+                    
+                    {m.attachments && m.attachments.length > 0 && (
+                      <div className={`flex flex-wrap gap-2 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        {m.attachments.map((a, ai) => (
+                          <div key={ai} className="relative group/att">
+                            {a.type === 'image' && a.url ? (
+                              <div className="w-32 h-32 rounded-lg overflow-hidden border border-white/10 hover:border-cyber-green/50 transition-colors">
+                                <img src={a.url} alt={a.name} className="w-full h-full object-cover" />
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-2 rounded-lg hover:border-cyber-green/50 transition-colors">
+                                <File size={16} className="text-white/40" />
+                                <Typography variant="caption" className="max-w-[120px] truncate">{a.name}</Typography>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -632,25 +762,75 @@ function ChatContent() {
         {/* Input Area */}
         <div className="p-6 border-t border-white/5 bg-black/40 shrink-0">
           <form onSubmit={handleSend} className="max-w-4xl mx-auto relative group">
-            <input 
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Enter command or query for Super Claw..."
-              className={`w-full bg-black border border-white/10 rounded-lg py-4 pl-6 pr-16 text-base outline-none focus:border-cyber-green/50 transition-all placeholder:text-white/50 ${
-                isShaking ? 'animate-shake border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : ''
-              }`}
-              disabled={isLoading}
-            />
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
-              <Button 
-                type="submit"
-                variant="primary"
-                size="sm"
-                disabled={isLoading || !input.trim()}
-                className="w-10 h-10 p-0 shadow-[0_0_15px_rgba(0,255,163,0.3)] !rounded-md"
-                icon={<Send size={18} />}
+            {/* Attachment Previews */}
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-3 mb-4 p-4 bg-white/5 rounded-lg border border-white/10 animate-in fade-in slide-in-from-bottom-2">
+                {attachments.map((a, i) => (
+                  <div key={i} className="relative group/preview">
+                    {a.type === 'image' ? (
+                      <div className="w-20 h-20 rounded-md overflow-hidden border border-cyber-green/30">
+                        <img src={a.preview} alt="preview" className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="w-20 h-20 rounded-md bg-white/5 border border-white/10 flex flex-col items-center justify-center p-2 text-center">
+                        <File size={20} className="text-white/40 mb-1" />
+                        <Typography variant="mono" className="text-[8px] truncate w-full">{a.file.name}</Typography>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(i)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover/preview:opacity-100 transition-opacity shadow-lg"
+                    >
+                      <X size={10} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="relative">
+              <input 
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Enter command or query for Super Claw..."
+                className={`w-full bg-black border border-white/10 rounded-lg py-4 pl-14 pr-16 text-base outline-none focus:border-cyber-green/50 transition-all placeholder:text-white/50 ${
+                  isShaking ? 'animate-shake border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : ''
+                }`}
+                disabled={isLoading}
               />
+              <div className="absolute left-2 top-1/2 -translate-y-1/2">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    handleFiles(files);
+                    e.target.value = '';
+                  }}
+                  className="hidden"
+                  multiple
+                />
+                <Button 
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-10 h-10 p-0 text-white/40 hover:text-cyber-green"
+                  icon={<Paperclip size={18} />}
+                />
+              </div>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
+                <Button 
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  disabled={isLoading || (!input.trim() && attachments.length === 0)}
+                  className="w-10 h-10 p-0 shadow-[0_0_15px_rgba(0,255,163,0.3)] !rounded-md"
+                  icon={<Send size={18} />}
+                />
+              </div>
             </div>
           </form>
         </div>

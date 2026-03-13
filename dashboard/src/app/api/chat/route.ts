@@ -8,17 +8,17 @@ import { revalidatePath } from 'next/cache';
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    const { text, sessionId } = await req.json();
+    const { text, sessionId, attachments } = await req.json();
     const userId = 'dashboard-user'; // Fixed ID for dashboard chat
     
     // Use a unique ID for the specific session history
     const storageId = sessionId ? `CONV#${userId}#${sessionId}` : userId;
 
-    if (!text) {
+    if (!text && (!attachments || attachments.length === 0)) {
       return NextResponse.json({ error: UI_STRINGS.MISSING_MESSAGE }, { status: HTTP_STATUS.BAD_REQUEST });
     }
 
-    console.log(`[Chat API] POST request - text: ${text.substring(0, 20)}..., sessionId: ${sessionId}`);
+    console.log(`[Chat API] POST request - text: ${text?.substring(0, 20)}..., sessionId: ${sessionId}, attachments: ${attachments?.length || 0}`);
     console.log(`[Chat API] Using storageId: ${storageId}`);
     
     const { DynamoMemory } = await import('@claw/core/lib/memory');
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const agentTools = await getAgentTools('main');
     const agent = new Agent(memory, provider, agentTools, SUPERCLAW_SYSTEM_PROMPT);
 
-    const reply = await agent.process(storageId, text, { sessionId, source: TraceSource.DASHBOARD });
+    const reply = await agent.process(storageId, text || '', { sessionId, source: TraceSource.DASHBOARD, attachments });
 
     // Update conversation metadata for the sidebar
     if (sessionId) {
