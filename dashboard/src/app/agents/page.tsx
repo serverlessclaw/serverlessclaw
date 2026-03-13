@@ -5,6 +5,7 @@ import { bot, save, plus, trash2, shield, settings2, refreshcw, cpu, chevronrigh
 import CyberSelect from '@/components/CyberSelect';
 import { THEME } from '@/lib/theme';
 import { toast } from 'sonner';
+import CyberConfirm from '@/components/CyberConfirm';
 
 interface AgentConfig {
   id: string;
@@ -45,6 +46,16 @@ export default function AgentsPage() {
     systemPrompt: '',
     enabled: true,
     isBackbone: false,
+  });
+
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    agentId: string;
+    agentName: string;
+  }>({
+    isOpen: false,
+    agentId: '',
+    agentName: '',
   });
 
   useEffect(() => {
@@ -135,10 +146,20 @@ export default function AgentsPage() {
 
   const deleteAgent = (id: string) => {
     if (agents[id].isBackbone) return;
-    if (!confirm(`Are you sure you want to decommission specialized node '${agents[id].name}'?`)) return;
+    setConfirmModal({
+      isOpen: true,
+      agentId: id,
+      agentName: agents[id].name,
+    });
+  };
+
+  const executeDeleteAgent = () => {
+    const id = confirmModal.agentId;
     const next = { ...agents };
     delete next[id];
     setAgents(next);
+    setConfirmModal({ isOpen: false, agentId: '', agentName: '' });
+    toast.success(`Agent '${confirmModal.agentName}' decommissioned`);
   };
 
   const hasChanges = JSON.stringify(agents) !== JSON.stringify(initialAgents);
@@ -154,6 +175,14 @@ export default function AgentsPage() {
 
   return (
     <main className={`flex-1 overflow-y-auto p-6 lg:p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-${THEME.COLORS.INTEL}/5 via-transparent to-transparent`}>
+      <CyberConfirm 
+        isOpen={confirmModal.isOpen}
+        title="Node Decommissioning"
+        message={`Are you sure you want to decommission specialized node '${confirmModal.agentName}'? This will remove it from the neural network.`}
+        variant="danger"
+        onConfirm={executeDeleteAgent}
+        onCancel={() => setConfirmModal({ isOpen: false, agentId: '', agentName: '' })}
+      />
       <header className="flex justify-between items-end border-b border-white/5 pb-6">
         <div>
           <h2 className="text-2xl lg:text-3xl font-bold tracking-tight glow-text uppercase">

@@ -4,6 +4,7 @@ import React, { useState, useTransition } from 'react';
 import { Wrench, Shield, Zap, Cpu, Settings, Save, Search, Trash2, X, Plus, Activity, BookOpen, ExternalLink } from 'lucide-react';
 import { updateAgentTools, deleteMCPServer } from '../app/capabilities/actions';
 import { toast } from 'sonner';
+import CyberConfirm from './CyberConfirm';
 
 interface Tool {
   name: string;
@@ -34,6 +35,20 @@ export default function CapabilitiesView({ agents: initialAgents, allTools, mcpS
   const [isPending, startTransition] = useTransition();
   const [optimisticAgents, setOptimisticAgents] = useState(initialAgents);
 
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant: 'danger' | 'warning';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    variant: 'warning'
+  });
+
   // Sync with props if they change
   React.useEffect(() => {
     setOptimisticAgents(initialAgents);
@@ -50,11 +65,27 @@ export default function CapabilitiesView({ agents: initialAgents, allTools, mcpS
 
     const isEnabled = agent.tools.includes(toolName);
     
-    if (isEnabled && !confirm(`Are you sure you want to remove '${toolName}' from ${agent.name}?`)) {
+    if (isEnabled) {
+      setConfirmModal({
+        isOpen: true,
+        title: 'Neural Decoupling',
+        message: `Are you sure you want to remove '${toolName}' from ${agent.name}? This will immediately revoke its access to this capability.`,
+        variant: 'warning',
+        onConfirm: () => executeToggle(agentId, toolName, true)
+      });
       return;
     }
 
-    const newTools = isEnabled 
+    executeToggle(agentId, toolName, false);
+  };
+
+  const executeToggle = (agentId: string, toolName: string, isRemoval: boolean) => {
+    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+    
+    const agent = optimisticAgents.find(a => a.id === agentId);
+    if (!agent) return;
+
+    const newTools = isRemoval 
       ? agent.tools.filter(t => t !== toolName)
       : [...agent.tools, toolName];
     
@@ -85,10 +116,34 @@ export default function CapabilitiesView({ agents: initialAgents, allTools, mcpS
     });
   };
 
+  const handleRemoveMCPServer = (name: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Bridge Deactivation',
+      message: `You are about to unregister the neural bridge '${name}'. All associated dynamic tools will be purged from the system. Proceed?`,
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        startTransition(async () => {
+          await deleteMCPServer(name);
+          toast.success(`Neural bridge '${name}' deactivated`);
+        });
+      }
+    });
+  };
+
   const universalSkills = ['discoverSkills', 'installSkill'];
 
   return (
     <div className={`space-y-10 transition-all duration-500 ${isPending ? 'opacity-80' : 'opacity-100'}`}>
+      <CyberConfirm 
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        variant={confirmModal.variant}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
       {isPending && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="flex flex-col items-center gap-6 glass-card p-10 border-yellow-500/20 shadow-[0_0_50px_rgba(234,179,8,0.1)]">
@@ -151,11 +206,7 @@ export default function CapabilitiesView({ agents: initialAgents, allTools, mcpS
                             </span>
                           </div>
                           <button 
-                              onClick={async () => {
-                                  if (confirm(`Deactivate and unregister ${name}?`)) {
-                                      await deleteMCPServer(name);
-                                  }
-                              }}
+                              onClick={() => handleRemoveMCPServer(name)}
                               className="p-2 rounded-sm bg-white/5 text-white/20 hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100 border border-white/10"
                           >
                               <Trash2 size={14} />
