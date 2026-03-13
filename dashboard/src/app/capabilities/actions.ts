@@ -36,7 +36,7 @@ export async function updateAgentTools(formData: FormData) {
 export async function deleteMCPServer(serverName: string) {
   try {
     const tableName = (Resource as any).ConfigTable?.name;
-    if (!tableName) throw new Error('ConfigTable name is missing');
+    if (!tableName) return { error: 'ConfigTable name is missing' };
     
     const client = new DynamoDBClient({});
     const docClient = DynamoDBDocumentClient.from(client);
@@ -58,7 +58,9 @@ export async function deleteMCPServer(serverName: string) {
     }
 
     revalidatePath('/capabilities');
+    return { success: true };
   } catch (e) {
     console.error('Error deleting MCP server:', e);
+    return { error: e instanceof Error ? e.message : 'Failed to delete MCP server' };
   }
 }

@@ -5,6 +5,7 @@ import { Wrench, Shield, Zap, Cpu, Settings, Save, Search, Trash2, X, Plus, Acti
 import { updateAgentTools, deleteMCPServer } from '../app/capabilities/actions';
 import { toast } from 'sonner';
 import CyberConfirm from './CyberConfirm';
+import { useRouter } from 'next/navigation';
 
 interface Tool {
   name: string;
@@ -30,6 +31,7 @@ interface CapabilitiesViewProps {
 }
 
 export default function CapabilitiesView({ agents: initialAgents, allTools, mcpServers }: CapabilitiesViewProps) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'agents' | 'library' | 'mcp'>('agents');
   const [isPending, startTransition] = useTransition();
@@ -107,6 +109,8 @@ export default function CapabilitiesView({ agents: initialAgents, allTools, mcpS
         if (result?.error) {
           throw new Error(result.error);
         }
+        toast.success(`Neural roster synced for ${agentId}`);
+        router.refresh();
       } catch (error) {
         console.error('Failed to update tools:', error);
         toast.error(`Failed to sync neural roster: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -125,8 +129,13 @@ export default function CapabilitiesView({ agents: initialAgents, allTools, mcpS
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         startTransition(async () => {
-          await deleteMCPServer(name);
-          toast.success(`Neural bridge '${name}' deactivated`);
+          const result = await deleteMCPServer(name);
+          if (result?.error) {
+            toast.error(`Failed to deactivate bridge: ${result.error}`);
+          } else {
+            toast.success(`Neural bridge '${name}' deactivated`);
+            router.refresh();
+          }
         });
       }
     });
