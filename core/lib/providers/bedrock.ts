@@ -247,6 +247,13 @@ export class BedrockProvider implements IProvider {
               arguments: JSON.stringify(c.toolUse!.input),
             },
           })),
+        usage: response.usage
+          ? {
+              prompt_tokens: response.usage.inputTokens || 0,
+              completion_tokens: response.usage.outputTokens || 0,
+              total_tokens: response.usage.totalTokens || 0,
+            }
+          : undefined,
       } as Message;
     }
 

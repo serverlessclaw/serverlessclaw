@@ -70,6 +70,8 @@ export const handler = async (
   // EventBridge wraps the payload in 'detail'
   const payload = event.detail || (event as unknown as ReflectorPayload);
   const { userId, conversation, traceId, sessionId } = payload;
+  // Extract base userId (remove CONV# prefix if present)
+  const baseUserId = userId.startsWith('CONV#') ? userId.split('#')[1] : userId;
 
   if (!userId || !conversation) {
     logger.warn('Reflector received incomplete payload, skipping audit.', {
@@ -134,7 +136,7 @@ export const handler = async (
     }
   }
 
-  const existingFacts = await memory.getDistilledMemory(userId);
+  const existingFacts = await memory.getDistilledMemory(baseUserId);
   const deployedGaps = await memory.getAllGaps(GapStatus.DEPLOYED);
   const activeGaps = [
     ...(await memory.getAllGaps(GapStatus.PLANNED)),
@@ -165,12 +167,23 @@ export const handler = async (
     ${deployedGapsContext}
     ${activeGapsContext}
 
-    Update the EXISTING FACTS with any new information found in the CONVERSATION or EXECUTION TRACE.
-    Identify any NEW CAPABILITY GAPS (errors in trace, missing tools, or user frustrations).
+    Analyze the CONVERSATION and EXECUTION TRACE to extract intelligence and capability gaps.
+    
+    You MUST return your response as a valid JSON object with the following schema:
+    {
+      "facts": "string (the updated complete list of all known facts about the user and project context)",
+      "lessons": [
+        { "content": "string (actionable technical lesson)", "category": "tactical_lesson", "impact": 1-10 }
+      ],
+      "gaps": [
+        { "content": "string (missing tool or architectural limitation)", "impact": 1-10, "urgency": 1-10 }
+      ],
+      "resolvedGapIds": ["string (IDs of gaps that were successfully addressed in this conversation)"]
+    }
   `;
 
   // Use 'fast' profile for cost-effective reflection
-  const response = await reflector.process(userId, reflectionPrompt, {
+  const response = await reflector.process(baseUserId, reflectionPrompt, {
     profile: ReasoningProfile.FAST,
     isIsolated: true,
     traceId,
@@ -188,15 +201,15 @@ export const handler = async (
 
       // 1. Handle Facts
       if (parsed.facts && parsed.facts !== existingFacts) {
-        await memory.updateDistilledMemory(userId, parsed.facts);
-        logger.info('Facts updated for user:', userId);
+        await memory.updateDistilledMemory(baseUserId, parsed.facts);
+        logger.info('Facts updated for user:', baseUserId);
       }
 
       // 2. Handle Lessons
       if (Array.isArray(parsed.lessons)) {
         for (const lesson of parsed.lessons) {
           if (lesson.content && lesson.content !== 'NONE') {
-            await memory.addLesson(userId, lesson.content, {
+            await memory.addLesson(baseUserId, lesson.content, {
               category: lesson.category || InsightCategory.TACTICAL_LESSON,
               confidence: lesson.confidence || 5,
               impact: lesson.impact || 5,

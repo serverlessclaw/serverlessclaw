@@ -207,6 +207,11 @@ export class OpenAIProvider implements IProvider {
         role: MessageRole.ASSISTANT,
         content,
         tool_calls: toolCalls.length > 0 ? toolCalls : undefined,
+        usage: {
+          prompt_tokens: (response as any).usage?.prompt_tokens || 0,
+          completion_tokens: (response as any).usage?.completion_tokens || 0,
+          total_tokens: (response as any).usage?.total_tokens || 0,
+        },
       } as Message;
     }
 
@@ -249,6 +254,13 @@ export class OpenAIProvider implements IProvider {
       role: MessageRole.ASSISTANT,
       content: message.content || '',
       tool_calls: message.tool_calls as Message['tool_calls'],
+      usage: response.usage
+        ? {
+            prompt_tokens: response.usage.prompt_tokens,
+            completion_tokens: response.usage.completion_tokens,
+            total_tokens: response.usage.total_tokens,
+          }
+        : undefined,
     } as Message;
   }
 

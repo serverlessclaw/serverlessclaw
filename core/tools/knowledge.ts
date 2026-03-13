@@ -471,3 +471,41 @@ export const uninstallSkill = {
     }
   },
 };
+
+/**
+ * Directly saves a new fact or user preference into the system memory.
+ */
+export const saveKnowledge = {
+  ...toolDefinitions.saveKnowledge,
+  execute: async (args: Record<string, unknown>): Promise<string> => {
+    const { content, category, userId } = args as {
+      content: string;
+      category: string;
+      userId: string;
+    };
+
+    const memory = getMemory();
+    const baseUserId = userId.startsWith('CONV#') ? userId.split('#')[1] : userId;
+
+    if (category === 'user_preference') {
+      const existing = await memory.getDistilledMemory(baseUserId);
+      const updated = existing ? `${existing}\n- ${content}` : `- ${content}`;
+      await memory.updateDistilledMemory(baseUserId, updated);
+      return `Successfully saved user preference: ${content}`;
+    }
+
+    const gapId = Date.now().toString();
+    const metadata = {
+      category: category as any,
+      confidence: 10,
+      impact: 5,
+      complexity: 1,
+      risk: 1,
+      urgency: 1,
+      priority: 5,
+    };
+
+    await memory.setGap(gapId, content, metadata);
+    return `Successfully saved knowledge as ${category}: ${content}`;
+  },
+};

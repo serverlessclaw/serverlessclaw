@@ -9,6 +9,7 @@ import {
   manageAgentTools,
   dispatchTask,
   manageGap,
+  saveKnowledge,
 } from './knowledge';
 import { GapStatus } from '../lib/types/index';
 
@@ -18,6 +19,9 @@ const ebMock = mockClient(EventBridgeClient);
 // Hoist mocks
 const mocks = vi.hoisted(() => ({
   updateGapStatus: vi.fn().mockResolvedValue(undefined),
+  getDistilledMemory: vi.fn().mockResolvedValue(''),
+  updateDistilledMemory: vi.fn().mockResolvedValue(undefined),
+  setGap: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock SST Resource
@@ -38,6 +42,9 @@ vi.mock('../lib/memory', () => ({
           { content: 'insight 1', metadata: { category: 'lesson', impact: 10, urgency: 10 } },
         ]),
       updateGapStatus: mocks.updateGapStatus,
+      getDistilledMemory: mocks.getDistilledMemory,
+      updateDistilledMemory: mocks.updateDistilledMemory,
+      setGap: mocks.setGap,
     };
   }),
 }));
@@ -140,6 +147,28 @@ describe('knowledge tools', () => {
       const result = await manageGap.execute({ gapId: 'gap-1', status: GapStatus.PLANNED });
       expect(result).toContain('Successfully updated gap gap-1 to PLANNED');
       expect(mocks.updateGapStatus).toHaveBeenCalledWith('gap-1', GapStatus.PLANNED);
+    });
+  });
+
+  describe('saveKnowledge', () => {
+    it('should save user preference to distilled memory', async () => {
+      const result = await saveKnowledge.execute({
+        userId: 'user-1',
+        content: 'likes coffee',
+        category: 'user_preference',
+      });
+      expect(result).toContain('Successfully saved user preference');
+      expect(mocks.updateDistilledMemory).toHaveBeenCalledWith('user-1', '- likes coffee');
+    });
+
+    it('should save general knowledge as a gap', async () => {
+      const result = await saveKnowledge.execute({
+        userId: 'user-1',
+        content: 'new fact',
+        category: 'system_knowledge',
+      });
+      expect(result).toContain('Successfully saved knowledge as system_knowledge');
+      expect(mocks.setGap).toHaveBeenCalled();
     });
   });
 });

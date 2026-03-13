@@ -61,6 +61,14 @@ export interface Message {
     name?: string;
     mimeType?: string;
   }>;
+  /**
+   * Optional usage statistics (tokens) for the message (usually only for ASSISTANT).
+   */
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
 }
 
 /**

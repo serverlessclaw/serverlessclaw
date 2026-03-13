@@ -311,11 +311,8 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     parameters: {
       type: 'object',
       properties: {
-        query: { type: 'string', description: 'The functionality you are looking for.' },
-        category: {
-          type: 'string',
-          description: 'Optional category filter (e.g., infra, build, knowledge).',
-        },
+        query: { type: 'string', description: 'Functional search query.' },
+        category: { type: 'string', description: 'Optional category filter like infra, build, knowledge.' },
       },
       required: ['query', 'category'],
       additionalProperties: false,
@@ -370,6 +367,23 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
       type: 'object',
       properties: {},
       required: [],
+      additionalProperties: false,
+    },
+  },
+  saveKnowledge: {
+    name: 'saveKnowledge',
+    description: 'Directly saves a new fact or user preference into the system memory.',
+    parameters: {
+      type: 'object',
+      properties: {
+        content: { type: 'string', description: 'The fact or preference to save.' },
+        category: {
+          type: 'string',
+          enum: ['user_preference', 'system_knowledge'],
+          description: 'The category of the knowledge.',
+        },
+      },
+      required: ['content', 'category'],
       additionalProperties: false,
     },
   },

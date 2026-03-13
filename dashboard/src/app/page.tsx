@@ -505,7 +505,7 @@ function ChatContent() {
 
       {/* Main Chat Area */}
       <main className="flex-1 flex flex-col min-w-0 bg-[#0a0a0a]">
-        <header className="p-6 border-b border-white/5 flex justify-between items-end shrink-0 min-h-[110px] pb-6">
+        <header className="px-6 py-4 border-b border-white/5 flex justify-between items-center shrink-0 min-h-[70px]">
           <div className="flex-1 min-w-0 mr-4">
             {activeSessionId && sessions.find(s => s.sessionId === activeSessionId) ? (
               <div className="flex items-center gap-3 group/title">
@@ -554,7 +554,6 @@ function ChatContent() {
                         icon={<Edit2 size={14} />}
                       />
                     </div>
-                    <Typography variant="body" color="muted" className="mt-1 block">Active neural path execution log.</Typography>
                   </div>
                 )}
               </div>
@@ -563,32 +562,20 @@ function ChatContent() {
                 <Typography variant="h2" weight="bold" color="white" glow className="uppercase">
                   Direct Chat
                 </Typography>
-                <Typography variant="body" color="muted" className="mt-1 block">
-                  Real-time interaction with Super Claw.
-                </Typography>
               </div>
             )}
           </div>
-          <div className="flex gap-4">
+          <div className="flex items-center gap-3">
               {isRealtimeActive && (
-                <div className="flex flex-col items-center">
-                    <Typography variant="mono" color="muted" className="text-[10px] uppercase tracking-widest opacity-40 mb-1">LINK</Typography>
-                    <Badge variant="primary" glow className="px-4 py-1 font-black text-xs">LIVE</Badge>
-                </div>
+                <Badge variant="primary" glow className="px-4 py-1 font-black text-xs">LIVE</Badge>
               )}
-              <div className="flex flex-col items-center">
-                  <Typography variant="mono" color="muted" className="text-[10px] uppercase tracking-widest opacity-40 mb-1">SESSION</Typography>
-                  <Badge variant="outline" className="px-4 py-1 font-bold text-xs border-white/10 text-white/60 uppercase">
-                      {activeSessionId ? activeSessionId.substring(0, 8).toUpperCase() : 'IDLE'}
-                  </Badge>
-              </div>
           </div>
         </header>
 
         {/* Message Area */}
         <div 
           ref={scrollRef}
-          className="flex-1 overflow-y-auto p-6 space-y-6 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/[0.02] via-transparent to-transparent custom-scrollbar"
+          className="flex-1 overflow-y-auto p-4 space-y-3 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/[0.02] via-transparent to-transparent custom-scrollbar"
         >
           {messages.length === 0 && !isLoading && (
               <div className="h-full flex flex-col items-center justify-center text-white/80">
@@ -603,8 +590,8 @@ function ChatContent() {
           )}
 
           {messages.map((m, i) => (
-            <div key={i} className={`flex gap-4 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`flex gap-4 max-w-[80%] ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+            <div key={i} className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`flex gap-3 max-w-[85%] ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                 <div className={`w-8 h-8 rounded shrink-0 flex items-center justify-center border ${
                   m.role === 'user' ? 'bg-white/5 border-white/10 text-white/100' : 'bg-cyber-green/10 border-cyber-green/30 text-cyber-green'
                 }`}>
@@ -617,7 +604,7 @@ function ChatContent() {
                       {m.agentName}
                     </Typography>
                   )}
-                  <Card variant="glass" padding="md" className={`rounded-lg ${
+                  <Card variant="glass" padding="sm" className={`rounded-lg ${
                     m.role === 'user' ? 'bg-white/5 text-white/90 border border-white/10' : 'text-cyber-green/90 border-cyber-green/20 shadow-[0_0_20px_rgba(0,255,145,0.05)]'
                   }`}>
                     <Typography variant="body">{m.content}</Typography>
@@ -628,12 +615,12 @@ function ChatContent() {
           ))}
           
           {isLoading && (
-            <div className="flex gap-4 justify-start">
+            <div className="flex gap-3 justify-start">
               <div className="w-8 h-8 rounded shrink-0 flex items-center justify-center border bg-cyber-green/10 border-cyber-green/30 text-cyber-green animate-pulse">
                   <Bot size={16} />
               </div>
-              <Card variant="glass" padding="md" className="flex items-center gap-3">
-                <Loader2 size={16} className="animate-spin text-cyber-green" />
+              <Card variant="glass" padding="sm" className="flex items-center gap-2">
+                <Loader2 size={14} className="animate-spin text-cyber-green" />
                 <Typography variant="caption" weight="bold" color="primary" className="animate-pulse">
                   Processing...
                 </Typography>

@@ -4,14 +4,11 @@ import { DynamoDBDocumentClient, ScanCommand, GetCommand } from '@aws-sdk/lib-dy
 import { Activity, ShieldCheck, Cpu, Terminal, Clock, ChevronRight, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { SSTResource } from '@claw/core/lib/types/index';
-import DeleteTraceButton from '@/components/DeleteTraceButton';
 import DeleteAllTracesButton from '@/components/DeleteAllTracesButton';
-import { TRACE_TYPES } from '@/lib/constants';
 import { TraceSource } from '@claw/core/lib/types/index';
 import Typography from '@/components/ui/Typography';
-import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
-import { THEME } from '@/lib/theme';
+import TraceIntelligenceView from '@/components/TraceIntelligenceView';
 
 export const dynamic = 'force-dynamic';
 
@@ -110,75 +107,8 @@ export default async function Dashboard() {
           </div>
         </header>
 
-        {/* Traces Grid */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Typography variant="caption" weight="bold" className="tracking-[0.2em] flex items-center gap-2">
-              <Terminal size={14} className="text-[var(--cyber-green)]" /> Recent Neural Paths
-            </Typography>
-            <Typography variant="mono" color="muted" className="hidden md:block">Last Update: {new Date().toISOString()}</Typography>
-          </div>
-          
-          <div className="grid gap-3">
-            {traces.length > 0 ? (
-              traces.map((trace: Record<string, any>) => (
-                <Link 
-                  key={trace.traceId} 
-                  href={`/trace/${trace.traceId}?t=${trace.timestamp}`}
-                  className="glass-card p-4 hover:bg-white/[0.05] transition-all cursor-pointer group cyber-border block relative overflow-hidden"
-                >
-                  <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
-                    <div className="flex items-start md:items-center gap-3 lg:gap-4">
-                      <div className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
-                        trace.status === 'completed' ? 'text-cyber-green/80 border-cyber-green/20' : 'text-amber-400/80 border-amber-400/20'
-                      }`}>
-                        {trace.status.toUpperCase()}
-                      </div>
-                      <div className="text-[10px] font-bold px-1.5 py-0.5 rounded border border-cyber-blue/20 text-cyber-blue/80 uppercase">
-                        {trace.source || 'UNKNOWN'}
-                      </div>
-                      <div className="text-sm font-medium text-white/90 truncate max-w-[200px] md:max-w-md">{trace.initialContext?.userText || 'System Task'}</div>
-                    </div>
-                    <div className="flex items-center justify-between md:justify-end gap-3 md:gap-6 text-[11px] text-white/90">
-                      <div className="flex items-center gap-2 font-mono">
-                        <Clock size={12} /> {new Date(trace.timestamp).toLocaleTimeString()}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <DeleteTraceButton traceId={trace.traceId} />
-                        <div className="group-hover:text-cyber-green transition-all transform group-hover:translate-x-1">
-                          <ChevronRight size={18} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Steps tags */}
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {trace.steps?.slice(0, 6).map((step: any, i: number) => (
-                      <span key={i} className={`text-[9px] px-2 py-0.5 rounded border font-bold tracking-tight ${
-                        step.type === TRACE_TYPES.TOOL_CALL ? 'border-cyber-blue/20 bg-cyber-blue/5 text-cyber-blue' : 
-                        step.type === TRACE_TYPES.ERROR ? 'border-red-500/20 bg-red-500/5 text-red-400' : 
-                        step.type === TRACE_TYPES.LLM_CALL ? 'border-purple-500/20 bg-purple-500/5 text-purple-400' :
-                        step.type === TRACE_TYPES.LLM_RESPONSE ? 'border-cyber-green/20 bg-cyber-green/5 text-cyber-green' :
-                        'border-white/5 bg-white/5 text-white/100'
-                      }`}>
-                        {step.type.toUpperCase()}
-                      </span>
-                    ))}
-                    {trace.steps?.length > 6 && (
-                      <span className="text-[9px] text-white/50 flex items-center">+{trace.steps.length - 6} MORE</span>
-                    )}
-                  </div>
-                </Link>
-              ))
-            ) : (
-              <div className="h-40 flex flex-col items-center justify-center text-white/50 border border-dashed border-white/10 rounded-lg bg-white/[0.02]">
-                <Terminal size={32} className="mb-3 opacity-20 animate-pulse" />
-                <p className="text-[10px] tracking-[0.2em] font-bold">NO_TRACES_FOUND // SYSTEM_IDLE</p>
-              </div>
-            )}
-          </div>
-        </section>
+        {/* Traces Observatory */}
+        <TraceIntelligenceView initialTraces={traces} />
       </main>
   );
 }

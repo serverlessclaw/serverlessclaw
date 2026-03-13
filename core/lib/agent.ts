@@ -188,8 +188,8 @@ export class Agent {
 
     // 1. Get history, distilled facts, and tactical lessons
     const history = await this.memory.getHistory(storageId);
-    const distilled = await this.memory.getDistilledMemory(userId);
-    const lessons = await this.memory.getLessons(userId);
+    const distilled = await this.memory.getDistilledMemory(baseUserId);
+    const lessons = await this.memory.getLessons(baseUserId);
 
     // 2. Check for recent Recovery Events (Dead Man's Switch)
     let recoveryContext = '';
@@ -211,10 +211,17 @@ export class Agent {
 
     // 2026 Hot-Swap Strategy: Resolve Model/Provider from DDB
     let activeModel: string | undefined = this.config?.model;
-    const activeProvider: string | undefined = this.config?.provider;
+    let activeProvider: string | undefined = this.config?.provider;
     let activeProfile = profile;
 
     try {
+      // 0. Resolve Global Overrides (Priority 1)
+      // These keys are set by the 'switchModel' tool
+      const globalProvider = (await AgentRegistry.getRawConfig('active_provider')) as string;
+      const globalModel = (await AgentRegistry.getRawConfig('active_model')) as string;
+      if (globalProvider) activeProvider = globalProvider;
+      if (globalModel) activeModel = globalModel;
+
       if (!process.env.VITEST) {
         // 1. Resolve Optimization Policy (System-wide profile override)
         const policy = await AgentRegistry.getRawConfig('optimization_policy');
@@ -225,7 +232,8 @@ export class Agent {
         }
 
         // 2. Resolve Model mapping based on (potentially overridden) profile
-        if (!activeModel) {
+        // Only apply if no global override was found
+        if (!globalModel && !activeModel) {
           const profileMap = (await AgentRegistry.getRawConfig('reasoning_profiles')) as Record<
             string,
             string
@@ -322,6 +330,8 @@ export class Agent {
           content: {
             messageCount: messages.length,
             messages: messages.map((m) => ({ role: m.role, content: m.content })),
+            model: activeModel,
+            provider: activeProvider,
           },
         });
         const aiResponse = await this.provider.call(
@@ -337,6 +347,7 @@ export class Agent {
           content: {
             content: aiResponse.content,
             tool_calls: aiResponse.tool_calls,
+            usage: aiResponse.usage,
           },
         });
 
@@ -358,6 +369,8 @@ export class Agent {
                 args.userId = args.userId || baseUserId;
                 args.mainConversationId = mainConversationId;
                 args.agentName = this.config?.name || 'SuperClaw';
+                args.activeModel = activeModel;
+                args.activeProvider = activeProvider;
                 args.task = userText;
               }
               await tracer.addStep({

@@ -196,24 +196,27 @@ export const sendMessage = {
 export const checkConfig = {
   ...toolDefinitions.checkConfig,
   execute: async (args: Record<string, unknown>): Promise<string> => {
-    const { agentName, initiatorId, traceId } = args as {
+    const { agentName, initiatorId, traceId, activeModel: injectedModel, activeProvider: injectedProvider } = args as {
       agentName: string;
       initiatorId: string;
       traceId: string;
+      activeModel?: string;
+      activeProvider?: string;
     };
 
     const { AgentRegistry } = await import('../lib/registry');
 
-    const activeProvider = await AgentRegistry.getRawConfig('active_provider');
-    const activeModel = await AgentRegistry.getRawConfig('active_model');
+    // These represent the global DDB-based overrides (from switchModel)
+    const ddbProvider = await AgentRegistry.getRawConfig('active_provider');
+    const ddbModel = await AgentRegistry.getRawConfig('active_model');
 
     return `
 [RUNTIME_CONFIG]
 AGENT_NAME: ${agentName}
 INITIATOR: ${initiatorId}
 TRACE_ID: ${traceId}
-ACTIVE_PROVIDER: ${activeProvider || 'openai (default)'}
-ACTIVE_MODEL: ${activeModel || 'gpt-4o-mini (default)'}
+ACTIVE_PROVIDER: ${injectedProvider || ddbProvider || 'openai (default)'}
+ACTIVE_MODEL: ${injectedModel || ddbModel || 'gpt-4o-mini (default)'}
     `.trim();
   },
 };

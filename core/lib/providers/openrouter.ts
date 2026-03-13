@@ -138,6 +138,13 @@ export class OpenRouterProvider implements IProvider {
       role: MessageRole.ASSISTANT,
       content: message.content || '',
       tool_calls: message.tool_calls,
+      usage: (data as any).usage
+        ? {
+            prompt_tokens: (data as any).usage.prompt_tokens || 0,
+            completion_tokens: (data as any).usage.completion_tokens || 0,
+            total_tokens: (data as any).usage.total_tokens || 0,
+          }
+        : undefined,
     } as Message;
   }
 

@@ -105,6 +105,9 @@ export const handler = async (event: PlannerEvent, _context: Context): Promise<P
     sessionId,
   } = payload;
 
+  // Extract base userId (remove CONV# prefix if present)
+  const baseUserId = contextUserId.startsWith('CONV#') ? contextUserId.split('#')[1] : contextUserId;
+
   // 1. Fetch System Context
   const { AgentRegistry } = await import('../lib/registry');
   const config = await AgentRegistry.getAgentConfig(AgentType.STRATEGIC_PLANNER);
@@ -139,7 +142,7 @@ export const handler = async (event: PlannerEvent, _context: Context): Promise<P
       const minGaps = parseInt(String(customMinGaps || '20'), 10);
 
       const lastReviewStr = await memory.getDistilledMemory(
-        `LAST#STRATEGIC_REVIEW#${contextUserId}`
+        `LAST#STRATEGIC_REVIEW#${baseUserId}`
       );
       const lastReview = lastReviewStr ? parseInt(lastReviewStr, 10) : 0;
       const now = Date.now();
@@ -197,7 +200,7 @@ export const handler = async (event: PlannerEvent, _context: Context): Promise<P
 
     // Update last review timestamp
     await memory.updateDistilledMemory(
-      `LAST#STRATEGIC_REVIEW#${contextUserId}`,
+      `LAST#STRATEGIC_REVIEW#${baseUserId}`,
       Date.now().toString()
     );
   } else {
@@ -216,7 +219,7 @@ export const handler = async (event: PlannerEvent, _context: Context): Promise<P
 
   // 2. Self-Evolution Loop Protection (Cool-down)
   // Logic: Check if we have tried to evolve a similar gap recently
-  const evolutionHistory = await memory.getDistilledMemory(`EVOLUTION#HISTORY#${contextUserId}`);
+  const evolutionHistory = await memory.getDistilledMemory(`EVOLUTION#HISTORY#${baseUserId}`);
   const isDuplicate = details && evolutionHistory?.includes(details.substring(0, 50));
   if (isDuplicate) {
     logger.warn('Evolution loop detected or cooldown active for this gap. Aborting.');
@@ -285,7 +288,7 @@ export const handler = async (event: PlannerEvent, _context: Context): Promise<P
       0,
       500
     );
-    await memory.updateDistilledMemory(`EVOLUTION#HISTORY#${contextUserId}`, updatedHistory);
+    await memory.updateDistilledMemory(`EVOLUTION#HISTORY#${baseUserId}`, updatedHistory);
   }
 
   // 5. Gap Sink: Mark gaps as PLANNED after review to prevent re-planning
