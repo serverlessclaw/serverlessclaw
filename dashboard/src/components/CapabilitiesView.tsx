@@ -318,10 +318,10 @@ export default function CapabilitiesView({ agents: initialAgents, allTools, mcpS
                               size="sm"
                               onClick={() => handleToggleTool(agent.id, toolName)}
                               disabled={isPending || isUniversal}
-                              className={`p-1 transition-all rounded-sm h-6 w-6 ${
+                              className={`p-1 transition-all rounded-sm h-6 w-6 flex items-center justify-center ${
                                 isUniversal 
                                   ? 'opacity-20 cursor-not-allowed' 
-                                  : 'hover:bg-red-500 hover:text-white opacity-40 group-hover:opacity-100'
+                                  : 'hover:bg-red-500/10 hover:text-red-500 opacity-40 group-hover:opacity-100'
                               }`}
                               icon={<X size={10} />}
                               title={isUniversal ? "Universal Core Skill" : "Remove Tool"}
