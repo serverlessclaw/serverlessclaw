@@ -61,7 +61,7 @@ describe('DynamoMemory Retention', () => {
 
     const calls = ddbMock.commandCalls(PutCommand);
     const item = calls[0].args[0].input.Item;
-    expect(item?.expiresAt).toBe(Math.floor(now / 1000) + 90 * 24 * 60 * 60);
+    expect(item?.expiresAt).toBe(Math.floor(now / 1000) + 730 * 24 * 60 * 60);
 
     vi.useRealTimers();
   });

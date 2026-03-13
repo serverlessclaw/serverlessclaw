@@ -22,23 +22,71 @@ import Button from '@/components/ui/Button';
 import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
+import MemoryPrioritySelector from '@/components/MemoryPrioritySelector';
 
 async function getMemoryData() {
-  try {
+  const { DynamoMemory } = await import('@claw/core/lib/memory');
+  const memory = new DynamoMemory();
+  
+  // Fetch by type in parallel for efficiency
+  const [distilled, lessons, gaps, sessions] = await Promise.all([
+    memory.getMemoryByType('DISTILLED', 50),
+    memory.getMemoryByType('LESSON', 50),
+    memory.getMemoryByType('GAP', 50),
+    memory.getMemoryByType('SESSION', 50)
+  ]);
+
+  // If we have no data at all, might be an old table without 'type' fields
+  if (gaps.length === 0 && lessons.length === 0 && distilled.length === 0 && sessions.length === 0) {
+    console.log('[MemoryVault] No typed data found, falling back to Scan for migration support');
     const client = new DynamoDBClient({});
     const docClient = DynamoDBDocumentClient.from(client);
     
-    const { Items } = await docClient.send(
-      new ScanCommand({
-        TableName: (Resource as any).MemoryTable.name,
-      })
-    );
+    let allItems: any[] = [];
+    let lastKey: any = undefined;
     
-    return Items || [];
-  } catch (e) {
-    console.error('Error fetching memory data:', e);
-    return [];
+    do {
+      const { Items, LastEvaluatedKey } = await docClient.send(
+        new ScanCommand({
+          TableName: (Resource as any).MemoryTable.name,
+          ExclusiveStartKey: lastKey,
+          Limit: 100 // Limit scan per chunk to avoid timeout
+        })
+      );
+      if (Items) allItems = [...allItems, ...Items];
+      lastKey = LastEvaluatedKey;
+    } while (lastKey && allItems.length < 500); // Guard rails
+    
+    return {
+        distilled: allItems.filter(item => item.userId?.startsWith('DISTILLED#')),
+        lessons: allItems.filter(item => item.userId?.startsWith('LESSON#') || item.userId?.startsWith('TACTICAL#')),
+        gaps: allItems.filter(item => item.userId?.startsWith('GAP#')),
+        sessions: Array.from(new Set(allItems
+            .filter(item => !item.userId?.includes('#') && item.timestamp)
+            .map(item => item.userId)))
+            .map(userId => ({
+            userId,
+            lastActive: Math.max(...allItems
+                .filter(item => item.userId === userId)
+                .map(item => item.timestamp || 0))
+            }))
+    };
   }
+  
+  return { 
+    distilled, 
+    lessons, 
+    gaps: gaps.sort((a, b) => {
+      const prioA = a.metadata?.priority ?? 5;
+      const prioB = b.metadata?.priority ?? 5;
+      if (prioA !== prioB) return prioB - prioA;
+      return (b.timestamp || 0) - (a.timestamp || 0);
+    }), 
+    sessions: sessions.map(s => ({
+        userId: s.userId.replace('SESSIONS#', ''),
+        lastActive: s.timestamp
+    }))
+  };
 }
 
 async function pruneMemory(formData: FormData) {
@@ -72,36 +120,8 @@ async function prioritizeMemory(formData: FormData) {
 }
 
 export default async function MemoryVault() {
-  const allItems = await getMemoryData();
+  const { distilled, lessons, gaps, sessions } = await getMemoryData();
   
-  const distilled = allItems
-    .filter(item => item.userId?.startsWith('DISTILLED#'))
-    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-
-  const lessons = allItems
-    .filter(item => item.userId?.startsWith('LESSON#') || item.userId?.startsWith('TACTICAL#'))
-    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-
-  const gaps = allItems
-    .filter(item => item.userId?.startsWith('GAP#'))
-    .sort((a, b) => {
-      const prioA = a.metadata?.priority ?? 5;
-      const prioB = b.metadata?.priority ?? 5;
-      if (prioA !== prioB) return prioB - prioA;
-      return (b.timestamp || 0) - (a.timestamp || 0);
-    });
-    
-  const sessions = Array.from(new Set(allItems
-    .filter(item => !item.userId?.includes('#') && item.timestamp)
-    .map(item => item.userId)))
-    .map(userId => ({
-      userId,
-      lastActive: Math.max(...allItems
-        .filter(item => item.userId === userId)
-        .map(item => item.timestamp || 0))
-    }))
-    .sort((a, b) => b.lastActive - a.lastActive);
-
   const toolList = Object.values(tools);
 
   return (
@@ -157,22 +177,12 @@ export default async function MemoryVault() {
                               <Typography variant="mono" color="muted" className="text-[9px]">ID: {gap.userId.split('#')[1]}</Typography>
                             </div>
                             
-                            <div className="flex items-center gap-4">
-                               <form action={prioritizeMemory} className="flex items-center gap-2 bg-black/40 px-2 py-1 rounded border border-white/5">
-                                  <input type="hidden" name="userId" value={gap.userId} />
-                                  <input type="hidden" name="timestamp" value={gap.timestamp} />
-                                  <Typography variant="caption" weight="bold" color="white" uppercase className="text-[9px] tracking-tighter">Prio:</Typography>
-                                  <select 
-                                    name="priority" 
-                                    defaultValue={gap.metadata?.priority || 5}
-                                    onBlur={(e) => e.target.form?.requestSubmit()}
-                                    className="bg-transparent text-amber-400 text-[10px] font-bold outline-none cursor-pointer"
-                                  >
-                                    {[1,3,5,7,8,10].map(p => (
-                                      <option key={p} value={p} className="bg-[#1a1a1a]">{p}</option>
-                                    ))}
-                                  </select>
-                               </form>
+                             <div className="flex items-center gap-4">
+                                <MemoryPrioritySelector 
+                                  userId={gap.userId} 
+                                  timestamp={gap.timestamp} 
+                                  currentPriority={gap.metadata?.priority || 5} 
+                                />
 
                                <form action={pruneMemory} className="opacity-0 group-hover:opacity-100 transition-opacity">
                                   <input type="hidden" name="userId" value={gap.userId} />

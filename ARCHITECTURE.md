@@ -7,7 +7,7 @@ This document covers the AWS topology and data flow. For agent logic and orchest
 ## Design Philosophy
 
 **Serverless Claw** is built to be:
-1.  **Stateless**: The core execution is entirely stateless, with persistence offloaded to highly available managed services (DynamoDB).
+1.  **Stateless**: The core execution is entirely stateless, with persistence offloaded to highly available managed services (DynamoDB). Utilizes a **Tiered Retention Policy** (TTL) and Global Secondary Index (GSI) for high-performance context recall.
 2.  **Extensible**: Every major component (Memory, Messaging, Tools) is designed as a pluggable adapter.
 3.  **Low Latency**: Optimized for fast startup times to minimize "time-to-first-token".
 4.  **Safety-First**: Implements nested guardrails including Circuit Breakers, Recursion Limits, and Protected Scopes.

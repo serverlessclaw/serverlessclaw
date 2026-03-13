@@ -3,8 +3,12 @@ export function createStorage() {
     fields: {
       userId: 'string',
       timestamp: 'number',
+      type: 'string',
     },
     primaryIndex: { hashKey: 'userId', rangeKey: 'timestamp' },
+    globalIndexes: {
+      TypeTimestampIndex: { hashKey: 'type', rangeKey: 'timestamp' },
+    },
     ttl: 'expiresAt',
   });
 

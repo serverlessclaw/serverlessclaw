@@ -1,5 +1,10 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import {
+  DynamoDBDocumentClient,
+  PutCommand,
+  QueryCommand,
+  DeleteCommand,
+} from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
 import { SSTResource } from './types/index';
 import {
@@ -77,38 +82,63 @@ export class DynamoMemory implements IMemory {
   }
 
   /**
-   * Appends a new message to the conversation history
+   * Appends a new message to the conversation history with tiered retention.
    * @param userId - Unique identifier for the user or session
    * @param message - The message object to be stored
    */
   async addMessage(userId: string, message: Message): Promise<void> {
     console.log(`[DynamoMemory] Adding message for userId: ${userId}`);
-    const days = await this.getRetention('MESSAGES_DAYS');
-    const expiresAt = Math.floor(Date.now() / 1000) + days * 24 * 60 * 60;
-    const command = new PutCommand({
-      TableName: this.tableName,
-      Item: {
+    let days = await this.getRetention('MESSAGES_DAYS'); // Default (usually 30 days)
+
+    // Tiered Retention Logic:
+    // 1. Transient System Logs (1 hour)
+    if (userId.startsWith('RECOVERY') || userId.startsWith('SYSTEM#')) {
+      const expiresAt = Math.floor(Date.now() / 1000) + 3600; // 1 hour
+      return this.putItem({
         userId,
         timestamp: Date.now(),
+        type: 'MESSAGE',
         expiresAt,
         ...message,
-      },
-    });
+      });
+    }
 
+    // 2. Internal Agent Traces (1 day)
+    // These are noisy isolated execution logs
+    if (
+      userId.includes('#') &&
+      (userId.startsWith('COGNITION-REFLECTOR#') ||
+        userId.startsWith('CODER#') ||
+        userId.startsWith('STRATEGIC-PLANNER#') ||
+        userId.startsWith('QA#'))
+    ) {
+      days = 1;
+    }
+
+    const expiresAt = Math.floor(Date.now() / 1000) + days * 24 * 60 * 60;
+    await this.putItem({ userId, timestamp: Date.now(), type: 'MESSAGE', expiresAt, ...message });
+  }
+
+  /**
+   * Internal helper to put an item into DynamoDB
+   */
+  private async putItem(item: any): Promise<void> {
+    const command = new PutCommand({
+      TableName: this.tableName,
+      Item: item,
+    });
     try {
       await docClient.send(command);
     } catch (error) {
-      logger.error('Error saving message to DynamoDB:', error);
+      logger.error('Error putting item into DynamoDB:', error);
     }
   }
 
   /**
    * Clears the conversation history for a specific user or session
+   * @param userId - Unique identifier for the user or session
    */
   async clearHistory(userId: string): Promise<void> {
-    const { DeleteCommand } = await import('@aws-sdk/lib-dynamodb');
-
-    // Query to get all items (with their sort keys)
     const command = new QueryCommand({
       TableName: this.tableName,
       KeyConditionExpression: 'userId = :userId',
@@ -181,6 +211,8 @@ export class DynamoMemory implements IMemory {
       ExpressionAttributeValues: {
         ':userId': `DISTILLED#${userId}`,
       },
+      ScanIndexForward: false, // Latest first
+      Limit: 1,
     });
 
     try {
@@ -198,11 +230,14 @@ export class DynamoMemory implements IMemory {
    * @param facts - The new textual content for the distilled memory
    */
   async updateDistilledMemory(userId: string, facts: string): Promise<void> {
+    const expiresAt = Math.floor(Date.now() / 1000) + 730 * 24 * 60 * 60; // 2 Years
     const command = new PutCommand({
       TableName: this.tableName,
       Item: {
         userId: `DISTILLED#${userId}`,
         timestamp: Date.now(),
+        type: 'DISTILLED',
+        expiresAt,
         content: facts,
       },
     });
@@ -222,15 +257,17 @@ export class DynamoMemory implements IMemory {
   async getAllGaps(status: GapStatus = GapStatus.OPEN): Promise<MemoryInsight[]> {
     // In a real system, we would have a GSI for Category=GAP
     // For now, we query with the GAP# prefix using a Scan
-    const { ScanCommand } = await import('@aws-sdk/lib-dynamodb');
-    const command = new ScanCommand({
+    const command = new QueryCommand({
       TableName: this.tableName,
-      FilterExpression: 'begins_with(userId, :prefix) AND #status = :status',
+      IndexName: 'TypeTimestampIndex',
+      KeyConditionExpression: '#type = :type',
+      FilterExpression: '#status = :status',
       ExpressionAttributeNames: {
+        '#type': 'type',
         '#status': 'status',
       },
       ExpressionAttributeValues: {
-        ':prefix': 'GAP#',
+        ':type': 'GAP',
         ':status': status,
       },
     });
@@ -264,11 +301,14 @@ export class DynamoMemory implements IMemory {
    * @param metadata - Strategic metadata (impact, complexity, etc.)
    */
   async setGap(gapId: string, details: string, metadata?: InsightMetadata): Promise<void> {
+    const expiresAt = Math.floor(Date.now() / 1000) + 730 * 24 * 60 * 60; // 2 Years
     const command = new PutCommand({
       TableName: this.tableName,
       Item: {
         userId: `GAP#${gapId}`,
         timestamp: parseInt(gapId, 10) || Date.now(),
+        type: 'GAP',
+        expiresAt,
         content: details,
         status: GapStatus.OPEN,
         metadata: metadata || {
@@ -341,13 +381,13 @@ export class DynamoMemory implements IMemory {
    * @param metadata - Insight metadata
    */
   async addLesson(userId: string, lesson: string, metadata?: InsightMetadata): Promise<void> {
-    const days = await this.getRetention('LESSONS_DAYS');
-    const expiresAt = Math.floor(Date.now() / 1000) + days * 24 * 60 * 60;
+    const expiresAt = Math.floor(Date.now() / 1000) + 730 * 24 * 60 * 60; // 2 Years
     const command = new PutCommand({
       TableName: this.tableName,
       Item: {
         userId: `LESSON#${userId}`,
         timestamp: Date.now(),
+        type: 'LESSON',
         expiresAt,
         content: lesson,
         metadata: metadata || {
@@ -401,20 +441,11 @@ export class DynamoMemory implements IMemory {
    * @param category - Optional category filter
    * @returns Array of MemoryInsight objects
    */
-  /**
-   * Searches for insights across all categories based on a query string
-   * @param userId - Unique identifier for the user
-   * @param query - Keyword query string or '*' for all
-   * @param category - Optional category filter
-   * @returns Array of MemoryInsight objects
-   */
   async searchInsights(
     userId: string,
     query: string,
     category?: InsightCategory
   ): Promise<MemoryInsight[]> {
-    // For now, we perform a simple query to get recent insights for the user.
-    // In a real high-volume system, we would use a Global Secondary Index or full-text search.
     const prefixes = [`LESSON#${userId}`, `GAP#`, `DISTILLED#${userId}`];
     let allInsights: MemoryInsight[] = [];
 
@@ -450,12 +481,10 @@ export class DynamoMemory implements IMemory {
       }
     }
 
-    // Filter by category if provided
     if (category) {
       allInsights = allInsights.filter((i) => i.metadata.category === category);
     }
 
-    // Simple keyword filtering based on the query
     if (query && query !== '*' && query !== '') {
       const lowerQuery = query.toLowerCase();
       allInsights = allInsights.filter((i) => i.content.toLowerCase().includes(lowerQuery));
@@ -466,16 +495,12 @@ export class DynamoMemory implements IMemory {
 
   /**
    * Updates the metadata for a specific insight item
-   * @param userId - Unique identifier for the user or insight prefix
-   * @param timestamp - The timestamp (sort key) of the item
-   * @param metadata - Partial metadata object to merge
    */
   async updateInsightMetadata(
     userId: string,
     timestamp: number,
     metadata: Partial<InsightMetadata>
   ): Promise<void> {
-    // First, fetch the existing item to merge metadata
     const getCommand = new QueryCommand({
       TableName: this.tableName,
       KeyConditionExpression: 'userId = :userId AND #ts = :timestamp',
@@ -534,7 +559,7 @@ export class DynamoMemory implements IMemory {
       return (response.Items || []).map((item) => ({
         sessionId: item.sessionId,
         title: item.title,
-        lastMessage: item.content, // We store last message in content
+        lastMessage: item.content,
         updatedAt: item.timestamp,
       }));
     } catch (error) {
@@ -551,13 +576,10 @@ export class DynamoMemory implements IMemory {
     sessionId: string,
     meta: Partial<ConversationMeta>
   ): Promise<void> {
-    // First, try to find existing record for this session to avoid duplicates
     const conversations = await this.listConversations(userId);
     const existing = conversations.find((c) => c.sessionId === sessionId);
 
-    // If update, we delete the old one first because timestamp (sort key) might change
     if (existing) {
-      const { DeleteCommand } = await import('@aws-sdk/lib-dynamodb');
       await docClient.send(
         new DeleteCommand({
           TableName: this.tableName,
@@ -576,6 +598,7 @@ export class DynamoMemory implements IMemory {
       Item: {
         userId: `SESSIONS#${userId}`,
         timestamp: Date.now(),
+        type: 'SESSION',
         expiresAt,
         sessionId,
         title: meta.title || existing?.title || 'New Conversation',
@@ -583,14 +606,37 @@ export class DynamoMemory implements IMemory {
       },
     });
 
-    console.log(
-      `[DynamoMemory] Saving session meta for ${sessionId} under userId: SESSIONS#${userId}`
-    );
     try {
       await docClient.send(command);
-      console.log(`[DynamoMemory] Successfully saved session meta for ${sessionId}`);
     } catch (error) {
       logger.error('Error saving conversation meta to DynamoDB:', error);
+    }
+  }
+
+  /**
+   * Universal fetcher for memory items by their type using the GSI.
+   */
+  async getMemoryByType(type: string, limit: number = 100): Promise<any[]> {
+    const command = new QueryCommand({
+      TableName: this.tableName,
+      IndexName: 'TypeTimestampIndex',
+      KeyConditionExpression: '#type = :type',
+      ExpressionAttributeNames: {
+        '#type': 'type',
+      },
+      ExpressionAttributeValues: {
+        ':type': type,
+      },
+      ScanIndexForward: false,
+      Limit: limit,
+    });
+
+    try {
+      const response = await docClient.send(command);
+      return response.Items || [];
+    } catch (error) {
+      logger.error(`Error fetching memory by type ${type}:`, error);
+      return [];
     }
   }
 }
