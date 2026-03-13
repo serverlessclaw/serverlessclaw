@@ -183,20 +183,22 @@ describe('Agent Trace Propagation', () => {
       expect.arrayContaining([
         expect.objectContaining({
           role: MessageRole.TOOL,
-          content: 'EXECUTED_BY_PROVIDER'
-        })
+          content: 'EXECUTED_BY_PROVIDER',
+        }),
       ]),
       expect.anything(),
       expect.anything(),
       undefined,
       undefined
     );
-    });
+  });
 
-    it('should handle and persist attachments in process', async () => {
+  it('should handle and persist attachments in process', async () => {
     const attachments = [{ type: 'image' as const, base64: 'data', name: 'test.png' }];
 
-    mockProvider.call = vi.fn().mockResolvedValue({ role: MessageRole.ASSISTANT, content: 'I see it' });
+    mockProvider.call = vi
+      .fn()
+      .mockResolvedValue({ role: MessageRole.ASSISTANT, content: 'I see it' });
 
     const agent = new Agent(mockMemory, mockProvider, [], 'System', { id: 'test', name: 'Test' });
 
@@ -207,7 +209,7 @@ describe('Agent Trace Propagation', () => {
       'user-1',
       expect.objectContaining({
         role: MessageRole.USER,
-        attachments
+        attachments,
       })
     );
 
@@ -216,13 +218,13 @@ describe('Agent Trace Propagation', () => {
       expect.arrayContaining([
         expect.objectContaining({
           role: MessageRole.USER,
-          attachments
-        })
+          attachments,
+        }),
       ]),
       expect.anything(),
       expect.anything(),
       undefined,
       undefined
     );
-    });
-    });
+  });
+});

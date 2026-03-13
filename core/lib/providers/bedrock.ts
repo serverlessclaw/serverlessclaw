@@ -109,26 +109,26 @@ export class BedrockProvider implements IProvider {
 
         if (m.role === MessageRole.TOOL) {
           const toolContent: ContentBlock[] = [];
-          
+
           // If content is a JSON string that might be a ToolResult, try to parse it
           // Actually, the Agent core already passes the text part if it's a ToolResult
           // But if we want to pass images back to the model, we need to handle it here.
           // Wait, the Message interface doesn't store the full ToolResult, only the text content is added to history currently.
-          
+
           toolContent.push({ text: m.content || '' });
-          
+
           // In 2026, we also support passing attachments from previous turns
           if (m.attachments) {
-            m.attachments.forEach(att => {
+            m.attachments.forEach((att) => {
               if (imgFormats.includes(att.mimeType?.split('/')[1] || '')) {
                 const format = (att.mimeType?.split('/')[1] || 'png') as any;
                 toolContent.push({
                   image: {
                     format,
                     source: {
-                      bytes: att.base64 ? Buffer.from(att.base64, 'base64') : new Uint8Array()
-                    }
-                  }
+                      bytes: att.base64 ? Buffer.from(att.base64, 'base64') : new Uint8Array(),
+                    },
+                  },
                 });
               }
             });
@@ -159,10 +159,12 @@ export class BedrockProvider implements IProvider {
             [t.name]: {
               display_name: t.name,
               type: t.type,
-              ...(t.name === 'computer' ? {
-                options: { display_height: 768, display_width: 1024, display_number: 0 }
-              } : {})
-            }
+              ...(t.name === 'computer'
+                ? {
+                    options: { display_height: 768, display_width: 1024, display_number: 0 },
+                  }
+                : {}),
+            },
           } as any;
         }
         return {

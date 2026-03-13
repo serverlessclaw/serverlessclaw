@@ -10,7 +10,7 @@ import { AgentRegistry } from './registry';
 vi.mock('./registry', () => ({
   AgentRegistry: {
     getRetentionDays: vi.fn(),
-  }
+  },
 }));
 
 // Mock SST Resource

@@ -15,13 +15,13 @@ describe('OpenRouterProvider', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     provider = new OpenRouterProvider('google/gemini-pro-1.5');
-    
+
     // Mock global fetch
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        choices: [{ message: { content: 'Hello', role: 'assistant' } }]
-      })
+        choices: [{ message: { content: 'Hello', role: 'assistant' } }],
+      }),
     });
   });
 
@@ -31,15 +31,15 @@ describe('OpenRouterProvider', () => {
         name: 'local_tool',
         description: 'A local tool',
         parameters: { type: 'object', properties: {} },
-        execute: async () => 'done'
+        execute: async () => 'done',
       },
       {
         name: 'google_search',
         description: 'Grounded search',
         type: 'google_search_retrieval',
         parameters: { type: 'object', properties: {} },
-        execute: async () => 'done'
-      }
+        execute: async () => 'done',
+      },
     ];
 
     await provider.call([{ role: MessageRole.USER, content: 'test' }], tools);
@@ -50,7 +50,7 @@ describe('OpenRouterProvider', () => {
     expect(body.tools).toHaveLength(2);
     expect(body.tools[0]).toMatchObject({ type: 'function' });
     expect(body.tools[1]).toMatchObject({ type: 'google_search_retrieval' });
-    
+
     // Check for Gemini-specific grounded search config
     expect(body.google_search_retrieval).toBeDefined();
     expect(body.google_search_retrieval.dynamic_retrieval).toBeDefined();

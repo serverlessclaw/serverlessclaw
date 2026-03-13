@@ -24,7 +24,7 @@ describe('BedrockProvider', () => {
 
   it('should correctly map computer_use tool for Anthropic', async () => {
     bedrockMock.on(ConverseCommand).resolves({
-      output: { message: { content: [{ text: 'Hello' }], role: 'assistant' } }
+      output: { message: { content: [{ text: 'Hello' }], role: 'assistant' } },
     });
 
     const tools = [
@@ -33,8 +33,8 @@ describe('BedrockProvider', () => {
         description: 'Standard computer tool',
         type: 'computer_use',
         parameters: { type: 'object', properties: {} },
-        execute: async () => 'done'
-      }
+        execute: async () => 'done',
+      },
     ];
 
     await provider.call([{ role: MessageRole.USER, content: 'test' }], tools);

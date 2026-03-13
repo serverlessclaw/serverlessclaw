@@ -30,12 +30,15 @@ export class AgentRegistry {
   /**
    * Retrieves the retention period in days for a specific item type.
    * Checks for overrides in the ConfigTable before falling back to system defaults.
-   * 
+   *
    * @param item - The retention key (from RETENTION constants)
    * @returns The number of days to keep the item.
    */
   static async getRetentionDays(item: keyof typeof RETENTION): Promise<number> {
-    const config = await this.getRawConfig(DYNAMO_KEYS.RETENTION_CONFIG) as Record<string, number>;
+    const config = (await this.getRawConfig(DYNAMO_KEYS.RETENTION_CONFIG)) as Record<
+      string,
+      number
+    >;
     if (config && config[item] !== undefined) {
       return config[item];
     }

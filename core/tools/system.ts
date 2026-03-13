@@ -27,11 +27,6 @@ interface ToolsResource {
 export const triggerDeployment = {
   ...toolDefinitions.triggerDeployment,
   execute: async (args: Record<string, unknown>): Promise<string> => {
-    const { reason, userId, traceId } = args as {
-      reason: string;
-      userId: string;
-      traceId?: string;
-    };
     const today = new Date().toISOString().split('T')[0];
     const typedResource = Resource as unknown as ToolsResource;
 

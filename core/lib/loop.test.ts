@@ -40,7 +40,7 @@ vi.mock('./memory', () => ({
     getLessons = vi.fn().mockResolvedValue([]);
     addMessage = vi.fn().mockResolvedValue(undefined);
     updateDistilledMemory = vi.fn().mockResolvedValue(undefined);
-  }
+  },
 }));
 
 describe('Autonomous Loop Closure', () => {
@@ -58,16 +58,16 @@ describe('Autonomous Loop Closure', () => {
         buildId: 'build-123',
         initiatorId: 'strategic-planner.agent',
         task: 'Add AWS Security Agent',
-        traceId: 'trace-456'
-      }
+        traceId: 'trace-456',
+      },
     };
 
-    // @ts-ignore
+    // @ts-expect-error - mockEvent does not match exact Lambda event type
     await eventHandler(mockEvent, {});
 
     const ebCalls = ebMock.commandCalls(PutEventsCommand);
-    const continuationCall = ebCalls.find(c => 
-        JSON.parse(c.args[0].input.Entries![0].Detail!).agentId === 'strategic-planner'
+    const continuationCall = ebCalls.find(
+      (c) => JSON.parse(c.args[0].input.Entries![0].Detail!).agentId === 'strategic-planner'
     );
 
     expect(continuationCall).toBeDefined();
@@ -85,19 +85,19 @@ describe('Autonomous Loop Closure', () => {
         errorLogs: 'TypeScript Error: type mismatch',
         initiatorId: 'strategic-planner.agent',
         task: 'Add AWS Security Agent',
-        traceId: 'trace-456'
-      }
+        traceId: 'trace-456',
+      },
     };
 
     // Mock the tracer start call
     ddbMock.on(PutCommand).resolves({});
 
-    // @ts-ignore
+    // @ts-expect-error - mockEvent does not match exact Lambda event type
     await eventHandler(mockEvent, {});
 
     const ebCalls = ebMock.commandCalls(PutEventsCommand);
-    const continuationCall = ebCalls.find(c => 
-        JSON.parse(c.args[0].input.Entries![0].Detail!).agentId === 'strategic-planner'
+    const continuationCall = ebCalls.find(
+      (c) => JSON.parse(c.args[0].input.Entries![0].Detail!).agentId === 'strategic-planner'
     );
 
     expect(continuationCall).toBeDefined();

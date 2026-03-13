@@ -37,7 +37,9 @@ export class DynamoMemory implements IMemory {
   /**
    * Helper to get retention days lazily to avoid circular dependencies
    */
-  private async getRetention(item: 'MESSAGES_DAYS' | 'LESSONS_DAYS' | 'SESSIONS_DAYS'): Promise<number> {
+  private async getRetention(
+    item: 'MESSAGES_DAYS' | 'LESSONS_DAYS' | 'SESSIONS_DAYS'
+  ): Promise<number> {
     const { AgentRegistry } = await import('./registry');
     return AgentRegistry.getRetentionDays(item);
   }
@@ -592,4 +594,3 @@ export class DynamoMemory implements IMemory {
     }
   }
 }
-

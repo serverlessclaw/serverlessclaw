@@ -6,7 +6,7 @@ import { AgentRegistry } from './registry';
 vi.mock('./registry', () => ({
   AgentRegistry: {
     getRetentionDays: vi.fn(),
-  }
+  },
 }));
 
 // Mock AWS SDK
@@ -70,7 +70,7 @@ describe('ClawTracer', () => {
   it('should start a trace node in DynamoDB with configurable TTL', async () => {
     vi.mocked(AgentRegistry.getRetentionDays).mockResolvedValue(7);
     const tracer = new ClawTracer('user-123', 'dashboard', 'trace-1', 'node-1');
-    
+
     const now = Date.now();
     vi.setSystemTime(now);
 

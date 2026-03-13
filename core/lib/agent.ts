@@ -168,7 +168,12 @@ export class Agent {
     const mainConversationId = userId;
 
     if (!isContinuation) {
-      await tracer.startTrace({ userText, sessionId, agentId: this.config?.id, hasAttachments: !!attachments });
+      await tracer.startTrace({
+        userText,
+        sessionId,
+        agentId: this.config?.id,
+        hasAttachments: !!attachments,
+      });
     }
 
     // Determine storage identifier (Namespaced if isolated)

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AgentRegistry } from './registry';
-import { RETENTION, DYNAMO_KEYS } from './constants';
+import { RETENTION } from './constants';
 
 const { mockSend } = vi.hoisted(() => ({
   mockSend: vi.fn(),
@@ -23,9 +23,15 @@ vi.mock('@aws-sdk/lib-dynamodb', () => ({
       send: mockSend,
     }),
   },
-  GetCommand: class { constructor(public input: any) {} },
-  PutCommand: class { constructor(public input: any) {} },
-  UpdateCommand: class { constructor(public input: any) {} },
+  GetCommand: class {
+    constructor(public input: any) {}
+  },
+  PutCommand: class {
+    constructor(public input: any) {}
+  },
+  UpdateCommand: class {
+    constructor(public input: any) {}
+  },
 }));
 
 describe('AgentRegistry Retention', () => {
@@ -41,10 +47,10 @@ describe('AgentRegistry Retention', () => {
   });
 
   it('should return override retention when it exists in DDB', async () => {
-    mockSend.mockResolvedValueOnce({ 
-      Item: { 
-        value: { MESSAGES_DAYS: 7 } 
-      } 
+    mockSend.mockResolvedValueOnce({
+      Item: {
+        value: { MESSAGES_DAYS: 7 },
+      },
     });
 
     const days = await AgentRegistry.getRetentionDays('MESSAGES_DAYS');
@@ -52,10 +58,10 @@ describe('AgentRegistry Retention', () => {
   });
 
   it('should fallback to default for specific items if not in override map', async () => {
-    mockSend.mockResolvedValueOnce({ 
-      Item: { 
-        value: { SOME_OTHER_KEY: 7 } 
-      } 
+    mockSend.mockResolvedValueOnce({
+      Item: {
+        value: { SOME_OTHER_KEY: 7 },
+      },
     });
 
     const days = await AgentRegistry.getRetentionDays('LESSONS_DAYS');
