@@ -40,6 +40,9 @@ export function createAgents(ctx: SharedContext): {
     link: [...baseLink, stagingBucket],
     memory: AGENT_CONFIG.memory.LARGE,
     timeout: AGENT_CONFIG.timeout.MAX,
+    logging: {
+      retention: '30 days',
+    },
   });
   bus.subscribe('CoderTaskSubscriber', coderAgent.arn, {
     pattern: { detailType: [EventType.CODER_TASK] },
@@ -64,6 +67,9 @@ export function createAgents(ctx: SharedContext): {
     ],
     memory: AGENT_CONFIG.memory.SMALL,
     timeout: AGENT_CONFIG.timeout.MEDIUM,
+    logging: {
+      retention: '30 days',
+    },
   });
 
   // 4. Dead Man's Switch
@@ -73,6 +79,9 @@ export function createAgents(ctx: SharedContext): {
     link: [...baseLink, deployer],
     memory: AGENT_CONFIG.memory.SMALL,
     timeout: AGENT_CONFIG.timeout.MEDIUM,
+    logging: {
+      retention: '30 days',
+    },
   });
 
   // 15-min Schedule
@@ -133,6 +142,9 @@ export function createAgents(ctx: SharedContext): {
     link: baseLink,
     memory: AGENT_CONFIG.memory.LARGE,
     timeout: AGENT_CONFIG.timeout.MAX,
+    logging: {
+      retention: '30 days',
+    },
   });
   bus.subscribe('EvolutionPlanSubscriber', plannerAgent.arn, {
     pattern: { detailType: [EventType.EVOLUTION_PLAN] },
@@ -176,6 +188,9 @@ export function createAgents(ctx: SharedContext): {
     link: baseLink,
     memory: AGENT_CONFIG.memory.MEDIUM,
     timeout: AGENT_CONFIG.timeout.LONG,
+    logging: {
+      retention: '30 days',
+    },
   });
   bus.subscribe('SystemBuildFailedSubscriber', eventHandler.arn, {
     pattern: {
@@ -196,6 +211,9 @@ export function createAgents(ctx: SharedContext): {
     link: baseLink,
     memory: AGENT_CONFIG.memory.MEDIUM,
     timeout: AGENT_CONFIG.timeout.MAX,
+    logging: {
+      retention: '30 days',
+    },
   });
   bus.subscribe('ReflectTaskSubscriber', reflectorAgent.arn, {
     pattern: { detailType: [EventType.REFLECT_TASK] },
@@ -208,6 +226,9 @@ export function createAgents(ctx: SharedContext): {
     link: baseLink,
     memory: AGENT_CONFIG.memory.LARGE,
     timeout: AGENT_CONFIG.timeout.MAX,
+    logging: {
+      retention: '30 days',
+    },
   });
   bus.subscribe('QaVerificationSubscriber', qaAgent.arn, {
     pattern: {
@@ -234,6 +255,9 @@ export function createAgents(ctx: SharedContext): {
     link: baseLink,
     memory: AGENT_CONFIG.memory.LARGE,
     timeout: AGENT_CONFIG.timeout.MAX,
+    logging: {
+      retention: '30 days',
+    },
   });
   // Subscribe to all agent tasks that don't have a specific handler
   bus.subscribe('WorkerAgentSubscriber', workerAgent.arn, {
@@ -256,6 +280,9 @@ export function createAgents(ctx: SharedContext): {
     handler: 'core/handlers/bridge.handler',
     dev: liveInLocalOnly,
     link: [ctx.realtime!, bus],
+    logging: {
+      retention: '30 days',
+    },
   });
   bus.subscribe('RealtimeBridgeSubscriber', bridge.arn, {
     pattern: {

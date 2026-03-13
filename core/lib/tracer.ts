@@ -21,7 +21,6 @@ const docClient = DynamoDBDocumentClient.from(client, {
 const typedResource = Resource as unknown as SSTResource;
 
 const TRACE_CONFIG = {
-  TTL_DAYS: 7,
   SECONDS_IN_DAY: 86400,
 } as const;
 
@@ -117,8 +116,9 @@ export class ClawTracer {
    * @returns A promise that resolves to the trace ID.
    */
   async startTrace(initialContext: Record<string, unknown>): Promise<string> {
-    const expiresAt =
-      Math.floor(Date.now() / 1000) + TRACE_CONFIG.TTL_DAYS * TRACE_CONFIG.SECONDS_IN_DAY;
+    const { AgentRegistry } = await import('./registry');
+    const days = await AgentRegistry.getRetentionDays('TRACES_DAYS');
+    const expiresAt = Math.floor(Date.now() / 1000) + days * TRACE_CONFIG.SECONDS_IN_DAY;
 
     try {
       await docClient.send(

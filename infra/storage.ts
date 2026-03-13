@@ -5,6 +5,7 @@ export function createStorage() {
       timestamp: 'number',
     },
     primaryIndex: { hashKey: 'userId', rangeKey: 'timestamp' },
+    ttl: 'expiresAt',
   });
 
   const traceTable = new sst.aws.Dynamo('TraceTable', {
@@ -21,7 +22,21 @@ export function createStorage() {
     ttl: 'expiresAt',
   });
 
-  const stagingBucket = new sst.aws.Bucket('StagingBucket');
+  const stagingBucket = new sst.aws.Bucket('StagingBucket', {
+    transform: {
+      bucket: {
+        lifecycleRules: [
+          {
+            id: 'expire-rubbish',
+            enabled: true,
+            expiration: {
+              days: 30,
+            },
+          },
+        ],
+      },
+    },
+  });
 
   const configTable = new sst.aws.Dynamo('ConfigTable', {
     fields: {

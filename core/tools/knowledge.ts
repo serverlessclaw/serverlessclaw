@@ -9,7 +9,13 @@ import { InsightCategory, GapStatus } from '../lib/types/index';
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const eventbridge = new EventBridgeClient({});
-const memory = new DynamoMemory();
+
+/**
+ * Lazy-load memory to avoid issues with Resource availability during unit tests.
+ */
+function getMemory() {
+  return new DynamoMemory();
+}
 
 interface ToolsResource {
   ConfigTable: { name: string };
@@ -202,7 +208,7 @@ export const recallKnowledge = {
       query: string;
       category?: string;
     };
-    const results = await memory.searchInsights(userId, query, category as InsightCategory);
+    const results = await getMemory().searchInsights(userId, query, category as InsightCategory);
 
     if (results.length === 0) return 'No relevant knowledge found.';
 
@@ -257,7 +263,7 @@ export const manageGap = {
   execute: async (args: Record<string, unknown>): Promise<string> => {
     const { gapId, status } = args as { gapId: string; status: GapStatus };
     try {
-      await memory.updateGapStatus(gapId, status);
+      await getMemory().updateGapStatus(gapId, status);
       return `Successfully updated gap ${gapId} to ${status}`;
     } catch (error) {
       return `Failed to update gap ${gapId}: ${error instanceof Error ? error.message : String(error)}`;

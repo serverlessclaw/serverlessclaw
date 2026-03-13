@@ -18,12 +18,18 @@ export function createApi(ctx: SharedContext): { api: sst.aws.ApiGatewayV2 } {
     handler: 'core/handlers/webhook.handler',
     link: [memoryTable, traceTable, configTable, stagingBucket, ...validSecrets, deployer, bus],
     timeout: AGENT_CONFIG.timeout.SHORT,
+    logging: {
+      retention: '30 days',
+    },
   });
 
   // Health Probe
   api.route('GET /health', {
     handler: 'core/handlers/health.handler',
     link: [memoryTable],
+    logging: {
+      retention: '30 days',
+    },
   });
 
   return { api };

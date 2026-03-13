@@ -23,6 +23,9 @@ export function createDashboard(ctx: SharedContext): { dashboard: sst.aws.Nextjs
 
   const dashboard = new sst.aws.Nextjs('ClawCenter', {
     path: 'dashboard',
+    logging: {
+      retention: '30 days',
+    },
     link: [
       memoryTable,
       traceTable,

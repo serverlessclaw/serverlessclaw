@@ -27,7 +27,20 @@ const typedResource = Resource as unknown as SSTResource;
  * of session history, distilled knowledge, and strategic insights.
  */
 export class DynamoMemory implements IMemory {
-  private tableName: string = typedResource.MemoryTable.name;
+  /**
+   * Resolves table name lazily to handle unit testing environments safely.
+   */
+  private get tableName(): string {
+    return typedResource?.MemoryTable?.name || 'MemoryTable';
+  }
+
+  /**
+   * Helper to get retention days lazily to avoid circular dependencies
+   */
+  private async getRetention(item: 'MESSAGES_DAYS' | 'LESSONS_DAYS' | 'SESSIONS_DAYS'): Promise<number> {
+    const { AgentRegistry } = await import('./registry');
+    return AgentRegistry.getRetentionDays(item);
+  }
 
   /**
    * Retrieves the conversation history for a specific user or session
@@ -68,11 +81,14 @@ export class DynamoMemory implements IMemory {
    */
   async addMessage(userId: string, message: Message): Promise<void> {
     console.log(`[DynamoMemory] Adding message for userId: ${userId}`);
+    const days = await this.getRetention('MESSAGES_DAYS');
+    const expiresAt = Math.floor(Date.now() / 1000) + days * 24 * 60 * 60;
     const command = new PutCommand({
       TableName: this.tableName,
       Item: {
         userId,
         timestamp: Date.now(),
+        expiresAt,
         ...message,
       },
     });
@@ -323,11 +339,14 @@ export class DynamoMemory implements IMemory {
    * @param metadata - Insight metadata
    */
   async addLesson(userId: string, lesson: string, metadata?: InsightMetadata): Promise<void> {
+    const days = await this.getRetention('LESSONS_DAYS');
+    const expiresAt = Math.floor(Date.now() / 1000) + days * 24 * 60 * 60;
     const command = new PutCommand({
       TableName: this.tableName,
       Item: {
         userId: `LESSON#${userId}`,
         timestamp: Date.now(),
+        expiresAt,
         content: lesson,
         metadata: metadata || {
           category: InsightCategory.TACTICAL_LESSON,
@@ -548,11 +567,14 @@ export class DynamoMemory implements IMemory {
       );
     }
 
+    const days = await this.getRetention('SESSIONS_DAYS');
+    const expiresAt = Math.floor(Date.now() / 1000) + days * 24 * 60 * 60;
     const command = new PutCommand({
       TableName: this.tableName,
       Item: {
         userId: `SESSIONS#${userId}`,
         timestamp: Date.now(),
+        expiresAt,
         sessionId,
         title: meta.title || existing?.title || 'New Conversation',
         content: meta.lastMessage || existing?.lastMessage || '',
@@ -570,3 +592,4 @@ export class DynamoMemory implements IMemory {
     }
   }
 }
+

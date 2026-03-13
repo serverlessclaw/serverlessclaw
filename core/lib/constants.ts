@@ -27,12 +27,21 @@ export const STORAGE = {
   TMP_STAGING_ZIP: '/tmp/staged_changes.zip',
 } as const;
 
+export const RETENTION = {
+  MESSAGES_DAYS: 30,
+  TRACES_DAYS: 30,
+  LESSONS_DAYS: 90,
+  SESSIONS_DAYS: 30,
+  ASSETS_DAYS: 30,
+} as const;
+
 export const DYNAMO_KEYS = {
   DEPLOY_LIMIT: 'deploy_limit',
   RECURSION_LIMIT: 'recursion_limit',
   AGENTS_CONFIG: 'agents_config',
   INFRA_CONFIG: 'infra_config',
   SYSTEM_TOPOLOGY: 'system_topology',
+  RETENTION_CONFIG: 'retention_config',
 } as const;
 
 export const HTTP_STATUS = {
