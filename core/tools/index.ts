@@ -22,24 +22,6 @@ export const tools: Record<string, ITool> = {
   ...knowledgeTools,
 
   /**
-   * Pass-through tools for model built-in capabilities (e.g. OpenAI Code Interpreter)
-   * These have no local execution logic as the provider handles them.
-   */
-  code_interpreter: {
-    ...toolDefinitions.codeInterpreter,
-    execute: async () => 'BUILT_IN_TOOL_EXECUTED_BY_MODEL',
-  },
-  file_search: {
-    ...toolDefinitions.fileSearch,
-    execute: async () => 'BUILT_IN_TOOL_EXECUTED_BY_MODEL',
-  },
-
-  /**
- * Evaluates a mathematical expression safely.
-...
-   */
-
-  /**
    * Switches the active LLM provider and model for the system.
    */
   switchModel: {
