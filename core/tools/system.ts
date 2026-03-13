@@ -196,7 +196,13 @@ export const sendMessage = {
 export const checkConfig = {
   ...toolDefinitions.checkConfig,
   execute: async (args: Record<string, unknown>): Promise<string> => {
-    const { agentName, initiatorId, traceId, activeModel: injectedModel, activeProvider: injectedProvider } = args as {
+    const {
+      agentName,
+      initiatorId,
+      traceId,
+      activeModel: injectedModel,
+      activeProvider: injectedProvider,
+    } = args as {
       agentName: string;
       initiatorId: string;
       traceId: string;

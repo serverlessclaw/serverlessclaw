@@ -93,7 +93,10 @@ describe('Cognition Reflector Handler', () => {
     await handler(event as any, {} as any);
 
     // Verify memory updates
-    expect(mocks.updateDistilledMemory).toHaveBeenCalledWith('user-123', 'Updated facts including SuperPeng');
+    expect(mocks.updateDistilledMemory).toHaveBeenCalledWith(
+      'user-123',
+      'Updated facts including SuperPeng'
+    );
     expect(mocks.addLesson).toHaveBeenCalledWith('user-123', 'New lesson', expect.any(Object));
     expect(mocks.setGap).toHaveBeenCalledWith(expect.any(String), 'New gap', expect.any(Object));
     expect(mocks.updateGapStatus).toHaveBeenCalledWith('gap-123', GapStatus.DONE);
@@ -111,7 +114,7 @@ describe('Cognition Reflector Handler', () => {
 
     const result = await handler(event as any, {} as any);
     expect(result).toBe('I updated the facts for you.');
-    
+
     // Memory should NOT be updated with structured data
     expect(mocks.updateDistilledMemory).not.toHaveBeenCalled();
   });

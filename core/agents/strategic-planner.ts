@@ -106,7 +106,9 @@ export const handler = async (event: PlannerEvent, _context: Context): Promise<P
   } = payload;
 
   // Extract base userId (remove CONV# prefix if present)
-  const baseUserId = contextUserId.startsWith('CONV#') ? contextUserId.split('#')[1] : contextUserId;
+  const baseUserId = contextUserId.startsWith('CONV#')
+    ? contextUserId.split('#')[1]
+    : contextUserId;
 
   // 1. Fetch System Context
   const { AgentRegistry } = await import('../lib/registry');
@@ -141,9 +143,7 @@ export const handler = async (event: PlannerEvent, _context: Context): Promise<P
       const frequencyHrs = parseInt(String(customFreq || '48'), 10);
       const minGaps = parseInt(String(customMinGaps || '20'), 10);
 
-      const lastReviewStr = await memory.getDistilledMemory(
-        `LAST#STRATEGIC_REVIEW#${baseUserId}`
-      );
+      const lastReviewStr = await memory.getDistilledMemory(`LAST#STRATEGIC_REVIEW#${baseUserId}`);
       const lastReview = lastReviewStr ? parseInt(lastReviewStr, 10) : 0;
       const now = Date.now();
 

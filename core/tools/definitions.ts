@@ -312,7 +312,10 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
       type: 'object',
       properties: {
         query: { type: 'string', description: 'Functional search query.' },
-        category: { type: 'string', description: 'Optional category filter like infra, build, knowledge.' },
+        category: {
+          type: 'string',
+          description: 'Optional category filter like infra, build, knowledge.',
+        },
       },
       required: ['query', 'category'],
       additionalProperties: false,

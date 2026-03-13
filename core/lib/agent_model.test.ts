@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Agent } from './agent';
-import { IMemory, IProvider, MessageRole, ReasoningProfile } from './types/index';
+import { IMemory, IProvider, MessageRole } from './types/index';
 import { AgentRegistry } from './registry';
 
 vi.mock('./registry', () => ({
@@ -54,7 +54,7 @@ describe('Agent Model Overrides', () => {
     // We need to temporarily unset VITEST env var or mock it if possible
     // But since it's a constant in the module, we might need to modify the code first.
     // For now, let's just see if we can trigger it.
-    
+
     vi.mocked(AgentRegistry.getRawConfig).mockImplementation(async (key: string) => {
       if (key === 'active_provider') return 'bedrock';
       if (key === 'active_model') return 'anthropic.claude-3-sonnet';
@@ -112,7 +112,7 @@ describe('Agent Model Overrides', () => {
 
   it('should correctly report the active model and provider when checkConfig tool is called', async () => {
     const { checkConfig } = await import('../tools/system');
-    
+
     vi.mocked(AgentRegistry.getRawConfig).mockImplementation(async (key: string) => {
       if (key === 'active_provider') return 'openai';
       if (key === 'active_model') return 'gpt-4o';
@@ -152,8 +152,10 @@ describe('Agent Model Overrides', () => {
 
     // Find the tool result in memory or check what the provider was called with
     const lastCallHistory = vi.mocked(mockProvider.call).mock.calls.slice(-1)[0][0];
-    const toolResult = lastCallHistory.find((m) => m.role === MessageRole.TOOL && m.name === 'checkConfig');
-    
+    const toolResult = lastCallHistory.find(
+      (m) => m.role === MessageRole.TOOL && m.name === 'checkConfig'
+    );
+
     expect(toolResult?.content).toContain('ACTIVE_PROVIDER: openai');
     expect(toolResult?.content).toContain('ACTIVE_MODEL: gpt-4o');
   });
@@ -175,9 +177,9 @@ describe('Agent Model Overrides', () => {
           {
             id: 'call-save',
             type: 'function',
-            function: { 
-              name: 'saveKnowledge', 
-              arguments: JSON.stringify({ content: 'SuperPeng', category: 'user_preference' }) 
+            function: {
+              name: 'saveKnowledge',
+              arguments: JSON.stringify({ content: 'SuperPeng', category: 'user_preference' }),
             },
           },
         ],

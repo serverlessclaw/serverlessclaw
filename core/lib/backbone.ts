@@ -124,7 +124,14 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     icon: 'FlaskConical',
     enabled: true,
     isBackbone: true,
-    tools: ['recallKnowledge', 'checkHealth', 'sendMessage', 'discoverSkills', 'installSkill', 'saveKnowledge'],
+    tools: [
+      'recallKnowledge',
+      'checkHealth',
+      'sendMessage',
+      'discoverSkills',
+      'installSkill',
+      'saveKnowledge',
+    ],
     connectionProfile: ['bus', 'memory', 'config', 'trace'],
   },
   // Handlers (Logic-only, but registered for topology awareness)
