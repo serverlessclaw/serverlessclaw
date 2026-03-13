@@ -25,7 +25,7 @@ vi.mock('@modelcontextprotocol/sdk/client/index.js', () => {
 vi.mock('@modelcontextprotocol/sdk/client/stdio.js', () => {
   return {
     StdioClientTransport: class {
-      constructor(public options: any) {}
+      constructor(public options: unknown) {}
     },
   };
 });

@@ -122,7 +122,7 @@ export class OpenAIProvider implements IProvider {
           else if (m.role === MessageRole.ASSISTANT) role = 'assistant';
           else if (m.role === MessageRole.DEVELOPER) role = 'developer';
 
-          const content: any[] = [];
+          const content: OpenAI.Chat.ChatCompletionContentPart[] = [];
           if (m.content) content.push({ type: 'text', text: m.content });
 
           if (m.attachments) {
@@ -169,6 +169,7 @@ export class OpenAIProvider implements IProvider {
           ? {
               tools: tools.map((t) => {
                 if (t.type && t.type !== 'function') {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   return { type: t.type } as any;
                 }
                 return {
@@ -214,10 +215,10 @@ export class OpenAIProvider implements IProvider {
       messages: processedMessages,
       ...(isReasoningModel ? { reasoning_effort: reasoningEffort } : {}),
     };
-
     if (hasTools) {
       params.tools = tools.map((t) => {
         if (t.type && t.type !== 'function') {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           return { type: t.type } as any;
         }
         return {
@@ -229,7 +230,8 @@ export class OpenAIProvider implements IProvider {
             strict: true,
           },
         };
-      });
+      }) as OpenAI.Chat.ChatCompletionTool[];
+
       params.parallel_tool_calls = isReasoningModel;
       if (profile === ReasoningProfile.DEEP || profile === ReasoningProfile.THINKING) {
         params.parallel_tool_calls = false;

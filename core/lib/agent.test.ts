@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Agent } from './agent';
-import { IMemory, IProvider, MessageRole, TraceSource } from './types/index';
+import { IMemory, IProvider, MessageRole, TraceSource, Message } from './types/index';
 
 // Create persistent mock functions
 const mockGetTraceId = vi.fn();
@@ -159,7 +159,7 @@ describe('Agent Trace Propagation', () => {
     // Check that the text part was sent back to the LLM
     expect(mockProvider.call).toHaveBeenCalled();
     const lastCallHistory = vi.mocked(mockProvider.call).mock.calls.slice(-1)[0][0];
-    expect(lastCallHistory).toSatisfy((history: any[]) =>
+    expect(lastCallHistory).toSatisfy((history: Message[]) =>
       history.some((m) => m.role === MessageRole.TOOL && m.content === 'Result text')
     );
   });

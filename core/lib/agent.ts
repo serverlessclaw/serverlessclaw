@@ -8,6 +8,7 @@ import {
   EventType,
   IAgentConfig,
   TraceSource,
+  ToolResult,
 } from './types/index';
 import { ClawTracer } from './tracer';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
@@ -368,7 +369,7 @@ export class Agent {
               const resultText =
                 typeof rawResult === 'string'
                   ? rawResult
-                  : (rawResult as any)?.text || JSON.stringify(rawResult) || '';
+                  : (rawResult as ToolResult).text || JSON.stringify(rawResult) || '';
 
               // Record tool usage atomically
               if (!process.env.VITEST) {

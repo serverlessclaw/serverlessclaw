@@ -16,21 +16,24 @@ const mockSend = vi.fn();
 vi.mock('@aws-sdk/lib-dynamodb', () => ({
   DynamoDBDocumentClient: {
     from: () => ({
-      send: (cmd: any) => mockSend(cmd),
+      send: (cmd: unknown) => mockSend(cmd),
     }),
   },
   PutCommand: class {
-    constructor(public input: any) {
+    constructor(public input: unknown) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (this as any).name = 'PutCommand';
     }
   },
   UpdateCommand: class {
-    constructor(public input: any) {
+    constructor(public input: unknown) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (this as any).name = 'UpdateCommand';
     }
   },
   QueryCommand: class {
-    constructor(public input: any) {
+    constructor(public input: unknown) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (this as any).name = 'QueryCommand';
     }
   },

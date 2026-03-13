@@ -5,6 +5,7 @@ import {
   SystemContentBlock,
   Tool as BedrockTool,
   ContentBlock,
+  ToolResultContentBlock,
 } from '@aws-sdk/client-bedrock-runtime';
 import {
   IProvider,
@@ -121,7 +122,11 @@ export class BedrockProvider implements IProvider {
           if (m.attachments) {
             m.attachments.forEach((att) => {
               if (imgFormats.includes(att.mimeType?.split('/')[1] || '')) {
-                const format = (att.mimeType?.split('/')[1] || 'png') as any;
+                const format = (att.mimeType?.split('/')[1] || 'png') as
+                  | 'png'
+                  | 'jpeg'
+                  | 'gif'
+                  | 'webp';
                 toolContent.push({
                   image: {
                     format,
@@ -137,7 +142,7 @@ export class BedrockProvider implements IProvider {
           content.push({
             toolResult: {
               toolUseId: m.tool_call_id!,
-              content: toolContent as any,
+              content: toolContent as ToolResultContentBlock[],
               status: 'success',
             },
           });
@@ -165,6 +170,7 @@ export class BedrockProvider implements IProvider {
                   }
                 : {}),
             },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } as any;
         }
         return {

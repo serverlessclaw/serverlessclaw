@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Agent } from './agent';
-import { MessageRole } from './types/index';
+import { MessageRole, IMemory, IProvider, ITool } from './types/index';
 
 // Mock SST
 vi.mock('sst', () => ({
@@ -15,7 +15,7 @@ vi.mock('@aws-sdk/client-eventbridge', () => ({
     send = vi.fn().mockResolvedValue({});
   },
   PutEventsCommand: class {
-    constructor(public input: any) {}
+    constructor(public input: unknown) {}
   },
 }));
 
@@ -67,8 +67,8 @@ vi.mock('./tracer', () => ({
 }));
 
 describe('Agent Evolution Flow', () => {
-  let mockMemory: any;
-  let mockProvider: any;
+  let mockMemory: IMemory;
+  let mockProvider: IProvider;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -77,10 +77,17 @@ describe('Agent Evolution Flow', () => {
       getDistilledMemory: vi.fn().mockResolvedValue(''),
       getLessons: vi.fn().mockResolvedValue([]),
       addMessage: vi.fn().mockResolvedValue(undefined),
-    };
+      updateDistilledMemory: vi.fn().mockResolvedValue(undefined),
+      searchInsights: vi.fn().mockResolvedValue([]),
+      updateGapStatus: vi.fn().mockResolvedValue(undefined),
+      getMessages: vi.fn().mockResolvedValue([]),
+      setGap: vi.fn().mockResolvedValue(undefined),
+      getAllGaps: vi.fn().mockResolvedValue([]),
+      addLesson: vi.fn().mockResolvedValue(undefined),
+    } as unknown as IMemory;
     mockProvider = {
       call: vi.fn(),
-    };
+    } as unknown as IProvider;
   });
 
   it('should simulate an agent discovering and installing a new skill', async () => {
@@ -98,7 +105,7 @@ describe('Agent Evolution Flow', () => {
     });
 
     // 2. LLM decides to discover skills
-    mockProvider.call
+    vi.mocked(mockProvider.call)
       .mockResolvedValueOnce({
         role: MessageRole.ASSISTANT,
         content: 'I need a secret tool.',
@@ -136,7 +143,7 @@ describe('Agent Evolution Flow', () => {
     vi.mocked(tools.discoverSkills.execute).mockResolvedValue('Found: secretTool');
     vi.mocked(tools.installSkill.execute).mockImplementation(async () => {
       // Simulate the registry update
-      initialTools.push(tools.secretTool as any);
+      initialTools.push(tools.secretTool as ITool);
       return 'Installed.';
     });
 

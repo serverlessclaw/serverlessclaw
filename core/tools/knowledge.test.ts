@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { TraceSource } from '../lib/types';
 import { mockClient } from 'aws-sdk-client-mock';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
@@ -56,7 +57,7 @@ vi.mock('../lib/tracer', () => ({
   ClawTracer: class {
     constructor(
       public userId: string,
-      public source: any,
+      public source: TraceSource,
       public traceId: string,
       public nodeId: string
     ) {}

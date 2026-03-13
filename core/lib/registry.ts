@@ -303,9 +303,9 @@ export class AgentRegistry {
           },
         })
       );
-    } catch (e: any) {
+    } catch (e: unknown) {
       // If the map doesn't exist yet, initialize it
-      if (e.name === 'ValidationException' && e.message.includes('path')) {
+      if (e instanceof Error && e.name === 'ValidationException' && e.message.includes('path')) {
         await this.saveRawConfig(DYNAMO_KEYS.TOOL_USAGE, {
           [toolName]: { count: 1, lastUsed: Date.now() },
         });

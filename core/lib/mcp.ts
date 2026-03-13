@@ -1,7 +1,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
-import { ITool } from './types/tool';
+import { ITool, JsonSchema } from './types/tool';
 import { logger } from './logger';
 import { AgentRegistry } from './registry';
 
@@ -53,7 +53,7 @@ export class MCPBridge {
       return response.tools.map((mcpTool) => ({
         name: `${serverName}_${mcpTool.name}`,
         description: mcpTool.description || `Tool from ${serverName} server.`,
-        parameters: mcpTool.inputSchema as any,
+        parameters: mcpTool.inputSchema as JsonSchema,
         execute: async (toolArgs: Record<string, unknown>) => {
           const result = await client!.callTool({
             name: mcpTool.name,
