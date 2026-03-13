@@ -54,13 +54,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     icon: 'Brain',
     enabled: true,
     isBackbone: true,
-    tools: [
-      'recallKnowledge',
-      'dispatchTask',
-      'sendMessage',
-      'manageAgentTools',
-      'discoverSkills',
-    ],
+    tools: ['recallKnowledge', 'dispatchTask', 'sendMessage', 'manageAgentTools', 'discoverSkills'],
     connectionProfile: ['bus', 'memory', 'config', 'trace'],
   },
   [AgentType.COGNITION_REFLECTOR]: {
