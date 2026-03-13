@@ -1,5 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ClawTracer } from './tracer';
+import { AgentRegistry } from './registry';
+
+// Mock AgentRegistry
+vi.mock('./registry', () => ({
+  AgentRegistry: {
+    getRetentionDays: vi.fn(),
+  }
+}));
 
 // Mock AWS SDK
 const mockSend = vi.fn();
@@ -59,8 +67,13 @@ describe('ClawTracer', () => {
     expect(tracer.getParentId()).toBe('parent-1');
   });
 
-  it('should start a trace node in DynamoDB', async () => {
+  it('should start a trace node in DynamoDB with configurable TTL', async () => {
+    vi.mocked(AgentRegistry.getRetentionDays).mockResolvedValue(7);
     const tracer = new ClawTracer('user-123', 'dashboard', 'trace-1', 'node-1');
+    
+    const now = Date.now();
+    vi.setSystemTime(now);
+
     await tracer.startTrace({ foo: 'bar' });
 
     expect(mockSend).toHaveBeenCalledWith(
@@ -72,11 +85,14 @@ describe('ClawTracer', () => {
             traceId: 'trace-1',
             nodeId: 'node-1',
             userId: 'user-123',
+            expiresAt: Math.floor(now / 1000) + 7 * 24 * 60 * 60,
             initialContext: { foo: 'bar' },
           }),
         }),
       })
     );
+
+    vi.useRealTimers();
   });
 
   it('should add a step to the correct node', async () => {
