@@ -333,46 +333,6 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
   },
-  fileUpload: {
-    name: 'fileUpload',
-    description: "Uploads a file to the agent's persistent storage.",
-    parameters: {
-      type: 'object',
-      properties: {
-        fileName: { type: 'string', description: 'The name of the file to save.' },
-        content: { type: 'string', description: 'The content of the file (text or base64).' },
-        encoding: {
-          type: 'string',
-          enum: ['text', 'base64'],
-          description: 'Content encoding type.',
-        },
-      },
-      required: ['fileName', 'content', 'encoding'],
-      additionalProperties: false,
-    },
-  },
-  fileDelete: {
-    name: 'fileDelete',
-    description: "Deletes a file from the agent's persistent storage.",
-    parameters: {
-      type: 'object',
-      properties: {
-        fileName: { type: 'string', description: 'The name of the file to delete.' },
-      },
-      required: ['fileName'],
-      additionalProperties: false,
-    },
-  },
-  listUploadedFiles: {
-    name: 'listUploadedFiles',
-    description: "Lists all files currently stored in the agent's persistent storage for the user.",
-    parameters: {
-      type: 'object',
-      properties: {},
-      required: [],
-      additionalProperties: false,
-    },
-  },
   fileRead: {
     name: 'fileRead',
     description: "Reads the content of a file from the agent's persistent storage.",

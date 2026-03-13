@@ -19,7 +19,7 @@ export class SkillRegistry {
     const allLocalTools = Object.values(tools);
 
     // 2. Get all external MCP tools
-    const allExternalTools = await MCPBridge.getAllExternalTools();
+    const allExternalTools = await MCPBridge.getExternalTools();
 
     const allCapabilities = [...allLocalTools, ...allExternalTools];
     const searchTerms = query.toLowerCase().split(' ');

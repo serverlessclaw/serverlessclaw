@@ -1,17 +1,10 @@
-import {
-  S3Client,
-  PutObjectCommand,
-  DeleteObjectCommand,
-  ListObjectsV2Command,
-  GetObjectCommand,
-} from '@aws-sdk/client-s3';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { Resource } from 'sst';
 import { toolDefinitions } from './definitions';
 import { logger } from '../lib/logger';
 import * as path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { ToolResult } from '../lib/types/tool';
 
 const execAsync = promisify(exec);
 const s3 = new S3Client({});
@@ -19,108 +12,6 @@ const s3 = new S3Client({});
 interface ToolsResource {
   StagingBucket: { name: string };
 }
-
-/**
- * Uploads a file to the agent's persistent S3 storage.
- */
-export const fileUpload = {
-  ...toolDefinitions.fileUpload,
-  execute: async (args: Record<string, unknown>): Promise<ToolResult | string> => {
-    const {
-      fileName,
-      content,
-      encoding = 'text',
-      userId,
-    } = args as {
-      fileName: string;
-      content: string;
-      encoding?: 'text' | 'base64';
-      userId: string;
-    };
-
-    if (!userId) return 'FAILED: No userId provided for storage mapping.';
-
-    const typedResource = Resource as unknown as ToolsResource;
-    const bucketName = typedResource.StagingBucket.name;
-    const s3Key = `users/${userId}/files/${fileName}`;
-
-    try {
-      const body = encoding === 'base64' ? Buffer.from(content, 'base64') : content;
-
-      await s3.send(
-        new PutObjectCommand({
-          Bucket: bucketName,
-          Key: s3Key,
-          Body: body,
-        })
-      );
-
-      return `Successfully uploaded ${fileName} to persistent storage.`;
-    } catch (error) {
-      return `Failed to upload file: ${error instanceof Error ? error.message : String(error)}`;
-    }
-  },
-};
-
-/**
- * Deletes a file from the agent's persistent S3 storage.
- */
-export const fileDelete = {
-  ...toolDefinitions.fileDelete,
-  execute: async (args: Record<string, unknown>): Promise<string> => {
-    const { fileName, userId } = args as { fileName: string; userId: string };
-    if (!userId) return 'FAILED: No userId provided.';
-
-    const typedResource = Resource as unknown as ToolsResource;
-    const s3Key = `users/${userId}/files/${fileName}`;
-
-    try {
-      await s3.send(
-        new DeleteObjectCommand({
-          Bucket: typedResource.StagingBucket.name,
-          Key: s3Key,
-        })
-      );
-      return `Successfully deleted ${fileName}.`;
-    } catch (error) {
-      return `Failed to delete file: ${error instanceof Error ? error.message : String(error)}`;
-    }
-  },
-};
-
-/**
- * Lists all uploaded files for the user.
- */
-export const listUploadedFiles = {
-  ...toolDefinitions.listUploadedFiles,
-  execute: async (args: Record<string, unknown>): Promise<string> => {
-    const { userId } = args as { userId: string };
-    if (!userId) return 'FAILED: No userId provided.';
-
-    const typedResource = Resource as unknown as ToolsResource;
-    const prefix = `users/${userId}/files/`;
-
-    try {
-      const response = await s3.send(
-        new ListObjectsV2Command({
-          Bucket: typedResource.StagingBucket.name,
-          Prefix: prefix,
-        })
-      );
-
-      if (!response.Contents || response.Contents.length === 0) {
-        return 'No files found in your persistent storage.';
-      }
-
-      return response.Contents.map((obj) => {
-        const name = obj.Key?.replace(prefix, '');
-        return `- ${name} (${(obj.Size || 0) / 1024} KB, Last Modified: ${obj.LastModified?.toISOString()})`;
-      }).join('\n');
-    } catch (error) {
-      return `Failed to list files: ${error instanceof Error ? error.message : String(error)}`;
-    }
-  },
-};
 
 /**
  * Reads the content of a file from S3 storage.

@@ -1,12 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mockClient } from 'aws-sdk-client-mock';
-import {
-  S3Client,
-  PutObjectCommand,
-  DeleteObjectCommand,
-  ListObjectsV2Command,
-} from '@aws-sdk/client-s3';
-import { fileUpload, fileDelete, listUploadedFiles } from './fs';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { fileRead } from './fs';
 
 const s3Mock = mockClient(S3Client);
 
@@ -17,77 +12,43 @@ vi.mock('sst', () => ({
   },
 }));
 
-describe('file management tools', () => {
+describe('fileRead tool', () => {
   beforeEach(() => {
     s3Mock.reset();
     vi.clearAllMocks();
   });
 
-  describe('fileUpload', () => {
-    it('should upload a text file to S3 with userId isolation', async () => {
-      s3Mock.on(PutObjectCommand).resolves({});
+  it('should read a file from chat-attachments if it exists there', async () => {
+    const mockBody = 'file content';
 
-      const result = await (fileUpload.execute({
-        fileName: 'test.txt',
-        content: 'hello world',
-        userId: 'user-123',
-      }) as Promise<string>);
-
-      expect(result).toContain('Successfully uploaded test.txt');
-      const calls = s3Mock.commandCalls(PutObjectCommand);
-      expect(calls[0].args[0].input).toMatchObject({
-        Bucket: 'test-bucket',
-        Key: 'users/user-123/files/test.txt',
-        Body: 'hello world',
-      });
-    });
-
-    it('should handle base64 encoding', async () => {
-      s3Mock.on(PutObjectCommand).resolves({});
-
-      await fileUpload.execute({
-        fileName: 'image.png',
-        content: 'YmFzZTY0ZGF0YQ==',
-        encoding: 'base64',
-        userId: 'user-123',
+    // Mock failure for first key, success for second
+    s3Mock
+      .on(GetObjectCommand, { Key: 'attachment.txt' })
+      .rejects(new Error('NoSuchKey'))
+      .on(GetObjectCommand, { Key: 'chat-attachments/attachment.txt' })
+      .resolves({
+        Body: {
+          transformToString: async () => mockBody,
+        } as any,
       });
 
-      const calls = s3Mock.commandCalls(PutObjectCommand);
-      expect(calls[0].args[0].input.Body).toBeInstanceOf(Buffer);
+    const result = await fileRead.execute({
+      fileName: 'attachment.txt',
     });
+
+    expect(result).toBe(mockBody);
+    const calls = s3Mock.commandCalls(GetObjectCommand);
+    const requestedKeys = calls.map((c) => c.args[0].input.Key);
+    expect(requestedKeys).toContain('chat-attachments/attachment.txt');
   });
 
-  describe('fileDelete', () => {
-    it('should delete a file from S3', async () => {
-      s3Mock.on(DeleteObjectCommand).resolves({});
+  it('should handle missing files gracefully', async () => {
+    s3Mock.on(GetObjectCommand).rejects(new Error('NoSuchKey'));
 
-      const result = await fileDelete.execute({
-        fileName: 'test.txt',
-        userId: 'user-123',
-      });
-
-      expect(result).toContain('Successfully deleted test.txt');
-      expect(s3Mock.commandCalls(DeleteObjectCommand)[0].args[0].input).toMatchObject({
-        Key: 'users/user-123/files/test.txt',
-      });
+    const result = await fileRead.execute({
+      fileName: 'missing.txt',
     });
-  });
 
-  describe('listUploadedFiles', () => {
-    it('should list files for a user', async () => {
-      s3Mock.on(ListObjectsV2Command).resolves({
-        Contents: [
-          { Key: 'users/user-123/files/file1.txt', Size: 1024, LastModified: new Date() },
-          { Key: 'users/user-123/files/file2.jpg', Size: 2048, LastModified: new Date() },
-        ],
-      });
-
-      const result = await listUploadedFiles.execute({
-        userId: 'user-123',
-      });
-
-      expect(result).toContain('file1.txt');
-      expect(result).toContain('file2.jpg');
-    });
+    expect(result).toContain('FAILED');
   });
 });

@@ -23,7 +23,7 @@ vi.mock('./registry', () => ({
 // Mock MCPBridge
 vi.mock('./mcp', () => ({
   MCPBridge: {
-    getAllExternalTools: vi.fn().mockResolvedValue([]),
+    getExternalTools: vi.fn().mockResolvedValue([]),
   },
 }));
 
@@ -59,7 +59,7 @@ describe('SkillRegistry', () => {
         systemPrompt: '...',
         enabled: true,
         isBackbone: true,
-      });
+      } as any);
 
       await SkillRegistry.installSkill('agent-1', 'tool1');
 
@@ -77,7 +77,7 @@ describe('SkillRegistry', () => {
         systemPrompt: '...',
         enabled: true,
         isBackbone: true,
-      });
+      } as any);
 
       await SkillRegistry.installSkill('agent-1', 'tool1');
 
