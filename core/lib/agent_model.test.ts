@@ -3,19 +3,19 @@ import { Agent } from './agent';
 import { IMemory, IProvider, MessageRole } from './types/index';
 import { AgentRegistry } from './registry';
 
-vi.mock('./registry', () => ({
-  AgentRegistry: {
-    getRawConfig: vi.fn(),
-    recordToolUsage: vi.fn(),
-  },
-}));
-
 const mockGetTraceId = vi.fn().mockReturnValue('test-trace-id');
 const mockGetNodeId = vi.fn().mockReturnValue('test-node-id');
 const mockGetParentId = vi.fn().mockReturnValue('test-parent-id');
 const mockStartTrace = vi.fn().mockResolvedValue('test-trace-id');
 const mockAddStep = vi.fn().mockResolvedValue(undefined);
 const mockEndTrace = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('./registry', () => ({
+  AgentRegistry: {
+    getRawConfig: vi.fn(),
+    recordToolUsage: vi.fn(),
+  },
+}));
 
 vi.mock('./tracer', () => {
   return {
@@ -51,10 +51,6 @@ describe('Agent Model Overrides', () => {
   });
 
   it('should use global model overrides from AgentRegistry', async () => {
-    // We need to temporarily unset VITEST env var or mock it if possible
-    // But since it's a constant in the module, we might need to modify the code first.
-    // For now, let's just see if we can trigger it.
-
     vi.mocked(AgentRegistry.getRawConfig).mockImplementation(async (key: string) => {
       if (key === 'active_provider') return 'bedrock';
       if (key === 'active_model') return 'anthropic.claude-3-sonnet';
@@ -70,8 +66,6 @@ describe('Agent Model Overrides', () => {
       provider: 'openai', // Initial provider
     });
 
-    // NOTE: This test will FAIL currently because Agent.ts has !process.env.VITEST guard
-    // and it doesn't even check for 'active_provider'/'active_model' keys.
     await agent.process('user-1', 'Hello');
 
     expect(mockProvider.call).toHaveBeenCalledWith(
@@ -122,7 +116,7 @@ describe('Agent Model Overrides', () => {
     const mockTool = {
       name: 'checkConfig',
       description: 'Check Config',
-      parameters: {},
+      parameters: { type: 'object', properties: {} },
       execute: checkConfig.execute,
     };
 
@@ -164,7 +158,7 @@ describe('Agent Model Overrides', () => {
     const mockSaveKnowledge = {
       name: 'saveKnowledge',
       description: 'Save knowledge',
-      parameters: {},
+      parameters: { type: 'object', properties: {} },
       execute: vi.fn().mockResolvedValue('Saved successfully'),
     };
 
