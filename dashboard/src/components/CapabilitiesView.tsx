@@ -2,6 +2,7 @@
 
 import React, { useState, useTransition } from 'react';
 import { Wrench, Shield, Zap, Cpu, Settings, Save, Search, Trash2, X, Plus, Activity, BookOpen, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 import { updateAgentTools, deleteMCPServer } from '../app/capabilities/actions';
 import { toast } from 'sonner';
 import CyberConfirm from './CyberConfirm';
@@ -279,6 +280,16 @@ export default function CapabilitiesView({ agents: initialAgents, allTools, mcpS
                   </div>
                   
                   <div className="flex gap-3">
+                    <Link href="/agents">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="bg-white/5 text-white/40 border-white/10 hover:text-[var(--cyber-blue)] hover:border-[var(--cyber-blue)]/50 tracking-widest px-3"
+                        icon={<Settings size={12} />}
+                      >
+                        <span className="text-[10px] font-bold uppercase">Configure Node</span>
+                      </Button>
+                    </Link>
                     <Badge variant="primary" className="bg-white/5 text-white/20 border border-white/5 tracking-widest px-4 py-2">
                       {agent.tools.length} active chips
                     </Badge>

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Bot, Save, Plus, Trash2, Shield, Settings2, RefreshCw, Cpu, ChevronRight, ShieldAlert, X } from 'lucide-react';
+import { Bot, Save, Plus, Trash2, Shield, Settings2, RefreshCw, Cpu, ChevronRight, ShieldAlert, X, Wrench } from 'lucide-react';
+import Link from 'next/link';
 import CyberSelect from '@/components/CyberSelect';
 import { THEME } from '@/lib/theme';
 import { toast } from 'sonner';
@@ -249,8 +250,18 @@ export default function AgentsPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-6 self-end lg:self-center">
-                    <label className={`flex items-center gap-3 ${agent.isBackbone ? 'cursor-not-allowed' : 'cursor-pointer'} group`}>
+                    <div className="flex items-center gap-3 self-end lg:self-center">
+                      <Link href="/capabilities">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-white/50 hover:text-[var(--cyber-green)] p-2 h-auto flex items-center gap-2"
+                        >
+                          <Wrench size={14} />
+                          <span className="text-[10px] font-bold uppercase tracking-widest">Capabilities</span>
+                        </Button>
+                      </Link>
+                      <label className={`flex items-center gap-3 ${agent.isBackbone ? 'cursor-not-allowed' : 'cursor-pointer'} group`}>
                       <Typography variant="caption" weight="bold" color="white" uppercase className="group-hover:text-cyber-green transition-colors">Active Status</Typography>
                       <div className="relative">
                         <input
