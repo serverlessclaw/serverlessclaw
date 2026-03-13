@@ -154,6 +154,56 @@ I am ready for further tasks or instructions.`;
         'SuperClaw'
       );
     }
+  } else if (event['detail-type'] === EventType.SYSTEM_HEALTH_REPORT) {
+    const { component, issue, severity, context: issueContext, userId, traceId, sessionId } =
+      event.detail as {
+        component: string;
+        issue: string;
+        severity: string;
+        context?: Record<string, any>;
+        userId: string;
+        traceId?: string;
+        sessionId?: string;
+      };
+
+    const triageTask = `SYSTEM HEALTH ALERT: A component has reported an internal issue.
+    
+    Component: ${component}
+    Issue: ${issue}
+    Severity: ${severity.toUpperCase()}
+    
+    Context:
+    ${JSON.stringify(issueContext || {}, null, 2)}
+    
+    Please investigate this health issue. Determine if it requires a code modification (Coder Agent), configuration change, or if it can be resolved via an autonomous recovery action.
+    Start by diagnosing the root cause using your tools.`;
+
+    const { AgentRegistry } = await import('../lib/registry');
+    const config = await AgentRegistry.getAgentConfig('main');
+    if (!config) {
+      logger.error('Main agent config missing during health triage');
+      return;
+    }
+
+    const agentTools = await getAgentTools('events');
+    const agent = new Agent(memory, provider, agentTools, config.systemPrompt, config);
+    const responseText = await agent.process(userId, `HEALTH_TRIAGE: ${triageTask}`, {
+      context,
+      traceId,
+      sessionId,
+      source: TraceSource.SYSTEM,
+    });
+
+    if (!responseText.startsWith('TASK_PAUSED')) {
+      await sendOutboundMessage(
+        'events.handler',
+        userId,
+        `🚨 **SYSTEM HEALTH ALERT** (${severity.toUpperCase()})\nComponent: ${component}\nIssue: ${issue}\n\nSuperClaw response: ${responseText}`,
+        undefined,
+        sessionId,
+        'SuperClaw'
+      );
+    }
   } else if (event['detail-type'] === EventType.TASK_COMPLETED) {
     const { userId, agentId, task, response, traceId, initiatorId, depth, sessionId } =
       event.detail as {

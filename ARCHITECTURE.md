@@ -281,7 +281,6 @@ If a deployment fails or the system becomes unstable, Serverless Claw automatica
     | (CodeBuild)|
     +-----------+
 ```
-```
 
 **How it works**:
 1. **Coder Agent** implements changes using `fileWrite` and validates them.
@@ -292,7 +291,11 @@ If a deployment fails or the system becomes unstable, Serverless Claw automatica
     - Pulls the modified files from the **Staging Bucket** and overwrites the local workspace.
     - Runs `pnpm sst deploy`.
 5. **On Success**: CodeBuild uses a `GITHUB_TOKEN` to commit and push the staged changes back to the repository, closing the evolution loop.
-6. **On Failure**: `Dead Man's Switch` detects the unhealthy state and reverts the last commit in Git.
+6. **On Failure**: 
+    - **Build Monitor** detects the failure and retrieves the `traceId` of the reasoning session that triggered it.
+    - **Enrichment**: It emits a `SYSTEM_BUILD_FAILED` event containing the `traceId`, `gapIds`, and `errorLogs`.
+    - **Triage**: The **EventHandler** injects this context into a recovery task, allowing the next agent to look back at the "breaking reasoning" via the trace.
+    - **Dead Man's Switch**: Reverts the last commit in Git if consecutive failures are detected.
 
 ---
 
@@ -302,8 +305,42 @@ Replacing legacy GitHub Actions cost controls with in-AWS equivalents:
 
 1. **Circuit Breaker**: Max 5 deploys/UTC day tracked in DynamoDB. See [docs/SAFETY.md](./docs/SAFETY.md).
 2. **Health Probe Reward**: Successful `GET /health` decrements the counter (-1), allowing continued evolution for healthy changes.
-3. **Config-as-Data**: Non-structural changes (prompts, tool params) live in DynamoDB — no deploy needed.
-4. **Human-in-the-Loop**: Protected files (`sst.config.ts`, etc.) require explicit Telegram approval before any change deploys.
+3. **Self-Reporting Health**: Components use `reportHealthIssue` to signal the AgentBus when internal invariants are violated (e.g., database failures, API timeouts).
+4. **Config-as-Data**: Non-structural changes (prompts, tool params) live in DynamoDB — no deploy needed.
+5. **Human-in-the-Loop**: Protected files (`sst.config.ts`, etc.) require explicit Telegram approval before any change deploys.
+
+---
+
+## ⚕️ Autonomous Health Monitoring
+
+Beyond build failures, the system monitors its own operational integrity through **Signal-based Triage**.
+
+```text
+ [ Any Component ]
+        |
+ (Health Violation)
+        |
+        +----------------------------+
+        |  SYSTEM_HEALTH_REPORT      |
+        |  (AgentBus)                |
+        +-------------+--------------+
+                      |
+        ______________V______________
+       |                             |
+       |     EVENT_HANDLER           | (SuperClaw)
+       |     (Triage Brain)          |
+       |_____________________________|
+              |
+      (Reason & Dispatch)
+              |
+      +-------+-------+
+      |               |
+ [ Coder Agent ]  [ Recovery Agent ]
+ (Fix Code)       (Cycle Resource)
+```
+
+- **Proactivity**: While currently event-driven (Self-Reporting), the system is architected for active heartbeating via the `/health` tool.
+- **Root Cause Analysis**: The SuperClaw receives the full error context and stack traces, allowing it to delegate to the **Coder Agent** for permanent fixes or the **Recovery Agent** for immediate stabilization.
 
 ### 4. LLM Providers
 Provider-agnostic interface supporting:

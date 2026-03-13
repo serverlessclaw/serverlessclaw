@@ -8,14 +8,15 @@
 |-----------|-------------------|---------|
 | **Resource Labeling** | `core/tools/index.ts → fileWrite` | Any write to a protected file |
 | **Circuit Breaker** | `core/tools/index.ts → triggerDeployment` | > 5 deployments/day (UTC) |
-| **Self-Healing Loop** | `core/handlers/monitor.ts` | CodeBuild FAILED event |
+| **Self-Healing Loop** | `core/handlers/monitor.ts` | CodeBuild FAILED event + Enrichment |
 | **Dead Man's Switch** | `core/handlers/recovery.ts` | 15-min health probe failure |
 | **Pre-flight Validation** | `core/tools/index.ts → validateCode` | Called by Coder Agent after writes |
-| **Health Probe** | `core/handlers/health.ts` → `GET /health` | Called by SuperClaw after deployment |
+| **Health Probe** | `core/handlers/health.ts` → `GET /health` | API endpoint for external probes |
+| **Self-Reporting (New)** | `core/lib/health.ts → reportHealthIssue` | Internal component violation detection |
 | **Rollback Signal** | `core/tools/index.ts → triggerRollback` | Circuit breaker active or health failed |
 | **Human-in-the-Loop** | SuperClaw system prompt | `MANUAL_APPROVAL_REQUIRED` returned |
 | **Dashboard Auth** | `dashboard/src/proxy.ts` | Unauthorized access to ClawCenter |
-| **Recursion Guard** | `core/handlers/events.ts` | Agent-to-agent hop depth > 5 |
+| **Recursion Guard** | `core/handlers/events.ts` | Agent-to-agent hop depth > default (50) |
 
 ---
 
@@ -66,9 +67,10 @@ To prevent infinite loops during autonomous multi-agent coordination, Serverless
 ```
 
 1. **Detection**: `BuildMonitor` Lambda captures `FAILED` state changes from CodeBuild.
-2. **Diagnosis**: `BuildMonitor` fetches the last 50 lines of CloudWatch logs and identifies the original user context from DynamoDB.
-3. **Notification**: Dispatches a `system.build.failed` event to the `AgentBus`.
-4. **Action**: `EventHandler` invokes the SuperClaw, which notifies the user and automatically dispatches a fix task to the **Coder Agent**.
+2. **Context Enrichment**: `BuildMonitor` retrieves the `traceId` of the reasoning session that initiated the build and the list of related `gapIds`.
+3. **Diagnosis**: `BuildMonitor` fetches the last 3000 chars of CloudWatch logs for immediate error extraction.
+4. **Notification**: Dispatches an enriched `system_build_failed` event to the `AgentBus`.
+5. **Action**: `EventHandler` invokes the SuperClaw, which explicitly instructs the recovery agent to review the `breakingTraceId` to understand the previous failure reasoning.
 
 This loop is still subject to the **Circuit Breaker** to prevent infinite repair attempts.
 

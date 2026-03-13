@@ -184,6 +184,7 @@ export function createAgents(ctx: SharedContext): {
         EventType.SYSTEM_BUILD_SUCCESS,
         EventType.TASK_COMPLETED,
         EventType.TASK_FAILED,
+        EventType.SYSTEM_HEALTH_REPORT,
       ],
     },
   });

@@ -11,7 +11,7 @@ As a serverless stack, the deployed infrastructure is immutable between releases
  Evolution follows a strict, verified lifecycle (**OPEN** → **PLANNED** → **PROGRESS** → **DEPLOYED** → **DONE**). No change is marked as complete until the **QA Auditor** verifies its real-world satisfaction in subsequent user interactions. **[Read more about the Evolutionary Lifecycle ↗](./docs/AGENTS.md#the-evolutionary-lifecycle-self-evolution-loop)**
 
 ### 2. Self-Healing & Resilient
-Designed to be "un-killable." If an autonomous deployment introduces a bug or causes a build failure, the **Build Monitor** intercepts the error logs and tasks the agent swarm to investigate and apply a fix. If the "brain" (SuperClaw Lambda) becomes unresponsive, an immutable **Dead Man's Switch** (health probe) triggers a 100% automated git-revert and redeploys the last known stable state. No midnight wake-up calls.
+Designed to be "un-killable." If an autonomous deployment fails, the **Build Monitor** retrieves the **Context-Aware Trace** (linking the failure to the original reasoning session) and tasks the agent swarm to investigate. If a component detects an internal violation (e.g., database failure), it emits a **Self-Reporting Signal** to the SuperClaw for autonomous triage. For catastrophic failures, an immutable **Dead Man's Switch** triggers a 100% automated git-revert and redeploys the last known stable state.
 
 ### 3. Self-Cost Optimizing (Zero Idle Costs)
 Traditional AI agents run on expensive, always-on instances. Serverless Claw is 100% serverless. Powered by AWS Lambda, DynamoDB, and EventBridge, **you pay strictly per invocation**. When the agent is idle, your infrastructure cost is exactly $0.00. The system also dynamically hot-swaps between LLM models (e.g., OpenAI, Anthropic Bedrock) based on the task's complexity, optimizing token costs on the fly.
@@ -106,6 +106,7 @@ make dev
 ## Resilience & Safety Guardrails
 - **Circuit Breaker**: Prevents "Deployment Death Spirals" by limiting deploys (Default: 5/day).
 - **Recursion Limit**: Protects against infinite agent-to-agent delegation loops (Default: 50).
+- **Self-Reporting Health**: Standardized internal signaling (`SYSTEM_HEALTH_REPORT`) that allows components to request autonomous triage from SuperClaw.
 - **Optimization Policy**: Global toggle for `Aggressive` (Quality-first) or `Conservative` (Cost-first) reasoning.
 - **Dead Man's Switch**: Immutable health probe that triggers automated git-reverts on failure.
 - **Protected Scopes**: Hardcoded list of files (e.g., `sst.config.ts`) that require human approval to modify.

@@ -20,6 +20,7 @@ import {
   IAgentConfig,
 } from '../lib/types/index';
 import { DynamoMemory } from '../lib/memory';
+import { reportHealthIssue } from '../lib/health';
 
 const codebuild = new CodeBuildClient({});
 const logs = new CloudWatchLogsClient({});
@@ -181,6 +182,14 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
         }
       } catch (e) {
         logger.error('Failed to update circuit breaker counter:', e);
+        await reportHealthIssue({
+          component: 'BuildMonitor',
+          issue: 'Failed to update circuit breaker counter in ConfigTable',
+          severity: 'medium',
+          userId: userId || 'SYSTEM',
+          traceId: breakingTraceId,
+          context: { error: String(e), buildId },
+        });
       }
 
       // Transition gaps to FAILED
