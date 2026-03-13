@@ -1,21 +1,26 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { mockClient } from 'aws-sdk-client-mock';
-import { EventBridgeClient } from '@aws-sdk/client-eventbridge';
 
 // 1. Mock 'sst' FIRST with a proxy
 vi.mock('sst', () => ({
-  Resource: new Proxy({}, {
-    get: (_target, prop) => {
-      return { name: `test-${String(prop).toLowerCase()}`, value: 'test-value', url: 'http://test.com' };
+  Resource: new Proxy(
+    {},
+    {
+      get: (_target, prop) => {
+        return {
+          name: `test-${String(prop).toLowerCase()}`,
+          value: 'test-value',
+          url: 'http://test.com',
+        };
+      },
     }
-  })
+  ),
 }));
 
 // Mock Agent
 const mockProcess = vi.fn();
 vi.mock('../lib/agent', () => {
   return {
-    Agent: vi.fn(function() {
+    Agent: vi.fn(function () {
       return {
         process: mockProcess,
       };
@@ -78,7 +83,8 @@ describe('EventHandler', () => {
 
       mockProcess.mockResolvedValue('Rebooting component...');
 
-      await handler(event as any, {} as any); // Pass empty context as any to fix lint
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await handler(event as any, {} as any);
 
       // Verify Agent.process was called with triage prompt
       expect(mockProcess).toHaveBeenCalledWith(
@@ -116,7 +122,8 @@ describe('EventHandler', () => {
 
       mockProcess.mockResolvedValue('TASK_PAUSED: Need permission');
 
-      await handler(event as any, {} as any); // Pass empty context as any to fix lint
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await handler(event as any, {} as any);
 
       const { sendOutboundMessage } = await import('../lib/outbound');
       expect(sendOutboundMessage).not.toHaveBeenCalled();

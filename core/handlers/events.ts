@@ -155,16 +155,23 @@ I am ready for further tasks or instructions.`;
       );
     }
   } else if (event['detail-type'] === EventType.SYSTEM_HEALTH_REPORT) {
-    const { component, issue, severity, context: issueContext, userId, traceId, sessionId } =
-      event.detail as {
-        component: string;
-        issue: string;
-        severity: string;
-        context?: Record<string, any>;
-        userId: string;
-        traceId?: string;
-        sessionId?: string;
-      };
+    const {
+      component,
+      issue,
+      severity,
+      context: issueContext,
+      userId,
+      traceId,
+      sessionId,
+    } = event.detail as {
+      component: string;
+      issue: string;
+      severity: string;
+      context?: Record<string, unknown>;
+      userId: string;
+      traceId?: string;
+      sessionId?: string;
+    };
 
     const triageTask = `SYSTEM HEALTH ALERT: A component has reported an internal issue.
     

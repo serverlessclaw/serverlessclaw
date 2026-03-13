@@ -10,7 +10,7 @@ export interface HealthIssue {
   component: string;
   issue: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   userId: string;
   traceId?: string;
 }

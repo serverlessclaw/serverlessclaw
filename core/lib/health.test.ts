@@ -9,7 +9,7 @@ vi.mock('sst', () => ({
     MemoryTable: { name: 'test-memory-table' },
     ConfigTable: { name: 'test-config-table' },
     TraceTable: { name: 'test-trace-table' },
-  }
+  },
 }));
 
 // 2. Mock EventBridge
@@ -40,12 +40,19 @@ describe('health reporting utility', () => {
 
       expect(ebMock.calls()).toHaveLength(1);
       const call = ebMock.call(0);
-      const input = call.args[0].input as any;
+      const input = call.args[0].input as {
+        Entries: Array<{
+          Source: string;
+          DetailType: string;
+          Detail: string;
+          EventBusName: string;
+        }>;
+      };
 
       expect(input.Entries[0].EventBusName).toBe('test-agent-bus');
       expect(input.Entries[0].Source).toBe('system.health');
       expect(input.Entries[0].DetailType).toBe(EventType.SYSTEM_HEALTH_REPORT);
-      
+
       const detail = JSON.parse(input.Entries[0].Detail);
       expect(detail).toMatchObject(report);
     });
