@@ -43,8 +43,21 @@ export default function CapabilitiesView({ allTools, mcpServers, agents }: Capab
   const [activeTab, setActiveTab] = useState<'library' | 'analytics' | 'mcp'>('analytics');
   const [isPending, startTransition] = useTransition();
   const [optimisticAgents, setOptimisticAgents] = useState(agents);
-
   const [newBridge, setNewBridge] = useState({ name: '', command: '', env: '{}' });
+
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant: 'danger' | 'warning';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    variant: 'warning'
+  });
 
   // Sync with props if they change
   useEffect(() => {

@@ -77,12 +77,32 @@ export class MCPBridge {
       string | { command: string; env?: Record<string, string> }
     >;
 
-    // 2026: Bootstrap default filesystem server if none exists
+    // 2026: Bootstrap default servers if none exists
     if (!serversConfig || Object.keys(serversConfig).length === 0) {
-      logger.info('No MCP servers found. Bootstrapping default filesystem bridge.');
+      logger.info('No MCP servers found. Bootstrapping default neural bridges.');
       serversConfig = {
         filesystem: {
           command: 'npx -y @modelcontextprotocol/server-filesystem .',
+          env: {},
+        },
+        git: {
+          command: 'npx -y @modelcontextprotocol/server-git',
+          env: {},
+        },
+        'google-search': {
+          command: 'npx -y @modelcontextprotocol/server-google-search',
+          env: {},
+        },
+        puppeteer: {
+          command: 'npx -y @modelcontextprotocol/server-puppeteer',
+          env: {},
+        },
+        fetch: {
+          command: 'npx -y @modelcontextprotocol/server-fetch',
+          env: {},
+        },
+        aws: {
+          command: 'npx -y @modelcontextprotocol/server-aws',
           env: {},
         },
       };

@@ -20,6 +20,11 @@
 | `installSkill` | Adds a tool to an agent's roster | — | ✅ |
 | `uninstallSkill` | Removes a tool from an agent's roster | — | ✅ |
 | `mcp-filesystem-*` | MCP-driven file operations (read/write/list/search) | ✅ | — |
+| `git-status` / `git-diff` | Version control awareness (MCP) | — | — |
+| `google-search` | Real-time global intelligence (MCP) | — | — |
+| `puppeteer-*` | Browser automation & UI vision (MCP) | ✅ | — |
+| `fetch` | Deep reading of docs/web pages (MCP) | — | — |
+| `aws-*` | Infrastructure auditing & logs (MCP) | ✅ | — |
 
 ---
 
