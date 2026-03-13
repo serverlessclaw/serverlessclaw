@@ -8,6 +8,7 @@ import {
 } from '../types/index';
 import { Resource } from 'sst';
 import { logger } from '../logger';
+import { normalizeProfile, capEffort } from './utils';
 
 interface OpenRouterResource {
   OpenRouterApiKey: { value: string };
@@ -38,22 +39,18 @@ export class OpenRouterProvider implements IProvider {
     const activeModel = model || this.model;
 
     // Fallback if profile not supported
-    const capabilities = await this.getCapabilities();
-    if (!capabilities.supportedReasoningProfiles.includes(profile)) {
-      logger.warn(
-        `Profile ${profile} not supported for OpenRouter model ${activeModel}, falling back to STANDARD`
-      );
-      profile = ReasoningProfile.STANDARD;
-    }
+    const capabilities = await this.getCapabilities(activeModel);
+    profile = normalizeProfile(profile, capabilities, activeModel);
 
     const reasoningConfig = OPENROUTER_REASONING_MAP[profile];
+    const reasoningEffort = capEffort(reasoningConfig.effort, capabilities.maxReasoningEffort);
 
     const body: Record<string, unknown> = {
       model: activeModel,
       messages: messages,
       route: reasoningConfig.route,
       reasoning: {
-        effort: reasoningConfig.effort,
+        effort: reasoningEffort,
         enabled: reasoningConfig.enabled,
       },
       // 2026: Provider routing and privacy defaults
@@ -168,6 +165,7 @@ export class OpenRouterProvider implements IProvider {
             ReasoningProfile.DEEP,
           ]
         : [ReasoningProfile.FAST, ReasoningProfile.STANDARD],
+      maxReasoningEffort: 'high', // OpenRouter's reasoning.effort usually caps at high
     };
   }
 }

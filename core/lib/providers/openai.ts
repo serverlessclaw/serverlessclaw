@@ -10,6 +10,7 @@ import {
 } from '../types/index';
 import { Resource } from 'sst';
 import { logger } from '../logger';
+import { normalizeProfile, capEffort } from './utils';
 
 interface OpenAIResponse {
   output_text?: string;
@@ -45,15 +46,13 @@ export class OpenAIProvider implements IProvider {
     const activeModel = model || this.model;
 
     // Fallback if profile not supported
-    const capabilities = await this.getCapabilities();
-    if (!capabilities.supportedReasoningProfiles.includes(profile)) {
-      logger.warn(
-        `Profile ${profile} not supported for model ${activeModel}, falling back to STANDARD`
-      );
-      profile = ReasoningProfile.STANDARD;
-    }
+    const capabilities = await this.getCapabilities(activeModel);
+    profile = normalizeProfile(profile, capabilities, activeModel);
 
-    const reasoningEffort = REASONING_MAP[profile];
+    const reasoningEffort = capEffort(
+      REASONING_MAP[profile] as string,
+      capabilities.maxReasoningEffort
+    );
 
     // Map internal message role to OpenAI SDK role
     const processedMessages = messages.map((m) => {
@@ -164,7 +163,7 @@ export class OpenAIProvider implements IProvider {
         model: activeModel as OpenAI.ResponsesModel,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         input: responsesInput as any,
-        reasoning: { effort: reasoningEffort },
+        reasoning: { effort: reasoningEffort as OpenAI.ReasoningEffort },
         ...(hasTools
           ? {
               tools: tools.map((t) => {
@@ -218,7 +217,7 @@ export class OpenAIProvider implements IProvider {
     const params: OpenAI.Chat.ChatCompletionCreateParamsNonStreaming = {
       model: activeModel,
       messages: processedMessages,
-      ...(isReasoningModel ? { reasoning_effort: reasoningEffort } : {}),
+      ...(isReasoningModel ? { reasoning_effort: reasoningEffort as OpenAI.ReasoningEffort } : {}),
     };
     if (hasTools) {
       params.tools = tools.map((t) => {
@@ -268,6 +267,8 @@ export class OpenAIProvider implements IProvider {
     const activeModel = model || this.model;
     const isReasoningModel =
       activeModel.includes(OpenAIModel.GPT_5_4) || activeModel.includes(OpenAIModel.GPT_5_MINI);
+    const isMiniModel = activeModel.includes(OpenAIModel.GPT_5_MINI);
+
     return {
       supportedReasoningProfiles: isReasoningModel
         ? [
@@ -277,6 +278,7 @@ export class OpenAIProvider implements IProvider {
             ReasoningProfile.DEEP,
           ]
         : [ReasoningProfile.FAST, ReasoningProfile.STANDARD],
+      maxReasoningEffort: isMiniModel ? 'high' : 'xhigh',
     };
   }
 }

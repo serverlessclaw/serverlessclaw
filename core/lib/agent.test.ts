@@ -49,6 +49,9 @@ describe('Agent Trace Propagation', () => {
 
     mockProvider = {
       call: vi.fn().mockResolvedValue({ role: MessageRole.ASSISTANT, content: 'Hello' }),
+      getCapabilities: vi
+        .fn()
+        .mockResolvedValue({ supportedReasoningProfiles: ['standard', 'fast'] }),
     } as unknown as IProvider;
 
     // Default mock behaviors

@@ -47,6 +47,9 @@ describe('Agent Model Overrides', () => {
 
     mockProvider = {
       call: vi.fn().mockResolvedValue({ role: MessageRole.ASSISTANT, content: 'Hello' }),
+      getCapabilities: vi.fn().mockResolvedValue({
+        supportedReasoningProfiles: ['standard', 'fast', 'thinking', 'deep'],
+      }),
     } as unknown as IProvider;
   });
 

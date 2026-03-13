@@ -127,6 +127,8 @@ export enum OpenRouterModel {
 export interface ICapabilities {
   /** List of reasoning profiles supported by this configuration. */
   supportedReasoningProfiles: ReasoningProfile[];
+  /** Optional cap for reasoning effort (e.g. 'high' for mini models). */
+  maxReasoningEffort?: string;
 }
 
 /**

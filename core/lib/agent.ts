@@ -18,6 +18,7 @@ import { SSTResource } from './types/index';
 import { Context as LambdaContext } from 'aws-lambda';
 import { SYSTEM } from './constants';
 import { AgentRegistry } from './registry';
+import { normalizeProfile } from './providers/utils';
 
 const typedResource = Resource as unknown as SSTResource;
 
@@ -334,10 +335,24 @@ export class Agent {
             provider: activeProvider,
           },
         });
+
+        // 2026 Resilience Strategy: Resolve capabilities and normalize profile before call
+        let normalizedProfile = activeProfile;
+        try {
+          const capabilities = await this.provider.getCapabilities(activeModel);
+          normalizedProfile = normalizeProfile(
+            activeProfile,
+            capabilities,
+            activeModel || 'default'
+          );
+        } catch (e) {
+          logger.warn('Failed to fetch capabilities, using requested profile:', e);
+        }
+
         const aiResponse = await this.provider.call(
           messages,
           this.tools,
-          activeProfile,
+          normalizedProfile,
           activeModel,
           activeProvider
         );

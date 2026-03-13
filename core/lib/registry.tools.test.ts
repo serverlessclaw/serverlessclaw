@@ -58,8 +58,9 @@ describe('AgentRegistry Tool Overrides', () => {
     expect(config?.tools).toContain('myCustomTool');
     expect(config?.tools).toContain('discoverSkills'); // Universal
     expect(config?.tools).toContain('installSkill'); // Universal
-    // Static backbone tools should be REPLACED by override (except universals)
-    expect(config?.tools).not.toContain('dispatchTask');
+    // Smart Default: Backbone tools are now MERGED with overrides
+    expect(config?.tools).toContain('dispatchTask');
+    expect(config?.tools).toContain('registerMCPServer');
   });
 
   it('should ensure universal tools are always present', async () => {

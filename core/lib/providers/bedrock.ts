@@ -17,6 +17,7 @@ import {
 } from '../types/index';
 import { Resource } from 'sst';
 import { logger } from '../logger';
+import { normalizeProfile } from './utils';
 
 interface BedrockResource {
   AwsRegion: { value: string };
@@ -75,13 +76,8 @@ export class BedrockProvider implements IProvider {
     const activeModelId = model || this.modelId;
 
     // Fallback if profile not supported
-    const capabilities = await this.getCapabilities();
-    if (!capabilities.supportedReasoningProfiles.includes(profile)) {
-      logger.warn(
-        `Profile ${profile} not supported for model ${activeModelId}, falling back to STANDARD`
-      );
-      profile = ReasoningProfile.STANDARD;
-    }
+    const capabilities = await this.getCapabilities(activeModelId);
+    profile = normalizeProfile(profile, capabilities, activeModelId);
 
     const reasoningConfig = BEDROCK_REASONING_MAP[profile];
 

@@ -17,24 +17,28 @@ const typedResource = Resource as unknown as SSTResource;
  */
 export class AgentRegistry {
   private static backboneConfigs: Record<string, IAgentConfig> = BACKBONE_REGISTRY;
-  private static DEFAULT_AGENT_TOOLS = [
-    'recallKnowledge',
-    'listAgents',
+
+  private static ESSENTIAL_SYSTEM_TOOLS = [
     'dispatchTask',
+    'recallKnowledge',
     'discoverSkills',
     'installSkill',
+    'saveKnowledge',
+    'checkConfig',
+  ];
+
+  private static DEFAULT_AGENT_TOOLS = [
+    ...AgentRegistry.ESSENTIAL_SYSTEM_TOOLS,
+    'listAgents',
     'fileUpload',
     'fileDelete',
     'listUploadedFiles',
   ];
 
   private static DISCOVERY_BOOTLOADER_TOOLS = [
-    'recallKnowledge',
+    ...AgentRegistry.ESSENTIAL_SYSTEM_TOOLS,
     'listAgents',
-    'discoverSkills',
-    'installSkill',
     'sendMessage',
-    'checkConfig',
   ];
 
   /**
@@ -99,13 +103,7 @@ export class AgentRegistry {
     const isDiscoveryMode = (await this.getRawConfig('selective_discovery_mode')) === true;
     if (isDiscoveryMode && config.tools) {
       // Core system tools that should never be removed from backbone agents
-      const coreTools = [
-        'dispatchTask',
-        'recallKnowledge',
-        'discoverSkills',
-        'installSkill',
-        'checkConfig',
-      ];
+      const coreTools = AgentRegistry.ESSENTIAL_SYSTEM_TOOLS;
       config.tools = config.tools.filter((t: string) => coreTools.includes(t));
 
       // Inject bootloader set if toolset becomes too empty
@@ -121,13 +119,24 @@ export class AgentRegistry {
     const toolOverride = await this.getRawConfig(`${id}_tools`);
     if (toolOverride && Array.isArray(toolOverride)) {
       logger.info(`Applying dynamic tool override for agent ${id}:`, toolOverride);
-      // Ensure universal skills are always present even in overrides
-      const universalSkills = ['discoverSkills', 'installSkill'];
-      config.tools = Array.from(new Set([...toolOverride, ...universalSkills]));
+
+      // Smart Default: If it's a backbone agent, merge code tools with overrides
+      // This ensures that newly added tools in the codebase are immediately available
+      // even if a user has a stale override in DynamoDB.
+      if (this.backboneConfigs[id]) {
+        config.tools = Array.from(
+          new Set([...toolOverride, ...(this.backboneConfigs[id].tools || [])])
+        );
+      } else {
+        config.tools = Array.from(
+          new Set([...toolOverride, ...AgentRegistry.ESSENTIAL_SYSTEM_TOOLS])
+        );
+      }
     } else {
-      // Ensure universal skills are present even if not in the base config or no override
-      const universalSkills = ['discoverSkills', 'installSkill'];
-      config.tools = Array.from(new Set([...(config.tools || []), ...universalSkills]));
+      // Ensure essential tools are present even if not in the base config or no override
+      config.tools = Array.from(
+        new Set([...(config.tools || []), ...AgentRegistry.ESSENTIAL_SYSTEM_TOOLS])
+      );
     }
 
     // Inject defaults if still missing tools
