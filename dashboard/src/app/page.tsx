@@ -5,6 +5,7 @@ import { Send, User, Bot, Loader2, MessageSquare, Terminal, Plus, Clock, Chevron
 import { THEME } from '@/lib/theme';
 import mqtt from 'mqtt';
 import { useSearchParams, useRouter } from 'next/navigation';
+import CyberConfirm from '@/components/CyberConfirm';
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -623,75 +624,25 @@ function ChatContent() {
         </div>
       </main>
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(false)} />
-          <div className="relative w-full max-w-md bg-[#0a0a0a] border border-red-500/30 shadow-[0_0_50px_rgba(239,68,68,0.1)] rounded-sm p-8 space-y-6">
-            <div className="flex flex-col items-center text-center space-y-4">
-              <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.2)]">
-                <AlertTriangle size={32} />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-lg font-black uppercase tracking-[0.2em] text-white">Decommission Trace?</h3>
-                <p className="text-xs text-white/60 leading-relaxed font-mono">
-                  You are about to purge this neural path from the permanent record. This action is irreversible and will fragment the historical context.
-                </p>
-              </div>
-            </div>
+      <CyberConfirm 
+        isOpen={showDeleteConfirm}
+        title="Trace Erasure"
+        message="You are about to purge this neural path from the permanent record. This action is irreversible and will fragment the historical context."
+        variant="danger"
+        confirmText="CONFIRM_PURGE"
+        onConfirm={confirmDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
 
-            <div className="flex gap-4">
-              <button
-                onClick={confirmDelete}
-                className="flex-1 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/50 py-3 rounded-sm text-[10px] font-black uppercase tracking-[0.2em] transition-all"
-              >
-                CONFIRM_PURGE
-              </button>
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 bg-white/5 hover:bg-white/10 text-white/60 border border-white/10 py-3 rounded-sm text-[10px] font-black uppercase tracking-[0.2em] transition-all"
-              >
-                ABORT_ACTION
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete All Confirmation Modal */}
-      {showDeleteAllConfirm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowDeleteAllConfirm(false)} />
-          <div className="relative w-full max-w-md bg-[#0a0a0a] border border-red-500/30 shadow-[0_0_50px_rgba(239,68,68,0.1)] rounded-sm p-8 space-y-6">
-            <div className="flex flex-col items-center text-center space-y-4">
-              <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.2)]">
-                <AlertTriangle size={32} />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-lg font-black uppercase tracking-[0.2em] text-white">Purge All Neural Logs?</h3>
-                <p className="text-xs text-white/60 leading-relaxed font-mono">
-                  You are about to permanently erase ALL conversation histories from the database. This action is irreversible.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-4">
-              <button
-                onClick={confirmDeleteAll}
-                className="flex-1 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/50 py-3 rounded-sm text-[10px] font-black uppercase tracking-[0.2em] transition-all"
-              >
-                CONFIRM_TOTAL_PURGE
-              </button>
-              <button
-                onClick={() => setShowDeleteAllConfirm(false)}
-                className="flex-1 bg-white/5 hover:bg-white/10 text-white/60 border border-white/10 py-3 rounded-sm text-[10px] font-black uppercase tracking-[0.2em] transition-all"
-              >
-                ABORT_ACTION
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CyberConfirm 
+        isOpen={showDeleteAllConfirm}
+        title="Total Memory Wipe"
+        message="You are about to permanently erase ALL conversation histories from the database. This action is irreversible and cannot be undone."
+        variant="danger"
+        confirmText="CONFIRM_TOTAL_PURGE"
+        onConfirm={confirmDeleteAll}
+        onCancel={() => setShowDeleteAllConfirm(false)}
+      />
     </div>
   );
 }

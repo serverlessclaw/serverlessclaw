@@ -35,8 +35,8 @@ export default function CyberConfirm({
   const color = colors[variant];
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 animate-in fade-in duration-300">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onCancel} />
+    <div className="fixed inset-0 z-[200] w-screen h-screen flex items-center justify-center p-4 animate-in fade-in duration-300 overflow-hidden">
+      <div className="absolute inset-0 w-full h-full bg-black/80 backdrop-blur-md" onClick={onCancel} />
       
       <div className={`relative w-full max-w-md bg-[#050505] border-2 border-${color}-500/30 shadow-[0_0_50px_rgba(0,0,0,0.5)] rounded-sm p-8 space-y-6 overflow-hidden`}>
         {/* Cyber background decoration */}
