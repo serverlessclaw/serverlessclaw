@@ -480,7 +480,7 @@ function ChatContent() {
                       variant="ghost"
                       size="sm"
                       onClick={(e) => deleteSession(e, s.sessionId)}
-                      className="opacity-0 group-hover:opacity-60 hover:!opacity-100 p-1 text-red-500 h-auto"
+                      className="p-1 text-red-500/40 hover:text-red-500 h-auto transition-colors"
                       icon={<Trash2 size={12} />}
                       title="Delete Conversation"
                     />

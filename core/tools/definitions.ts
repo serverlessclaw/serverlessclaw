@@ -236,9 +236,8 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
           description: 'The configuration key (e.g. evolution_mode, deploy_limit).',
         },
         value: {
-          type: 'object',
-          description: 'The new value for the configuration.',
-          additionalProperties: true,
+          type: 'string',
+          description: 'The new value for the configuration (JSON stringified if object).',
         },
       },
       required: ['key', 'value'],
@@ -260,8 +259,8 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
           description: 'The command to run the server (e.g., npx @mcp/server-git).',
         },
         env: {
-          type: 'object',
-          description: 'Optional environment variables for the server.',
+          type: 'string',
+          description: 'Optional environment variables for the server (JSON stringified object).',
         },
       },
       required: ['serverName', 'command', 'env'],

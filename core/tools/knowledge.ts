@@ -333,15 +333,22 @@ export const reportGap = {
 export const setSystemConfig = {
   ...toolDefinitions.setSystemConfig,
   execute: async (args: Record<string, unknown>): Promise<string> => {
-    const { key, value } = args as { key: string; value: unknown };
+    const { key, value } = args as { key: string; value: string };
+    let parsedValue: unknown = value;
+    try {
+      parsedValue = JSON.parse(value);
+    } catch {
+      // Not a JSON string, use raw value
+    }
+
     try {
       await db.send(
         new PutCommand({
           TableName: typedResource.ConfigTable.name,
-          Item: { key, value },
+          Item: { key, value: parsedValue },
         })
       );
-      return `Successfully updated system config: ${key} = ${JSON.stringify(value)}`;
+      return `Successfully updated system config: ${key} = ${JSON.stringify(parsedValue)}`;
     } catch (error) {
       return `Failed to update system config: ${error instanceof Error ? error.message : String(error)}`;
     }
@@ -357,15 +364,24 @@ export const registerMCPServer = {
     const { serverName, command, env } = args as {
       serverName: string;
       command: string;
-      env?: Record<string, string>;
+      env: string;
     };
 
     try {
+      let parsedEnv = {};
+      if (env) {
+        try {
+          parsedEnv = typeof env === 'string' ? JSON.parse(env) : env;
+        } catch (e) {
+          return `Failed to parse environment variables: ${e instanceof Error ? e.message : String(e)}. Ensure 'env' is a valid JSON string.`;
+        }
+      }
+
       const { AgentRegistry } = await import('../lib/registry');
       const mcpServers =
         ((await AgentRegistry.getRawConfig('mcp_servers')) as Record<string, unknown>) || {};
 
-      mcpServers[serverName] = env ? { command, env } : command;
+      mcpServers[serverName] = { command, env: parsedEnv };
 
       await db.send(
         new PutCommand({
