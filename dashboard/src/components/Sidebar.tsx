@@ -57,7 +57,6 @@ export default function Sidebar() {
     { label: UI_STRINGS.INFRA_HEADER, type: 'header' },
     { href: ROUTES.SYSTEM_PULSE, label: UI_STRINGS.SYSTEM_PULSE, icon: Share2 },
     { href: ROUTES.LOCKS, label: UI_STRINGS.SESSION_TRAFFIC, icon: Lock },
-    { href: ROUTES.SECURITY, label: UI_STRINGS.SECURITY_MANIFEST, icon: ShieldCheck },
     { href: ROUTES.RESILIENCE, label: UI_STRINGS.SELF_HEALING, icon: Zap },
     { href: ROUTES.SETTINGS, label: UI_STRINGS.CONFIG, icon: Settings },
   ];
@@ -130,7 +129,7 @@ export default function Sidebar() {
             if (item.type === 'header') {
               return (
                 <div key={idx} className={`px-3 mb-1 ${idx === 0 ? 'mt-0' : 'mt-4'}`}>
-                  <Typography variant="mono" weight="black" color="muted" className="text-[10px] uppercase tracking-[0.3em] opacity-70">
+                  <Typography variant="mono" weight="black" color="white" className="text-[11px] uppercase tracking-[0.3em] opacity-90">
                     {item.label}
                   </Typography>
                 </div>
