@@ -365,9 +365,10 @@ export class Agent {
               });
 
               const rawResult = await tool.execute(args);
-              const resultText = typeof rawResult === 'string'
-                ? rawResult
-                : (rawResult as any)?.text || JSON.stringify(rawResult) || '';
+              const resultText =
+                typeof rawResult === 'string'
+                  ? rawResult
+                  : (rawResult as any)?.text || JSON.stringify(rawResult) || '';
 
               // Record tool usage atomically
               if (!process.env.VITEST) {

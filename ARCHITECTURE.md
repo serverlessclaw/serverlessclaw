@@ -102,30 +102,40 @@ Agents communicate asynchronously using **AWS EventBridge (The AgentBus)**. This
                |
       _________V_________
      |                   |
-     |   SUPERCLAW       | (Orchestrator)
-     |___________________|
-               |
-     (1) DISPATCH_TASK (via AgentBus)
-               |
-       _________V_________           (3) [ BUILD_MONITOR ]
-      |    EVENT_BUS      | <-------  (Deterministic Logic)
-      |   (AgentBus)      |
-      |___________________|          (4) [ REFLECTOR_AGENT ]
-          |         |                 (Cognition Reflection)
-          |         |
-     (2) CODER_AGENT|                (5) [ PLANNER_AGENT ]
-         (Writes Code)                (Designs STRATEGIC_PLAN)
-                    |
-                    |                (6) [ NOTIFIER_HANDLER ]
-                    +-----------------> (Listens for OUTBOUND_MESSAGE)
-                    |
-                    |                (7) [ DEAD MAN'S SWITCH ]
-                    +-----------------> (Emergency Recovery)
-                                         (logic-based rollback)
+     |   SUPERCLAW       | <---------------------------------------+
+     | (Orchestrator)    |                                         |
+     |___________________|                                         |
+               |                                                   |
+     (1) DISPATCH_TASK (via AgentBus)                              |
+               |                                                   |
+       ________V_________           (3) [ BUILD_MONITOR ]          |
+      |    EVENT_BUS     | <-------  (Signals Build Status)        |
+      |   (AgentBus)     |                                         |
+      |__________________|          (4) [ REFLECTOR_AGENT ]        |
+          |         |                (Signals Evolution Plans)     |
+          |         |                                              |
+     (2) CODER_AGENT|               (5) [ PLANNER_AGENT ]          |
+         (Signals   |                (Signals Coder Tasks)         |
+          Results)  |                                              |
+          |         |               (6) [ WORKER_AGENT ]           |
+          |         |                (Signals Dynamic Results)     |
+          |         |                                              |
+          +---------+-----> [ EVENT_HANDLER ] ---------------------+
+                                (Callback & Relay)
+                                (Recursion Guard)
+                                (Trace Propagation)
+                                        |
+                                        +-----> [ NOTIFIER ]
+                                        |       (Telegram/Slack)
+                                        |
+                                        +-----> [ REALTIME_BRIDGE ]
+                                                (Dashboard IoT)
  ```
 
-- **Pattern**: The SuperClaw emits a `coder_task` or `custom_task` event. When an agent completes a task, it emits a `TASK_COMPLETED` event, which the `EventHandler` routes back to the `initiatorId` as a `CONTINUATION_TASK`.
-- **Recursion Control**: To prevent infinite delegation loops, the `EventHandler` enforces a **Recursion Limit** (Default: 50), which can be adjusted in the System Settings.
+- **Pattern**: Standardized events (`CODER_TASK`, `EVOLUTION_PLAN`, `TASK_COMPLETED`, `TASK_FAILED`) flow through the Bus. 
+- **Relay Loop**: When a sub-agent emits `TASK_COMPLETED` or `TASK_FAILED`, the `EventHandler` routes it back to the `initiatorId` as a `CONTINUATION_TASK`.
+- **Metadata**: Every event carries a standardized `traceId` (for visual DAG tracing) and a `depth` counter (for loop protection).
+- **Recursion Control**: The `EventHandler` enforces a **Recursion Limit** (Default: 5), aborting flows that exceed it.
 - **Discovery**: The `AgentRegistry` merges backbone logic with user-defined personas from DynamoDB.
 - **Visualization**: The **System Pulse** map in ClawCenter renders a unified graph of these interactions.
 

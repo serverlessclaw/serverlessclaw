@@ -159,8 +159,8 @@ describe('Agent Trace Propagation', () => {
     // Check that the text part was sent back to the LLM
     expect(mockProvider.call).toHaveBeenCalled();
     const lastCallHistory = vi.mocked(mockProvider.call).mock.calls.slice(-1)[0][0];
-    expect(lastCallHistory).toSatisfy((history: any[]) => 
-      history.some(m => m.role === MessageRole.TOOL && m.content === 'Result text')
+    expect(lastCallHistory).toSatisfy((history: any[]) =>
+      history.some((m) => m.role === MessageRole.TOOL && m.content === 'Result text')
     );
   });
 

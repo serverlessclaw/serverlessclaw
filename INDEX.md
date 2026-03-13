@@ -43,16 +43,21 @@ make dev
 ## For Agents: Self-Documentation Rule
 
 > **CRITICAL**: If you (the Coder Agent) make changes that affect any of the spoke documents below, you **MUST** update the relevant spoke as part of the same commit. Reference the appropriate spoke before making any changes to ensure alignment.
+> 
+> **COMPLEX SYSTEMS**: For any complex system-level changes (e.g., changing EventBridge routing, adding new agent-to-agent communication, or modifying the core backbone), you **MUST** also update the relevant **ASCII diagrams** in [ARCHITECTURE.md](./ARCHITECTURE.md) to ensure the visual representation matches the implementation.
 
 | Changed File | Update This Spoke |
 |---|---|
 | `core/lib/providers/` | [docs/LLM.md](./docs/LLM.md) |
 | `core/lib/backbone.ts` | [AGENTS.md](./docs/AGENTS.md) |
 | `core/handlers/monitor.ts` | [ARCHITECTURE.md](./ARCHITECTURE.md) |
+| `core/handlers/events.ts` | [ARCHITECTURE.md](./ARCHITECTURE.md) |
 | `core/tools/` | [TOOLS.md](./docs/TOOLS.md) |
 | `infra/` | [ARCHITECTURE.md](./ARCHITECTURE.md) |
 | `sst.config.ts` | [ARCHITECTURE.md](./ARCHITECTURE.md) |
 | `makefiles/` | [DEVOPS.md](./docs/DEVOPS.md) |
+| `core/agents/` | [AGENTS.md](./docs/AGENTS.md) |
+| `core/lib/types/` | [ARCHITECTURE.md](./ARCHITECTURE.md) |
 
 ---
 

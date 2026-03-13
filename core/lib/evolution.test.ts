@@ -29,7 +29,6 @@ vi.mock('./registry', () => ({
   },
 }));
 
-
 vi.mock('../tools/index', () => ({
   tools: {
     discoverSkills: {
