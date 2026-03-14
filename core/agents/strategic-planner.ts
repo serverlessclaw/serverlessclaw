@@ -1,6 +1,7 @@
 import { DynamoMemory } from '../lib/memory';
 import { Agent } from '../lib/agent';
 import { ProviderManager } from '../lib/providers/index';
+import { TIME } from '../lib/constants';
 import {
   AgentType,
   ReasoningProfile,
@@ -148,7 +149,7 @@ export const handler = async (event: PlannerEvent, _context: Context): Promise<P
       const lastReview = lastReviewStr ? parseInt(lastReviewStr, 10) : 0;
       const now = Date.now();
 
-      if (now - lastReview < frequencyHrs * 60 * 60 * 1000) {
+      if (now - lastReview < frequencyHrs * TIME.SECONDS_IN_HOUR * TIME.MS_PER_SECOND) {
         logger.info(
           `Scheduled review skipped. Interval: ${frequencyHrs}h. Last run: ${new Date(lastReview).toISOString()}`
         );

@@ -4,13 +4,13 @@ import { Resource } from 'sst';
 import { SSTResource } from './types/index';
 import { ILockManager } from './types/index';
 import { logger } from './logger';
+import { TIME, LIMITS } from './constants';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
 const typedResource = Resource as unknown as SSTResource;
 
 const LOCK_PREFIX = 'LOCK#';
-const DEFAULT_LOCK_TTL = 30;
 const DYNAMO_CONDITION_EXPRESSION = 'attribute_not_exists(userId) OR expiresAt < :now';
 const DYNAMO_ERROR_CONDITIONAL_CHECK_FAILED = 'ConditionalCheckFailedException';
 
@@ -27,8 +27,8 @@ export class DynamoLockManager implements ILockManager {
    * @param ttlSeconds - Time-to-live for the lock in seconds.
    * @returns A promise that resolves to true if the lock was acquired, false otherwise.
    */
-  async acquire(lockId: string, ttlSeconds: number = DEFAULT_LOCK_TTL): Promise<boolean> {
-    const expiresAt = Math.floor(Date.now() / 1000) + ttlSeconds;
+  async acquire(lockId: string, ttlSeconds: number = LIMITS.DEFAULT_LOCK_TTL): Promise<boolean> {
+    const expiresAt = Math.floor(Date.now() / TIME.MS_PER_SECOND) + ttlSeconds;
 
     const command = new PutCommand({
       TableName: this.tableName,
@@ -40,7 +40,7 @@ export class DynamoLockManager implements ILockManager {
       },
       ConditionExpression: DYNAMO_CONDITION_EXPRESSION,
       ExpressionAttributeValues: {
-        ':now': Math.floor(Date.now() / 1000),
+        ':now': Math.floor(Date.now() / TIME.MS_PER_SECOND),
       },
     });
 

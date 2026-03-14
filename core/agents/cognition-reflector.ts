@@ -1,6 +1,7 @@
 import { DynamoMemory } from '../lib/memory';
 import { Agent } from '../lib/agent';
 import { ProviderManager } from '../lib/providers/index';
+import { LIMITS } from '../lib/constants';
 import {
   ReasoningProfile,
   Message,
@@ -99,8 +100,9 @@ export const handler = async (
           .join('\n');
 
         // Truncate trace if it's too large to prevent LLM/DDB issues
-        if (fullTrace.length > 5000) {
-          fullTrace = fullTrace.substring(0, 5000) + '\n... [TRACE_TRUNCATED]';
+        if (fullTrace.length > LIMITS.TRACE_TRUNCATE_LENGTH) {
+          fullTrace =
+            fullTrace.substring(0, LIMITS.TRACE_TRUNCATE_LENGTH) + '\n... [TRACE_TRUNCATED]';
         }
 
         traceContext = `\nEXECUTION TRACE (Mechanical Steps):\n${fullTrace}\n`;

@@ -66,3 +66,56 @@ export const TRACE_STATUS = {
   STARTED: 'started',
   COMPLETED: 'completed',
 } as const;
+
+/**
+ * Time conversion constants (in milliseconds)
+ * These help eliminate magic number calculations throughout the codebase
+ */
+export const TIME = {
+  SECONDS_IN_MINUTE: 60,
+  SECONDS_IN_HOUR: 3600,
+  SECONDS_IN_DAY: 86400,
+  MS_PER_SECOND: 1000,
+  MS_PER_MINUTE: 60000,
+  MS_PER_HOUR: 3600000,
+  MS_PER_DAY: 86400000,
+} as const;
+
+/**
+ * Memory and storage limits
+ */
+export const LIMITS = {
+  TRACE_TRUNCATE_LENGTH: 5000,
+  MAX_CONTEXT_LENGTH: 10000,
+  DEFAULT_LOCK_TTL: 300,
+  STALE_GAP_DAYS: 30,
+  TWO_YEARS_DAYS: 730,
+} as const;
+
+/**
+ * DynamoDB table and index names
+ */
+export const DYNAMO = {
+  TABLE_NAME: process.env.MEMORY_TABLE || 'ServerlessClaw-Memory',
+  TYPE_TIMESTAMP_INDEX: 'TypeTimestampIndex',
+} as const;
+
+/**
+ * Gap status values
+ */
+export const GAP_STATUS = {
+  OPEN: 'open',
+  ADDRESSED: 'addressed',
+  DISMISSED: 'dismissed',
+} as const;
+
+/**
+ * Memory tiers for retention
+ */
+export const MEMORY_TIER = {
+  MESSAGES: 'MESSAGES',
+  DISTILLED: 'DISTILLED',
+  INSIGHTS: 'INSIGHTS',
+  SESSIONS: 'SESSIONS',
+  TRACES: 'TRACES',
+} as const;

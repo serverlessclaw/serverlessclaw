@@ -9,7 +9,7 @@ import { Resource } from 'sst';
 import { SSTResource } from './types/index';
 import { TraceSource } from './types/agent';
 import { v4 as uuidv4 } from 'uuid';
-import { TRACE_TYPES, TRACE_STATUS } from './constants';
+import { TRACE_TYPES, TRACE_STATUS, TIME } from './constants';
 import { logger } from './logger';
 
 const client = new DynamoDBClient({});
@@ -19,10 +19,6 @@ const docClient = DynamoDBDocumentClient.from(client, {
   },
 });
 const typedResource = Resource as unknown as SSTResource;
-
-const TRACE_CONFIG = {
-  SECONDS_IN_DAY: 86400,
-} as const;
 
 /**
  * Represents a single step within a trace (e.g., an LLM call or a tool execution).
@@ -118,7 +114,7 @@ export class ClawTracer {
   async startTrace(initialContext: Record<string, unknown>): Promise<string> {
     const { AgentRegistry } = await import('./registry');
     const days = await AgentRegistry.getRetentionDays('TRACES_DAYS');
-    const expiresAt = Math.floor(Date.now() / 1000) + days * TRACE_CONFIG.SECONDS_IN_DAY;
+    const expiresAt = Math.floor(Date.now() / TIME.MS_PER_SECOND) + days * TIME.SECONDS_IN_DAY;
 
     try {
       await docClient.send(

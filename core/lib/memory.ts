@@ -10,6 +10,7 @@ import {
 import { logger } from './logger';
 import { BaseMemoryProvider, docClient } from './memory/base';
 import { RetentionManager } from './memory/tiering';
+import { TIME, LIMITS } from './constants';
 
 /**
  * Implementation of IMemory using AWS DynamoDB for persistent storage
@@ -123,8 +124,8 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
    * Archives stale gaps that have been open for longer than the specified days.
    * Returns the number of gaps archived.
    */
-  async archiveStaleGaps(staleDays: number = 30): Promise<number> {
-    const cutoffTime = Date.now() - staleDays * 24 * 60 * 60 * 1000;
+  async archiveStaleGaps(staleDays: number = LIMITS.STALE_GAP_DAYS): Promise<number> {
+    const cutoffTime = Date.now() - staleDays * TIME.SECONDS_IN_DAY * TIME.MS_PER_SECOND;
 
     // Get all OPEN and PLANNED gaps
     const items = await this.queryItems({

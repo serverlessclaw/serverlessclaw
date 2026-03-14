@@ -1,6 +1,6 @@
 import { logger } from '../logger';
 import { ConfigManager } from '../registry/config';
-import { RETENTION } from '../constants';
+import { RETENTION, TIME } from '../constants';
 
 /**
  * Retention IDs for different system logs based on 2026 usage patterns.
@@ -50,7 +50,7 @@ export class RetentionManager {
     }
 
     const days = await AgentRegistry.getRetentionDays(tier as keyof typeof RETENTION);
-    const expiresAt = Math.floor(Date.now() / 1000) + days * 86400;
+    const expiresAt = Math.floor(Date.now() / TIME.MS_PER_SECOND) + days * TIME.SECONDS_IN_DAY;
 
     return { expiresAt, type };
   }
