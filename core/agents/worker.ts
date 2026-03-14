@@ -3,7 +3,16 @@ import { Context } from 'aws-lambda';
 import { EventType, TraceSource, TaskEvent, SSTResource } from '../lib/types/index';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import { Resource } from 'sst';
-import { loadAgentConfig, createAgent, validatePayload } from '../lib/utils/agent-helpers';
+import {
+  getAgentContext,
+  extractPayload,
+  detectFailure,
+  isTaskPaused,
+  loadAgentConfig,
+  createAgent,
+  validatePayload,
+  buildProcessOptions,
+} from '../lib/utils/agent-helpers';
 
 const eventbridge = new EventBridgeClient({});
 const typedResource = Resource as unknown as SSTResource;

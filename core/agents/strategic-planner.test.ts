@@ -128,7 +128,7 @@ describe('Strategic Planner — selective PLANNED marking', () => {
       },
     };
 
-    await handler(event as any);
+    await handler(event as any, {} as any);
 
     // Gap A content excerpt appears in plan → PLANNED
     const plannedCalls = memoryMocks.updateGapStatus.mock.calls.filter(
