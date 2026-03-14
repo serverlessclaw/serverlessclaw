@@ -161,7 +161,7 @@ describe('Strategic Planner — selective PLANNED marking', () => {
       },
     };
 
-    const result = await handler(event as any);
+    const result = await handler(event as any, {} as any);
     expect(result).toMatchObject({ status: 'COOLDOWN_ACTIVE' });
     expect(agentProcess).not.toHaveBeenCalled();
   });
@@ -181,7 +181,7 @@ describe('Strategic Planner — selective PLANNED marking', () => {
       },
     };
 
-    const result = await handler(event as any);
+    const result = await handler(event as any, {} as any);
     expect(result).not.toMatchObject({ status: 'COOLDOWN_ACTIVE' });
     expect(agentProcess).toHaveBeenCalled();
   });
@@ -201,7 +201,7 @@ describe('Strategic Planner — selective PLANNED marking', () => {
       },
     };
 
-    const result = await handler(event as any);
+    const result = await handler(event as any, {} as any);
     // Should not return COOLDOWN_ACTIVE (that would block all scheduled reviews)
     expect(result).not.toMatchObject({ status: 'COOLDOWN_ACTIVE' });
   });
