@@ -8,7 +8,7 @@ import {
   ConversationMeta,
 } from './types/index';
 import { logger } from './logger';
-import { BaseMemoryProvider, docClient } from './memory/base';
+import { BaseMemoryProvider } from './memory/base';
 import { RetentionManager } from './memory/tiering';
 import { TIME, LIMITS } from './constants';
 
@@ -212,7 +212,7 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
    */
   async updateGapStatus(gapId: string, status: GapStatus): Promise<void> {
     const numericId = gapId.replace('GAP#', '');
-    const params: any = {
+    const params = {
       Key: {
         userId: `GAP#${numericId}`,
         timestamp: parseInt(numericId, 10) || 0,

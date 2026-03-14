@@ -3,7 +3,6 @@ import {
   ReasoningProfile,
   EvolutionMode,
   GapStatus,
-  EventType,
   TraceSource,
 } from '../lib/types/index';
 import type { SSTResource } from '../lib/types/system';
@@ -283,7 +282,7 @@ export const handler = async (event: PlannerEvent, _context: Context): Promise<P
       source: 'planner.agent',
       userId: contextUserId,
       agentId: AgentType.STRATEGIC_PLANNER,
-      task: isScheduledReview ? 'Scheduled Review' : (details || 'Strategic Review'),
+      task: isScheduledReview ? 'Scheduled Review' : details || 'Strategic Review',
       response: plan,
       error: isFailure ? plan : undefined,
       traceId,
