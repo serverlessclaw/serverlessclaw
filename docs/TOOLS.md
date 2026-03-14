@@ -7,6 +7,8 @@
 | Tool | Purpose | Protected? | Writes to Cloud? |
 |------|---------|:---:|:---:|
 | `dispatchTask` | Sends a task to EventBridge → Specialized Agent | — | ✅ |
+| `seekClarification` | Pauses current agent and requests directions from initiator | — | ✅ |
+| `provideClarification` | Answers a request and resumes the target agent | — | ✅ |
 | `triggerDeployment` | Starts a CodeBuild deploy (circuit-breaker protected) | ✅ | ✅ |
 | `checkHealth` | Hits `/health` and rewards successful evolution | — | ✅ |
 | `triggerRollback` | Emergency Git revert + redeploy | — | ✅ |

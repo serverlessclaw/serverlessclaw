@@ -55,6 +55,33 @@ User (Telegram)       SuperClaw (Lambda)       AgentBus (EB)       Specialized A
       v                      |                      v
 ```
 
+### Clarification Protocol (Conversational Mid-task Coordination)
+
+Unlike a standard handoff, the Clarification Protocol allows a sub-agent to pause and seek directions from its initiator without failing the task.
+
+```text
+Initiator (Planner)     AgentBus (EB)       Follower (Coder)
+      |                      |                      |
+      +--- dispatchTask ---->|                      |
+      |                      +---- coder_task ----->|
+      |                 [TERMINATE]                 |
+      |                      |               [THINK: Ambiguity!]
+      |                      |<-- seekClarification-+
+      |      [EH ROUTE]      |   (question, task)   |
+      |                      |       [PAUSE/TERMINATE]
+      |<-- CONTINUATION_TASK-+                      |
+      | (CLARIFICATION_REQ)  |                      |
+      |                      |                      |
+      | [THINK: Answer]      |                      |
+      |                      |                      |
+      +-- provideClarification                      |
+      |   (answer) --------->|                      |
+      |                      +-- CONTINUATION_TASK->|
+      |                 [TERMINATE]                 |
+      |                      |              [RESUME with Answer]
+      |                      |                      |
+```
+
 ### Routing Metadata
 Every event on the `AgentBus` carries critical routing metadata:
 - **`traceId`**: Consolidates all agent steps into a single unified timeline.

@@ -178,8 +178,10 @@ export enum EventType {
   TASK_COMPLETED = 'task_completed',
   /** Generic task failure signal. */
   TASK_FAILED = 'task_failed',
-  /** Event emitted when a system component detects an internal health issue. */
+  /** Event emitted when an agent detects an internal health issue. */
   SYSTEM_HEALTH_REPORT = 'system_health_report',
+  /** Request for clarification from an initiator agent. */
+  CLARIFICATION_REQUEST = 'clarification_request',
 }
 
 /**

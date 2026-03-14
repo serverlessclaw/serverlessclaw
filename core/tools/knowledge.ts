@@ -414,3 +414,78 @@ export const saveMemory = {
     return `Successfully saved knowledge as ${category}: ${content}`;
   },
 };
+
+/**
+ * Pauses the current agent and requests clarification from the initiator.
+ */
+export const seekClarification = {
+  ...toolDefinitions.seekClarification,
+  execute: async (args: Record<string, unknown>): Promise<string> => {
+    const { userId, question, traceId, initiatorId, depth, sessionId, originalTask, task } =
+      args as {
+        userId: string;
+        question: string;
+        traceId?: string;
+        initiatorId?: string;
+        depth?: number;
+        sessionId?: string;
+        originalTask?: string;
+        task?: string;
+      };
+
+    try {
+      await emitEvent(initiatorId || 'main.agent', EventType.CLARIFICATION_REQUEST, {
+        userId,
+        question,
+        traceId,
+        initiatorId,
+        depth: (depth || 0) + 1,
+        sessionId,
+        originalTask: originalTask || task || 'Unknown task',
+      });
+      return `TASK_PAUSED: Clarification request sent to ${initiatorId || 'initiator'}. Waiting for response.`;
+    } catch (error) {
+      return `Failed to seek clarification: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  },
+};
+
+/**
+ * Provides an answer to a clarification request, resuming the target agent.
+ */
+export const provideClarification = {
+  ...toolDefinitions.provideClarification,
+  execute: async (args: Record<string, unknown>): Promise<string> => {
+    const { userId, agentId, answer, traceId, sessionId, depth, initiatorId, originalTask } =
+      args as {
+        userId: string;
+        agentId: string;
+        answer: string;
+        traceId?: string;
+        sessionId?: string;
+        depth?: number;
+        initiatorId?: string;
+        originalTask: string;
+      };
+
+    try {
+      await emitEvent('agent.tool', EventType.CONTINUATION_TASK, {
+        userId,
+        agentId,
+        task: `CLARIFICATION_RESPONSE: For your task "${originalTask}", here is the answer: 
+        ---
+        ${answer}
+        ---
+        Please proceed with this information.`,
+        traceId,
+        sessionId,
+        depth: (depth || 0) + 1,
+        initiatorId,
+        isContinuation: true,
+      });
+      return `Clarification provided to ${agentId}. Continuation task emitted.`;
+    } catch (error) {
+      return `Failed to provide clarification: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  },
+};

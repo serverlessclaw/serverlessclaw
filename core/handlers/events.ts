@@ -373,5 +373,63 @@ The QA Auditor will verify the changes shortly. Gaps are only marked **DONE** af
       sessionId,
       currentDepth
     );
+  } else if (event['detail-type'] === EventType.CLARIFICATION_REQUEST) {
+    const { userId, agentId, question, traceId, initiatorId, depth, sessionId, originalTask } =
+      event.detail as unknown as {
+        userId: string;
+        agentId: string;
+        question: string;
+        traceId?: string;
+        initiatorId?: string;
+        depth?: number;
+        sessionId?: string;
+        originalTask: string;
+      };
+
+    const currentDepth = depth || 1;
+    logger.info(
+      `Relaying clarification request from ${agentId} to Initiator: ${initiatorId || 'Orchestrator'} (Depth: ${currentDepth}, Session: ${sessionId})`
+    );
+
+    // 1. Loop Protection
+    let RECURSION_LIMIT: number = SYSTEM.DEFAULT_RECURSION_LIMIT;
+    try {
+      const customLimit = await ConfigManager.getRawConfig(DYNAMO_KEYS.RECURSION_LIMIT);
+      if (customLimit !== undefined) {
+        RECURSION_LIMIT = parseInt(String(customLimit), 10);
+      }
+    } catch {
+      logger.warn('Failed to fetch recursion_limit from DDB, using default.');
+    }
+
+    if (currentDepth >= RECURSION_LIMIT) {
+      logger.error(
+        `Recursion Limit Exceeded for CLARIFICATION_REQUEST (Depth: ${currentDepth}) for user ${userId}. Aborting.`
+      );
+      await sendOutboundMessage(
+        'events.handler',
+        userId,
+        `⚠️ **Recursion Limit Exceeded**\n\nI have detected an infinite loop in clarification requests (Depth: ${currentDepth}). I've intervened to stop the process.`,
+        undefined,
+        sessionId,
+        'SuperClaw',
+        undefined
+      );
+      return;
+    }
+
+    await wakeupInitiator(
+      userId,
+      initiatorId || 'main',
+      `CLARIFICATION_REQUEST: Agent '${agentId}' needs clarification while working on: "${originalTask}".
+      Question:
+      ---
+      ${question}
+      ---
+      Please provide the necessary directions to the agent using the "provideClarification" tool.`,
+      traceId,
+      sessionId,
+      currentDepth
+    );
   }
 };
