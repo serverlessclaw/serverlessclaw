@@ -74,6 +74,48 @@ describe('OpenAIProvider', () => {
     expect(builtInTool.name).toBeUndefined();
   });
 
+  it('should correctly format file attachments for the Responses API', async () => {
+    mockCreateResponse.mockResolvedValue({
+      output_text: 'Hello',
+      output: [],
+    });
+
+    const messages = [
+      {
+        role: MessageRole.USER,
+        content: 'Check this file',
+        attachments: [
+          {
+            type: 'file',
+            name: 'test.txt',
+            base64: 'SGVsbG8gd29ybGQ=', // "Hello world"
+            mimeType: 'text/plain',
+          },
+        ],
+      },
+    ];
+
+    await provider.call(messages as any, []);
+
+    expect(mockCreateResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.arrayContaining([
+          expect.objectContaining({
+            type: 'message',
+            role: 'user',
+            content: expect.arrayContaining([
+              expect.objectContaining({ type: 'input_text', text: 'Check this file' }),
+              expect.objectContaining({
+                type: 'input_file',
+                file_data: 'SGVsbG8gd29ybGQ=',
+              }),
+            ]),
+          }),
+        ]),
+      })
+    );
+  });
+
   it('should correctly map different tool types for Chat Completions API', async () => {
     mockCreateChatCompletion.mockResolvedValue({
       choices: [{ message: { content: 'Hello', role: 'assistant' } }],

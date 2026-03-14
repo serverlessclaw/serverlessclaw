@@ -148,14 +148,8 @@ export class OpenAIProvider implements IProvider {
                 });
               } else if (att.type === 'file') {
                 content.push({
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  type: 'input_file' as any,
-                  input_file: {
-                    file_id:
-                      att.url ||
-                      `data:${att.mimeType || 'application/octet-stream'};base64,${att.base64}`,
-                  },
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  type: 'input_file',
+                  file_data: att.base64,
                 } as any);
               }
             });

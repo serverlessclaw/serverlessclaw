@@ -86,7 +86,7 @@ describe('Provider Attachments Mapping', () => {
       });
       expect(userMessage.content[2]).toEqual({
         type: 'input_file',
-        input_file: { file_id: 'data:application/pdf;base64,filedata' },
+        file_data: 'filedata',
       });
     });
 
