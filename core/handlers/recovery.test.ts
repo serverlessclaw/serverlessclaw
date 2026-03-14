@@ -109,4 +109,26 @@ describe('Dead Man Switch Recovery Handler', () => {
       expect.objectContaining({ name: 'LKG_HASH', value: '' })
     );
   });
+
+  it('should log error but continue if EventBridge escalation fails', async () => {
+    lockMocks.acquire.mockResolvedValue(true);
+    memoryMocks.incrementRecoveryAttemptCount.mockResolvedValue(3);
+    ebMock.on(PutEventsCommand).rejects(new Error('EventBridge Down'));
+    ddbMock.on(PutCommand).resolves({});
+
+    const { handler } = await import('./recovery');
+    // Should not throw
+    await expect(handler()).resolves.not.toThrow();
+    expect(ebMock.commandCalls(PutEventsCommand)).toHaveLength(1);
+  });
+
+  it('should release lock if any error occurs during recovery flow', async () => {
+    lockMocks.acquire.mockResolvedValue(true);
+    memoryMocks.incrementRecoveryAttemptCount.mockRejectedValue(new Error('DynamoDB Error'));
+
+    const { handler } = await import('./recovery');
+    await handler();
+
+    expect(lockMocks.release).toHaveBeenCalledWith('dead-mans-switch-recovery');
+  });
 });
