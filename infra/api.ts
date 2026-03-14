@@ -47,7 +47,7 @@ export function createApi(ctx: SharedContext): { api: sst.aws.ApiGatewayV2 } {
   // Health Probe
   api.route('GET /health', {
     handler: 'core/handlers/health.handler',
-    link: [memoryTable, bus],
+    link: [memoryTable, traceTable, configTable, stagingBucket, knowledgeBucket, bus],
     permissions: [
       {
         actions: ['events:ListEventBuses'],
