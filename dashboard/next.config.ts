@@ -9,6 +9,14 @@ const nextConfig: any = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  turbopack: {
+    rules: {
+      '*.md': {
+        loaders: ['raw-loader'],
+        as: '*.js',
+      },
+    },
+  },
   webpack: (config) => {
     config.module.rules.push({
       test: /\.md$/,
