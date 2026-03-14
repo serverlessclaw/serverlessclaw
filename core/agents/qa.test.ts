@@ -89,7 +89,10 @@ describe('QA Agent — REOPEN cap and HITL escalation', () => {
     );
     registryMocks.getRawConfig.mockResolvedValue('auto');
 
-    await handler(BASE_PAYLOAD as any, {} as any);
+    await handler(
+      BASE_PAYLOAD as unknown as Parameters<typeof handler>[0],
+      {} as unknown as Parameters<typeof handler>[1]
+    );
 
     expect(memoryMocks.updateGapStatus).toHaveBeenCalledWith('GAP#1001', GapStatus.DONE);
     expect(memoryMocks.incrementGapAttemptCount).not.toHaveBeenCalled();
@@ -105,7 +108,10 @@ describe('QA Agent — REOPEN cap and HITL escalation', () => {
     );
     memoryMocks.incrementGapAttemptCount.mockResolvedValue(1); // attempt 1 of 3
 
-    await handler(BASE_PAYLOAD as any, {} as any);
+    await handler(
+      BASE_PAYLOAD as unknown as Parameters<typeof handler>[0],
+      {} as unknown as Parameters<typeof handler>[1]
+    );
 
     expect(memoryMocks.incrementGapAttemptCount).toHaveBeenCalledWith('GAP#1001');
     expect(memoryMocks.updateGapStatus).toHaveBeenCalledWith('GAP#1001', GapStatus.OPEN);
@@ -122,7 +128,10 @@ describe('QA Agent — REOPEN cap and HITL escalation', () => {
     );
     memoryMocks.incrementGapAttemptCount.mockResolvedValue(3); // cap reached
 
-    await handler(BASE_PAYLOAD as any, {} as any);
+    await handler(
+      BASE_PAYLOAD as unknown as Parameters<typeof handler>[0],
+      {} as unknown as Parameters<typeof handler>[1]
+    );
 
     // Gap is still reopened
     expect(memoryMocks.updateGapStatus).toHaveBeenCalledWith('GAP#1001', GapStatus.OPEN);
@@ -138,7 +147,10 @@ describe('QA Agent — REOPEN cap and HITL escalation', () => {
     });
     registryMocks.getRawConfig.mockResolvedValue('auto');
 
-    await handler(BASE_PAYLOAD as any, {} as any);
+    await handler(
+      BASE_PAYLOAD as unknown as Parameters<typeof handler>[0],
+      {} as unknown as Parameters<typeof handler>[1]
+    );
 
     // Prompt must instruct QA to run mechanical checks first
     expect(capturedPrompt).toMatch(/STEP 1/i);

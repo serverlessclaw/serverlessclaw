@@ -131,7 +131,10 @@ describe('Strategic Planner — selective PLANNED marking', () => {
       },
     };
 
-    await handler(event as any, {} as any);
+    await handler(
+      event as unknown as Parameters<typeof handler>[0],
+      {} as unknown as Parameters<typeof handler>[1]
+    );
 
     // Gap A content excerpt appears in plan → PLANNED
     const plannedCalls = memoryMocks.updateGapStatus.mock.calls.filter(
@@ -161,7 +164,10 @@ describe('Strategic Planner — selective PLANNED marking', () => {
       },
     };
 
-    const result = await handler(event as any, {} as any);
+    const result = await handler(
+      event as unknown as Parameters<typeof handler>[0],
+      {} as unknown as Parameters<typeof handler>[1]
+    );
     expect(result).toMatchObject({ status: 'COOLDOWN_ACTIVE' });
     expect(agentProcess).not.toHaveBeenCalled();
   });
@@ -181,7 +187,10 @@ describe('Strategic Planner — selective PLANNED marking', () => {
       },
     };
 
-    const result = await handler(event as any, {} as any);
+    const result = await handler(
+      event as unknown as Parameters<typeof handler>[0],
+      {} as unknown as Parameters<typeof handler>[1]
+    );
     expect(result).not.toMatchObject({ status: 'COOLDOWN_ACTIVE' });
     expect(agentProcess).toHaveBeenCalled();
   });
@@ -201,7 +210,10 @@ describe('Strategic Planner — selective PLANNED marking', () => {
       },
     };
 
-    const result = await handler(event as any, {} as any);
+    const result = await handler(
+      event as unknown as Parameters<typeof handler>[0],
+      {} as unknown as Parameters<typeof handler>[1]
+    );
     // Should not return COOLDOWN_ACTIVE (that would block all scheduled reviews)
     expect(result).not.toMatchObject({ status: 'COOLDOWN_ACTIVE' });
   });

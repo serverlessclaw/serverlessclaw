@@ -529,9 +529,8 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   /**
    * Universal fetcher for memory items by their type using the GSI.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async getMemoryByType(type: string, limit: number = 100): Promise<any[]> {
-    return this.queryItems({
+  async getMemoryByType(type: string, limit: number = 100): Promise<Record<string, unknown>[]> {
+    return (await this.queryItems({
       IndexName: 'TypeTimestampIndex',
       KeyConditionExpression: '#type = :type',
       ExpressionAttributeNames: {
@@ -542,6 +541,6 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
       },
       ScanIndexForward: false,
       Limit: limit,
-    });
+    })) as Record<string, unknown>[];
   }
 }

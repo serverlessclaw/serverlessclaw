@@ -85,7 +85,7 @@ describe('BuildMonitor — FAILED gap handling', () => {
       .resolvesOnce({ Items: [{ content: JSON.stringify(['GAP#1001']) }] }); // gap meta
 
     const { handler } = await import('./monitor');
-    await handler(makeFailEvent('build-1') as any);
+    await handler(makeFailEvent('build-1') as unknown as Parameters<typeof handler>[0]);
 
     expect(memoryMocks.incrementGapAttemptCount).toHaveBeenCalledWith('GAP#1001');
     expect(memoryMocks.updateGapStatus).toHaveBeenCalledWith('GAP#1001', GapStatus.OPEN);
@@ -100,7 +100,7 @@ describe('BuildMonitor — FAILED gap handling', () => {
       .resolvesOnce({ Items: [{ content: JSON.stringify(['GAP#1002']) }] });
 
     const { handler } = await import('./monitor');
-    await handler(makeFailEvent('build-2') as any);
+    await handler(makeFailEvent('build-2') as unknown as Parameters<typeof handler>[0]);
 
     expect(memoryMocks.updateGapStatus).toHaveBeenCalledWith('GAP#1002', GapStatus.ARCHIVED);
     expect(memoryMocks.updateGapStatus).not.toHaveBeenCalledWith('GAP#1002', GapStatus.OPEN);
@@ -114,7 +114,7 @@ describe('BuildMonitor — FAILED gap handling', () => {
       .resolvesOnce({ Items: [{ content: JSON.stringify(['GAP#1003']) }] });
 
     const { handler } = await import('./monitor');
-    await handler(makeFailEvent('build-3') as any);
+    await handler(makeFailEvent('build-3') as unknown as Parameters<typeof handler>[0]);
 
     const failedCalls = memoryMocks.updateGapStatus.mock.calls.filter(
       (call: unknown[]) => call[1] === GapStatus.FAILED
