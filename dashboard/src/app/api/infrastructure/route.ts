@@ -28,22 +28,22 @@ export async function GET(): Promise<NextResponse> {
     const { discoverSystemTopology } = await import('@claw/core/lib/utils/topology');
 
     // 1. Try to load full system topology from DynamoDB (persisted by Build Monitor)
-    const topology = await AgentRegistry.getFullTopology();
+    const storedTopology = await AgentRegistry.getFullTopology();
     
     // 2. Perform Live Discovery to get latest state
     console.log('Performing live topology discovery...');
     const liveTopology = await discoverSystemTopology();
 
-    // 3. Merge Strategies
+    // 3. Merge Strategies: Prefer stored topology if it exists, as it includes post-deployment metadata
+    if (storedTopology && storedTopology.nodes.length > 0) {
+      // Potentially merge status from liveTopology into storedTopology here if needed
+      return NextResponse.json(storedTopology);
+    }
+
     if (liveTopology && liveTopology.nodes.length > 0) {
-      // If we have live data, it's generally preferred over persisted data for dev/local
-      // but we might want to merge if persisted has something live is missing
       return NextResponse.json(liveTopology);
     }
 
-    if (topology && topology.nodes.length > 0) {
-      return NextResponse.json(topology);
-    }
 
     // 4. Static Fallback for initial deployment or broken environments
     const infraNodes: any[] = [];

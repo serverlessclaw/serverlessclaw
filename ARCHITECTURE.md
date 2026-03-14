@@ -165,8 +165,9 @@ Agents communicate asynchronously using **AWS EventBridge (The AgentBus)**. This
 - **Relay Loop**: When a sub-agent emits `TASK_COMPLETED` or `TASK_FAILED`, the `EventHandler` routes it back to the `initiatorId` as a `CONTINUATION_TASK`.
 - **Metadata**: Every event carries a standardized `traceId` (for visual DAG tracing) and a `depth` counter (for loop protection).
 - **Recursion Control**: The `EventHandler` enforces a **Recursion Limit** (Default: 5), aborting flows that exceed it.
-- **Discovery**: The `AgentRegistry` merges backbone logic with user-defined personas from DynamoDB.
-- **Visualization**: The **System Pulse** map in ClawCenter renders a unified graph of these interactions.
+- **Discovery**: The `AgentRegistry` and `topology.ts` utility perform post-deployment discovery, merging backbone logic with user-defined personas.
+- **Visualization**: The **System Pulse** map in ClawCenter renders a unified, resilient graph of these interactions, covering the full stack from API Gateway to individual agent tools.
+
 
 ---
 
@@ -219,7 +220,17 @@ Tools can now return **Structured Results** (`ToolResult`) containing text, imag
 
 ## 🧠 Infrastructure Discovery
 The system implements a **Self-Aware Infrastructure** model where the topology is discovered post-deployment rather than hardcoded.
+
+```text
+ [ ClawCenter ] <--- (Query) --- [ API Gateway ]
+                                       |
+ [ ConfigTable ] <--- (Store) --- [ Build Monitor ]
+                                       |
+ [ Infrastructure ] <--- (Scan) -------+
+```
+
 - **Deep Dive**: [Infra & Discovery ↗](./docs/INFRASTRUCTURE.md)
+
 
 ---
 

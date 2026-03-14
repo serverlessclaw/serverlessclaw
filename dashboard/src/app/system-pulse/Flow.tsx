@@ -17,7 +17,7 @@ import {
   Bot, Zap, Code, ShieldCheck, Terminal, Cpu, 
   Database, Brain, Activity, Search, FlaskConical, 
   Settings2, RefreshCw, Radio, Info, Plus, Minus, Maximize, Lock,
-  LayoutDashboard
+  LayoutDashboard, Send, MessageSquare
 } from 'lucide-react';
 import { useReactFlow, ReactFlowProvider } from '@xyflow/react';
 import { THEME } from '@/lib/theme';
@@ -140,6 +140,10 @@ const getAgentDescription = (id: string) => {
   return descMap[id] || 'Neural spoke for dynamic task execution and decentralized intelligence.';
 };
 
+const getEdgeType = (source: string, target: string, allEdges: any[]) => {
+  return 'default'; // Use Bezier curves as preferred by the user
+};
+
 export function FlowContent() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -160,23 +164,46 @@ export function FlowContent() {
         let yPos = 100 + Math.floor(index / 4) * 200;
         
         // Logical clustering for core resources
-        if (node.id === 'bus') { xPos = 400; yPos = 150; }
-        else if (node.id === 'memory') { xPos = 700; yPos = 700; }
-        else if (node.id === 'codebuild') { xPos = 400; yPos = 700; }
-        else if (node.id === 'storage') { xPos = 100; yPos = 700; }
-        else if (node.id === 'config') { xPos = 1050; yPos = 700; }
-        else if (node.id === 'trace') { xPos = -250; yPos = 700; }
-        else if (node.id === 'api') { xPos = 100; yPos = -100; }
-        else if (node.id === 'dashboard') { xPos = -200; yPos = -100; }
-        else if (node.id === 'main') { xPos = 400; yPos = -100; }
-        else if (node.id === 'monitor') { xPos = -400; yPos = 400; }
-        else if (node.type === 'agent') {
-            const agentsList = topology.nodes.filter(n => n.type === 'agent' && n.id !== 'main' && n.id !== 'monitor');
-            const agentIndex = agentsList.indexOf(node);
-            const totalAgents = agentsList.length;
-            const startX = 400 - ((totalAgents - 1) * 125);
-            xPos = startX + (agentIndex * 250);
-            yPos = 400;
+        // 1. Layer 1: Top - User Interfaces & Entry Points (Y: -100)
+        if (node.id === 'api') { xPos = 200; yPos = -100; }
+        else if (node.id === 'dashboard') { xPos = -100; yPos = -100; }
+        else if (node.id === 'telegram') { xPos = 500; yPos = -100; }
+        
+        // 1.5 Layer 1.5: The Brain - SuperClaw (Y: 50)
+        else if (node.id === 'main') { xPos = 350; yPos = 50; }
+        
+        // 2. Layer 2: Neural Bus & Comms (Y: 200)
+        else if (node.id === 'bus') { xPos = 350; yPos = 200; }
+        else if (node.id === 'notifier') { xPos = 650; yPos = 200; }
+        else if (node.id === 'bridge') { xPos = 50; yPos = 200; }
+        
+        // 3. Layer 3: Logic Units & Workers (Y: 450)
+        else if (node.type === 'agent' || node.id === 'monitor') {
+            const allAgents = topology.nodes.filter(n => 
+                (n.type === 'agent' || n.id === 'monitor') && n.id !== 'main'
+            );
+            const agentIndex = allAgents.findIndex(n => n.id === node.id);
+            const totalAgents = allAgents.length;
+            const startX = 350 - ((totalAgents - 1) * 150);
+            xPos = startX + (agentIndex * 300);
+            yPos = 450;
+        }
+        
+        // 4. Layer 4: Bottom - Infrastructure & Persistence (Y: 800)
+        else {
+            const infraNodes = [
+                'traces', 'storage', 'memory', 'config', 'codebuild', 'knowledge'
+            ];
+            const infraIndex = infraNodes.indexOf(node.id);
+            if (infraIndex !== -1) {
+                // startX + (2 * 150) = 350 => startX = 50
+                const startX = 50;
+                xPos = startX + (infraIndex * 150);
+                yPos = 800;
+            } else {
+                xPos = index * 200;
+                yPos = 1100;
+            }
         }
 
         let icon = <Database size={16} />;
@@ -184,6 +211,9 @@ export function FlowContent() {
         else if (node.iconType === 'Dashboard' || node.id === 'dashboard') icon = <LayoutDashboard size={16} />;
         else if (node.id === 'api') icon = <Radio size={16} />;
         else if (node.id === 'monitor') icon = <Activity size={16} />;
+        else if (node.id === 'telegram') icon = <MessageSquare size={16} />;
+        else if (node.id === 'bridge') icon = <Zap size={16} />;
+        else if (node.id === 'notifier') icon = <Info size={16} />;
         else if (node.type === 'agent') icon = getAgentIcon(node.id, node.icon);
 
         newNodes.push({
@@ -213,25 +243,39 @@ export function FlowContent() {
         if (isResult) strokeColor = '#00d4ff'; // Sky blue
         if (isInvoke) strokeColor = '#ffcf00'; // Yellow
 
+        const isBiDirectional = topology.edges.some((e: any) => e.source === edge.target && e.target === edge.source);
+        const edgeIndex = topology.edges.indexOf(edge);
+        const reverseEdgeIndex = topology.edges.findIndex((e: any) => e.source === edge.target && e.target === edge.source);
+        const isPrimary = !isBiDirectional || edgeIndex < reverseEdgeIndex;
+        
         newEdges.push({
           id: edge.id,
           source: edge.source,
           target: edge.target,
           animated: true,
+          type: 'default',
           label: edge.label || (isMainOrch ? 'ORCHESTRATE' : (isBusSignal ? 'SIGNAL' : undefined)),
-          labelStyle: { fill: strokeColor, fontSize: isMainOrch ? 10 : 8, fontWeight: 'black', fontFamily: 'monospace' },
-          labelBgStyle: { fill: '#050505', fillOpacity: 0.8 },
-          labelBgPadding: [4, 2],
-          labelBgBorderRadius: 2,
+          labelStyle: { 
+            fill: strokeColor, 
+            fontSize: isMainOrch ? 10 : 8, 
+            fontWeight: 'black', 
+            fontFamily: 'monospace',
+            transform: isBiDirectional ? `translate(0, ${isPrimary ? -12 : 12}px)` : undefined
+          },
+          labelBgStyle: { fill: '#010101', fillOpacity: 0.95 },
+          labelBgPadding: [6, 4],
+          labelBgBorderRadius: 4,
           style: { 
             stroke: strokeColor, 
-            strokeWidth: isMainOrch ? 2 : (isBusSignal ? 1.5 : 1),
-            opacity: (isMainOrch || isBusSignal || isResult || isInvoke) ? 1 : 0.4,
+            strokeWidth: isMainOrch ? 2.5 : (isBusSignal ? 1.5 : 1.2),
+            opacity: (isMainOrch || isBusSignal || isResult || isInvoke) ? 1 : 0.6,
             strokeDasharray: (isMainOrch || isBusSignal || isResult || isInvoke) ? undefined : '5,5'
           },
           markerEnd: { 
             type: MarkerType.ArrowClosed, 
-            color: strokeColor 
+            color: strokeColor,
+            width: 20,
+            height: 20
           }
         });
       });
