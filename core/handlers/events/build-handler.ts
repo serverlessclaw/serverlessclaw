@@ -1,8 +1,6 @@
-import { EventType, BuildEvent } from '../../lib/types/index';
-import { logger } from '../../lib/logger';
+import { BuildEvent } from '../../lib/types/index';
 import { Context } from 'aws-lambda';
 import { wakeupInitiator, processEventWithAgent } from './shared';
-
 
 /**
  * Handles build failure events - triggers agent to investigate and fix.
@@ -41,7 +39,7 @@ export async function handleBuildFailure(
     Please investigate the codebase using your tools, find the root cause, fix the issue, and trigger a new deployment. 
     Explain your plan to the user before proceeding.`;
 
-  const { responseText } = await processEventWithAgent(userId, 'main', task, {
+  await processEventWithAgent(userId, 'main', task, {
     context,
     traceId,
     sessionId,

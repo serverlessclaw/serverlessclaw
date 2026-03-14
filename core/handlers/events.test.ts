@@ -117,11 +117,11 @@ describe('EventHandler', () => {
       expect(sendOutboundMessage).toHaveBeenCalledWith(
         'health-handler',
         'user-1',
-        expect.stringContaining('CRITICAL'),
+        expect.stringContaining('Rebooting component...'),
         undefined,
         'session-1',
         'SuperClaw',
-        undefined
+        []
       );
     });
 

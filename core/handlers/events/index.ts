@@ -1,5 +1,5 @@
-// Event handlers barrel export
-export { handleBuildFailure, handleBuildSuccess, wakeupInitiator } from './build-handler';
+export { handleBuildFailure, handleBuildSuccess } from './build-handler';
+export { wakeupInitiator } from './shared';
 export { handleContinuationTask } from './continuation-handler';
 export { handleHealthReport } from './health-handler';
 export { handleTaskResult } from './task-result-handler';
