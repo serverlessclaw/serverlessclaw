@@ -5,20 +5,25 @@ import {
   GapStatus,
   TraceSource,
 } from '../lib/types/index';
-import type { SSTResource } from '../lib/types/system';
 import { sendOutboundMessage } from '../lib/outbound';
 import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
-import { extractPayload, loadAgentConfig, extractBaseUserId, getAgentContext, emitTaskEvent } from '../lib/utils/agent-helpers';
+import {
+  extractPayload,
+  loadAgentConfig,
+  extractBaseUserId,
+  getAgentContext,
+  emitTaskEvent,
+} from '../lib/utils/agent-helpers';
 
 async function getEvolutionMode(): Promise<'auto' | 'hitl'> {
   try {
     const { DynamoDBClient } = await import('@aws-sdk/client-dynamodb');
     const { DynamoDBDocumentClient, GetCommand } = await import('@aws-sdk/lib-dynamodb');
     const { Resource } = await import('sst');
-    
+
     const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
-    const typedResource = Resource as any;
+    const typedResource = Resource as unknown as { ConfigTable: { name: string } };
 
     const response = await db.send(
       new GetCommand({
