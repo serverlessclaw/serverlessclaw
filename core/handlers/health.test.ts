@@ -33,7 +33,8 @@ describe('Health Handler', () => {
     const { handler } = await import('./health');
     const result = (await (handler as APIGatewayProxyHandlerV2)(
       {} as unknown as APIGatewayProxyEventV2,
-      {} as unknown as Context
+      {} as unknown as Context,
+      null as any
     )) as { statusCode: number; body: string };
 
     expect(result.statusCode).toBe(200);
@@ -51,7 +52,8 @@ describe('Health Handler', () => {
     const { handler } = await import('./health');
     const result = (await (handler as APIGatewayProxyHandlerV2)(
       {} as unknown as APIGatewayProxyEventV2,
-      {} as unknown as Context
+      {} as unknown as Context,
+      null as any
     )) as { statusCode: number; body: string };
 
     expect(result.statusCode).toBe(200);
@@ -67,7 +69,8 @@ describe('Health Handler', () => {
     const { handler } = await import('./health');
     const result = (await (handler as APIGatewayProxyHandlerV2)(
       {} as unknown as APIGatewayProxyEventV2,
-      {} as unknown as Context
+      {} as unknown as Context,
+      null as any
     )) as { statusCode: number; body: string };
 
     expect(result.statusCode).toBe(503);
@@ -86,7 +89,8 @@ describe('Health Handler', () => {
     // In current implementation, if any error happens in mid-handler it catches.
     const result = (await (handler as APIGatewayProxyHandlerV2)(
       {} as unknown as APIGatewayProxyEventV2,
-      {} as unknown as Context
+      {} as unknown as Context,
+      null as any
     )) as { statusCode: number; body: string };
     expect(result.statusCode).toBe(503); // It catches the error and returns 503
     expect(memoryMocks.resetRecoveryAttemptCount).toHaveBeenCalled();
