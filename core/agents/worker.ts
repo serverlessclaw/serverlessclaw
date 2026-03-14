@@ -66,7 +66,7 @@ export const handler = async (
   const config = await loadAgentConfig(agentId);
 
   // 2. Initialization: Setup tools and prompt
-  const { memory, provider } = getAgentContext();
+  const { memory, provider } = await getAgentContext();
   const agent = await createAgent(agentId, config, memory, provider);
 
   // 3. Execution
