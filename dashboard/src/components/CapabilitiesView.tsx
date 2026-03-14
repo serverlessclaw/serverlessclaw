@@ -13,16 +13,7 @@ import Button from './ui/Button';
 import Typography from './ui/Typography';
 import Card from './ui/Card';
 import Badge from './ui/Badge';
-
-interface Tool {
-  name: string;
-  description: string;
-  isExternal?: boolean;
-  usage?: {
-    count: number;
-    lastUsed: number;
-  };
-}
+import type { Tool } from '@/lib/types/ui';
 
 interface AgentConfig {
   id: string;
