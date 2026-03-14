@@ -22,7 +22,7 @@ export const handler = async (event: { userId: string; data: string }) => {
   const agent = new Agent(memory, provider, agentTools, config.systemPrompt, config);
 
   // Process task
-  const response = await agent.process(userId, `TASK: ${data}`);
+  const { responseText } = await agent.process(userId, `TASK: ${data}`);
 
-  return response;
+  return responseText;
 };

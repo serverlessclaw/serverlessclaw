@@ -74,7 +74,7 @@ export const handler = async (
   const agent = await createAgent(agentId, config, memory, provider);
 
   // 3. Execution
-  const response = await agent.process(
+  const { responseText, attachments: resultAttachments } = await agent.process(
     userId,
     task,
     buildProcessOptions({
@@ -89,11 +89,11 @@ export const handler = async (
     })
   );
 
-  logger.info(`Worker Agent [${agentId}] completed task:`, response);
+  logger.info(`Worker Agent [${agentId}] completed task:`, responseText);
 
   // 4. Notification (Optional: Worker could be silent or chatty)
-  if (!isTaskPaused(response)) {
-    const isFailure = detectFailure(response);
+  if (!isTaskPaused(responseText)) {
+    const isFailure = detectFailure(responseText);
     try {
       await eventbridge.send(
         new PutEventsCommand({
@@ -105,7 +105,8 @@ export const handler = async (
                 userId,
                 agentId,
                 task,
-                [isFailure ? 'error' : 'response']: response,
+                [isFailure ? 'error' : 'response']: responseText,
+                attachments: resultAttachments,
                 traceId,
                 sessionId,
                 initiatorId: payload.initiatorId,
@@ -121,5 +122,5 @@ export const handler = async (
     }
   }
 
-  return response;
+  return responseText;
 };

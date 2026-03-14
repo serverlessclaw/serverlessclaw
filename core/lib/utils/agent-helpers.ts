@@ -19,6 +19,7 @@ import {
   IAgentConfig,
   AgentType,
   ReasoningProfile,
+  Attachment,
 } from '../types/index';
 
 /** Singleton agent context - shared across all agent handlers */
@@ -132,6 +133,7 @@ export async function emitTaskEvent(params: {
   task: string;
   response?: string;
   error?: string;
+  attachments?: Attachment[];
   traceId?: string;
   sessionId?: string;
   initiatorId?: string;
@@ -152,6 +154,7 @@ export async function emitTaskEvent(params: {
               agentId: params.agentId,
               task: params.task,
               [isFailure ? 'error' : 'response']: params.error || params.response || '',
+              attachments: params.attachments,
               traceId: params.traceId,
               initiatorId: params.initiatorId,
               depth: params.depth,

@@ -17,6 +17,7 @@ interface ChatMessage {
   attachments?: Array<{
     type: 'image' | 'file';
     url?: string;
+    base64?: string;
     name?: string;
     mimeType?: string;
   }>;
@@ -731,15 +732,29 @@ function ChatContent() {
                       <div className={`flex flex-wrap gap-2 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                         {m.attachments.map((a, ai) => (
                           <div key={ai} className="relative group/att">
-                            {a.type === 'image' && a.url ? (
-                              <div className="w-32 h-32 rounded-lg overflow-hidden border border-white/10 hover:border-cyber-green/50 transition-colors">
-                                <img src={a.url} alt={a.name} className="w-full h-full object-cover" />
+                            {a.type === 'image' && (a.url || a.base64) ? (
+                              <div className="w-32 h-32 rounded-lg overflow-hidden border border-white/10 hover:border-cyber-green/50 transition-colors shadow-lg">
+                                <img 
+                                  src={a.url || `data:${a.mimeType || 'image/png'};base64,${a.base64}`} 
+                                  alt={a.name} 
+                                  className="w-full h-full object-cover cursor-zoom-in"
+                                  onClick={() => a.url && window.open(a.url, '_blank')}
+                                />
                               </div>
                             ) : (
-                              <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-2 rounded-lg hover:border-cyber-green/50 transition-colors">
-                                <File size={16} className="text-white/40" />
-                                <Typography variant="caption" className="max-w-[120px] truncate">{a.name}</Typography>
-                              </div>
+                              <a 
+                                href={a.url} 
+                                download={a.name}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 bg-white/5 border border-white/10 p-2 rounded-lg hover:border-cyber-green/50 transition-colors group/dl"
+                              >
+                                <File size={16} className="text-white/40 group-hover/dl:text-cyber-green transition-colors" />
+                                <div className="flex flex-col">
+                                  <Typography variant="caption" className="max-w-[120px] truncate">{a.name}</Typography>
+                                  {a.url && <Typography variant="mono" className="text-[8px] text-white/30 uppercase">Download</Typography>}
+                                </div>
+                              </a>
                             )}
                           </div>
                         ))}

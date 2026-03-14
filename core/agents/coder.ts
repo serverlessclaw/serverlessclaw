@@ -93,7 +93,7 @@ export const handler = async (event: CoderEvent, context: Context): Promise<stri
   const config = await loadAgentConfig(AgentType.CODER);
 
   const agent = await createAgent('coder', config, memory, provider);
-  const rawResponse = await agent.process(
+  const { responseText: rawResponse, attachments: resultAttachments } = await agent.process(
     userId,
     task,
     buildProcessOptions({
@@ -133,7 +133,8 @@ export const handler = async (event: CoderEvent, context: Context): Promise<stri
       responseText,
       [userId],
       sessionId,
-      config.name
+      config.name,
+      resultAttachments
     );
   }
 
@@ -159,6 +160,7 @@ export const handler = async (event: CoderEvent, context: Context): Promise<stri
       userId,
       task,
       response: responseText,
+      attachments: resultAttachments,
       traceId,
       sessionId,
       initiatorId,

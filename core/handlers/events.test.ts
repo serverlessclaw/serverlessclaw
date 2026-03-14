@@ -96,7 +96,7 @@ describe('EventHandler', () => {
         },
       };
 
-      mockProcess.mockResolvedValue('Rebooting component...');
+      mockProcess.mockResolvedValue({ responseText: 'Rebooting component...' });
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await handler(event as any, {} as any);
@@ -120,7 +120,8 @@ describe('EventHandler', () => {
         expect.stringContaining('CRITICAL'),
         undefined,
         'session-1',
-        'SuperClaw'
+        'SuperClaw',
+        undefined
       );
     });
 
@@ -135,7 +136,7 @@ describe('EventHandler', () => {
         },
       };
 
-      mockProcess.mockResolvedValue('TASK_PAUSED: Need permission');
+      mockProcess.mockResolvedValue({ responseText: 'TASK_PAUSED: Need permission' });
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await handler(event as any, {} as any);
@@ -159,7 +160,7 @@ describe('EventHandler', () => {
         },
       };
 
-      mockProcess.mockResolvedValue('Investigating failure...');
+      mockProcess.mockResolvedValue({ responseText: 'Investigating failure...' });
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await handler(event as any, {} as any);
@@ -212,7 +213,8 @@ describe('EventHandler', () => {
         expect.stringContaining('DEPLOYMENT SUCCESSFUL'),
         undefined,
         undefined,
-        'SuperClaw'
+        'SuperClaw',
+        undefined
       );
 
       // Verify initiator wakeup
@@ -321,7 +323,8 @@ describe('EventHandler', () => {
         expect.stringContaining('Recursion Limit Exceeded'),
         undefined,
         undefined,
-        'SuperClaw'
+        'SuperClaw',
+        undefined
       );
     });
 
@@ -347,7 +350,8 @@ describe('EventHandler', () => {
         expect.stringContaining('Recursion Limit Exceeded'),
         undefined,
         undefined,
-        'SuperClaw'
+        'SuperClaw',
+        undefined
       );
     });
   });

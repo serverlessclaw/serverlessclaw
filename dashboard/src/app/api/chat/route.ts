@@ -33,17 +33,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const agentTools = await getAgentTools('main');
     const agent = new Agent(memory, provider, agentTools, SUPERCLAW_SYSTEM_PROMPT);
 
-    const reply = await agent.process(storageId, text || '', { sessionId, source: TraceSource.DASHBOARD, attachments });
+    const { responseText, attachments: resultAttachments } = await agent.process(storageId, text || '', { sessionId, source: TraceSource.DASHBOARD, attachments });
 
     // Update conversation metadata for the sidebar
     if (sessionId) {
       await memory.saveConversationMeta(userId, sessionId, {
-        lastMessage: reply.length > 60 ? reply.substring(0, 60) + '...' : reply,
+        lastMessage: responseText.length > 60 ? responseText.substring(0, 60) + '...' : responseText,
         updatedAt: Date.now()
       });
     }
 
-    return NextResponse.json({ reply, agentName: 'SuperClaw' });
+    return NextResponse.json({ reply: responseText, agentName: 'SuperClaw', attachments: resultAttachments });
   } catch (error) {
     console.error(UI_STRINGS.API_CHAT_ERROR, error);
     return NextResponse.json(

@@ -78,16 +78,28 @@ export const handler = async (
 
     const agentTools = await getAgentTools('main');
     const agent = new Agent(memory, provider, agentTools, config.systemPrompt, config);
-    const responseText = await agent.process(chatId, cleanText, {
-      profile,
-      context,
-      source: TraceSource.TELEGRAM,
-      attachments,
-      // isContinuation is not directly applicable to APIGatewayProxyEventV2 from Telegram
-    });
+    const { responseText, attachments: resultAttachments } = await agent.process(
+      chatId,
+      cleanText,
+      {
+        profile,
+        context,
+        source: TraceSource.TELEGRAM,
+        attachments,
+        // isContinuation is not directly applicable to APIGatewayProxyEventV2 from Telegram
+      }
+    );
 
     // 3. Send response to Notifier via AgentBus
-    await sendOutboundMessage('webhook.handler', chatId, responseText);
+    await sendOutboundMessage(
+      'webhook.handler',
+      chatId,
+      responseText,
+      undefined,
+      undefined,
+      'SuperClaw',
+      resultAttachments
+    );
   } finally {
     // 4. Release Lock
     await lockManager.release(chatId);

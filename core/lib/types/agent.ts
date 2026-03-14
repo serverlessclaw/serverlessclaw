@@ -1,3 +1,11 @@
+export interface Attachment {
+  type: 'image' | 'file';
+  url?: string;
+  base64?: string;
+  name?: string;
+  mimeType?: string;
+}
+
 /**
  * Configuration for an agent instance.
  */
@@ -16,13 +24,7 @@ export interface TaskEvent extends BaseEvent {
   task: string;
   isContinuation?: boolean;
   metadata?: Record<string, unknown>;
-  attachments?: Array<{
-    type: 'image' | 'file';
-    url?: string;
-    base64?: string;
-    name?: string;
-    mimeType?: string;
-  }>;
+  attachments?: Attachment[];
 }
 
 /**
@@ -43,13 +45,7 @@ export interface CompletionEvent extends BaseEvent {
   agentId: string;
   task: string;
   response: string;
-  attachments?: Array<{
-    type: 'image' | 'file';
-    url?: string;
-    base64?: string;
-    name?: string;
-    mimeType?: string;
-  }>;
+  attachments?: Attachment[];
 }
 
 /**
@@ -59,12 +55,7 @@ export interface OutboundMessageEvent extends BaseEvent {
   message: string;
   agentName?: string;
   memoryContexts?: string[];
-  attachments?: Array<{
-    type: 'image' | 'file';
-    url: string;
-    name?: string;
-    mimeType?: string;
-  }>;
+  attachments?: Attachment[];
 }
 
 /**

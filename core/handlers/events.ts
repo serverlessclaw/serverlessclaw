@@ -107,12 +107,16 @@ export const handler = async (
 
     const agentTools = await getAgentTools('events');
     const agent = new Agent(memory, provider, agentTools, config.systemPrompt, config);
-    const responseText = await agent.process(userId, `SYSTEM_NOTIFICATION: ${task}`, {
-      context,
-      traceId,
-      sessionId,
-      source: TraceSource.SYSTEM,
-    });
+    const { responseText, attachments: resultAttachments } = await agent.process(
+      userId,
+      `SYSTEM_NOTIFICATION: ${task}`,
+      {
+        context,
+        traceId,
+        sessionId,
+        source: TraceSource.SYSTEM,
+      }
+    );
 
     // Notify user via Notifier (if not paused)
     if (!responseText.startsWith('TASK_PAUSED')) {
@@ -122,7 +126,8 @@ export const handler = async (
         responseText,
         undefined,
         sessionId,
-        'SuperClaw'
+        'SuperClaw',
+        resultAttachments
       );
     }
 
@@ -151,7 +156,15 @@ Build ID: ${buildId}
 The build completed successfully. Associated gaps have been marked as **DEPLOYED** and are pending QA verification.
 The QA Auditor will verify the changes shortly. Gaps are only marked **DONE** after QA passes (auto mode) or you confirm (HITL mode).`;
 
-    await sendOutboundMessage('events.handler', userId, message, undefined, sessionId, 'SuperClaw');
+    await sendOutboundMessage(
+      'events.handler',
+      userId,
+      message,
+      undefined,
+      sessionId,
+      'SuperClaw',
+      undefined
+    );
 
     // WAKE UP INITIATOR
     if (initiatorId && task) {
@@ -199,7 +212,8 @@ The QA Auditor will verify the changes shortly. Gaps are only marked **DONE** af
         `⚠️ **Recursion Limit Exceeded**\n\nI have detected an infinite loop in task continuation (Depth: ${currentDepth}). I've intervened to stop the process. Please check the orchestration logic.`,
         undefined,
         sessionId,
-        'SuperClaw'
+        'SuperClaw',
+        undefined
       );
       return;
     }
@@ -221,7 +235,7 @@ The QA Auditor will verify the changes shortly. Gaps are only marked **DONE** af
     const agent = new Agent(memory, provider, agentTools, config.systemPrompt, config);
 
     // Resume with isContinuation = true
-    const responseText = await agent.process(userId, task, {
+    const { responseText, attachments: resultAttachments } = await agent.process(userId, task, {
       context,
       isContinuation: isContinuation !== false, // Default to true for CONTINUATION_TASK
       traceId,
@@ -239,7 +253,8 @@ The QA Auditor will verify the changes shortly. Gaps are only marked **DONE** af
         responseText,
         undefined,
         sessionId,
-        'SuperClaw'
+        'SuperClaw',
+        resultAttachments
       );
     }
   } else if (event['detail-type'] === EventType.SYSTEM_HEALTH_REPORT) {
@@ -274,12 +289,16 @@ The QA Auditor will verify the changes shortly. Gaps are only marked **DONE** af
 
     const agentTools = await getAgentTools('events');
     const agent = new Agent(memory, provider, agentTools, config.systemPrompt, config);
-    const responseText = await agent.process(userId, `HEALTH_TRIAGE: ${triageTask}`, {
-      context,
-      traceId,
-      sessionId,
-      source: TraceSource.SYSTEM,
-    });
+    const { responseText, attachments: resultAttachments } = await agent.process(
+      userId,
+      `HEALTH_TRIAGE: ${triageTask}`,
+      {
+        context,
+        traceId,
+        sessionId,
+        source: TraceSource.SYSTEM,
+      }
+    );
 
     if (!responseText.startsWith('TASK_PAUSED')) {
       await sendOutboundMessage(
@@ -288,7 +307,8 @@ The QA Auditor will verify the changes shortly. Gaps are only marked **DONE** af
         `🚨 **SYSTEM HEALTH ALERT** (${severity.toUpperCase()})\nComponent: ${component}\nIssue: ${issue}\n\nSuperClaw response: ${responseText}`,
         undefined,
         sessionId,
-        'SuperClaw'
+        'SuperClaw',
+        resultAttachments
       );
     }
   } else if (
@@ -330,7 +350,8 @@ The QA Auditor will verify the changes shortly. Gaps are only marked **DONE** af
         `⚠️ **Recursion Limit Exceeded**\n\nI have detected an infinite loop between agents (Depth: ${currentDepth}). I've intervened to stop the process. Please check the orchestration logic. You can increase this limit in the System Config.`,
         undefined,
         sessionId,
-        'SuperClaw'
+        'SuperClaw',
+        undefined
       );
       return;
     }

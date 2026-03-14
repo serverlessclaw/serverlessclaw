@@ -60,7 +60,12 @@ export class AgentExecutor {
       userText: string;
       mainConversationId: string;
     }
-  ): Promise<{ responseText: string; paused?: boolean; pauseMessage?: string }> {
+  ): Promise<{
+    responseText: string;
+    paused?: boolean;
+    pauseMessage?: string;
+    attachments?: any[];
+  }> {
     const {
       maxIterations,
       activeModel,
@@ -81,6 +86,7 @@ export class AgentExecutor {
 
     let iterations = 0;
     let responseText = '';
+    const attachments: any[] = [];
 
     while (iterations < maxIterations) {
       // 1. Timeout Check
@@ -92,6 +98,7 @@ export class AgentExecutor {
             responseText: AGENT_LOG_MESSAGES.TASK_PAUSED_TIMEOUT,
             paused: true,
             pauseMessage: AGENT_LOG_MESSAGES.TASK_PAUSED_TIMEOUT,
+            attachments,
           };
         }
       }
@@ -163,6 +170,19 @@ export class AgentExecutor {
                 ? rawResult
                 : (rawResult as ToolResult).text || JSON.stringify(rawResult) || '';
 
+            // Collect attachments from result
+            if (typeof rawResult !== 'string') {
+              const res = rawResult as ToolResult;
+              if (res.images && res.images.length > 0) {
+                for (const img of res.images) {
+                  attachments.push({ type: 'image', base64: img });
+                }
+              }
+              if (res.metadata?.attachments && Array.isArray(res.metadata.attachments)) {
+                attachments.push(...res.metadata.attachments);
+              }
+            }
+
             if (!process.env.VITEST) {
               await AgentRegistry.recordToolUsage(tool.name, this.agentId);
             }
@@ -202,9 +222,13 @@ export class AgentExecutor {
         responseText: AGENT_LOG_MESSAGES.TASK_PAUSED_ITERATION_LIMIT,
         paused: true,
         pauseMessage: AGENT_LOG_MESSAGES.TASK_PAUSED_ITERATION_LIMIT,
+        attachments,
       };
     }
 
-    return { responseText: responseText || 'Sorry, I reached my iteration limit.' };
+    return {
+      responseText: responseText || 'Sorry, I reached my iteration limit.',
+      attachments: attachments.length > 0 ? attachments : undefined,
+    };
   }
 }

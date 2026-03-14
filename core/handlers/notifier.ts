@@ -1,6 +1,6 @@
 import { Resource } from 'sst';
 import { DynamoMemory } from '../lib/memory';
-import { MessageRole } from '../lib/types/index';
+import { MessageRole, Attachment } from '../lib/types/index';
 import { logger } from '../lib/logger';
 
 const memory = new DynamoMemory();
@@ -12,12 +12,7 @@ interface NotifierEvent {
     memoryContexts?: string[];
     sessionId?: string;
     agentName?: string;
-    attachments?: Array<{
-      type: 'image' | 'file';
-      url: string;
-      name?: string;
-      mimeType?: string;
-    }>;
+    attachments?: Attachment[];
   };
 }
 
@@ -60,10 +55,13 @@ export const handler = async (event: NotifierEvent): Promise<void> => {
   }
 
   // 2. Telegram Adapter
-  // 2. Telegram Adapter
   if (attachments && attachments.length > 0) {
     for (const attachment of attachments) {
-      await sendTelegramMedia(userId, attachment, message);
+      if (attachment.url) {
+        await sendTelegramMedia(userId, attachment, message);
+      } else {
+        logger.warn('Skipping attachment without URL for Telegram:', attachment.name);
+      }
     }
   } else {
     await sendTelegramMessage(userId, message);
@@ -110,7 +108,7 @@ async function sendTelegramMessage(chatId: string, text: string): Promise<void> 
  */
 async function sendTelegramMedia(
   chatId: string,
-  attachment: { type: 'image' | 'file'; url: string; name?: string; mimeType?: string },
+  attachment: Attachment,
   caption?: string
 ): Promise<void> {
   try {

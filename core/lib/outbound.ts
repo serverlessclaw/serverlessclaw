@@ -1,5 +1,5 @@
 import { emitEvent } from './utils/bus';
-import { EventType } from './types/index';
+import { EventType, Attachment } from './types/index';
 
 /**
  * Sends an outbound message event to the system bus.
@@ -10,6 +10,7 @@ import { EventType } from './types/index';
  * @param memoryContexts - Optional array of context IDs to sync the message to.
  * @param sessionId - Optional dashboard session ID for targeted delivery.
  * @param agentName - Optional name of the agent sending the message.
+ * @param attachments - Optional attachments to include in the message.
  * @returns A promise that resolves when the event has been sent.
  */
 export async function sendOutboundMessage(
@@ -19,12 +20,7 @@ export async function sendOutboundMessage(
   memoryContexts?: string[],
   sessionId?: string,
   agentName?: string,
-  attachments?: Array<{
-    type: 'image' | 'file';
-    url: string;
-    name?: string;
-    mimeType?: string;
-  }>
+  attachments?: Attachment[]
 ): Promise<void> {
   await emitEvent(source, EventType.OUTBOUND_MESSAGE, {
     userId,

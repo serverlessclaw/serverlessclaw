@@ -50,7 +50,7 @@ async function testChatWithFile() {
   console.log('[Test] Processing: ' + fileName + ' (' + base64.length + ' bytes base64)');
 
   try {
-    const reply = await agent.process(storageId, 'Please analyze this file briefly.', {
+    const { responseText } = await agent.process(storageId, 'Please analyze this file briefly.', {
       sessionId,
       source: TraceSource.DASHBOARD,
       attachments: [
@@ -64,7 +64,7 @@ async function testChatWithFile() {
     });
 
     console.log('\n--- AGENT RESPONSE ---');
-    console.log(reply);
+    console.log(responseText);
     console.log('----------------------\n');
   } catch (error) {
     console.error('[Error] Processing failed:', error);

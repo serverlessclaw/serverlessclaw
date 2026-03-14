@@ -8,6 +8,7 @@ import {
   EventType,
   IAgentConfig,
   TraceSource,
+  Attachment,
 } from './types/index';
 import { ClawTracer } from './tracer';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
@@ -68,7 +69,7 @@ export class Agent {
     userId: string,
     userText: string,
     options: AgentProcessOptions = {}
-  ): Promise<string> {
+  ): Promise<{ responseText: string; attachments?: Attachment[] }> {
     const {
       profile = ReasoningProfile.STANDARD,
       context,
@@ -80,7 +81,7 @@ export class Agent {
       nodeId: incomingNodeId,
       parentId: incomingParentId,
       sessionId,
-      attachments,
+      attachments: incomingAttachments,
       source = TraceSource.UNKNOWN,
     } = options;
 
@@ -102,7 +103,7 @@ export class Agent {
         userText,
         sessionId,
         agentId: this.config?.id,
-        hasAttachments: !!attachments,
+        hasAttachments: !!incomingAttachments,
       });
     }
 
@@ -130,7 +131,7 @@ export class Agent {
       await this.memory.addMessage(storageId, {
         role: MessageRole.USER,
         content: userText,
-        attachments,
+        attachments: incomingAttachments,
       });
     }
 
@@ -171,7 +172,7 @@ export class Agent {
     const messages: Message[] = [
       { role: MessageRole.SYSTEM, content: contextPrompt },
       ...history,
-      { role: MessageRole.USER, content: userText, attachments },
+      { role: MessageRole.USER, content: userText, attachments: incomingAttachments },
     ];
 
     // 4. Execution Loop
@@ -192,7 +193,12 @@ export class Agent {
       logger.warn(`Failed to fetch max_tool_iterations from DDB, using default ${maxIterations}.`);
     }
 
-    const { responseText, paused, pauseMessage } = await executor.runLoop(messages, {
+    const {
+      responseText,
+      paused,
+      pauseMessage,
+      attachments: resultAttachments,
+    } = await executor.runLoop(messages, {
       activeModel,
       activeProvider,
       activeProfile,
@@ -224,9 +230,9 @@ export class Agent {
         sessionId,
         nodeId: nodeId || 'unknown',
         parentId: parentId || 'unknown',
-        attachments,
+        attachments: incomingAttachments,
       });
-      return pauseMessage!;
+      return { responseText: pauseMessage!, attachments: resultAttachments };
     }
 
     // 5. Finalize and Response
@@ -235,6 +241,7 @@ export class Agent {
       content: responseText,
       agentName: this.config?.name || 'SuperClaw',
       traceId,
+      attachments: resultAttachments, // Store attachments in memory too
     });
 
     await tracer.endTrace(responseText);
@@ -255,7 +262,7 @@ export class Agent {
       depth
     );
 
-    return responseText;
+    return { responseText, attachments: resultAttachments };
   }
 
   /**
