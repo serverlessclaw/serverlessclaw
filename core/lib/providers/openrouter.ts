@@ -45,9 +45,46 @@ export class OpenRouterProvider implements IProvider {
     const reasoningConfig = OPENROUTER_REASONING_MAP[profile];
     const reasoningEffort = capEffort(reasoningConfig.effort, capabilities.maxReasoningEffort);
 
+    const processedMessages = messages.map((m) => {
+      if (!m.attachments || m.attachments.length === 0) {
+        return m;
+      }
+
+      const content: any[] = [];
+      if (m.content) {
+        content.push({ type: 'text', text: m.content });
+      }
+
+      m.attachments.forEach((att) => {
+        if (att.type === 'image') {
+          content.push({
+            type: 'image_url',
+            image_url: {
+              url: att.url || `data:${att.mimeType || 'image/png'};base64,${att.base64}`,
+            },
+          });
+        } else if (att.type === 'file') {
+          // OpenRouter/OpenAI-compatible file input
+          content.push({
+            type: 'input_file' as any,
+            input_file: {
+              file_id:
+                att.url ||
+                `data:${att.mimeType || 'application/octet-stream'};base64,${att.base64}`,
+            },
+          });
+        }
+      });
+
+      return {
+        ...m,
+        content: content.length === 1 && content[0].type === 'text' ? m.content : content,
+      };
+    });
+
     const body: Record<string, unknown> = {
       model: activeModel,
-      messages: messages,
+      messages: processedMessages,
       route: reasoningConfig.route,
       reasoning: {
         effort: reasoningEffort,

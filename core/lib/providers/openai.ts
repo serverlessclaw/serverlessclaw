@@ -76,6 +76,16 @@ export class OpenAIProvider implements IProvider {
                 url: att.url || `data:${att.mimeType || 'image/png'};base64,${att.base64}`,
               },
             });
+          } else if (att.type === 'file') {
+            // OpenAI v1/responses and some /chat/completions models support file input in 2026
+            content.push({
+              type: 'input_file' as any,
+              input_file: {
+                file_id:
+                  att.url ||
+                  `data:${att.mimeType || 'application/octet-stream'};base64,${att.base64}`,
+              },
+            } as any);
           }
         });
       }
@@ -133,6 +143,15 @@ export class OpenAIProvider implements IProvider {
                     url: att.url || `data:${att.mimeType || 'image/png'};base64,${att.base64}`,
                   },
                 });
+              } else if (att.type === 'file') {
+                content.push({
+                  type: 'input_file' as any,
+                  input_file: {
+                    file_id:
+                      att.url ||
+                      `data:${att.mimeType || 'application/octet-stream'};base64,${att.base64}`,
+                  },
+                } as any);
               }
             });
           }

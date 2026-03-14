@@ -90,6 +90,33 @@ export class BedrockProvider implements IProvider {
 
         const content: ContentBlock[] = [{ text: m.content || '' }];
 
+        if (m.attachments && m.role !== MessageRole.TOOL) {
+          m.attachments.forEach((att) => {
+            const format = (att.mimeType?.split('/')[1] || 'png').toLowerCase();
+            if (att.type === 'image' && imgFormats.includes(format)) {
+              content.push({
+                image: {
+                  format: format as 'png' | 'jpeg' | 'gif' | 'webp',
+                  source: {
+                    bytes: att.base64 ? Buffer.from(att.base64, 'base64') : new Uint8Array(),
+                  },
+                },
+              });
+            } else if (att.type === 'file') {
+              // 2026 Bedrock Converse API: Support for document attachments
+              content.push({
+                document: {
+                  name: att.name || 'document',
+                  format: (att.mimeType?.split('/')[1] || 'pdf') as any,
+                  source: {
+                    bytes: att.base64 ? Buffer.from(att.base64, 'base64') : new Uint8Array(),
+                  },
+                },
+              } as any);
+            }
+          });
+        }
+
         if (m.tool_calls) {
           m.tool_calls.forEach(
             (tc: { id: string; function: { name: string; arguments: string } }) => {
@@ -105,7 +132,7 @@ export class BedrockProvider implements IProvider {
         }
 
         if (m.role === MessageRole.TOOL) {
-          const toolContent: ContentBlock[] = [];
+          const toolContent: ToolResultContentBlock[] = [];
 
           // If content is a JSON string that might be a ToolResult, try to parse it
           // Actually, the Agent core already passes the text part if it's a ToolResult
@@ -117,20 +144,26 @@ export class BedrockProvider implements IProvider {
           // In 2026, we also support passing attachments from previous turns
           if (m.attachments) {
             m.attachments.forEach((att) => {
-              if (imgFormats.includes(att.mimeType?.split('/')[1] || '')) {
-                const format = (att.mimeType?.split('/')[1] || 'png') as
-                  | 'png'
-                  | 'jpeg'
-                  | 'gif'
-                  | 'webp';
+              const format = (att.mimeType?.split('/')[1] || 'png').toLowerCase();
+              if (att.type === 'image' && imgFormats.includes(format)) {
                 toolContent.push({
                   image: {
-                    format,
+                    format: format as 'png' | 'jpeg' | 'gif' | 'webp',
                     source: {
                       bytes: att.base64 ? Buffer.from(att.base64, 'base64') : new Uint8Array(),
                     },
                   },
                 });
+              } else if (att.type === 'file') {
+                toolContent.push({
+                  document: {
+                    name: att.name || 'document',
+                    format: (att.mimeType?.split('/')[1] || 'pdf') as any,
+                    source: {
+                      bytes: att.base64 ? Buffer.from(att.base64, 'base64') : new Uint8Array(),
+                    },
+                  },
+                } as any);
               }
             });
           }
@@ -138,7 +171,7 @@ export class BedrockProvider implements IProvider {
           content.push({
             toolResult: {
               toolUseId: m.tool_call_id!,
-              content: toolContent as ToolResultContentBlock[],
+              content: toolContent,
               status: 'success',
             },
           });
