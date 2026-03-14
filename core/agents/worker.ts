@@ -1,6 +1,6 @@
 import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
-import { TraceSource, TaskEvent } from '../lib/types/index';
+import { TraceSource, TaskEvent, EventType } from '../lib/types/index';
 import {
   getAgentContext,
   extractPayload,

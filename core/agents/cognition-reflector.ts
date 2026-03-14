@@ -6,13 +6,11 @@ import {
   ReasoningProfile,
   Message,
   EventType,
-  SSTResource,
   InsightCategory,
   GapStatus,
   AgentType,
   TraceSource,
 } from '../lib/types/index';
-import { Resource } from 'sst';
 import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
 import {
@@ -23,8 +21,7 @@ import {
   extractBaseUserId,
   emitTaskEvent,
 } from '../lib/utils/agent-helpers';
-
-const typedResource = Resource as unknown as SSTResource;
+import { emitEvent } from '../lib/utils/bus';
 
 const memory = new DynamoMemory();
 const provider = new ProviderManager();
@@ -235,24 +232,13 @@ export const handler = async (
 
             // Notify Planner Agent via EventBridge
             try {
-              await eventbridge.send(
-                new PutEventsCommand({
-                  Entries: [
-                    {
-                      Source: 'reflector.agent',
-                      DetailType: EventType.EVOLUTION_PLAN,
-                      Detail: JSON.stringify({
-                        gapId,
-                        details: gap.content,
-                        metadata,
-                        contextUserId: userId,
-                        sessionId, // Propagate session context for history syncing
-                      }),
-                      EventBusName: typedResource.AgentBus.name,
-                    },
-                  ],
-                })
-              );
+              await emitEvent('reflector.agent', EventType.EVOLUTION_PLAN, {
+                gapId,
+                details: gap.content,
+                metadata,
+                contextUserId: userId,
+                sessionId, // Propagate session context for history syncing
+              });
             } catch (e) {
               logger.error('Failed to emit evolution plan event from Reflector:', e);
             }
