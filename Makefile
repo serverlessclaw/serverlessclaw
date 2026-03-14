@@ -7,8 +7,9 @@ include makefiles/Makefile.release.mk
 
 .DEFAULT_GOAL := help
 
-pre-commit: ## Run pre-commit checks (lint-staged, test-silent)
+pre-commit: ## Run pre-commit checks (lint --fix, lint-staged, test-silent)
 	@$(call log_step,Running pre-commit checks...)
+	@pnpm lint --fix
 	@$(MAKE) lint-staged
 	@$(MAKE) test-silent
 	@$(call log_success,Pre-commit checks passed)
