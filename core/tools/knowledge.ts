@@ -233,7 +233,6 @@ export const reportGap = {
     };
 
     try {
-      const gapId = Date.now().toString();
       const metadata = {
         category: category || InsightCategory.STRATEGIC_GAP,
         confidence: 9,
@@ -244,7 +243,13 @@ export const reportGap = {
         priority: 5,
       };
 
-      await getMemory().setGap(gapId, content, metadata);
+      const gapIdTimestamp = await getMemory().addInsight(
+        'SYSTEM#GLOBAL',
+        category || InsightCategory.STRATEGIC_GAP,
+        content,
+        metadata
+      );
+      const gapId = gapIdTimestamp.toString();
 
       await emitEvent('agent.tool', EventType.EVOLUTION_PLAN, {
         gapId,
@@ -374,8 +379,8 @@ export const uninstallSkill = {
 /**
  * Directly saves a new fact or user preference into the system memory.
  */
-export const saveKnowledge = {
-  ...toolDefinitions.saveKnowledge,
+export const saveMemory = {
+  ...toolDefinitions.saveMemory, // Assuming toolDefinitions will also be updated
   execute: async (args: Record<string, unknown>): Promise<string> => {
     const { content, category, userId } = args as {
       content: string;
@@ -384,19 +389,19 @@ export const saveKnowledge = {
     };
 
     const memory = getMemory();
+    // Use the baseUserId for user-specific memory, but ensure it's prefixed correctly for scope.
     const baseUserId = userId.startsWith('CONV#') ? userId.split('#')[1] : userId;
+    const scopeId = `USER#${baseUserId}`;
 
     if (category === 'user_preference') {
-      const existing = await memory.getDistilledMemory(baseUserId);
-      const updated = existing ? `${existing}\n- ${content}` : `- ${content}`;
-      await memory.updateDistilledMemory(baseUserId, updated);
+      // User preferences are now stored as granular memory items.
+      await memory.addMemory(scopeId, InsightCategory.USER_PREFERENCE, content);
       return `Successfully saved user preference: ${content}`;
     }
 
-    const gapId = Date.now().toString();
+    // Other categories are treated as system knowledge and stored globally.
     const metadata = {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      category: category as any,
+      category: category as InsightCategory,
       confidence: 10,
       impact: 5,
       complexity: 1,
@@ -405,7 +410,7 @@ export const saveKnowledge = {
       priority: 5,
     };
 
-    await memory.setGap(gapId, content, metadata);
+    await memory.addMemory('SYSTEM#GLOBAL', category, content, metadata);
     return `Successfully saved knowledge as ${category}: ${content}`;
   },
 };

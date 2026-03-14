@@ -164,10 +164,10 @@ describe('Agent Model Overrides', () => {
     expect(toolResult?.content).toContain('ACTIVE_MODEL: gpt-4o');
   });
 
-  it('should call saveKnowledge tool when requested', async () => {
-    const mockSaveKnowledge = {
-      name: 'saveKnowledge',
-      description: 'Save knowledge',
+  it('should call saveMemory tool when requested', async () => {
+    const mockSaveMemory = {
+      name: 'saveMemory',
+      description: 'Save memory',
       parameters: { type: 'object', properties: {} },
       execute: vi.fn().mockResolvedValue('Saved successfully'),
     };
@@ -182,7 +182,7 @@ describe('Agent Model Overrides', () => {
             id: 'call-save',
             type: 'function',
             function: {
-              name: 'saveKnowledge',
+              name: 'saveMemory',
               arguments: JSON.stringify({ content: 'SuperPeng', category: 'user_preference' }),
             },
           },
@@ -190,7 +190,7 @@ describe('Agent Model Overrides', () => {
       })
       .mockResolvedValueOnce({ role: MessageRole.ASSISTANT, content: 'Done' });
 
-    const agent = new Agent(mockMemory, mockProvider, [mockSaveKnowledge], 'System', {
+    const agent = new Agent(mockMemory, mockProvider, [mockSaveMemory], 'System', {
       id: 'test',
       name: 'Test',
       enabled: true,
@@ -199,7 +199,7 @@ describe('Agent Model Overrides', () => {
 
     await agent.process('user-1', 'Call me SuperPeng');
 
-    expect(mockSaveKnowledge.execute).toHaveBeenCalledWith(
+    expect(mockSaveMemory.execute).toHaveBeenCalledWith(
       expect.objectContaining({
         content: 'SuperPeng',
         category: 'user_preference',

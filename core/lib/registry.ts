@@ -18,7 +18,7 @@ export class AgentRegistry {
     'recallKnowledge',
     'discoverSkills',
     'installSkill',
-    'saveKnowledge',
+    'saveMemory',
     'checkConfig',
   ];
 

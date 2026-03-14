@@ -223,6 +223,68 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   }
 
   /**
+   * Adds a new granular insight
+   */
+  async addInsight(
+    scopeId: string,
+    category: InsightCategory | string,
+    content: string,
+    metadata?: Partial<InsightMetadata>
+  ): Promise<number> {
+    const { expiresAt } = await RetentionManager.getExpiresAt('INSIGHT', scopeId);
+    const timestamp = Date.now();
+    await this.putItem({
+      userId: scopeId,
+      timestamp,
+      type: `INSIGHT:${category.toUpperCase()}`,
+      expiresAt,
+      content,
+      metadata: {
+        category,
+        confidence: 10,
+        impact: 5,
+        complexity: 5,
+        risk: 5,
+        urgency: 5,
+        priority: 5,
+        ...(metadata || {}),
+      },
+    });
+    return timestamp;
+  }
+
+  /**
+   * Adds a new granular memory item into the user or global scope.
+   */
+  async addMemory(
+    scopeId: string,
+    category: InsightCategory | string,
+    content: string,
+    metadata?: Partial<InsightMetadata>
+  ): Promise<number> {
+    const { expiresAt } = await RetentionManager.getExpiresAt('MEMORY', scopeId);
+    const timestamp = Date.now();
+    await this.putItem({
+      userId: scopeId,
+      timestamp,
+      type: `MEMORY:${category.toUpperCase()}`,
+      expiresAt,
+      content,
+      metadata: {
+        category,
+        confidence: 10,
+        impact: 5,
+        complexity: 5,
+        risk: 5,
+        urgency: 5,
+        priority: 5,
+        ...(metadata || {}),
+      },
+    });
+    return timestamp;
+  }
+
+  /**
    * Searches for insights across all categories
    */
   async searchInsights(
@@ -230,32 +292,46 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
     query: string,
     category?: InsightCategory
   ): Promise<MemoryInsight[]> {
-    const prefixes = [`LESSON#${userId}`, `GAP#`, `DISTILLED#${userId}`];
+    const scopes = [
+      `USER#${userId}`,
+      'SYSTEM#GLOBAL',
+      `LESSON#${userId}`,
+      `GAP#`,
+      `DISTILLED#${userId}`,
+    ];
     let allInsights: MemoryInsight[] = [];
 
-    for (const prefix of prefixes) {
+    for (const scope of scopes) {
       const items = await this.queryItems({
         KeyConditionExpression: 'userId = :userId',
         ExpressionAttributeValues: {
-          ':userId': prefix,
+          ':userId': scope,
         },
         Limit: 50,
       });
 
-      const insights = items.map((item) => ({
-        id: item.userId as string,
-        content: item.content as string,
-        metadata: (item.metadata as InsightMetadata) || {
-          category: InsightCategory.SYSTEM_KNOWLEDGE,
+      const insights = items.map((item) => {
+        const metadata = (item.metadata as InsightMetadata) || {
+          category: scope.startsWith('DISTILLED')
+            ? InsightCategory.USER_PREFERENCE
+            : scope.startsWith('LESSON')
+              ? InsightCategory.TACTICAL_LESSON
+              : InsightCategory.STRATEGIC_GAP,
           confidence: 0,
           impact: 0,
           complexity: 0,
           risk: 0,
           urgency: 0,
           priority: 0,
-        },
-        timestamp: item.timestamp as number,
-      }));
+        };
+
+        return {
+          id: item.userId as string,
+          content: item.content as string,
+          metadata,
+          timestamp: item.timestamp as number,
+        };
+      });
       allInsights = [...allInsights, ...insights];
     }
 

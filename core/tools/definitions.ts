@@ -333,8 +333,8 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
   },
-  saveKnowledge: {
-    name: 'saveKnowledge',
+  saveMemory: {
+    name: 'saveMemory',
     description: 'Directly saves a new fact or user preference into the system memory.',
     parameters: {
       type: 'object',
@@ -342,7 +342,7 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
         content: { type: 'string', description: 'The fact or preference to save.' },
         category: {
           type: 'string',
-          enum: ['user_preference', 'system_knowledge'],
+          enum: ['user_preference', 'system_knowledge'], // Aligned with InsightCategory enum
           description: 'The category of the knowledge.',
         },
       },
@@ -350,4 +350,5 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
   },
+  // REMOVED: saveKnowledge,
 };

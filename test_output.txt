@@ -1,0 +1,37 @@
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90m/Users/pengcao/projects/serverlessclaw[39m
+
+ [31m❯[39m core/lib/agent.test.ts [2m([22m[2m0 test[22m[2m)[22m
+ [32m✓[39m core/tools/knowledge.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m core/lib/agent_model.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 55[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Suites 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m core/lib/agent.test.ts[2m [ core/lib/agent.test.ts ][22m
+[31m[1mError[22m: Transform failed with 1 error:
+/Users/pengcao/projects/serverlessclaw/core/agents/superclaw.ts:30:4: ERROR: Expected ";" but found "are"[39m
+  Plugin: [35mvite:esbuild[39m
+  File: [36m/Users/pengcao/projects/serverlessclaw/core/agents/superclaw.ts[39m:30:4
+[33m  
+  Expected ";" but found "are"
+  28 |  
+  29 |  export const SUPERCLAW_SYSTEM_PROMPT = `
+  30 |  You are SuperClaw, the primary orchestrator of the Serverless Claw stack.
+     |      ^
+  31 |  
+  32 |  You are capable of autonomous self-evolution and multi-agent orchestration.
+  [39m
+[90m [2m❯[22m failureErrorWithLog node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:[2m1467:15[22m[39m
+[90m [2m❯[22m node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:[2m736:50[22m[39m
+[90m [2m❯[22m responseCallbacks.<computed> node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:[2m603:9[22m[39m
+[90m [2m❯[22m handleIncomingPacket node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:[2m658:12[22m[39m
+[90m [2m❯[22m Socket.readFromStdout node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:[2m581:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m2 passed[39m[22m[90m (3)[39m
+[2m      Tests [22m [1m[32m11 passed[39m[22m[90m (11)[39m
+[2m   Start at [22m 12:40:21
+[2m   Duration [22m 408ms[2m (transform 252ms, setup 0ms, import 423ms, tests 61ms, environment 0ms)[22m
+

@@ -124,6 +124,14 @@ export interface IMemory extends IHistoryStore, IKnowledgeStore, IGapManager {
     category?: InsightCategory
   ): Promise<MemoryInsight[]>;
 
+  /** Adds a new granular memory item into the user or global scope. */
+  addMemory(
+    scopeId: string,
+    category: InsightCategory | string,
+    content: string,
+    metadata?: Partial<InsightMetadata>
+  ): Promise<number>;
+
   /** Updates the metadata (priority, impact, etc.) for a specific recorded insight. */
   updateInsightMetadata(
     userId: string,
