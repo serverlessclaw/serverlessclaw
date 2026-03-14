@@ -127,24 +127,20 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
     let archived = 0;
     for (const gap of staleGaps) {
       try {
-        const { UpdateCommand } = await import('@aws-sdk/lib-dynamodb');
-        await docClient.send(
-          new UpdateCommand({
-            TableName: this.tableName,
-            Key: {
-              userId: gap.userId,
-              timestamp: gap.timestamp,
-            },
-            UpdateExpression: 'SET #status = :archived, updatedAt = :now',
-            ExpressionAttributeNames: {
-              '#status': 'status',
-            },
-            ExpressionAttributeValues: {
-              ':archived': GapStatus.ARCHIVED,
-              ':now': Date.now(),
-            },
-          })
-        );
+        await this.updateItem({
+          Key: {
+            userId: gap.userId,
+            timestamp: gap.timestamp,
+          },
+          UpdateExpression: 'SET #status = :archived, updatedAt = :now',
+          ExpressionAttributeNames: {
+            '#status': 'status',
+          },
+          ExpressionAttributeValues: {
+            ':archived': GapStatus.ARCHIVED,
+            ':now': Date.now(),
+          },
+        });
         archived++;
         logger.info(`Archived stale gap: ${gap.userId}`);
       } catch (error) {
@@ -188,26 +184,22 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
    * Used by the self-healing loop to cap infinite reopen/redeploy cycles.
    */
   async incrementGapAttemptCount(gapId: string): Promise<number> {
-    const { UpdateCommand } = await import('@aws-sdk/lib-dynamodb');
     const numericId = gapId.replace('GAP#', '');
-    const command = new UpdateCommand({
-      TableName: this.tableName,
-      Key: {
-        userId: `GAP#${numericId}`,
-        timestamp: parseInt(numericId, 10) || 0,
-      },
-      UpdateExpression:
-        'SET attemptCount = if_not_exists(attemptCount, :zero) + :one, updatedAt = :now',
-      ExpressionAttributeValues: {
-        ':zero': 0,
-        ':one': 1,
-        ':now': Date.now(),
-      },
-      ReturnValues: 'ALL_NEW',
-    });
-
     try {
-      const result = await docClient.send(command);
+      const result = await this.updateItem({
+        Key: {
+          userId: `GAP#${numericId}`,
+          timestamp: parseInt(numericId, 10) || 0,
+        },
+        UpdateExpression:
+          'SET attemptCount = if_not_exists(attemptCount, :zero) + :one, updatedAt = :now',
+        ExpressionAttributeValues: {
+          ':zero': 0,
+          ':one': 1,
+          ':now': Date.now(),
+        },
+        ReturnValues: 'ALL_NEW',
+      });
       return (result.Attributes?.attemptCount as number) ?? 1;
     } catch (error) {
       logger.error(`Error incrementing attempt count for gap ${gapId}:`, error);
@@ -219,10 +211,8 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
    * Transitions a capability gap to a new status
    */
   async updateGapStatus(gapId: string, status: GapStatus): Promise<void> {
-    const { UpdateCommand } = await import('@aws-sdk/lib-dynamodb');
     const numericId = gapId.replace('GAP#', '');
-    const command = new UpdateCommand({
-      TableName: this.tableName,
+    const params: any = {
       Key: {
         userId: `GAP#${numericId}`,
         timestamp: parseInt(numericId, 10) || 0,
@@ -236,17 +226,17 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
         ':status': status,
         ':now': Date.now(),
       },
-    });
+    };
 
     // Strategy 2: If primary key fails, search and retry exactly ONCE with specific timestamp
-    if (isNaN(parseInt(numericId, 10)) || command.input.Key?.timestamp === 0) {
+    if (isNaN(parseInt(numericId, 10)) || params.Key?.timestamp === 0) {
       const allStatuses = Object.values(GapStatus);
       let found = false;
       for (const s of allStatuses) {
         const gaps = await this.getAllGaps(s);
         const target = gaps.find((g) => g.id === `GAP#${numericId}`);
         if (target) {
-          command.input.Key = { userId: `GAP#${numericId}`, timestamp: target.timestamp };
+          params.Key = { userId: `GAP#${numericId}`, timestamp: target.timestamp };
           found = true;
           break;
         }
@@ -258,7 +248,7 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
     }
 
     try {
-      await docClient.send(command);
+      await this.updateItem(params);
     } catch (error) {
       const err = error as { name?: string };
       if (err.name === 'ConditionalCheckFailedException') {
@@ -269,8 +259,8 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
         const all = await this.getAllGaps();
         const retryTarget = all.find((g) => g.id === `GAP#${numericId}`);
         if (retryTarget) {
-          command.input.Key = { userId: `GAP#${numericId}`, timestamp: retryTarget.timestamp };
-          await docClient.send(command);
+          params.Key = { userId: `GAP#${numericId}`, timestamp: retryTarget.timestamp };
+          await this.updateItem(params);
         }
       } else {
         logger.error(`Error updating gap ${gapId} status:`, error);
@@ -546,9 +536,7 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
    * Atomically increments the system-wide recovery attempt count.
    */
   async incrementRecoveryAttemptCount(): Promise<number> {
-    const { UpdateCommand } = await import('@aws-sdk/lib-dynamodb');
-    const command = new UpdateCommand({
-      TableName: this.tableName,
+    const result = await this.updateItem({
       Key: {
         userId: 'SYSTEM#RECOVERY#STATS',
         timestamp: 0,
@@ -562,7 +550,6 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
       ReturnValues: 'ALL_NEW',
     });
 
-    const result = await docClient.send(command);
     return (result.Attributes?.attempts as number) ?? 1;
   }
 
@@ -570,20 +557,16 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
    * Resets the system-wide recovery attempt count.
    */
   async resetRecoveryAttemptCount(): Promise<void> {
-    const { UpdateCommand } = await import('@aws-sdk/lib-dynamodb');
-    await docClient.send(
-      new UpdateCommand({
-        TableName: this.tableName,
-        Key: {
-          userId: 'SYSTEM#RECOVERY#STATS',
-          timestamp: 0,
-        },
-        UpdateExpression: 'SET attempts = :zero, updatedAt = :now',
-        ExpressionAttributeValues: {
-          ':zero': 0,
-          ':now': Date.now(),
-        },
-      })
-    );
+    await this.updateItem({
+      Key: {
+        userId: 'SYSTEM#RECOVERY#STATS',
+        timestamp: 0,
+      },
+      UpdateExpression: 'SET attempts = :zero, updatedAt = :now',
+      ExpressionAttributeValues: {
+        ':zero': 0,
+        ':now': Date.now(),
+      },
+    });
   }
 }

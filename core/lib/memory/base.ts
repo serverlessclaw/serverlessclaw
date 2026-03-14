@@ -4,6 +4,7 @@ import {
   PutCommand,
   QueryCommand,
   DeleteCommand,
+  UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
 import { logger } from '../logger';
@@ -77,6 +78,18 @@ export class BaseMemoryProvider {
     } catch (error) {
       logger.error('Error deleting item from DynamoDB:', error);
     }
+  }
+
+  /**
+   * Internal helper for Update commands
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  protected async updateItem(params: any): Promise<any> {
+    const command = new UpdateCommand({
+      TableName: this.tableName,
+      ...params,
+    });
+    return docClient.send(command);
   }
 
   /**

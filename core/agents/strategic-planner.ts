@@ -1,7 +1,3 @@
-import { DynamoMemory } from '../lib/memory';
-import { Agent } from '../lib/agent';
-import { ProviderManager } from '../lib/providers/index';
-import { TIME } from '../lib/constants';
 import {
   AgentType,
   ReasoningProfile,
@@ -9,25 +5,22 @@ import {
   GapStatus,
   EventType,
   TraceSource,
-  SSTResource,
 } from '../lib/types/index';
-import { getAgentTools } from '../tools/index';
-import { Resource } from 'sst';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
+import type { SSTResource } from '../lib/types/system';
 import { sendOutboundMessage } from '../lib/outbound';
 import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
-import { AgentRegistry } from '../lib/registry';
-import { extractPayload, loadAgentConfig, extractBaseUserId } from '../lib/utils/agent-helpers';
-
-const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
-const memory = new DynamoMemory();
-const providerManager = new ProviderManager();
-const typedResource = Resource as unknown as SSTResource;
+import { extractPayload, loadAgentConfig, extractBaseUserId, getAgentContext, emitTaskEvent } from '../lib/utils/agent-helpers';
 
 async function getEvolutionMode(): Promise<'auto' | 'hitl'> {
   try {
+    const { DynamoDBClient } = await import('@aws-sdk/client-dynamodb');
+    const { DynamoDBDocumentClient, GetCommand } = await import('@aws-sdk/lib-dynamodb');
+    const { Resource } = await import('sst');
+    
+    const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+    const typedResource = Resource as any;
+
     const response = await db.send(
       new GetCommand({
         TableName: typedResource.ConfigTable.name,
@@ -35,8 +28,8 @@ async function getEvolutionMode(): Promise<'auto' | 'hitl'> {
       })
     );
     return response.Item?.value === 'auto' ? 'auto' : 'hitl';
-  } catch {
-    logger.warn('Failed to fetch evolution_mode, defaulting to hitl:');
+  } catch (error) {
+    logger.warn('Failed to fetch evolution_mode, defaulting to hitl:', error);
     return 'hitl';
   }
 }
@@ -100,8 +93,11 @@ export const handler = async (event: PlannerEvent, _context: Context): Promise<P
 
   // 1. Fetch System Context
   const config = await loadAgentConfig(AgentType.STRATEGIC_PLANNER);
+  const { memory, provider: providerManager } = await getAgentContext();
 
+  const { getAgentTools } = await import('../tools/index');
   const agentTools = await getAgentTools('planner');
+  const { Agent } = await import('../lib/agent');
   const plannerAgent = new Agent(memory, providerManager, agentTools, config.systemPrompt, config);
   const toolsList = agentTools
     .map((t: { name: string; description: string }) => `- ${t.name}: ${t.description}`)
@@ -130,6 +126,7 @@ export const handler = async (event: PlannerEvent, _context: Context): Promise<P
       const lastReview = lastReviewStr ? parseInt(lastReviewStr, 10) : 0;
       const now = Date.now();
 
+      const { TIME } = await import('../lib/constants');
       if (now - lastReview < frequencyHrs * TIME.SECONDS_IN_HOUR * TIME.MS_PER_SECOND) {
         logger.info(
           `Scheduled review skipped. Interval: ${frequencyHrs}h. Last run: ${new Date(lastReview).toISOString()}`
@@ -160,6 +157,7 @@ export const handler = async (event: PlannerEvent, _context: Context): Promise<P
     // 2. Fetch Tool Usage Telemetry for Auditing
     let toolUsageContext = '';
     try {
+      const { AgentRegistry } = await import('../lib/registry');
       const toolUsage = await AgentRegistry.getRawConfig('tool_usage');
       if (toolUsage) {
         toolUsageContext = `\n[TOOL_USAGE_TELEMETRY]:\n${JSON.stringify(toolUsage, null, 2)}\n`;
@@ -281,33 +279,18 @@ export const handler = async (event: PlannerEvent, _context: Context): Promise<P
 
   // 2. Emit Task Result for Universal Coordination
   if (!rawResponse.startsWith('TASK_PAUSED')) {
-    try {
-      const { EventBridgeClient, PutEventsCommand } = await import('@aws-sdk/client-eventbridge');
-      const eb = new EventBridgeClient({});
-      await eb.send(
-        new PutEventsCommand({
-          Entries: [
-            {
-              Source: 'planner.agent',
-              DetailType: isFailure ? EventType.TASK_FAILED : EventType.TASK_COMPLETED,
-              Detail: JSON.stringify({
-                userId: contextUserId,
-                agentId: AgentType.STRATEGIC_PLANNER,
-                task: isScheduledReview ? 'Scheduled Review' : details,
-                [isFailure ? 'error' : 'response']: plan,
-                traceId,
-                initiatorId: payload.initiatorId,
-                depth: payload.depth,
-                sessionId,
-              }),
-              EventBusName: typedResource.AgentBus.name,
-            },
-          ],
-        })
-      );
-    } catch (e) {
-      logger.error('Failed to emit result from Planner:', e);
-    }
+    await emitTaskEvent({
+      source: 'planner.agent',
+      userId: contextUserId,
+      agentId: AgentType.STRATEGIC_PLANNER,
+      task: isScheduledReview ? 'Scheduled Review' : (details || 'Strategic Review'),
+      response: plan,
+      error: isFailure ? plan : undefined,
+      traceId,
+      initiatorId: payload.initiatorId,
+      depth: payload.depth,
+      sessionId,
+    });
   }
 
   // 4. Record gap in structured cooldown store

@@ -1,5 +1,3 @@
-import { DynamoMemory } from '../lib/memory';
-import { ProviderManager } from '../lib/providers/index';
 import { AgentType, GapStatus, ReasoningProfile } from '../lib/types/index';
 import { sendOutboundMessage } from '../lib/outbound';
 import { logger } from '../lib/logger';
@@ -13,10 +11,8 @@ import {
   validatePayload,
   buildProcessOptions,
   emitTaskEvent,
+  getAgentContext,
 } from '../lib/utils/agent-helpers';
-
-const memory = new DynamoMemory();
-const provider = new ProviderManager();
 
 interface CoderPayload {
   userId: string;
@@ -55,6 +51,7 @@ export const handler = async (event: CoderEvent, context: Context): Promise<stri
   }
 
   // 1. Transition gaps to PROGRESS
+  const { memory, provider } = await getAgentContext();
   if (metadata?.gapIds && metadata.gapIds.length > 0) {
     logger.info(`Picking up task. Marking ${metadata.gapIds.length} gaps as PROGRESS.`);
     for (const gapId of metadata.gapIds) {
