@@ -1,4 +1,4 @@
-import { EventType, TraceSource, BuildEvent } from '../../lib/types/index';
+import { EventType, BuildEvent } from '../../lib/types/index';
 import { logger } from '../../lib/logger';
 import { Context } from 'aws-lambda';
 import { wakeupInitiator, processEventWithAgent } from './shared';

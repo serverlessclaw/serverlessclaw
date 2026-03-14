@@ -1,5 +1,4 @@
-import { TraceSource, HealthReportEvent } from '../../lib/types/index';
-import { logger } from '../../lib/logger';
+import { HealthReportEvent } from '../../lib/types/index';
 import { Context } from 'aws-lambda';
 import { processEventWithAgent } from './shared';
 

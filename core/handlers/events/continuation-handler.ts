@@ -1,4 +1,4 @@
-import { TraceSource, TaskEvent } from '../../lib/types/index';
+import { TaskEvent } from '../../lib/types/index';
 import { logger } from '../../lib/logger';
 import { Context } from 'aws-lambda';
 import { getRecursionLimit, handleRecursionLimitExceeded, processEventWithAgent } from './shared';
