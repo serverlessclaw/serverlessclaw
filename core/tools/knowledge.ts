@@ -14,8 +14,8 @@ function getMemory() {
 /**
  * Lists all registered agents and their current status.
  */
-export const listAgents = {
-  ...toolDefinitions.listAgents,
+export const getAgentRegistrySummary = {
+  ...toolDefinitions.getAgentRegistrySummary,
   execute: async (): Promise<string> => {
     const { AgentRegistry } = await import('../lib/registry');
     const configs = await AgentRegistry.getAllConfigs();

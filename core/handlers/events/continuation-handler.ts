@@ -1,15 +1,7 @@
-import { DynamoMemory } from '../../lib/memory';
-import { Agent } from '../../lib/agent';
-import { ProviderManager } from '../../lib/providers/index';
-import { getAgentTools } from '../../tools/index';
 import { TraceSource, TaskEvent } from '../../lib/types/index';
-import { sendOutboundMessage } from '../../lib/outbound';
 import { logger } from '../../lib/logger';
 import { Context } from 'aws-lambda';
-import { getRecursionLimit, handleRecursionLimitExceeded } from './shared';
-
-const memory = new DynamoMemory();
-const provider = new ProviderManager();
+import { getRecursionLimit, handleRecursionLimitExceeded, processEventWithAgent } from './shared';
 
 /**
  * Handles continuation task events - resumes agent processing with context.
@@ -54,37 +46,15 @@ export async function handleContinuationTask(
     sessionId,
   });
 
-  const { AgentRegistry } = await import('../../lib/registry');
-  const config = await AgentRegistry.getAgentConfig(targetAgentId);
-  if (!config) {
-    logger.error(`Agent configuration for '${targetAgentId}' not found during continuation.`);
-    return;
-  }
-
-  const agentTools = await getAgentTools(targetAgentId === 'main' ? 'events' : targetAgentId);
-  const agent = new Agent(memory, provider, agentTools, config.systemPrompt, config);
-
-  // Resume with isContinuation = true
-  const { responseText, attachments: resultAttachments } = await agent.process(userId, task, {
+  await processEventWithAgent(userId, targetAgentId, task, {
     context,
-    isContinuation: isContinuation !== false, // Default to true for CONTINUATION_TASK
+    isContinuation: isContinuation !== false,
     traceId,
     sessionId,
     depth,
     initiatorId,
     attachments,
-    source: TraceSource.SYSTEM,
+    handlerTitle: 'CONTINUATION_NOTIFICATION', // Or as needed
+    outboundHandlerName: 'continuation-handler',
   });
-
-  if (!responseText.startsWith('TASK_PAUSED')) {
-    await sendOutboundMessage(
-      'continuation-handler',
-      userId,
-      responseText,
-      undefined,
-      sessionId,
-      'SuperClaw',
-      resultAttachments
-    );
-  }
 }

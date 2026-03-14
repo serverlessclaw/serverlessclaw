@@ -1,43 +1,8 @@
-import { DynamoMemory } from '../../lib/memory';
-import { Agent } from '../../lib/agent';
-import { ProviderManager } from '../../lib/providers/index';
-import { getAgentTools } from '../../tools/index';
 import { EventType, TraceSource, BuildEvent } from '../../lib/types/index';
-import { sendOutboundMessage } from '../../lib/outbound';
 import { logger } from '../../lib/logger';
 import { Context } from 'aws-lambda';
-import { emitEvent } from '../../lib/utils/bus';
+import { wakeupInitiator, processEventWithAgent } from './shared';
 
-const memory = new DynamoMemory();
-const provider = new ProviderManager();
-
-/**
- * Wake up the initiator agent when a delegated task or system event completes.
- */
-export async function wakeupInitiator(
-  userId: string,
-  initiatorId: string | undefined,
-  task: string,
-  traceId: string | undefined,
-  sessionId: string | undefined,
-  depth: number = 0
-): Promise<void> {
-  if (!initiatorId || !task) return;
-
-  const initiatorAgentId = initiatorId.endsWith('.agent')
-    ? initiatorId.replace('.agent', '')
-    : initiatorId;
-
-  await emitEvent('events.handler', EventType.CONTINUATION_TASK, {
-    userId,
-    agentId: initiatorAgentId,
-    task,
-    traceId,
-    initiatorId,
-    sessionId,
-    depth: depth + 1,
-  });
-}
 
 /**
  * Handles build failure events - triggers agent to investigate and fix.
@@ -76,39 +41,13 @@ export async function handleBuildFailure(
     Please investigate the codebase using your tools, find the root cause, fix the issue, and trigger a new deployment. 
     Explain your plan to the user before proceeding.`;
 
-  // Process the failure context via the SuperClaw
-  const { AgentRegistry } = await import('../../lib/registry');
-  const config = await AgentRegistry.getAgentConfig('main');
-  if (!config) {
-    logger.error('Main agent config missing in events handler');
-    return;
-  }
-
-  const agentTools = await getAgentTools('events');
-  const agent = new Agent(memory, provider, agentTools, config.systemPrompt, config);
-  const { responseText, attachments: resultAttachments } = await agent.process(
-    userId,
-    `SYSTEM_NOTIFICATION: ${task}`,
-    {
-      context,
-      traceId,
-      sessionId,
-      source: TraceSource.SYSTEM,
-    }
-  );
-
-  // Notify user via Notifier (if not paused)
-  if (!responseText.startsWith('TASK_PAUSED')) {
-    await sendOutboundMessage(
-      'build-handler',
-      userId,
-      responseText,
-      undefined,
-      sessionId,
-      'SuperClaw',
-      resultAttachments
-    );
-  }
+  const { responseText } = await processEventWithAgent(userId, 'main', task, {
+    context,
+    traceId,
+    sessionId,
+    handlerTitle: 'SYSTEM_NOTIFICATION',
+    outboundHandlerName: 'build-handler',
+  });
 
   // WAKE UP INITIATOR
   if (initiatorId && originalTask) {
@@ -140,6 +79,7 @@ Build ID: ${buildId}
 The build completed successfully. Associated gaps have been marked as **DEPLOYED** and are pending QA verification.
 The QA Auditor will verify the changes shortly. Gaps are only marked **DONE** after QA passes (auto mode) or you confirm (HITL mode).`;
 
+  const { sendOutboundMessage } = await import('../../lib/outbound');
   await sendOutboundMessage(
     'build-handler',
     userId,

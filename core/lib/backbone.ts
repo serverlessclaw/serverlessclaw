@@ -7,6 +7,17 @@ import {
   QA_SYSTEM_PROMPT,
 } from '../agents/prompts/index';
 
+const TOOL_DISCOVER_SKILLS = 'discoverSkills';
+const TOOL_INSTALL_SKILL = 'installSkill';
+const TOOL_SAVE_MEMORY = 'saveMemory';
+const TOOL_SEEK_CLARIFICATION = 'seekClarification';
+const TOOL_PROVIDE_CLARIFICATION = 'provideClarification';
+const TOOL_RECALL_KNOWLEDGE = 'recallKnowledge';
+const TOOL_SEND_MESSAGE = 'sendMessage';
+const TOOL_MANAGE_GAP = 'manageGap';
+const TOOL_REPORT_GAP = 'reportGap';
+const TOOL_CHECK_HEALTH = 'checkHealth';
+
 /**
  * Backbone Registry: The single source of truth for essential system components.
  * Reserved for LLM-based Agents and logic-based Handlers.
@@ -25,15 +36,15 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     tools: [
       'dispatchTask',
       'listAgents',
-      'recallKnowledge',
+      TOOL_RECALL_KNOWLEDGE,
       'checkConfig',
-      'discoverSkills',
-      'installSkill',
+      TOOL_DISCOVER_SKILLS,
+      TOOL_INSTALL_SKILL,
       'registerMCPServer',
-      'manageGap',
-      'reportGap',
-      'saveMemory',
-      'provideClarification',
+      TOOL_MANAGE_GAP,
+      TOOL_REPORT_GAP,
+      TOOL_SAVE_MEMORY,
+      TOOL_PROVIDE_CLARIFICATION,
       'aws-s3_read_file',
       'aws-s3_list_objects',
     ],
@@ -54,7 +65,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       'stageChanges',
       'triggerDeployment',
       'validateCode',
-      'checkHealth',
+      TOOL_CHECK_HEALTH,
       'inspectTrace',
       'aws-s3_read_file',
       'aws-s3_write_file',
@@ -73,11 +84,11 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       'fetch_get',
       'aws_list_resources',
       'aws_get_resource',
-      'sendMessage',
-      'discoverSkills',
-      'installSkill',
-      'saveMemory',
-      'seekClarification',
+      TOOL_SEND_MESSAGE,
+      TOOL_DISCOVER_SKILLS,
+      TOOL_INSTALL_SKILL,
+      TOOL_SAVE_MEMORY,
+      TOOL_SEEK_CLARIFICATION,
     ],
     maxIterations: 50,
     connectionProfile: ['bus', 'memory', 'storage', 'codebuild', 'config', 'trace'],
@@ -92,17 +103,17 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     enabled: true,
     isBackbone: true,
     tools: [
-      'recallKnowledge',
+      TOOL_RECALL_KNOWLEDGE,
       'dispatchTask',
-      'manageGap',
-      'reportGap',
-      'sendMessage',
+      TOOL_MANAGE_GAP,
+      TOOL_REPORT_GAP,
+      TOOL_SEND_MESSAGE,
       'manageAgentTools',
-      'discoverSkills',
-      'installSkill',
-      'saveMemory',
-      'seekClarification',
-      'provideClarification',
+      TOOL_DISCOVER_SKILLS,
+      TOOL_INSTALL_SKILL,
+      TOOL_SAVE_MEMORY,
+      TOOL_SEEK_CLARIFICATION,
+      TOOL_PROVIDE_CLARIFICATION,
     ],
     connectionProfile: ['bus', 'memory', 'config', 'trace'],
   },
@@ -116,14 +127,14 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     enabled: true,
     isBackbone: true,
     tools: [
-      'recallKnowledge',
-      'manageGap',
-      'reportGap',
-      'sendMessage',
-      'discoverSkills',
-      'installSkill',
-      'saveMemory',
-      'seekClarification',
+      TOOL_RECALL_KNOWLEDGE,
+      TOOL_MANAGE_GAP,
+      TOOL_REPORT_GAP,
+      TOOL_SEND_MESSAGE,
+      TOOL_DISCOVER_SKILLS,
+      TOOL_INSTALL_SKILL,
+      TOOL_SAVE_MEMORY,
+      TOOL_SEEK_CLARIFICATION,
     ],
     connectionProfile: ['bus', 'memory', 'config', 'trace'],
   },
@@ -137,13 +148,13 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     enabled: true,
     isBackbone: true,
     tools: [
-      'recallKnowledge',
-      'checkHealth',
-      'sendMessage',
-      'discoverSkills',
-      'installSkill',
-      'saveMemory',
-      'seekClarification',
+      TOOL_RECALL_KNOWLEDGE,
+      TOOL_CHECK_HEALTH,
+      TOOL_SEND_MESSAGE,
+      TOOL_DISCOVER_SKILLS,
+      TOOL_INSTALL_SKILL,
+      TOOL_SAVE_MEMORY,
+      TOOL_SEEK_CLARIFICATION,
     ],
     connectionProfile: ['bus', 'memory', 'config', 'trace'],
   },

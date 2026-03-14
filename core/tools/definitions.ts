@@ -1,5 +1,10 @@
 import { IToolDefinition } from '../lib/types/index';
 
+const TYPE_OBJECT = 'object';
+const TYPE_STRING = 'string';
+const TYPE_ARRAY = 'array';
+const TYPE_NUMBER = 'number';
+
 /**
  * Metadata and parameter schemas for all system tools.
  * These definitions are used by LLMs to understand how to invoke each tool.
@@ -10,11 +15,11 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     name: 'stageChanges',
     description: 'Stages modified files to S3 for persistent deployment.',
     parameters: {
-      type: 'object',
+      type: TYPE_OBJECT,
       properties: {
         modifiedFiles: {
-          type: 'array',
-          items: { type: 'string' },
+          type: TYPE_ARRAY,
+          items: { type: TYPE_STRING },
           description: 'List of relative file paths that were modified.',
         },
       },
@@ -26,14 +31,14 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     name: 'dispatchTask',
     description: 'Dispatches a specialized task to a sub-agent.',
     parameters: {
-      type: 'object',
+      type: TYPE_OBJECT,
       properties: {
         agentId: {
-          type: 'string',
+          type: TYPE_STRING,
           description:
             'The unique ID of the agent to invoke (e.g., coder, planner, or a custom agent ID).',
         },
-        task: { type: 'string', description: 'The specific task for the sub-agent.' },
+        task: { type: TYPE_STRING, description: 'The specific task for the sub-agent.' },
       },
       required: ['agentId', 'task'],
       additionalProperties: false,
@@ -43,15 +48,15 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     name: 'triggerDeployment',
     description: 'Triggers an autonomous self-deployment of the agent infrastructure.',
     parameters: {
-      type: 'object',
+      type: TYPE_OBJECT,
       properties: {
         reason: {
-          type: 'string',
+          type: TYPE_STRING,
           description: 'The reason for the deployment (e.g., added a new tool).',
         },
         gapIds: {
-          type: 'array',
-          items: { type: 'string' },
+          type: TYPE_ARRAY,
+          items: { type: TYPE_STRING },
           description: 'Optional list of gap IDs to associate with this build.',
         },
       },
@@ -63,7 +68,7 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     name: 'validateCode',
     description: 'Runs type checking and linting to ensure no regressions are introduced.',
     parameters: {
-      type: 'object',
+      type: TYPE_OBJECT,
       properties: {},
       required: [],
       additionalProperties: false,
@@ -73,9 +78,9 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     name: 'checkHealth',
     description: 'Verify the health of the deployed agent API.',
     parameters: {
-      type: 'object',
+      type: TYPE_OBJECT,
       properties: {
-        url: { type: 'string', description: 'The health check endpoint URL.' },
+        url: { type: TYPE_STRING, description: 'The health check endpoint URL.' },
       },
       required: ['url'],
       additionalProperties: false,
@@ -85,9 +90,9 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     name: 'triggerRollback',
     description: 'Trigger an emergency rollback by reverting the last commit and redeploying.',
     parameters: {
-      type: 'object',
+      type: TYPE_OBJECT,
       properties: {
-        reason: { type: 'string', description: 'The reason for the rollback.' },
+        reason: { type: TYPE_STRING, description: 'The reason for the rollback.' },
       },
       required: ['reason'],
       additionalProperties: false,
@@ -97,7 +102,7 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     name: 'runTests',
     description: 'Runs the project unit tests to verify changes before staging.',
     parameters: {
-      type: 'object',
+      type: TYPE_OBJECT,
       properties: {},
       required: [],
       additionalProperties: false,
@@ -107,11 +112,11 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     name: 'runShellCommand',
     description: 'Executes a shell command in the agent environment.',
     parameters: {
-      type: 'object',
+      type: TYPE_OBJECT,
       properties: {
-        command: { type: 'string', description: 'The shell command to execute.' },
+        command: { type: TYPE_STRING, description: 'The shell command to execute.' },
         dir_path: {
-          type: 'string',
+          type: TYPE_STRING,
           description: 'The directory path to run the command in (relative to project root).',
         },
       },
@@ -123,15 +128,15 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     name: 'switchModel',
     description: 'Switch the active LLM provider and model at runtime.',
     parameters: {
-      type: 'object',
+      type: TYPE_OBJECT,
       properties: {
         provider: {
-          type: 'string',
+          type: TYPE_STRING,
           enum: ['openai', 'bedrock', 'openrouter'],
           description: 'The LLM provider to switch to.',
         },
         model: {
-          type: 'string',
+          type: TYPE_STRING,
           description:
             'The specific model ID to use (e.g. gpt-5-mini, google/gemini-3-flash-preview).',
         },
@@ -145,14 +150,14 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     description:
       "Searches the agent's long-term memory for relevant facts, lessons, or capability gaps.",
     parameters: {
-      type: 'object',
+      type: TYPE_OBJECT,
       properties: {
         query: {
-          type: 'string',
+          type: TYPE_STRING,
           description: 'The search query or keyword (use "*" for all recent).',
         },
         category: {
-          type: 'string',
+          type: TYPE_STRING,
           enum: ['user_preference', 'tactical_lesson', 'strategic_gap', 'system_knowledge'],
           description: 'Optional category filter.',
         },
@@ -165,10 +170,17 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     name: 'manageAgentTools',
     description: 'Updates the active toolset for a specific agent.',
     parameters: {
-      type: 'object',
+      type: TYPE_OBJECT,
       properties: {
-        agentId: { type: 'string', description: 'The unique ID of the agent (e.g., main, coder).' },
-        toolNames: { type: 'array', items: { type: 'string' }, description: 'List of tool names.' },
+        agentId: {
+          type: TYPE_STRING,
+          description: 'The unique ID of the agent (e.g., main, coder).',
+        },
+        toolNames: {
+          type: TYPE_ARRAY,
+          items: { type: TYPE_STRING },
+          description: 'List of tool names.',
+        },
       },
       required: ['agentId', 'toolNames'],
       additionalProperties: false,
@@ -178,11 +190,11 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     name: 'manageGap',
     description: 'Updates the status of a capability gap.',
     parameters: {
-      type: 'object',
+      type: TYPE_OBJECT,
       properties: {
-        gapId: { type: 'string', description: 'The ID of the gap (timestamp part).' },
+        gapId: { type: TYPE_STRING, description: 'The ID of the gap (timestamp part).' },
         status: {
-          type: 'string',
+          type: TYPE_STRING,
           enum: ['OPEN', 'PLANNED', 'PROGRESS', 'DEPLOYED', 'DONE', 'FAILED', 'ARCHIVED'],
           description: 'The new status for the gap.',
         },
@@ -195,22 +207,22 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     name: 'reportGap',
     description: 'Records a new capability gap or system limitation into the evolution pipeline.',
     parameters: {
-      type: 'object',
+      type: TYPE_OBJECT,
       properties: {
         content: {
-          type: 'string',
+          type: TYPE_STRING,
           description: 'Detailed description of the gap or missing capability.',
         },
         impact: {
-          type: 'number',
+          type: TYPE_NUMBER,
           description: 'Impact score (1-10) of this gap on system utility.',
         },
         urgency: {
-          type: 'number',
+          type: TYPE_NUMBER,
           description: 'Urgency score (1-10) for addressing this gap.',
         },
         category: {
-          type: 'string',
+          type: TYPE_STRING,
           enum: ['strategic_gap', 'tactical_lesson', 'system_knowledge'],
           description: 'The category of the insight.',
         },
@@ -224,7 +236,7 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     description:
       'Retrieves the current runtime configuration, including active LLM provider and model.',
     parameters: {
-      type: 'object',
+      type: TYPE_OBJECT,
       properties: {},
       required: [],
       additionalProperties: false,
@@ -234,14 +246,14 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     name: 'setSystemConfig',
     description: 'Updates a system-wide configuration value in the ConfigTable.',
     parameters: {
-      type: 'object',
+      type: TYPE_OBJECT,
       properties: {
         key: {
-          type: 'string',
+          type: TYPE_STRING,
           description: 'The configuration key (e.g. evolution_mode, deploy_limit).',
         },
         value: {
-          type: 'string',
+          type: TYPE_STRING,
           description: 'The new value for the configuration (JSON stringified if object).',
         },
       },
@@ -253,18 +265,18 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     name: 'registerMCPServer',
     description: 'Registers a new Model Context Protocol (MCP) server for dynamic tool discovery.',
     parameters: {
-      type: 'object',
+      type: TYPE_OBJECT,
       properties: {
         serverName: {
-          type: 'string',
+          type: TYPE_STRING,
           description: 'A unique name for the server (e.g., git, search).',
         },
         command: {
-          type: 'string',
+          type: TYPE_STRING,
           description: 'The command to run the server (e.g., npx @mcp/server-git).',
         },
         env: {
-          type: 'string',
+          type: TYPE_STRING,
           description: 'Optional environment variables for the server (JSON stringified object).',
         },
       },
@@ -276,10 +288,10 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     name: 'unregisterMCPServer',
     description: 'Removes an MCP server and all its associated tools from the system.',
     parameters: {
-      type: 'object',
+      type: TYPE_OBJECT,
       properties: {
         serverName: {
-          type: 'string',
+          type: TYPE_STRING,
           description: 'The name of the MCP server to remove.',
         },
       },
@@ -287,11 +299,11 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
   },
-  listAgents: {
-    name: 'listAgents',
+  getAgentRegistrySummary: {
+    name: 'getAgentRegistrySummary',
     description: 'Lists all available specialized agents in the system and their capabilities.',
     parameters: {
-      type: 'object',
+      type: TYPE_OBJECT,
       properties: {},
       required: [],
       additionalProperties: false,
@@ -302,9 +314,9 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     description:
       'Retrieves the full mechanical monologue (tool calls, intermediate reasoning) for a specific trace ID.',
     parameters: {
-      type: 'object',
+      type: TYPE_OBJECT,
       properties: {
-        traceId: { type: 'string', description: 'The unique ID of the trace to inspect.' },
+        traceId: { type: TYPE_STRING, description: 'The unique ID of the trace to inspect.' },
       },
       required: ['traceId'],
       additionalProperties: false,
@@ -314,11 +326,11 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     name: 'discoverSkills',
     description: 'Searches the global Skills Marketplace for new capabilities based on a query.',
     parameters: {
-      type: 'object',
+      type: TYPE_OBJECT,
       properties: {
-        query: { type: 'string', description: 'Functional search query.' },
+        query: { type: TYPE_STRING, description: 'Functional search query.' },
         category: {
-          type: 'string',
+          type: TYPE_STRING,
           description: 'Optional category filter like infra, build, knowledge.',
         },
       },
@@ -330,9 +342,9 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     name: 'installSkill',
     description: "Installs a new skill into the agent's current toolset.",
     parameters: {
-      type: 'object',
+      type: TYPE_OBJECT,
       properties: {
-        skillName: { type: 'string', description: 'The name of the skill to install.' },
+        skillName: { type: TYPE_STRING, description: 'The name of the skill to install.' },
       },
       required: ['skillName'],
       additionalProperties: false,
@@ -342,11 +354,11 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     name: 'saveMemory',
     description: 'Directly saves a new fact or user preference into the system memory.',
     parameters: {
-      type: 'object',
+      type: TYPE_OBJECT,
       properties: {
-        content: { type: 'string', description: 'The fact or preference to save.' },
+        content: { type: TYPE_STRING, description: 'The fact or preference to save.' },
         category: {
-          type: 'string',
+          type: TYPE_STRING,
           enum: ['user_preference', 'system_knowledge'], // Aligned with InsightCategory enum
           description: 'The category of the knowledge.',
         },
@@ -359,11 +371,11 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     name: 'seekClarification',
     description: 'Pauses the current agent and requests clarification from the initiator.',
     parameters: {
-      type: 'object',
+      type: TYPE_OBJECT,
       properties: {
-        question: { type: 'string', description: 'The specific question for the initiator.' },
+        question: { type: TYPE_STRING, description: 'The specific question for the initiator.' },
         originalTask: {
-          type: 'string',
+          type: TYPE_STRING,
           description: 'The task you were working on when you needed clarification.',
         },
       },
@@ -375,15 +387,15 @@ export const toolDefinitions: Record<string, IToolDefinition> = {
     name: 'provideClarification',
     description: 'Provides an answer to a clarification request, resuming the target agent.',
     parameters: {
-      type: 'object',
+      type: TYPE_OBJECT,
       properties: {
         agentId: {
-          type: 'string',
+          type: TYPE_STRING,
           description: 'The ID of the agent that requested clarification.',
         },
-        answer: { type: 'string', description: 'The answer to the question.' },
+        answer: { type: TYPE_STRING, description: 'The answer to the question.' },
         originalTask: {
-          type: 'string',
+          type: TYPE_STRING,
           description: 'The task the agent was working on.',
         },
       },

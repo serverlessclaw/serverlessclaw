@@ -4,7 +4,7 @@ import { mockClient } from 'aws-sdk-client-mock';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import {
-  listAgents,
+  getAgentRegistrySummary,
   recallKnowledge,
   manageAgentTools,
   dispatchTask,
@@ -90,9 +90,9 @@ describe('knowledge tools', () => {
     vi.clearAllMocks();
   });
 
-  describe('listAgents', () => {
+  describe('getAgentRegistrySummary', () => {
     it('should return a summary of agents', async () => {
-      const result = await listAgents.execute();
+      const result = await getAgentRegistrySummary.execute();
       expect(result).toContain('[main] Main');
     });
   });

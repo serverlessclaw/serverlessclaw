@@ -33,4 +33,9 @@ describe('Tool Definitions Schema Integrity', () => {
       expect(tool.parameters.additionalProperties).toBe(false);
     }
   });
+
+  it('should have getAgentRegistrySummary tool', () => {
+    expect(toolDefinitions.getAgentRegistrySummary).toBeDefined();
+    expect(toolDefinitions.getAgentRegistrySummary.name).toBe('getAgentRegistrySummary');
+  });
 });
