@@ -133,8 +133,9 @@ export class OpenAIProvider implements IProvider {
           else if (m.role === MessageRole.ASSISTANT) role = 'assistant';
           else if (m.role === MessageRole.DEVELOPER) role = 'developer';
 
-          const content: OpenAI.Chat.ChatCompletionContentPart[] = [];
-          if (m.content) content.push({ type: 'text', text: m.content });
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const content: any[] = [];
+          if (m.content) content.push({ type: 'input_text', text: m.content });
 
           if (m.attachments) {
             m.attachments.forEach((att) => {
@@ -163,7 +164,7 @@ export class OpenAIProvider implements IProvider {
           items.push({
             type: 'message',
             role,
-            content: content.length === 1 && content[0].type === 'text' ? m.content : content,
+            content: content.length === 1 && content[0].type === 'input_text' ? m.content : content,
           });
         }
 

@@ -79,7 +79,7 @@ describe('Provider Attachments Mapping', () => {
       const userMessage = input.find((i: any) => i.type === 'message' && i.role === 'user');
 
       expect(userMessage.content).toHaveLength(3); // text + image + file
-      expect(userMessage.content[0]).toEqual({ type: 'text', text: 'Look at this' });
+      expect(userMessage.content[0]).toEqual({ type: 'input_text', text: 'Look at this' });
       expect(userMessage.content[1]).toEqual({
         type: 'image_url',
         image_url: { url: 'data:image/png;base64,imgdata' },
