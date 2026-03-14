@@ -52,6 +52,7 @@ export const handler = async (
   // EventBridge wraps the payload in 'detail'
   const payload = extractPayload<ReflectorEvent>(event);
   const { userId, conversation, traceId, sessionId, task, initiatorId, depth } =
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     payload.detail || (payload as any); // Double safety for direct or wrapped event
 
   if (!userId || !conversation) {

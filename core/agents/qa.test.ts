@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handler } from './qa';
-import { GapStatus, EvolutionMode, AgentType } from '../lib/types/index';
+import { GapStatus, EvolutionMode } from '../lib/types/index';
 
 vi.mock('../lib/utils/agent-helpers', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   extractPayload: vi.fn((event: any) => event.detail || event),
   loadAgentConfig: vi.fn().mockResolvedValue({
     id: 'qa',
