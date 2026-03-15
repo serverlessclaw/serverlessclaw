@@ -313,29 +313,30 @@ export default async function MemoryVault() {
               <Brain size={14} className="text-cyber-blue" /> Distilled Neural Constants
             </Typography>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {distilled.length > 0 ? (
-                distilled.map((fact, i) => (
+              {allDistilled.length > 0 ? (
+                // Simple deduplication based on content snippets
+                Array.from(new Map(allDistilled.map(item => [item.content?.toString().substring(0, 50), item])).values()).map((fact, i) => (
                   <Card key={i} variant="solid" padding="sm" className="relative group border-cyber-blue/10 bg-cyber-blue/[0.01]">
                     <form action={pruneMemory} className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <input type="hidden" name="userId" value={fact.userId} />
-                        <input type="hidden" name="timestamp" value={fact.timestamp} />
+                        <input type="hidden" name="userId" value={fact.userId as string} />
+                        <input type="hidden" name="timestamp" value={fact.timestamp as number} />
                         <Button variant="ghost" size="sm" type="submit" className="text-white/50 hover:text-red-500 p-0 h-auto" icon={<Trash2 size={14} />} />
                     </form>
                     <Typography variant="caption" weight="bold" color="intel" uppercase className="mb-2 block opacity-40">
-                      {fact.userId.replace('DISTILLED#', 'CONST::')}
+                      {String(fact.userId).replace('DISTILLED#', 'CONST::').replace('USER#', 'PREF::')}
                     </Typography>
                     <Typography variant="body" color="white" italic className="leading-relaxed opacity-70 block">
-                      {fact.content}
+                      {fact.content as string}
                     </Typography>
 
                     <div className="mt-4 pt-2 border-t border-white/5 flex gap-3 opacity-40">
                       <div className="flex items-center gap-1">
                         <Zap size={10} className="text-cyber-blue" />
-                        <Typography variant="mono" className="text-[8px] uppercase">Utility: {fact.metadata?.hitCount || 0}</Typography>
+                        <Typography variant="mono" className="text-[8px] uppercase">Utility: {(fact.metadata as any)?.hitCount || 0}</Typography>
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock size={10} />
-                        <Typography variant="mono" className="text-[8px] uppercase">Last Recalled: {fact.metadata?.lastAccessed ? new Date(fact.metadata.lastAccessed).toLocaleDateString() : 'Never'}</Typography>
+                        <Typography variant="mono" className="text-[8px] uppercase">Last Recalled: {(fact.metadata as any)?.lastAccessed ? new Date((fact.metadata as any).lastAccessed).toLocaleDateString() : 'Never'}</Typography>
                       </div>
                     </div>
                   </Card>

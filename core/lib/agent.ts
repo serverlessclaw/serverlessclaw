@@ -47,7 +47,7 @@ export class Agent {
     userId: string,
     userText: string,
     options: AgentProcessOptions = {}
-  ): Promise<{ responseText: string; attachments?: Attachment[] }> {
+  ): Promise<{ responseText: string; attachments?: Attachment[]; traceId?: string }> {
     const {
       profile = ReasoningProfile.STANDARD,
       context,
@@ -215,7 +215,7 @@ export class Agent {
           parentId: parentId || 'unknown',
           attachments: incomingAttachments,
         });
-        return { responseText: pauseMessage!, attachments: resultAttachments };
+        return { responseText: pauseMessage!, attachments: resultAttachments, traceId };
       }
 
       // 5. Finalize and Response
@@ -245,7 +245,7 @@ export class Agent {
         depth
       );
 
-      return { responseText: responseText, attachments: resultAttachments };
+      return { responseText: responseText, attachments: resultAttachments, traceId };
     } catch (error) {
       const errorDetail = error instanceof Error ? error.message : String(error);
       logger.error(`[Agent.process] Critical failure: ${errorDetail}`, error);

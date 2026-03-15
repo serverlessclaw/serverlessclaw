@@ -33,7 +33,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const agentTools = await getAgentTools('main');
     const agent = new Agent(memory, provider, agentTools, SUPERCLAW_SYSTEM_PROMPT);
 
-    const { responseText, attachments: resultAttachments } = await agent.process(storageId, text || '', { sessionId, source: TraceSource.DASHBOARD, attachments });
+    const { responseText, attachments: resultAttachments, traceId } = await agent.process(storageId, text || '', { sessionId, source: TraceSource.DASHBOARD, attachments });
 
     // Update conversation metadata for the sidebar
     if (sessionId) {
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       });
     }
 
-    return NextResponse.json({ reply: responseText, agentName: 'SuperClaw', attachments: resultAttachments });
+    return NextResponse.json({ reply: responseText, agentName: 'SuperClaw', attachments: resultAttachments, messageId: traceId });
   } catch (error) {
     console.error(UI_STRINGS.API_CHAT_ERROR, error);
     

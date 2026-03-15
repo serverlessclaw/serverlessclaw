@@ -40,12 +40,20 @@ export async function handleTaskResult(
   }
 
   // 2. Dynamic Routing
-  // If the initiator is not the main agent, we route back to that specific agent
+  // If no initiator is provided, this was likely a background system task (e.g. reflection).
+  // We do not wake up anyone in this case to prevent unexpected user-facing messages.
+  if (!initiatorId) {
+    logger.info(
+      `No initiator found for ${agentId} task. Treating as background background completion.`
+    );
+    return;
+  }
+
   const resultPrefix = isFailure ? 'DELEGATED_TASK_FAILURE' : 'DELEGATED_TASK_RESULT';
 
   await wakeupInitiator(
     userId,
-    initiatorId || 'main',
+    initiatorId,
     `${resultPrefix}: Agent '${agentId}' has ${isFailure ? 'failed' : 'completed'} the task: "${task}". 
       ${isFailure ? 'Error' : 'Result'}:
       ---

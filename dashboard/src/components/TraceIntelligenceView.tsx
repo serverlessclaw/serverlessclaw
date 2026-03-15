@@ -24,11 +24,12 @@ import { TRACE_TYPES } from '@/lib/constants';
 
 interface TraceIntelligenceViewProps {
   initialTraces: any[];
+  sessionTitles?: Record<string, string>;
 }
 
 type TabType = 'timeline' | 'sessions' | 'models' | 'tools' | 'usage';
 
-export default function TraceIntelligenceView({ initialTraces }: TraceIntelligenceViewProps) {
+export default function TraceIntelligenceView({ initialTraces, sessionTitles }: TraceIntelligenceViewProps) {
   const [activeTab, setActiveTab] = useState<TabType>('timeline');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'started' | 'error'>('all');
@@ -86,8 +87,11 @@ export default function TraceIntelligenceView({ initialTraces }: TraceIntelligen
     if (activeTab === 'sessions') {
       const groups: Record<string, any[]> = {};
       filteredTraces.forEach(t => {
-        if (!groups[t.sessionId]) groups[t.sessionId] = [];
-        groups[t.sessionId].push(t);
+        const displayTitle = sessionTitles?.[t.sessionId] 
+          ? `${sessionTitles[t.sessionId]} (${t.sessionId.substring(0, 8)}...)` 
+          : t.sessionId;
+        if (!groups[displayTitle]) groups[displayTitle] = [];
+        groups[displayTitle].push(t);
       });
       return Object.entries(groups).sort((a, b) => b[1].length - a[1].length);
     }
@@ -183,7 +187,7 @@ export default function TraceIntelligenceView({ initialTraces }: TraceIntelligen
           { label: 'Total Operations', value: traces.length, icon: Activity, color: 'text-cyber-blue' },
           { label: 'Active Sessions', value: new Set(traces.map(t => t.sessionId)).size, icon: LayoutGrid, color: 'text-purple-400' },
           { label: 'Tools Invoked', value: new Set(traces.flatMap(t => t.toolsUsed)).size, icon: Wrench, color: 'text-yellow-400' },
-          { label: 'Neural Cost', value: `${(traces.reduce((acc, t) => acc + t.totalTokens, 0) / 1000).toFixed(1)}k`, icon: Zap, color: 'text-cyber-green' },
+          { label: 'Token Cost', value: `${(traces.reduce((acc, t) => acc + t.totalTokens, 0) / 1000).toFixed(1)}k`, icon: Zap, color: 'text-cyber-green' },
         ].map((stat, i) => (
           <div key={i} className="glass-card p-4 flex flex-col items-center justify-center border-white/5">
             <stat.icon size={20} className={`${stat.color} mb-2 opacity-80`} />

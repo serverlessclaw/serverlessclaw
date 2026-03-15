@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import mqtt from 'mqtt';
 import { ChatMessage, ConversationMeta, HistoryMessage } from './types';
+import { isDuplicate } from './dedup';
 
-export function useChatConnection(activeSessionId: string, setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>, setIsLoading: React.Dispatch<React.SetStateAction<boolean>>) {
+export function useChatConnection(activeSessionId: string, setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>, setIsLoading: React.Dispatch<React.SetStateAction<boolean>>, isPostInFlight: React.MutableRefObject<boolean>) {
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
   const [sessions, setSessions] = useState<ConversationMeta[]>([]);
   const mqttClientRef = useRef<any>(null);
   const activeSessionRef = useRef<string>(activeSessionId);
   const skipNextHistoryFetch = useRef<boolean>(false);
+  const seenMessageIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     activeSessionRef.current = activeSessionId;
@@ -26,10 +28,12 @@ export function useChatConnection(activeSessionId: string, setMessages: React.Di
   };
 
   const fetchHistorySilently = async (sessionId: string) => {
+    if (isPostInFlight.current) return;
     try {
       const response = await fetch(`/api/chat?sessionId=${sessionId}`);
       const data = await response.json();
       if (data.history) {
+        seenMessageIds.current.clear();
         setMessages(data.history.map((m: HistoryMessage) => ({
           role: m.role === 'assistant' || m.role === 'system' ? 'assistant' : 'user',
           content: m.content,
@@ -78,11 +82,11 @@ export function useChatConnection(activeSessionId: string, setMessages: React.Di
             if (!data.sessionId || data.sessionId === currentActiveId) {
               if (data.message && data.userId === userId) {
                 setMessages(prev => {
-                  const alreadyExists = prev.some(m => m.content === data.message && m.role === 'assistant');
-                  if (alreadyExists) return prev;
+                  if (isDuplicate(seenMessageIds.current, prev, data.messageId, data.message)) return prev;
                   return [...prev, {
                     role: 'assistant',
                     content: data.message,
+                    messageId: data.messageId,
                     agentName: data.agentName || 'SuperClaw'
                   }];
                 });
@@ -134,12 +138,12 @@ export function useChatConnection(activeSessionId: string, setMessages: React.Di
     if (!activeSessionId) return;
     const interval = setInterval(() => {
       const isIdle = !document.hidden;
-      if (isIdle) {
+      if (isIdle && !isPostInFlight.current) {
         fetchHistorySilently(activeSessionId);
       }
     }, isRealtimeActive ? 60000 : 10000);
     return () => clearInterval(interval);
   }, [activeSessionId, isRealtimeActive]);
 
-  return { isRealtimeActive, sessions, fetchSessions, skipNextHistoryFetch };
+  return { isRealtimeActive, sessions, fetchSessions, skipNextHistoryFetch, seenMessageIds };
 }

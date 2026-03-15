@@ -9,11 +9,12 @@ import { formatErrorMessage } from '../lib/utils/error';
 export const sendMessage = {
   ...toolDefinitions.sendMessage,
   execute: async (args: Record<string, unknown>): Promise<string> => {
-    const { message, userId, sessionId, agentName } = args as {
+    const { message, userId, sessionId, agentName, traceId } = args as {
       message: string;
       userId: string;
       sessionId?: string;
       agentName?: string;
+      traceId?: string;
     };
 
     try {
@@ -24,7 +25,9 @@ export const sendMessage = {
         message,
         [userId],
         sessionId,
-        agentName
+        agentName,
+        undefined,
+        traceId
       );
       return 'Message sent successfully to user.';
     } catch (error) {

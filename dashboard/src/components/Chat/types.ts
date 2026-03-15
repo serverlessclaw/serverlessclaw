@@ -1,6 +1,7 @@
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+  messageId?: string;
   agentName?: string;
   attachments?: Array<{
     type: 'image' | 'file';

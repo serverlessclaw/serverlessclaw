@@ -2,15 +2,17 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Paperclip } from 'lucide-react';
+import { Paperclip, Edit2, Check, X } from 'lucide-react';
 import Typography from '@/components/ui/Typography';
 import CyberConfirm from '@/components/CyberConfirm';
+import Button from '@/components/ui/Button';
 import { AGENT_ERRORS } from '@/lib/constants';
 import { useChatConnection } from './useChatConnection';
 import { ChatSidebar } from './ChatSidebar';
 import { ChatMessageList } from './ChatMessageList';
 import { ChatInput } from './ChatInput';
 import { ChatMessage, AttachmentPreview, HistoryMessage } from './types';
+import { isDuplicate } from './dedup';
 
 export default function ChatContent() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -29,17 +31,40 @@ export default function ChatContent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const activeSessionRef = useRef<string>('');
   const hasProcessedPrompt = useRef<boolean>(false);
+  const isPostInFlight = useRef<boolean>(false);
 
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const { isRealtimeActive, sessions, fetchSessions, skipNextHistoryFetch } = useChatConnection(
-    activeSessionId, 
-    setMessages, 
-    setIsLoading
+  const { isRealtimeActive, sessions, fetchSessions, skipNextHistoryFetch, seenMessageIds } = useChatConnection(
+    activeSessionId,
+    setMessages,
+    setIsLoading,
+    isPostInFlight
   );
 
   const currentSession = sessions.find(s => s.sessionId === activeSessionId);
+
+  useEffect(() => {
+    if (currentSession) {
+      setEditedTitle(currentSession.title || 'Untitled Trace');
+    }
+  }, [currentSession]);
+
+  const saveTitle = async () => {
+    if (!activeSessionId || !editedTitle.trim()) return;
+    try {
+      await fetch('/api/chat', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: activeSessionId, title: editedTitle.trim() }),
+      });
+      setIsEditingTitle(false);
+      fetchSessions();
+    } catch (error) {
+      console.error('Failed to save title:', error);
+    }
+  };
 
   useEffect(() => {
     activeSessionRef.current = activeSessionId;
@@ -87,6 +112,7 @@ export default function ChatContent() {
       const response = await fetch(`/api/chat?sessionId=${sessionId}`);
       const data = await response.json();
       if (data.history) {
+        seenMessageIds.current.clear();
         setMessages(data.history.map((m: HistoryMessage) => ({
           role: m.role === 'assistant' || m.role === 'system' ? 'assistant' : 'user',
           content: m.content,
@@ -146,6 +172,7 @@ export default function ChatContent() {
     
     setIsLoading(true);
     setAttachments([]);
+    isPostInFlight.current = true;
 
     let currentSessionId = activeSessionRef.current;
     if (!currentSessionId) {
@@ -172,7 +199,10 @@ export default function ChatContent() {
 
       const data = await response.json();
       if (currentSessionId === activeSessionRef.current) {
-        setMessages(prev => [...prev, { role: 'assistant', content: data.reply, agentName: data.agentName }]);
+        setMessages(prev => {
+          if (isDuplicate(seenMessageIds.current, prev, data.messageId, data.reply)) return prev;
+          return [...prev, { role: 'assistant', content: data.reply, messageId: data.messageId, agentName: data.agentName }];
+        });
       }
       fetchSessions();
     } catch (error) {
@@ -194,11 +224,13 @@ export default function ChatContent() {
         console.error('Failed to report strategic gap:', e);
       }
     } finally {
+      isPostInFlight.current = false;
       setIsLoading(false);
     }
   };
 
   const createNewChat = () => {
+    seenMessageIds.current.clear();
     setActiveSessionId('');
     setMessages([]);
     setAttachments([]);
@@ -268,9 +300,59 @@ export default function ChatContent() {
         
         <header className="px-6 py-4 border-b border-white/5 flex justify-between items-center shrink-0 min-h-[70px]">
           <div className="flex-1 min-w-0 mr-4">
-            <Typography variant="h2" weight="bold" color="white" glow className="truncate uppercase">
-              {currentSession?.title || 'Direct Chat'}
-            </Typography>
+            {activeSessionId && currentSession ? (
+              <div className="flex items-center gap-3 group/title">
+                {isEditingTitle ? (
+                  <div className="flex items-center gap-2 flex-1 max-w-xl">
+                    <input
+                      autoFocus
+                      type="text"
+                      value={editedTitle}
+                      onChange={(e) => setEditedTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') saveTitle();
+                        if (e.key === 'Escape') {
+                          setIsEditingTitle(false);
+                          setEditedTitle(currentSession?.title || 'Untitled Trace');
+                        }
+                      }}
+                      className="bg-white/5 border border-cyber-green/30 rounded px-2 py-1 text-lg font-bold text-white outline-none w-full"
+                    />
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={saveTitle} 
+                      className="p-1 hover:text-cyber-green h-auto"
+                      icon={<Check size={18} />}
+                    />
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setIsEditingTitle(false)} 
+                      className="p-1 hover:text-red-500 h-auto"
+                      icon={<X size={18} />}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <Typography variant="h2" weight="bold" color="white" glow className="truncate uppercase">
+                      {currentSession?.title || 'Untitled Trace'}
+                    </Typography>
+                    <Button 
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsEditingTitle(true)}
+                      className="p-1 opacity-0 group-hover/title:opacity-50 hover:opacity-100 text-white h-auto"
+                      icon={<Edit2 size={14} />}
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Typography variant="h2" weight="bold" color="white" glow className="truncate uppercase">
+                Direct Chat
+              </Typography>
+            )}
           </div>
           {isRealtimeActive && (
             <div className="flex items-center gap-2 bg-cyber-green/10 px-3 py-1 rounded border border-cyber-green/30">

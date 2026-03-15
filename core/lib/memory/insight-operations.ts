@@ -298,7 +298,8 @@ export async function getLowUtilizationMemory(
       const lastAccessed = meta.lastAccessed || (item.timestamp as number) || now;
       const timeSinceAccess = now - lastAccessed;
 
-      return isHitCountLow && timeSinceAccess > STALE_THRESHOLD_MS;    });
+      return isHitCountLow && timeSinceAccess > STALE_THRESHOLD_MS;
+    });
 
     staleItems = [...staleItems, ...stale];
   }

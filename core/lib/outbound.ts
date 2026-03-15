@@ -20,7 +20,8 @@ export async function sendOutboundMessage(
   memoryContexts?: string[],
   sessionId?: string,
   agentName?: string,
-  attachments?: Attachment[]
+  attachments?: Attachment[],
+  messageId?: string
 ): Promise<void> {
   await emitEvent(source, EventType.OUTBOUND_MESSAGE, {
     userId,
@@ -29,5 +30,6 @@ export async function sendOutboundMessage(
     sessionId,
     agentName,
     attachments,
+    messageId,
   });
 }

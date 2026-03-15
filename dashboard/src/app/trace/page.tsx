@@ -76,8 +76,43 @@ async function getConfig() {
   }
 }
 
+async function getSessionTitles() {
+  try {
+    const typedResource = Resource as unknown as SSTResource;
+    const tableName = typedResource.MemoryTable?.name;
+    if (!tableName) return {};
+    
+    const client = new DynamoDBClient({});
+    const docClient = DynamoDBDocumentClient.from(client);
+    
+    // Scan for all session metadata records across all users
+    const res = await docClient.send(new ScanCommand({
+      TableName: tableName,
+      FilterExpression: 'begins_with(userId, :prefix)',
+      ExpressionAttributeValues: {
+        ':prefix': 'SESSIONS#'
+      }
+    }));
+    
+    const titles: Record<string, string> = {};
+    res.Items?.forEach(item => {
+      if (item.sessionId) {
+        titles[item.sessionId] = item.title || 'Untitled Conversation';
+      }
+    });
+    return titles;
+  } catch (e) {
+    console.error('Error fetching session titles:', e);
+    return {};
+  }
+}
+
 export default async function Dashboard() {
-  const [traces, config] = await Promise.all([getTraces(), getConfig()]);
+  const [traces, config, sessionTitles] = await Promise.all([
+    getTraces(), 
+    getConfig(), 
+    getSessionTitles()
+  ]);
 
   return (
     <main className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-green/5 via-transparent to-transparent">
@@ -108,7 +143,7 @@ export default async function Dashboard() {
         </header>
 
         {/* Traces Observatory */}
-        <TraceIntelligenceView initialTraces={traces} />
+        <TraceIntelligenceView initialTraces={traces} sessionTitles={sessionTitles} />
       </main>
   );
 }

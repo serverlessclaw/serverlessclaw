@@ -46,8 +46,8 @@ export class AgentEmitter {
     nodeId: string,
     parentId: string | undefined,
     sessionId: string | undefined,
-    currentInitiator: string,
-    depth: number
+    _currentInitiator: string,
+    _depth: number
   ): Promise<void> {
     let reflectionFrequency: number = AGENT_DEFAULTS.REFLECTION_FREQUENCY;
     try {
@@ -91,8 +91,6 @@ export class AgentEmitter {
                       traceId: traceId || 'unknown',
                     },
                   ],
-                  initiatorId: currentInitiator,
-                  depth,
                 }),
                 EventBusName: typedResource.AgentBus.name,
               },

@@ -49,18 +49,19 @@ export async function deleteConversation(
 }
 
 /**
- * Updates distilled memory with a 2-year retention policy
+ * Updates distilled memory with a 2-year retention policy.
+ * Uses a fixed timestamp (0) to ensure we only keep the latest version per user.
  */
 export async function updateDistilledMemory(
   base: BaseMemoryProvider,
   userId: string,
   facts: string
 ): Promise<void> {
-  const { expiresAt, type } = await RetentionManager.getExpiresAt('DISTILLED', userId);
+  const { expiresAt } = await RetentionManager.getExpiresAt('DISTILLED', userId);
   await base.putItem({
     userId: `DISTILLED#${userId}`,
-    timestamp: Date.now(),
-    type,
+    timestamp: 0,
+    type: 'DISTILLED',
     expiresAt,
     content: facts,
   });

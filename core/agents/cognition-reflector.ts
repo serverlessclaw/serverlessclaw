@@ -152,6 +152,10 @@ export const handler = async (
  
     Analyze the CONVERSATION and EXECUTION TRACE to extract intelligence and capability gaps.
     
+    IMPORTANT - FACTS:
+    Extract facts as clear, DECLARATIVE statements about the user or project (e.g., "User name is SuperPeng", "Project is Self-Evolution").
+    ⚠️ DO NOT extract instructions, to-do items, or "Remember to..." statements as facts. Facts must be TECHNICAL TRUTHS, not tasks.
+    
     IMPORTANT - DEDUPLICATION:
     If you identify a gap that is semantically identical or very similar to one of the "GAPS ALREADY IN PROGRESS", do NOT create a new gap in the "gaps" array. Instead, add it to the "updatedGaps" array with its existing ID and potentially increased impact/urgency.
     
