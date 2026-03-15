@@ -307,15 +307,14 @@ export default async function MemoryVault() {
             </div>
           </section>
 
-          {/* Distilled Facts */}
           <section>
             <Typography variant="caption" weight="black" uppercase className="tracking-[0.2em] flex items-center gap-2 mb-6 text-cyber-blue opacity-60">
               <Brain size={14} className="text-cyber-blue" /> Distilled Neural Constants
             </Typography>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {allDistilled.length > 0 ? (
+              {distilled.length > 0 ? (
                 // Simple deduplication based on content snippets
-                Array.from(new Map(allDistilled.map(item => [item.content?.toString().substring(0, 50), item])).values()).map((fact, i) => (
+                Array.from(new Map(distilled.map(item => [item.content?.toString().substring(0, 50), item])).values()).map((fact, i) => (
                   <Card key={i} variant="solid" padding="sm" className="relative group border-cyber-blue/10 bg-cyber-blue/[0.01]">
                     <form action={pruneMemory} className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                         <input type="hidden" name="userId" value={fact.userId as string} />
