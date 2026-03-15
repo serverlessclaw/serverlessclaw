@@ -18,6 +18,7 @@ import {
   ReasoningProfile,
   Attachment,
 } from '../types/index';
+import { AGENT_ERRORS } from '../constants';
 
 /** Singleton agent context - shared across all agent handlers */
 let _eventbridge: import('@aws-sdk/client-eventbridge').EventBridgeClient | undefined;
@@ -65,7 +66,7 @@ export function extractPayload<T extends object>(event: { detail?: T } | T): T {
  * Used consistently across all agents to determine failure state.
  */
 export function detectFailure(response: string): boolean {
-  return response.startsWith('I encountered an internal error');
+  return response === AGENT_ERRORS.PROCESS_FAILURE || response.startsWith('I encountered an internal error');
 }
 
 /**

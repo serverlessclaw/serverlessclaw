@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
-import { UI_STRINGS, HTTP_STATUS } from '@/lib/constants';
+import { UI_STRINGS, HTTP_STATUS, AGENT_ERRORS } from '@/lib/constants';
 import { revalidatePath } from 'next/cache';
 
 /**
@@ -46,6 +46,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ reply: responseText, agentName: 'SuperClaw', attachments: resultAttachments });
   } catch (error) {
     console.error(UI_STRINGS.API_CHAT_ERROR, error);
+    
+    // Persist error to history if we have sessionId
+    try {
+      const { text, sessionId } = await req.clone().json();
+      if (sessionId) {
+        const { DynamoMemory } = await import('@claw/core/lib/memory');
+        const { MessageRole } = await import('@claw/core/lib/types');
+        const memory = new DynamoMemory();
+        const userId = 'dashboard-user';
+        const storageId = `CONV#${userId}#${sessionId}`;
+        await memory.addMessage(storageId, {
+          role: MessageRole.ASSISTANT,
+          content: AGENT_ERRORS.PROCESS_FAILURE,
+        });
+      }
+    } catch (e) {
+      console.error('Failed to persist error message:', e);
+    }
+
     return NextResponse.json(
       { error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) },
       { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }

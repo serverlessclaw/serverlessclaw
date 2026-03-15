@@ -1,6 +1,7 @@
 /**
  * Dashboard-specific constants to improve AI signal clarity and maintainability
  */
+export { AGENT_ERRORS } from '@claw/core/lib/constants';
 
 export const AUTH = {
   COOKIE_NAME: 'claw_auth_session',

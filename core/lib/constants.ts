@@ -128,3 +128,10 @@ export const MEMORY_TIER = {
   SESSIONS: 'SESSIONS',
   TRACES: 'TRACES',
 } as const;
+/**
+ * Standardized agent error messages for consistent detection and gap reporting.
+ */
+export const AGENT_ERRORS = {
+  PROCESS_FAILURE: "I encountered an internal processing error while handling your request. I've registered this failure as a strategic gap for my evolution cycle, and my engineering team will review it. Please try again or rephrase your query.",
+  CONNECTION_FAILURE: "SYSTEM_ERROR: Connection interrupted or internal failure. Technical details logged as strategic gap.",
+} as const;
