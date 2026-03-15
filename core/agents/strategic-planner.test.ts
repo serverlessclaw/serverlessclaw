@@ -25,6 +25,7 @@ vi.mock('../lib/memory', () => ({
     getDistilledMemory = memoryMocks.getDistilledMemory;
     updateDistilledMemory = memoryMocks.updateDistilledMemory;
     archiveStaleGaps = vi.fn().mockResolvedValue(0);
+    getLowUtilizationMemory = vi.fn().mockResolvedValue([]);
   },
 }));
 

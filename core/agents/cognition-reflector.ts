@@ -152,6 +152,9 @@ export const handler = async (
  
     Analyze the CONVERSATION and EXECUTION TRACE to extract intelligence and capability gaps.
     
+    IMPORTANT - DEDUPLICATION:
+    If you identify a gap that is semantically identical or very similar to one of the "GAPS ALREADY IN PROGRESS", do NOT create a new gap in the "gaps" array. Instead, add it to the "updatedGaps" array with its existing ID and potentially increased impact/urgency.
+    
     You MUST return your response as a valid JSON object with the following schema:
     {
       "facts": "string (the updated complete list of all known facts about the user and project context)",
@@ -160,6 +163,9 @@ export const handler = async (
       ],
       "gaps": [
         { "content": "string (missing tool or architectural limitation)", "impact": 1-10, "urgency": 1-10 }
+      ],
+      "updatedGaps": [
+        { "id": "string (existing gap ID)", "impact": 1-10, "urgency": 1-10 }
       ],
       "resolvedGapIds": ["string (IDs of gaps that were successfully addressed in this conversation)"]
     }
@@ -215,7 +221,7 @@ export const handler = async (
       if (Array.isArray(parsed.gaps)) {
         for (const gap of parsed.gaps) {
           if (gap.content && gap.content !== 'NONE') {
-            const gapId = Date.now().toString();
+            const gapId = Date.now().toString() + '-' + Math.floor(Math.random() * 1000); // ensure uniqueness
             const metadata = {
               category: InsightCategory.STRATEGIC_GAP,
               confidence: gap.confidence || 5,
@@ -239,6 +245,30 @@ export const handler = async (
               });
             } catch (e) {
               logger.error('Failed to emit evolution plan event from Reflector:', e);
+            }
+          }
+        }
+      }
+
+      // 3b. Handle Updated Gaps (Deduplication)
+      if (Array.isArray(parsed.updatedGaps)) {
+        for (const uGap of parsed.updatedGaps) {
+          if (uGap.id) {
+            const cleanId = uGap.id.replace('GAP#', '');
+            // Retrieve existing to update metadata
+            const allGaps = [
+              ...(await memory.getAllGaps(GapStatus.OPEN)),
+              ...(await memory.getAllGaps(GapStatus.PLANNED)),
+            ];
+            const existing = allGaps.find((g) => g.id === `GAP#${cleanId}`);
+            if (existing) {
+              const updatedMeta = {
+                ...existing.metadata,
+                impact: Math.max(existing.metadata.impact || 0, uGap.impact || 0),
+                urgency: Math.max(existing.metadata.urgency || 0, uGap.urgency || 0),
+              };
+              await memory.setGap(cleanId, existing.content, updatedMeta);
+              logger.info(`Updated existing gap ${cleanId} via semantic deduplication.`);
             }
           }
         }

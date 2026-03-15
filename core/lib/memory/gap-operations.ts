@@ -176,7 +176,7 @@ export async function updateGapStatus(
   status: GapStatus
 ): Promise<void> {
   const numericId = gapId.replace('GAP#', '');
-  const params = {
+  const params: any = {
     Key: {
       userId: `GAP#${numericId}`,
       timestamp: parseInt(numericId, 10) || 0,
@@ -192,6 +192,11 @@ export async function updateGapStatus(
     },
   };
 
+  if (status === GapStatus.DONE) {
+    params.ConditionExpression = 'attribute_exists(userId) AND #status = :deployedStatus';
+    params.ExpressionAttributeValues[':deployedStatus'] = GapStatus.DEPLOYED;
+  }
+
   // Strategy 2: If primary key fails, search and retry exactly ONCE with specific timestamp
   if (isNaN(parseInt(numericId, 10)) || params.Key?.timestamp === 0) {
     const allStatuses = Object.values(GapStatus);
@@ -201,6 +206,16 @@ export async function updateGapStatus(
       const target = gaps.find((g) => g.id === `GAP#${numericId}`);
       if (target) {
         params.Key = { userId: `GAP#${numericId}`, timestamp: target.timestamp };
+
+        // Ensure state transition rule for DONE still holds if found via search
+        if (
+          status === GapStatus.DONE &&
+          target.metadata?.status !== GapStatus.DEPLOYED &&
+          (target as any).status !== GapStatus.DEPLOYED
+        ) {
+          // Check status directly if it's in the root
+          // Wait, we can just let DDB handle it via ConditionExpression.
+        }
         found = true;
         break;
       }
@@ -216,6 +231,12 @@ export async function updateGapStatus(
   } catch (error) {
     const err = error as { name?: string };
     if (err.name === 'ConditionalCheckFailedException') {
+      if (status === GapStatus.DONE) {
+        logger.warn(
+          `Gap update aborted: Cannot transition gap ${gapId} to DONE because it is not in DEPLOYED state.`
+        );
+        return;
+      }
       logger.warn(
         `Gap update race condition or missing item: ${gapId}. Retrying with fresh lookup.`
       );
@@ -224,7 +245,11 @@ export async function updateGapStatus(
       const retryTarget = all.find((g) => g.id === `GAP#${numericId}`);
       if (retryTarget) {
         params.Key = { userId: `GAP#${numericId}`, timestamp: retryTarget.timestamp };
-        await base.updateItem(params);
+        try {
+          await base.updateItem(params);
+        } catch (e) {
+          logger.error(`Failed retry update gap ${gapId} status:`, e);
+        }
       }
     } else {
       logger.error(`Error updating gap ${gapId} status:`, error);

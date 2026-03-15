@@ -52,12 +52,14 @@ describe('SelfVerifier', () => {
           { id: 'GAP#2', status: GapStatus.PROGRESS },
           { id: 'GAP#3', status: GapStatus.DONE },
           { id: 'GAP#4', status: GapStatus.DONE },
+          { id: 'GAP#5', status: GapStatus.FAILED },
+          { id: 'GAP#6', status: GapStatus.FAILED },
         ],
       });
 
       const result = await verifier.verifyEvolution();
 
-      expect(result.totalGaps).toBe(4);
+      expect(result.totalGaps).toBe(6);
       expect(result.activeGaps).toBe(2);
       expect(result.fixSuccessRate).toBe(50);
     });

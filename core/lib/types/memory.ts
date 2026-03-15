@@ -19,7 +19,7 @@ export enum InsightCategory {
  */
 export interface InsightMetadata {
   /** The category of the insight. */
-  category: InsightCategory;
+  category: InsightCategory | string;
   /** 0-10 confidence score of the insight's accuracy. */
   confidence: number;
   /** 0-10 impact score of the insight on system performance or user experience. */
@@ -34,6 +34,10 @@ export interface InsightMetadata {
   priority: number;
   /** Optional expiration timestamp (Unix epoch) for transient insights. */
   expiration?: number;
+  /** Number of times this memory has been successfully recalled by an agent. */
+  hitCount?: number;
+  /** Timestamp (Unix epoch) of the last time this memory was recalled. */
+  lastAccessed?: number;
 }
 
 /**

@@ -67,6 +67,10 @@ If a deployment fails, the **Build Monitor** detects the failure and emits a `SY
 ```
 OPEN → PLANNED → PROGRESS → DEPLOYED → DONE
   |        |          |           |
-  v        v          v           v
+  |        v          v           v
+  +----<---------------------- FAILED (If max reopen limits hit: 3 attempts)
+                                  |
 ARCHIVED (auto-archived after 30 days)
 ```
+
+**Retry Logic:** If a deployed change fails QA or the build fails, the gap is moved back to `OPEN` and the `Coder Agent` is immediately dispatched to fix it. If it fails 3 times, it escalates to `FAILED`.

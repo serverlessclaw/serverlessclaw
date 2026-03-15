@@ -50,9 +50,11 @@ export class SelfVerifier {
       (g) => g.status === GapStatus.OPEN || g.status === GapStatus.PROGRESS
     ).length;
     const doneGaps = gaps.filter((g) => g.status === GapStatus.DONE).length;
+    const failedGaps = gaps.filter((g) => g.status === GapStatus.FAILED).length;
 
-    // Simple success rate calculation
-    const fixSuccessRate = totalGaps > 0 ? (doneGaps / totalGaps) * 100 : 100;
+    // Success rate explicitly excludes ARCHIVED gaps and relies only on resolved states
+    const resolvedCount = doneGaps + failedGaps;
+    const fixSuccessRate = resolvedCount > 0 ? (doneGaps / resolvedCount) * 100 : 100;
 
     return { totalGaps, activeGaps, fixSuccessRate };
   }

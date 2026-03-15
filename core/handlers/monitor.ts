@@ -155,9 +155,9 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
         const attempts = await memory.incrementGapAttemptCount(gapId);
         if (attempts >= MAX_GAP_ATTEMPTS) {
           logger.warn(
-            `Gap ${gapId} has failed ${attempts} times. Archiving to prevent runaway loop.`
+            `Gap ${gapId} has failed ${attempts} times. Escalating to FAILED to prevent runaway loop.`
           );
-          await memory.updateGapStatus(gapId, GapStatus.ARCHIVED);
+          await memory.updateGapStatus(gapId, GapStatus.FAILED);
         } else {
           logger.info(`Gap ${gapId} attempt ${attempts}/${MAX_GAP_ATTEMPTS}. Reopening.`);
           await memory.updateGapStatus(gapId, GapStatus.OPEN);

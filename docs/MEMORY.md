@@ -88,13 +88,56 @@ The `MemoryTable` utilizes a Global Secondary Index (GSI) named `TypeTimestampIn
 - **Sort Key**: `timestamp`
 - **Result**: Reduced dashboard load times from ~10s to **<100ms**.
 
+## Neural Pruning & Hit Tracking (The Self-Cleaning Loop)
+
+Serverless Claw doesn't just remember; it strategically forgets. To prevent "cognitive bloat" and ensure the most relevant knowledge is always prioritized, the system implements an autonomous **Neural Pruning** loop.
+
+### Hit Tracking Mechanism
+Every time an agent recalls a memory using the `recallKnowledge` tool, the system performs an atomic "Hit" update in the background:
+- **`hitCount`**: Increments a counter on the memory item.
+- **`lastAccessed`**: Updates the timestamp to the current time.
+
+This telemetry allows the system to distinguish between **High-Utility Facts** (recalled daily) and **Neural Noise** (never used).
+
+### The Pruning Loop Diagram
+
+```text
++-----------------------+       +-----------------------+
+|   Agent Tool Use      |       |  Strategic Planner    |
+|  (recallKnowledge)    |       |  (48h Review Cycle)   |
++-----------+-----------+       +-----------+-----------+
+            |                               ^
+     [RECORD HIT]                    [AUDIT UTILIZATION]
+            |                               |
+            v                               v
++-----------+-------------------------------+-----------+
+|                  NEURAL MEMORY TABLE                  |
+|  (Tracks hitCount, lastAccessed, and timestamp)       |
++-----------+-------------------------------+-----------+
+            |                               |
+            |                         [PRUNE STALE]
+            v                               |
++-----------+-------------------------------+-----------+
+|                CLEAN NEURAL STATE                     |
+|  (High-density, relevant, and cost-efficient)        |
++-------------------------------------------------------+
+```
+
+### Pruning Logic
+During its scheduled **48-hour review**, the **Strategic Planner** audits all dynamic memories (`MEMORY:*` and `INSIGHT:*`). 
+1. **Identification**: Any memory with `hitCount == 0` that hasn't been accessed in **14 days** is flagged as "Stale".
+2. **Analysis**: The Planner evaluates if the stale information is redundant or irrelevant to current system goals.
+3. **Action**: The Planner recommends pruning the item (archiving or deleting) as part of its **Strategic Plan**.
+
 ## Human-Agent Co-Management (Neural Reserve)
 
 Memory is not a "black box" in Serverless Claw. Through the **Neural Reserve** page (Evolution sector) in ClawCenter, users can:
-- **Audit**: View all distilled facts, lessons, and identified gaps.
+- **Audit**: View all distilled facts, lessons, and identified gaps, now including **Hit Tracking** metrics (total hits and last recalled time).
 - **Prioritize**: Manually adjust the priority of a `GAP#` to influence the Planner's roadmap.
 - **Prune**: "Weed" the memory garden by deleting stale or incorrect items.
 - **Focus**: Toggle "HOT_PATH" status for tactical lessons to ensure they are always present in the reasoning loop.
+- **Neural Health**: Monitor which memories are currently being ignored by the agents to decide on manual pruning.
+
 
 ## The Smart Recall Mechanism
 

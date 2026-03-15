@@ -77,7 +77,7 @@ describe('BuildMonitor — FAILED gap handling', () => {
     cwMock.on(GetLogEventsCommand).resolves({ events: [{ message: 'Error: build failed' }] });
   });
 
-  it('should REOPEN a gap (not leave it FAILED) when attempt count is below the cap', async () => {
+  it('should REOPEN a gap when attempt count is below the cap', async () => {
     memoryMocks.incrementGapAttemptCount.mockResolvedValue(1); // first attempt
     ddbMock
       .on(QueryCommand)
@@ -89,10 +89,10 @@ describe('BuildMonitor — FAILED gap handling', () => {
 
     expect(memoryMocks.incrementGapAttemptCount).toHaveBeenCalledWith('GAP#1001');
     expect(memoryMocks.updateGapStatus).toHaveBeenCalledWith('GAP#1001', GapStatus.OPEN);
-    expect(memoryMocks.updateGapStatus).not.toHaveBeenCalledWith('GAP#1001', GapStatus.ARCHIVED);
+    expect(memoryMocks.updateGapStatus).not.toHaveBeenCalledWith('GAP#1001', GapStatus.FAILED);
   });
 
-  it('should ARCHIVE a gap when attempt count reaches the cap (3)', async () => {
+  it('should FAIL a gap when attempt count reaches the cap (3)', async () => {
     memoryMocks.incrementGapAttemptCount.mockResolvedValue(3); // cap reached
     ddbMock
       .on(QueryCommand)
@@ -102,11 +102,12 @@ describe('BuildMonitor — FAILED gap handling', () => {
     const { handler } = await import('./monitor');
     await handler(makeFailEvent('build-2') as unknown as Parameters<typeof handler>[0]);
 
-    expect(memoryMocks.updateGapStatus).toHaveBeenCalledWith('GAP#1002', GapStatus.ARCHIVED);
+    expect(memoryMocks.updateGapStatus).toHaveBeenCalledWith('GAP#1002', GapStatus.FAILED);
     expect(memoryMocks.updateGapStatus).not.toHaveBeenCalledWith('GAP#1002', GapStatus.OPEN);
+    expect(memoryMocks.updateGapStatus).not.toHaveBeenCalledWith('GAP#1002', GapStatus.ARCHIVED);
   });
 
-  it('should never set a gap to GapStatus.FAILED (orphan state eliminated)', async () => {
+  it('should never set a gap to GapStatus.ARCHIVED immediately on failure', async () => {
     memoryMocks.incrementGapAttemptCount.mockResolvedValue(1);
     ddbMock
       .on(QueryCommand)
@@ -116,9 +117,9 @@ describe('BuildMonitor — FAILED gap handling', () => {
     const { handler } = await import('./monitor');
     await handler(makeFailEvent('build-3') as unknown as Parameters<typeof handler>[0]);
 
-    const failedCalls = memoryMocks.updateGapStatus.mock.calls.filter(
-      (call: unknown[]) => call[1] === GapStatus.FAILED
+    const archivedCalls = memoryMocks.updateGapStatus.mock.calls.filter(
+      (call: unknown[]) => call[1] === GapStatus.ARCHIVED
     );
-    expect(failedCalls).toHaveLength(0);
+    expect(archivedCalls).toHaveLength(0);
   });
 });

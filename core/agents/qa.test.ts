@@ -64,6 +64,11 @@ vi.mock('../lib/providers/index', () => ({
 
 vi.mock('../tools/index', () => ({
   getAgentTools: vi.fn().mockResolvedValue([]),
+  tools: {
+    dispatchTask: {
+      execute: vi.fn().mockResolvedValue(undefined),
+    },
+  },
 }));
 
 vi.mock('../lib/outbound', () => ({
@@ -140,7 +145,7 @@ describe('QA Agent — REOPEN cap and HITL escalation', () => {
     expect(registryMocks.saveRawConfig).not.toHaveBeenCalledWith('evolution_mode', 'hitl');
   });
 
-  it('should escalate to HITL and send alert when reopen cap (3) is reached', async () => {
+  it('should escalate to FAILED and send alert when reopen cap (3) is reached', async () => {
     agentProcess.mockResolvedValue({
       responseText: JSON.stringify({
         status: 'REOPEN',
@@ -154,10 +159,10 @@ describe('QA Agent — REOPEN cap and HITL escalation', () => {
       {} as unknown as Parameters<typeof handler>[1]
     );
 
-    // Gap is still reopened
-    expect(memoryMocks.updateGapStatus).toHaveBeenCalledWith('GAP#1001', GapStatus.OPEN);
-    // Evolution mode forced to HITL
-    expect(registryMocks.saveRawConfig).toHaveBeenCalledWith('evolution_mode', 'hitl');
+    // Gap is escalated to FAILED
+    expect(memoryMocks.updateGapStatus).toHaveBeenCalledWith('GAP#1001', GapStatus.FAILED);
+    // Evolution mode is NOT forced to HITL
+    expect(registryMocks.saveRawConfig).not.toHaveBeenCalledWith('evolution_mode', 'hitl');
   });
 
   it('audit prompt should mandate independent tool verification, not trust coder testimony', async () => {

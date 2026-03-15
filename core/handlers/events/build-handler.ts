@@ -39,7 +39,7 @@ export async function handleBuildFailure(
     Please investigate the codebase using your tools, find the root cause, fix the issue, and trigger a new deployment. 
     Explain your plan to the user before proceeding.`;
 
-  await processEventWithAgent(userId, 'main', task, {
+  await processEventWithAgent(userId, 'coder', task, {
     context,
     traceId,
     sessionId,

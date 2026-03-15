@@ -132,9 +132,15 @@ export const recallKnowledge = {
       query: string;
       category?: string;
     };
-    const results = await getMemory().searchInsights(userId, query, category as InsightCategory);
+    const memory = getMemory();
+    const results = await memory.searchInsights(userId, query, category as InsightCategory);
 
     if (results.length === 0) return 'No relevant knowledge found.';
+
+    // Track hits asynchronously to not block the agent's tool return
+    Promise.all(results.map((r) => memory.recordMemoryHit(r.id, r.timestamp))).catch((e) =>
+      console.warn('Failed to track memory hits:', e)
+    );
 
     return results
       .map(
@@ -247,5 +253,27 @@ export const saveMemory = {
 
     await memory.addMemory('SYSTEM#GLOBAL', category, content, metadata);
     return `Successfully saved knowledge as ${category}: ${content}`;
+  },
+};
+
+/**
+ * Permanently deletes a specific memory item from the neural reserve.
+ */
+export const pruneMemory = {
+  ...toolDefinitions.pruneMemory,
+  execute: async (args: Record<string, unknown>): Promise<string> => {
+    const { partitionKey, timestamp } = args as { partitionKey: string; timestamp: number };
+
+    if (!partitionKey || !timestamp) {
+      return 'FAILED: Both partitionKey and timestamp are required to prune memory.';
+    }
+
+    try {
+      const memory = getMemory();
+      await memory.deleteItem({ userId: partitionKey, timestamp });
+      return `Successfully pruned memory item: ${partitionKey}@${timestamp}`;
+    } catch (error) {
+      return `Failed to prune memory item: ${formatErrorMessage(error)}`;
+    }
   },
 };

@@ -24,6 +24,8 @@ const mocks = vi.hoisted(() => ({
   setGap: vi.fn().mockResolvedValue(undefined),
   addInsight: vi.fn().mockResolvedValue(123456), // reportGap still uses addInsight
   addMemory: vi.fn().mockResolvedValue(123456), // saveMemory now uses addMemory
+  recordMemoryHit: vi.fn().mockResolvedValue(undefined),
+  deleteItem: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock SST Resource
@@ -49,6 +51,8 @@ vi.mock('../lib/memory', () => ({
       setGap: mocks.setGap,
       addInsight: mocks.addInsight, // reportGap still uses addInsight
       addMemory: mocks.addMemory, // saveMemory now uses addMemory
+      recordMemoryHit: mocks.recordMemoryHit,
+      deleteItem: mocks.deleteItem,
     };
   }),
 }));
@@ -183,6 +187,32 @@ describe('knowledge tools', () => {
         'new fact',
         expect.any(Object)
       );
+    });
+  });
+
+  describe('pruneMemory', () => {
+    it('should permanently delete a memory item from DDB', async () => {
+      const { pruneMemory } = await import('./knowledge-storage');
+      const result = await pruneMemory.execute({
+        partitionKey: 'LESSON#user-1',
+        timestamp: 123456,
+      });
+
+      expect(result).toContain('Successfully pruned memory item');
+      expect(mocks.deleteItem).toHaveBeenCalledWith({
+        userId: 'LESSON#user-1',
+        timestamp: 123456,
+      });
+    });
+
+    it('should fail if partitionKey or timestamp is missing', async () => {
+      const { pruneMemory } = await import('./knowledge-storage');
+      const result = await pruneMemory.execute({
+        partitionKey: 'LESSON#user-1',
+      });
+
+      expect(result).toContain('FAILED');
+      expect(mocks.deleteItem).not.toHaveBeenCalled();
     });
   });
 });

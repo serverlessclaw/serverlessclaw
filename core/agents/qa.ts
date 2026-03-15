@@ -137,36 +137,47 @@ export const handler = async (event: QAEvent, _context: Context): Promise<void> 
       logger.info('Verification successful. Awaiting human confirmation (HITL).');
     }
   } else {
-    // Reopen failed verification. Track attempt count and escalate to HITL if cap reached.
+    // Reopen failed verification. Track attempt count and escalate to FAILED if cap reached.
     const MAX_REOPEN_ATTEMPTS = 3;
     logger.warn('Verification failed. Checking reopen attempt counts.');
     const escalatedGaps: string[] = [];
+    const retryGaps: string[] = [];
 
     for (const gapId of gapIds) {
       const attempts = await memory.incrementGapAttemptCount(gapId);
       if (attempts >= MAX_REOPEN_ATTEMPTS) {
-        logger.warn(
-          `Gap ${gapId} has been reopened ${attempts} times. Escalating to HITL and halting autonomous evolution.`
-        );
-        await memory.updateGapStatus(gapId, GapStatus.OPEN);
+        logger.warn(`Gap ${gapId} has been reopened ${attempts} times. Escalating to FAILED.`);
+        await memory.updateGapStatus(gapId, GapStatus.FAILED);
         escalatedGaps.push(gapId);
       } else {
         logger.info(`Gap ${gapId} reopen attempt ${attempts}/${MAX_REOPEN_ATTEMPTS}.`);
         await memory.updateGapStatus(gapId, GapStatus.OPEN);
+        retryGaps.push(gapId);
       }
     }
 
     if (escalatedGaps.length > 0) {
-      const { AgentRegistry } = await import('../lib/registry');
-      await AgentRegistry.saveRawConfig('evolution_mode', 'hitl');
       await sendOutboundMessage(
         'qa.agent',
         userId,
-        `⚠️ **Evolution Escalation Required**\n\nGaps ${escalatedGaps.join(', ')} have failed QA verification ${MAX_REOPEN_ATTEMPTS} times and cannot be autonomously resolved. Evolution mode has been switched to **HITL**.\n\nPlease review the implementation manually and re-approve when ready.`,
+        `⚠️ **Evolution Escalation Required**\n\nGaps ${escalatedGaps.join(', ')} have failed QA verification ${MAX_REOPEN_ATTEMPTS} times and cannot be autonomously resolved.\n\nPlease review the implementation manually and re-approve when ready.`,
         [userId],
         traceId,
         config.name
       );
+    }
+
+    if (retryGaps.length > 0) {
+      const { tools } = await import('../tools/index');
+      const dispatcher = tools.dispatchTask;
+      await dispatcher.execute({
+        agentId: AgentType.CODER,
+        userId,
+        task: `QA verification failed for gaps: ${retryGaps.join(', ')}.\n\nAudit Report:\n${auditReport}\n\nPlease fix the issues and redeploy.`,
+        metadata: { gapIds: retryGaps },
+        traceId,
+        sessionId,
+      });
     }
   }
 

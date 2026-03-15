@@ -175,6 +175,27 @@ export const handler = async (event: PlannerEvent, _context: Context): Promise<P
       logger.warn('Failed to fetch tool_usage for Strategic Review:', e);
     }
 
+    let staleMemoryContext = '';
+    try {
+      // @ts-expect-error - DynamoMemory has this method now
+      const staleItems = await memory.getLowUtilizationMemory(10);
+      if (staleItems && staleItems.length > 0) {
+        staleMemoryContext = `\n[LOW_UTILIZATION_MEMORY]:\nThese dynamic memory items have not been recalled recently. Consider recommending pruning them if they are no longer relevant to system goals.\n${JSON.stringify(
+          staleItems.map((i: Record<string, any>) => ({
+            id: i.userId,
+            timestamp: i.timestamp,
+            content: i.content,
+            hitCount: (i.metadata as any)?.hitCount,
+            lastAccessed: (i.metadata as any)?.lastAccessed,
+          })),
+          null,
+          2
+        )}\n`;
+      }
+    } catch (e) {
+      logger.warn('Failed to fetch stale memory for Strategic Review:', e);
+    }
+
     // Deterministic Review of all Gaps
     const allGaps = await memory.getAllGaps(GapStatus.OPEN);
     if (allGaps.length === 0) {
@@ -194,8 +215,11 @@ export const handler = async (event: PlannerEvent, _context: Context): Promise<P
       ${gapSummary}
       ${telemetry}
       ${toolUsageContext}
+      ${staleMemoryContext}
 
-      Please analyze these gaps and the tool usage telemetry. Prioritize the most critical needs based on ROI (Impact vs Complexity), and design a STRATEGIC_PLAN to either address the MOST IMPORTANT evolution or prune redundant/inefficient tools.
+      Please analyze these gaps, the tool usage telemetry, and the memory utilization audit. Prioritize the most critical needs based on ROI (Impact vs Complexity), and design a STRATEGIC_PLAN to either address the MOST IMPORTANT evolution or prune redundant/inefficient tools and stale memories.
+      
+      If low-utilization memory is no longer relevant, recommend pruning it by suggesting the use of 'pruneMemory' tool or explaining why it should be archived.
     `;
 
     // Update last review timestamp

@@ -100,11 +100,12 @@ describe('Integrated Mechanism Verification', () => {
         Items: [
           { id: 'GAP#1', status: 'OPEN' },
           { id: 'GAP#2', status: 'DONE' },
+          { id: 'GAP#3', status: 'FAILED' },
         ],
       });
 
       const status = await verifier.verifyEvolution();
-      expect(status.totalGaps).toBe(2);
+      expect(status.totalGaps).toBe(3);
       expect(status.activeGaps).toBe(1);
       expect(status.fixSuccessRate).toBe(50);
     });

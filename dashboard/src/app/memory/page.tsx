@@ -14,7 +14,9 @@ import {
   Trash2,
   TrendingUp,
   Lightbulb,
-  Target
+  Target,
+  BarChart2,
+  Zap
 } from 'lucide-react';
 import { tools } from '@/lib/tool-definitions';
 import { revalidatePath } from 'next/cache';
@@ -28,16 +30,44 @@ async function getMemoryData() {
   const { DynamoMemory } = await import('@claw/core/lib/memory');
   const memory = new DynamoMemory();
   
-  // Fetch by type in parallel for efficiency
-  const [distilled, lessons, gaps, sessions] = await Promise.all([
+  // 1. Fetch the dynamic registry of memory types
+  const registeredTypes = await memory.getRegisteredMemoryTypes();
+  const knownTypes = new Set(['DISTILLED', 'LESSON', 'GAP', 'SESSION', 'MEMORY:USER_PREFERENCE']);
+  const dynamicTypes = registeredTypes.filter(type => !knownTypes.has(type));
+
+  // 2. Build the parallel fetch queue
+  const fetchPromises = [
     memory.getMemoryByType('DISTILLED', 50),
+    memory.getMemoryByType('MEMORY:USER_PREFERENCE', 50),
     memory.getMemoryByType('LESSON', 50),
     memory.getMemoryByType('GAP', 50),
-    memory.getMemoryByType('SESSION', 50)
-  ]);
+    memory.getMemoryByType('SESSION', 50),
+    ...dynamicTypes.map(t => memory.getMemoryByType(t, 20)) // Fetch a sensible limit for dynamic types
+  ];
+
+  // 3. Execute all queries in parallel
+  const results = await Promise.all(fetchPromises);
+  
+  const distilled = results[0];
+  const preferences = results[1];
+  const lessons = results[2];
+  const gaps = results[3];
+  const sessions = results[4];
+
+  // Group all dynamic types into a single structure
+  const dynamicCategories: Record<string, any[]> = {};
+  dynamicTypes.forEach((type, index) => {
+    const items = results[5 + index];
+    if (items && items.length > 0) {
+      dynamicCategories[type] = items;
+    }
+  });
+
+  // Merge preferences into distilled facts as they serve a similar UI purpose
+  const allDistilled = [...distilled, ...preferences];
 
   // If we have no data at all, might be an old table without 'type' fields
-  if (gaps.length === 0 && lessons.length === 0 && distilled.length === 0 && sessions.length === 0) {
+  if (gaps.length === 0 && lessons.length === 0 && allDistilled.length === 0 && sessions.length === 0 && Object.keys(dynamicCategories).length === 0) {
     console.log('[MemoryVault] No typed data found, falling back to Scan for migration support');
     const client = new DynamoDBClient({});
     const docClient = DynamoDBDocumentClient.from(client);
@@ -58,7 +88,7 @@ async function getMemoryData() {
     } while (lastKey && allItems.length < 500); // Guard rails
     
     return {
-        distilled: allItems.filter(item => item.userId?.startsWith('DISTILLED#')),
+        distilled: allItems.filter(item => item.userId?.startsWith('DISTILLED#') || item.userId?.startsWith('USER#')),
         lessons: allItems.filter(item => item.userId?.startsWith('LESSON#') || item.userId?.startsWith('TACTICAL#')),
         gaps: allItems.filter(item => item.userId?.startsWith('GAP#')),
         sessions: Array.from(new Set(allItems
@@ -69,13 +99,15 @@ async function getMemoryData() {
             lastActive: Math.max(...allItems
                 .filter(item => item.userId === userId)
                 .map(item => item.timestamp || 0))
-            }))
+            })),
+        dynamicCategories: {}
     };
   }
   
   return { 
-    distilled, 
+    distilled: allDistilled, 
     lessons, 
+    dynamicCategories,
     gaps: gaps.sort((a, b) => {
       const prioA = a.metadata?.priority ?? 5;
       const prioB = b.metadata?.priority ?? 5;
@@ -121,7 +153,7 @@ async function prioritizeMemory(formData: FormData) {
 
 /** MemoryVault — tiered memory inspector. Displays DISTILLED facts, tactical INSIGHTS, strategic GAPS, and agent SESSIONS. Supports human-in-the-loop prioritisation and memory pruning. */
 export default async function MemoryVault() {
-  const { distilled, lessons, gaps, sessions } = await getMemoryData();
+  const { distilled, lessons, gaps, sessions, dynamicCategories } = await getMemoryData();
   
   const toolList = Object.values(tools);
 
@@ -254,6 +286,17 @@ export default async function MemoryVault() {
                     <Typography variant="body" color="white" italic className="leading-relaxed opacity-90 block mt-1">
                        "{lesson.content}"
                     </Typography>
+                    
+                    <div className="mt-3 flex gap-3 opacity-60">
+                      <div className="flex items-center gap-1">
+                        <BarChart2 size={10} />
+                        <Typography variant="mono" className="text-[8px] uppercase">Recalls: {lesson.metadata?.hitCount || 0}</Typography>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock size={10} />
+                        <Typography variant="mono" className="text-[8px] uppercase">Last: {lesson.metadata?.lastAccessed ? new Date(lesson.metadata.lastAccessed).toLocaleDateString() : 'Never'}</Typography>
+                      </div>
+                    </div>
                   </Card>
                 ))
               ) : (
@@ -284,6 +327,17 @@ export default async function MemoryVault() {
                     <Typography variant="body" color="white" italic className="leading-relaxed opacity-70 block">
                       {fact.content}
                     </Typography>
+
+                    <div className="mt-4 pt-2 border-t border-white/5 flex gap-3 opacity-40">
+                      <div className="flex items-center gap-1">
+                        <Zap size={10} className="text-cyber-blue" />
+                        <Typography variant="mono" className="text-[8px] uppercase">Utility: {fact.metadata?.hitCount || 0}</Typography>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock size={10} />
+                        <Typography variant="mono" className="text-[8px] uppercase">Last Recalled: {fact.metadata?.lastAccessed ? new Date(fact.metadata.lastAccessed).toLocaleDateString() : 'Never'}</Typography>
+                      </div>
+                    </div>
                   </Card>
                 ))
               ) : (
@@ -294,6 +348,50 @@ export default async function MemoryVault() {
               )}
             </div>
           </section>
+
+          {/* Dynamically Discovered Knowledge Types */}
+          {Object.entries(dynamicCategories || {}).map(([type, items]) => (
+            <section key={type}>
+              <Typography variant="caption" weight="black" uppercase className="tracking-[0.2em] flex items-center gap-2 mb-6 text-purple-400 opacity-60">
+                <Database size={14} className="text-purple-400" /> {type.replace('MEMORY:', '').replace(/_/g, ' ')}
+              </Typography>
+              <div className="grid grid-cols-1 gap-4">
+                {items.map((item, i) => (
+                  <Card key={i} variant="solid" padding="sm" className={`relative group border-purple-500/10 bg-purple-500/[0.01] ${!item.metadata?.hitCount ? 'opacity-60 grayscale-[0.5]' : ''}`}>
+                    <form action={pruneMemory} className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <input type="hidden" name="userId" value={item.userId} />
+                        <input type="hidden" name="timestamp" value={item.timestamp} />
+                        <Button variant="ghost" size="sm" type="submit" className="text-white/50 hover:text-red-500 p-0 h-auto" icon={<Trash2 size={14} />} />
+                    </form>
+                    <div className="flex flex-col gap-1 mb-2">
+                        <Typography variant="mono" color="intel" weight="bold" uppercase className="text-[9px] tracking-tighter opacity-50 block">
+                          ID :: {item.userId.split('#')[1]}
+                        </Typography>
+                    </div>
+                    <Typography variant="body" color="white" className="leading-relaxed opacity-80 block whitespace-pre-wrap">
+                      {item.content}
+                    </Typography>
+
+                    <div className="mt-4 pt-2 border-t border-white/5 flex gap-4 opacity-40">
+                      <div className="flex items-center gap-1">
+                        <BarChart2 size={10} className="text-purple-400" />
+                        <Typography variant="mono" className="text-[8px] uppercase">Hits: {item.metadata?.hitCount || 0}</Typography>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock size={10} />
+                        <Typography variant="mono" className="text-[8px] uppercase">Last: {item.metadata?.lastAccessed ? new Date(item.metadata.lastAccessed).toLocaleDateString() : 'Never'}</Typography>
+                      </div>
+                      {!item.metadata?.hitCount && (
+                        <div className="ml-auto flex items-center gap-1 text-amber-500/60">
+                          <Typography variant="mono" className="text-[8px] uppercase">STALE_CANDIDATE</Typography>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          ))}
         </div>
 
         {/* Right: Arsenal & Sessions */}

@@ -160,6 +160,27 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   }
 
   /**
+   * Retrieves memory items with low hit counts or old lastAccessed timestamps.
+   */
+  async getLowUtilizationMemory(limit: number = 20): Promise<Record<string, unknown>[]> {
+    return InsightOps.getLowUtilizationMemory(this, limit);
+  }
+
+  /**
+   * Retrieves the list of active memory types that have been dynamically registered.
+   */
+  async getRegisteredMemoryTypes(): Promise<string[]> {
+    return SessionOps.getRegisteredMemoryTypes(this);
+  }
+
+  /**
+   * Atomically increments the hit count and updates the lastAccessed timestamp for a memory item.
+   */
+  async recordMemoryHit(userId: string, timestamp: number): Promise<void> {
+    return InsightOps.recordMemoryHit(this, userId, timestamp);
+  }
+
+  /**
    * Saves the Last Known Good (LKG) commit hash after a successful health check.
    */
   async saveLKGHash(hash: string): Promise<void> {

@@ -120,6 +120,28 @@ export async function getMemoryByType(
 }
 
 /**
+ * Retrieves the list of active memory types that have been dynamically registered.
+ */
+export async function getRegisteredMemoryTypes(base: BaseMemoryProvider): Promise<string[]> {
+  const items = await base.queryItems({
+    KeyConditionExpression: 'userId = :userId AND #ts = :ts',
+    ExpressionAttributeNames: {
+      '#ts': 'timestamp',
+    },
+    ExpressionAttributeValues: {
+      ':userId': 'SYSTEM#REGISTRY',
+      ':ts': 0,
+    },
+  });
+
+  const activeTypesSet = items[0]?.activeTypes as Set<string> | string[] | undefined;
+  if (!activeTypesSet) return [];
+
+  // Handle both DynamoDB Set object and native Array formats
+  return Array.isArray(activeTypesSet) ? activeTypesSet : Array.from(activeTypesSet);
+}
+
+/**
  * Saves the Last Known Good (LKG) commit hash after a successful health check.
  */
 export async function saveLKGHash(base: BaseMemoryProvider, hash: string): Promise<void> {

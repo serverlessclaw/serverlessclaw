@@ -117,7 +117,7 @@ describe('DynamoMemory Retention', () => {
         ],
       });
 
-      await memory.updateGapStatus(gapId, GapStatus.DONE);
+      await memory.updateGapStatus(gapId, GapStatus.PROGRESS);
 
       // Should have 2 UpdateCommand calls (initial + retry)
       const updateCalls = ddbMock.commandCalls(UpdateCommand);

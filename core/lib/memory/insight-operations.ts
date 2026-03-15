@@ -22,10 +22,29 @@ async function addRecord(
 ): Promise<number> {
   const { expiresAt } = await RetentionManager.getExpiresAt(baseCategory, scopeId);
   const timestamp = Date.now();
+  const fullType = `${baseCategory}:${category.toUpperCase()}`;
+
+  // 1. Register the type atomically so it can be dynamically discovered by the dashboard
+  try {
+    await base.updateItem({
+      Key: {
+        userId: 'SYSTEM#REGISTRY',
+        timestamp: 0,
+      },
+      UpdateExpression: 'ADD activeTypes :type',
+      ExpressionAttributeValues: {
+        ':type': new Set([fullType]),
+      },
+    });
+  } catch {
+    // Silent fail if registry update fails to not break memory insertion
+  }
+
+  // 2. Insert the actual memory record
   await base.putItem({
     userId: scopeId,
     timestamp,
-    type: `${baseCategory}:${category.toUpperCase()}`,
+    type: fullType,
     expiresAt,
     content,
     metadata: {
@@ -36,10 +55,38 @@ async function addRecord(
       risk: 5,
       urgency: 5,
       priority: 5,
+      hitCount: 0,
+      lastAccessed: timestamp,
       ...(metadata || {}),
     },
   });
   return timestamp;
+}
+
+/**
+ * Atomically increments the hit count and updates the lastAccessed timestamp for a memory item.
+ */
+export async function recordMemoryHit(
+  base: BaseMemoryProvider,
+  userId: string,
+  timestamp: number
+): Promise<void> {
+  try {
+    await base.updateItem({
+      Key: { userId, timestamp },
+      UpdateExpression:
+        'SET metadata.hitCount = if_not_exists(metadata.hitCount, :zero) + :inc, metadata.lastAccessed = :now',
+      ExpressionAttributeValues: {
+        ':zero': 0,
+        ':inc': 1,
+        ':now': Date.now(),
+      },
+      ConditionExpression: 'attribute_exists(userId)',
+    });
+  } catch (error) {
+    // Silent failure so it doesn't interrupt tool execution if the memory item was just deleted or schema is legacy
+    console.warn(`Failed to record memory hit for ${userId}@${timestamp}`, error);
+  }
 }
 
 /**
@@ -52,9 +99,10 @@ export async function addLesson(
   metadata?: InsightMetadata
 ): Promise<void> {
   const { expiresAt, type } = await RetentionManager.getExpiresAt('LESSON', userId);
+  const timestamp = Date.now();
   await base.putItem({
     userId: `LESSON#${userId}`,
-    timestamp: Date.now(),
+    timestamp,
     type,
     expiresAt,
     content: lesson,
@@ -66,6 +114,8 @@ export async function addLesson(
       risk: 5,
       urgency: 5,
       priority: 5,
+      hitCount: 0,
+      lastAccessed: timestamp,
     },
   });
 }
@@ -111,6 +161,8 @@ export async function addMemory(
   return addRecord(base, 'MEMORY', scopeId, category, content, metadata);
 }
 
+import { getRegisteredMemoryTypes, getMemoryByType } from './session-operations';
+
 /**
  * Searches for insights across all categories
  */
@@ -120,15 +172,10 @@ export async function searchInsights(
   query: string,
   category?: InsightCategory
 ): Promise<MemoryInsight[]> {
-  const scopes = [
-    `USER#${userId}`,
-    'SYSTEM#GLOBAL',
-    `LESSON#${userId}`,
-    `GAP#`,
-    `DISTILLED#${userId}`,
-  ];
-  let allInsights: MemoryInsight[] = [];
+  const scopes = [`USER#${userId}`, 'SYSTEM#GLOBAL', `LESSON#${userId}`, `DISTILLED#${userId}`];
+  let allItems: any[] = [];
 
+  // 1. Fetch by explicit partition keys
   for (const scope of scopes) {
     const items = await base.queryItems({
       KeyConditionExpression: 'userId = :userId',
@@ -137,31 +184,52 @@ export async function searchInsights(
       },
       Limit: 50,
     });
-
-    const insights = items.map((item) => {
-      const metadata = (item.metadata as InsightMetadata) || {
-        category: scope.startsWith('DISTILLED')
-          ? InsightCategory.USER_PREFERENCE
-          : scope.startsWith('LESSON')
-            ? InsightCategory.TACTICAL_LESSON
-            : InsightCategory.STRATEGIC_GAP,
-        confidence: 0,
-        impact: 0,
-        complexity: 0,
-        risk: 0,
-        urgency: 0,
-        priority: 0,
-      };
-
-      return {
-        id: item.userId as string,
-        content: item.content as string,
-        metadata,
-        timestamp: item.timestamp as number,
-      };
-    });
-    allInsights = [...allInsights, ...insights];
+    allItems = [...allItems, ...items];
   }
+
+  // 2. Fetch GAPs properly using the GSI (since GAP# is a prefix, not a full PK)
+  const gaps = await getMemoryByType(base, 'GAP', 50);
+  allItems = [...allItems, ...gaps];
+
+  // 3. Fetch dynamically registered types (if they aren't already captured by SYSTEM#GLOBAL or USER# scopes)
+  // To avoid duplicates, we'll map them by a unique key
+  const registeredTypes = await getRegisteredMemoryTypes(base);
+  for (const rType of registeredTypes) {
+    if (rType.startsWith('MEMORY:') || rType.startsWith('INSIGHT:')) {
+      const dynamicItems = await getMemoryByType(base, rType, 50);
+      allItems = [...allItems, ...dynamicItems];
+    }
+  }
+
+  // Deduplicate by userId and timestamp
+  const uniqueItemsMap = new Map<string, any>();
+  allItems.forEach((item) => {
+    uniqueItemsMap.set(`${item.userId}-${item.timestamp}`, item);
+  });
+
+  let allInsights: MemoryInsight[] = Array.from(uniqueItemsMap.values()).map((item) => {
+    const scope = item.userId as string;
+    const metadata = (item.metadata as InsightMetadata) || {
+      category: scope.startsWith('DISTILLED')
+        ? InsightCategory.USER_PREFERENCE
+        : scope.startsWith('LESSON')
+          ? InsightCategory.TACTICAL_LESSON
+          : InsightCategory.STRATEGIC_GAP,
+      confidence: 0,
+      impact: 0,
+      complexity: 0,
+      risk: 0,
+      urgency: 0,
+      priority: 0,
+    };
+
+    return {
+      id: item.userId as string,
+      content: item.content as string,
+      metadata,
+      timestamp: item.timestamp as number,
+    };
+  });
 
   if (category) {
     allInsights = allInsights.filter((i) => i.metadata.category === category);
@@ -202,4 +270,45 @@ export async function updateInsightMetadata(
     ...item,
     metadata: { ...(item.metadata || {}), ...metadata },
   });
+}
+
+/**
+ * Retrieves memory items with low utilization (low hitCount and old lastAccessed).
+ * Scans dynamically registered memory types.
+ */
+export async function getLowUtilizationMemory(
+  base: BaseMemoryProvider,
+  limit: number = 20
+): Promise<Record<string, unknown>[]> {
+  const registeredTypes = await getRegisteredMemoryTypes(base);
+  let staleItems: Record<string, unknown>[] = [];
+  const STALE_THRESHOLD_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
+  const now = Date.now();
+
+  for (const type of registeredTypes) {
+    if (!type.startsWith('MEMORY:') && !type.startsWith('INSIGHT:') && type !== 'LESSON') continue;
+
+    const items = await getMemoryByType(base, type, 50);
+
+    const stale = items.filter((item) => {
+      const meta = item.metadata as InsightMetadata | undefined;
+      if (!meta) return false;
+
+      const isHitCountLow = meta.hitCount === undefined || meta.hitCount === 0;
+      const timeSinceAccess = now - (meta.lastAccessed || item.timestamp || now);
+
+      return isHitCountLow && timeSinceAccess > STALE_THRESHOLD_MS;
+    });
+
+    staleItems = [...staleItems, ...stale];
+  }
+
+  // Sort by oldest first and cap
+  return staleItems
+    .sort((a, b) => {
+      const tA = (a.metadata as any)?.lastAccessed || a.timestamp || 0;
+      const tB = (b.metadata as any)?.lastAccessed || b.timestamp || 0;
+      return tA - tB;
+    })
+    .slice(0, limit);
 }
