@@ -28,6 +28,7 @@ export function createApi(ctx: SharedContext): { api: sst.aws.ApiGatewayV2 } {
   // Main Webhook
   api.route('ANY /webhook', {
     handler: 'core/handlers/webhook.handler',
+    nodejs: { loader: { '.md': 'text' } },
     link: [
       memoryTable,
       traceTable,
@@ -47,6 +48,7 @@ export function createApi(ctx: SharedContext): { api: sst.aws.ApiGatewayV2 } {
   // Health Probe
   api.route('GET /health', {
     handler: 'core/handlers/health.handler',
+    nodejs: { loader: { '.md': 'text' } },
     link: [memoryTable, traceTable, configTable, stagingBucket, knowledgeBucket, bus],
     permissions: [
       {

@@ -47,6 +47,7 @@ export function createAgents(ctx: SharedContext): {
     handler: 'core/agents/coder.handler',
     dev: liveInLocalOnly,
     link: [...baseLink, stagingBucket],
+    nodejs: { loader: { '.md': 'text' } },
     memory: AGENT_CONFIG.memory.LARGE,
     timeout: AGENT_CONFIG.timeout.MAX,
     logging: {
@@ -62,6 +63,7 @@ export function createAgents(ctx: SharedContext): {
     handler: 'core/handlers/monitor.handler',
     dev: liveInLocalOnly,
     link: baseLink,
+    nodejs: { loader: { '.md': 'text' } },
     permissions: [
       {
         actions: ['codebuild:BatchGetBuilds'],
@@ -86,6 +88,7 @@ export function createAgents(ctx: SharedContext): {
     handler: 'core/handlers/recovery.handler',
     dev: liveInLocalOnly,
     link: [...baseLink, deployer],
+    nodejs: { loader: { '.md': 'text' } },
     memory: AGENT_CONFIG.memory.SMALL,
     timeout: AGENT_CONFIG.timeout.MEDIUM,
     logging: {
@@ -149,6 +152,7 @@ export function createAgents(ctx: SharedContext): {
     handler: 'core/agents/strategic-planner.handler',
     dev: liveInLocalOnly,
     link: baseLink,
+    nodejs: { loader: { '.md': 'text' } },
     memory: AGENT_CONFIG.memory.LARGE,
     timeout: AGENT_CONFIG.timeout.MAX,
     logging: {
@@ -195,6 +199,7 @@ export function createAgents(ctx: SharedContext): {
     handler: 'core/handlers/events.handler',
     dev: liveInLocalOnly,
     link: baseLink,
+    nodejs: { loader: { '.md': 'text' } },
     memory: AGENT_CONFIG.memory.MEDIUM,
     timeout: AGENT_CONFIG.timeout.LONG,
     logging: {
@@ -218,6 +223,7 @@ export function createAgents(ctx: SharedContext): {
     handler: 'core/agents/cognition-reflector.handler',
     dev: liveInLocalOnly,
     link: baseLink,
+    nodejs: { loader: { '.md': 'text' } },
     memory: AGENT_CONFIG.memory.MEDIUM,
     timeout: AGENT_CONFIG.timeout.MAX,
     logging: {
@@ -233,6 +239,7 @@ export function createAgents(ctx: SharedContext): {
     handler: 'core/agents/qa.handler',
     dev: liveInLocalOnly,
     link: baseLink,
+    nodejs: { loader: { '.md': 'text' } },
     memory: AGENT_CONFIG.memory.LARGE,
     timeout: AGENT_CONFIG.timeout.MAX,
     logging: {
@@ -250,6 +257,7 @@ export function createAgents(ctx: SharedContext): {
     handler: 'core/handlers/notifier.handler',
     dev: liveInLocalOnly,
     link: baseLink,
+    nodejs: { loader: { '.md': 'text' } },
     memory: AGENT_CONFIG.memory.SMALL,
     timeout: AGENT_CONFIG.timeout.SHORT,
   });
@@ -262,6 +270,7 @@ export function createAgents(ctx: SharedContext): {
     handler: 'core/agents/worker.handler',
     dev: liveInLocalOnly,
     link: baseLink,
+    nodejs: { loader: { '.md': 'text' } },
     memory: AGENT_CONFIG.memory.LARGE,
     timeout: AGENT_CONFIG.timeout.MAX,
     logging: {
@@ -289,6 +298,7 @@ export function createAgents(ctx: SharedContext): {
     handler: 'core/handlers/bridge.handler',
     dev: liveInLocalOnly,
     link: [ctx.realtime!, bus],
+    nodejs: { loader: { '.md': 'text' } },
     logging: {
       retention: '1 month',
     },

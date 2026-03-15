@@ -20,7 +20,7 @@ import { AgentEmitter } from './agent/emitter';
 import { parseConfigInt } from './providers/utils';
 
 // Re-export for backward compatibility
-export { AgentProcessOptions };
+export type { AgentProcessOptions };
 
 /**
  * The core Agent class responsible for orchestrating LLM calls, tool execution,
