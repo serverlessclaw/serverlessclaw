@@ -1,8 +1,5 @@
 import { IToolDefinition } from '../../lib/types/index';
 
-const TYPE_OBJECT = 'object';
-const TYPE_STRING = 'string';
-
 /**
  * System utility tool definitions.
  */
@@ -11,11 +8,11 @@ export const systemTools: Record<string, IToolDefinition> = {
     name: 'runShellCommand',
     description: 'Executes a shell command in the agent environment.',
     parameters: {
-      type: TYPE_OBJECT,
+      type: 'object',
       properties: {
-        command: { type: TYPE_STRING, description: 'The shell command to execute.' },
+        command: { type: 'string', description: 'The shell command to execute.' },
         dir_path: {
-          type: TYPE_STRING,
+          type: 'string',
           description: 'The directory path to run the command in (relative to project root).',
         },
       },
@@ -27,15 +24,15 @@ export const systemTools: Record<string, IToolDefinition> = {
     name: 'switchModel',
     description: 'Switch the active LLM provider and model at runtime.',
     parameters: {
-      type: TYPE_OBJECT,
+      type: 'object',
       properties: {
         provider: {
-          type: TYPE_STRING,
+          type: 'string',
           enum: ['openai', 'bedrock', 'openrouter'],
           description: 'The LLM provider to switch to.',
         },
         model: {
-          type: TYPE_STRING,
+          type: 'string',
           description:
             'The specific model ID to use (e.g. gpt-5-mini, google/gemini-3-flash-preview).',
         },
@@ -49,9 +46,9 @@ export const systemTools: Record<string, IToolDefinition> = {
     description:
       'Retrieves the full mechanical monologue (tool calls, intermediate reasoning) for a specific trace ID.',
     parameters: {
-      type: TYPE_OBJECT,
+      type: 'object',
       properties: {
-        traceId: { type: TYPE_STRING, description: 'The unique ID of the trace to inspect.' },
+        traceId: { type: 'string', description: 'The unique ID of the trace to inspect.' },
       },
       required: ['traceId'],
       additionalProperties: false,
@@ -63,7 +60,7 @@ export const systemTools: Record<string, IToolDefinition> = {
     description:
       'Returns a structured map of the entire system (agents, infrastructure, and connections). Use this to understand how components are linked.',
     parameters: {
-      type: TYPE_OBJECT,
+      type: 'object',
       properties: {},
       required: [],
       additionalProperties: false,

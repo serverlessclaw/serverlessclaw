@@ -3,7 +3,7 @@
  */
 export interface JsonSchema {
   /** The data type (e.g., 'string', 'object', 'array'). */
-  type: string;
+  type: 'string' | 'number' | 'integer' | 'boolean' | 'object' | 'array';
   /** Human-readable description of the property. */
   description?: string;
   /** Nested properties for object types. */

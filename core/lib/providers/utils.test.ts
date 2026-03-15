@@ -17,9 +17,9 @@ describe('transformToolsToOpenAI', () => {
         name: 'get_weather',
         description: 'Get the weather for a location',
         parameters: {
-          type: 'object',
+          type: 'object' as const,
           properties: {
-            location: { type: 'string' },
+            location: { type: 'string' as const },
           },
           required: ['location'],
         },
@@ -46,14 +46,14 @@ describe('transformToolsToOpenAI', () => {
       {
         name: 'get_weather',
         description: 'Get the weather',
-        parameters: { type: 'object', properties: {} },
+        parameters: { type: 'object' as const, properties: {} },
         execute: async () => 'result',
       },
       {
         name: 'some_image',
         type: 'image',
         description: 'An image',
-        parameters: { type: 'object', properties: {} },
+        parameters: { type: 'object' as const, properties: {} },
         execute: async () => 'result',
       } as ITool,
     ];

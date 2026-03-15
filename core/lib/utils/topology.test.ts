@@ -172,7 +172,7 @@ describe('discoverSystemTopology', () => {
 
     expect(mainNode?.label).toBe('Commander-in-Chief');
     expect(mainNode?.icon).toBe('Shield');
-    // For SuperClaw, reinforcement currently wins IF it's an existing node, 
+    // For SuperClaw, reinforcement currently wins IF it's an existing node,
     // but the override wins if it's a new node. Let's make it consistent.
     expect(mainNode?.tier).toBe('INFRA');
 

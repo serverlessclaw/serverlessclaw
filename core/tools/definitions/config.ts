@@ -1,8 +1,5 @@
 import { IToolDefinition } from '../../lib/types/index';
 
-const TYPE_OBJECT = 'object';
-const TYPE_STRING = 'string';
-
 /**
  * Configuration tool definitions.
  */
@@ -12,7 +9,7 @@ export const configTools: Record<string, IToolDefinition> = {
     description:
       'Retrieves the current runtime configuration, including active LLM provider and model.',
     parameters: {
-      type: TYPE_OBJECT,
+      type: 'object',
       properties: {},
       required: [],
       additionalProperties: false,
@@ -22,14 +19,14 @@ export const configTools: Record<string, IToolDefinition> = {
     name: 'setSystemConfig',
     description: 'Updates a system-wide configuration value in the ConfigTable.',
     parameters: {
-      type: TYPE_OBJECT,
+      type: 'object',
       properties: {
         key: {
-          type: TYPE_STRING,
+          type: 'string',
           description: 'The configuration key (e.g. evolution_mode, deploy_limit).',
         },
         value: {
-          type: TYPE_STRING,
+          type: 'string',
           description: 'The new value for the configuration (JSON stringified if object).',
         },
       },

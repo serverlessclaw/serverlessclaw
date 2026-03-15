@@ -1,8 +1,5 @@
 import { IToolDefinition } from '../../lib/types/index';
 
-const TYPE_OBJECT = 'object';
-const TYPE_STRING = 'string';
-
 /**
  * Clarification tool definitions for human-in-the-loop interactions.
  */
@@ -11,11 +8,11 @@ export const clarificationTools: Record<string, IToolDefinition> = {
     name: 'seekClarification',
     description: 'Pauses the current agent and requests clarification from the initiator.',
     parameters: {
-      type: TYPE_OBJECT,
+      type: 'object',
       properties: {
-        question: { type: TYPE_STRING, description: 'The specific question for the initiator.' },
+        question: { type: 'string', description: 'The specific question for the initiator.' },
         originalTask: {
-          type: TYPE_STRING,
+          type: 'string',
           description: 'The task you were working on when you needed clarification.',
         },
       },
@@ -27,15 +24,15 @@ export const clarificationTools: Record<string, IToolDefinition> = {
     name: 'provideClarification',
     description: 'Provides an answer to a clarification request, resuming the target agent.',
     parameters: {
-      type: TYPE_OBJECT,
+      type: 'object',
       properties: {
         agentId: {
-          type: TYPE_STRING,
+          type: 'string',
           description: 'The ID of the agent that requested clarification.',
         },
-        answer: { type: TYPE_STRING, description: 'The answer to the question.' },
+        answer: { type: 'string', description: 'The answer to the question.' },
         originalTask: {
-          type: TYPE_STRING,
+          type: 'string',
           description: 'The task the agent was working on.',
         },
       },

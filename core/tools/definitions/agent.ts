@@ -1,9 +1,5 @@
 import { IToolDefinition } from '../../lib/types/index';
 
-const TYPE_OBJECT = 'object';
-const TYPE_STRING = 'string';
-const TYPE_ARRAY = 'array';
-
 /**
  * Agent management tool definitions.
  */
@@ -12,14 +8,14 @@ export const agentTools: Record<string, IToolDefinition> = {
     name: 'dispatchTask',
     description: 'Dispatches a specialized task to a sub-agent.',
     parameters: {
-      type: TYPE_OBJECT,
+      type: 'object',
       properties: {
         agentId: {
-          type: TYPE_STRING,
+          type: 'string',
           description:
             'The unique ID of the agent to invoke (e.g., coder, planner, or a custom agent ID).',
         },
-        task: { type: TYPE_STRING, description: 'The specific task for the sub-agent.' },
+        task: { type: 'string', description: 'The specific task for the sub-agent.' },
       },
       required: ['agentId', 'task'],
       additionalProperties: false,
@@ -30,15 +26,15 @@ export const agentTools: Record<string, IToolDefinition> = {
     name: 'manageAgentTools',
     description: 'Updates the active toolset for a specific agent.',
     parameters: {
-      type: TYPE_OBJECT,
+      type: 'object',
       properties: {
         agentId: {
-          type: TYPE_STRING,
+          type: 'string',
           description: 'The unique ID of the agent (e.g., main, coder).',
         },
         toolNames: {
-          type: TYPE_ARRAY,
-          items: { type: TYPE_STRING },
+          type: 'array',
+          items: { type: 'string' },
           description: 'List of tool names.',
         },
       },
@@ -51,7 +47,7 @@ export const agentTools: Record<string, IToolDefinition> = {
     name: 'listAgents',
     description: 'Lists all available specialized agents in the system and their capabilities.',
     parameters: {
-      type: TYPE_OBJECT,
+      type: 'object',
       properties: {},
       required: [],
       additionalProperties: false,

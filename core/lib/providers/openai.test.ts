@@ -46,14 +46,14 @@ describe('OpenAIProvider', () => {
       {
         name: 'local_tool',
         description: 'A local tool',
-        parameters: { type: 'object', properties: {} },
+        parameters: { type: 'object' as const, properties: {} },
         execute: async () => 'done',
       },
       {
         name: 'code_interpreter',
         description: 'Built-in python',
         type: 'code_interpreter',
-        parameters: { type: 'object', properties: {} },
+        parameters: { type: 'object' as const, properties: {} },
         execute: async () => 'done',
       },
     ];
@@ -130,14 +130,14 @@ describe('OpenAIProvider', () => {
       {
         name: 'local_tool',
         description: 'A local tool',
-        parameters: { type: 'object', properties: {} },
+        parameters: { type: 'object' as const, properties: {} },
         execute: async () => 'done',
       },
       {
         name: 'code_interpreter',
         description: 'Built-in python',
         type: 'code_interpreter',
-        parameters: { type: 'object', properties: {} },
+        parameters: { type: 'object' as const, properties: {} },
         execute: async () => 'done',
       },
     ];

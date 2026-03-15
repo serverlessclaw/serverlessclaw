@@ -126,7 +126,7 @@ describe('Agent Model Overrides', () => {
     const mockTool = {
       name: 'checkConfig',
       description: 'Check Config',
-      parameters: { type: 'object', properties: {} },
+      parameters: { type: 'object' as const, properties: {} },
       execute: checkConfig.execute,
     };
 
@@ -168,7 +168,7 @@ describe('Agent Model Overrides', () => {
     const mockSaveMemory = {
       name: 'saveMemory',
       description: 'Save memory',
-      parameters: { type: 'object', properties: {} },
+      parameters: { type: 'object' as const, properties: {} },
       execute: vi.fn().mockResolvedValue('Saved successfully'),
     };
 

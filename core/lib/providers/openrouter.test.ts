@@ -30,14 +30,14 @@ describe('OpenRouterProvider', () => {
       {
         name: 'local_tool',
         description: 'A local tool',
-        parameters: { type: 'object', properties: {} },
+        parameters: { type: 'object' as const, properties: {} },
         execute: async () => 'done',
       },
       {
         name: 'google_search',
         description: 'Grounded search',
         type: 'google_search_retrieval',
-        parameters: { type: 'object', properties: {} },
+        parameters: { type: 'object' as const, properties: {} },
         execute: async () => 'done',
       },
     ];

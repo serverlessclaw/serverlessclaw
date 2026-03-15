@@ -304,10 +304,10 @@ export async function discoverSystemTopology(): Promise<Topology> {
   const mapToolToResources = (toolName: string): string[] => {
     const tool = tools[toolName];
     if (!tool || !tool.connectionProfile) {
-        // Fallback for legacy hardcoded tools if any
-        if (toolName === 'sendMessage') return ['notifier'];
-        if (toolName.startsWith('aws-s3_')) return ['stagingbucket'];
-        return [];
+      // Fallback for legacy hardcoded tools if any
+      if (toolName === 'sendMessage') return ['notifier'];
+      if (toolName.startsWith('aws-s3_')) return ['stagingbucket'];
+      return [];
     }
     return tool.connectionProfile;
   };
@@ -334,9 +334,13 @@ export async function discoverSystemTopology(): Promise<Topology> {
           id: lowerId,
           type: NODE_TYPE.AGENT,
           label: config.topologyOverride?.label || config.name || lowerId,
-          icon: config.topologyOverride?.icon || (config.isBackbone ? RESOURCE_ICON.BRAIN : RESOURCE_ICON.BOT),
+          icon:
+            config.topologyOverride?.icon ||
+            (config.isBackbone ? RESOURCE_ICON.BRAIN : RESOURCE_ICON.BOT),
           description: config.description,
-          tier: config.topologyOverride?.tier || (lowerId === 'main' || lowerId === 'superclaw' ? NODE_TIER.APP : NODE_TIER.AGENT),
+          tier:
+            config.topologyOverride?.tier ||
+            (lowerId === 'main' || lowerId === 'superclaw' ? NODE_TIER.APP : NODE_TIER.AGENT),
         });
       }
 
@@ -360,15 +364,15 @@ export async function discoverSystemTopology(): Promise<Topology> {
           for (const profile of targets) {
             const targetId = mapProfileToResource(profile);
             if (targetId && nodes.find((n) => n.id === targetId)) {
-                const edgeId = `${lowerId}-${targetId}-tool`;
-                if (!edges.find((e) => e.id === edgeId)) {
-                  edges.push({
-                    id: edgeId,
-                    source: lowerId,
-                    target: targetId,
-                    label: EDGE_LABEL.USE,
-                  });
-                }
+              const edgeId = `${lowerId}-${targetId}-tool`;
+              if (!edges.find((e) => e.id === edgeId)) {
+                edges.push({
+                  id: edgeId,
+                  source: lowerId,
+                  target: targetId,
+                  label: EDGE_LABEL.USE,
+                });
+              }
             }
           }
         }
@@ -417,21 +421,21 @@ export async function discoverSystemTopology(): Promise<Topology> {
           // Tool usage for dynamic agents
           if (agent.tools && Array.isArray(agent.tools)) {
             for (const toolName of agent.tools) {
-                const targets = mapToolToResources(toolName);
-                for (const profile of targets) {
-                    const targetId = mapProfileToResource(profile);
-                    if (targetId && nodes.find((n) => n.id === targetId)) {
-                        const edgeId = `${lowerAgentId}-${targetId}-tool`;
-                        if (!edges.find((e) => e.id === edgeId)) {
-                          edges.push({
-                            id: edgeId,
-                            source: lowerAgentId,
-                            target: targetId,
-                            label: EDGE_LABEL.USE,
-                          });
-                        }
-                    }
+              const targets = mapToolToResources(toolName);
+              for (const profile of targets) {
+                const targetId = mapProfileToResource(profile);
+                if (targetId && nodes.find((n) => n.id === targetId)) {
+                  const edgeId = `${lowerAgentId}-${targetId}-tool`;
+                  if (!edges.find((e) => e.id === edgeId)) {
+                    edges.push({
+                      id: edgeId,
+                      source: lowerAgentId,
+                      target: targetId,
+                      label: EDGE_LABEL.USE,
+                    });
+                  }
                 }
+              }
             }
           }
         }

@@ -68,7 +68,7 @@ describe('Agent Trace Propagation', () => {
       name: 'testTool',
       description: 'Test Tool',
       parameters: {
-        type: 'object',
+        type: 'object' as const,
         properties: {},
         required: [],
         additionalProperties: false,
@@ -123,7 +123,7 @@ describe('Agent Trace Propagation', () => {
       name: 'multiModalTool',
       description: 'Test Tool',
       parameters: {
-        type: 'object',
+        type: 'object' as const,
         properties: {},
         required: [],
         additionalProperties: false,
