@@ -119,6 +119,7 @@ async function prioritizeMemory(formData: FormData) {
   revalidatePath('/memory');
 }
 
+/** MemoryVault — tiered memory inspector. Displays DISTILLED facts, tactical INSIGHTS, strategic GAPS, and agent SESSIONS. Supports human-in-the-loop prioritisation and memory pruning. */
 export default async function MemoryVault() {
   const { distilled, lessons, gaps, sessions } = await getMemoryData();
   

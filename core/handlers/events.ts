@@ -1,11 +1,7 @@
 import { EventType } from '../lib/types/index';
 import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
-import { handleBuildFailure, handleBuildSuccess } from './events/build-handler';
-import { handleContinuationTask } from './events/continuation-handler';
-import { handleHealthReport } from './events/health-handler';
-import { handleTaskResult } from './events/task-result-handler';
-import { handleClarificationRequest } from './events/clarification-handler';
+// Sub-handlers are imported lazily per-event to minimise static import depth and context budget.
 
 /**
  * Main entry point for the Events Handler.
@@ -28,30 +24,42 @@ export const handler = async (
   const eventDetail = event.detail;
 
   switch (detailType) {
-    case EventType.SYSTEM_BUILD_FAILED:
+    case EventType.SYSTEM_BUILD_FAILED: {
+      const { handleBuildFailure } = await import('./events/build-handler');
       await handleBuildFailure(eventDetail, context);
       break;
+    }
 
-    case EventType.SYSTEM_BUILD_SUCCESS:
+    case EventType.SYSTEM_BUILD_SUCCESS: {
+      const { handleBuildSuccess } = await import('./events/build-handler');
       await handleBuildSuccess(eventDetail);
       break;
+    }
 
-    case EventType.CONTINUATION_TASK:
+    case EventType.CONTINUATION_TASK: {
+      const { handleContinuationTask } = await import('./events/continuation-handler');
       await handleContinuationTask(eventDetail, context);
       break;
+    }
 
-    case EventType.SYSTEM_HEALTH_REPORT:
+    case EventType.SYSTEM_HEALTH_REPORT: {
+      const { handleHealthReport } = await import('./events/health-handler');
       await handleHealthReport(eventDetail, context);
       break;
+    }
 
     case EventType.TASK_COMPLETED:
-    case EventType.TASK_FAILED:
+    case EventType.TASK_FAILED: {
+      const { handleTaskResult } = await import('./events/task-result-handler');
       await handleTaskResult(eventDetail, detailType);
       break;
+    }
 
-    case EventType.CLARIFICATION_REQUEST:
+    case EventType.CLARIFICATION_REQUEST: {
+      const { handleClarificationRequest } = await import('./events/clarification-handler');
       await handleClarificationRequest(eventDetail);
       break;
+    }
 
     default:
       logger.warn(`Unhandled event type: ${detailType}`);

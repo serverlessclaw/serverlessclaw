@@ -57,6 +57,7 @@ async function getRecoveryLogs() {
   }
 }
 
+/** ResilienceHub — displays the live health status, recovery logs, and Dead Man's Switch circuit-breaker state for the ClawCenter Observability sector. */
 export default async function ResilienceHub() {
   const health = await getHealth();
   const logs = await getRecoveryLogs();

@@ -58,6 +58,7 @@ async function updateStatus(formData: FormData) {
   }
 }
 
+/** EvolutionPipeline — visual Kanban board for the gap lifecycle (OPEN → PLANNED → PROGRESS → DEPLOYED → DONE). Fetches gap records from DynamoDB and supports inline status advancement. */
 export default async function EvolutionPipeline() {
   const gaps = await getGaps();
   

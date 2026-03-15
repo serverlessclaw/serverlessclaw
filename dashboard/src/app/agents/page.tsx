@@ -41,6 +41,7 @@ const PROVIDERS = {
   },
 };
 
+/** AgentsPage — manages the Neural Agent Registry: configure agent personas, toggle tool scopes, and register new dynamic agents without redeploying. */
 export default function AgentsPage() {
   const [agents, setAgents] = useState<Record<string, AgentConfig>>({});
   const [initialAgents, setInitialAgents] = useState<Record<string, AgentConfig>>({});

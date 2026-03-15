@@ -6,65 +6,107 @@ import { AgentType } from '../types/agent';
 
 const db = new DynamoDBClient({});
 
+/** Canonical identifiers for well-known infrastructure and platform nodes. */
+const INFRA_NODE_ID = {
+  API: 'api',
+  BUS: 'bus',
+  CODEBUILD: 'codebuild',
+  CONFIG: 'config',
+  MEMORY: 'memory',
+  STORAGE: 'storage',
+  TRACES: 'traces',
+  KNOWLEDGE: 'knowledge',
+  NOTIFIER: 'notifier',
+  BRIDGE: 'bridge',
+  TELEGRAM: 'telegram',
+  DASHBOARD: 'dashboard',
+} as const;
+
+/** Node type discriminators for the topology graph renderer. */
+const NODE_TYPE = {
+  INFRA: 'infra' as const,
+  AGENT: 'agent' as const,
+  DASHBOARD: 'dashboard' as const,
+};
+
+/** Standard edge label vocabulary for topology links. */
+const EDGE_LABEL = {
+  INBOUND: 'INBOUND',
+  SIGNAL: 'SIGNAL',
+  MANAGE: 'MANAGE',
+  DEPLOY: 'DEPLOY',
+  EVENT: 'EVENT',
+  REALTIME: 'REALTIME',
+  QUERY: 'QUERY',
+  WEBHOOK: 'WEBHOOK',
+  READ_FILES: 'READ_FILES',
+  MANAGE_FILES: 'MANAGE_FILES',
+  ARCHIVE: 'ARCHIVE',
+  OUTBOUND: 'OUTBOUND',
+  SYNC: 'SYNC',
+  ORCHESTRATE: 'ORCHESTRATE',
+  USE: 'USE',
+} as const;
+
 /**
  * Discovers the active system topology by scanning SST resources and Agent configs.
  * Designed to be highly resilient and self-aware.
  */
 export async function discoverSystemTopology(): Promise<Topology> {
   const nodes: TopologyNode[] = [
-    { id: 'api', type: 'infra', label: 'API Gateway', icon: 'Globe' },
-    { id: 'bus', type: 'infra', label: 'AgentBus', icon: 'MessageCircle' },
-    { id: 'codebuild', type: 'infra', label: 'BuildEngine', icon: 'Hammer' },
-    { id: 'config', type: 'infra', label: 'DynamoDB Config', icon: 'Database' },
-    { id: 'memory', type: 'infra', label: 'DynamoDB Memory', icon: 'Database' },
-    { id: 'storage', type: 'infra', label: 'Staging Bucket', icon: 'Database' },
-    { id: 'traces', type: 'infra', label: 'DynamoDB Traces', icon: 'Database' },
-    { id: 'knowledge', type: 'infra', label: 'Knowledge Bucket', icon: 'Database' },
-    { id: 'notifier', type: 'infra', label: 'Notifier', icon: 'Bell' },
-    { id: 'bridge', type: 'infra', label: 'Realtime Bridge', icon: 'Zap' },
-    { id: 'telegram', type: 'infra', label: 'Telegram', icon: 'Send' },
-    { id: 'dashboard', type: 'dashboard', label: 'ClawCenter', icon: 'LayoutDashboard' },
+    { id: INFRA_NODE_ID.API, type: NODE_TYPE.INFRA, label: 'API Gateway', icon: 'Globe' },
+    { id: INFRA_NODE_ID.BUS, type: NODE_TYPE.INFRA, label: 'AgentBus', icon: 'MessageCircle' },
+    { id: INFRA_NODE_ID.CODEBUILD, type: NODE_TYPE.INFRA, label: 'BuildEngine', icon: 'Hammer' },
+    { id: INFRA_NODE_ID.CONFIG, type: NODE_TYPE.INFRA, label: 'DynamoDB Config', icon: 'Database' },
+    { id: INFRA_NODE_ID.MEMORY, type: NODE_TYPE.INFRA, label: 'DynamoDB Memory', icon: 'Database' },
+    { id: INFRA_NODE_ID.STORAGE, type: NODE_TYPE.INFRA, label: 'Staging Bucket', icon: 'Database' },
+    { id: INFRA_NODE_ID.TRACES, type: NODE_TYPE.INFRA, label: 'DynamoDB Traces', icon: 'Database' },
+    { id: INFRA_NODE_ID.KNOWLEDGE, type: NODE_TYPE.INFRA, label: 'Knowledge Bucket', icon: 'Database' },
+    { id: INFRA_NODE_ID.NOTIFIER, type: NODE_TYPE.INFRA, label: 'Notifier', icon: 'Bell' },
+    { id: INFRA_NODE_ID.BRIDGE, type: NODE_TYPE.INFRA, label: 'Realtime Bridge', icon: 'Zap' },
+    { id: INFRA_NODE_ID.TELEGRAM, type: NODE_TYPE.INFRA, label: 'Telegram', icon: 'Send' },
+    { id: INFRA_NODE_ID.DASHBOARD, type: NODE_TYPE.DASHBOARD, label: 'ClawCenter', icon: 'LayoutDashboard' },
   ];
 
   const edges: TopologyEdge[] = [
-    { id: 'api-main', source: 'api', target: AgentType.MAIN, label: 'INBOUND' },
-    { id: 'api-bus', source: 'api', target: 'bus', label: 'SIGNAL' },
-    { id: 'api-config', source: 'api', target: 'config', label: 'MANAGE' },
-    { id: 'bus-codebuild', source: 'bus', target: 'codebuild', label: 'DEPLOY' },
-    { id: 'bus-notifier', source: 'bus', target: 'notifier', label: 'EVENT' },
-    { id: 'bus-bridge', source: 'bus', target: 'bridge', label: 'EVENT' },
-    { id: 'bridge-dashboard', source: 'bridge', target: 'dashboard', label: 'REALTIME' },
-    { id: 'dashboard-api', source: 'dashboard', target: 'api', label: 'QUERY' },
-    { id: 'main-dashboard-rt', source: AgentType.MAIN, target: 'dashboard', label: 'REALTIME' },
-    { id: 'telegram-api', source: 'telegram', target: 'api', label: 'WEBHOOK' },
-    { id: 'main-knowledge', source: AgentType.MAIN, target: 'knowledge', label: 'READ_FILES' },
-    { id: 'coder-knowledge', source: AgentType.CODER, target: 'knowledge', label: 'MANAGE_FILES' },
+    { id: 'api-main', source: INFRA_NODE_ID.API, target: AgentType.MAIN, label: EDGE_LABEL.INBOUND },
+    { id: 'api-bus', source: INFRA_NODE_ID.API, target: INFRA_NODE_ID.BUS, label: EDGE_LABEL.SIGNAL },
+    { id: 'api-config', source: INFRA_NODE_ID.API, target: INFRA_NODE_ID.CONFIG, label: EDGE_LABEL.MANAGE },
+    { id: 'bus-codebuild', source: INFRA_NODE_ID.BUS, target: INFRA_NODE_ID.CODEBUILD, label: EDGE_LABEL.DEPLOY },
+    { id: 'bus-notifier', source: INFRA_NODE_ID.BUS, target: INFRA_NODE_ID.NOTIFIER, label: EDGE_LABEL.EVENT },
+    { id: 'bus-bridge', source: INFRA_NODE_ID.BUS, target: INFRA_NODE_ID.BRIDGE, label: EDGE_LABEL.EVENT },
+    { id: 'bridge-dashboard', source: INFRA_NODE_ID.BRIDGE, target: INFRA_NODE_ID.DASHBOARD, label: EDGE_LABEL.REALTIME },
+    { id: 'dashboard-api', source: INFRA_NODE_ID.DASHBOARD, target: INFRA_NODE_ID.API, label: EDGE_LABEL.QUERY },
+    { id: 'main-dashboard-rt', source: AgentType.MAIN, target: INFRA_NODE_ID.DASHBOARD, label: EDGE_LABEL.REALTIME },
+    { id: 'telegram-api', source: INFRA_NODE_ID.TELEGRAM, target: INFRA_NODE_ID.API, label: EDGE_LABEL.WEBHOOK },
+    { id: 'main-knowledge', source: AgentType.MAIN, target: INFRA_NODE_ID.KNOWLEDGE, label: EDGE_LABEL.READ_FILES },
+    { id: 'coder-knowledge', source: AgentType.CODER, target: INFRA_NODE_ID.KNOWLEDGE, label: EDGE_LABEL.MANAGE_FILES },
     {
       id: 'planner-knowledge',
       source: AgentType.STRATEGIC_PLANNER,
-      target: 'knowledge',
-      label: 'QUERY',
+      target: INFRA_NODE_ID.KNOWLEDGE,
+      label: EDGE_LABEL.QUERY,
     },
     {
       id: 'reflector-knowledge',
       source: AgentType.COGNITION_REFLECTOR,
-      target: 'knowledge',
-      label: 'ARCHIVE',
+      target: INFRA_NODE_ID.KNOWLEDGE,
+      label: EDGE_LABEL.ARCHIVE,
     },
-    { id: 'notifier-telegram', source: 'notifier', target: 'telegram', label: 'OUTBOUND' },
-    { id: 'notifier-memory', source: 'notifier', target: 'memory', label: 'SYNC' },
+    { id: 'notifier-telegram', source: INFRA_NODE_ID.NOTIFIER, target: INFRA_NODE_ID.TELEGRAM, label: EDGE_LABEL.OUTBOUND },
+    { id: 'notifier-memory', source: INFRA_NODE_ID.NOTIFIER, target: INFRA_NODE_ID.MEMORY, label: EDGE_LABEL.SYNC },
   ];
 
   // Tool to Resource Mapping Strategy
   const mapToolToResource = (tool: string): string | null => {
-    if (tool === 'dispatchTask' || tool === 'listAgents') return 'bus';
-    if (tool === 'recallKnowledge' || tool === 'saveMemory') return 'memory';
-    if (tool === 'checkConfig' || tool === 'manageGap' || tool === 'reportGap') return 'config';
-    if (tool === 'inspectTrace') return 'traces';
-    if (tool === 'triggerDeployment') return 'codebuild';
-    if (tool === 'sendMessage') return 'notifier';
-    if (tool.startsWith('aws-s3_')) return 'storage';
-    if (tool.startsWith('knowledge_')) return 'knowledge';
+    if (tool === 'dispatchTask' || tool === 'listAgents') return INFRA_NODE_ID.BUS;
+    if (tool === 'recallKnowledge' || tool === 'saveMemory') return INFRA_NODE_ID.MEMORY;
+    if (tool === 'checkConfig' || tool === 'manageGap' || tool === 'reportGap') return INFRA_NODE_ID.CONFIG;
+    if (tool === 'inspectTrace') return INFRA_NODE_ID.TRACES;
+    if (tool === 'triggerDeployment') return INFRA_NODE_ID.CODEBUILD;
+    if (tool === 'sendMessage') return INFRA_NODE_ID.NOTIFIER;
+    if (tool.startsWith('aws-s3_')) return INFRA_NODE_ID.STORAGE;
+    if (tool.startsWith('knowledge_')) return INFRA_NODE_ID.KNOWLEDGE;
     return null;
   };
 
@@ -74,15 +116,15 @@ export async function discoverSystemTopology(): Promise<Topology> {
       if (!nodes.find((n) => n.id === id)) {
         nodes.push({
           id,
-          type: 'agent',
+          type: NODE_TYPE.AGENT,
           label: config.name || id,
           icon: config.isBackbone ? 'Brain' : 'Cpu',
           description: config.description,
         });
 
         // Implicit edges for all backbone agents
-        edges.push({ id: `${id}-bus-orch`, source: id, target: 'bus', label: 'ORCHESTRATE' });
-        edges.push({ id: `bus-${id}-signal`, source: 'bus', target: id, label: 'SIGNAL' });
+        edges.push({ id: `${id}-bus-orch`, source: id, target: INFRA_NODE_ID.BUS, label: EDGE_LABEL.ORCHESTRATE });
+        edges.push({ id: `bus-${id}-signal`, source: INFRA_NODE_ID.BUS, target: id, label: EDGE_LABEL.SIGNAL });
 
         if (config.tools) {
           for (const tool of config.tools) {
@@ -90,7 +132,7 @@ export async function discoverSystemTopology(): Promise<Topology> {
             if (target) {
               const edgeId = `${id}-${target}-use`;
               if (!edges.find((e) => e.id === edgeId)) {
-                edges.push({ id: edgeId, source: id, target, label: 'USE' });
+                edges.push({ id: edgeId, source: id, target, label: EDGE_LABEL.USE });
               }
             }
           }
@@ -116,7 +158,7 @@ export async function discoverSystemTopology(): Promise<Topology> {
 
           nodes.push({
             id: agent.id,
-            type: 'agent',
+            type: NODE_TYPE.AGENT,
             label: agent.name || agent.id,
             icon: 'Cpu',
           });
@@ -124,14 +166,14 @@ export async function discoverSystemTopology(): Promise<Topology> {
           edges.push({
             id: `${agent.id}-bus-orch`,
             source: agent.id,
-            target: 'bus',
-            label: 'ORCHESTRATE',
+            target: INFRA_NODE_ID.BUS,
+            label: EDGE_LABEL.ORCHESTRATE,
           });
           edges.push({
             id: `bus-${agent.id}-signal`,
-            source: 'bus',
+            source: INFRA_NODE_ID.BUS,
             target: agent.id,
-            label: 'SIGNAL',
+            label: EDGE_LABEL.SIGNAL,
           });
 
           if (agent.tools && Array.isArray(agent.tools)) {
@@ -140,7 +182,7 @@ export async function discoverSystemTopology(): Promise<Topology> {
               if (target) {
                 const edgeId = `${agent.id}-${target}-use`;
                 if (!edges.find((e) => e.id === edgeId)) {
-                  edges.push({ id: edgeId, source: agent.id, target, label: 'USE' });
+                  edges.push({ id: edgeId, source: agent.id, target, label: EDGE_LABEL.USE });
                 }
               }
             }

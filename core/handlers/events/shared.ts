@@ -4,15 +4,8 @@ import { logger } from '../../lib/logger';
 import { SYSTEM, DYNAMO_KEYS } from '../../lib/constants';
 import { ConfigManager } from '../../lib/registry/config';
 import { emitEvent } from '../../lib/utils/bus';
-import { Agent } from '../../lib/agent';
-import { ProviderManager } from '../../lib/providers/index';
-import { getAgentTools } from '../../tools/index';
-import { DynamoMemory } from '../../lib/memory';
 import { TraceSource, Attachment } from '../../lib/types/index';
 import { Context } from 'aws-lambda';
-
-const memory = new DynamoMemory();
-const provider = new ProviderManager();
 
 /**
  * Wake up the initiator agent when a delegated task or system event completes.
@@ -98,6 +91,13 @@ export async function processEventWithAgent(
     formatResponse?: (responseText: string, attachments: Attachment[]) => string;
   }
 ): Promise<{ responseText: string; attachments: Attachment[] }> {
+  // Heavy SDK dependencies loaded lazily to keep this module's static import depth low.
+  const { Agent } = await import('../../lib/agent');
+  const { ProviderManager } = await import('../../lib/providers/index');
+  const { getAgentTools: loadAgentTools } = await import('../../tools/index');
+  const { DynamoMemory } = await import('../../lib/memory');
+  const memory = new DynamoMemory();
+  const provider = new ProviderManager();
   const { AgentRegistry } = await import('../../lib/registry');
   const config = await AgentRegistry.getAgentConfig(agentId);
   if (!config) {
@@ -105,7 +105,7 @@ export async function processEventWithAgent(
     throw new Error(`Agent configuration for '${agentId}' not found.`);
   }
 
-  const agentTools = await getAgentTools(agentId === 'main' ? 'events' : agentId);
+  const agentTools = await loadAgentTools(agentId === 'main' ? 'events' : agentId);
   const agent = new Agent(memory, provider, agentTools, config.systemPrompt, config);
 
   const { responseText, attachments: resultAttachments } = await agent.process(

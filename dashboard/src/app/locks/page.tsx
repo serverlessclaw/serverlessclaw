@@ -69,6 +69,7 @@ async function forceUnlock(rawId: string) {
   }
 }
 
+/** LocksPage — lists active DynamoDB session locks managed by DynamoLockManager and allows manual force-unlock, giving operators visibility into concurrent session state. */
 export default async function LocksPage() {
   const locks = await getLocks();
 
