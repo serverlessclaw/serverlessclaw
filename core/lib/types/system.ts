@@ -66,6 +66,8 @@ export interface TopologyNode {
   enabled?: boolean;
   /** Whether this is a core system component. */
   isBackbone?: boolean;
+  /** Vertical placement tier. */
+  tier?: 'APP' | 'COMM' | 'AGENT' | 'INFRA';
 }
 
 /**

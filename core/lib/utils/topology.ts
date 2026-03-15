@@ -1,13 +1,80 @@
 import { DynamoDBClient, ScanCommand } from '@aws-sdk/client-dynamodb';
 import { Topology, TopologyNode, TopologyEdge, IAgentConfig } from '../types/index';
+import { ConnectionProfile } from '../types/agent';
 import { ConfigManager } from '../registry/config';
 import { BACKBONE_REGISTRY } from '../backbone';
-import { NODE_TYPE, EDGE_LABEL } from './topology/constants';
+import { NODE_TYPE, EDGE_LABEL, NODE_TIER, RESOURCE_ICON } from './topology/constants';
 
 // Re-export constants for backward compatibility
-export { INFRA_NODE_ID, NODE_TYPE, EDGE_LABEL } from './topology/constants';
+export { INFRA_NODE_ID, NODE_TYPE, EDGE_LABEL, NODE_TIER } from './topology/constants';
 
 const db = new DynamoDBClient({});
+
+interface ResourceClassifier {
+  match: (key: string) => boolean;
+  type: string;
+  icon: string;
+  tier: 'APP' | 'COMM' | 'AGENT' | 'INFRA';
+  label?: string;
+  idOverride?: string;
+}
+
+const CLASSIFIERS: ResourceClassifier[] = [
+  {
+    match: (k) => k === 'agentbus' || k === 'bus',
+    type: NODE_TYPE.BUS,
+    icon: RESOURCE_ICON.BUS,
+    label: 'AgentBus (EventBridge)',
+    tier: NODE_TIER.COMM,
+  },
+  {
+    match: (k) => k.includes('api') || k === 'webhookapi',
+    type: NODE_TYPE.INFRA,
+    icon: RESOURCE_ICON.APP,
+    label: 'Webhook API',
+    tier: NODE_TIER.APP,
+  },
+  {
+    match: (k) => k === 'deployer' || k === 'codebuild',
+    type: NODE_TYPE.INFRA,
+    icon: RESOURCE_ICON.HAMMER,
+    tier: NODE_TIER.INFRA,
+  },
+  {
+    match: (k) => k === 'notifier',
+    type: NODE_TYPE.INFRA,
+    icon: RESOURCE_ICON.BELL,
+    tier: NODE_TIER.COMM,
+  },
+  {
+    match: (k) => k === 'dashboard' || k === 'clawcenter',
+    type: NODE_TYPE.DASHBOARD,
+    icon: RESOURCE_ICON.DASHBOARD,
+    label: 'ClawCenter (Next.js)',
+    tier: NODE_TIER.APP,
+    idOverride: 'dashboard',
+  },
+  {
+    match: (k) => k === 'realtimebridge' || k === 'bridge',
+    type: NODE_TYPE.INFRA,
+    icon: RESOURCE_ICON.SIGNAL,
+    label: 'Realtime Bridge (Lambda)',
+    tier: NODE_TIER.COMM,
+  },
+  {
+    match: (k) => k === 'realtimebus',
+    type: NODE_TYPE.INFRA,
+    icon: RESOURCE_ICON.RADIO,
+    label: 'Realtime Bus (IoT Core)',
+    tier: NODE_TIER.COMM,
+  },
+  {
+    match: (k) => ['superclaw', 'main', 'coder', 'strategicplanner', 'reflector', 'qa'].includes(k) || k.includes('agent') || k.includes('worker'),
+    type: NODE_TYPE.AGENT,
+    icon: RESOURCE_ICON.BOT,
+    tier: NODE_TIER.AGENT,
+  },
+];
 
 /**
  * Discovers the active system topology by reflecting on SST resources and Agent configs.
@@ -19,72 +86,49 @@ export async function discoverSystemTopology(): Promise<Topology> {
   const edges: TopologyEdge[] = [];
 
   // 1. Reflective Node Discovery (SST Linked Resources)
-  // We iterate over everything linked to this execution context.
   const resourceMap = Resource as any;
   Object.keys(resourceMap).forEach((key) => {
     const res = resourceMap[key];
     if (!res || typeof res !== 'object') return;
 
-    // Categorize based on Naming or Type
-    let type: any = NODE_TYPE.INFRA;
-    let icon = 'Database';
-    let label = key;
-
     const lowerKey = key.toLowerCase();
+    const sensitiveWords = ['token', 'key', 'password', 'secret', 'awsregion', 'activemodel', 'activeprovider', 'app'];
+    
+    if (sensitiveWords.some(word => lowerKey.includes(word)) || lowerKey === 'app') {
+      return;
+    }
 
-    // EXPLICIT INFRASTRUCTURE OVERRIDES (Prevent misclassification as agents)
-    if (lowerKey === 'agentbus' || lowerKey === 'bus') {
-      type = NODE_TYPE.BUS;
-      icon = 'MessageCircle';
-      label = 'AgentBus';
-    } else if (lowerKey.includes('api')) {
-      type = NODE_TYPE.INFRA;
-      icon = 'Globe';
-    } else if (lowerKey === 'deployer') {
-      type = NODE_TYPE.INFRA;
-      icon = 'Hammer';
-    } else if (lowerKey === 'notifier') {
-      type = NODE_TYPE.INFRA;
-      icon = 'Bell';
-    } else if (lowerKey === 'dashboard') {
-      type = NODE_TYPE.DASHBOARD;
-      icon = 'LayoutDashboard';
-      label = 'ClawCenter';
-    } else if (lowerKey === 'realtimebridge' || lowerKey === 'bridge') {
-      type = NODE_TYPE.INFRA;
-      icon = 'Zap';
-      label = 'Realtime Bridge';
-    } else if (lowerKey === 'realtimebus') {
-      type = NODE_TYPE.INFRA;
-      icon = 'Radio';
-      label = 'Realtime Bus (IoT)';
-    } else if (
-      lowerKey.includes('agent') ||
-      lowerKey.includes('worker') ||
-      lowerKey === 'superclaw' ||
-      lowerKey === 'coder' ||
-      lowerKey === 'strategicplanner' ||
-      lowerKey === 'reflector' ||
-      lowerKey === 'qa'
-    ) {
-      type = NODE_TYPE.AGENT;
-      icon = 'Cpu';
+    // Find first matching classifier
+    const classifier = CLASSIFIERS.find(c => c.match(lowerKey));
+    
+    const type = classifier?.type || NODE_TYPE.INFRA;
+    const icon = classifier?.icon || RESOURCE_ICON.DATABASE;
+    const label = classifier?.label || key;
+    let tier = classifier?.tier || NODE_TIER.INFRA;
+
+    // Special Promotion Logic (SuperClaw is top tier)
+    if (lowerKey === 'superclaw' || lowerKey === 'main') {
+      tier = NODE_TIER.APP;
     }
 
     nodes.push({
-      id: lowerKey,
-      type,
+      id: classifier?.idOverride || lowerKey,
+      type: type as any,
       label,
       icon,
       isBackbone: true,
+      tier,
     });
   });
 
   // 2. Add Critical Non-Linked Nodes (Orphans)
   const orphans = [
-    { id: 'scheduler', label: 'AWS Scheduler', icon: 'Calendar', type: NODE_TYPE.INFRA },
-    { id: 'telegram', label: 'Telegram', icon: 'Send', type: NODE_TYPE.INFRA },
-    { id: 'heartbeat', label: 'Heartbeat Engine', icon: 'Zap', type: NODE_TYPE.INFRA },
+    { id: 'dashboard', label: 'ClawCenter (Next.js)', icon: RESOURCE_ICON.DASHBOARD, type: NODE_TYPE.DASHBOARD, tier: NODE_TIER.APP },
+    { id: 'scheduler', label: 'AWS Scheduler', icon: RESOURCE_ICON.CALENDAR, type: NODE_TYPE.INFRA, tier: NODE_TIER.APP }, // USER FEEDBACK: Top Tier
+    { id: 'telegram', label: 'Telegram', icon: RESOURCE_ICON.SEND, type: NODE_TYPE.INFRA, tier: NODE_TIER.APP },
+    { id: 'heartbeat', label: 'Heartbeat Engine', icon: RESOURCE_ICON.SIGNAL, type: NODE_TYPE.INFRA, tier: NODE_TIER.COMM },
+    { id: 'realtimebridge', label: 'Realtime Bridge (Lambda)', icon: RESOURCE_ICON.SIGNAL, type: NODE_TYPE.INFRA, tier: NODE_TIER.COMM },
+    { id: 'realtimebus', label: 'Realtime Bus (IoT Core)', icon: RESOURCE_ICON.RADIO, type: NODE_TYPE.INFRA, tier: NODE_TIER.COMM },
   ];
 
   orphans.forEach((o) => {
@@ -94,7 +138,7 @@ export async function discoverSystemTopology(): Promise<Topology> {
   // 3. Dynamic Edge Inference
   // A. Agent to Bus Relationship
   nodes
-    .filter((n) => n.type === NODE_TYPE.AGENT)
+    .filter((n) => n.type === NODE_TYPE.AGENT || n.id === 'monitor' || n.id === 'superclaw' || n.id === 'main')
     .forEach((agent) => {
       edges.push({
         id: `${agent.id}-agentbus-orch`,
@@ -124,8 +168,8 @@ export async function discoverSystemTopology(): Promise<Topology> {
     label: EDGE_LABEL.SIGNAL,
   });
 
-  // C. API to Bus
-  const apiNode = nodes.find((n) => n.id.includes('api'));
+  // C. API/Webhook to Bus
+  const apiNode = nodes.find((n) => n.id === 'webhookapi' || n.id.includes('api'));
   if (apiNode) {
     edges.push({
       id: `${apiNode.id}-agentbus`,
@@ -133,10 +177,8 @@ export async function discoverSystemTopology(): Promise<Topology> {
       target: 'agentbus',
       label: EDGE_LABEL.SIGNAL,
     });
-  }
 
-  // D. Telegram to API
-  if (apiNode) {
+    // D. Telegram to API
     edges.push({
       id: 'telegram-api',
       source: 'telegram',
@@ -146,24 +188,47 @@ export async function discoverSystemTopology(): Promise<Topology> {
   }
 
   // E. Real-time Signaling Flow
-  edges.push({
-    id: 'agentbus-realtimebridge',
-    source: 'agentbus',
-    target: 'realtimebridge',
-    label: EDGE_LABEL.SIGNAL,
-  });
-  edges.push({
-    id: 'realtimebridge-realtimebus',
-    source: 'realtimebridge',
-    target: 'realtimebus',
-    label: EDGE_LABEL.REALTIME,
-  });
-  edges.push({
-    id: 'realtimebus-dashboard',
-    source: 'realtimebus',
-    target: 'dashboard',
-    label: EDGE_LABEL.REALTIME,
-  });
+  if (nodes.find(n => n.id === 'realtimebridge') && nodes.find(n => n.id === 'agentbus')) {
+    edges.push({
+      id: 'agentbus-realtimebridge',
+      source: 'agentbus',
+      target: 'realtimebridge',
+      label: EDGE_LABEL.SIGNAL,
+    });
+  }
+  
+  if (nodes.find(n => n.id === 'realtimebridge') && nodes.find(n => n.id === 'realtimebus')) {
+    edges.push({
+      id: 'realtimebridge-realtimebus',
+      source: 'realtimebridge',
+      target: 'realtimebus',
+      label: EDGE_LABEL.REALTIME,
+    });
+  }
+  
+  if (nodes.find(n => n.id === 'realtimebus') && nodes.find(n => n.type === NODE_TYPE.DASHBOARD)) {
+    const dashNode = nodes.find(n => n.type === NODE_TYPE.DASHBOARD);
+    if (dashNode) {
+      edges.push({
+        id: `realtimebus-${dashNode.id}`,
+        source: 'realtimebus',
+        target: dashNode.id,
+        label: EDGE_LABEL.REALTIME,
+      });
+    }
+  }
+
+  // F. Dashboard (ClawCenter) explicitly linked to SuperClaw
+  const dashboardNode = nodes.find(n => n.type === NODE_TYPE.DASHBOARD);
+  if (dashboardNode && nodes.find(n => n.id === 'superclaw' || n.id === 'main')) {
+    const superclawId = nodes.find(n => n.id === 'superclaw' || n.id === 'main')!.id;
+    edges.push({
+      id: `${dashboardNode.id}-${superclawId}`,
+      source: dashboardNode.id,
+      target: superclawId,
+      label: EDGE_LABEL.ORCHESTRATE,
+    });
+  }
 
   // 4. Map Tool-to-Resource Edges Dynamically
   const mapToolToResource = (tool: string): { target: string; label: string } | null => {
@@ -177,7 +242,7 @@ export async function discoverSystemTopology(): Promise<Topology> {
     if (tool === 'triggerDeployment') return { target: 'deployer', label: EDGE_LABEL.USE };
     if (tool === 'sendMessage') return { target: 'notifier', label: EDGE_LABEL.USE };
     if (tool.startsWith('aws-s3_')) return { target: 'stagingbucket', label: EDGE_LABEL.USE };
-    if (tool.startsWith('knowledge_')) return { target: 'knowledgebucket', label: EDGE_LABEL.USE };
+    if (tool.includes('knowledge_') || tool === 'recallKnowledge') return { target: 'knowledgebucket', label: EDGE_LABEL.USE };
     if (tool === 'scheduleGoal' || tool === 'cancelGoal' || tool === 'listGoals')
       return { target: 'scheduler', label: EDGE_LABEL.USE };
     return null;
@@ -185,13 +250,13 @@ export async function discoverSystemTopology(): Promise<Topology> {
 
   const mapProfileToResource = (profile: string): string | null => {
     const p = profile.toLowerCase();
-    if (p === 'bus') return 'agentbus';
-    if (p === 'memory' || p === 'memorytable') return 'memorytable';
-    if (p === 'config' || p === 'configtable') return 'configtable';
-    if (p === 'trace' || p === 'tracetable') return 'tracetable';
-    if (p === 'storage' || p === 'stagingbucket') return 'stagingbucket';
-    if (p === 'codebuild' || p === 'deployer') return 'deployer';
-    if (p === 'knowledge' || p === 'knowledgebucket') return 'knowledgebucket';
+    if (p === ConnectionProfile.BUS) return 'agentbus';
+    if (p === ConnectionProfile.MEMORY || p === 'memorytable') return 'memorytable';
+    if (p === ConnectionProfile.CONFIG || p === 'configtable') return 'configtable';
+    if (p === ConnectionProfile.TRACE || p === 'tracetable') return 'tracetable';
+    if (p === ConnectionProfile.STORAGE || p === 'stagingbucket') return 'stagingbucket';
+    if (p === ConnectionProfile.CODEBUILD || p === ConnectionProfile.DEPLOYER || p === 'deployer') return 'deployer';
+    if (p === ConnectionProfile.KNOWLEDGE || p === 'knowledgebucket') return 'knowledgebucket';
     return null;
   };
 
@@ -202,16 +267,22 @@ export async function discoverSystemTopology(): Promise<Topology> {
       const existingNode = nodes.find((n) => n.id === lowerId);
 
       if (existingNode) {
-        // Enrich existing reflective node with registry metadata
+        // Enrichment
         existingNode.label = config.name || existingNode.label;
         existingNode.description = config.description;
+        // Reinforce Tier for SuperClaw (it must be at the top)
+        if (lowerId === 'main' || lowerId === 'superclaw') {
+            existingNode.tier = NODE_TIER.APP;
+        }
       } else {
         nodes.push({
           id: lowerId,
           type: NODE_TYPE.AGENT,
           label: config.name || lowerId,
-          icon: config.isBackbone ? 'Brain' : 'Cpu',
+          icon: config.isBackbone ? RESOURCE_ICON.BRAIN : RESOURCE_ICON.BOT,
           description: config.description,
+          // SuperClaw is always top tier
+          tier: (lowerId === 'main' || lowerId === 'superclaw') ? NODE_TIER.APP : NODE_TIER.AGENT,
         });
       }
 
@@ -268,7 +339,8 @@ export async function discoverSystemTopology(): Promise<Topology> {
             id: lowerAgentId,
             type: NODE_TYPE.AGENT,
             label: agent.name || lowerAgentId,
-            icon: 'Cpu',
+            icon: RESOURCE_ICON.BOT,
+            tier: NODE_TIER.AGENT,
           });
 
           edges.push({

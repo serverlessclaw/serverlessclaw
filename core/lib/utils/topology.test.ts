@@ -44,6 +44,7 @@ vi.mock('sst', () => ({
     StagingBucket: { name: 'test-staging' },
     KnowledgeBucket: { name: 'test-knowledge' },
     Notifier: { name: 'test-notifier' },
+    RealtimeBridge: { name: 'test-rt-bridge' },
     RealtimeBus: { name: 'test-bridge' },
     Dashboard: { url: 'https://dashboard.test' },
     SuperClaw: { name: 'test-main' },
@@ -86,8 +87,21 @@ describe('discoverSystemTopology', () => {
     const nodeIds = topology.nodes.map((n) => n.id);
 
     Object.keys(BACKBONE_REGISTRY).forEach((id) => {
-      expect(nodeIds).toContain(id.toLowerCase());
+      const lowerId = id.toLowerCase();
+      expect(nodeIds).toContain(lowerId);
+      
+      const node = topology.nodes.find(n => n.id === lowerId);
+      if (lowerId === 'main' || lowerId === 'superclaw') {
+        expect(node?.tier).toBe('APP');
+      }
     });
+  });
+
+  it('should place ClawCenter in the APP tier', async () => {
+    const topology = await discoverSystemTopology();
+    const dashboard = topology.nodes.find(n => n.id === 'dashboard');
+    expect(dashboard).toBeDefined();
+    expect(dashboard?.tier).toBe('APP');
   });
 
   it('should correctly link API Gateway to AgentBus', async () => {

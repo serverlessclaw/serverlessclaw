@@ -101,6 +101,18 @@ export enum AgentCategory {
   SYSTEM = 'system',
 }
 
+/** Common resource connection profiles. */
+export enum ConnectionProfile {
+  BUS = 'bus',
+  MEMORY = 'memory',
+  STORAGE = 'storage',
+  CODEBUILD = 'codebuild',
+  CONFIG = 'config',
+  TRACE = 'trace',
+  KNOWLEDGE = 'knowledge',
+  DEPLOYER = 'deployer',
+}
+
 export interface IAgentConfig {
   /** Unique ID of the agent. */
   id: string;
@@ -125,7 +137,7 @@ export interface IAgentConfig {
   /** Whether this is a hardcoded system agent (cannot be deleted). */
   isBackbone?: boolean;
   /** Resource connections for the agent (e.g., 'bus', 'memory'). */
-  connectionProfile?: string[];
+  connectionProfile?: (ConnectionProfile | string)[];
   /** Maximum tool execution loops allowed in a single turn. */
   maxIterations?: number;
   /** Whether the agent can call multiple tools in parallel. */

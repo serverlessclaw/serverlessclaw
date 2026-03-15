@@ -7,3 +7,4 @@ export { checkHealth } from './health-check';
 export { validateCode } from './validation';
 export { sendMessage } from './messaging';
 export { checkConfig } from './runtime-config';
+export { inspectTopology } from './topology-discovery';

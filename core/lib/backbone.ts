@@ -1,4 +1,4 @@
-import { AgentType, IAgentConfig, AgentCategory } from './types/agent';
+import { AgentType, IAgentConfig, AgentCategory, ConnectionProfile } from './types/agent';
 import {
   SUPERCLAW_SYSTEM_PROMPT,
   CODER_SYSTEM_PROMPT,
@@ -17,6 +17,7 @@ const TOOL_SEND_MESSAGE = 'sendMessage';
 const TOOL_MANAGE_GAP = 'manageGap';
 const TOOL_REPORT_GAP = 'reportGap';
 const TOOL_CHECK_HEALTH = 'checkHealth';
+const TOOL_INSPECT_TOPOLOGY = 'inspectTopology';
 
 /**
  * Backbone Registry: The single source of truth for essential system components.
@@ -45,10 +46,16 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       TOOL_REPORT_GAP,
       TOOL_SAVE_MEMORY,
       TOOL_PROVIDE_CLARIFICATION,
+      TOOL_INSPECT_TOPOLOGY,
       'aws-s3_read_file',
       'aws-s3_list_objects',
     ],
-    connectionProfile: ['bus', 'memory', 'config', 'trace'],
+    connectionProfile: [
+      ConnectionProfile.BUS,
+      ConnectionProfile.MEMORY,
+      ConnectionProfile.CONFIG,
+      ConnectionProfile.TRACE,
+    ],
   },
   [AgentType.CODER]: {
     id: AgentType.CODER,
@@ -89,9 +96,17 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       TOOL_INSTALL_SKILL,
       TOOL_SAVE_MEMORY,
       TOOL_SEEK_CLARIFICATION,
+      TOOL_INSPECT_TOPOLOGY,
     ],
     maxIterations: 50,
-    connectionProfile: ['bus', 'memory', 'storage', 'codebuild', 'config', 'trace'],
+    connectionProfile: [
+      ConnectionProfile.BUS,
+      ConnectionProfile.MEMORY,
+      ConnectionProfile.STORAGE,
+      ConnectionProfile.CODEBUILD,
+      ConnectionProfile.CONFIG,
+      ConnectionProfile.TRACE,
+    ],
   },
   [AgentType.STRATEGIC_PLANNER]: {
     id: AgentType.STRATEGIC_PLANNER,
@@ -114,8 +129,14 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       TOOL_SAVE_MEMORY,
       TOOL_SEEK_CLARIFICATION,
       TOOL_PROVIDE_CLARIFICATION,
+      TOOL_INSPECT_TOPOLOGY,
     ],
-    connectionProfile: ['bus', 'memory', 'config', 'trace'],
+    connectionProfile: [
+      ConnectionProfile.BUS,
+      ConnectionProfile.MEMORY,
+      ConnectionProfile.CONFIG,
+      ConnectionProfile.TRACE,
+    ],
   },
   [AgentType.COGNITION_REFLECTOR]: {
     id: AgentType.COGNITION_REFLECTOR,
@@ -136,7 +157,12 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       TOOL_SAVE_MEMORY,
       TOOL_SEEK_CLARIFICATION,
     ],
-    connectionProfile: ['bus', 'memory', 'config', 'trace'],
+    connectionProfile: [
+      ConnectionProfile.BUS,
+      ConnectionProfile.MEMORY,
+      ConnectionProfile.CONFIG,
+      ConnectionProfile.TRACE,
+    ],
   },
   [AgentType.QA]: {
     id: AgentType.QA,
@@ -156,7 +182,12 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       TOOL_SAVE_MEMORY,
       TOOL_SEEK_CLARIFICATION,
     ],
-    connectionProfile: ['bus', 'memory', 'config', 'trace'],
+    connectionProfile: [
+      ConnectionProfile.BUS,
+      ConnectionProfile.MEMORY,
+      ConnectionProfile.CONFIG,
+      ConnectionProfile.TRACE,
+    ],
   },
   // Handlers (Logic-only, but registered for topology awareness)
   [AgentType.BUILD_MONITOR]: {
@@ -168,7 +199,12 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     icon: 'Activity',
     enabled: true,
     isBackbone: true,
-    connectionProfile: ['bus', 'config', 'codebuild', 'memory'],
+    connectionProfile: [
+      ConnectionProfile.BUS,
+      ConnectionProfile.CONFIG,
+      ConnectionProfile.CODEBUILD,
+      ConnectionProfile.MEMORY,
+    ],
   },
   [AgentType.RECOVERY]: {
     id: AgentType.RECOVERY,
@@ -179,6 +215,6 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     icon: 'ShieldCheck',
     enabled: true,
     isBackbone: true,
-    connectionProfile: ['deployer', 'memoryTable'],
+    connectionProfile: [ConnectionProfile.DEPLOYER, 'memoryTable'],
   },
 };

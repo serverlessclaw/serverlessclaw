@@ -57,4 +57,15 @@ export const systemTools: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
   },
+  inspectTopology: {
+    name: 'inspectTopology',
+    description:
+      'Returns a structured map of the entire system (agents, infrastructure, and connections). Use this to understand how components are linked.',
+    parameters: {
+      type: TYPE_OBJECT,
+      properties: {},
+      required: [],
+      additionalProperties: false,
+    },
+  },
 };

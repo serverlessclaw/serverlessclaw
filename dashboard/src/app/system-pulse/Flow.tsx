@@ -160,60 +160,33 @@ export function FlowContent() {
 
       // 1. Process Nodes
       topology.nodes.forEach((node: any, index: number) => {
-        let xPos = 100 + (index % 4) * 250;
-        let yPos = 100 + Math.floor(index / 4) * 200;
+        let xPos = 0;
+        let yPos = 0;
         
-        // Logical clustering for core resources
-        // 1. Layer 1: Top - User Interfaces & Entry Points (Y: -100)
-        if (node.id === 'api') { xPos = 200; yPos = -100; }
-        // 1. Layer 1: Entrance (Y: -100)
-        if (node.id === 'telegram') { xPos = 350; yPos = -100; }
-        else if (node.id === 'api' || node.id === 'webhookapi') { xPos = 350; yPos = 0; }
+        // Use the tier from the backend, default to INFRA if missing
+        const tier = node.tier || 'INFRA';
+        
+        // Define Y coordinates for each tier
+        const TIER_Y = {
+          'APP': -100,
+          'COMM': 150,
+          'AGENT': 400,
+          'INFRA': 700
+        };
+        
+        yPos = TIER_Y[tier as keyof typeof TIER_Y] || 700;
 
-        // 1.5 Layer 1.5: The Brain - SuperClaw (Y: 50)
-        else if (node.id === 'main' || node.id === 'superclaw') { xPos = 350; yPos = 100; }
-
-        // 2. Layer 2: Neural Bus & Comms (Y: 200)
-        else if (node.id === 'bus' || node.id === 'agentbus') { xPos = 350; yPos = 200; }
-        else if (node.id === 'notifier') { xPos = 650; yPos = 200; }
-        else if (node.id === 'bridge' || node.id === 'realtimebridge') { xPos = 50; yPos = 200; }
+        // Calculate X position based on tier occupancy
+        const tierNodes = topology.nodes.filter((n: any) => (n.tier || 'INFRA') === tier);
+        const nodeIndex = tierNodes.findIndex(n => n.id === node.id);
+        const totalInTier = tierNodes.length;
         
-        // 2.5 Layer 2.5: Proactive Goals & Scheduling (Y: 325)
-        else if (node.id === 'scheduler') { xPos = 550; yPos = 325; }
-        else if (node.id === 'heartbeat') { xPos = 350; yPos = 325; }
-        else if (node.id === 'realtimebus') { xPos = 50; yPos = 325; }
+        // Center the nodes horizontally
+        const spacing = tier === 'AGENT' ? 300 : 200; // Wider spacing for agents
+        const totalWidth = (totalInTier - 1) * spacing;
+        const startX = 400 - (totalWidth / 2);
         
-        // 2.7 Layer 2.7: Interfaces (Y: 0)
-        else if (node.id === 'dashboard') { xPos = 50; yPos = 0; }
-        
-        // 3. Layer 3: Logic Units & Workers (Y: 450)
-        else if (node.type === 'agent' || node.id === 'monitor') {
-            const allAgents = topology.nodes.filter(n => 
-                (n.type === 'agent' || n.id === 'monitor') && n.id !== 'main' && n.id !== 'superclaw'
-            );
-            const agentIndex = allAgents.findIndex(n => n.id === node.id);
-            const totalAgents = allAgents.length;
-            const startX = 350 - ((totalAgents - 1) * 150);
-            xPos = startX + (agentIndex * 300);
-            yPos = 450;
-        }
-        
-        // 4. Layer 4: Bottom - Infrastructure & Persistence (Y: 800)
-        else {
-            const infraNodes = [
-                'tracetable', 'stagingbucket', 'memorytable', 'configtable', 'deployer', 'knowledgebucket'
-            ];
-            const infraIndex = infraNodes.indexOf(node.id);
-            if (infraIndex !== -1) {
-                // startX + (2 * 150) = 350 => startX = 50
-                const startX = 50;
-                xPos = startX + (infraIndex * 150);
-                yPos = 800;
-            } else {
-                xPos = index * 200;
-                yPos = 1100;
-            }
-        }
+        xPos = startX + (nodeIndex * spacing);
 
         let icon = <Database size={16} />;
         if (node.iconType === 'Terminal' || node.id === 'codebuild' || node.id === 'deployer') icon = <Terminal size={16} />;
