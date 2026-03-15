@@ -166,17 +166,17 @@ export function FlowContent() {
         // Logical clustering for core resources
         // 1. Layer 1: Top - User Interfaces & Entry Points (Y: -100)
         if (node.id === 'api') { xPos = 200; yPos = -100; }
-        else if (node.id === 'dashboard') { xPos = -100; yPos = -100; }
-        else if (node.id === 'telegram') { xPos = 500; yPos = -100; }
-        
+        // 1. Layer 1: Entrance (Y: -100)
+        if (node.id === 'telegram') { xPos = 350; yPos = -100; }
+        else if (node.id === 'api' || node.id === 'webhookapi') { xPos = 350; yPos = 0; }
+
         // 1.5 Layer 1.5: The Brain - SuperClaw (Y: 50)
-        else if (node.id === 'main') { xPos = 350; yPos = 50; }
-        
+        else if (node.id === 'main' || node.id === 'superclaw') { xPos = 350; yPos = 100; }
+
         // 2. Layer 2: Neural Bus & Comms (Y: 200)
         else if (node.id === 'bus' || node.id === 'agentbus') { xPos = 350; yPos = 200; }
         else if (node.id === 'notifier') { xPos = 650; yPos = 200; }
-        else if (node.id === 'bridge' || node.id === 'realtimebridge') { xPos = 50; yPos = 200; }
-        
+        else if (node.id === 'bridge' || node.id === 'realtimebridge' || node.id === 'realtimebus') { xPos = 50; yPos = 200; }
         // 2.5 Layer 2.5: Proactive Goals & Scheduling (Y: 325)
         else if (node.id === 'scheduler') { xPos = 550; yPos = 325; }
         else if (node.id === 'heartbeat') { xPos = 350; yPos = 325; }
@@ -213,10 +213,10 @@ export function FlowContent() {
         let icon = <Database size={16} />;
         if (node.iconType === 'Terminal' || node.id === 'codebuild' || node.id === 'deployer') icon = <Terminal size={16} />;
         else if (node.iconType === 'Dashboard' || node.id === 'dashboard') icon = <LayoutDashboard size={16} />;
-        else if (node.id === 'api') icon = <Radio size={16} />;
+        else if (node.id === 'api' || node.id === 'webhookapi') icon = <Radio size={16} />;
         else if (node.id === 'monitor') icon = <Activity size={16} />;
         else if (node.id === 'telegram') icon = <MessageSquare size={16} />;
-        else if (node.id === 'bridge') icon = <Zap size={16} />;
+        else if (node.id === 'bridge' || node.id === 'realtimebus') icon = <Zap size={16} />;
         else if (node.id === 'notifier') icon = <Info size={16} />;
         else if (node.id === 'scheduler') icon = <Radio size={16} />;
         else if (node.id === 'heartbeat') icon = <Zap size={16} />;

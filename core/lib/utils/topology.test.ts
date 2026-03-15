@@ -35,7 +35,7 @@ vi.mock('@aws-sdk/lib-dynamodb', () => ({
 // Mock SST Resource
 vi.mock('sst', () => ({
   Resource: {
-    Api: { url: 'https://api.test' },
+    WebhookApi: { url: 'https://api.test' },
     AgentBus: { name: 'test-bus' },
     Deployer: { name: 'test-deployer' },
     MemoryTable: { name: 'test-memory' },
@@ -44,14 +44,14 @@ vi.mock('sst', () => ({
     StagingBucket: { name: 'test-staging' },
     KnowledgeBucket: { name: 'test-knowledge' },
     Notifier: { name: 'test-notifier' },
-    RealtimeBridge: { name: 'test-bridge' },
+    RealtimeBus: { name: 'test-bridge' },
     Dashboard: { url: 'https://dashboard.test' },
     SuperClaw: { name: 'test-main' },
     Coder: { name: 'test-coder' },
     StrategicPlanner: { name: 'test-planner' },
     ReflectorAgent: { name: 'test-reflector' },
     QaAgent: { name: 'test-qa' },
-  },
+  }
 }));
 
 // Mock agent prompts to break dependency chains (preventing DynamoDB imports)
@@ -70,12 +70,12 @@ describe('discoverSystemTopology', () => {
     const topology = await discoverSystemTopology();
     const nodeIds = topology.nodes.map((n) => n.id);
 
-    expect(nodeIds).toContain('api');
+    expect(nodeIds).toContain('webhookapi');
     expect(nodeIds).toContain('agentbus');
     expect(nodeIds).toContain('deployer');
     expect(nodeIds).toContain('dashboard');
     expect(nodeIds).toContain('memorytable');
-    expect(nodeIds).toContain('realtimebridge');
+    expect(nodeIds).toContain('realtimebus');
     expect(nodeIds).toContain('telegram');
     expect(nodeIds).toContain('scheduler');
     expect(nodeIds).toContain('heartbeat');
@@ -90,20 +90,19 @@ describe('discoverSystemTopology', () => {
     });
   });
 
-  it('should correctly link API Gateway to SuperClaw and Config', async () => {
+  it('should correctly link API Gateway to AgentBus', async () => {
     const topology = await discoverSystemTopology();
-    // In dynamic mode, implicit links are limited to Agent->Bus.
-    // Additional links from Backbone Registry:
-    const mainEdge = topology.edges.find(
-      (e) => e.source === 'superclaw' && e.target === 'agentbus'
-    );
-    expect(mainEdge).toBeDefined();
-    expect(mainEdge?.label).toBe('ORCHESTRATE');
+    const apiToBus = topology.edges.find((e) => e.source === 'webhookapi' && e.target === 'agentbus');
+
+    expect(apiToBus).toBeDefined();
+    expect(apiToBus?.label).toBe('SIGNAL');
   });
 
   it('link agents to AgentBus for orchestration', async () => {
     const topology = await discoverSystemTopology();
-    const coderToBus = topology.edges.find((e) => e.source === 'coder' && e.target === 'agentbus');
+    const coderToBus = topology.edges.find(
+      (e) => e.source === 'coder' && e.target === 'agentbus'
+    );
 
     expect(coderToBus).toBeDefined();
     expect(coderToBus?.label).toBe('ORCHESTRATE');

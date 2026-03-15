@@ -45,13 +45,13 @@ export async function discoverSystemTopology(): Promise<Topology> {
     } else if (key === 'AgentBus') {
       icon = 'MessageCircle';
       label = 'AgentBus';
-    } else if (key.includes('Api')) {
+    } else if (key.toLowerCase().includes('api')) {
       icon = 'Globe';
     } else if (key === 'Deployer') {
       icon = 'Hammer';
     } else if (key === 'Notifier') {
       icon = 'Bell';
-    } else if (key === 'RealtimeBridge') {
+    } else if (key.includes('Bridge') || key.includes('Realtime')) {
       icon = 'Zap';
     }
 
@@ -109,12 +109,25 @@ export async function discoverSystemTopology(): Promise<Topology> {
   });
 
   // C. API to Bus
-  edges.push({
-    id: 'api-agentbus',
-    source: 'api',
-    target: 'agentbus',
-    label: EDGE_LABEL.SIGNAL,
-  });
+  const apiNode = nodes.find(n => n.id.includes('api'));
+  if (apiNode) {
+    edges.push({
+      id: `${apiNode.id}-agentbus`,
+      source: apiNode.id,
+      target: 'agentbus',
+      label: EDGE_LABEL.SIGNAL,
+    });
+  }
+
+  // D. Telegram to API
+  if (apiNode) {
+    edges.push({
+      id: 'telegram-api',
+      source: 'telegram',
+      target: apiNode.id,
+      label: EDGE_LABEL.WEBHOOK,
+    });
+  }
 
   // 4. Map Tool-to-Resource Edges Dynamically
   const mapToolToResource = (tool: string): { target: string; label: string } | null => {
