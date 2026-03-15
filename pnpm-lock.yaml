@@ -128,7 +128,7 @@ importers:
         version: 1.27.1(zod@4.3.6)
       '@openai/agents-core':
         specifier: ^0.7.0
-        version: 0.7.0(ws@8.19.0)(zod@4.3.6)
+        version: 0.7.1(ws@8.19.0)(zod@4.3.6)
       zod:
         specifier: ^4.3.6
         version: 4.3.6
@@ -1329,8 +1329,8 @@ packages:
     resolution: {integrity: sha512-nn5ozdjYQpUCZlWGuxcJY/KpxkWQs4DcbMCmKojjyrYDEAGy4Ce19NN4v5MduafTwJlbKc99UA8YhSVqq9yPZA==}
     engines: {node: '>=12.4.0'}
 
-  '@openai/agents-core@0.7.0':
-    resolution: {integrity: sha512-UiCfQOBl4adU5+qTzkL+9FGkG5wGafhWe8msY6bhj3hC/b+Xdv//DBWxwXGNhfbIuuxfAHvdFVTiTF/dVsNE1g==}
+  '@openai/agents-core@0.7.1':
+    resolution: {integrity: sha512-GdYK9g03t4UCTnsd+nA7/YjXj3lk2e2TaWbo9Vs1btkSlqOguJA8maVwadypBGAdDIvr2LUp/H8jbMP3rv5t5Q==}
     peerDependencies:
       zod: ^4.0.0
     peerDependenciesMeta:
@@ -4024,6 +4024,18 @@ packages:
   onetime@7.0.0:
     resolution: {integrity: sha512-VXJjc87FScF88uafS3JllDgvAm+c/Slfz06lorj2uAY34rlUu0Nt+v8wreiImcrgAjjIHp1rXpTDlLOGw29WwQ==}
     engines: {node: '>=18'}
+
+  openai@6.29.0:
+    resolution: {integrity: sha512-YxoArl2BItucdO89/sN6edksV0x47WUTgkgVfCgX7EuEMhbirENsgYe5oO4LTjBL9PtdKtk2WqND1gSLcTd2yw==}
+    hasBin: true
+    peerDependencies:
+      ws: ^8.18.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      ws:
+        optional: true
+      zod:
+        optional: true
 
   openai@6.29.0:
     resolution: {integrity: sha512-YxoArl2BItucdO89/sN6edksV0x47WUTgkgVfCgX7EuEMhbirENsgYe5oO4LTjBL9PtdKtk2WqND1gSLcTd2yw==}
@@ -6773,7 +6785,7 @@ snapshots:
 
   '@nolyfill/is-core-module@1.0.39': {}
 
-  '@openai/agents-core@0.7.0(ws@8.19.0)(zod@4.3.6)':
+  '@openai/agents-core@0.7.1(ws@8.19.0)(zod@4.3.6)':
     dependencies:
       debug: 4.4.3
       openai: 6.29.0(ws@8.19.0)(zod@4.3.6)
@@ -9969,6 +9981,11 @@ snapshots:
   onetime@7.0.0:
     dependencies:
       mimic-function: 5.0.1
+
+  openai@6.29.0(ws@8.19.0)(zod@4.3.6):
+    optionalDependencies:
+      ws: 8.19.0
+      zod: 4.3.6
 
   openai@6.29.0(ws@8.19.0)(zod@4.3.6):
     optionalDependencies:
