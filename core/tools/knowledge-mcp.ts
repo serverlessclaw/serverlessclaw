@@ -1,5 +1,6 @@
 import { toolDefinitions } from './definitions';
 import { ConfigManager } from '../lib/registry/config';
+import { formatErrorMessage } from '../lib/utils/error';
 
 /**
  * Registers a new MCP server in the global configuration.
@@ -31,7 +32,7 @@ export const registerMCPServer = {
       await ConfigManager.saveRawConfig('mcp_servers', mcpServers);
       return `Successfully registered MCP server '${serverName}'.`;
     } catch (error) {
-      return `Failed to register MCP server: ${error instanceof Error ? error.message : String(error)}`;
+      return `Failed to register MCP server: ${formatErrorMessage(error)}`;
     }
   },
 };
@@ -56,7 +57,7 @@ export const unregisterMCPServer = {
 
       return `Successfully unregistered MCP server '${serverName}'.`;
     } catch (error) {
-      return `Failed to unregister MCP server: ${error instanceof Error ? error.message : String(error)}`;
+      return `Failed to unregister MCP server: ${formatErrorMessage(error)}`;
     }
   },
 };

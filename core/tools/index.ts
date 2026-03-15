@@ -1,6 +1,7 @@
 import { toolDefinitions } from './definitions';
 import { logger } from '../lib/logger';
 import { ITool } from '../lib/types/index';
+import { formatErrorMessage } from '../lib/utils/error';
 
 // Import split tool implementations
 import * as systemTools from './system';
@@ -40,7 +41,7 @@ export const tools: Record<string, ITool> = {
         await AgentRegistry.saveRawConfig('active_model', model);
         return `Successfully switched to ${provider} with model ${model}. Hot config applied.`;
       } catch (error) {
-        return `Failed to switch model: ${error instanceof Error ? error.message : String(error)}`;
+        return `Failed to switch model: ${formatErrorMessage(error)}`;
       }
     },
   },

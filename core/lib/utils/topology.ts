@@ -3,50 +3,12 @@ import { Topology, TopologyNode, TopologyEdge, IAgentConfig } from '../types/ind
 import { ConfigManager } from '../registry/config';
 import { BACKBONE_REGISTRY } from '../backbone';
 import { AgentType } from '../types/agent';
+import { INFRA_NODE_ID, NODE_TYPE, EDGE_LABEL } from './topology/constants';
+
+// Re-export constants for backward compatibility
+export { INFRA_NODE_ID, NODE_TYPE, EDGE_LABEL } from './topology/constants';
 
 const db = new DynamoDBClient({});
-
-/** Canonical identifiers for well-known infrastructure and platform nodes. */
-const INFRA_NODE_ID = {
-  API: 'api',
-  BUS: 'bus',
-  CODEBUILD: 'codebuild',
-  CONFIG: 'config',
-  MEMORY: 'memory',
-  STORAGE: 'storage',
-  TRACES: 'traces',
-  KNOWLEDGE: 'knowledge',
-  NOTIFIER: 'notifier',
-  BRIDGE: 'bridge',
-  TELEGRAM: 'telegram',
-  DASHBOARD: 'dashboard',
-} as const;
-
-/** Node type discriminators for the topology graph renderer. */
-const NODE_TYPE = {
-  INFRA: 'infra' as const,
-  AGENT: 'agent' as const,
-  DASHBOARD: 'dashboard' as const,
-};
-
-/** Standard edge label vocabulary for topology links. */
-const EDGE_LABEL = {
-  INBOUND: 'INBOUND',
-  SIGNAL: 'SIGNAL',
-  MANAGE: 'MANAGE',
-  DEPLOY: 'DEPLOY',
-  EVENT: 'EVENT',
-  REALTIME: 'REALTIME',
-  QUERY: 'QUERY',
-  WEBHOOK: 'WEBHOOK',
-  READ_FILES: 'READ_FILES',
-  MANAGE_FILES: 'MANAGE_FILES',
-  ARCHIVE: 'ARCHIVE',
-  OUTBOUND: 'OUTBOUND',
-  SYNC: 'SYNC',
-  ORCHESTRATE: 'ORCHESTRATE',
-  USE: 'USE',
-} as const;
 
 /**
  * Discovers the active system topology by scanning SST resources and Agent configs.

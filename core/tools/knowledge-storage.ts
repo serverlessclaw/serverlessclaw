@@ -2,6 +2,7 @@ import { toolDefinitions } from './definitions';
 import { DynamoMemory } from '../lib/memory';
 import { InsightCategory, GapStatus, EventType } from '../lib/types/index';
 import { emitEvent } from '../lib/utils/bus';
+import { formatErrorMessage } from '../lib/utils/error';
 
 /**
  * Lazy-load memory.
@@ -44,7 +45,7 @@ ${n.steps
         .join('\n');
       return summary;
     } catch (error) {
-      return `Failed to inspect trace: ${error instanceof Error ? error.message : String(error)}`;
+      return `Failed to inspect trace: ${formatErrorMessage(error)}`;
     }
   },
 };
@@ -68,7 +69,7 @@ export const discoverSkills = {
         '\n\nUSE "installSkill" to add any of these to your current toolset.'
       );
     } catch (error) {
-      return `Failed to discover skills: ${error instanceof Error ? error.message : String(error)}`;
+      return `Failed to discover skills: ${formatErrorMessage(error)}`;
     }
   },
 };
@@ -87,7 +88,7 @@ export const installSkill = {
       await SkillRegistry.installSkill(targetAgentId, skillName);
       return `Skill '${skillName}' successfully installed for agent ${targetAgentId}.`;
     } catch (error) {
-      return `Failed to install skill: ${error instanceof Error ? error.message : String(error)}`;
+      return `Failed to install skill: ${formatErrorMessage(error)}`;
     }
   },
 };
@@ -115,7 +116,7 @@ export const uninstallSkill = {
 
       return `Successfully uninstalled skill '${skillName}' from agent ${targetAgentId}.`;
     } catch (error) {
-      return `Failed to uninstall skill: ${error instanceof Error ? error.message : String(error)}`;
+      return `Failed to uninstall skill: ${formatErrorMessage(error)}`;
     }
   },
 };
@@ -156,7 +157,7 @@ export const manageGap = {
       await getMemory().updateGapStatus(gapId, status);
       return `Successfully updated gap ${gapId} to ${status}`;
     } catch (error) {
-      return `Failed to update gap ${gapId}: ${error instanceof Error ? error.message : String(error)}`;
+      return `Failed to update gap ${gapId}: ${formatErrorMessage(error)}`;
     }
   },
 };

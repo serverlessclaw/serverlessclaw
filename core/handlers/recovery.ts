@@ -8,6 +8,7 @@ import { SSTResource, EventType, OutboundMessageEvent } from '../lib/types/index
 import { DynamoLockManager } from '../lib/lock';
 import { DynamoMemory } from '../lib/memory';
 import { emitEvent } from '../lib/utils/bus';
+import { formatErrorMessage } from '../lib/utils/error';
 
 const codebuild = new CodeBuildClient({});
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -45,7 +46,7 @@ export const handler = async (_event?: { detail: Record<string, unknown> }): Pro
     return;
   } catch (error) {
     logger.error(
-      `System health check FAILED: ${error instanceof Error ? error.message : String(error)}`
+      `System health check FAILED: ${formatErrorMessage(error)}`
     );
   }
 

@@ -3,6 +3,7 @@
  * Copy this file and modify it to create new tools.
  */
 import { ITool } from '../lib/types/index';
+import { formatErrorMessage } from '../lib/utils/error';
 
 export const MY_NEW_TOOL: ITool = {
   name: 'my_new_tool',
@@ -20,7 +21,7 @@ export const MY_NEW_TOOL: ITool = {
       // Implementation logic
       return `Successfully executed my_new_tool with ${arg1}`;
     } catch (error) {
-      return `Error in my_new_tool: ${error instanceof Error ? error.message : String(error)}`;
+      return `Error in my_new_tool: ${formatErrorMessage(error)}`;
     }
   },
 };

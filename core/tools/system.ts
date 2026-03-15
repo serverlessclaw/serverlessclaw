@@ -10,6 +10,7 @@ import { SYSTEM, DYNAMO_KEYS } from '../lib/constants';
 import { getDeployCountToday, incrementDeployCount, rewardDeployLimit } from '../lib/deploy-stats';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { formatErrorMessage } from '../lib/utils/error';
 
 const execAsync = promisify(exec);
 const codebuild = new CodeBuildClient({});
@@ -112,7 +113,7 @@ export const triggerDeployment = {
 
       return `Deployment started successfully. Build ID: ${buildId}. Build counter: ${count + 1}/${LIMIT}. Reason: ${reason}${warning}`;
     } catch (error) {
-      return `Failed to trigger deployment: ${error instanceof Error ? error.message : String(error)}`;
+      return `Failed to trigger deployment: ${formatErrorMessage(error)}`;
     }
   },
 };
@@ -133,7 +134,7 @@ export const checkHealth = {
       }
       return `HEALTH_FAILED: Received status ${response.status}.`;
     } catch (error) {
-      return `HEALTH_ERROR: ${error instanceof Error ? error.message : String(error)}`;
+      return `HEALTH_ERROR: ${formatErrorMessage(error)}`;
     }
   },
 };
@@ -155,7 +156,7 @@ export const triggerRollback = {
       await codebuild.send(command);
       return `ROLLBACK_SUCCESSFUL: Last commit reverted and deployment re-triggered. Reason: ${reason}`;
     } catch (error) {
-      return `ROLLBACK_FAILED: ${error instanceof Error ? error.message : String(error)}`;
+      return `ROLLBACK_FAILED: ${formatErrorMessage(error)}`;
     }
   },
 };
@@ -172,7 +173,7 @@ export const validateCode = {
       const { stdout: lintOut } = await execAsync('npx eslint . --fix-dry-run');
       return `Validation Successful:\n${tscOut}\n${lintOut}`;
     } catch (error) {
-      return `Validation FAILED:\n${error instanceof Error ? error.message : String(error)}`;
+      return `Validation FAILED:\n${formatErrorMessage(error)}`;
     }
   },
 };
@@ -203,7 +204,7 @@ export const sendMessage = {
       );
       return 'Message sent successfully to user.';
     } catch (error) {
-      return `Failed to send message: ${error instanceof Error ? error.message : String(error)}`;
+      return `Failed to send message: ${formatErrorMessage(error)}`;
     }
   },
 };

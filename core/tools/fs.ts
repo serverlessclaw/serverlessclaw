@@ -9,6 +9,7 @@ import { promisify } from 'util';
 import { createWriteStream } from 'fs';
 import * as fs from 'fs/promises';
 import archiver from 'archiver';
+import { formatErrorMessage } from '../lib/utils/error';
 
 const execAsync = promisify(exec);
 const s3 = new S3Client({});
@@ -48,7 +49,7 @@ export const stageChanges = {
           resolve(`Successfully staged ${modifiedFiles.length} files to S3.`);
         } catch (error) {
           resolve(
-            `Failed to upload staged changes: ${error instanceof Error ? error.message : String(error)}`
+            `Failed to upload staged changes: ${formatErrorMessage(error)}`
           );
         }
       });
@@ -81,7 +82,7 @@ export const runShellCommand = {
       });
       return `Output:\n${stdout}\n${stderr}`;
     } catch (error) {
-      return `Execution FAILED:\n${error instanceof Error ? error.message : String(error)}`;
+      return `Execution FAILED:\n${formatErrorMessage(error)}`;
     }
   },
 };
@@ -97,7 +98,7 @@ export const runTests = {
       const { stdout, stderr } = await execAsync('npm test');
       return `Test Results:\n${stdout}\n${stderr}`;
     } catch (error) {
-      return `Tests FAILED:\n${error instanceof Error ? error.message : String(error)}`;
+      return `Tests FAILED:\n${formatErrorMessage(error)}`;
     }
   },
 };

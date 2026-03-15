@@ -2,6 +2,7 @@ import { toolDefinitions } from './definitions';
 import { ConfigManager } from '../lib/registry/config';
 import { emitEvent } from '../lib/utils/bus';
 import { EventType } from '../lib/types/index';
+import { formatErrorMessage } from '../lib/utils/error';
 
 /**
  * Lists all registered agents and their current status.
@@ -65,7 +66,7 @@ export const dispatchTask = {
       });
       return `Task successfully dispatched to ${agentId} agent. Trace ID: ${childTracer.getTraceId()}`;
     } catch (error) {
-      return `Failed to dispatch task: ${error instanceof Error ? error.message : String(error)}`;
+      return `Failed to dispatch task: ${formatErrorMessage(error)}`;
     }
   },
 };
@@ -104,7 +105,7 @@ export const setSystemConfig = {
       await ConfigManager.saveRawConfig(key, parsedValue);
       return `Successfully updated system config: ${key} = ${JSON.stringify(parsedValue)}`;
     } catch (error) {
-      return `Failed to update system config: ${error instanceof Error ? error.message : String(error)}`;
+      return `Failed to update system config: ${formatErrorMessage(error)}`;
     }
   },
 };
@@ -139,7 +140,7 @@ export const seekClarification = {
       });
       return `TASK_PAUSED: Clarification request sent to ${initiatorId || 'initiator'}. Waiting for response.`;
     } catch (error) {
-      return `Failed to seek clarification: ${error instanceof Error ? error.message : String(error)}`;
+      return `Failed to seek clarification: ${formatErrorMessage(error)}`;
     }
   },
 };
@@ -179,7 +180,7 @@ export const provideClarification = {
       });
       return `Clarification provided to ${agentId}. Continuation task emitted.`;
     } catch (error) {
-      return `Failed to provide clarification: ${error instanceof Error ? error.message : String(error)}`;
+      return `Failed to provide clarification: ${formatErrorMessage(error)}`;
     }
   },
 };

@@ -2,6 +2,7 @@ import { APIGatewayProxyHandlerV2 } from 'aws-lambda';
 import { logger } from '../lib/logger';
 import { runDeepHealthCheck } from '../lib/health';
 import { DynamoMemory } from '../lib/memory';
+import { formatErrorMessage } from '../lib/utils/error';
 
 const memory = new DynamoMemory();
 
@@ -43,7 +44,7 @@ export const handler: APIGatewayProxyHandlerV2 = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         status: 'error',
-        message: error instanceof Error ? error.message : String(error),
+        message: formatErrorMessage(error),
       }),
     };
   }

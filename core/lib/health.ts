@@ -9,6 +9,7 @@ import { Resource } from 'sst';
 import { EventType, SSTResource } from './types/index';
 import { logger } from './logger';
 import { emitEvent } from './utils/bus';
+import { formatErrorMessage } from './utils/error';
 
 const eventbridge = new EventBridgeClient({});
 const dynamodb = new DynamoDBClient({});
@@ -105,7 +106,7 @@ export async function runDeepHealthCheck(): Promise<{ ok: boolean; details?: str
 
     return { ok: true };
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = formatErrorMessage(error);
     logger.error(`Deep Health Check FAILED: ${msg}`);
     return { ok: false, details: msg };
   }
