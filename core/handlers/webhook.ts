@@ -1,11 +1,6 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
 import { sendOutboundMessage } from '../lib/outbound';
 import { logger } from '../lib/logger';
-
-import { DynamoMemory } from '../lib/memory';
-import { ProviderManager } from '../lib/providers/index';
-import { getAgentTools } from '../tools/index';
-import { DynamoLockManager } from '../lib/lock';
 import { TraceSource, SSTResource } from '../lib/types/index';
 import { Resource } from 'sst';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -13,17 +8,9 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 const typedResource = Resource as unknown as SSTResource;
 const s3 = new S3Client({});
 
-const memory = new DynamoMemory();
-const provider = new ProviderManager();
-const lockManager = new DynamoLockManager();
-
 /**
  * Main entry point for Telegram webhooks.
  * Processes user messages, acquires session locks, and delegates to the SuperClaw.
- *
- * @param event - The API Gateway event containing the Telegram update.
- * @param context - The AWS Lambda context.
- * @returns A promise that resolves to an API Gateway response.
  */
 export const handler = async (
   event: APIGatewayProxyEventV2,
@@ -43,10 +30,31 @@ export const handler = async (
   }
 
   const chatId = message.chat.id.toString();
-  const userText = message.text || message.caption || ''; // Support captions on media
+  const userText = message.text || message.caption || '';
 
   // Handle Media Attachments
   const attachments = await processTelegramMedia(message);
+
+  // Lazy load dependencies to reduce initial context budget
+  const [
+    { DynamoMemory },
+    { ProviderManager },
+    { DynamoLockManager },
+    { getAgentTools },
+    { SuperClaw },
+    { AgentRegistry },
+  ] = await Promise.all([
+    import('../lib/memory'),
+    import('../lib/providers/index'),
+    import('../lib/lock'),
+    import('../tools/index'),
+    import('../agents/superclaw'),
+    import('../lib/registry'),
+  ]);
+
+  const memory = new DynamoMemory();
+  const provider = new ProviderManager();
+  const lockManager = new DynamoLockManager();
 
   // 1. Acquire Lock
   const acquired = await lockManager.acquire(chatId, 60);
@@ -57,8 +65,6 @@ export const handler = async (
 
   try {
     // 2. Process message via Agent
-    const { SuperClaw } = await import('../agents/superclaw');
-    const { AgentRegistry } = await import('../lib/registry');
     const config = await AgentRegistry.getAgentConfig('main');
     if (!config) throw new Error('Main agent config missing');
 
