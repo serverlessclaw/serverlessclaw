@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handleProactiveHeartbeat } from './proactive-handler';
-import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
+import {
+  EventBridgeClient,
+  PutEventsCommand,
+  PutEventsCommandInput,
+} from '@aws-sdk/client-eventbridge';
 import { mockClient } from 'aws-sdk-client-mock';
 import { AgentType, EventType } from '../../lib/types/agent';
 
@@ -34,7 +38,7 @@ describe('ProactiveHandler', () => {
 
     expect(eventBridgeMock.commandCalls(PutEventsCommand)).toHaveLength(1);
     const call = eventBridgeMock.call(0);
-    const input = call.args[0].input;
+    const input = call.args[0].input as PutEventsCommandInput;
 
     expect(input.Entries![0].DetailType).toBe(EventType.TASK_COMPLETED); // emitTaskEvent defaults to TASK_COMPLETED if no error
     const detail = JSON.parse(input.Entries![0].Detail!);

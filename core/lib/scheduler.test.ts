@@ -3,6 +3,7 @@ import { DynamicScheduler } from './scheduler';
 import {
   SchedulerClient,
   CreateScheduleCommand,
+  CreateScheduleCommandInput,
   DeleteScheduleCommand,
   GetScheduleCommand,
   ListSchedulesCommand,
@@ -32,8 +33,9 @@ describe('DynamicScheduler', () => {
 
     expect(schedulerMock.calls()).toHaveLength(1);
     const call = schedulerMock.call(0);
-    expect(call.args[0].input.Name).toBe('test-goal');
-    expect(call.args[0].input.ScheduleExpression).toBe('rate(1 hour)');
+    const input = call.args[0].input as CreateScheduleCommandInput;
+    expect(input.Name).toBe('test-goal');
+    expect(input.ScheduleExpression).toBe('rate(1 hour)');
   });
 
   it('should handle conflict by deleting and recreating', async () => {
@@ -74,7 +76,7 @@ describe('DynamicScheduler', () => {
 
   it('should list schedules', async () => {
     schedulerMock.on(ListSchedulesCommand).resolves({
-      Schedules: [{ Name: 'goal-1', ScheduleExpression: 'rate(1h)', State: 'ENABLED' }],
+      Schedules: [{ Name: 'goal-1', ScheduleExpression: 'rate(1h)', State: 'ENABLED' } as any],
     });
 
     const results = await DynamicScheduler.listSchedules();

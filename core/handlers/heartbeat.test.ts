@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handler } from './heartbeat';
-import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
+import {
+  EventBridgeClient,
+  PutEventsCommand,
+  PutEventsCommandInput,
+} from '@aws-sdk/client-eventbridge';
 import { mockClient } from 'aws-sdk-client-mock';
 import { EventType } from '../lib/types/agent';
 
@@ -33,7 +37,7 @@ describe('HeartbeatHandler', () => {
 
     expect(eventBridgeMock.commandCalls(PutEventsCommand)).toHaveLength(1);
     const call = eventBridgeMock.call(0);
-    const input = call.args[0].input;
+    const input = call.args[0].input as PutEventsCommandInput;
 
     expect(input.Entries![0].DetailType).toBe(EventType.HEARTBEAT_PROACTIVE);
     const detail = JSON.parse(input.Entries![0].Detail!);
