@@ -7,6 +7,12 @@ import * as systemTools from './system';
 import * as fsTools from './fs';
 import * as knowledgeTools from './knowledge';
 
+// Filter knowledgeTools to only include ITool exports (exclude utility functions like formatErrorMessage)
+const knowledgeToolEntries = Object.entries(knowledgeTools).filter(
+  ([, value]) => typeof value === 'object' && value !== null && 'execute' in value
+);
+const knowledgeToolsFiltered = Object.fromEntries(knowledgeToolEntries) as Record<string, ITool>;
+
 /**
  * Registry of all available tools for agents to execute.
  * Aggregates tools from specialized modules (system, fs, knowledge).
@@ -19,7 +25,7 @@ export const tools: Record<string, ITool> = {
   // File System & Validation Tools
   ...fsTools,
   // Knowledge & Agent Management Tools
-  ...knowledgeTools,
+  ...knowledgeToolsFiltered,
 
   /**
    * Switches the active LLM provider and model for the system.

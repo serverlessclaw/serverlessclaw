@@ -1,0 +1,185 @@
+import { toolDefinitions } from './definitions';
+import { ConfigManager } from '../lib/registry/config';
+import { emitEvent } from '../lib/utils/bus';
+import { EventType } from '../lib/types/index';
+
+/**
+ * Lists all registered agents and their current status.
+ */
+export const getAgentRegistrySummary = {
+  ...toolDefinitions.getAgentRegistrySummary,
+  execute: async (): Promise<string> => {
+    const { AgentRegistry } = await import('../lib/registry');
+    const configs = await AgentRegistry.getAllConfigs();
+
+    const summary = Object.values(configs)
+      .filter((a) => a.enabled)
+      .map((a) => `- [${a.id}] ${a.name}: ${a.description} (Backbone: ${a.isBackbone || false})`)
+      .join('\n');
+
+    return summary || 'No enabled agents found in the registry.';
+  },
+};
+
+/**
+ * Dispatches a specific task to another agent via EventBridge.
+ */
+export const dispatchTask = {
+  ...toolDefinitions.dispatchTask,
+  execute: async (args: Record<string, unknown>): Promise<string> => {
+    const { agentId, userId, task, metadata, traceId, nodeId, initiatorId, depth, sessionId } =
+      args as {
+        agentId: string;
+        userId: string;
+        task: string;
+        metadata?: Record<string, unknown>;
+        traceId?: string;
+        nodeId?: string;
+        initiatorId?: string;
+        depth?: number;
+        sessionId?: string;
+      };
+
+    const { AgentRegistry } = await import('../lib/registry');
+    const config = await AgentRegistry.getAgentConfig(agentId);
+
+    if (!config || !config.enabled) {
+      return `FAILED: Agent '${agentId}' is not registered or is disabled.`;
+    }
+
+    const { ClawTracer } = await import('../lib/tracer');
+    const tracer = new ClawTracer(userId, 'system', traceId, nodeId);
+    const childTracer = tracer.getChildTracer();
+
+    try {
+      await emitEvent(initiatorId || 'main.agent', `${agentId}_task`, {
+        userId,
+        task,
+        metadata,
+        traceId: childTracer.getTraceId(),
+        nodeId: childTracer.getNodeId(),
+        parentId: childTracer.getParentId(),
+        initiatorId: initiatorId || 'main.agent',
+        depth: (depth || 0) + 1,
+        sessionId,
+      });
+      return `Task successfully dispatched to ${agentId} agent. Trace ID: ${childTracer.getTraceId()}`;
+    } catch (error) {
+      return `Failed to dispatch task: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  },
+};
+
+/**
+ * Updates the tools assigned to a specific agent.
+ */
+export const manageAgentTools = {
+  ...toolDefinitions.manageAgentTools,
+  execute: async (args: Record<string, unknown>): Promise<string> => {
+    const { agentId, toolNames } = args as { agentId: string; toolNames: string[] };
+    try {
+      await ConfigManager.saveRawConfig(`${agentId}_tools`, toolNames);
+      return `Successfully updated tools for agent ${agentId}: ${toolNames.join(', ')}`;
+    } catch {
+      return `Failed to update agent tools`;
+    }
+  },
+};
+
+/**
+ * Updates global system configuration in the ConfigTable.
+ */
+export const setSystemConfig = {
+  ...toolDefinitions.setSystemConfig,
+  execute: async (args: Record<string, unknown>): Promise<string> => {
+    const { key, value } = args as { key: string; value: string };
+    let parsedValue: unknown = value;
+    try {
+      parsedValue = JSON.parse(value);
+    } catch {
+      // Use raw value
+    }
+
+    try {
+      await ConfigManager.saveRawConfig(key, parsedValue);
+      return `Successfully updated system config: ${key} = ${JSON.stringify(parsedValue)}`;
+    } catch (error) {
+      return `Failed to update system config: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  },
+};
+
+/**
+ * Pauses the current agent and requests clarification from the initiator.
+ */
+export const seekClarification = {
+  ...toolDefinitions.seekClarification,
+  execute: async (args: Record<string, unknown>): Promise<string> => {
+    const { userId, question, traceId, initiatorId, depth, sessionId, originalTask, task } =
+      args as {
+        userId: string;
+        question: string;
+        traceId?: string;
+        initiatorId?: string;
+        depth?: number;
+        sessionId?: string;
+        originalTask?: string;
+        task?: string;
+      };
+
+    try {
+      await emitEvent(initiatorId || 'main.agent', EventType.CLARIFICATION_REQUEST, {
+        userId,
+        question,
+        traceId,
+        initiatorId,
+        depth: (depth || 0) + 1,
+        sessionId,
+        originalTask: originalTask || task || 'Unknown task',
+      });
+      return `TASK_PAUSED: Clarification request sent to ${initiatorId || 'initiator'}. Waiting for response.`;
+    } catch (error) {
+      return `Failed to seek clarification: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  },
+};
+
+/**
+ * Provides an answer to a clarification request, resuming the target agent.
+ */
+export const provideClarification = {
+  ...toolDefinitions.provideClarification,
+  execute: async (args: Record<string, unknown>): Promise<string> => {
+    const { userId, agentId, answer, traceId, sessionId, depth, initiatorId, originalTask } =
+      args as {
+        userId: string;
+        agentId: string;
+        answer: string;
+        traceId?: string;
+        sessionId?: string;
+        depth?: number;
+        initiatorId?: string;
+        originalTask: string;
+      };
+
+    try {
+      await emitEvent('agent.tool', EventType.CONTINUATION_TASK, {
+        userId,
+        agentId,
+        task: `CLARIFICATION_RESPONSE: For your task "${originalTask}", here is the answer: 
+        ---
+        ${answer}
+        ---
+        Please proceed with this information.`,
+        traceId,
+        sessionId,
+        depth: (depth || 0) + 1,
+        initiatorId,
+        isContinuation: true,
+      });
+      return `Clarification provided to ${agentId}. Continuation task emitted.`;
+    } catch (error) {
+      return `Failed to provide clarification: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  },
+};

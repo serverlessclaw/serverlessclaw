@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toolDefinitions } from './definitions';
+import { toolDefinitions } from './definitions/index';
 
 describe('Tool Definitions Schema Integrity', () => {
   const tools = Object.values(toolDefinitions);

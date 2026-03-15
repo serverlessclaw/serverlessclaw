@@ -5,54 +5,28 @@ import {
   Message,
   ReasoningProfile,
   MessageRole,
-  EventType,
   IAgentConfig,
   TraceSource,
   Attachment,
 } from './types/index';
 import { ClawTracer } from './tracer';
-import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
-import { Resource } from 'sst';
 import { logger } from './logger';
-import { SSTResource } from './types/index';
-import { Context as LambdaContext } from 'aws-lambda';
 import { SYSTEM } from './constants';
 import { AgentRegistry } from './registry';
 import { AgentContext } from './agent/context';
 import { AgentExecutor, AGENT_DEFAULTS, AGENT_LOG_MESSAGES } from './agent/executor';
+import { AgentProcessOptions } from './agent/options';
+import { AgentEmitter } from './agent/emitter';
 
-const typedResource = Resource as unknown as SSTResource;
-
-/**
- * Processing options for the agent's process method.
- */
-export interface AgentProcessOptions {
-  profile?: ReasoningProfile;
-  context?: LambdaContext;
-  isContinuation?: boolean;
-  isIsolated?: boolean;
-  initiatorId?: string;
-  depth?: number;
-  traceId?: string;
-  nodeId?: string;
-  parentId?: string;
-  sessionId?: string;
-  attachments?: Array<{
-    type: 'image' | 'file';
-    url?: string;
-    base64?: string;
-    name?: string;
-    mimeType?: string;
-  }>;
-  source?: TraceSource | string;
-}
+// Re-export for backward compatibility
+export { AgentProcessOptions };
 
 /**
  * The core Agent class responsible for orchestrating LLM calls, tool execution,
  * and memory management.
  */
 export class Agent {
-  private eventbridge: EventBridgeClient = new EventBridgeClient({});
+  private emitter: AgentEmitter;
 
   constructor(
     private memory: IMemory,
@@ -60,7 +34,9 @@ export class Agent {
     private tools: ITool[],
     private systemPrompt: string,
     public config?: IAgentConfig
-  ) {}
+  ) {
+    this.emitter = new AgentEmitter(config);
+  }
 
   /**
    * Processes a user message, potentially performing multiple tool-calling iterations
@@ -224,7 +200,7 @@ export class Agent {
         traceId,
       });
 
-      await this.emitContinuation(userId, userText, tracer.getTraceId() || 'unknown', {
+      await this.emitter.emitContinuation(userId, userText, tracer.getTraceId() || 'unknown', {
         initiatorId: currentInitiator,
         depth,
         sessionId,
@@ -247,7 +223,7 @@ export class Agent {
     await tracer.endTrace(responseText);
 
     // 6. Reflection Trigger
-    await this.considerReflection(
+    await this.emitter.considerReflection(
       isIsolated,
       userId,
       history,
@@ -263,131 +239,5 @@ export class Agent {
     );
 
     return { responseText, attachments: resultAttachments };
-  }
-
-  /**
-   * Logic to determine if a reflection task should be emitted.
-   */
-  private async considerReflection(
-    isIsolated: boolean,
-    userId: string,
-    history: Message[],
-    userText: string,
-    traceId: string,
-    messages: Message[],
-    responseText: string,
-    nodeId: string,
-    parentId: string | undefined,
-    sessionId: string | undefined,
-    currentInitiator: string,
-    depth: number
-  ) {
-    let reflectionFrequency: number = AGENT_DEFAULTS.REFLECTION_FREQUENCY;
-    try {
-      if (!process.env.VITEST) {
-        const customFreq = await AgentRegistry.getRawConfig('reflection_frequency');
-        if (customFreq !== undefined) reflectionFrequency = parseInt(String(customFreq), 10);
-      }
-    } catch {
-      logger.warn(`Failed to fetch reflection_frequency, using default ${reflectionFrequency}.`);
-    }
-
-    const shouldReflect =
-      !isIsolated &&
-      reflectionFrequency > 0 &&
-      history.length > 0 &&
-      (history.length % reflectionFrequency === 0 ||
-        userText.toLowerCase().includes('remember') ||
-        userText.toLowerCase().includes('learn'));
-
-    if (shouldReflect) {
-      try {
-        await this.eventbridge.send(
-          new PutEventsCommand({
-            Entries: [
-              {
-                Source: 'main.agent',
-                DetailType: EventType.REFLECT_TASK,
-                Detail: JSON.stringify({
-                  userId,
-                  traceId,
-                  nodeId,
-                  parentId,
-                  sessionId,
-                  conversation: [
-                    ...messages,
-                    {
-                      role: MessageRole.ASSISTANT,
-                      content: responseText,
-                      agentName: this.config?.name || 'SuperClaw',
-                      traceId: traceId || 'unknown',
-                    },
-                  ],
-                  initiatorId: currentInitiator,
-                  depth,
-                }),
-                EventBusName: typedResource.AgentBus.name,
-              },
-            ],
-          })
-        );
-        logger.info('Reflection task emitted for user:', userId);
-      } catch (e) {
-        logger.error('Failed to emit reflection task:', e);
-      }
-    }
-  }
-
-  /**
-   * Emits an event to trigger a continuation of the current task
-   */
-  private async emitContinuation(
-    userId: string,
-    task: string,
-    traceId: string,
-    metadata: {
-      initiatorId?: string;
-      depth?: number;
-      sessionId?: string;
-      nodeId?: string;
-      parentId?: string;
-      attachments?: Array<{
-        type: 'image' | 'file';
-        url?: string;
-        base64?: string;
-        name?: string;
-        mimeType?: string;
-      }>;
-    } = {}
-  ): Promise<void> {
-    try {
-      await this.eventbridge.send(
-        new PutEventsCommand({
-          Entries: [
-            {
-              Source: this.config?.id || 'main.agent',
-              DetailType: EventType.CONTINUATION_TASK,
-              Detail: JSON.stringify({
-                userId,
-                agentId: this.config?.id || 'main',
-                task,
-                isContinuation: true,
-                traceId,
-                nodeId: metadata.nodeId,
-                parentId: metadata.parentId,
-                initiatorId: metadata.initiatorId,
-                depth: (metadata.depth || 0) + 1,
-                sessionId: metadata.sessionId,
-                attachments: metadata.attachments,
-              }),
-              EventBusName: typedResource.AgentBus.name,
-            },
-          ],
-        })
-      );
-      logger.info('Continuation task emitted for user:', userId);
-    } catch (e) {
-      logger.error('Failed to emit continuation task:', e);
-    }
   }
 }
