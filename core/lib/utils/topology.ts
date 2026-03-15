@@ -109,7 +109,7 @@ export async function discoverSystemTopology(): Promise<Topology> {
   });
 
   // C. API to Bus
-  const apiNode = nodes.find(n => n.id.includes('api'));
+  const apiNode = nodes.find((n) => n.id.includes('api'));
   if (apiNode) {
     edges.push({
       id: `${apiNode.id}-agentbus`,

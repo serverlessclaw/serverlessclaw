@@ -51,7 +51,7 @@ vi.mock('sst', () => ({
     StrategicPlanner: { name: 'test-planner' },
     ReflectorAgent: { name: 'test-reflector' },
     QaAgent: { name: 'test-qa' },
-  }
+  },
 }));
 
 // Mock agent prompts to break dependency chains (preventing DynamoDB imports)
@@ -92,7 +92,9 @@ describe('discoverSystemTopology', () => {
 
   it('should correctly link API Gateway to AgentBus', async () => {
     const topology = await discoverSystemTopology();
-    const apiToBus = topology.edges.find((e) => e.source === 'webhookapi' && e.target === 'agentbus');
+    const apiToBus = topology.edges.find(
+      (e) => e.source === 'webhookapi' && e.target === 'agentbus'
+    );
 
     expect(apiToBus).toBeDefined();
     expect(apiToBus?.label).toBe('SIGNAL');
@@ -100,9 +102,7 @@ describe('discoverSystemTopology', () => {
 
   it('link agents to AgentBus for orchestration', async () => {
     const topology = await discoverSystemTopology();
-    const coderToBus = topology.edges.find(
-      (e) => e.source === 'coder' && e.target === 'agentbus'
-    );
+    const coderToBus = topology.edges.find((e) => e.source === 'coder' && e.target === 'agentbus');
 
     expect(coderToBus).toBeDefined();
     expect(coderToBus?.label).toBe('ORCHESTRATE');
