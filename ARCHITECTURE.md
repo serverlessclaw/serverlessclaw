@@ -11,6 +11,7 @@ This document covers the AWS topology and data flow. For agent logic and orchest
 2.  **Extensible**: Every major component (Memory, Messaging, Tools) is designed as a pluggable adapter.
 3.  **Low Latency**: Optimized for fast startup times to minimize "time-to-first-token".
 4.  **Safety-First**: Implements nested guardrails including Circuit Breakers, Recursion Limits, and Protected Scopes.
+5.  **Proactive**: Agents can self-schedule future tasks and "wake-up" calls, moving beyond reactive event processing to autonomous goal achievement.
 
 ---
 
@@ -42,11 +43,16 @@ This document covers the AWS topology and data flow. For agent logic and orchest
                                         |                             |
                                         v                             |
                             +-----------+-----------+                 |
-                            |                       |                 |
-                            |   Managed Services    |                 |
-                            | (DynamoDB / S3)       |                 |
-                            |                       |                 |
-                            +-----------+-----------+                 |
+                                        |                             |
+                                        v                             |
+              +-------------------------+-------------------------+   |
+              |                         |                         |   |
+    +---------v---------+     +---------v---------+     +---------v---v-----+
+    |                   |     |                   |     |                   |
+    |  Managed Services |     |   AWS Scheduler   +<----+  HeartbeatHandler |
+    | (DynamoDB / S3)   |     | (Dynamic Goals)   |     | (Proactive Pulse) |
+    |                   |     |                   |     |                   |
+    +-------------------+     +-------------------+     +-------------------+
                                         |                             |
                                         v                             |
                             +-----------+-----------+                 |

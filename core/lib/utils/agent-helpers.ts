@@ -132,6 +132,7 @@ export async function emitTaskEvent(params: {
   sessionId?: string;
   initiatorId?: string;
   depth?: number;
+  metadata?: Record<string, unknown>;
 }): Promise<void> {
   const eventbridge = await getEventBridge();
   const typedResource = getTypedResource();
@@ -155,6 +156,7 @@ export async function emitTaskEvent(params: {
               initiatorId: params.initiatorId,
               depth: params.depth,
               sessionId: params.sessionId,
+              metadata: params.metadata,
             }),
             EventBusName: typedResource.AgentBus.name,
           },
