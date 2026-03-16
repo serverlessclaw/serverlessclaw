@@ -11,6 +11,7 @@ import { AgentRegistry } from './registry';
  */
 export class MCPBridge {
   private static clients: Map<string, Client> = new Map();
+  private static connecting: Map<string, Promise<Client>> = new Map();
 
   /**
    * Connects to an MCP server (Local or Remote) and returns its tools.
@@ -50,72 +51,90 @@ export class MCPBridge {
       let client = this.clients.get(serverName);
 
       if (!client) {
-        let transport;
-
-        if (connectionString.startsWith('http')) {
-          logger.info(`Connecting to Remote MCP Server: ${serverName} (${connectionString})`);
-          transport = new SSEClientTransport(new URL(connectionString));
+        // If already connecting, wait for it
+        let connectingPromise = this.connecting.get(serverName);
+        if (connectingPromise) {
+          logger.debug(`Waiting for existing connection to MCP server: ${serverName}`);
+          client = await connectingPromise;
         } else {
-          const parts = connectionString.split(' ');
-          const command = parts[0];
-          const args = parts.slice(1);
-          logger.info(`Spawning Local MCP Server: ${serverName} (${command} ${args.join(' ')})`);
-          transport = new StdioClientTransport({
-            command,
-            args,
-            env: {
-              ...(process.env as Record<string, string>),
-              ...env,
-              // Critical for AWS Lambda: ensures npx/npm has a writable directory to cache packages
-              XDG_CACHE_HOME: '/tmp/mcp-cache',
-              NPM_CONFIG_CACHE: '/tmp/npm-cache',
-              HOME: '/tmp',
-            },
-          });
+          // Start a new connection
+          connectingPromise = (async () => {
+            let transport;
 
-          // Hack to capture stderr from the internal child process if possible
-          // Note: The SDK doesn't natively expose the process, but we can wrap it if needed.
-          // For now, we'll rely on the client.connect error which usually captures spawn failures.
+            if (connectionString.startsWith('http')) {
+              logger.info(`Connecting to Remote MCP Server: ${serverName} (${connectionString})`);
+              transport = new SSEClientTransport(new URL(connectionString));
+            } else {
+              const parts = connectionString.split(' ');
+              const command = parts[0];
+              const args = parts.slice(1);
+              logger.info(
+                `Spawning Local MCP Server: ${serverName} (${command} ${args.join(' ')})`
+              );
+              transport = new StdioClientTransport({
+                command,
+                args,
+                env: {
+                  ...(process.env as Record<string, string>),
+                  ...env,
+                  // Critical for AWS Lambda: ensures npx/npm has a writable directory to cache packages
+                  XDG_CACHE_HOME: '/tmp/mcp-cache',
+                  NPM_CONFIG_CACHE: '/tmp/npm-cache',
+                  HOME: '/tmp',
+                },
+              });
+            }
+
+            const newClient = new Client(
+              { name: 'ServerlessClaw-Client', version: '1.0.0' },
+              { capabilities: {} }
+            );
+
+            // Add a timeout to connection to prevent hanging Lambdas
+            const isHub =
+              connectionString.startsWith('http') &&
+              connectionString.includes(process.env.MCP_HUB_URL || '___none___');
+            const connectTimeout = isHub ? 5000 : 60000; // 5s for Hub, 60s for Local/Direct
+            const timeoutPromise = new Promise<never>((_, reject) =>
+              setTimeout(
+                () =>
+                  reject(
+                    new Error(
+                      `MCP Connection timeout (${isHub ? 'Hub' : 'Direct'}) after ${connectTimeout}ms`
+                    )
+                  ),
+                connectTimeout
+              )
+            );
+
+            await Promise.race([newClient.connect(transport), timeoutPromise]);
+
+            // Listen for close event if the SDK supports it or handle it in the execute wrap
+            transport.onclose = () => {
+              logger.warn(`MCP Server connection closed: ${serverName}. Removing from cache.`);
+              this.clients.delete(serverName);
+            };
+
+            transport.onerror = (err: unknown) => {
+              logger.error(`MCP Transport Error (${serverName}):`, err);
+              this.clients.delete(serverName);
+            };
+
+            return newClient;
+          })();
+
+          this.connecting.set(serverName, connectingPromise);
+
+          try {
+            client = await connectingPromise;
+            this.clients.set(serverName, client);
+          } finally {
+            this.connecting.delete(serverName);
+          }
         }
-
-        client = new Client(
-          { name: 'ServerlessClaw-Client', version: '1.0.0' },
-          { capabilities: {} }
-        );
-
-        // Add a timeout to connection to prevent hanging Lambdas
-        const isHub =
-          connectionString.startsWith('http') &&
-          connectionString.includes(process.env.MCP_HUB_URL || '___none___');
-        const connectTimeout = isHub ? 5000 : 30000; // 5s for Hub, 30s for Local/Direct
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(
-            () =>
-              reject(
-                new Error(
-                  `MCP Connection timeout (${isHub ? 'Hub' : 'Direct'}) after ${connectTimeout}ms`
-                )
-              ),
-            connectTimeout
-          )
-        );
-
-        await Promise.race([client.connect(transport), timeoutPromise]);
-        this.clients.set(serverName, client);
-
-        // Listen for close event if the SDK supports it or handle it in the execute wrap
-        transport.onclose = () => {
-          logger.warn(`MCP Server connection closed: ${serverName}. Removing from cache.`);
-          this.clients.delete(serverName);
-        };
-
-        transport.onerror = (err: unknown) => {
-          logger.error(`MCP Transport Error (${serverName}):`, err);
-          this.clients.delete(serverName);
-        };
       }
 
-      const response = await client.listTools();
+      const response = await client!.listTools();
       return response.tools.map((mcpTool) => ({
         name: `${serverName}_${mcpTool.name}`,
         description: mcpTool.description || `Tool from ${serverName} server.`,
@@ -230,7 +249,25 @@ export class MCPBridge {
       allTools.push(...serverTools);
     }
 
+    // Cache tools list for dashboard performance (if this was a full discovery)
+    if (!requestedTools) {
+      const cacheableTools = allTools.map((t) => ({
+        name: t.name,
+        description: t.description,
+        isExternal: true,
+      }));
+      await AgentRegistry.saveRawConfig('mcp_tools_cache', cacheableTools);
+    }
+
     return allTools;
+  }
+
+  /**
+   * Retrieves tool definitions from cache without connecting to MCP servers.
+   */
+  static async getCachedTools(): Promise<Partial<ITool>[]> {
+    const cached = await AgentRegistry.getRawConfig('mcp_tools_cache');
+    return Array.isArray(cached) ? cached : [];
   }
 
   /**

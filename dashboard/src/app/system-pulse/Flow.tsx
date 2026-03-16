@@ -158,13 +158,36 @@ export function FlowContent() {
       const newNodes: Node[] = [];
       const newEdges: Edge[] = [];
 
-      // 1. Process Nodes
-      topology.nodes.forEach((node: any, index: number) => {
-        let xPos = 0;
-        let yPos = 0;
+      // 1. Pre-calculate connectivity (Degree) for each node
+      const nodeDegrees: Record<string, number> = {};
+      topology.edges.forEach((edge: any) => {
+        nodeDegrees[edge.source] = (nodeDegrees[edge.source] || 0) + 1;
+        nodeDegrees[edge.target] = (nodeDegrees[edge.target] || 0) + 1;
+      });
+
+      // 2. Process Nodes with Centered Connectivity Sorting
+      const tiers = ['APP', 'COMM', 'AGENT', 'INFRA'];
+      const tierNodesMap: Record<string, any[]> = {};
+      
+      tiers.forEach(t => {
+        const nodesInTier = topology.nodes.filter((n: any) => (n.tier || 'INFRA') === t);
         
-        // Use the tier from the backend, default to INFRA if missing
-        const tier = node.tier || 'INFRA';
+        // Sort by degree descending
+        nodesInTier.sort((a, b) => (nodeDegrees[b.id] || 0) - (nodeDegrees[a.id] || 0));
+        
+        // Reorder to put highest degree in middle: [side, side, center, side, side]
+        const centered: any[] = [];
+        nodesInTier.forEach((node, idx) => {
+          if (idx % 2 === 0) centered.push(node);
+          else centered.unshift(node);
+        });
+        
+        tierNodesMap[t] = centered;
+      });
+
+      tiers.forEach(tier => {
+        const centeredNodes = tierNodesMap[tier];
+        const totalInTier = centeredNodes.length;
         
         // Define Y coordinates for each tier
         const TIER_Y = {
@@ -174,52 +197,52 @@ export function FlowContent() {
           'INFRA': 700
         };
         
-        yPos = TIER_Y[tier as keyof typeof TIER_Y] || 700;
-
-        // Calculate X position based on tier occupancy
-        const tierNodes = topology.nodes.filter((n: any) => (n.tier || 'INFRA') === tier);
-        const nodeIndex = tierNodes.findIndex(n => n.id === node.id);
-        const totalInTier = tierNodes.length;
+        const yPos = TIER_Y[tier as keyof typeof TIER_Y] || 700;
         
-        // Center the nodes horizontally
-        const spacing = tier === 'AGENT' ? 300 : 200; // Wider spacing for agents
+        // Define horizontal spacing per tier
+        let spacing = 250;
+        if (tier === 'AGENT') spacing = 300; // Specialized nodes
+        if (tier === 'COMM') spacing = 450; // Communication hub (Tier 2) needs more room for multiple edges
+        
         const totalWidth = (totalInTier - 1) * spacing;
         const startX = 400 - (totalWidth / 2);
-        
-        xPos = startX + (nodeIndex * spacing);
 
-        let icon = <Database size={16} />;
-        if (node.iconType === 'Terminal' || node.id === 'codebuild' || node.id === 'deployer') icon = <Terminal size={16} />;
-        else if (node.iconType === 'Dashboard' || node.id === 'dashboard') icon = <LayoutDashboard size={16} />;
-        else if (node.id === 'api' || node.id === 'webhookapi') icon = <Radio size={16} />;
-        else if (node.id === 'monitor') icon = <Activity size={16} />;
-        else if (node.id === 'telegram') icon = <MessageSquare size={16} />;
-        else if (node.id === 'bridge' || node.id === 'realtimebridge' || node.id === 'realtimebus') icon = <Zap size={16} />;
-        else if (node.id === 'notifier') icon = <Info size={16} />;
-        else if (node.id === 'scheduler') icon = <Radio size={16} />;
-        else if (node.id === 'heartbeat') icon = <Zap size={16} />;
-        else if (node.type === 'agent') icon = getAgentIcon(node.id, node.icon);
+        centeredNodes.forEach((node, nodeIndex) => {
+          const xPos = startX + (nodeIndex * spacing);
+          
+          let icon = <Database size={16} />;
+          if (node.iconType === 'Terminal' || node.id === 'codebuild' || node.id === 'deployer') icon = <Terminal size={16} />;
+          else if (node.iconType === 'Dashboard' || node.id === 'dashboard') icon = <LayoutDashboard size={16} />;
+          else if (node.id === 'api' || node.id === 'webhookapi') icon = <Radio size={16} />;
+          else if (node.id === 'monitor') icon = <Activity size={16} />;
+          else if (node.id === 'telegram') icon = <MessageSquare size={16} />;
+          else if (node.id === 'bridge' || node.id === 'realtimebridge' || node.id === 'realtimebus') icon = <Zap size={16} />;
+          else if (node.id === 'notifier') icon = <Info size={16} />;
+          else if (node.id === 'scheduler') icon = <Radio size={16} />;
+          else if (node.id === 'heartbeat') icon = <Zap size={16} />;
+          else if (node.type === 'agent') icon = getAgentIcon(node.id, node.icon);
 
-        newNodes.push({
-          id: node.id,
-          type: node.type === 'dashboard' ? 'infra' : node.type,
-          position: { x: xPos, y: yPos },
-          data: { 
-            label: node.label,
-            description: node.description || getAgentDescription(node.id),
-            icon,
-            enabled: node.enabled !== undefined ? node.enabled : true,
-            type: node.id === 'main' || node.id === 'superclaw' ? 'Logic_Core' : 
-                  (node.id === 'agentbus' || node.id === 'bus' ? 'ORCHESTRATOR' :
-                  (node.type === 'agent' ? 'Neural_Worker' : 
-                  (node.id === 'memorytable' ? 'DATA_STORE' : 
-                  (node.id === 'stagingbucket' ? 'STORAGE' : 
-                  (node.id === 'deployer' ? 'COMPUTE' : 'INFRA_NODE')))))
-          },
+          newNodes.push({
+            id: node.id,
+            type: node.type === 'dashboard' ? 'infra' : node.type,
+            position: { x: xPos, y: yPos },
+            data: { 
+              label: node.label,
+              description: node.description || getAgentDescription(node.id),
+              icon,
+              enabled: node.enabled !== undefined ? node.enabled : true,
+              type: node.id === 'main' || node.id === 'superclaw' ? 'Logic_Core' : 
+                    (node.id === 'agentbus' || node.id === 'bus' ? 'ORCHESTRATOR' :
+                    (node.type === 'agent' ? 'Neural_Worker' : 
+                    (node.id === 'memorytable' ? 'DATA_STORE' : 
+                    (node.id === 'stagingbucket' ? 'STORAGE' : 
+                    (node.id === 'deployer' ? 'COMPUTE' : 'INFRA_NODE')))))
+            },
+          });
         });
       });
 
-      // 2. Process Edges
+      // 3. Process Edges
       topology.edges.forEach((edge: any) => {
         const isMainOrch = edge.label === 'ORCHESTRATE' || (edge.source === 'main' && edge.target === 'bus');
         const isBusSignal = edge.label === 'SIGNAL' || edge.label?.startsWith('SIGNAL_') || edge.source === 'bus';

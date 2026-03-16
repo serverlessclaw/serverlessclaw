@@ -238,23 +238,31 @@ export const saveMemory = {
     try {
       // 1. Search for existing memories in the same category and scope
       const existing = await memory.searchInsights(baseUserId, '*', category as InsightCategory);
-      
+
       // 2. Filter for the exact same scope to avoid pruning global knowledge from a user context
-      const relevantExisting = existing.filter(e => e.id === scopeId);
+      const relevantExisting = existing.filter((e) => e.id === scopeId);
 
       if (relevantExisting.length > 0) {
-        const newKeywords = content.toLowerCase().split(/\W+/).filter(w => w.length > 3);
-        
+        const newKeywords = content
+          .toLowerCase()
+          .split(/\W+/)
+          .filter((w) => w.length > 3);
+
         for (const oldMem of relevantExisting) {
-          const oldKeywords = oldMem.content.toLowerCase().split(/\W+/).filter(w => w.length > 3);
-          
+          const oldKeywords = oldMem.content
+            .toLowerCase()
+            .split(/\W+/)
+            .filter((w) => w.length > 3);
+
           // Simple Jaccard-ish similarity check for high-confidence conflicts
-          const intersection = newKeywords.filter(w => oldKeywords.includes(w));
+          const intersection = newKeywords.filter((w) => oldKeywords.includes(w));
           const similarity = intersection.length / Math.max(newKeywords.length, oldKeywords.length);
 
           // If > 60% similarity, assume it's an update/redundancy and prune the old one
           if (similarity > 0.6) {
-            console.log(`[Deduplication] Pruning similar memory: "${oldMem.content}" (Similarity: ${Math.round(similarity * 100)}%)`);
+            console.log(
+              `[Deduplication] Pruning similar memory: "${oldMem.content}" (Similarity: ${Math.round(similarity * 100)}%)`
+            );
             await memory.deleteItem({ userId: scopeId, timestamp: oldMem.timestamp });
           }
         }

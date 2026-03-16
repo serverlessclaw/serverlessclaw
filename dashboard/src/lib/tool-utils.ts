@@ -15,7 +15,7 @@ export async function getToolUsage(): Promise<Record<string, { count: number; la
   }
 }
 
-export async function getAllTools(usage: Record<string, { count: number; lastUsed: number }>) {
+export async function getAllTools(usage: Record<string, { count: number; lastUsed: number }>, forceRefresh = false) {
   try {
     const { MCPBridge } = await import('@claw/core/lib/mcp');
 
@@ -27,9 +27,19 @@ export async function getAllTools(usage: Record<string, { count: number; lastUse
       isExternal: false
     }));
 
-    // 2. MCP tools
-    const externalTools = await MCPBridge.getExternalTools();
-    const mcpTools = externalTools.map((t: any) => ({
+    // 2. MCP tools (use cache by default for dashboard speed)
+    let externalToolsDefinitions: any[] = [];
+    if (forceRefresh) {
+      externalToolsDefinitions = await MCPBridge.getExternalTools();
+    } else {
+      externalToolsDefinitions = await MCPBridge.getCachedTools();
+      // If cache is empty, fallback to one-time discovery
+      if (externalToolsDefinitions.length === 0) {
+        externalToolsDefinitions = await MCPBridge.getExternalTools();
+      }
+    }
+
+    const mcpTools = externalToolsDefinitions.map((t: any) => ({
       name: t.name,
       description: t.description,
       usage: usage[t.name] || { count: 0, lastUsed: 0 },

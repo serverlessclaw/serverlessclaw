@@ -42,6 +42,18 @@ export function createDashboard(ctx: SharedContext): { dashboard: sst.aws.Nextjs
       memory: AGENT_CONFIG.memory.LARGE,
       timeout: AGENT_CONFIG.timeout.MAX,
     },
+    permissions: [
+      {
+        actions: [
+          'scheduler:CreateSchedule',
+          'scheduler:DeleteSchedule',
+          'scheduler:GetSchedule',
+          'scheduler:ListSchedules',
+          'scheduler:UpdateSchedule',
+        ],
+        resources: ['*'],
+      },
+    ],
   });
 
   return { dashboard };

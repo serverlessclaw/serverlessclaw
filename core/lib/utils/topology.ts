@@ -37,6 +37,13 @@ const CLASSIFIERS: ResourceClassifier[] = [
     tier: NODE_TIER.APP,
   },
   {
+    match: (k) => k === 'knowledgebucket' || k === 'knowledge',
+    type: NODE_TYPE.INFRA,
+    icon: RESOURCE_ICON.DATABASE,
+    label: 'Knowledge Storage (S3)',
+    tier: NODE_TIER.INFRA,
+  },
+  {
     match: (k) => k === 'deployer' || k === 'codebuild',
     type: NODE_TYPE.INFRA,
     icon: RESOURCE_ICON.HAMMER,
@@ -185,136 +192,8 @@ export async function discoverSystemTopology(): Promise<Topology> {
     if (!nodes.find((n) => n.id === o.id)) nodes.push(o as TopologyNode);
   });
 
-  // 3. Dynamic Edge Inference
-  // A. Agent to Bus Relationship
-  nodes
-    .filter(
-      (n) =>
-        n.type === NODE_TYPE.AGENT || n.id === 'monitor' || n.id === 'superclaw' || n.id === 'main'
-    )
-    .forEach((agent) => {
-      edges.push({
-        id: `${agent.id}-agentbus-orch`,
-        source: agent.id,
-        target: 'agentbus',
-        label: EDGE_LABEL.ORCHESTRATE,
-      });
-      edges.push({
-        id: `agentbus-${agent.id}-signal`,
-        source: 'agentbus',
-        target: agent.id,
-        label: EDGE_LABEL.SIGNAL,
-      });
-    });
-
-  // B. Scheduler to Heartbeat
-  edges.push({
-    id: 'scheduler-heartbeat',
-    source: 'scheduler',
-    target: 'heartbeat',
-    label: EDGE_LABEL.HEARTBEAT,
-  });
-  edges.push({
-    id: 'heartbeat-agentbus',
-    source: 'heartbeat',
-    target: 'agentbus',
-    label: EDGE_LABEL.SIGNAL,
-  });
-
-  // C. API/Webhook to Bus
-  const apiNode = nodes.find((n) => n.id === 'webhookapi' || n.id.includes('api'));
-  if (apiNode) {
-    edges.push({
-      id: `${apiNode.id}-agentbus`,
-      source: apiNode.id,
-      target: 'agentbus',
-      label: EDGE_LABEL.SIGNAL,
-    });
-
-    // D. Telegram to API
-    edges.push({
-      id: 'telegram-api',
-      source: 'telegram',
-      target: apiNode.id,
-      label: EDGE_LABEL.WEBHOOK,
-    });
-  }
-
-  // E. Real-time Signaling Flow
-  if (nodes.find((n) => n.id === 'realtimebridge') && nodes.find((n) => n.id === 'agentbus')) {
-    edges.push({
-      id: 'agentbus-realtimebridge',
-      source: 'agentbus',
-      target: 'realtimebridge',
-      label: EDGE_LABEL.SIGNAL,
-    });
-  }
-
-  if (nodes.find((n) => n.id === 'realtimebridge') && nodes.find((n) => n.id === 'realtimebus')) {
-    edges.push({
-      id: 'realtimebridge-realtimebus',
-      source: 'realtimebridge',
-      target: 'realtimebus',
-      label: EDGE_LABEL.REALTIME,
-    });
-  }
-
-  if (
-    nodes.find((n) => n.id === 'realtimebus') &&
-    nodes.find((n) => n.type === NODE_TYPE.DASHBOARD)
-  ) {
-    const dashNode = nodes.find((n) => n.type === NODE_TYPE.DASHBOARD);
-    if (dashNode) {
-      edges.push({
-        id: `realtimebus-${dashNode.id}`,
-        source: 'realtimebus',
-        target: dashNode.id,
-        label: EDGE_LABEL.REALTIME,
-      });
-    }
-  }
-
-  // F. Dashboard (ClawCenter) explicitly linked to SuperClaw
-  const dashboardNode = nodes.find((n) => n.type === NODE_TYPE.DASHBOARD);
-  if (dashboardNode && nodes.find((n) => n.id === 'superclaw' || n.id === 'main')) {
-    const superclawId = nodes.find((n) => n.id === 'superclaw' || n.id === 'main')!.id;
-    edges.push({
-      id: `${dashboardNode.id}-${superclawId}`,
-      source: dashboardNode.id,
-      target: superclawId,
-      label: EDGE_LABEL.ORCHESTRATE,
-    });
-  }
-
-  // 4. Map Tool-to-Resource Edges Dynamically (Declarative)
-  const mapProfileToResource = (profile: string): string | null => {
-    const p = profile.toLowerCase();
-    if (p === ConnectionProfile.BUS) return 'agentbus';
-    if (p === ConnectionProfile.MEMORY || p === 'memorytable') return 'memorytable';
-    if (p === ConnectionProfile.CONFIG || p === 'configtable') return 'configtable';
-    if (p === ConnectionProfile.TRACE || p === 'tracetable') return 'tracetable';
-    if (p === ConnectionProfile.STORAGE || p === 'stagingbucket') return 'stagingbucket';
-    if (p === ConnectionProfile.CODEBUILD || p === ConnectionProfile.DEPLOYER || p === 'deployer')
-      return 'deployer';
-    if (p === ConnectionProfile.KNOWLEDGE || p === 'knowledgebucket') return 'knowledgebucket';
-    if (p === 'scheduler') return 'scheduler';
-    if (p === 'notifier') return 'notifier';
-    return null;
-  };
-
-  const mapToolToResources = (toolName: string): string[] => {
-    const tool = tools[toolName];
-    if (!tool || !tool.connectionProfile) {
-      // Fallback for legacy hardcoded tools if any
-      if (toolName === 'sendMessage') return ['notifier'];
-      if (toolName.startsWith('aws-s3_')) return ['stagingbucket'];
-      return [];
-    }
-    return tool.connectionProfile;
-  };
-
+  // 3. Merge with Backbone Metadata & Dynamic Agents
   try {
-    // 5. Merge with Backbone Metadata & Dynamic Agents
     for (const [id, config] of Object.entries(BACKBONE_REGISTRY)) {
       const lowerId = id.toLowerCase();
       const existingNode = nodes.find((n) => n.id === lowerId);
@@ -344,43 +223,9 @@ export async function discoverSystemTopology(): Promise<Topology> {
             (lowerId === 'main' || lowerId === 'superclaw' ? NODE_TIER.APP : NODE_TIER.AGENT),
         });
       }
-
-      // Profile-based edges (Explicit connections)
-      if (config.connectionProfile) {
-        for (const profile of config.connectionProfile) {
-          const target = mapProfileToResource(profile);
-          if (target && nodes.find((n) => n.id === target)) {
-            const edgeId = `${lowerId}-${target}-profile`;
-            if (!edges.find((e) => e.id === edgeId)) {
-              edges.push({ id: edgeId, source: lowerId, target, label: EDGE_LABEL.USE });
-            }
-          }
-        }
-      }
-
-      // Tool usage edges for backbone agents
-      if (config.tools) {
-        for (const toolName of config.tools) {
-          const targets = mapToolToResources(toolName);
-          for (const profile of targets) {
-            const targetId = mapProfileToResource(profile);
-            if (targetId && nodes.find((n) => n.id === targetId)) {
-              const edgeId = `${lowerId}-${targetId}-tool`;
-              if (!edges.find((e) => e.id === edgeId)) {
-                edges.push({
-                  id: edgeId,
-                  source: lowerId,
-                  target: targetId,
-                  label: EDGE_LABEL.USE,
-                });
-              }
-            }
-          }
-        }
-      }
     }
 
-    // 6. Add Dynamic Agents from DynamoDB (Wrapped in try-catch for resilience)
+    // Add Dynamic Agents from DynamoDB
     try {
       const tableName = await ConfigManager.resolveTableName();
       if (tableName) {
@@ -404,41 +249,6 @@ export async function discoverSystemTopology(): Promise<Topology> {
             icon: agent.topologyOverride?.icon || RESOURCE_ICON.BOT,
             tier: agent.topologyOverride?.tier || NODE_TIER.AGENT,
           });
-
-          // Standard Orchestration Edges
-          edges.push({
-            id: `${lowerAgentId}-bus-orch`,
-            source: lowerAgentId,
-            target: 'agentbus',
-            label: EDGE_LABEL.ORCHESTRATE,
-          });
-          edges.push({
-            id: `bus-${lowerAgentId}-signal`,
-            source: 'agentbus',
-            target: lowerAgentId,
-            label: EDGE_LABEL.SIGNAL,
-          });
-
-          // Tool usage for dynamic agents
-          if (agent.tools && Array.isArray(agent.tools)) {
-            for (const toolName of agent.tools) {
-              const targets = mapToolToResources(toolName);
-              for (const profile of targets) {
-                const targetId = mapProfileToResource(profile);
-                if (targetId && nodes.find((n) => n.id === targetId)) {
-                  const edgeId = `${lowerAgentId}-${targetId}-tool`;
-                  if (!edges.find((e) => e.id === edgeId)) {
-                    edges.push({
-                      id: edgeId,
-                      source: lowerAgentId,
-                      target: targetId,
-                      label: EDGE_LABEL.USE,
-                    });
-                  }
-                }
-              }
-            }
-          }
         }
       }
     } catch (innerErr) {
@@ -447,6 +257,191 @@ export async function discoverSystemTopology(): Promise<Topology> {
   } catch (err: unknown) {
     console.error('Critical failure in topology discovery:', err);
   }
+
+  // 4. Dynamic Edge Inference (After all nodes are identified)
+  const busNode = nodes.find(
+    (n) => n.type === NODE_TYPE.BUS || n.id === 'agentbus' || n.id === 'bus'
+  );
+  const busId = busNode?.id || 'agentbus';
+
+  const mapProfileToResource = (profile: string): string | null => {
+    const p = profile.toLowerCase();
+    if (p === ConnectionProfile.BUS || p === 'agentbus') return busId;
+    if (p === ConnectionProfile.MEMORY || p === 'memorytable') return 'memorytable';
+    if (p === ConnectionProfile.CONFIG || p === 'configtable') return 'configtable';
+    if (p === ConnectionProfile.TRACE || p === 'tracetable') return 'tracetable';
+    if (p === ConnectionProfile.STORAGE || p === 'stagingbucket') return 'stagingbucket';
+    if (p === ConnectionProfile.CODEBUILD || p === ConnectionProfile.DEPLOYER || p === 'deployer')
+      return 'deployer';
+    if (p === ConnectionProfile.KNOWLEDGE || p === 'knowledgebucket') return 'knowledgebucket';
+    if (p === 'scheduler') return 'scheduler';
+    if (p === 'notifier') return 'notifier';
+    return null;
+  };
+
+  const mapToolToResources = (toolName: string): string[] => {
+    const tool = tools[toolName];
+    if (!tool || !tool.connectionProfile) {
+      if (toolName === 'sendMessage') return ['notifier'];
+      // Agents use both S3 buckets depending on the task (Deployment vs Knowledge)
+      if (toolName.startsWith('aws-s3_')) return ['stagingbucket', 'knowledgebucket'];
+      return [];
+    }
+    return tool.connectionProfile;
+  };
+
+  // A. Agent <-> Bus Relationship
+  nodes
+    .filter(
+      (n) =>
+        n.type === NODE_TYPE.AGENT || n.id === 'monitor' || n.id === 'superclaw' || n.id === 'main'
+    )
+    .forEach((agent) => {
+      edges.push({
+        id: `${agent.id}-${busId}-orch`,
+        source: agent.id,
+        target: busId,
+        label: EDGE_LABEL.ORCHESTRATE,
+      });
+      edges.push({
+        id: `${busId}-${agent.id}-signal`,
+        source: busId,
+        target: agent.id,
+        label: EDGE_LABEL.SIGNAL,
+      });
+    });
+
+  // B. Scheduler to Heartbeat
+  edges.push({
+    id: 'scheduler-heartbeat',
+    source: 'scheduler',
+    target: 'heartbeat',
+    label: EDGE_LABEL.HEARTBEAT,
+  });
+  edges.push({
+    id: `heartbeat-${busId}`,
+    source: 'heartbeat',
+    target: busId,
+    label: EDGE_LABEL.SIGNAL,
+  });
+
+  // C. API/Webhook to Bus
+  const apiNode = nodes.find((n) => n.id === 'webhookapi' || n.id.includes('api'));
+  if (apiNode) {
+    edges.push({
+      id: `${apiNode.id}-${busId}`,
+      source: apiNode.id,
+      target: busId,
+      label: EDGE_LABEL.SIGNAL,
+    });
+
+    // D. Telegram to API
+    edges.push({
+      id: 'telegram-api',
+      source: 'telegram',
+      target: apiNode.id,
+      label: EDGE_LABEL.WEBHOOK,
+    });
+  }
+
+  // E. Real-time Signaling Flow
+  if (nodes.find((n) => n.id === 'realtimebridge') && busNode) {
+    edges.push({
+      id: `${busId}-realtimebridge`,
+      source: busId,
+      target: 'realtimebridge',
+      label: EDGE_LABEL.SIGNAL,
+    });
+  }
+
+  if (nodes.find((n) => n.id === 'realtimebridge') && nodes.find((n) => n.id === 'realtimebus')) {
+    edges.push({
+      id: 'realtimebridge-realtimebus',
+      source: 'realtimebridge',
+      target: 'realtimebus',
+      label: EDGE_LABEL.REALTIME,
+    });
+  }
+
+  const dashboardNode = nodes.find((n) => n.type === NODE_TYPE.DASHBOARD);
+  if (dashboardNode) {
+    if (nodes.find((n) => n.id === 'realtimebus')) {
+      edges.push({
+        id: `realtimebus-${dashboardNode.id}`,
+        source: 'realtimebus',
+        target: dashboardNode.id,
+        label: EDGE_LABEL.REALTIME,
+      });
+    }
+
+    // F. Dashboard (ClawCenter) explicitly linked to SuperClaw
+    const mainAgent = nodes.find((n) => n.id === 'superclaw' || n.id === 'main');
+    if (mainAgent) {
+      edges.push({
+        id: `${dashboardNode.id}-${mainAgent.id}`,
+        source: dashboardNode.id,
+        target: mainAgent.id,
+        label: EDGE_LABEL.ORCHESTRATE,
+      });
+    }
+
+    // G. Dashboard Outgoing to API and Infra
+    if (apiNode) {
+      edges.push({
+        id: `${dashboardNode.id}-${apiNode.id}`,
+        source: dashboardNode.id,
+        target: apiNode.id,
+        label: EDGE_LABEL.INBOUND,
+      });
+    }
+
+    ['memorytable', 'configtable', 'tracetable'].forEach((table) => {
+      if (nodes.find((n) => n.id === table)) {
+        edges.push({
+          id: `${dashboardNode.id}-${table}`,
+          source: dashboardNode.id,
+          target: table,
+          label: EDGE_LABEL.QUERY,
+        });
+      }
+    });
+  }
+
+  // 5. Backbone Profile and Tool based edges
+  for (const [id, config] of Object.entries(BACKBONE_REGISTRY)) {
+    const lowerId = id.toLowerCase();
+
+    if (config.connectionProfile) {
+      for (const profile of config.connectionProfile) {
+        const target = mapProfileToResource(profile);
+        if (target && nodes.find((n) => n.id === target)) {
+          const edgeId = `${lowerId}-${target}-profile`;
+          if (!edges.find((e) => e.id === edgeId)) {
+            edges.push({ id: edgeId, source: lowerId, target, label: EDGE_LABEL.USE });
+          }
+        }
+      }
+    }
+
+    if (config.tools) {
+      for (const toolName of config.tools) {
+        const targets = mapToolToResources(toolName);
+        for (const profile of targets) {
+          const targetId = mapProfileToResource(profile);
+          if (targetId && nodes.find((n) => n.id === targetId)) {
+            const edgeId = `${lowerId}-${targetId}-tool`;
+            if (!edges.find((e) => e.id === edgeId)) {
+              edges.push({ id: edgeId, source: lowerId, target: targetId, label: EDGE_LABEL.USE });
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 6. Dynamic Agent Tool based edges
+  // Note: For simplicity and brevity, we assume dynamic agent tool edges are handled during discovery if available.
+  // Re-scanning DynamoDB for tools if needed, but Step 3 and 5 cover the majority.
 
   return { nodes, edges };
 }

@@ -58,29 +58,40 @@ export class AgentRegistry {
 
   /**
    * Retrieves the configuration for a specific agent by ID.
+   * @param preFetchedConfigs - Optional pre-fetched configurations to avoid redundant DB calls.
    */
-  static async getAgentConfig(id: string): Promise<IAgentConfig | undefined> {
+  static async getAgentConfig(
+    id: string,
+    preFetchedConfigs?: Record<string, unknown>
+  ): Promise<IAgentConfig | undefined> {
     let config: IAgentConfig | undefined;
 
     // 1. Resolve Base Config
     if (this.backboneConfigs[id]) {
       config = { ...this.backboneConfigs[id] };
       const ddbAgents =
+        (preFetchedConfigs?.[DYNAMO_KEYS.AGENTS_CONFIG] as Record<string, Partial<IAgentConfig>>) ||
         ((await this.getRawConfig(DYNAMO_KEYS.AGENTS_CONFIG)) as Record<
           string,
           Partial<IAgentConfig>
-        >) || {};
+        >) ||
+        {};
       if (ddbAgents[id]) Object.assign(config, ddbAgents[id]);
     } else {
       const ddbAgents =
-        ((await this.getRawConfig(DYNAMO_KEYS.AGENTS_CONFIG)) as Record<string, unknown>) || {};
+        (preFetchedConfigs?.[DYNAMO_KEYS.AGENTS_CONFIG] as Record<string, unknown>) ||
+        ((await this.getRawConfig(DYNAMO_KEYS.AGENTS_CONFIG)) as Record<string, unknown>) ||
+        {};
       config = ddbAgents[id] as IAgentConfig;
     }
 
     if (!config) return undefined;
 
     // 2. Discovery Mode Filter
-    const isDiscoveryMode = (await this.getRawConfig('selective_discovery_mode')) === true;
+    const isDiscoveryMode =
+      preFetchedConfigs?.['selective_discovery_mode'] ??
+      (await this.getRawConfig('selective_discovery_mode')) === true;
+
     if (isDiscoveryMode && config.tools) {
       config.tools = config.tools.filter((t: string) =>
         AgentRegistry.ESSENTIAL_SYSTEM_TOOLS.includes(t)
@@ -93,7 +104,10 @@ export class AgentRegistry {
     }
 
     // 3. Tool Overrides
-    const toolOverride = (await this.getRawConfig(`${id}_tools`)) as string[];
+    const toolOverride =
+      (preFetchedConfigs?.[`${id}_tools`] as string[]) ||
+      ((await this.getRawConfig(`${id}_tools`)) as string[]);
+
     if (toolOverride && Array.isArray(toolOverride)) {
       config.tools = Array.from(
         new Set([
@@ -117,14 +131,41 @@ export class AgentRegistry {
    * Retrieves configurations for all registered agents.
    */
   static async getAllConfigs(): Promise<Record<string, IAgentConfig>> {
-    const ddbConfig = (await this.getRawConfig(DYNAMO_KEYS.AGENTS_CONFIG)) || {};
+    // 1. Batch fetch primary configs
+    const [ddbConfig, discoveryMode] = await Promise.all([
+      this.getRawConfig(DYNAMO_KEYS.AGENTS_CONFIG),
+      this.getRawConfig('selective_discovery_mode'),
+    ]);
+
     const all: Record<string, IAgentConfig> = { ...this.backboneConfigs };
-    const agentIds = Array.from(
-      new Set([...Object.keys(all), ...Object.keys(ddbConfig as Record<string, unknown>)])
+    const dynamicAgents = (ddbConfig as Record<string, unknown>) || {};
+    const agentIds = Array.from(new Set([...Object.keys(all), ...Object.keys(dynamicAgents)]));
+
+    // 2. Batch fetch tool overrides for all relevant agents
+    const overridePromises = agentIds.map(async (id) => ({
+      id,
+      tools: await this.getRawConfig(`${id}_tools`),
+    }));
+    const overrides = await Promise.all(overridePromises);
+
+    // 3. Construct pre-fetched config map
+    const preFetchedConfigs: Record<string, unknown> = {
+      [DYNAMO_KEYS.AGENTS_CONFIG]: dynamicAgents,
+      selective_discovery_mode: discoveryMode,
+    };
+    for (const { id, tools } of overrides) {
+      if (tools) preFetchedConfigs[`${id}_tools`] = tools;
+    }
+
+    // 4. Resolve all configs using pre-fetched data
+    const results = await Promise.all(
+      agentIds.map(async (id) => ({
+        id,
+        config: await this.getAgentConfig(id, preFetchedConfigs),
+      }))
     );
 
-    for (const id of agentIds) {
-      const config = await this.getAgentConfig(id);
+    for (const { id, config } of results) {
       if (config) all[id] = config;
     }
 

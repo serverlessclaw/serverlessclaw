@@ -55,6 +55,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       ConnectionProfile.MEMORY,
       ConnectionProfile.CONFIG,
       ConnectionProfile.TRACE,
+      ConnectionProfile.KNOWLEDGE,
     ],
   },
   [AgentType.CODER]: {
@@ -106,6 +107,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       ConnectionProfile.CODEBUILD,
       ConnectionProfile.CONFIG,
       ConnectionProfile.TRACE,
+      ConnectionProfile.KNOWLEDGE,
     ],
   },
   [AgentType.STRATEGIC_PLANNER]: {
@@ -136,6 +138,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       ConnectionProfile.MEMORY,
       ConnectionProfile.CONFIG,
       ConnectionProfile.TRACE,
+      ConnectionProfile.KNOWLEDGE,
     ],
   },
   [AgentType.COGNITION_REFLECTOR]: {
@@ -162,6 +165,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       ConnectionProfile.MEMORY,
       ConnectionProfile.CONFIG,
       ConnectionProfile.TRACE,
+      ConnectionProfile.KNOWLEDGE,
     ],
   },
   [AgentType.QA]: {
@@ -187,6 +191,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       ConnectionProfile.MEMORY,
       ConnectionProfile.CONFIG,
       ConnectionProfile.TRACE,
+      ConnectionProfile.KNOWLEDGE,
     ],
   },
   // Handlers (Logic-only, but registered for topology awareness)

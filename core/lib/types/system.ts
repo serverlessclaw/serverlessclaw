@@ -53,7 +53,7 @@ export interface TopologyNode {
   /** Unique ID of the node. */
   id: string;
   /** Broad category of the resource. */
-  type: 'dashboard' | 'infra' | 'agent';
+  type: 'dashboard' | 'infra' | 'agent' | 'bus';
   /** Display label for the node. */
   label: string;
   /** Brief description of the node's function. */

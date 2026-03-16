@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Search, Plus, Wrench, X } from 'lucide-react';
+import { Search, Plus, Wrench, X, RefreshCw } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Typography from '@/components/ui/Typography';
@@ -11,6 +11,7 @@ interface Props {
   selectedAgentIdForTools: string | null;
   agents: Record<string, any>;
   allTools: Tool[];
+  loadingTools: boolean;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
   setSelectedAgentIdForTools: (id: string | null) => void;
@@ -22,6 +23,7 @@ export default function AgentToolsModal({
   selectedAgentIdForTools,
   agents,
   allTools,
+  loadingTools,
   searchQuery,
   setSearchQuery,
   setSelectedAgentIdForTools,
@@ -108,37 +110,45 @@ export default function AgentToolsModal({
               <Plus size={12} className="text-white/40" /> 
               Available Insertions
             </Typography>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {allTools
-                .filter(t => !(agents[selectedAgentIdForTools]?.tools || []).includes(t.name))
-                .filter(t => !searchQuery || t.name.toLowerCase().includes(searchQuery.toLowerCase()) || t.description.toLowerCase().includes(searchQuery.toLowerCase()))
-                .map(tool => (
-                  <Button
-                    key={tool.name}
-                    variant="ghost"
-                    onClick={() => handleToggleTool(selectedAgentIdForTools, tool.name)}
-                    disabled={isUpdatingTools}
-                    className={`flex flex-col items-start p-3 rounded-sm border border-white/5 bg-white/[0.02] hover:bg-cyber-green/10 hover:border-cyber-green/30 transition-all h-auto text-left group`}
-                  >
-                    <div className="flex justify-between items-center w-full mb-1">
-                      <Typography variant="mono" className="text-[10px] font-bold text-white/90 group-hover:text-cyber-green transition-colors uppercase">
-                        {tool.name}
+            
+            {loadingTools ? (
+              <div className="flex flex-col items-center justify-center py-12 text-white/30 gap-4">
+                <RefreshCw size={24} className="animate-spin text-cyber-green" />
+                <Typography variant="mono" className="text-[10px] uppercase tracking-widest">Synchronizing Tool Registry...</Typography>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {allTools
+                  .filter(t => !(agents[selectedAgentIdForTools]?.tools || []).includes(t.name))
+                  .filter(t => !searchQuery || t.name.toLowerCase().includes(searchQuery.toLowerCase()) || t.description.toLowerCase().includes(searchQuery.toLowerCase()))
+                  .map(tool => (
+                    <Button
+                      key={tool.name}
+                      variant="ghost"
+                      onClick={() => handleToggleTool(selectedAgentIdForTools, tool.name)}
+                      disabled={isUpdatingTools}
+                      className={`flex flex-col items-start p-3 rounded-sm border border-white/5 bg-white/[0.02] hover:bg-cyber-green/10 hover:border-cyber-green/30 transition-all h-auto text-left group`}
+                    >
+                      <div className="flex justify-between items-center w-full mb-1">
+                        <Typography variant="mono" className="text-[10px] font-bold text-white/90 group-hover:text-cyber-green transition-colors uppercase">
+                          {tool.name}
+                        </Typography>
+                        <Plus size={10} className="text-white/40 group-hover:text-cyber-green" />
+                      </div>
+                      <Typography variant="mono" className="text-[9px] line-clamp-2 leading-relaxed h-8 text-white/50 group-hover:text-white/70 transition-colors">
+                        {tool.description}
                       </Typography>
-                      <Plus size={10} className="text-white/40 group-hover:text-cyber-green" />
-                    </div>
-                    <Typography variant="mono" className="text-[9px] line-clamp-2 leading-relaxed h-8 text-white/50 group-hover:text-white/70 transition-colors">
-                      {tool.description}
-                    </Typography>
-                  </Button>
-                ))
-              }
-            </div>
+                    </Button>
+                  ))
+                }
+              </div>
+            )}
           </div>
         </div>
 
         <footer className="mt-8 pt-6 border-t border-white/5 flex justify-between items-center bg-black/20 shrink-0">
           <Typography variant="mono" color="muted" className="text-[10px] italic">
-            {isUpdatingTools ? 'Synchronizing neural pathways...' : 'System stable. All changes persisted immediately.'}
+            {isUpdatingTools ? 'Synchronizing neural pathways...' : loadingTools ? 'Downloading tool definitions...' : 'System stable. All changes persisted immediately.'}
           </Typography>
           <Button 
             variant="primary"

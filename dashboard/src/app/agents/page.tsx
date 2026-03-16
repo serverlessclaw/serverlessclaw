@@ -46,6 +46,8 @@ export default function AgentsPage() {
   const [agents, setAgents] = useState<Record<string, AgentConfig>>({});
   const [initialAgents, setInitialAgents] = useState<Record<string, AgentConfig>>({});
   const [loading, setLoading] = useState(true);
+  const [loadingTools, setLoadingTools] = useState(false);
+  const [refreshingTools, setRefreshingTools] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showBackboneWarning, setShowBackboneWarning] = useState(false);
   const [backboneChanges, setBackboneChanges] = useState<string[]>([]);
@@ -72,31 +74,62 @@ export default function AgentsPage() {
     agentId: '',
     agentName: '',
   });
+  
+  const loadAgents = async () => {
+    setLoading(true);
+    try {
+      const agentsRes = await fetch('/api/agents');
+      const agentsData = await agentsRes.json();
+      setAgents(agentsData);
+      setInitialAgents(JSON.parse(JSON.stringify(agentsData)));
+    } catch (err) {
+      console.error('Failed to load agents:', err);
+      toast.error('Failed to synchronize with agent registry');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadTools = async (forceRefresh = false) => {
+    if (forceRefresh) setRefreshingTools(true);
+    else setLoadingTools(true);
+    
+    try {
+      const toolsRes = await fetch(`/api/tools${forceRefresh ? '?refresh=true' : ''}`);
+      const toolsData = await toolsRes.json();
+      setAllTools(toolsData);
+      if (forceRefresh) toast.success('Tool cache synchronized');
+    } catch (err) {
+      console.error('Failed to load tools:', err);
+      toast.error('Failed to synchronize tool registry');
+    } finally {
+      setLoadingTools(false);
+      setRefreshingTools(false);
+    }
+  };
+
+  const syncRegistry = async () => {
+    setRefreshingTools(true);
+    try {
+      await Promise.all([loadAgents(), loadTools(true)]);
+      toast.success('Agent registry and tool cache synchronized');
+    } catch (err) {
+      console.error('Sync failed:', err);
+      toast.error('Failed to synchronize registry');
+    } finally {
+      setRefreshingTools(false);
+    }
+  };
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [agentsRes, toolsRes] = await Promise.all([
-          fetch('/api/agents'),
-          fetch('/api/tools')
-        ]);
-        
-        const agentsData = await agentsRes.json();
-        const toolsData = await toolsRes.json();
-        
-        setAgents(agentsData);
-        setInitialAgents(JSON.parse(JSON.stringify(agentsData)));
-        setAllTools(toolsData);
-      } catch (err) {
-        console.error('Failed to load dashboard data:', err);
-        toast.error('Failed to synchronize with agent registry');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadData();
+    loadAgents();
   }, []);
+
+  useEffect(() => {
+    if (selectedAgentIdForTools && allTools.length === 0 && !loadingTools) {
+      loadTools();
+    }
+  }, [selectedAgentIdForTools]);
 
   const handleSave = async (force: boolean = false) => {
     // Detect backbone changes
@@ -262,6 +295,16 @@ export default function AgentsPage() {
                 <Typography variant="mono" color="muted" className="text-[10px] uppercase tracking-widest opacity-40 mb-1">NODES</Typography>
                 <Badge variant="outline" className={`px-4 py-1 font-bold text-xs border-${THEME.COLORS.INTEL}/20 text-${THEME.COLORS.INTEL}/60 uppercase`}>{Object.keys(agents).length}</Badge>
             </div>
+            <Button
+              onClick={syncRegistry}
+              variant="outline"
+              size="sm"
+              disabled={refreshingTools}
+              icon={<RefreshCw size={14} className={refreshingTools ? 'animate-spin' : ''} />}
+              className="h-[34px] uppercase font-black tracking-widest border-white/5 hover:bg-white/5"
+            >
+              {refreshingTools ? 'Syncing...' : 'Sync Registry'}
+            </Button>
             <Button
               onClick={addAgent}
               variant="outline"
@@ -529,12 +572,12 @@ export default function AgentsPage() {
         selectedAgentIdForTools={selectedAgentIdForTools}
         agents={agents}
         allTools={allTools}
+        loadingTools={loadingTools}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         setSelectedAgentIdForTools={setSelectedAgentIdForTools}
         handleToggleTool={handleToggleTool}
         isUpdatingTools={isUpdatingTools}
-      />
-    </main>
+      />    </main>
   );
 }
