@@ -37,6 +37,8 @@ export function createDashboard(ctx: SharedContext): { dashboard: sst.aws.Nextjs
       deployer,
       api!,
       realtime!,
+      ctx.heartbeatHandler!,
+      ctx.schedulerRole!,
     ],
     server: {
       memory: AGENT_CONFIG.memory.LARGE,
@@ -52,6 +54,10 @@ export function createDashboard(ctx: SharedContext): { dashboard: sst.aws.Nextjs
           'scheduler:UpdateSchedule',
         ],
         resources: ['*'],
+      },
+      {
+        actions: ['iam:PassRole'],
+        resources: [ctx.schedulerRole!.arn],
       },
     ],
   });

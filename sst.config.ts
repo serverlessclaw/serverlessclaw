@@ -58,7 +58,7 @@ export default $config({
     });
 
     // 5. Sub-Agents (Handlers & Logic)
-    createAgents({
+    const { heartbeatHandler, schedulerRole } = createAgents({
       memoryTable,
       traceTable,
       configTable,
@@ -83,7 +83,9 @@ export default $config({
       deployer,
       api,
       realtime,
-    });
+      heartbeatHandler,
+      schedulerRole,
+    } as any);
 
     return {
       apiUrl: api.url,

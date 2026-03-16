@@ -9,6 +9,8 @@ export interface SharedContext {
   deployer: aws.codebuild.Project;
   api?: sst.aws.ApiGatewayV2;
   realtime?: sst.aws.Realtime;
+  heartbeatHandler?: sst.aws.Function;
+  schedulerRole?: aws.iam.Role;
 }
 
 /**

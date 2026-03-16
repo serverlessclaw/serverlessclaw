@@ -6,6 +6,9 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
+    ignores: ["src/app/api/**/*.ts"],
+  },
+  {
     rules: {
       "no-alert": "error",
     },

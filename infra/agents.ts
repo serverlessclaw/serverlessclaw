@@ -374,5 +374,7 @@ export function createAgents(ctx: SharedContext): {
     notifier,
     workerAgent,
     bridge,
+    heartbeatHandler,
+    schedulerRole,
   };
 }
