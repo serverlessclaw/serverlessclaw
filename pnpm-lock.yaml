@@ -131,7 +131,7 @@ importers:
         version: 1.27.1(zod@4.3.6)
       '@openai/agents-core':
         specifier: ^0.7.0
-        version: 0.7.0(ws@8.19.0)(zod@4.3.6)
+        version: 0.7.2(ws@8.19.0)(zod@4.3.6)
       zod:
         specifier: ^4.3.6
         version: 4.3.6
@@ -1486,8 +1486,8 @@ packages:
     resolution: {integrity: sha512-nn5ozdjYQpUCZlWGuxcJY/KpxkWQs4DcbMCmKojjyrYDEAGy4Ce19NN4v5MduafTwJlbKc99UA8YhSVqq9yPZA==}
     engines: {node: '>=12.4.0'}
 
-  '@openai/agents-core@0.7.0':
-    resolution: {integrity: sha512-UiCfQOBl4adU5+qTzkL+9FGkG5wGafhWe8msY6bhj3hC/b+Xdv//DBWxwXGNhfbIuuxfAHvdFVTiTF/dVsNE1g==}
+  '@openai/agents-core@0.7.2':
+    resolution: {integrity: sha512-q+o0JrsaGz1b0GZf3omsq/27VRU2pixzACVtp4jXhzFV2XyXjqbzpT1vmS4H7wJZozSCOfaLTm65CcHCuLafXA==}
     peerDependencies:
       zod: ^4.0.0
     peerDependenciesMeta:
@@ -4340,6 +4340,18 @@ packages:
 
   openai@6.27.0:
     resolution: {integrity: sha512-osTKySlrdYrLYTt0zjhY8yp0JUBmWDCN+Q+QxsV4xMQnnoVFpylgKGgxwN8sSdTNw0G4y+WUXs4eCMWpyDNWZQ==}
+    hasBin: true
+    peerDependencies:
+      ws: ^8.18.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      ws:
+        optional: true
+      zod:
+        optional: true
+
+  openai@6.29.0:
+    resolution: {integrity: sha512-YxoArl2BItucdO89/sN6edksV0x47WUTgkgVfCgX7EuEMhbirENsgYe5oO4LTjBL9PtdKtk2WqND1gSLcTd2yw==}
     hasBin: true
     peerDependencies:
       ws: ^8.18.0
@@ -7672,10 +7684,10 @@ snapshots:
 
   '@nolyfill/is-core-module@1.0.39': {}
 
-  '@openai/agents-core@0.7.0(ws@8.19.0)(zod@4.3.6)':
+  '@openai/agents-core@0.7.2(ws@8.19.0)(zod@4.3.6)':
     dependencies:
       debug: 4.4.3
-      openai: 6.27.0(ws@8.19.0)(zod@4.3.6)
+      openai: 6.29.0(ws@8.19.0)(zod@4.3.6)
     optionalDependencies:
       '@modelcontextprotocol/sdk': 1.27.1(zod@4.3.6)
       zod: 4.3.6
@@ -9658,7 +9670,7 @@ snapshots:
       eslint: 10.0.3(jiti@2.6.1)
       eslint-import-resolver-node: 0.3.9
       eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.57.0(eslint@10.0.3(jiti@2.6.1))(typescript@5.9.3))(eslint@10.0.3(jiti@2.6.1)))(eslint@10.0.3(jiti@2.6.1))
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.57.0(eslint@10.0.3(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.57.0(eslint@10.0.3(jiti@2.6.1))(typescript@5.9.3))(eslint@10.0.3(jiti@2.6.1)))(eslint@10.0.3(jiti@2.6.1)))(eslint@10.0.3(jiti@2.6.1))
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.57.0(eslint@10.0.3(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@10.0.3(jiti@2.6.1))
       eslint-plugin-jsx-a11y: 6.10.2(eslint@10.0.3(jiti@2.6.1))
       eslint-plugin-react: 7.37.5(eslint@10.0.3(jiti@2.6.1))
       eslint-plugin-react-hooks: 7.0.1(eslint@10.0.3(jiti@2.6.1))
@@ -9695,7 +9707,7 @@ snapshots:
       tinyglobby: 0.2.15
       unrs-resolver: 1.11.1
     optionalDependencies:
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.57.0(eslint@10.0.3(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.57.0(eslint@10.0.3(jiti@2.6.1))(typescript@5.9.3))(eslint@10.0.3(jiti@2.6.1)))(eslint@10.0.3(jiti@2.6.1)))(eslint@10.0.3(jiti@2.6.1))
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.57.0(eslint@10.0.3(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@10.0.3(jiti@2.6.1))
     transitivePeerDependencies:
       - supports-color
 
@@ -9710,7 +9722,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.57.0(eslint@10.0.3(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.57.0(eslint@10.0.3(jiti@2.6.1))(typescript@5.9.3))(eslint@10.0.3(jiti@2.6.1)))(eslint@10.0.3(jiti@2.6.1)))(eslint@10.0.3(jiti@2.6.1)):
+  eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.57.0(eslint@10.0.3(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@10.0.3(jiti@2.6.1)):
     dependencies:
       '@rtsao/scc': 1.1.0
       array-includes: 3.1.9
@@ -11142,6 +11154,11 @@ snapshots:
       mimic-function: 5.0.1
 
   openai@6.27.0(ws@8.19.0)(zod@4.3.6):
+    optionalDependencies:
+      ws: 8.19.0
+      zod: 4.3.6
+
+  openai@6.29.0(ws@8.19.0)(zod@4.3.6):
     optionalDependencies:
       ws: 8.19.0
       zod: 4.3.6
