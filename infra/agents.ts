@@ -19,6 +19,8 @@ export function createAgents(ctx: SharedContext): {
   notifier: sst.aws.Function;
   workerAgent: sst.aws.Function;
   bridge: sst.aws.Function;
+  heartbeatHandler: sst.aws.Function;
+  schedulerRole: aws.iam.Role;
 } {
   const {
     memoryTable,
