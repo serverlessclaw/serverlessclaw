@@ -18,6 +18,16 @@ pre-push: ## Run pre-push checks (check, test-silent, aiready)
 	@$(MAKE) check test-silent aiready
 	@$(call log_success,Pre-push checks passed)
 
+commit-push: ## Commit all changes and push (usage: make commit-push MSG="your message")
+	@if [ -z "$(MSG)" ]; then \
+		$(call log_error,Please provide a commit message via MSG="...").; \
+		exit 1; \
+	fi
+	@git add .
+	@git commit -m "$(MSG)"
+	@git push origin $(shell git branch --show-current)
+	@$(call log_success,Changes committed and pushed successfully!)
+
 help-agent: help ## Show optimized help for AI agents
 
 help: ## Show all targets and descriptions in a markdown table
