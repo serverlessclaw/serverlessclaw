@@ -7,6 +7,7 @@ import {
   DeleteScheduleCommand,
   GetScheduleCommand,
   ListSchedulesCommand,
+  ListSchedulesCommandOutput,
 } from '@aws-sdk/client-scheduler';
 import { mockClient } from 'aws-sdk-client-mock';
 
@@ -76,17 +77,17 @@ describe('DynamicScheduler', () => {
 
   it('should list schedules', async () => {
     schedulerMock.on(ListSchedulesCommand).resolves({
-      Schedules: [{ Name: 'goal-1', ScheduleExpression: 'rate(1h)', State: 'ENABLED' } as any],
-    });
+      Schedules: [{ Name: 'goal-1', State: 'ENABLED' }],
+    } as unknown as ListSchedulesCommandOutput);
 
-    const results = await DynamicScheduler.listSchedules();
+    const results = (await DynamicScheduler.listSchedules()) as { Name: string }[];
     expect(results).toHaveLength(1);
     expect(results[0].Name).toBe('goal-1');
   });
 
   it('should get a specific schedule', async () => {
-    schedulerMock.on(GetScheduleCommand).resolves({ Name: 'test-goal' } as any);
-    const result = await DynamicScheduler.getSchedule('test-goal');
+    schedulerMock.on(GetScheduleCommand).resolves({ Name: 'test-goal' });
+    const result = (await DynamicScheduler.getSchedule('test-goal')) as { Name: string };
     expect(result.Name).toBe('test-goal');
   });
 
@@ -117,7 +118,7 @@ describe('DynamicScheduler', () => {
     });
 
     it('should do nothing if schedule already exists', async () => {
-      schedulerMock.on(GetScheduleCommand).resolves({ Name: 'existing-goal' } as any);
+      schedulerMock.on(GetScheduleCommand).resolves({ Name: 'existing-goal' });
 
       await DynamicScheduler.ensureProactiveGoal({
         goalId: 'existing-goal',

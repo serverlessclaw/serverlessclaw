@@ -95,8 +95,8 @@ export async function archiveStaleGaps(
       });
       archived++;
       logger.info(`Archived stale gap: ${gap.userId}`);
-    } catch (error) {
-      logger.warn(`Failed to archive gap ${gap.userId}:`, error);
+    } catch (e: unknown) {
+      logger.warn(`Failed to archive gap ${gap.userId}:`, e);
     }
   }
 
@@ -176,7 +176,7 @@ export async function updateGapStatus(
   status: GapStatus
 ): Promise<void> {
   const numericId = gapId.replace('GAP#', '');
-  const params: any = {
+  const params: Record<string, unknown> = {
     Key: {
       userId: `GAP#${numericId}`,
       timestamp: parseInt(numericId, 10) || 0,
@@ -194,11 +194,12 @@ export async function updateGapStatus(
 
   if (status === GapStatus.DONE) {
     params.ConditionExpression = 'attribute_exists(userId) AND #status = :deployedStatus';
-    params.ExpressionAttributeValues[':deployedStatus'] = GapStatus.DEPLOYED;
+    (params.ExpressionAttributeValues as Record<string, unknown>)[':deployedStatus'] =
+      GapStatus.DEPLOYED;
   }
 
   // Strategy 2: If primary key fails, search and retry exactly ONCE with specific timestamp
-  if (isNaN(parseInt(numericId, 10)) || params.Key?.timestamp === 0) {
+  if (isNaN(parseInt(numericId, 10)) || (params.Key as Record<string, unknown>)?.timestamp === 0) {
     const allStatuses = Object.values(GapStatus);
     let found = false;
     for (const s of allStatuses) {

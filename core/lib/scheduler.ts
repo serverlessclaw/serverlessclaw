@@ -57,8 +57,11 @@ export class DynamicScheduler {
           State: 'ENABLED',
         })
       );
-    } catch (error: any) {
-      if (error.name === 'ConflictException') {
+    } catch (error: unknown) {
+      if (
+        error instanceof Error &&
+        (error as Error & { name: string }).name === 'ConflictException'
+      ) {
         // Handle update by deleting and recreating (Scheduler doesn't have UpdateSchedule in all SDK versions,
         // or it's often easier to replace for simple dynamic tasks)
         logger.info(`Schedule ${name} already exists, replacing...`);
@@ -80,8 +83,11 @@ export class DynamicScheduler {
     logger.info(`Removing schedule: ${name}`);
     try {
       await scheduler.send(new DeleteScheduleCommand({ Name: name }));
-    } catch (error: any) {
-      if (error.name === 'ResourceNotFoundException') {
+    } catch (error: unknown) {
+      if (
+        error instanceof Error &&
+        (error as Error & { name: string }).name === 'ResourceNotFoundException'
+      ) {
         logger.warn(`Schedule ${name} not found, skipping deletion.`);
       } else {
         logger.error(`Failed to delete schedule ${name}:`, error);
@@ -93,7 +99,7 @@ export class DynamicScheduler {
   /**
    * Lists all dynamic schedules managed by the system.
    */
-  static async listSchedules(namePrefix?: string): Promise<any[]> {
+  static async listSchedules(namePrefix?: string): Promise<unknown[]> {
     try {
       const response = await scheduler.send(
         new ListSchedulesCommand({
@@ -101,7 +107,7 @@ export class DynamicScheduler {
         })
       );
       return response.Schedules || [];
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Failed to list schedules:', error);
       throw error;
     }
@@ -110,12 +116,16 @@ export class DynamicScheduler {
   /**
    * Retrieves details of a specific schedule.
    */
-  static async getSchedule(name: string): Promise<any> {
+  static async getSchedule(name: string): Promise<unknown> {
     try {
       const response = await scheduler.send(new GetScheduleCommand({ Name: name }));
       return response;
-    } catch (error: any) {
-      if (error.name === 'ResourceNotFoundException') return null;
+    } catch (error: unknown) {
+      if (
+        error instanceof Error &&
+        (error as Error & { name: string }).name === 'ResourceNotFoundException'
+      )
+        return null;
       throw error;
     }
   }

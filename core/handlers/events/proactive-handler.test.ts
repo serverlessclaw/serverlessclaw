@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { Context } from 'aws-lambda';
 import { handleProactiveHeartbeat } from './proactive-handler';
 import {
   EventBridgeClient,
@@ -34,7 +35,10 @@ describe('ProactiveHandler', () => {
       metadata: { priority: 'high' },
     };
 
-    await handleProactiveHeartbeat(payload as any, {} as any);
+    await handleProactiveHeartbeat(
+      payload as unknown as Record<string, unknown>,
+      {} as unknown as Context
+    );
 
     expect(eventBridgeMock.commandCalls(PutEventsCommand)).toHaveLength(1);
     const call = eventBridgeMock.call(0);
@@ -60,6 +64,11 @@ describe('ProactiveHandler', () => {
     };
 
     // Should not throw, just log the error
-    await expect(handleProactiveHeartbeat(payload as any, {} as any)).resolves.not.toThrow();
+    await expect(
+      handleProactiveHeartbeat(
+        payload as unknown as Record<string, unknown>,
+        {} as unknown as Context
+      )
+    ).resolves.not.toThrow();
   });
 });

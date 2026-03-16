@@ -48,7 +48,7 @@ export const listSystemConfigs = {
   execute: async (): Promise<string> => {
     try {
       const { docClient } = await import('../lib/registry/config');
-      const { ConfigTable } = Resource as any;
+      const { ConfigTable } = Resource as unknown as Record<string, { name: string }>;
 
       if (!ConfigTable?.name) {
         return 'ConfigTable not linked. Unable to list configurations.';
@@ -69,7 +69,7 @@ export const listSystemConfigs = {
       );
 
       return `[SYSTEM_CONFIGURATIONS]\n${configMap}`;
-    } catch (e) {
+    } catch (e: unknown) {
       const { formatErrorMessage } = await import('../lib/utils/error');
       return `Failed to list configurations: ${formatErrorMessage(e)}`;
     }

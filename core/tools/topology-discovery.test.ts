@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { inspectTopology } from './topology-discovery';
-import { discoverSystemTopology } from '../lib/utils/topology';
+import { discoverSystemTopology, Topology } from '../lib/utils/topology';
 
 vi.mock('../lib/utils/topology', () => ({
   discoverSystemTopology: vi.fn(),
@@ -20,7 +20,8 @@ describe('inspectTopology tool', () => {
       edges: [{ source: 'main', target: 'agentbus', label: 'ORCHESTRATE' }],
     };
 
-    vi.mocked(discoverSystemTopology).mockResolvedValue(mockTopology as any);
+    vi.mocked(discoverSystemTopology).mockResolvedValue(mockTopology as unknown as Topology);
+    // Actually, I'll just use @ts-expect-error for the one place I really need a mock that doesn't perfectly match.
 
     const result = await inspectTopology.execute();
     const parsed = JSON.parse(result);

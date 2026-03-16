@@ -83,9 +83,9 @@ export async function recordMemoryHit(
       },
       ConditionExpression: 'attribute_exists(userId)',
     });
-  } catch (error) {
+  } catch (e: unknown) {
     // Silent failure so it doesn't interrupt tool execution if the memory item was just deleted or schema is legacy
-    console.warn(`Failed to record memory hit for ${userId}@${timestamp}`, error);
+    console.warn(`Failed to record memory hit for ${userId}@${timestamp}`, e);
   }
 }
 
@@ -173,7 +173,7 @@ export async function searchInsights(
   category?: InsightCategory
 ): Promise<MemoryInsight[]> {
   const scopes = [`USER#${userId}`, 'SYSTEM#GLOBAL', `LESSON#${userId}`, `DISTILLED#${userId}`];
-  let allItems: any[] = [];
+  let allItems: Record<string, unknown>[] = [];
 
   // 1. Fetch by explicit partition keys
   for (const scope of scopes) {
@@ -202,7 +202,7 @@ export async function searchInsights(
   }
 
   // Deduplicate by userId and timestamp
-  const uniqueItemsMap = new Map<string, any>();
+  const uniqueItemsMap = new Map<string, Record<string, unknown>>();
   allItems.forEach((item) => {
     uniqueItemsMap.set(`${item.userId}-${item.timestamp}`, item);
   });
@@ -307,9 +307,11 @@ export async function getLowUtilizationMemory(
   // Sort by oldest first and cap
   return staleItems
     .sort((a, b) => {
-      const tA = (a.metadata as any)?.lastAccessed || a.timestamp || 0;
-      const tB = (b.metadata as any)?.lastAccessed || b.timestamp || 0;
-      return tA - tB;
+      const tA =
+        (a.metadata as Record<string, unknown>)?.lastAccessed || (a.timestamp as number) || 0;
+      const tB =
+        (b.metadata as Record<string, unknown>)?.lastAccessed || (b.timestamp as number) || 0;
+      return (tA as number) - (tB as number);
     })
     .slice(0, limit);
 }

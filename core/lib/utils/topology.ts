@@ -6,8 +6,9 @@ import { BACKBONE_REGISTRY } from '../backbone';
 import { NODE_TYPE, EDGE_LABEL, NODE_TIER, RESOURCE_ICON } from './topology/constants';
 import { tools } from '../../tools/index';
 
-// Re-export constants for backward compatibility
+// Re-export constants and types for backward compatibility
 export { INFRA_NODE_ID, NODE_TYPE, EDGE_LABEL, NODE_TIER } from './topology/constants';
+export { Topology, TopologyNode, TopologyEdge } from '../types/index';
 
 const db = new DynamoDBClient({});
 
@@ -90,7 +91,7 @@ export async function discoverSystemTopology(): Promise<Topology> {
   const edges: TopologyEdge[] = [];
 
   // 1. Reflective Node Discovery (SST Linked Resources)
-  const resourceMap = Resource as any;
+  const resourceMap = Resource as unknown as Record<string, unknown>;
   Object.keys(resourceMap).forEach((key) => {
     const res = resourceMap[key];
     if (!res || typeof res !== 'object') return;
@@ -126,7 +127,7 @@ export async function discoverSystemTopology(): Promise<Topology> {
 
     nodes.push({
       id: classifier?.idOverride || lowerKey,
-      type: type as any,
+      type: type as TopologyNode['type'],
       label,
       icon,
       isBackbone: true,
@@ -181,7 +182,7 @@ export async function discoverSystemTopology(): Promise<Topology> {
   ];
 
   orphans.forEach((o) => {
-    if (!nodes.find((n) => n.id === o.id)) nodes.push(o as any);
+    if (!nodes.find((n) => n.id === o.id)) nodes.push(o as TopologyNode);
   });
 
   // 3. Dynamic Edge Inference
@@ -443,7 +444,7 @@ export async function discoverSystemTopology(): Promise<Topology> {
     } catch (innerErr) {
       console.warn('Failed to scan dynamic agents, proceeding with backbone only:', innerErr);
     }
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('Critical failure in topology discovery:', err);
   }
 

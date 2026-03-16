@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { Context } from 'aws-lambda';
 import { handler } from './heartbeat';
 import {
   EventBridgeClient,
@@ -6,7 +7,7 @@ import {
   PutEventsCommandInput,
 } from '@aws-sdk/client-eventbridge';
 import { mockClient } from 'aws-sdk-client-mock';
-import { EventType } from '../lib/types/agent';
+import { EventType, ProactiveHeartbeatPayload } from '../lib/types/agent';
 
 const eventBridgeMock = mockClient(EventBridgeClient);
 
@@ -33,7 +34,7 @@ describe('HeartbeatHandler', () => {
       metadata: { foo: 'bar' },
     };
 
-    await handler(event as any, {} as any);
+    await handler(event as unknown as ProactiveHeartbeatPayload, {} as unknown as Context);
 
     expect(eventBridgeMock.commandCalls(PutEventsCommand)).toHaveLength(1);
     const call = eventBridgeMock.call(0);
@@ -51,7 +52,7 @@ describe('HeartbeatHandler', () => {
       agentId: 'test-agent',
     };
 
-    await handler(event as any, {} as any);
+    await handler(event as unknown as ProactiveHeartbeatPayload, {} as unknown as Context);
 
     expect(eventBridgeMock.commandCalls(PutEventsCommand)).toHaveLength(0);
   });

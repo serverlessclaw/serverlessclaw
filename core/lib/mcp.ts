@@ -109,7 +109,7 @@ export class MCPBridge {
           this.clients.delete(serverName);
         };
 
-        transport.onerror = (err: any) => {
+        transport.onerror = (err: unknown) => {
           logger.error(`MCP Transport Error (${serverName}):`, err);
           this.clients.delete(serverName);
         };
@@ -128,11 +128,12 @@ export class MCPBridge {
               arguments: toolArgs,
             });
             return JSON.stringify(result.content);
-          } catch (execError: any) {
+          } catch (execError: unknown) {
+            const error = execError as Error & { code?: string };
             const errorDetails = {
-              message: execError?.message,
-              code: execError?.code,
-              stack: execError?.stack,
+              message: error?.message,
+              code: error?.code,
+              stack: error?.stack,
               nodeVersion: process.version,
               memoryUsage: process.memoryUsage(),
               server: serverName,
@@ -140,14 +141,14 @@ export class MCPBridge {
             };
             logger.error(`MCP Tool Execution Error Details:`, JSON.stringify(errorDetails));
 
-            if (execError?.message?.includes('Connection closed')) {
+            if (error?.message?.includes('Connection closed')) {
               this.clients.delete(serverName); // Force re-connect on next call
             }
             throw execError;
           }
         },
       }));
-    } catch (e: any) {
+    } catch (e: unknown) {
       logger.error(`Failed to fetch tools from MCP server ${serverName}:`, e);
       this.clients.delete(serverName); // Clean up failed attempts
       return [];

@@ -1,6 +1,7 @@
 import { Context } from 'aws-lambda';
 import { logger } from '../../lib/logger';
 import { emitTaskEvent } from '../../lib/utils/agent-helpers';
+import { AgentType } from '../../lib/types/index';
 import { ProactiveHeartbeatPayload } from '../../lib/types/agent';
 
 /**
@@ -24,7 +25,7 @@ export const handleProactiveHeartbeat = async (
     await emitTaskEvent({
       source: 'heartbeat.scheduler',
       userId: payload.userId || 'SYSTEM',
-      agentId: payload.agentId as any,
+      agentId: payload.agentId as AgentType,
       task: payload.task,
       traceId: payload.traceId,
       initiatorId: 'SYSTEM#SCHEDULER',

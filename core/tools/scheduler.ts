@@ -37,9 +37,15 @@ export const scheduleGoal: ITool = {
     },
     required: ['goalId', 'task', 'scheduleExpression', 'agentId'],
   },
-  execute: async (args: any) => {
+  execute: async (args: Record<string, unknown>) => {
     try {
-      const { goalId, task, agentId, scheduleExpression, metadata } = args;
+      const { goalId, task, agentId, scheduleExpression, metadata } = args as {
+        goalId: string;
+        task: string;
+        agentId: string;
+        scheduleExpression: string;
+        metadata?: Record<string, unknown>;
+      };
       await DynamicScheduler.upsertSchedule(
         goalId,
         { goalId, task, agentId, metadata, userId: 'SYSTEM' },
@@ -47,7 +53,7 @@ export const scheduleGoal: ITool = {
         `Proactive goal for ${agentId}: ${task}`
       );
       return `Successfully scheduled proactive goal "${goalId}" with expression "${scheduleExpression}".`;
-    } catch (error) {
+    } catch (error: unknown) {
       return `Failed to schedule goal: ${formatErrorMessage(error)}`;
     }
   },
@@ -67,11 +73,11 @@ export const cancelGoal: ITool = {
     },
     required: ['goalId'],
   },
-  execute: async (args: any) => {
+  execute: async (args: Record<string, unknown>) => {
     try {
-      await DynamicScheduler.removeSchedule(args.goalId);
+      await DynamicScheduler.removeSchedule((args as { goalId: string }).goalId);
       return `Successfully cancelled proactive goal "${args.goalId}".`;
-    } catch (error) {
+    } catch (error: unknown) {
       return `Failed to cancel goal: ${formatErrorMessage(error)}`;
     }
   },
@@ -90,16 +96,18 @@ export const listGoals: ITool = {
       namePrefix: { type: 'string', description: 'Optional prefix to filter the goal list.' },
     },
   },
-  execute: async (args: any) => {
+  execute: async (args: Record<string, unknown>) => {
     try {
-      const schedules = await DynamicScheduler.listSchedules(args.namePrefix);
+      const schedules = (await DynamicScheduler.listSchedules(
+        (args as { namePrefix?: string }).namePrefix
+      )) as unknown[];
       if (schedules.length === 0) return 'No active proactive goals found.';
 
-      const list = schedules
-        .map((s) => `- ${s.Name}: ${s.ScheduleExpression} (${s.State})`)
+      const list = (schedules as { Name: string; State: string }[])
+        .map((s) => `- ${s.Name}: (${s.State})`)
         .join('\n');
       return `Active Proactive Goals:\n${list}`;
-    } catch (error) {
+    } catch (error: unknown) {
       return `Failed to list goals: ${formatErrorMessage(error)}`;
     }
   },

@@ -95,7 +95,8 @@ export const handler = async (event: PlannerEvent, _context: Context): Promise<P
     sessionId,
   } = payload;
 
-  const isProactive = (metadata as any)?.isProactive || isScheduledReview;
+  const isProactive =
+    (metadata as unknown as Record<string, unknown>)?.isProactive || isScheduledReview;
 
   // Extract base userId (remove CONV# prefix if present)
   const baseUserId = extractBaseUserId(contextUserId);
@@ -211,12 +212,12 @@ export const handler = async (event: PlannerEvent, _context: Context): Promise<P
       const staleItems = await memory.getLowUtilizationMemory(10);
       if (staleItems && staleItems.length > 0) {
         staleMemoryContext = `\n[LOW_UTILIZATION_MEMORY]:\nThese dynamic memory items have not been recalled recently. Consider recommending pruning them if they are no longer relevant to system goals.\n${JSON.stringify(
-          staleItems.map((i: Record<string, any>) => ({
+          staleItems.map((i: Record<string, unknown>) => ({
             id: i.userId,
             timestamp: i.timestamp,
             content: i.content,
-            hitCount: (i.metadata as any)?.hitCount,
-            lastAccessed: (i.metadata as any)?.lastAccessed,
+            hitCount: (i.metadata as Record<string, unknown>)?.hitCount,
+            lastAccessed: (i.metadata as Record<string, unknown>)?.lastAccessed,
           })),
           null,
           2
