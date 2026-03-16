@@ -1,7 +1,7 @@
 # System Configuration Reference
 
 > [!IMPORTANT]
-> **Single Source of Truth**: The technical definitions, implications, and risks outlined here are programmatically managed in [metadata.ts](file:///Users/pengcao/projects/serverlessclaw/core/lib/metadata.ts). Both the ClawCenter UI and SuperClaw's reasoning engine consume this metadata directly to ensure absolute consistency.
+> **Single Source of Truth**: The technical definitions, implications, and risks outlined here are programmatically managed in [metadata.ts](../core/lib/metadata.ts). Both the ClawCenter UI and SuperClaw's reasoning engine consume this metadata directly to ensure absolute consistency.
 
 This document outlines the system-wide configuration keys available in the `ConfigTable` (DynamoDB) and their mechanical implications.
 
