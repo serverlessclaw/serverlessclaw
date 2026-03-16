@@ -155,6 +155,33 @@ To prevent "Context Window Bloat" and maintain high reasoning performance, Serve
 
 ---
 
+## 🛡️ MCP Reliability & Transport (May 2026 Refresh)
+
+To ensure tools are always available even in unstable network conditions or Lambda cold-starts, the system employs a **Layered Transport Architecture**.
+
+```text
+    [ Call Tool ]
+          |
+    +-----v-----+
+    |  MCP Hub  | (Primary - SSE)
+    |  (Remote) | [5s Timeout]
+    +-----+-----+
+          |
+    (Fail / Timeout)
+          |
+    +-----v-----+
+    | Local NPX | (Fallback - Stdio)
+    | (Lambda)  | [30s Timeout]
+    +-----------+
+```
+
+### Reliability Guardrails:
+1. **Physical Resource Headroom**: Agents running MCP tools require `LARGE` (2048MB) memory to avoid OOM crashes during `npx` installations.
+2. **Persistence Safeguards**: Any "Connection Interrupted" message is preserved in the UI even during background session refreshes.
+3. **Environment Hardening**: Writable cache paths in `/tmp` prevent `npm` from crashing when attempting to write to the read-only Lambda home directory.
+
+---
+
 ## 📡 Deploy Lifecycle (Tool Sequence)
 
 ```text

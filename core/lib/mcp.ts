@@ -23,7 +23,7 @@ export class MCPBridge {
   ): Promise<ITool[]> {
     const hubUrl = process.env.MCP_HUB_URL;
     const isLocalCommand = !connectionString.startsWith('http');
-    
+
     // External Hub Priority Logic:
     // If we have a Hub URL and it's a local command (not already a direct URL),
     // and we aren't being forced to stay local (e.g. after a hub failure).
@@ -31,14 +31,17 @@ export class MCPBridge {
       try {
         const hubServerUrl = `${hubUrl.replace(/\/$/, '')}/${serverName}`;
         logger.info(`Attempting to connect to MCP Hub for ${serverName}: ${hubServerUrl}`);
-        
+
         // Use a much shorter timeout for the Hub handshake
         const tools = await this.getToolsFromServer(serverName, hubServerUrl, env, false);
         if (tools.length > 0) {
           return tools;
         }
       } catch (hubError) {
-        logger.warn(`MCP Hub connection failed for ${serverName}, falling back to local:`, hubError);
+        logger.warn(
+          `MCP Hub connection failed for ${serverName}, falling back to local:`,
+          hubError
+        );
         // Continue to local execution
       }
     }
@@ -81,11 +84,18 @@ export class MCPBridge {
         );
 
         // Add a timeout to connection to prevent hanging Lambdas
-        const isHub = connectionString.startsWith('http') && connectionString.includes(process.env.MCP_HUB_URL || '___none___');
+        const isHub =
+          connectionString.startsWith('http') &&
+          connectionString.includes(process.env.MCP_HUB_URL || '___none___');
         const connectTimeout = isHub ? 5000 : 30000; // 5s for Hub, 30s for Local/Direct
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(
-            () => reject(new Error(`MCP Connection timeout (${isHub ? 'Hub' : 'Direct'}) after ${connectTimeout}ms`)),
+            () =>
+              reject(
+                new Error(
+                  `MCP Connection timeout (${isHub ? 'Hub' : 'Direct'}) after ${connectTimeout}ms`
+                )
+              ),
             connectTimeout
           )
         );

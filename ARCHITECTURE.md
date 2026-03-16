@@ -220,24 +220,27 @@ Serverless Claw has evolved from static tools to a **Dynamic Skill Architecture*
     +--------+--------+--------+
     |                 |        |
  [ Custom ]        [ MCP ]  [ Built-in ]
- Internal          External  Model Native
- (Lambda)          (Bridge)  (Provider)
-    |                 |        |
- - deploy          - github  - python
- - memory          - slack   - search
- - health          - sql     - files
+ Internal       External Hub Model Native
+ (Lambda)         (SSE)     (Provider)
+    |          +------+------+ |
+    |          |             | |
+ - deploy      v             v - python
+ - memory   [ Hub ] ----> [ Local ] - search
+ - health   (Prim)  (Fallback) - files
 ```
 
 ### 1. Custom Skills (Internal)
 Tools written specifically for the ServerlessClaw environment (e.g., `triggerDeployment`). These run within the agent's AWS Lambda execution context and are defined in `core/tools/`.
 
-### 2. MCP Skills (External Bridge)
+### 2. MCP Skills (External & Hybrid)
 Connected via the **Model Context Protocol (MCP)**. This is the primary scaling vector for the system.
-- **Lazy Loading (Requested Tool Filtering)**: The `MCPBridge` ensures that external servers are only connected to when an agent's specific toolset requires them. This prevents resource waste and minimizes startup latency for agents that don't need external integrations.
-- **Dynamic Spawning**: The `MCPBridge` uses `npx` to fetch and run servers on-demand based on the `mcp_servers` configuration in DynamoDB.
-- **Curated Ecosystem**: Includes bootstrapped servers for `aws-ss3`, `google-search`, and `filesystem`.
-- **Encapsulated Environments**: Servers run as independent sub-processes, ensuring isolation from the core agent runtime.
-- **Persistence & Auditing**: Once an agent calls `registerMCPServer`, the server is recorded in the `ConfigTable`. Every subsequent tool call is tracked (count and last-used timestamp) to enable data-driven pruning.
+- **Hub-First Architecture (New in May 2026)**: The system prioritizes high-speed connections to an external MCP Hub via SSE. This minimizes Lambda startup latency (cold starts) and offloads resource-heavy tasks (like browser automation) to external infrastructure.
+- **Graceful Local Fallback**: If the external Hub is unreachable or times out (5s limit), the `MCPBridge` seamlessly falls back to local spawning using `StdioClientTransport`.
+- **Lambda Environment Hardening**:
+  - **Memory/Timeout**: Backbone agents and the Dashboard server are provisioned with **2048MB** (LARGE) and **15m** (MAX) to handle concurrent MCP child processes.
+  - **Writable Cache**: Uses `/tmp/mcp-cache` and `/tmp/npm-cache` to ensure `npx` has a writable scratch space in the read-only Lambda environment.
+- **Lazy Loading**: External servers are only connected to when an agent's specific toolset requires them.
+- **Dynamic Spawning**: Uses `npx` to fetch and run fallback servers on-demand.
 
 ### 3. Built-in Skills (Model-Native)
 Native capabilities provided by the LLM provider (e.g., OpenAI's **Code Interpreter** or Gemini's **Grounded Search**). The system passes these through while maintaining trace visibility.
