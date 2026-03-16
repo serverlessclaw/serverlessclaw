@@ -96,18 +96,6 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   }
 
   /**
-   * Adds a new granular insight
-   */
-  async addInsight(
-    scopeId: string,
-    category: InsightCategory | string,
-    content: string,
-    metadata?: Partial<InsightMetadata>
-  ): Promise<number> {
-    return InsightOps.addInsight(this, scopeId, category, content, metadata);
-  }
-
-  /**
    * Adds a new granular memory item into the user or global scope.
    */
   async addMemory(

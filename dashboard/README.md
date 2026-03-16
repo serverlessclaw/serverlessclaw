@@ -1,3 +1,16 @@
+# ClawCenter
+
+<p align="center">
+  <img src="../logo.png" alt="Serverless Claw Logo" width="300">
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=next.js" alt="Next.js">
+  <img src="https://img.shields.io/badge/Tailwind-v4-38B2AC?style=flat-square&logo=tailwind-css" alt="Tailwind CSS">
+  <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript" alt="TypeScript">
+  <img src="https://img.shields.io/badge/OpenNext-Ready-blue?style=flat-square" alt="OpenNext">
+</p>
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

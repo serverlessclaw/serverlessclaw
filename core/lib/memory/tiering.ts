@@ -33,7 +33,8 @@ export class RetentionManager {
     if (
       upperCategory === 'LESSONS' ||
       upperCategory === 'LESSON' ||
-      upperCategory === 'IMPORTANT'
+      upperCategory === 'IMPORTANT' ||
+      upperCategory === 'MEMORY'
     ) {
       tier = RetentionTiers.CRITICAL;
       type = 'lesson';

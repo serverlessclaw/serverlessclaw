@@ -14,7 +14,7 @@ import type { BaseMemoryProvider } from './base';
  */
 async function addRecord(
   base: BaseMemoryProvider,
-  baseCategory: 'INSIGHT' | 'MEMORY',
+  baseCategory: 'MEMORY',
   scopeId: string,
   category: InsightCategory | string,
   content: string,
@@ -22,7 +22,8 @@ async function addRecord(
 ): Promise<number> {
   const { expiresAt } = await RetentionManager.getExpiresAt(baseCategory, scopeId);
   const timestamp = Date.now();
-  const fullType = `${baseCategory}:${category.toUpperCase()}`;
+  // Unify all flexible memory under the MEMORY: prefix for 2026 simplicity
+  const fullType = `MEMORY:${category.toUpperCase()}`;
 
   // 1. Register the type atomically so it can be dynamically discovered by the dashboard
   try {
@@ -136,19 +137,6 @@ export async function getLessons(base: BaseMemoryProvider, userId: string): Prom
 }
 
 /**
- * Adds a new granular insight
- */
-export async function addInsight(
-  base: BaseMemoryProvider,
-  scopeId: string,
-  category: InsightCategory | string,
-  content: string,
-  metadata?: Partial<InsightMetadata>
-): Promise<number> {
-  return addRecord(base, 'INSIGHT', scopeId, category, content, metadata);
-}
-
-/**
  * Adds a new granular memory item into the user or global scope.
  */
 export async function addMemory(
@@ -192,10 +180,9 @@ export async function searchInsights(
   allItems = [...allItems, ...gaps];
 
   // 3. Fetch dynamically registered types (if they aren't already captured by SYSTEM#GLOBAL or USER# scopes)
-  // To avoid duplicates, we'll map them by a unique key
   const registeredTypes = await getRegisteredMemoryTypes(base);
   for (const rType of registeredTypes) {
-    if (rType.startsWith('MEMORY:') || rType.startsWith('INSIGHT:')) {
+    if (rType.startsWith('MEMORY:')) {
       const dynamicItems = await getMemoryByType(base, rType, 50);
       allItems = [...allItems, ...dynamicItems];
     }
@@ -286,7 +273,7 @@ export async function getLowUtilizationMemory(
   const now = Date.now();
 
   for (const type of registeredTypes) {
-    if (!type.startsWith('MEMORY:') && !type.startsWith('INSIGHT:') && type !== 'LESSON') continue;
+    if (!type.startsWith('MEMORY:') && type !== 'LESSON') continue;
 
     const items = await getMemoryByType(base, type, 50);
 

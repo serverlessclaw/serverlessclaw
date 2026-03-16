@@ -28,14 +28,15 @@ export const knowledgeTools: Record<string, IToolDefinition> = {
   },
   saveMemory: {
     name: 'saveMemory',
-    description: 'Directly saves a new fact or user preference into the system memory.',
+    description:
+      'Saves project knowledge (facts, conclusions, user preferences) into the system memory.',
     parameters: {
       type: 'object',
       properties: {
-        content: { type: 'string', description: 'The fact or preference to save.' },
+        content: { type: 'string', description: 'The knowledge, fact, or preference to save.' },
         category: {
           type: 'string',
-          enum: ['user_preference', 'system_knowledge'],
+          enum: ['user_preference', 'system_knowledge', 'tactical_lesson'],
           description: 'The category of the knowledge.',
         },
       },

@@ -194,7 +194,7 @@ export const reportGap = {
         priority: 5,
       };
 
-      const gapIdTimestamp = await getMemory().addInsight(
+      const gapIdTimestamp = await getMemory().addMemory(
         'SYSTEM#GLOBAL',
         category || InsightCategory.STRATEGIC_GAP,
         content,
@@ -218,7 +218,7 @@ export const reportGap = {
 };
 
 /**
- * Directly saves a new fact or user preference into the system memory.
+ * Directly saves project knowledge (facts, insights, preferences) into the system memory.
  */
 export const saveMemory = {
   ...toolDefinitions.saveMemory,
@@ -230,17 +230,9 @@ export const saveMemory = {
     };
 
     const memory = getMemory();
-    // Use the baseUserId for user-specific memory, but ensure it's prefixed correctly for scope.
     const baseUserId = userId.startsWith('CONV#') ? userId.split('#')[1] : userId;
-    const scopeId = `USER#${baseUserId}`;
+    const scopeId = category === 'user_preference' ? `USER#${baseUserId}` : 'SYSTEM#GLOBAL';
 
-    if (category === 'user_preference') {
-      // User preferences are now stored as granular memory items.
-      await memory.addMemory(scopeId, InsightCategory.USER_PREFERENCE, content);
-      return `Successfully saved user preference: ${content}`;
-    }
-
-    // Other categories are treated as system knowledge and stored globally.
     const metadata = {
       category: category as InsightCategory,
       confidence: 10,
@@ -251,8 +243,9 @@ export const saveMemory = {
       priority: 5,
     };
 
-    await memory.addMemory('SYSTEM#GLOBAL', category, content, metadata);
-    return `Successfully saved knowledge as ${category}: ${content}`;
+    // All knowledge is now stored via addMemory which uses the unified MEMORY: prefix
+    await memory.addMemory(scopeId, category, content, metadata);
+    return `Successfully saved knowledge as MEMORY:${category.toUpperCase()}: ${content}`;
   },
 };
 

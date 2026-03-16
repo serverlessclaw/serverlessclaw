@@ -27,6 +27,7 @@ export const tools: Record<string, ITool> = {
 
   // File System & Validation Tools
   ...fsTools,
+
   // Knowledge & Agent Management Tools
   ...knowledgeToolsFiltered,
 

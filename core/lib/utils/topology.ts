@@ -1,5 +1,5 @@
 import { DynamoDBClient, ScanCommand } from '@aws-sdk/client-dynamodb';
-import { Topology, TopologyNode, TopologyEdge, IAgentConfig } from '../types/index';
+import type { Topology, TopologyNode, TopologyEdge, IAgentConfig } from '../types/index';
 import { ConnectionProfile } from '../types/agent';
 import { ConfigManager } from '../registry/config';
 import { BACKBONE_REGISTRY } from '../backbone';
@@ -8,7 +8,7 @@ import { tools } from '../../tools/index';
 
 // Re-export constants and types for backward compatibility
 export { INFRA_NODE_ID, NODE_TYPE, EDGE_LABEL, NODE_TIER } from './topology/constants';
-export { Topology, TopologyNode, TopologyEdge } from '../types/index';
+export type { Topology, TopologyNode, TopologyEdge } from '../types/index';
 
 const db = new DynamoDBClient({});
 

@@ -68,8 +68,13 @@ export default function Sidebar() {
       {/* Mobile Header - Visible only on small screens */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 border-b border-white/10 bg-black/80 backdrop-blur-md z-40 px-6 flex items-center justify-between">
         <Link href={ROUTES.HOME} className="flex items-center gap-3 group">
-          <div className={`w-8 h-8 bg-${THEME.COLORS.PRIMARY} rounded-sm flex items-center justify-center text-black font-bold`}>
-            C
+          <div className="relative w-8 h-8 rounded-sm overflow-hidden group-hover:scale-105 transition-transform">
+            <Image
+              src="/logo-text-transparent.png"
+              alt="ClawCenter Logo"
+              fill
+              className="object-contain"
+            />
           </div>
           <Typography variant="h3" weight="black" className="text-lg tracking-tighter">ClawCenter</Typography>
         </Link>
@@ -98,8 +103,13 @@ export default function Sidebar() {
       `}>
         <div className="flex items-center justify-between lg:justify-start gap-3">
           <Link href={ROUTES.HOME} className="flex items-center gap-3 group">
-            <div className={`w-8 h-8 bg-${THEME.COLORS.PRIMARY} rounded-sm flex items-center justify-center text-black font-bold group-hover:scale-105 transition-transform`}>
-              C
+            <div className="relative w-8 h-8 rounded-sm overflow-hidden group-hover:scale-105 transition-transform">
+              <Image
+                src="/logo-text-transparent.png"
+                alt="ClawCenter Logo"
+                fill
+                className="object-contain"
+              />
             </div>
             <Typography variant="h2" weight="black" className="text-xl tracking-tighter">ClawCenter</Typography>
           </Link>

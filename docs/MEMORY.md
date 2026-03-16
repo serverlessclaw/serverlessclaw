@@ -23,7 +23,7 @@ Serverless Claw uses a tiered, evolutionary memory system designed to provide co
 +---------------------------------------------------------------------+
 |                                                                     |
 |  [ TIER 1: CORE INTELLIGENCE ] --------> Retain: 2 Years (730d)     |
-|  - Key: DISTILLED# / LESSON# / GAP# / INSIGHT: / MEMORY:            |
+|  - Key: DISTILLED# / LESSON# / GAP# / MEMORY:                       |
 |  - Purpose: Permanent identity, tactical lessons, strategic roadmaps.|
 |                                                                     |
 |  [ TIER 2: HUMAN CONVERSATION ] -------> Retain: 30 Days            |
@@ -124,7 +124,7 @@ This telemetry allows the system to distinguish between **High-Utility Facts** (
 ```
 
 ### Pruning Logic
-During its scheduled **48-hour review**, the **Strategic Planner** audits all dynamic memories (`MEMORY:*` and `INSIGHT:*`). 
+During its scheduled **48-hour review**, the **Strategic Planner** audits all dynamic memories (`MEMORY:*`). 
 1. **Identification**: Any memory with `hitCount == 0` that hasn't been accessed in **14 days** is flagged as "Stale".
 2. **Analysis**: The Planner evaluates if the stale information is redundant or irrelevant to current system goals.
 3. **Action**: The Planner recommends pruning the item (archiving or deleting) as part of its **Strategic Plan**.

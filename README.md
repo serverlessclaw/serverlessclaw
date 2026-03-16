@@ -1,162 +1,96 @@
 # Serverless Claw
 
-**Serverless Claw** is a fully autonomous, serverless implementation of the **OpenClaw** AI agent platform. It is designed from the ground up to be **Self-Evolving**, **Self-Healing**, and **Self-Cost Optimizing**. Deployed entirely on AWS using [SST (v4)](https://sst.dev), Serverless Claw features an orchestrated swarm of intelligent agents capable of writing code, modifying their own AWS infrastructure, and deploying updates with zero human intervention.
+<p align="center">
+  <img src="./dashboard/public/logo-text-transparent.png" alt="Serverless Claw Logo" width="400">
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/SST-v3-E27152?style=flat-square&logo=sst" alt="SST v3">
+  <img src="https://img.shields.io/badge/AWS-Lambda-FF9900?style=flat-square&logo=amazon-aws" alt="AWS Lambda">
+  <img src="https://img.shields.io/badge/v2026-Self--Evolution-purple?style=flat-square" alt="Self-Evolution">
+  <img src="https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=next.js" alt="Next.js">
+  <img src="https://img.shields.io/badge/Tailwind-v4-38B2AC?style=flat-square&logo=tailwind-css" alt="Tailwind CSS">
+  <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript" alt="TypeScript">
+  <img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square" alt="License MIT">
+</p>
+
+<p align="center">
+  <strong>The world's first fully autonomous, self-evolving, and serverless AI agent swarm.</strong>
+</p>
+
+---
+
+### 🌟 Help us grow!
+Our agents have calculated a 99.8% probability that a **Star** or **Fork** from you will delay the robot uprising by at least 15 minutes. Support our autonomous evolution!
+
+---
+
+**Serverless Claw** is a production-grade implementation of the **OpenClaw** platform, optimized for zero human intervention. It features an orchestrated swarm of agents that can write code, modify their own AWS infrastructure, and deploy updates on the fly—all with **Zero Idle Costs**.
 
 ![Serverless Claw Dashboard](./dashboard/public/clawcenter.png)
 
-## 🆚 The 2026 "Claw" Ecosystem Comparison
-
-While **OpenClaw**, **NanoClaw**, and **ZeroClaw** focus primarily on *where* the agent runs (Hardware vs. Container vs. Edge), **Serverless Claw** is a fundamentally different category of software: it's a **Self-Evolving Multi-Agent System**. We aren't just a "bot" running in a container; we are a self-healing, self-improving cloud infrastructure.
+## 🆚 The 2026 "Claw" Comparison
 
 | Feature | **OpenClaw** | **NanoClaw** | **ZeroClaw** | **Serverless Claw (Us)** |
 | :--- | :--- | :--- | :--- | :--- |
-| **Core Architecture** | Monolithic Node.js | Micro TypeScript | Native Rust Binary | **AWS Serverless (Lambda + EventBridge)** |
+| **Architecture** | Monolithic Node.js | Micro TypeScript | Native Rust Binary | **Event-Driven Serverless (Lambda)** |
 | **Operational Cost** | High (24/7 Server) | Moderate (VPS/Docker) | Low (Raspberry Pi) | **Zero Idle Cost ($0 when not in use)** |
-| **Multi-Agent Coordination**| Basic "Fire & Forget" | Containerized Swarms | Trait-based Modular | **Conversational (Mid-Task Pause/Resume)** |
-| **Self-Evolution** | Plugin-based (Static) | Manual (Human-coded) | Hardware-focused | **Full Reflector → Planner → Coder Loop** |
-| **Tool Management** | Pre-loaded (50+ Tools) | Static (Hardcoded) | Static (Config-based) | **Just-in-Time (JIT) Skill Discovery** |
-| **Observability** | Standard Text Logs | Container Logs | Binary Logs | **Hierarchical Trace Graphs (`ClawTracer`)** |
-| **Security Model** | App-level Permissions | Hard Sandboxing (Docker) | Memory Safe (Rust) | **Cloud IAM + Recursive Circuit Breakers** |
+| **Scalability** | Manual Cluster | Docker Swarm | Hardware-bound | **Elastic Auto-scale (AWS Native)** |
+| **Multi-Agent** | Basic "Fire & Forget" | Containerized Swarms | Trait-based Modular | **Non-blocking (Pause & Resume)** |
+| **Self-Evolution** | Plugin-based (Static) | Manual (Human-coded) | Hardware-focused | **Verified Refector → Planner Loop** |
+| **Tooling Architecture**| Static Registry | Static (JSON) | Static (Hardcoded) | **Hub-First Dynamic Discovery** |
+| **MCP Integration** | Not Supported | Local Stdio Only | Low-level C FFI | **SSE/Stdio Hybrid (Hub-First)** |
+| **Skill Acquisition** | Static (Hardcoded) | Static (Hardcoded) | Static (Config-based) | **Just-in-Time (JIT) Skill Discovery** |
+| **Memory Model** | SQLite / Local File | Volatile Cache | Flash Storage | **Tiered Neural Engine + Hit Tracking** |
+| **Collaborative Memory** | None (Log-based) | Minimal (JSON) | None | **ClawCenter Neural Reserve Hub** |
+| **Vision Capability** | OCR / Text-only | Basic Base64 | Edge Inference | **S3-mediated Multi-modal Pipeline** |
+| **Observability** | Standard Text Logs | Container Logs | Binary Logs | **Neural Trace Graphs (`ClawTracer`)** |
+| **Resilience** | Manual Recovery | Restart Container | Hardware Watchdog | **Autonomous Heartbeat + Rollback** |
+| **Resource Safety** | App-level Permissions | Sandboxing (Docker) | Memory Safe (Rust) | **Cloud IAM + Recursion Guards** |
 
-### Why We Are Different (Grounded in Code)
+## 🚀 Key Innovations
 
-1. **The Evolutionary Lifecycle:** We don't wait for human developers to write updates. Our `Cognition Reflector` automatically identifies capability failures and logs them as `strategic_gap` items in DynamoDB. Our `Strategic Planner` designs an architectural fix, and our `Coder Agent` implements it, triggering an autonomous `sst deploy`.
-2. **Conversational Coordination (The Clarification Protocol):** In traditional multi-agent systems, if a sub-agent gets stuck, the task fails. We implemented `seekClarification` and `provideClarification` tools, allowing sub-agents to pause execution, ask their initiator a technical question via EventBridge (`CLARIFICATION_REQUEST`), and resume dynamically.
-3. **Just-in-Time (JIT) Skill Discovery:** To solve "Context Window Bloat," our agents start with a tiny core toolset. They use the `discoverSkills` tool to search the marketplace and `installSkill` to dynamically add tools to the `ConfigTable` only when required for the specific task at hand.
-4. **Mechanical Monologue & Trace Graphs:** Standard logging fails in async multi-agent environments. We use a custom `ClawTracer` that links every agent action to a `traceId` and a parent-child `nodeId`, rendering a full "thought tree" of the execution in the ClawCenter Dashboard.
+1.  **[Ask-Back Clarification Protocol](./docs/AGENTS.md#clarification-protocol)**: Sub-agents stop and ask for info via AgentBus rather than guessing.
+2.  **[Tiered Neural Memory](./docs/MEMORY.md)**: DynamoDB-backed memory system with hit-tracking and automatic 2-year retention.
+3.  **[Self-Aware Topology](./ARCHITECTURE.md#infrastructure-discovery)**: Real-time discovery of agent-tool linkages for 100% accurate system visualization.
+4.  **[Hub-First MCP (JIT Skills)](./docs/TOOLS.md#mcp-skills-external--hybrid)**: Prioritizes external skill hubs with graceful local fallback for infinite tool scaling.
+5.  **[Dead Man's Switch (DMS)](./docs/SAFETY.md#dead-mans-switch)**: 15-minute heartbeat probe that triggers automated rollbacks on system failure.
+6.  **[Multi-Modal Vision](./ARCHITECTURE.md#multi-modal-storage-flow)**: Bridge Telegram media to S3 for agent-led PDF analysis and image comprehension.
+7.  **[AI-Native Codebase](./ARCHITECTURE.md#design-philosophy)**: Semantic transparency and strict neural typing optimized for 0.1s reasoning accuracy.
 
-## 🧬 Core Philosophies
+## 🏗️ Technical Blueprint
 
-### 1. Git-Driven Dynamic Evolution
-As a serverless stack, the deployed infrastructure is immutable between releases, but the system's *capabilities* are never static. Through the **Cognition Reflector**, **Strategic Planner**, **Coder**, and **QA Auditor** agents, Serverless Claw autonomously discovers gaps and designs plans that result in verified git-commits and redeployments.
- Evolution follows a strict, verified lifecycle (**OPEN** → **PLANNED** → **PROGRESS** → **DEPLOYED** → **DONE**). No change is marked as complete until the **QA Auditor** verifies its real-world satisfaction in subsequent user interactions. **[Read more about the Evolutionary Lifecycle ↗](./docs/AGENTS.md#the-evolutionary-lifecycle-self-evolution-loop)**
+Serverless Claw follows an **AI-Native** design principle, prioritizing readability for both humans and LLMs. The backbone is powered by the **AgentBus (AWS EventBridge)**, enabling non-blocking, asynchronous coordination across specialized personas like the **Strategic Planner**, **Coder**, and **QA Auditor**.
 
-### 2. Self-Healing & Resilient
-Designed to be "un-killable." If an autonomous deployment fails, the **Build Monitor** retrieves the **Context-Aware Trace** (linking the failure to the original reasoning session) and tasks the agent swarm to investigate. If a component detects an internal violation (e.g., database failure), it emits a **Self-Reporting Signal** to the SuperClaw for autonomous triage. For catastrophic failures, an immutable **Dead Man's Switch** triggers a 100% automated recovery flow that redeploys the Last Known Good (LKG) state.
+For a deep dive into the system topology and data flow, see **[ARCHITECTURE.md](./ARCHITECTURE.md)**.
 
-### 3. Self-Cost Optimizing (Zero Idle Costs)
-Traditional AI agents run on expensive, always-on instances. Serverless Claw is 100% serverless. Powered by AWS Lambda, DynamoDB, and EventBridge, **you pay strictly per invocation**. When the agent is idle, your infrastructure cost is exactly $0.00. The system also dynamically hot-swaps between LLM models (e.g., OpenAI, Anthropic Bedrock) based on the task's complexity, optimizing token costs on the fly.
-
-### 4. Human-Agent Memory Co-Management
-Avoid the "black box" of agent long-term memory. Through the **ClawCenter Dashboard**, humans can audit distilled tactical lessons and strategic capability gaps. You can explicitly **prioritize** what the system should focus on next or "weed" the memory garden.
-
-### 5. Self-Aware Discovery
-The system maintains a real-time topology of itself. Using the **Build Monitor** and the `listAgents` tool, Serverless Claw nodes autonomously discover each other and their underlying infrastructure, ensuring that the system remains coherent as it expands with new specialized agents.
-
-### 6. Multi-Modal Vision & File Intelligence
-The agent swarm isn't limited to text. By bridging Telegram media to S3, Serverless Claw can analyze photos, summarize PDFs, and process audio messages in real-time. It leverages the latest Vision-language models (VLM) for direct image comprehension and custom tools for deep file introspection.
-
-### 7. AI-Native Coding for LLM Transparency
-We prioritize **Semantic Transparency** over traditional boilerplate. By using direct string literals for schema definitions (avoiding redundant constant indirections) and strict TypeScript union types, we minimize the "Reasoning Tax" on LLMs. The codebase is designed to be as readable to an agent as it is to a human developer, maximizing zero-shot task accuracy.
-
-## 🏗️ Architecture & Tech Stack
-
-### Dashboard Organization (ClawCenter)
-The dashboard is structured into four primary command sectors:
-- **Intelligence**: Real-time chat interface and high-fidelity neural traces.
-- **Evolution**: Management of agent personas, tiered memory (Facts, Lessons, Gaps), and tool capabilities.
-- **Infrastructure**: System pulse (real-time topology), session traffic control, and global hot-swappable configuration.
-- **Observability**: Security manifests and self-healing resilience hubs.
-
-### Tiered Memory Engine
-Serverless Claw uses a tiered, evolutionary memory system with **Flexible Neural Typing**:
-- **`DISTILLED#` (Facts)**: Long-term user preferences and project identity.
-- **`LESSON#` (Tactical)**: Actionable heuristics learned from past technical failures.
-- **`GAP#` (Strategic)**: Capability backlog driving the Self-Evolution loop.
-- **`INSIGHT:` / `MEMORY:` (Flexible)**: Dynamic, self-registered categories (e.g., `MEMORY:ARCHITECTURE_CHOICES`) for specialized reasoning context.
-- **`TRACE#` (Operational)**: Short-term mechanical execution logs (24h retention).
-
-### Tech Stack Overview
-- **Framework**: [SST (Serverless Stack) v3 / Ion](https://sst.dev)
-- **Compute**: AWS Lambda (Node.js)
-- **Database**: AWS DynamoDB (Single-Table Design)
-- **Storage**: AWS S3 (Staging & Long-term Artifacts)
-- **Event Bus**: AWS EventBridge (The **AgentBus**)
-- **CI/CD**: AWS CodeBuild
-- **Admin Dashboard**: Next.js 16 (React 19), TailwindCSS v4, deployed via OpenNext
-- **AI / LLMs**: OpenAI (GPT-5.4, GPT-5-mini), Anthropic Claude 4.6 Sonnet (via Amazon Bedrock), OpenRouter (Gemini-3 Flash, GLM-5, Minimax 2.5)
-- **Language**: TypeScript
-
-### ASCII Architecture Diagram
-
-```text
-                                  +-----------------------------------+
-                                  |         Next.js Dashboard         |
-                                  | (Intelligence, Evolution, Infra)  |
-                                  +-----------------------------------+
-                                                  |
-                                                  v
-+----------------+      HTTP       +----------------------------------+
-| User / Webhook | --------------->|        Amazon API Gateway        |
-+----------------+                 +----------------------------------+
-                                                  |
-                                                  v
-                                  +-----------------------------------+
-                                  |    SuperClaw (AWS Lambda)        |
-                                  |  (Orchestrator, LLM Integration)  |
-                                  +-----------------------------------+
-                                                  |
-                                                  v
-                                  +-----------------------------------+
-                                  |        AWS EventBridge            |
-                                  |     (Asynchronous AgentBus)       |
-                                  +-----------------------------------+
-                                   /        |            |        \
-                                  /         |            |         \
-                  +----------------+ +------------------+ +------------------+ +---------------+
-                  |  Coder Agent   | |Strategic Planner | |Cognition Reflector| | QA Auditor    |
-                  |  (AWS Lambda)  | |   (AWS Lambda)   | |   (AWS Lambda)    | | (AWS Lambda)  |
-                  +----------------+ +------------------+ +------------------+ +---------------+
-                           |                |                |               |
-                           +----------------+-------+--------+---------------+
-                                                    |
-                   +------------------------------------------------------------------+
-                   |                    AWS Services & Resources                      |
-                   |                                                                  |
-                   |  [ DynamoDB ]   [ S3 Bucket ]   [ AWS CodeBuild ]   [ Secrets ]  |
-                   | (Memory/Traces) (Staging Code)  (Self-Deployment)   (API Keys)   |
-                   +------------------------------------------------------------------+
-                                                   |
-                   +------------------------------------------------------------------+
-                   |                 Build Monitor & Dead Man's Switch                |
-                   |                (Self-Healing & Rollback Mechanisms)              |
-                   +------------------------------------------------------------------+
-```
-
-## Quick Start
+## ⚡ Quick Start
 
 ```bash
+# 1. Install dependencies
 pnpm install
+
+# 2. Configure AWS Secrets
 # Populate .env with SST_SECRET_ prefixes (e.g. SST_SECRET_OpenAIApiKey)
+
+# 3. Launch Development Mode
 make dev
 ```
 
-## Resilience & Safety Guardrails
-- **Circuit Breaker**: Prevents "Deployment Death Spirals" by limiting deploys (Default: 5/day).
-- **Recursion Limit**: Protects against infinite agent-to-agent delegation loops (Default: 15).
-- **Self-Reporting Health**: Standardized internal signaling (`SYSTEM_HEALTH_REPORT`) that allows components to request autonomous triage from SuperClaw.
-- **Optimization Policy**: Global toggle for `Aggressive` (Quality-first) or `Conservative` (Cost-first) reasoning.
-- **Dead Man's Switch**: 15-minute deep health probe that triggers automated LKG rollback orchestration on failure.
-- **Protected Scopes**: Hardcoded list of files (e.g., `sst.config.ts`) that require human approval to modify.
+## 📖 Documentation Hub
 
-
-## Documentation
-
-📖 Start with **[INDEX.md](./INDEX.md)** — the documentation hub for both humans and agents.
+Start with **[INDEX.md](./INDEX.md)** — the progressive context loading map for both humans and agents.
 
 | Doc | Purpose |
 |-----|---------|
-| [INDEX.md](./INDEX.md) | **Hub** — start here, progressive context loading map |
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | System topology, data flow, & **AI-Native Principles** |
-| [docs/DEVOPS.md](./docs/DEVOPS.md) | **DevOps Hub** — automation, make targets, & CI/CD |
-| [docs/AGENTS.md](./docs/AGENTS.md) | Agent roster, orchestration flow, & Evolutionary loop |
-| [docs/LLM.md](./docs/LLM.md) | Reasoning profiles & LLM provider bridges |
-| [docs/MEMORY.md](./docs/MEMORY.md) | Tiered memory engine & co-management prioritization |
-| [docs/TOOLS.md](./docs/TOOLS.md) | Full tool registry & **AI-Native Tool Standards** |
-| [docs/SAFETY.md](./docs/SAFETY.md) | Circuit breakers, rollback, & HITL guardrails |
-| [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md) | Dev workflow & documentation standards |
-| [docs/RESEARCH.md](./docs/RESEARCH.md) | Architectural decisions & design research |
-| [docs/ROADMAP.md](./docs/ROADMAP.md) | Planned features |
+| [INDEX.md](./INDEX.md) | **Hub** — Start here for the documentation map |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | System topology & **AI-Native Principles** |
+| [docs/AGENTS.md](./docs/AGENTS.md) | Agent roster & Evolutionary loop |
+| [docs/MEMORY.md](./docs/MEMORY.md) | Tiered memory engine & co-management |
+| [docs/TOOLS.md](./docs/TOOLS.md) | Full tool registry & **MCP Standards** |
+| [docs/SAFETY.md](./docs/SAFETY.md) | Circuit breakers & DMS Rollback |
+| [docs/DEVOPS.md](./docs/DEVOPS.md) | DevOps Hub, make targets, & CI/CD |
+| [docs/ROADMAP.md](./docs/ROADMAP.md) | Planned features & Strategic goals |
 
-## License
+## 📜 License
 MIT

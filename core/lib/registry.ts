@@ -2,7 +2,7 @@ import { PutCommand } from '@aws-sdk/lib-dynamodb';
 import { IAgentConfig } from './types/agent';
 import { BACKBONE_REGISTRY } from './backbone';
 import { logger } from './logger';
-import { Topology, TopologyNode } from './types/index';
+import type { Topology, TopologyNode } from './types/index';
 import { DYNAMO_KEYS, RETENTION } from './constants';
 import { ConfigManager, docClient } from './registry/config';
 

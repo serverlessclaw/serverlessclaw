@@ -22,8 +22,7 @@ const mocks = vi.hoisted(() => ({
   getDistilledMemory: vi.fn().mockResolvedValue(''),
   updateDistilledMemory: vi.fn().mockResolvedValue(undefined),
   setGap: vi.fn().mockResolvedValue(undefined),
-  addInsight: vi.fn().mockResolvedValue(123456), // reportGap still uses addInsight
-  addMemory: vi.fn().mockResolvedValue(123456), // saveMemory now uses addMemory
+  addMemory: vi.fn().mockResolvedValue(1),
   recordMemoryHit: vi.fn().mockResolvedValue(undefined),
   deleteItem: vi.fn().mockResolvedValue(undefined),
 }));
@@ -49,8 +48,7 @@ vi.mock('../lib/memory', () => ({
       getDistilledMemory: mocks.getDistilledMemory,
       updateDistilledMemory: mocks.updateDistilledMemory,
       setGap: mocks.setGap,
-      addInsight: mocks.addInsight, // reportGap still uses addInsight
-      addMemory: mocks.addMemory, // saveMemory now uses addMemory
+      addMemory: mocks.addMemory,
       recordMemoryHit: mocks.recordMemoryHit,
       deleteItem: mocks.deleteItem,
     };
@@ -166,11 +164,12 @@ describe('knowledge tools', () => {
         content: 'likes coffee',
         category: 'user_preference',
       });
-      expect(result).toContain('Successfully saved user preference');
+      expect(result).toContain('Successfully saved knowledge as MEMORY:USER_PREFERENCE');
       expect(mocks.addMemory).toHaveBeenCalledWith(
         'USER#user-1',
         InsightCategory.USER_PREFERENCE,
-        'likes coffee'
+        'likes coffee',
+        expect.any(Object)
       );
     });
 
@@ -180,7 +179,7 @@ describe('knowledge tools', () => {
         content: 'new fact',
         category: 'system_knowledge',
       });
-      expect(result).toContain('Successfully saved knowledge');
+      expect(result).toContain('Successfully saved knowledge as MEMORY:SYSTEM_KNOWLEDGE');
       expect(mocks.addMemory).toHaveBeenCalledWith(
         'SYSTEM#GLOBAL',
         InsightCategory.SYSTEM_KNOWLEDGE,
