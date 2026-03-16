@@ -32,9 +32,7 @@ export async function GET() {
           const details = await scheduler.send(new GetScheduleCommand({ Name: s.Name }));
           return {
             ...s,
-            Target: details.Target,
-            Description: details.Description,
-            CreationDate: details.CreationDate,
+            ...details,
           };
         } catch (e) {
           console.error(`Failed to fetch details for schedule ${s.Name}:`, e);

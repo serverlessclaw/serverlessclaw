@@ -122,7 +122,8 @@ export default function ScheduleList() {
 
   const filteredSchedules = schedules.filter(s => 
     !s.Name.startsWith('TRIGGER-') && 
-    s.Name !== 'RecoverySchedule'
+    !s.Name.startsWith('RecoverySchedule') &&
+    !s.Name.startsWith('StrategicReviewSchedule')
   );
 
   const handleTrigger = async (name: string) => {
