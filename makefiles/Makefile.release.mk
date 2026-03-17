@@ -14,6 +14,8 @@ release: ## Full production release: test -> deploy -> verify -> tag
 	@$(MAKE) tag
 	@$(call log_success,Release completed successfully!)
 
+release-dev: dev-release ## Alias for dev-release
+
 dev-release: ## Full development release: test -> deploy -> verify
 	@$(call log_step,Starting full development release...)
 	@$(call verify_clean)
