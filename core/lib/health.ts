@@ -25,6 +25,7 @@ export interface HealthIssue {
 
 /**
  * Reports a system health issue to the AgentBus for autonomous triage.
+ * @param report - High-level health event to be published
  */
 export async function reportHealthIssue(report: HealthIssue): Promise<void> {
   logger.warn(`Reporting system health issue in ${report.component}: ${report.issue}`, {
