@@ -2,13 +2,12 @@ const path = require("path");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  basePath: '/dashboard',
   output: 'standalone',
   outputFileTracingRoot: path.join(__dirname, '../'),
   transpilePackages: ['@claw/core'],
   reactStrictMode: true,
   images: {
-    // unoptimized: true,
+    unoptimized: true,
   },
   typescript: {
     ignoreBuildErrors: true,

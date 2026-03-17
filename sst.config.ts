@@ -24,7 +24,6 @@ export default $config({
     };
   },
   async run() {
-    const { getDomainConfig } = await import('./infra/shared.js');
     // SST v3 Modular Infrastructure via Dynamic Imports
     const { createStorage } = await import('./infra/storage.js');
     const { createBus } = await import('./infra/bus.js');
@@ -88,19 +87,9 @@ export default $config({
       schedulerRole,
     });
 
-    // 7. Routing (Standard v4)
-    const router = new sst.aws.Router('ClawRouter', {
-      domain: getDomainConfig('router'),
-      routes: {
-        '/dashboard/*': dashboard.url,
-        '/api/*': api.url,
-        '/*': dashboard.url,
-      },
-    });
-
     return {
       apiUrl: api.url,
-      dashboardUrl: router.url,
+      dashboardUrl: dashboard.url,
     };
   },
 });

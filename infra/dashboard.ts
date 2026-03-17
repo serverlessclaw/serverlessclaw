@@ -22,7 +22,6 @@ export function createDashboard(ctx: SharedContext): { dashboard: sst.aws.Nextjs
       STAGING_BUCKET_NAME: stagingBucket.name,
       KNOWLEDGE_BUCKET_NAME: knowledgeBucket.name,
       BUS_NAME: bus.name,
-      NEXT_PUBLIC_BASE_PATH: '/dashboard',
     },
     server: {
       memory: AGENT_CONFIG.memory.LARGE,

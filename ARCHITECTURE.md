@@ -295,15 +295,17 @@ While the default uses DynamoDB, the system can be adapted to use:
 To ensure the **ClawCenter Dashboard** receives instantaneous updates, we use a **Real-time Bridge** pattern over AWS IoT Core and MQTT.
 - **Deep Dive**: [Real-time Signaling ↗](./docs/REALTIME.md)
 
-## 🌐 Standard Routing (SST v4 Router)
-The project uses a standard path-based routing strategy managed by `sst.aws.Router`. This replaces legacy post-deployment scripts and provides a cleaner architecture:
+## 🌐 CloudFront Workaround (Next.js 16 / SST v4)
+Due to the project's monorepo structure where the Next.js app resides in a subfolder (`dashboard/`) rather than the root, the standard `sst.aws.Nextjs` component (v4.3.5) sometimes fails to automatically configure the CloudFront distribution with the correct S3 origins and `_next/static` cache behaviors.
 
-1.  **Next.js BasePath**: The dashboard is configured with `basePath: '/dashboard'` in `dashboard/next.config.js`. This ensures all internal links, static assets (`/_next/static`), and image requests are correctly prefixed.
-2.  **SST Router**: A root-level `sst.aws.Router` in `sst.config.ts` maps traffic as follows:
-    - `/dashboard/*` -> Next.js Dashboard
-    - `/api/*` -> API Gateway
-    - `/*` (Default) -> Next.js Dashboard
-3.  **Unified Entry Point**: The Router provides a single CloudFront distribution that serves both the UI and the API, simplifying domain management and CORS.
+To ensure high-performance delivery and correct routing, we use a post-deployment script: `scripts/fix-cloudfront.sh`.
+
+### Why it's needed:
+1.  **Asset Mapping**: SST uploads assets to a `_assets/` prefix in S3, but Next.js expects them at `/_next/static/`. The script injects a CloudFront Function to transparently map these requests.
+2.  **Origin Consolidation**: In some versions/configurations, SST only creates a single Lambda URL origin. The script manually adds/verifies the S3 origin for static content to bypass Lambda execution for assets.
+3.  **Image Optimization**: It ensures requests to `/_next/image` are correctly routed to the dedicated Image Optimizer Lambda function.
+
+This workaround is specific to the `path: 'dashboard'` configuration and is not required for root-level Next.js deployments (like `aiready-platform`).
 
 ### 5. Channel Adapters (Fan-Out)
 Instead of hardcoding API requests to a single platform, agents emit an `OUTBOUND_MESSAGE` event onto the AgentBus.

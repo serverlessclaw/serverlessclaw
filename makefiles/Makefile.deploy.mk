@@ -14,6 +14,8 @@ dev: ## Start SST in development mode
 deploy: ## Deploy SST to the specified environment (default: dev)
 	@$(call log_step,Deploying to environment: $(ENV)...)
 	@$(call load_env); $(SST) deploy --stage $(ENV) --yes
+	@$(call log_step,Running post-deploy CloudFront fix...)
+	@./scripts/fix-cloudfront.sh $(ENV)
 	@$(call log_success,SST deploy completed)
 
 deploy-prod: ## Deploy SST to production
