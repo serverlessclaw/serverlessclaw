@@ -63,7 +63,7 @@ describe('Agent Model Overrides', () => {
   it('should use global model overrides from AgentRegistry', async () => {
     vi.mocked(AgentRegistry.getRawConfig).mockImplementation(async (key: string) => {
       if (key === 'active_provider') return 'bedrock';
-      if (key === 'active_model') return 'anthropic.claude-3-sonnet';
+      if (key === 'active_model') return 'anthropic.claude-4.6-sonnet';
       return undefined;
     });
 
@@ -82,7 +82,7 @@ describe('Agent Model Overrides', () => {
       expect.any(Array),
       expect.any(Array),
       expect.any(String),
-      'anthropic.claude-3-sonnet',
+      'anthropic.claude-4.6-sonnet',
       'bedrock',
       undefined
     );

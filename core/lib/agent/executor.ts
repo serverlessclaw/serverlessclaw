@@ -135,9 +135,13 @@ export class AgentExecutor {
       });
 
       let normalizedProfile = activeProfile;
+      let effectiveResponseFormat = undefined;
       try {
         const capabilities = await this.provider.getCapabilities(activeModel);
         normalizedProfile = normalizeProfile(activeProfile, capabilities, activeModel || 'default');
+        if (capabilities.supportsStructuredOutput) {
+          effectiveResponseFormat = responseFormat;
+        }
       } catch (e) {
         logger.warn('Failed to fetch capabilities, using requested profile:', e);
       }
@@ -148,7 +152,7 @@ export class AgentExecutor {
         normalizedProfile,
         activeModel,
         activeProvider,
-        responseFormat
+        effectiveResponseFormat
       );
 
       await tracer.addStep({

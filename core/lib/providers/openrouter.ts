@@ -211,6 +211,7 @@ export class OpenRouterProvider implements IProvider {
           ]
         : [ReasoningProfile.FAST, ReasoningProfile.STANDARD],
       maxReasoningEffort: 'high', // OpenRouter's reasoning.effort usually caps at high
+      supportsStructuredOutput: true,
     };
   }
 }

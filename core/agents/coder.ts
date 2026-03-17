@@ -18,6 +18,7 @@ import {
   buildProcessOptions,
   emitTaskEvent,
   getAgentContext,
+  parseStructuredResponse,
 } from '../lib/utils/agent-helpers';
 
 /**
@@ -93,7 +94,11 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
   let buildId: string | undefined = undefined;
 
   try {
-    const parsed = JSON.parse(rawResponse);
+    const parsed = parseStructuredResponse<{
+      status: string;
+      response: string;
+      buildId?: string;
+    }>(rawResponse);
     status = parsed.status || 'SUCCESS';
     responseText = parsed.response || rawResponse;
     buildId = parsed.buildId;

@@ -197,6 +197,38 @@ export async function emitTaskEvent(params: {
   }
 }
 
+/**
+ * Parse a structured JSON response from an LLM, with fallback for markdown-wrapped JSON.
+ * This is used by agents to ensure reliability across different providers and models.
+ *
+ * @param rawResponse - The raw text response from the LLM.
+ * @returns The parsed object.
+ * @throws Error if the response cannot be parsed as JSON.
+ */
+export function parseStructuredResponse<T>(rawResponse: string): T {
+  try {
+    // 1. Try direct parsing
+    return JSON.parse(rawResponse.trim()) as T;
+  } catch {
+    // 2. Try cleaning potential markdown formatting
+    try {
+      const jsonContent = rawResponse.replace(/```json\n?|\n?```/g, '').trim();
+      return JSON.parse(jsonContent) as T;
+    } catch (innerE) {
+      logger.error('Failed to parse structured response:', {
+        raw: rawResponse,
+        error: (innerE as Error).message,
+      });
+      throw new Error(
+        `Failed to parse structured response from LLM: ${(innerE as Error).message}`,
+        {
+          cause: innerE,
+        }
+      );
+    }
+  }
+}
+
 /** Options for building process options */
 export interface ProcessOptionsParams {
   isContinuation?: boolean;

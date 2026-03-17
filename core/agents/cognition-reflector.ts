@@ -18,6 +18,7 @@ import {
   extractBaseUserId,
   emitTaskEvent,
   getAgentContext,
+  parseStructuredResponse,
 } from '../lib/utils/agent-helpers';
 import { emitEvent } from '../lib/utils/bus';
 
@@ -251,7 +252,30 @@ export const handler = async (
 
   if (response && !isFailure) {
     try {
-      const parsed = JSON.parse(response);
+      const parsed = parseStructuredResponse<{
+        facts: string;
+        lessons: Array<{
+          content: string;
+          category: InsightCategory;
+          impact: number;
+          confidence?: number;
+          complexity?: number;
+          risk?: number;
+          urgency?: number;
+          priority?: number;
+        }>;
+        gaps: Array<{
+          content: string;
+          impact: number;
+          urgency: number;
+          confidence?: number;
+          complexity?: number;
+          risk?: number;
+          priority?: number;
+        }>;
+        updatedGaps: Array<{ id: string; impact: number; urgency: number }>;
+        resolvedGapIds: string[];
+      }>(response);
 
       // 1. Handle Facts
       if (parsed.facts && parsed.facts !== existingFacts) {

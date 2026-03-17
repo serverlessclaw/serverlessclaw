@@ -306,6 +306,7 @@ export class BedrockProvider implements IProvider {
             ReasoningProfile.DEEP,
           ]
         : [ReasoningProfile.FAST, ReasoningProfile.STANDARD],
+      supportsStructuredOutput: false,
     };
   }
 }

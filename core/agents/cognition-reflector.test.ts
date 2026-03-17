@@ -91,6 +91,7 @@ vi.mock('../lib/utils/agent-helpers', () => ({
     userId.startsWith('CONV#') ? userId.split('#')[1] : userId
   ),
   emitTaskEvent: vi.fn().mockResolvedValue(undefined),
+  parseStructuredResponse: (r: string) => JSON.parse(r),
   getAgentContext: vi.fn().mockResolvedValue({
     memory: {
       getDistilledMemory: vi.fn().mockResolvedValue('Old facts'),

@@ -210,6 +210,7 @@ export class OpenAIProvider implements IProvider {
           ]
         : [ReasoningProfile.FAST, ReasoningProfile.STANDARD],
       maxReasoningEffort: isMiniModel ? 'high' : 'xhigh',
+      supportsStructuredOutput: true,
     };
   }
 }

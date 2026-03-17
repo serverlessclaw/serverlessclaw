@@ -15,6 +15,7 @@ import {
   getAgentContext,
   emitTaskEvent,
   isTaskPaused,
+  parseStructuredResponse,
 } from '../lib/utils/agent-helpers';
 import { parseConfigInt } from '../lib/providers/utils';
 import { MEMORY_KEYS } from '../lib/constants';
@@ -335,7 +336,11 @@ export const handler = async (event: PlannerEvent, _context: Context): Promise<P
   let coveredGapIds: string[] = [];
 
   try {
-    const parsed = JSON.parse(rawResponse);
+    const parsed = parseStructuredResponse<{
+      status: string;
+      plan: string;
+      coveredGapIds: string[];
+    }>(rawResponse);
     status = parsed.status || 'SUCCESS';
     plan = parsed.plan || rawResponse;
     coveredGapIds = parsed.coveredGapIds || [];

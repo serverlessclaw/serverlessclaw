@@ -129,6 +129,8 @@ export interface ICapabilities {
   supportedReasoningProfiles: ReasoningProfile[];
   /** Optional cap for reasoning effort (e.g. 'high' for mini models). */
   maxReasoningEffort?: string;
+  /** Whether the model supports structured JSON output (json_schema). */
+  supportsStructuredOutput?: boolean;
 }
 
 /**
