@@ -65,14 +65,18 @@ endif
 ENV_FILES := .env.$(ENV).local .env.$(ENV) .env.local .env
 
 # Usage: $(call load_env)
-# Loads available env files and exports variables
+# Loads available env files and exports variables. Fails if AWS_PROFILE is not set.
 define load_env
 	for f in $(ENV_FILES); do \
 		if [ -f "$$f" ]; then \
 			$(call log_info,Loading env file: $$f); \
 			set -a; . ./$$f; set +a; \
 		fi; \
-	done
+	done; \
+	if [ -z "$$AWS_PROFILE" ]; then \
+		$(call log_error,AWS_PROFILE is not set. Please ensure it is defined in your .env file.); \
+		exit 1; \
+	fi
 endef
 
 .PHONY: show-env
