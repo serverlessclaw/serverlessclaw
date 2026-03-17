@@ -29,8 +29,8 @@ jobs:
       - name: Install Dependencies
         run: pnpm install
 
-      - name: Generate SST Types
-        run: npx sst refresh --stage ci
+      - name: Install Providers & Generate Types
+        run: pnpm exec sst install
         env:
           AWS_ACCESS_KEY_ID: mock-key
           AWS_SECRET_ACCESS_KEY: mock-secret
