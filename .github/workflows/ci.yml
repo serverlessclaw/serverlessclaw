@@ -29,5 +29,18 @@ jobs:
       - name: Install Dependencies
         run: pnpm install
 
-      - name: Run All Checks (Parallel)
-        run: make -j check test-silent aiready
+      - name: Generate SST Types
+        run: npx sst build --stage ci --no-deploy
+        env:
+          AWS_ACCESS_KEY_ID: mock-key
+          AWS_SECRET_ACCESS_KEY: mock-secret
+          AWS_REGION: ap-southeast-2
+
+      - name: Run Quality Checks
+        run: make check
+
+      - name: Run Unit Tests
+        run: make test-silent
+
+      - name: Run AIReady Scan
+        run: make aiready
