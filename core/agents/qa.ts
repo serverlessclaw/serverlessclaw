@@ -4,6 +4,8 @@ import {
   AgentType,
   EvolutionMode,
   TraceSource,
+  AgentEvent,
+  AgentPayload,
 } from '../lib/types/index';
 import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
@@ -15,21 +17,6 @@ import {
 } from '../lib/utils/agent-helpers';
 import { sendOutboundMessage } from '../lib/outbound';
 
-interface QAPayload {
-  userId: string;
-  gapIds: string[];
-  response: string;
-  traceId?: string;
-  initiatorId?: string;
-  depth?: number;
-  sessionId?: string;
-}
-
-interface QAEvent {
-  detail?: QAPayload;
-  source?: string;
-}
-
 /**
  * QA Agent handler. Triggered after a build success or coder task completion.
  *
@@ -37,19 +24,19 @@ interface QAEvent {
  * @param context - The AWS Lambda context.
  * @returns A promise that resolves when the audit is complete.
  */
-export const handler = async (event: QAEvent, _context: Context): Promise<void> => {
+export const handler = async (event: AgentEvent, _context: Context): Promise<void> => {
   logger.info('QA Agent received verification task:', JSON.stringify(event, null, 2));
 
-  const payload = extractPayload<QAPayload>(event);
+  const payload = extractPayload<AgentPayload>(event);
   const {
     userId,
-    gapIds,
     response: implementationResponse,
     traceId,
     sessionId,
     initiatorId,
     depth,
   } = payload;
+  const gapIds = payload.metadata?.gapIds as string[];
 
   if (!userId || !gapIds || !Array.isArray(gapIds) || gapIds.length === 0) {
     logger.warn('QA Auditor received incomplete payload, skipping verification.');

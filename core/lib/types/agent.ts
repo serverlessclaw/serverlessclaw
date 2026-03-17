@@ -18,6 +18,25 @@ export interface BaseEvent {
 }
 
 /**
+ * Shared payload for EventBridge-triggered agent handlers.
+ */
+export interface AgentPayload extends BaseEvent {
+  task?: string;
+  response?: string;
+  metadata?: Record<string, unknown>;
+  attachments?: Attachment[];
+  isContinuation?: boolean;
+}
+
+/**
+ * Shared EventBridge event structure for agent handlers.
+ */
+export interface AgentEvent {
+  detail?: AgentPayload;
+  source?: string;
+}
+
+/**
  * Task delegation event.
  */
 export interface TaskEvent extends BaseEvent {

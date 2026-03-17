@@ -3,6 +3,9 @@ import { getRecursionLimit, handleRecursionLimitExceeded, wakeupInitiator } from
 
 /**
  * Handles task completion and failure events - relays results to initiator.
+ *
+ * @param eventDetail - The detail of the EventBridge event.
+ * @param detailType - The type of the EventBridge event.
  */
 export async function handleTaskResult(
   eventDetail: Record<string, unknown>,

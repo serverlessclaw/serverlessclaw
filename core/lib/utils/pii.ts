@@ -59,7 +59,7 @@ export function filterPIIFromObject<T>(obj: T): T {
     return obj.map((item) => filterPIIFromObject(item)) as unknown as T;
   }
 
-  const filteredObj = { ...obj } as Record<string, any>;
+  const filteredObj = { ...obj } as Record<string, unknown>;
 
   for (const key in filteredObj) {
     const value = filteredObj[key];

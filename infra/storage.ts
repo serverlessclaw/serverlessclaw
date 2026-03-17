@@ -1,3 +1,8 @@
+/**
+ * Creates and configures the storage resources for the application.
+ *
+ * @returns An object containing the created DynamoDB tables, S3 buckets, and secrets.
+ */
 export function createStorage() {
   const memoryTable = new sst.aws.Dynamo('MemoryTable', {
     fields: {
@@ -34,7 +39,7 @@ export function createStorage() {
             id: 'expire-rubbish',
             enabled: true,
             expiration: {
-              days: 30,
+              days: STAGING_EXPIRATION_DAYS,
             },
           },
         ],
@@ -64,3 +69,5 @@ export function createStorage() {
 
   return { memoryTable, traceTable, stagingBucket, knowledgeBucket, secrets, configTable };
 }
+
+const STAGING_EXPIRATION_DAYS = 30;

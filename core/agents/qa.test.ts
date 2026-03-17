@@ -94,7 +94,7 @@ vi.mock('sst', () => ({
 const BASE_PAYLOAD = {
   detail: {
     userId: 'user-1',
-    gapIds: ['GAP#1001'],
+    metadata: { gapIds: ['GAP#1001'] },
     response: 'Coder reported success.',
     traceId: 'trace-1',
   },

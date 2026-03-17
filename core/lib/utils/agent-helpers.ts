@@ -26,6 +26,8 @@ let _typedResource: SSTResource | undefined;
 
 /**
  * Get or initialize the shared eventbridge client (singleton pattern).
+ *
+ * @returns A promise resolving to the shared EventBridgeClient.
  */
 async function getEventBridge(): Promise<import('@aws-sdk/client-eventbridge').EventBridgeClient> {
   if (!_eventbridge) {
@@ -36,7 +38,9 @@ async function getEventBridge(): Promise<import('@aws-sdk/client-eventbridge').E
 }
 
 /**
- * Get typed resource reference
+ * Get typed resource reference.
+ *
+ * @returns The typed SSTResource object.
  */
 function getTypedResource(): SSTResource {
   if (!_typedResource) {
@@ -83,6 +87,7 @@ export function detectFailure(response: string): boolean {
 
 /**
  * Check if response indicates a paused task (should not emit completion event).
+ * This is used to maintain state across async operations.
  *
  * @param response - The string response from the agent.
  * @returns True if the task is paused, false otherwise.

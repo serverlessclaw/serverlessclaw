@@ -11,6 +11,13 @@ import { isTaskPaused } from '../../lib/utils/agent-helpers';
 
 /**
  * Wake up the initiator agent when a delegated task or system event completes.
+ *
+ * @param userId - The ID of the user.
+ * @param initiatorId - The ID of the agent that initiated the task.
+ * @param task - The task name or identifier.
+ * @param traceId - Optional trace ID for tracking.
+ * @param sessionId - Optional session identifier.
+ * @param depth - Current recursion depth.
  */
 export async function wakeupInitiator(
   userId: string,
@@ -54,7 +61,12 @@ export async function getRecursionLimit(): Promise<number> {
 }
 
 /**
- * Handle recursion limit exceeded scenario.
+ * Handle recursion limit exceeded scenario by informing the user.
+ *
+ * @param userId - The ID of the user.
+ * @param sessionId - Optional session identifier.
+ * @param handlerName - The name of the handler reporting the limit.
+ * @param reason - The reason for recursion limit.
  */
 export async function handleRecursionLimitExceeded(
   userId: string,
@@ -75,6 +87,12 @@ export async function handleRecursionLimitExceeded(
 
 /**
  * Encapsulates the core agent processing logic for event handlers.
+ *
+ * @param userId - The ID of the user.
+ * @param agentId - The ID of the agent to process the event.
+ * @param taskContent - The content of the task to perform.
+ * @param options - Additional options for execution.
+ * @returns A promise resolving to the agent response and attachments.
  */
 export async function processEventWithAgent(
   userId: string,

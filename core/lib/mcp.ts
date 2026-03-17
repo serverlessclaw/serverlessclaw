@@ -9,6 +9,8 @@ import { checkFileSecurity } from './utils/fs-security';
 /**
  * MCPBridge allows ServerlessClaw to connect to external Model Context Protocol servers.
  * It dynamically discovers tools from these servers and makes them available to agents.
+ *
+ * Updated: March 2026 - Added human-in-the-loop security checks for filesystem tools.
  */
 export class MCPBridge {
   private static clients: Map<string, Client> = new Map();

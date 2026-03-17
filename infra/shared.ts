@@ -1,3 +1,6 @@
+/**
+ * Represents the shared resource context passed between infrastructure modules.
+ */
 export interface SharedContext {
   memoryTable: sst.aws.Dynamo;
   traceTable: sst.aws.Dynamo;
@@ -47,7 +50,7 @@ export const AGENT_CONFIG = {
  * @returns The domain configuration or undefined if not set.
  */
 export function getDomainConfig(component: 'api' | 'dashboard' | 'router'): string | undefined {
-  const envVarMap = {
+  const envVarMap: Record<string, string> = {
     api: 'CLAW_DOMAIN_API',
     dashboard: 'CLAW_DOMAIN_DASHBOARD',
     router: 'CLAW_DOMAIN_ROUTER',

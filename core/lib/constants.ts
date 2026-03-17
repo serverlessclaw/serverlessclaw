@@ -4,6 +4,9 @@
  * resource naming, and status codes.
  */
 
+/**
+ * System-wide constants for agent orchestration and resource management.
+ */
 export const SYSTEM = {
   USER_ID: 'SYSTEM',
   DEPLOY_STATS_KEY: 'SYSTEM#DEPLOY_STATS',
