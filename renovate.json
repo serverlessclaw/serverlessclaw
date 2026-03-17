@@ -8,10 +8,12 @@
   "automerge": true,
   "platformAutomerge": true,
   "platform": "github",
+  "prCreation": "not-pending",
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
-      "automerge": true
+      "automerge": true,
+      "automergeType": "pr"
     },
     {
       "description": "Prevent sst upgrade to v4.3.x which breaks CloudFront subfolder routing",
