@@ -25,6 +25,11 @@ vi.mock('../lib/deploy-stats', () => ({
 
 import { getDeployCountToday, incrementDeployCount, rewardDeployLimit } from '../lib/deploy-stats';
 
+// Mock exec
+vi.mock('child_process', () => ({
+  exec: vi.fn((cmd, cb) => cb(null, { stdout: 'ok', stderr: '' })),
+}));
+
 describe('system tools', () => {
   beforeEach(() => {
     codebuildMock.reset();
@@ -80,11 +85,6 @@ describe('system tools', () => {
 
   describe('triggerRollback', () => {
     it('should trigger rollback build', async () => {
-      // Mock exec
-      vi.mock('child_process', () => ({
-        exec: vi.fn((cmd, cb) => cb(null, { stdout: 'ok', stderr: '' })),
-      }));
-
       codebuildMock.on(StartBuildCommand).resolves({});
 
       const result = await triggerRollback.execute({ reason: 'failed deploy' });

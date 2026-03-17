@@ -6,27 +6,27 @@ import { TraceSource, MessageRole, Message } from '../types/index';
 
 // We skip actual LLM calls unless explicitly requested,
 // but this shows how to setup the integration test.
+// 1. Setup mocks to avoid real AWS/OpenAI calls in CI
+vi.mock('sst', () => ({
+  Resource: {
+    OpenAIApiKey: { value: 'test' },
+    TraceTable: { name: 'test-trace' },
+    MemoryTable: { name: 'test-memory' },
+  },
+}));
+
+// Mock DynamoDB client used by Memory and Tracer
+vi.mock('@aws-sdk/lib-dynamodb', () => ({
+  DynamoDBDocumentClient: { from: () => ({ send: vi.fn().mockResolvedValue({}) }) },
+  PutCommand: class {},
+  GetCommand: class {},
+  QueryCommand: class {},
+  UpdateCommand: class {},
+}));
+vi.mock('@aws-sdk/client-dynamodb', () => ({ DynamoDBClient: class {} }));
+
 describe('Backend API Integration', () => {
   it('should format a message with a file attachment for the provider', async () => {
-    // 1. Setup mocks to avoid real AWS/OpenAI calls in CI
-    vi.mock('sst', () => ({
-      Resource: {
-        OpenAIApiKey: { value: 'test' },
-        TraceTable: { name: 'test-trace' },
-        MemoryTable: { name: 'test-memory' },
-      },
-    }));
-
-    // Mock DynamoDB client used by Memory and Tracer
-    vi.mock('@aws-sdk/lib-dynamodb', () => ({
-      DynamoDBDocumentClient: { from: () => ({ send: vi.fn().mockResolvedValue({}) }) },
-      PutCommand: class {},
-      GetCommand: class {},
-      QueryCommand: class {},
-      UpdateCommand: class {},
-    }));
-    vi.mock('@aws-sdk/client-dynamodb', () => ({ DynamoDBClient: class {} }));
-
     const memory = new DynamoMemory();
     const provider = new ProviderManager();
     const agent = new Agent(memory, provider, [], 'Test Prompt');

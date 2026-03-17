@@ -11,16 +11,17 @@ import { EventType, ProactiveHeartbeatPayload } from '../lib/types/agent';
 
 const eventBridgeMock = mockClient(EventBridgeClient);
 
+vi.mock('sst', () => ({
+  Resource: {
+    AgentBus: { name: 'test-bus' },
+  },
+}));
+
 describe('HeartbeatHandler', () => {
   beforeEach(() => {
     eventBridgeMock.reset();
     vi.clearAllMocks();
     // Resource mock
-    vi.mock('sst', () => ({
-      Resource: {
-        AgentBus: { name: 'test-bus' },
-      },
-    }));
   });
 
   it('should emit a proactive heartbeat event when triggered', async () => {

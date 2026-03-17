@@ -11,16 +11,17 @@ import { AgentType, EventType } from '../../lib/types/agent';
 
 const eventBridgeMock = mockClient(EventBridgeClient);
 
+vi.mock('sst', () => ({
+  Resource: {
+    AgentBus: { name: 'test-bus' },
+  },
+}));
+
 describe('ProactiveHandler', () => {
   beforeEach(() => {
     eventBridgeMock.reset();
     vi.clearAllMocks();
     // Resource mock
-    vi.mock('sst', () => ({
-      Resource: {
-        AgentBus: { name: 'test-bus' },
-      },
-    }));
   });
 
   it('should dispatch a task to the responsible agent when a heartbeat is received', async () => {
