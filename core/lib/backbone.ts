@@ -1,4 +1,11 @@
-import { AgentType, IAgentConfig, AgentCategory, ConnectionProfile } from './types/agent';
+import {
+  AgentType,
+  IAgentConfig,
+  AgentCategory,
+  ConnectionProfile,
+  ReasoningProfile,
+} from './types/index';
+import { TOOLS } from './constants';
 import {
   SUPERCLAW_SYSTEM_PROMPT,
   CODER_SYSTEM_PROMPT,
@@ -7,17 +14,17 @@ import {
   QA_SYSTEM_PROMPT,
 } from '../agents/prompts/index';
 
-const TOOL_DISCOVER_SKILLS = 'discoverSkills';
-const TOOL_INSTALL_SKILL = 'installSkill';
-const TOOL_SAVE_MEMORY = 'saveMemory';
-const TOOL_SEEK_CLARIFICATION = 'seekClarification';
-const TOOL_PROVIDE_CLARIFICATION = 'provideClarification';
-const TOOL_RECALL_KNOWLEDGE = 'recallKnowledge';
-const TOOL_SEND_MESSAGE = 'sendMessage';
-const TOOL_MANAGE_GAP = 'manageGap';
-const TOOL_REPORT_GAP = 'reportGap';
-const TOOL_CHECK_HEALTH = 'checkHealth';
-const TOOL_INSPECT_TOPOLOGY = 'inspectTopology';
+const TOOL_DISCOVER_SKILLS = TOOLS.DISCOVER_SKILLS;
+const TOOL_INSTALL_SKILL = TOOLS.INSTALL_SKILL;
+const TOOL_SAVE_MEMORY = TOOLS.SAVE_MEMORY;
+const TOOL_SEEK_CLARIFICATION = TOOLS.SEEK_CLARIFICATION;
+const TOOL_PROVIDE_CLARIFICATION = TOOLS.PROVIDE_CLARIFICATION;
+const TOOL_RECALL_KNOWLEDGE = TOOLS.RECALL_KNOWLEDGE;
+const TOOL_SEND_MESSAGE = TOOLS.SEND_MESSAGE;
+const TOOL_MANAGE_GAP = TOOLS.MANAGE_GAP;
+const TOOL_REPORT_GAP = TOOLS.REPORT_GAP;
+const TOOL_CHECK_HEALTH = TOOLS.CHECK_HEALTH;
+const TOOL_INSPECT_TOPOLOGY = TOOLS.INSPECT_TOPOLOGY;
 
 /**
  * Backbone Registry: The single source of truth for essential system components.
@@ -34,15 +41,17 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     icon: 'Bot',
     enabled: true,
     isBackbone: true,
+    model: 'gpt-5.4-mini',
+    reasoningProfile: ReasoningProfile.STANDARD,
     defaultCommunicationMode: 'text',
     tools: [
-      'dispatchTask',
-      'listAgents',
+      TOOLS.DISPATCH_TASK,
+      TOOLS.LIST_AGENTS,
       TOOL_RECALL_KNOWLEDGE,
-      'checkConfig',
+      TOOLS.CHECK_CONFIG,
       TOOL_DISCOVER_SKILLS,
       TOOL_INSTALL_SKILL,
-      'registerMCPServer',
+      TOOLS.REGISTER_MCP_SERVER,
       TOOL_MANAGE_GAP,
       TOOL_REPORT_GAP,
       TOOL_SAVE_MEMORY,
@@ -70,13 +79,13 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     isBackbone: true,
     defaultCommunicationMode: 'json',
     tools: [
-      'runTests',
-      'runShellCommand',
-      'stageChanges',
-      'triggerDeployment',
-      'validateCode',
+      TOOLS.RUN_TESTS,
+      TOOLS.RUN_SHELL_COMMAND,
+      TOOLS.STAGE_CHANGES,
+      TOOLS.TRIGGER_DEPLOYMENT,
+      TOOLS.VALIDATE_CODE,
       TOOL_CHECK_HEALTH,
-      'inspectTrace',
+      TOOLS.INSPECT_TRACE,
       'aws-s3_read_file',
       'aws-s3_write_file',
       'aws-s3_list_objects',
@@ -102,6 +111,8 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       TOOL_INSPECT_TOPOLOGY,
     ],
     maxIterations: 50,
+    model: 'gpt-5.4-mini',
+    reasoningProfile: ReasoningProfile.STANDARD,
     connectionProfile: [
       ConnectionProfile.BUS,
       ConnectionProfile.MEMORY,
@@ -121,6 +132,8 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     icon: 'Brain',
     enabled: true,
     isBackbone: true,
+    model: 'gpt-5.4',
+    reasoningProfile: ReasoningProfile.DEEP,
     defaultCommunicationMode: 'json',
     tools: [
       TOOL_RECALL_KNOWLEDGE,
@@ -153,6 +166,8 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     icon: 'Search',
     enabled: true,
     isBackbone: true,
+    model: 'gpt-5.4-nano',
+    reasoningProfile: ReasoningProfile.FAST,
     defaultCommunicationMode: 'json',
     tools: [
       TOOL_RECALL_KNOWLEDGE,
@@ -181,6 +196,8 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     icon: 'FlaskConical',
     enabled: true,
     isBackbone: true,
+    model: 'gpt-5.4-mini',
+    reasoningProfile: ReasoningProfile.STANDARD,
     defaultCommunicationMode: 'json',
     tools: [
       TOOL_RECALL_KNOWLEDGE,

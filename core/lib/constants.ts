@@ -16,6 +16,8 @@ export const SYSTEM = {
   // 15 hops allows ~4 full plan→code→QA→reopen cycles before the guard fires.
   // The old value of 50 allowed ~12 autonomous infrastructure cycles — dangerously high.
   DEFAULT_RECURSION_LIMIT: 15,
+  DEFAULT_MODEL: 'gpt-5.4-mini',
+  DEFAULT_PROVIDER: 'openai',
 } as const;
 
 export const PROTECTED_FILES = [
@@ -124,6 +126,86 @@ export const GAP_STATUS = {
  */
 export const MEMORY_KEYS = {
   STRATEGIC_REVIEW: 'LAST#STRATEGIC_REVIEW',
+  CONVERSATION_PREFIX: 'CONV#',
+  RECOVERY: 'RECOVERY',
+} as const;
+
+/**
+ * Configuration keys for AgentRegistry/DynamoDB.
+ */
+export const CONFIG_KEYS = {
+  ACTIVE_PROVIDER: 'active_provider',
+  ACTIVE_MODEL: 'active_model',
+  OPTIMIZATION_POLICY: 'optimization_policy',
+  REASONING_PROFILES: 'reasoning_profiles',
+  MAX_TOOL_ITERATIONS: 'max_tool_iterations',
+  SELECTIVE_DISCOVERY_MODE: 'selective_discovery_mode',
+} as const;
+
+/**
+ * Values for optimization policies.
+ */
+export const OPTIMIZATION_POLICIES = {
+  AGGRESSIVE: 'aggressive',
+  CONSERVATIVE: 'conservative',
+} as const;
+
+/**
+ * Standardized tool names across the system.
+ */
+export const TOOLS = {
+  DISPATCH_TASK: 'dispatchTask',
+  RECALL_KNOWLEDGE: 'recallKnowledge',
+  DISCOVER_SKILLS: 'discoverSkills',
+  INSTALL_SKILL: 'installSkill',
+  SAVE_MEMORY: 'saveMemory',
+  CHECK_CONFIG: 'checkConfig',
+  SET_SYSTEM_CONFIG: 'setSystemConfig',
+  LIST_SYSTEM_CONFIGS: 'listSystemConfigs',
+  GET_SYSTEM_CONFIG_METADATA: 'getSystemConfigMetadata',
+  LIST_AGENTS: 'listAgents',
+  FILE_UPLOAD: 'fileUpload',
+  FILE_DELETE: 'fileDelete',
+  LIST_UPLOADED_FILES: 'listUploadedFiles',
+  SEND_MESSAGE: 'sendMessage',
+  REGISTER_MCP_SERVER: 'registerMCPServer',
+  MANAGE_GAP: 'manageGap',
+  REPORT_GAP: 'reportGap',
+  CHECK_HEALTH: 'checkHealth',
+  INSPECT_TOPOLOGY: 'inspectTopology',
+  SEEK_CLARIFICATION: 'seekClarification',
+  PROVIDE_CLARIFICATION: 'provideClarification',
+  STAGE_CHANGES: 'stageChanges',
+  TRIGGER_DEPLOYMENT: 'triggerDeployment',
+  VALIDATE_CODE: 'validateCode',
+  RUN_TESTS: 'runTests',
+  RUN_SHELL_COMMAND: 'runShellCommand',
+  INSPECT_TRACE: 'inspectTrace',
+} as const;
+
+/**
+ * OpenAI-specific API literals for the Responses API.
+ */
+export const OPENAI = {
+  ROLES: {
+    USER: 'user',
+    ASSISTANT: 'assistant',
+    SYSTEM: 'system',
+    DEVELOPER: 'developer',
+  },
+  ITEM_TYPES: {
+    MESSAGE: 'message',
+    FUNCTION_CALL: 'function_call',
+    FUNCTION_CALL_OUTPUT: 'function_call_output',
+  },
+  CONTENT_TYPES: {
+    INPUT_TEXT: 'input_text',
+    INPUT_FILE: 'input_file',
+    IMAGE_URL: 'image_url',
+  },
+  DEFAULT_FILE_NAME: 'document.pdf',
+  DEFAULT_MIME_TYPE: 'application/octet-stream',
+  FUNCTION_TYPE: 'function',
 } as const;
 
 /**

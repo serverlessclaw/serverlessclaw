@@ -10,6 +10,7 @@ import { logger } from '../logger';
 import { RetentionManager } from './tiering';
 import { LIMITS, TIME } from '../constants';
 import type { BaseMemoryProvider } from './base';
+import { createMetadata } from './utils';
 
 /**
  * Retrieves all capability gaps filtered by status.
@@ -40,15 +41,10 @@ export async function getAllGaps(
     id: item.userId,
     content: item.content,
     timestamp: item.timestamp,
-    metadata: item.metadata || {
-      category: InsightCategory.STRATEGIC_GAP,
-      confidence: 0,
-      impact: 0,
-      complexity: 0,
-      risk: 0,
-      urgency: 0,
-      priority: 0,
-    },
+    metadata: createMetadata(
+      item.metadata || { category: InsightCategory.STRATEGIC_GAP },
+      item.timestamp
+    ),
   }));
 }
 
@@ -138,15 +134,7 @@ export async function setGap(
     expiresAt,
     content: details,
     status: GapStatus.OPEN,
-    metadata: metadata || {
-      category: InsightCategory.STRATEGIC_GAP,
-      confidence: 5,
-      impact: 5,
-      complexity: 5,
-      risk: 5,
-      urgency: 5,
-      priority: 5,
-    },
+    metadata: createMetadata(metadata || { category: InsightCategory.STRATEGIC_GAP }),
   });
 }
 

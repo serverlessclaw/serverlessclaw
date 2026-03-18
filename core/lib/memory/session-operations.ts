@@ -134,57 +134,7 @@ export async function saveConversationMeta(
   });
 }
 
-/**
- * Universal fetcher for memory items by their type using the GSI.
- *
- * @param base - The base memory provider instance.
- * @param type - The memory type to query.
- * @param limit - The maximum number of items to retrieve.
- * @returns A promise resolving to an array of memory items.
- */
-export async function getMemoryByType(
-  base: BaseMemoryProvider,
-  type: string,
-  limit: number = 100
-): Promise<Record<string, unknown>[]> {
-  return (await base.queryItems({
-    IndexName: 'TypeTimestampIndex',
-    KeyConditionExpression: '#type = :type',
-    ExpressionAttributeNames: {
-      '#type': 'type',
-    },
-    ExpressionAttributeValues: {
-      ':type': type,
-    },
-    ScanIndexForward: false,
-    Limit: limit,
-  })) as Record<string, unknown>[];
-}
-
-/**
- * Retrieves the list of active memory types that have been dynamically registered.
- *
- * @param base - The base memory provider instance.
- * @returns A promise resolving to an array of active memory type strings.
- */
-export async function getRegisteredMemoryTypes(base: BaseMemoryProvider): Promise<string[]> {
-  const items = await base.queryItems({
-    KeyConditionExpression: 'userId = :userId AND #ts = :ts',
-    ExpressionAttributeNames: {
-      '#ts': 'timestamp',
-    },
-    ExpressionAttributeValues: {
-      ':userId': 'SYSTEM#REGISTRY',
-      ':ts': 0,
-    },
-  });
-
-  const activeTypesSet = items[0]?.activeTypes as Set<string> | string[] | undefined;
-  if (!activeTypesSet) return [];
-
-  // Handle both DynamoDB Set object and native Array formats
-  return Array.isArray(activeTypesSet) ? activeTypesSet : Array.from(activeTypesSet);
-}
+// Move delete registered types
 
 /**
  * Saves the Last Known Good (LKG) commit hash after a successful health check.

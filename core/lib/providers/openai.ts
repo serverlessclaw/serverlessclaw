@@ -9,6 +9,7 @@ import {
   SSTResource,
 } from '../types/index';
 import { Resource } from 'sst';
+import { OPENAI } from '../constants';
 import { logger } from '../logger';
 import { normalizeProfile, capEffort, createEmptyResponse } from './utils';
 
@@ -32,7 +33,7 @@ const typedResource = Resource as unknown as SSTResource;
 const REASONING_MAP: Record<ReasoningProfile, OpenAI.ReasoningEffort> = {
   [ReasoningProfile.FAST]: 'low',
   [ReasoningProfile.STANDARD]: 'medium',
-  [ReasoningProfile.THINKING]: 'high',
+  [ReasoningProfile.THINKING]: 'xhigh',
   [ReasoningProfile.DEEP]: 'xhigh',
 };
 
@@ -49,7 +50,18 @@ export class OpenAIProvider implements IProvider {
   ): Promise<Message> {
     const apiKey = typedResource.OpenAIApiKey?.value || process.env.OPENAI_API_KEY || 'test-key';
     const client = new OpenAI({ apiKey });
-    const activeModel = model || this.model;
+
+    // Resolve model if only profile is provided
+    let activeModel = model || this.model;
+    if (!model && profile) {
+      const profileToModel: Record<ReasoningProfile, string> = {
+        [ReasoningProfile.FAST]: OpenAIModel.GPT_5_4_NANO,
+        [ReasoningProfile.STANDARD]: OpenAIModel.GPT_5_4_MINI,
+        [ReasoningProfile.THINKING]: OpenAIModel.GPT_5_4_MINI,
+        [ReasoningProfile.DEEP]: OpenAIModel.GPT_5_4,
+      };
+      activeModel = profileToModel[profile] || activeModel;
+    }
 
     // Fallback if profile not supported
     const capabilities = await this.getCapabilities(activeModel);
@@ -69,7 +81,7 @@ export class OpenAIProvider implements IProvider {
       if (m.role === MessageRole.TOOL) {
         return [
           {
-            type: 'function_call_output',
+            type: OPENAI.ITEM_TYPES.FUNCTION_CALL_OUTPUT,
             call_id: m.tool_call_id || '',
             output: m.content || '',
           },
@@ -80,38 +92,41 @@ export class OpenAIProvider implements IProvider {
 
       // 1. Add message content if present
       if (m.content || (m.attachments && m.attachments.length > 0)) {
-        let role: 'user' | 'assistant' | 'system' | 'developer' = 'user';
-        if (m.role === MessageRole.SYSTEM) role = 'developer';
-        else if (m.role === MessageRole.ASSISTANT) role = 'assistant';
-        else if (m.role === MessageRole.DEVELOPER) role = 'developer';
+        let role: 'user' | 'assistant' | 'system' | 'developer' = OPENAI.ROLES.USER;
+        if (m.role === MessageRole.SYSTEM) role = OPENAI.ROLES.DEVELOPER;
+        else if (m.role === MessageRole.ASSISTANT) role = OPENAI.ROLES.ASSISTANT;
+        else if (m.role === MessageRole.DEVELOPER) role = OPENAI.ROLES.DEVELOPER;
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const content: any[] = [];
-        if (m.content) content.push({ type: 'input_text', text: m.content });
+        if (m.content) content.push({ type: OPENAI.CONTENT_TYPES.INPUT_TEXT, text: m.content });
 
         if (m.attachments) {
           m.attachments.forEach((att) => {
             if (att.type === 'image') {
               content.push({
-                type: 'image_url',
+                type: OPENAI.CONTENT_TYPES.IMAGE_URL,
                 image_url: {
                   url: att.url || `data:${att.mimeType || 'image/png'};base64,${att.base64}`,
                 },
               });
             } else if (att.type === 'file') {
               content.push({
-                type: 'input_file' as const,
-                filename: att.name || 'document.pdf',
-                file_data: `data:${att.mimeType || 'application/octet-stream'};base64,${att.base64}`,
+                type: OPENAI.CONTENT_TYPES.INPUT_FILE,
+                filename: att.name || OPENAI.DEFAULT_FILE_NAME,
+                file_data: `data:${att.mimeType || OPENAI.DEFAULT_MIME_TYPE};base64,${att.base64}`,
               });
             }
           });
         }
 
         items.push({
-          type: 'message',
+          type: OPENAI.ITEM_TYPES.MESSAGE,
           role,
-          content: content.length === 1 && content[0].type === 'input_text' ? m.content : content,
+          content:
+            content.length === 1 && content[0].type === OPENAI.CONTENT_TYPES.INPUT_TEXT
+              ? m.content
+              : content,
         });
       }
 
@@ -119,7 +134,7 @@ export class OpenAIProvider implements IProvider {
       if (m.tool_calls && m.tool_calls.length > 0) {
         for (const tc of m.tool_calls) {
           items.push({
-            type: 'function_call',
+            type: OPENAI.ITEM_TYPES.FUNCTION_CALL,
             call_id: tc.id,
             name: tc.function.name,
             arguments: tc.function.arguments,
@@ -146,7 +161,7 @@ export class OpenAIProvider implements IProvider {
                   return { type: t.type } as any;
                 }
                 return {
-                  type: 'function',
+                  type: OPENAI.FUNCTION_TYPE,
                   name: t.name,
                   description: t.description,
                   parameters: t.parameters as unknown as Record<string, unknown>,
@@ -163,10 +178,10 @@ export class OpenAIProvider implements IProvider {
 
       if (response.output && Array.isArray(response.output)) {
         for (const item of response.output) {
-          if (item.type === 'function_call') {
+          if (item.type === OPENAI.ITEM_TYPES.FUNCTION_CALL) {
             toolCalls.push({
               id: item.call_id || '',
-              type: 'function',
+              type: OPENAI.FUNCTION_TYPE,
               function: {
                 name: item.name || '',
                 arguments: item.arguments || '',
@@ -196,9 +211,14 @@ export class OpenAIProvider implements IProvider {
 
   async getCapabilities(model?: string) {
     const activeModel = model || this.model;
-    const isReasoningModel =
-      activeModel.includes(OpenAIModel.GPT_5_4) || activeModel.includes(OpenAIModel.GPT_5_MINI);
-    const isMiniModel = activeModel.includes(OpenAIModel.GPT_5_MINI);
+    const isReasoningModel = activeModel.includes('gpt-5.4') || activeModel.includes('gpt-5-mini');
+    const isMiniModel = activeModel.includes('mini');
+    const isNanoModel = activeModel.includes('nano');
+
+    let maxReasoningEffort = 'xhigh';
+    if (isMiniModel)
+      maxReasoningEffort = 'xhigh'; // Upgraded to support xhigh per user request
+    else if (isNanoModel) maxReasoningEffort = 'medium';
 
     return {
       supportedReasoningProfiles: isReasoningModel
@@ -209,7 +229,7 @@ export class OpenAIProvider implements IProvider {
             ReasoningProfile.DEEP,
           ]
         : [ReasoningProfile.FAST, ReasoningProfile.STANDARD],
-      maxReasoningEffort: isMiniModel ? 'high' : 'xhigh',
+      maxReasoningEffort,
       supportsStructuredOutput: true,
     };
   }

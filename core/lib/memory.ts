@@ -14,6 +14,7 @@ import { LIMITS } from './constants';
 import * as GapOps from './memory/gap-operations';
 import * as InsightOps from './memory/insight-operations';
 import * as SessionOps from './memory/session-operations';
+import * as MemoryUtils from './memory/utils';
 
 /**
  * Implementation of IMemory using AWS DynamoDB for persistent storage
@@ -144,7 +145,7 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
    * Universal fetcher for memory items by their type using the GSI.
    */
   async getMemoryByType(type: string, limit: number = 100): Promise<Record<string, unknown>[]> {
-    return SessionOps.getMemoryByType(this, type, limit);
+    return MemoryUtils.getMemoryByType(this, type, limit);
   }
 
   /**
@@ -158,7 +159,7 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
    * Retrieves the list of active memory types that have been dynamically registered.
    */
   async getRegisteredMemoryTypes(): Promise<string[]> {
-    return SessionOps.getRegisteredMemoryTypes(this);
+    return MemoryUtils.getRegisteredMemoryTypes(this);
   }
 
   /**

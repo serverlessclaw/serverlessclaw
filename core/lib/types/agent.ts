@@ -132,6 +132,10 @@ export enum ConnectionProfile {
   DEPLOYER = 'deployer',
 }
 
+/**
+ * Configuration interface for an Agent, defining its identity,
+ * capabilities, and preferred reasoning behavior.
+ */
 export interface IAgentConfig {
   /** Unique ID of the agent. */
   id: string;
@@ -147,6 +151,8 @@ export interface IAgentConfig {
   icon?: string;
   /** Specific LLM model ID override. */
   model?: string;
+  /** Preferred reasoning profile (FAST, STANDARD, THINKING, DEEP). */
+  reasoningProfile?: import('./llm').ReasoningProfile;
   /** Specific LLM provider name override. */
   provider?: string;
   /** List of tool names assigned to this agent. */

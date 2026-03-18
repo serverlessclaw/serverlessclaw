@@ -70,7 +70,7 @@ export function createDashboard(ctx: SharedContext): { dashboard: sst.aws.Nextjs
         // 1. Ensure the server origin uses https-only (fixes 502/origin issues)
         if (args.origins) {
           args.origins = $util.output(args.origins).apply((origins: any[]) =>
-            origins.map((origin) => {
+            origins.map((origin: any) => {
               if (origin.customOriginConfig) {
                 return {
                   ...origin,
@@ -104,18 +104,16 @@ function handler(event) {
 
         // Associate the function with the default cache behavior
         if (args.defaultCacheBehavior) {
-          args.defaultCacheBehavior = $util
-            .output(args.defaultCacheBehavior)
-            .apply((behavior: any) => ({
-              ...behavior,
-              functionAssociations: [
-                ...(behavior.functionAssociations || []),
-                {
-                  eventType: 'viewer-request',
-                  functionArn: routingFunction.arn,
-                },
-              ],
-            }));
+          args.defaultCacheBehavior = $util.output(args.defaultCacheBehavior).apply((behavior) => ({
+            ...behavior,
+            functionAssociations: [
+              ...(behavior.functionAssociations || []),
+              {
+                eventType: 'viewer-request',
+                functionArn: routingFunction.arn,
+              },
+            ],
+          }));
         }
       },
     },

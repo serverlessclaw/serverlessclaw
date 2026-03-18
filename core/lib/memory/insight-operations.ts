@@ -9,6 +9,7 @@ import { MemoryInsight, InsightMetadata, InsightCategory } from '../types/index'
 import { RetentionManager } from './tiering';
 import type { BaseMemoryProvider } from './base';
 import { filterPII } from '../utils/pii';
+import { createMetadata } from './utils';
 
 /**
  * Shared implementation for adding granular records (Insights/Memories).
@@ -58,18 +59,13 @@ async function addRecord(
     type: fullType,
     expiresAt,
     content: scrubbedContent,
-    metadata: {
-      category,
-      confidence: 10,
-      impact: 5,
-      complexity: 5,
-      risk: 5,
-      urgency: 5,
-      priority: 5,
-      hitCount: 0,
-      lastAccessed: timestamp,
-      ...(metadata || {}),
-    },
+    metadata: createMetadata(
+      {
+        category,
+        ...(metadata || {}),
+      },
+      timestamp
+    ),
   });
   return timestamp;
 }
@@ -128,17 +124,7 @@ export async function addLesson(
     type,
     expiresAt,
     content: filterPII(lesson),
-    metadata: metadata || {
-      category: InsightCategory.TACTICAL_LESSON,
-      confidence: 5,
-      impact: 5,
-      complexity: 5,
-      risk: 5,
-      urgency: 5,
-      priority: 5,
-      hitCount: 0,
-      lastAccessed: timestamp,
-    },
+    metadata: createMetadata(metadata || { category: InsightCategory.TACTICAL_LESSON }, timestamp),
   });
 }
 
@@ -181,7 +167,7 @@ export async function addMemory(
   return addRecord(base, 'MEMORY', scopeId, category, content, metadata);
 }
 
-import { getRegisteredMemoryTypes, getMemoryByType } from './session-operations';
+import { getRegisteredMemoryTypes, getMemoryByType } from './utils';
 
 /**
  * Searches for insights across all categories.
@@ -325,7 +311,7 @@ export async function getLowUtilizationMemory(
 
     const items = await getMemoryByType(base, type, 50);
 
-    const stale = items.filter((item) => {
+    const stale = items.filter((item: Record<string, unknown>) => {
       const meta = item.metadata as InsightMetadata | undefined;
       if (!meta) return false;
 

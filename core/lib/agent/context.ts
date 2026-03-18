@@ -1,4 +1,5 @@
 import { IAgentConfig, ReasoningProfile } from '../types/index';
+import { SYSTEM } from '../constants';
 
 /**
  * Handles agent self-awareness and prompt context assembly.
@@ -25,8 +26,8 @@ export class AgentContext {
       [SYSTEM_IDENTITY]:
       - AGENT_NAME: ${config?.name || 'SuperClaw'}
       - AGENT_ID: ${config?.id || 'main'}
-      - ACTIVE_PROVIDER: ${provider || 'openai (default)'}
-      - ACTIVE_MODEL: ${model || 'gpt-5-mini (default)'}
+      - ACTIVE_PROVIDER: ${provider || `${SYSTEM.DEFAULT_PROVIDER} (default)`}
+      - ACTIVE_MODEL: ${model || `${SYSTEM.DEFAULT_MODEL} (default)`}
       - REASONING_PROFILE: ${profile}
       - RECURSION_DEPTH: ${depth}
     `;

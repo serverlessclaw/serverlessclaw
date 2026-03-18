@@ -13,7 +13,7 @@ import {
 } from './types/index';
 import { ClawTracer } from './tracer';
 import { logger } from './logger';
-import { SYSTEM, AGENT_ERRORS } from './constants';
+import { SYSTEM, AGENT_ERRORS, MEMORY_KEYS, CONFIG_KEYS, OPTIMIZATION_POLICIES } from './constants';
 import { AgentRegistry } from './registry';
 import { AgentContext } from './agent/context';
 import { AgentExecutor, AGENT_DEFAULTS, AGENT_LOG_MESSAGES } from './agent/executor';
@@ -48,7 +48,8 @@ const DEFAULT_SIGNAL_SCHEMA: ResponseFormat = {
 
 /**
  * The core Agent class responsible for orchestrating LLM calls, tool execution,
- * and memory management.
+ * and memory management. It acts as the primary execution engine for both
+ * backbone (system) and user-defined agents.
  */
 export class Agent {
   private emitter: AgentEmitter;
@@ -64,7 +65,14 @@ export class Agent {
   }
 
   /**
-   * Processes a user message, potentially performing multiple tool-calling iterations
+   * Processes a user message, potentially performing multiple tool-calling iterations.
+   * This method handles memory retrieval, model/provider resolution, prompt assembly,
+   * and the core execution loop.
+   *
+   * @param userId - The unique identifier for the user.
+   * @param userText - The text content of the user's message.
+   * @param options - Optional configuration for this specific processing run.
+   * @returns A promise that resolves to the agent's response, including text and any attachments.
    */
   async process(
     userId: string,
@@ -72,7 +80,7 @@ export class Agent {
     options: AgentProcessOptions = {}
   ): Promise<{ responseText: string; attachments?: Attachment[]; traceId?: string }> {
     const {
-      profile = ReasoningProfile.STANDARD,
+      profile = this.config?.reasoningProfile || ReasoningProfile.STANDARD,
       context,
       isContinuation = false,
       isIsolated = false,
@@ -93,7 +101,9 @@ export class Agent {
         ? initialResponseFormat || DEFAULT_SIGNAL_SCHEMA
         : initialResponseFormat;
 
-    const baseUserId = userId.startsWith('CONV#') ? userId.split('#')[1] : userId;
+    const baseUserId = userId.startsWith(MEMORY_KEYS.CONVERSATION_PREFIX)
+      ? userId.split('#')[1]
+      : userId;
     const tracer = new ClawTracer(
       baseUserId,
       source,
@@ -128,11 +138,11 @@ export class Agent {
       let recoveryContext = '';
       try {
         const recoveryData = await this.memory.getDistilledMemory(
-          SYSTEM.RECOVERY_KEY || 'RECOVERY'
+          SYSTEM.RECOVERY_KEY || MEMORY_KEYS.RECOVERY
         );
         if (recoveryData) {
           recoveryContext = `${AGENT_LOG_MESSAGES.RECOVERY_LOG_PREFIX}${recoveryData}`;
-          await this.memory.updateDistilledMemory(SYSTEM.RECOVERY_KEY || 'RECOVERY', '');
+          await this.memory.updateDistilledMemory(SYSTEM.RECOVERY_KEY || MEMORY_KEYS.RECOVERY, '');
         }
       } catch (e) {
         logger.error('Error checking recovery context:', e);
@@ -150,21 +160,23 @@ export class Agent {
       let activeProfile = profile;
 
       try {
-        const globalProvider = (await AgentRegistry.getRawConfig('active_provider')) as string;
-        const globalModel = (await AgentRegistry.getRawConfig('active_model')) as string;
+        const globalProvider = (await AgentRegistry.getRawConfig(
+          CONFIG_KEYS.ACTIVE_PROVIDER
+        )) as string;
+        const globalModel = (await AgentRegistry.getRawConfig(CONFIG_KEYS.ACTIVE_MODEL)) as string;
         if (globalProvider) activeProvider = globalProvider;
         if (globalModel) activeModel = globalModel;
 
         if (!process.env.VITEST) {
-          const policy = await AgentRegistry.getRawConfig('optimization_policy');
-          if (policy === 'aggressive') activeProfile = ReasoningProfile.DEEP;
-          else if (policy === 'conservative') activeProfile = ReasoningProfile.FAST;
+          const policy = await AgentRegistry.getRawConfig(CONFIG_KEYS.OPTIMIZATION_POLICY);
+          if (policy === OPTIMIZATION_POLICIES.AGGRESSIVE) activeProfile = ReasoningProfile.DEEP;
+          else if (policy === OPTIMIZATION_POLICIES.CONSERVATIVE)
+            activeProfile = ReasoningProfile.FAST;
 
           if (!globalModel && !activeModel) {
-            const profileMap = (await AgentRegistry.getRawConfig('reasoning_profiles')) as Record<
-              string,
-              string
-            >;
+            const profileMap = (await AgentRegistry.getRawConfig(
+              CONFIG_KEYS.REASONING_PROFILES
+            )) as Record<string, string>;
             if (profileMap && profileMap[activeProfile]) activeModel = profileMap[activeProfile];
           }
         }
@@ -176,7 +188,7 @@ export class Agent {
       let contextPrompt = this.systemPrompt;
       if (recoveryContext) contextPrompt += recoveryContext;
       contextPrompt += `\n\n${AgentContext.getMemoryIndexBlock(distilled, lessons.length)}`;
-      contextPrompt += `\n\n${AgentContext.getIdentityBlock(this.config, activeModel || 'gpt-5-mini', activeProvider || 'openai', activeProfile, depth)}`;
+      contextPrompt += `\n\n${AgentContext.getIdentityBlock(this.config, activeModel || SYSTEM.DEFAULT_MODEL, activeProvider || SYSTEM.DEFAULT_PROVIDER, activeProfile, depth)}`;
 
       const messages: Message[] = [
         { role: MessageRole.SYSTEM, content: contextPrompt },
@@ -195,7 +207,7 @@ export class Agent {
       let maxIterations = this.config?.maxIterations || AGENT_DEFAULTS.MAX_ITERATIONS;
       try {
         if (!process.env.VITEST) {
-          const customMax = await AgentRegistry.getRawConfig('max_tool_iterations');
+          const customMax = await AgentRegistry.getRawConfig(CONFIG_KEYS.MAX_TOOL_ITERATIONS);
           if (customMax !== undefined) maxIterations = parseConfigInt(customMax, maxIterations);
         }
       } catch {

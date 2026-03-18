@@ -101,8 +101,12 @@ export enum LLMProvider {
  * Specific model identifiers for OpenAI.
  */
 export enum OpenAIModel {
+  /** High-tier reasoning model (GPT-5.4 family) */
   GPT_5_4 = 'gpt-5.4',
-  GPT_5_MINI = 'gpt-5-mini',
+  /** Balanced standard reasoning model (GPT-5.4 family) */
+  GPT_5_4_MINI = 'gpt-5.4-mini',
+  /** Fast, cost-efficient reasoning model (GPT-5.4 family) */
+  GPT_5_4_NANO = 'gpt-5.4-nano',
 }
 
 /**

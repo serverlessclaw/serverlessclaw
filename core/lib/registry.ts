@@ -3,7 +3,7 @@ import { IAgentConfig } from './types/agent';
 import { BACKBONE_REGISTRY } from './backbone';
 import { logger } from './logger';
 import type { Topology, TopologyNode } from './types/index';
-import { DYNAMO_KEYS, RETENTION } from './constants';
+import { DYNAMO_KEYS, RETENTION, TOOLS, CONFIG_KEYS } from './constants';
 import { ConfigManager, docClient } from './registry/config';
 
 /**
@@ -14,29 +14,29 @@ export class AgentRegistry {
   private static backboneConfigs: Record<string, IAgentConfig> = BACKBONE_REGISTRY;
 
   private static ESSENTIAL_SYSTEM_TOOLS = [
-    'dispatchTask',
-    'recallKnowledge',
-    'discoverSkills',
-    'installSkill',
-    'saveMemory',
-    'checkConfig',
-    'setSystemConfig',
-    'listSystemConfigs',
-    'getSystemConfigMetadata',
+    TOOLS.DISPATCH_TASK,
+    TOOLS.RECALL_KNOWLEDGE,
+    TOOLS.DISCOVER_SKILLS,
+    TOOLS.INSTALL_SKILL,
+    TOOLS.SAVE_MEMORY,
+    TOOLS.CHECK_CONFIG,
+    TOOLS.SET_SYSTEM_CONFIG,
+    TOOLS.LIST_SYSTEM_CONFIGS,
+    TOOLS.GET_SYSTEM_CONFIG_METADATA,
   ];
 
   private static DEFAULT_AGENT_TOOLS = [
     ...AgentRegistry.ESSENTIAL_SYSTEM_TOOLS,
-    'listAgents',
-    'fileUpload',
-    'fileDelete',
-    'listUploadedFiles',
+    TOOLS.LIST_AGENTS,
+    TOOLS.FILE_UPLOAD,
+    TOOLS.FILE_DELETE,
+    TOOLS.LIST_UPLOADED_FILES,
   ];
 
   private static DISCOVERY_BOOTLOADER_TOOLS = [
     ...AgentRegistry.ESSENTIAL_SYSTEM_TOOLS,
-    'listAgents',
-    'sendMessage',
+    TOOLS.LIST_AGENTS,
+    TOOLS.SEND_MESSAGE,
   ];
 
   /**
@@ -89,12 +89,12 @@ export class AgentRegistry {
 
     // 2. Discovery Mode Filter
     const isDiscoveryMode =
-      preFetchedConfigs?.['selective_discovery_mode'] ??
-      (await this.getRawConfig('selective_discovery_mode')) === true;
+      preFetchedConfigs?.[CONFIG_KEYS.SELECTIVE_DISCOVERY_MODE] ??
+      (await this.getRawConfig(CONFIG_KEYS.SELECTIVE_DISCOVERY_MODE)) === true;
 
     if (isDiscoveryMode && config.tools) {
       config.tools = config.tools.filter((t: string) =>
-        AgentRegistry.ESSENTIAL_SYSTEM_TOOLS.includes(t)
+        (AgentRegistry.ESSENTIAL_SYSTEM_TOOLS as string[]).includes(t)
       );
       if (config.tools.length < 4) {
         config.tools = Array.from(
