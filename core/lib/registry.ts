@@ -47,6 +47,9 @@ export class AgentRegistry {
 
   /**
    * Retrieves the retention period in days for a specific item type.
+   *
+   * @param item - The key for the retention setting (e.g., MESSAGES_DAYS).
+   * @returns A promise resolving to the number of retention days.
    */
   static async getRetentionDays(item: keyof typeof RETENTION): Promise<number> {
     const config = (await ConfigManager.getRawConfig(DYNAMO_KEYS.RETENTION_CONFIG)) as Record<
@@ -58,7 +61,10 @@ export class AgentRegistry {
 
   /**
    * Retrieves the configuration for a specific agent by ID.
+   *
+   * @param id - The unique agent identifier.
    * @param preFetchedConfigs - Optional pre-fetched configurations to avoid redundant DB calls.
+   * @returns A promise resolving to the agent configuration or undefined.
    */
   static async getAgentConfig(
     id: string,
@@ -132,6 +138,8 @@ export class AgentRegistry {
 
   /**
    * Retrieves configurations for all registered agents.
+   *
+   * @returns A promise resolving to a record of all agent configurations.
    */
   static async getAllConfigs(): Promise<Record<string, IAgentConfig>> {
     // 1. Batch fetch primary configs
@@ -147,7 +155,7 @@ export class AgentRegistry {
     // 2. Batch fetch tool overrides for all relevant agents
     const overridePromises = agentIds.map(async (id) => ({
       id,
-      tools: await this.getRawConfig(`${id}_tools`),
+      tools: await ConfigManager.getRawConfig(`${id}_tools`),
     }));
     const overrides = await Promise.all(overridePromises);
 
@@ -177,21 +185,28 @@ export class AgentRegistry {
 
   /**
    * Retrieves infrastructure configurations from the ConfigTable.
+   *
+   * @returns A promise resolving to an array of topology nodes.
    */
   static async getInfraConfig(): Promise<TopologyNode[]> {
-    const ddbConfig = await this.getRawConfig(DYNAMO_KEYS.INFRA_CONFIG);
+    const ddbConfig = await ConfigManager.getRawConfig(DYNAMO_KEYS.INFRA_CONFIG);
     return Array.isArray(ddbConfig) ? (ddbConfig as TopologyNode[]) : [];
   }
 
   /**
    * Retrieves the full system topology.
+   *
+   * @returns A promise resolving to the full system topology or undefined.
    */
   static async getFullTopology(): Promise<Topology | undefined> {
-    return (await this.getRawConfig(DYNAMO_KEYS.SYSTEM_TOPOLOGY)) as Topology | undefined;
+    return (await ConfigManager.getRawConfig(DYNAMO_KEYS.SYSTEM_TOPOLOGY)) as Topology | undefined;
   }
 
   /**
    * Saves or updates an agent configuration and triggers topology refresh.
+   *
+   * @param id - The unique agent identifier.
+   * @param config - The new agent configuration to save.
    */
   static async saveConfig(id: string, config: IAgentConfig): Promise<void> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -233,6 +248,9 @@ export class AgentRegistry {
 
   /**
    * Records tool usage atomically.
+   *
+   * @param toolName - The name of the tool used.
+   * @param agentId - The ID of the agent that used the tool.
    */
   static async recordToolUsage(toolName: string, agentId: string = 'unknown'): Promise<void> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

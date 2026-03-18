@@ -296,8 +296,20 @@ export class MCPBridge {
         continue;
       }
 
-      const connectionString = typeof config === 'string' ? config : config.command;
-      const env = typeof config === 'string' ? undefined : config.env;
+      let connectionString: string;
+      let env: Record<string, string> | undefined;
+
+      if (typeof config === 'string') {
+        connectionString = config;
+      } else if (config.type === 'remote') {
+        connectionString = config.url;
+      } else if (config.type === 'local' || !config.type) {
+        connectionString = config.command;
+        env = config.env;
+      } else {
+        logger.warn(`Unknown MCP server configuration type for ${name}. Skipping.`);
+        continue;
+      }
 
       const serverTools = await this.getToolsFromServer(name, connectionString, env);
       allTools.push(...serverTools);

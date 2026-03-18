@@ -14,6 +14,9 @@ const typedResource = Resource as unknown as SSTResource;
 export class ConfigManager {
   /**
    * Fetches a raw value from the ConfigTable by key.
+   *
+   * @param key - The unique configuration key.
+   * @returns A promise resolving to the configuration value or undefined.
    */
   public static async getRawConfig(key: string): Promise<unknown> {
     if (!typedResource.ConfigTable?.name) {
@@ -37,6 +40,10 @@ export class ConfigManager {
 
   /**
    * Fetches a configuration value with a type-safe fallback.
+   *
+   * @param key - The unique configuration key.
+   * @param defaultValue - The fallback value if the key is not found.
+   * @returns A promise resolving to the typed configuration value.
    */
   public static async getTypedConfig<T>(key: string, defaultValue: T): Promise<T> {
     const value = await this.getRawConfig(key);
@@ -45,6 +52,9 @@ export class ConfigManager {
 
   /**
    * Saves a raw configuration value to the ConfigTable.
+   *
+   * @param key - The unique configuration key.
+   * @param value - The value to store.
    */
   public static async saveRawConfig(key: string, value: unknown): Promise<void> {
     if (!typedResource.ConfigTable?.name) {
@@ -67,6 +77,8 @@ export class ConfigManager {
 
   /**
    * Resolves the table name for the configured ConfigTable.
+   *
+   * @returns A promise resolving to the table name or undefined.
    */
   public static async resolveTableName(): Promise<string | undefined> {
     return typedResource.ConfigTable?.name;

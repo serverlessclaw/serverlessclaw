@@ -29,7 +29,13 @@ export interface IToolDefinition {
   /** Schema defining the arguments expected by the tool. */
   parameters: JsonSchema;
   /** The type of tool. */
-  type?: 'function' | 'code_interpreter' | 'file_search' | 'mcp' | 'computer_use';
+  type?:
+    | 'function'
+    | 'code_interpreter'
+    | 'file_search'
+    | 'mcp'
+    | 'computer_use'
+    | 'google_search_retrieval';
   /** Optional resource connections this tool utilizes (used for topology discovery). */
   connectionProfile?: string[];
   /** Optional ID for OpenAI Managed Connectors (e.g., connector_googledrive). */

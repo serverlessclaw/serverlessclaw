@@ -36,7 +36,7 @@ describe('OpenRouterProvider', () => {
       {
         name: 'google_search',
         description: 'Grounded search',
-        type: 'google_search_retrieval',
+        type: 'google_search_retrieval' as const,
         parameters: { type: 'object' as const, properties: {} },
         execute: async () => 'done',
       },

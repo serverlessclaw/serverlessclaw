@@ -31,7 +31,7 @@ describe('BedrockProvider', () => {
       {
         name: 'computer',
         description: 'Standard computer tool',
-        type: 'computer_use',
+        type: 'computer_use' as const,
         parameters: { type: 'object' as const, properties: {} },
         execute: async () => 'done',
       },
