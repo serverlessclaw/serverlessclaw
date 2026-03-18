@@ -127,9 +127,11 @@ export async function setGap(
   metadata?: InsightMetadata
 ): Promise<void> {
   const { expiresAt, type } = await RetentionManager.getExpiresAt('GAP', '');
+  const parsedGapId = Number.parseInt(gapId, 10);
+  const gapTimestamp = Number.isNaN(parsedGapId) ? Date.now() : parsedGapId;
   await base.putItem({
     userId: `GAP#${gapId}`,
-    timestamp: parseInt(gapId, 10) ?? Date.now(),
+    timestamp: gapTimestamp,
     type,
     expiresAt,
     content: details,
@@ -151,11 +153,13 @@ export async function incrementGapAttemptCount(
   gapId: string
 ): Promise<number> {
   const numericId = gapId.replace('GAP#', '');
+  const parsedNumericId = Number.parseInt(numericId, 10);
+  const gapTimestamp = Number.isNaN(parsedNumericId) ? 0 : parsedNumericId;
   try {
     const result = await base.updateItem({
       Key: {
         userId: `GAP#${numericId}`,
-        timestamp: parseInt(numericId, 10) ?? 0,
+        timestamp: gapTimestamp,
       },
       UpdateExpression:
         'SET attemptCount = if_not_exists(attemptCount, :zero) + :one, updatedAt = :now',
@@ -187,10 +191,12 @@ export async function updateGapStatus(
   status: GapStatus
 ): Promise<void> {
   const numericId = gapId.replace('GAP#', '');
+  const parsedNumericId = Number.parseInt(numericId, 10);
+  const defaultTimestamp = Number.isNaN(parsedNumericId) ? 0 : parsedNumericId;
   const params: Record<string, unknown> = {
     Key: {
       userId: `GAP#${numericId}`,
-      timestamp: parseInt(numericId, 10) ?? 0,
+      timestamp: defaultTimestamp,
     },
     UpdateExpression: 'SET #status = :status, updatedAt = :now',
     ConditionExpression: 'attribute_exists(userId)',
@@ -210,7 +216,7 @@ export async function updateGapStatus(
   }
 
   // Strategy 2: If primary key fails, search and retry exactly ONCE with specific timestamp
-  if (isNaN(parseInt(numericId, 10)) || (params.Key as Record<string, unknown>)?.timestamp === 0) {
+  if (Number.isNaN(parsedNumericId) || (params.Key as Record<string, unknown>)?.timestamp === 0) {
     const allStatuses = Object.values(GapStatus);
     let found = false;
     for (const s of allStatuses) {

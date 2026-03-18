@@ -48,7 +48,11 @@ export default function TraceIntelligenceView({ initialTraces, sessionTitles }: 
 
       // Extract LLM used
       const llmStep = trace.steps?.find((s: any) => s.type === TRACE_TYPES.LLM_CALL);
-      const model = trace.initialContext?.model || llmStep?.content?.model || llmStep?.metadata?.model ?? 'UNKNOWN_MODEL';
+      const model =
+        trace.initialContext?.model ||
+        llmStep?.content?.model ||
+        llmStep?.metadata?.model ||
+        'UNKNOWN_MODEL';
 
       // Calculate total tokens
       let totalTokens = 0;

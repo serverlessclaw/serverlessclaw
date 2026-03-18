@@ -204,8 +204,8 @@ export default async function TraceDetailPage({
                       <div>
                         <Typography variant="caption" weight="bold" color="white" className="tracking-wider block">{step.type}</Typography>
                          <Typography variant="caption" weight="medium" color="white" className="block">
-                          {step.type === TRACE_TYPES.TOOL_CALL ? `Executing ${step.content.tool || step.content.toolName ?? ''}` : 
-                           step.type === TRACE_TYPES.TOOL_RESULT ? `Observation from ${step.content.tool || step.content.toolName ?? 'tool'}` :
+                          {step.type === TRACE_TYPES.TOOL_CALL ? `Executing ${step.content.tool || step.content.toolName || ''}` : 
+                          step.type === TRACE_TYPES.TOOL_RESULT ? `Observation from ${step.content.tool || step.content.toolName || 'tool'}` :
                            step.type === TRACE_TYPES.LLM_CALL ? 'Agent Processing (Input)' : 
                            step.type === TRACE_TYPES.LLM_RESPONSE ? 'Agent Response (Output)' : 'Error detected'}
                         </Typography>

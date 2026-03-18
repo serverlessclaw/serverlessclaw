@@ -316,7 +316,7 @@ export async function getLowUtilizationMemory(
       if (!meta) return false;
 
       const isHitCountLow = meta.hitCount === undefined || meta.hitCount === 0;
-      const lastAccessed = (meta.lastAccessed || (item.timestamp as number)) ?? now;
+      const lastAccessed = meta.lastAccessed ?? (item.timestamp as number) ?? now;
       const timeSinceAccess = now - lastAccessed;
 
       return isHitCountLow && timeSinceAccess > STALE_THRESHOLD_MS;
@@ -329,9 +329,9 @@ export async function getLowUtilizationMemory(
   return staleItems
     .sort((a, b) => {
       const tA =
-        ((a.metadata as Record<string, unknown>)?.lastAccessed || (a.timestamp as number)) ?? 0;
+        (a.metadata as Record<string, unknown>)?.lastAccessed ?? (a.timestamp as number) ?? 0;
       const tB =
-        ((b.metadata as Record<string, unknown>)?.lastAccessed || (b.timestamp as number)) ?? 0;
+        (b.metadata as Record<string, unknown>)?.lastAccessed ?? (b.timestamp as number) ?? 0;
       return (tA as number) - (tB as number);
     })
     .slice(0, limit);

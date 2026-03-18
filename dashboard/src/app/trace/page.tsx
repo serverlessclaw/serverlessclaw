@@ -39,7 +39,11 @@ async function getTraces() {
     const uniqueMap = new Map();
     merged.forEach(item => uniqueMap.set(item.traceId, item));
     
-    const allItems = Array.from(uniqueMap.values()).sort((a, b) => (Number(b.timestamp) ?? 0) - (Number(a.timestamp) ?? 0));
+    const allItems = Array.from(uniqueMap.values()).sort((a, b) => {
+      const bTs = Number(b.timestamp);
+      const aTs = Number(a.timestamp);
+      return (Number.isFinite(bTs) ? bTs : 0) - (Number.isFinite(aTs) ? aTs : 0);
+    });
     
     // Filter out internal reflector/system tasks to keep the view clean for the user
     // but keep dashboard/telegram traces

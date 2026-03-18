@@ -129,8 +129,8 @@ export async function saveConversationMeta(
     expiresAt,
     sessionId,
     isPinned,
-    title: (meta.title || existing?.title) ?? 'New Conversation',
-    content: (meta.lastMessage || existing?.lastMessage) ?? '',
+    title: meta.title || existing?.title || 'New Conversation',
+    content: meta.lastMessage || existing?.lastMessage || '',
   });
 }
 

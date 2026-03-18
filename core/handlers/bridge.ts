@@ -1,18 +1,8 @@
 import { IoTDataPlaneClient, PublishCommand } from '@aws-sdk/client-iot-data-plane';
 import { Context } from 'aws-lambda';
+import { BridgeEventSchema } from '../lib/schema/events';
 
 const iot = new IoTDataPlaneClient({});
-
-interface BridgePayload {
-  userId?: string;
-  sessionId?: string;
-  [key: string]: unknown;
-}
-
-interface BridgeEvent {
-  'detail-type': string;
-  detail: BridgePayload;
-}
 
 /**
  * Bridges AgentBus (EventBridge) to RealtimeBus (IoT Core).
@@ -21,10 +11,17 @@ interface BridgeEvent {
  * @param event - The EventBridge event.
  * @param context - The AWS Lambda context.
  */
-export const handler = async (event: BridgeEvent, _context: Context) => {
-  console.log('[RealtimeBridge] Received event:', event['detail-type']);
+export const handler = async (event: Record<string, unknown>, _context: Context) => {
+  const parsedEventResult = BridgeEventSchema.safeParse(event);
+  if (!parsedEventResult.success) {
+    console.error('[RealtimeBridge] Invalid bridge event payload:', parsedEventResult.error);
+    return;
+  }
 
-  const detail = event.detail ?? {};
+  const parsedEvent = parsedEventResult.data;
+  console.log('[RealtimeBridge] Received event:', parsedEvent['detail-type']);
+
+  const { detail } = parsedEvent;
   // Standardize userId: fallback to dashboard-user, then ensure it's a clean string
   let userId = detail.userId ?? 'dashboard-user';
   if (typeof userId !== 'string') userId = 'dashboard-user';

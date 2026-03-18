@@ -204,7 +204,7 @@ function processTraceNodes(
         });
         added = true;
       } else if (step.type === TRACE_TYPES.TOOL_CALL) {
-        const tName = step.content.tool || step.content.toolName ?? 'Unknown';
+        const tName = step.content.tool || step.content.toolName || 'Unknown';
         initialNodes.push({
           id: stepNodeId,
           type: 'tool',
@@ -229,7 +229,7 @@ function processTraceNodes(
           }
         }
       } else if (step.type === TRACE_TYPES.TOOL_RESULT) {
-        const tName = step.content.tool || step.content.toolName ?? 'OBSERVATION';
+        const tName = step.content.tool || step.content.toolName || 'OBSERVATION';
         initialNodes.push({
           id: stepNodeId,
           type: 'tool',

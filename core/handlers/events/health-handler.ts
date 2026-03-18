@@ -1,4 +1,4 @@
-import { HealthReportEvent } from '../../lib/types/index';
+import { HealthReportEventSchema } from '../../lib/schema/events';
 import { Context } from 'aws-lambda';
 import { processEventWithAgent } from './shared';
 
@@ -21,7 +21,7 @@ export async function handleHealthReport(
     userId,
     traceId,
     sessionId,
-  } = eventDetail as unknown as HealthReportEvent;
+  } = HealthReportEventSchema.parse(eventDetail);
 
   const triageTask = `SYSTEM HEALTH ALERT: A component has reported an internal issue.
     
@@ -42,6 +42,10 @@ export async function handleHealthReport(
     handlerTitle: 'HEALTH_TRIAGE',
     outboundHandlerName: 'health-handler',
     formatResponse: (responseText) =>
-      `🚨 **SYSTEM HEALTH ALERT** (CRITICAL)\nComponent: ${component}\nIssue: ${issue}\n\nSuperClaw response: ${responseText}`,
+      `🚨 **SYSTEM HEALTH ALERT** (CRITICAL)
+Component: ${component}
+Issue: ${issue}
+
+SuperClaw response: ${responseText}`,
   });
 }

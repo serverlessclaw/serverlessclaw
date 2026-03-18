@@ -4,6 +4,8 @@ import { logger } from '../lib/logger';
 import { TraceSource, SSTResource } from '../lib/types/index';
 import { Resource } from 'sst';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { z } from 'zod';
+import { TelegramUpdateSchema } from '../lib/schema/webhook';
 
 const typedResource = Resource as unknown as SSTResource;
 const s3 = new S3Client({});
@@ -18,21 +20,37 @@ export const handler = async (
 ): Promise<APIGatewayProxyResultV2> => {
   logger.info('Received event:', JSON.stringify(event, null, 2));
 
-  if (!event.body) {
-    return { statusCode: 400, body: 'Missing body' };
+  let parsedUpdate: z.infer<typeof TelegramUpdateSchema>;
+  try {
+    if (!event.body) {
+      throw new Error('Missing event body');
+    }
+    parsedUpdate = TelegramUpdateSchema.parse(JSON.parse(event.body));
+  } catch (error) {
+    logger.error('Failed to parse or validate Telegram update:', error);
+    return { statusCode: 400, body: 'Invalid Telegram update format or missing body' };
   }
 
-  const update = JSON.parse(event.body);
-  const message = update.message;
+  const message = parsedUpdate.message;
+  if (!message) {
+    // Non-message updates should be acknowledged so Telegram does not retry.
+    return { statusCode: 200, body: 'OK' };
+  }
 
-  if (!message || !message.text) {
+  const hasActionableContent =
+    !!message.text ||
+    !!message.caption ||
+    !!(message.photo && message.photo.length > 0) ||
+    !!message.document ||
+    !!message.voice;
+
+  if (!hasActionableContent) {
     return { statusCode: 200, body: 'OK' };
   }
 
   const chatId = message.chat.id.toString();
   const userText = message.text ?? message.caption ?? '';
 
-  // Handle Media Attachments
   const attachments = await processTelegramMedia(message);
 
   // Lazy load dependencies to reduce initial context budget

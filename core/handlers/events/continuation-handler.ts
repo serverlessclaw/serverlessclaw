@@ -1,4 +1,4 @@
-import { TaskEvent } from '../../lib/types/index';
+import { TaskEventSchema } from '../../lib/schema/events';
 import { logger } from '../../lib/logger';
 import { Context } from 'aws-lambda';
 import { getRecursionLimit, handleRecursionLimitExceeded, processEventWithAgent } from './shared';
@@ -23,7 +23,7 @@ export async function handleContinuationTask(
     depth,
     initiatorId,
     attachments,
-  } = eventDetail as unknown as TaskEvent & { agentId?: string };
+  } = TaskEventSchema.parse(eventDetail);
 
   const currentDepth = depth ?? 1;
 

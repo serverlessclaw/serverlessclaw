@@ -1,4 +1,5 @@
-import { CompletionEvent, FailureEvent, EventType } from '../../lib/types/index';
+import { EventType } from '../../lib/types/index';
+import { CompletionEventSchema, FailureEventSchema } from '../../lib/schema/events';
 import { getRecursionLimit, handleRecursionLimitExceeded, wakeupInitiator } from './shared';
 
 /**
@@ -12,12 +13,12 @@ export async function handleTaskResult(
   detailType: string
 ): Promise<void> {
   const isFailure = detailType === EventType.TASK_FAILED;
-  const { userId, agentId, task, traceId, initiatorId, depth, sessionId } =
-    eventDetail as unknown as CompletionEvent & FailureEvent;
+  const parsedEvent = isFailure
+    ? FailureEventSchema.parse(eventDetail)
+    : CompletionEventSchema.parse(eventDetail);
 
-  const response = isFailure
-    ? (eventDetail as unknown as FailureEvent).error
-    : (eventDetail as unknown as CompletionEvent).response;
+  const { userId, agentId, task, traceId, initiatorId, depth, sessionId } = parsedEvent;
+  const response = 'error' in parsedEvent ? parsedEvent.error : parsedEvent.response;
 
   const currentDepth = depth ?? 1;
 

@@ -124,7 +124,7 @@ export class Agent {
     const traceId = tracer.getTraceId();
     const nodeId = tracer.getNodeId();
     const parentId = tracer.getParentId();
-    const currentInitiator = (initiatorId || this.config?.id) ?? 'unknown';
+    const currentInitiator = initiatorId ?? this.config?.id ?? 'unknown';
 
     if (!isContinuation) {
       await tracer.startTrace({

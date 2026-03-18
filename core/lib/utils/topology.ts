@@ -200,7 +200,7 @@ export async function discoverSystemTopology(): Promise<Topology> {
 
       if (existingNode) {
         // Enrichment
-        existingNode.label = (config.topologyOverride?.label || config.name) ?? existingNode.label;
+        existingNode.label = config.topologyOverride?.label || config.name || existingNode.label;
         existingNode.description = config.description;
         existingNode.icon = config.topologyOverride?.icon ?? existingNode.icon;
         existingNode.tier = config.topologyOverride?.tier ?? existingNode.tier;
@@ -213,7 +213,7 @@ export async function discoverSystemTopology(): Promise<Topology> {
         nodes.push({
           id: lowerId,
           type: NODE_TYPE.AGENT,
-          label: (config.topologyOverride?.label || config.name) ?? lowerId,
+          label: config.topologyOverride?.label || config.name || lowerId,
           icon:
             config.topologyOverride?.icon ??
             (config.isBackbone ? RESOURCE_ICON.BRAIN : RESOURCE_ICON.BOT),
@@ -245,7 +245,7 @@ export async function discoverSystemTopology(): Promise<Topology> {
           nodes.push({
             id: lowerAgentId,
             type: NODE_TYPE.AGENT,
-            label: (agent.topologyOverride?.label || agent.name) ?? lowerAgentId,
+            label: agent.topologyOverride?.label || agent.name || lowerAgentId,
             icon: agent.topologyOverride?.icon ?? RESOURCE_ICON.BOT,
             tier: agent.topologyOverride?.tier ?? NODE_TIER.AGENT,
           });

@@ -1,4 +1,4 @@
-import { BuildEvent } from '../../lib/types/index';
+import { BuildEventSchema } from '../../lib/schema/events';
 import { Context } from 'aws-lambda';
 import { wakeupInitiator, processEventWithAgent } from './shared';
 
@@ -21,7 +21,7 @@ export async function handleBuildFailure(
     sessionId,
     initiatorId,
     task: originalTask,
-  } = eventDetail as unknown as BuildEvent;
+  } = BuildEventSchema.parse(eventDetail);
 
   const gapsContext =
     gapIds && gapIds.length > 0
@@ -75,7 +75,7 @@ export async function handleBuildFailure(
  */
 export async function handleBuildSuccess(eventDetail: Record<string, unknown>): Promise<void> {
   const { userId, buildId, sessionId, initiatorId, task, traceId } =
-    eventDetail as unknown as BuildEvent;
+    BuildEventSchema.parse(eventDetail);
 
   const message = `✅ **DEPLOYMENT SUCCESSFUL**
 Build ID: ${buildId}

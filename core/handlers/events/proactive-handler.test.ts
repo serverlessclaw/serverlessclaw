@@ -34,12 +34,11 @@ describe('ProactiveHandler', () => {
       userId: 'user-1',
       traceId: 'trace-abc',
       metadata: { priority: 'high' },
+      sessionId: 'session-xyz',
+      timestamp: Math.floor(Date.now() / 1000),
     };
 
-    await handleProactiveHeartbeat(
-      payload as unknown as Record<string, unknown>,
-      {} as unknown as Context
-    );
+    await handleProactiveHeartbeat(payload, {} as unknown as Context);
 
     expect(eventBridgeMock.commandCalls(PutEventsCommand)).toHaveLength(1);
     const call = eventBridgeMock.call(0);
@@ -66,10 +65,7 @@ describe('ProactiveHandler', () => {
 
     // Should not throw, just log the error
     await expect(
-      handleProactiveHeartbeat(
-        payload as unknown as Record<string, unknown>,
-        {} as unknown as Context
-      )
+      handleProactiveHeartbeat(payload, {} as unknown as Context)
     ).resolves.not.toThrow();
   });
 });
