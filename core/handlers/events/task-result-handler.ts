@@ -19,13 +19,13 @@ export async function handleTaskResult(
     ? (eventDetail as unknown as FailureEvent).error
     : (eventDetail as unknown as CompletionEvent).response;
 
-  const currentDepth = depth || 1;
+  const currentDepth = depth ?? 1;
 
   // Use shared logger
   const { logger } = await import('../../lib/logger');
 
   logger.info(
-    `Relaying ${isFailure ? 'failure' : 'completion'} from ${agentId} to Initiator: ${initiatorId || 'Orchestrator'} (Depth: ${currentDepth}, Session: ${sessionId})`
+    `Relaying ${isFailure ? 'failure' : 'completion'} from ${agentId} to Initiator: ${initiatorId ?? 'Orchestrator'} (Depth: ${currentDepth}, Session: ${sessionId})`
   );
 
   // 1. Loop Protection - Use shared function

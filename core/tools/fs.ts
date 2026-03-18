@@ -74,7 +74,7 @@ export const runShellCommand = {
   execute: async (args: Record<string, unknown>): Promise<string> => {
     const { command, dir_path } = args as { command: string; dir_path?: string };
     try {
-      logger.info(`Executing shell command: ${command} in ${dir_path || 'root'}`);
+      logger.info(`Executing shell command: ${command} in ${dir_path ?? 'root'}`);
       const { stdout, stderr } = await execAsync(command, {
         cwd: dir_path ? path.resolve(process.cwd(), dir_path) : process.cwd(),
       });

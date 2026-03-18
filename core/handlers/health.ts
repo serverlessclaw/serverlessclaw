@@ -22,7 +22,7 @@ export const handler: APIGatewayProxyHandlerV2 = async () => {
     await memory.resetRecoveryAttemptCount();
 
     // Save current hash as LKG if check passes
-    const currentHash = process.env.GIT_HASH || 'unknown';
+    const currentHash = process.env.GIT_HASH ?? 'unknown';
     if (currentHash !== 'unknown') {
       await memory.saveLKGHash(currentHash);
     }

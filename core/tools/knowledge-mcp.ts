@@ -24,9 +24,8 @@ export const registerMCPServer = {
         }
       }
 
-      const { AgentRegistry } = await import('../lib/registry');
       const mcpServers =
-        ((await AgentRegistry.getRawConfig('mcp_servers')) as Record<string, unknown>) || {};
+        ((await ConfigManager.getRawConfig('mcp_servers')) as Record<string, unknown>) ?? {};
       mcpServers[serverName] = { command, env: parsedEnv };
 
       await ConfigManager.saveRawConfig('mcp_servers', mcpServers);
@@ -46,9 +45,8 @@ export const unregisterMCPServer = {
     const { serverName } = args as { serverName: string };
 
     try {
-      const { AgentRegistry } = await import('../lib/registry');
       const mcpServers =
-        ((await AgentRegistry.getRawConfig('mcp_servers')) as Record<string, unknown>) || {};
+        ((await ConfigManager.getRawConfig('mcp_servers')) as Record<string, unknown>) ?? {};
 
       if (!mcpServers[serverName]) return `FAILED: MCP server '${serverName}' is not registered.`;
 

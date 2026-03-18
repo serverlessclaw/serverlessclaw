@@ -24,7 +24,7 @@ export const handleProactiveHeartbeat = async (
     // Dispatch the task to the responsible agent
     await emitTaskEvent({
       source: 'heartbeat.scheduler',
-      userId: payload.userId || 'SYSTEM',
+      userId: payload.userId ?? 'SYSTEM',
       agentId: payload.agentId as AgentType,
       task: payload.task,
       traceId: payload.traceId,

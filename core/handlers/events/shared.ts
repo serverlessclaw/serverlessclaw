@@ -145,7 +145,7 @@ export async function processEventWithAgent(
 
   if (!isTaskPaused(responseText)) {
     const finalMessage = options.formatResponse
-      ? options.formatResponse(responseText, resultAttachments || [])
+      ? options.formatResponse(responseText, resultAttachments ?? [])
       : responseText;
 
     await sendOutboundMessage(
@@ -155,11 +155,11 @@ export async function processEventWithAgent(
       undefined,
       options.sessionId,
       'SuperClaw',
-      resultAttachments || []
+      resultAttachments ?? []
     );
   }
 
-  return { responseText, attachments: resultAttachments || [] };
+  return { responseText, attachments: resultAttachments ?? [] };
 }
 
 export { EventType, CompletionEvent, FailureEvent, sendOutboundMessage, logger };

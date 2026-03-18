@@ -34,7 +34,7 @@ export const handler = async (event: NotifierEvent): Promise<void> => {
 
   const { userId, message, memoryContexts, sessionId, agentName, attachments } = payload;
 
-  const contextsToSync = new Set<string>(memoryContexts || []);
+  const contextsToSync = new Set<string>(memoryContexts ?? []);
   contextsToSync.add(userId); // Always sync to the base user history
   if (sessionId) {
     contextsToSync.add(`CONV#${userId}#${sessionId}`);

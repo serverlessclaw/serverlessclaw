@@ -30,7 +30,7 @@ export const handler = async (
   }
 
   const chatId = message.chat.id.toString();
-  const userText = message.text || message.caption || '';
+  const userText = message.text ?? message.caption ?? '';
 
   // Handle Media Attachments
   const attachments = await processTelegramMedia(message);
@@ -176,7 +176,7 @@ async function handleTelegramFile(
     const buffer = Buffer.from(await response.arrayBuffer());
 
     // 3. Upload to S3 StagingBucket
-    const key = `chat-attachments/${Date.now()}-${fileName || fileId}`;
+    const key = `chat-attachments/${Date.now()}-${fileName ?? fileId}`;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const bucketName = (typedResource as any).StagingBucket.name;
 
@@ -194,7 +194,7 @@ async function handleTelegramFile(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const attachment: any = {
       type,
-      name: fileName || key.split('/').pop(),
+      name: fileName ?? key.split('/').pop(),
       mimeType,
       url: s3Url,
     };

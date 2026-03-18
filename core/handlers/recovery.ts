@@ -101,13 +101,13 @@ export const handler = async (_event?: { detail: Record<string, unknown> }): Pro
     }
 
     logger.info(
-      `Triggering CodeBuild Deployer for emergency recovery to LKG: ${lkgHash || 'HEAD^'}...`
+      `Triggering CodeBuild Deployer for emergency recovery to LKG: ${lkgHash ?? 'HEAD^'}...`
     );
     const command = new StartBuildCommand({
       projectName: typedResource.Deployer.name,
       environmentVariablesOverride: [
         { name: 'EMERGENCY_ROLLBACK', value: 'true' },
-        { name: 'LKG_HASH', value: lkgHash || '' },
+        { name: 'LKG_HASH', value: lkgHash ?? '' },
       ],
     });
 
@@ -120,7 +120,7 @@ export const handler = async (_event?: { detail: Record<string, unknown> }): Pro
         Item: {
           userId: 'DISTILLED#RECOVERY',
           timestamp: Date.now(),
-          content: `Dead Man's Switch detected unhealthy system and triggered attempt #${attemptCount} for rollback to ${lkgHash || 'previous state'}.`,
+          content: `Dead Man's Switch detected unhealthy system and triggered attempt #${attemptCount} for rollback to ${lkgHash ?? 'previous state'}.`,
         },
       })
     );

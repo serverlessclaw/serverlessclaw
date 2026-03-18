@@ -30,7 +30,7 @@ export async function handleHealthReport(
     Severity: ${severity.toUpperCase()}
     
     Context:
-    ${JSON.stringify(issueContext || {}, null, 2)}
+    ${JSON.stringify(issueContext ?? {}, null, 2)}
     
     Please investigate this health issue. Determine if it requires a code modification (Coder Agent), configuration change, or if it can be resolved via an autonomous recovery action.
     Start by diagnosing the root cause using your tools.`;

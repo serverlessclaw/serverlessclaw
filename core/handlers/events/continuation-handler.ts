@@ -25,7 +25,7 @@ export async function handleContinuationTask(
     attachments,
   } = eventDetail as unknown as TaskEvent & { agentId?: string };
 
-  const currentDepth = depth || 1;
+  const currentDepth = depth ?? 1;
 
   // 1. Loop Protection - Check recursion depth before processing
   const RECURSION_LIMIT = await getRecursionLimit();
@@ -43,7 +43,7 @@ export async function handleContinuationTask(
     return;
   }
 
-  const targetAgentId = agentId || 'main';
+  const targetAgentId = agentId ?? 'main';
   logger.info(`Handling continuation task for agent ${targetAgentId}, user:`, userId, {
     traceId,
     sessionId,

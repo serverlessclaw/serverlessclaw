@@ -28,7 +28,7 @@ export const inspectTrace = {
       const summary = nodes
         .map(
           (n) => `
---- NODE: ${n.nodeId} (Parent: ${n.parentId || 'None'}) ---
+--- NODE: ${n.nodeId} (Parent: ${n.parentId ?? 'None'}) ---
 STATUS: ${n.status}
 STEPS:
 ${n.steps
@@ -81,7 +81,7 @@ export const installSkill = {
   ...toolDefinitions.installSkill,
   execute: async (args: Record<string, unknown>): Promise<string> => {
     const { skillName, agentId } = args as { skillName: string; agentId?: string };
-    const targetAgentId = agentId || 'main';
+    const targetAgentId = agentId ?? 'main';
 
     try {
       const { SkillRegistry } = await import('../lib/skills');
@@ -100,7 +100,7 @@ export const uninstallSkill = {
   ...toolDefinitions.uninstallSkill,
   execute: async (args: Record<string, unknown>): Promise<string> => {
     const { skillName, agentId } = args as { skillName: string; agentId?: string };
-    const targetAgentId = agentId || 'main';
+    const targetAgentId = agentId ?? 'main';
 
     try {
       const { AgentRegistry } = await import('../lib/registry');
@@ -185,18 +185,18 @@ export const reportGap = {
 
     try {
       const metadata = {
-        category: category || InsightCategory.STRATEGIC_GAP,
+        category: category ?? InsightCategory.STRATEGIC_GAP,
         confidence: 9,
-        impact: impact || 5,
+        impact: impact ?? 5,
         complexity: 5,
         risk: 5,
-        urgency: urgency || 5,
+        urgency: urgency ?? 5,
         priority: 5,
       };
 
       const gapIdTimestamp = await getMemory().addMemory(
         'SYSTEM#GLOBAL',
-        category || InsightCategory.STRATEGIC_GAP,
+        category ?? InsightCategory.STRATEGIC_GAP,
         content,
         metadata
       );

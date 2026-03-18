@@ -15,10 +15,10 @@ export const listAgents = {
 
     const summary = Object.values(configs)
       .filter((a) => a.enabled)
-      .map((a) => `- [${a.id}] ${a.name}: ${a.description} (Backbone: ${a.isBackbone || false})`)
+      .map((a) => `- [${a.id}] ${a.name}: ${a.description} (Backbone: ${a.isBackbone ?? false})`)
       .join('\n');
 
-    return summary || 'No enabled agents found in the registry.';
+    return summary ?? 'No enabled agents found in the registry.';
   },
 };
 
@@ -53,15 +53,15 @@ export const dispatchTask = {
     const childTracer = tracer.getChildTracer();
 
     try {
-      await emitEvent(initiatorId || 'main.agent', `${agentId}_task`, {
+      await emitEvent(initiatorId ?? 'main.agent', `${agentId}_task`, {
         userId,
         task,
         metadata,
         traceId: childTracer.getTraceId(),
         nodeId: childTracer.getNodeId(),
         parentId: childTracer.getParentId(),
-        initiatorId: initiatorId || 'main.agent',
-        depth: (depth || 0) + 1,
+        initiatorId: initiatorId ?? 'main.agent',
+        depth: (depth ?? 0) + 1,
         sessionId,
       });
       return `Task successfully dispatched to ${agentId} agent. Trace ID: ${childTracer.getTraceId()}`;
@@ -129,16 +129,16 @@ export const seekClarification = {
       };
 
     try {
-      await emitEvent(initiatorId || 'main.agent', EventType.CLARIFICATION_REQUEST, {
+      await emitEvent(initiatorId ?? 'main.agent', EventType.CLARIFICATION_REQUEST, {
         userId,
         question,
         traceId,
         initiatorId,
-        depth: (depth || 0) + 1,
+        depth: (depth ?? 0) + 1,
         sessionId,
-        originalTask: originalTask || task || 'Unknown task',
+        originalTask: originalTask ?? task ?? 'Unknown task',
       });
-      return `TASK_PAUSED: Clarification request sent to ${initiatorId || 'initiator'}. Waiting for response.`;
+      return `TASK_PAUSED: Clarification request sent to ${initiatorId ?? 'initiator'}. Waiting for response.`;
     } catch (error) {
       return `Failed to seek clarification: ${formatErrorMessage(error)}`;
     }
@@ -174,7 +174,7 @@ export const provideClarification = {
         Please proceed with this information.`,
         traceId,
         sessionId,
-        depth: (depth || 0) + 1,
+        depth: (depth ?? 0) + 1,
         initiatorId,
         isContinuation: true,
       });

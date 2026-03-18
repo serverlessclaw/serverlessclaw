@@ -24,9 +24,9 @@ interface BridgeEvent {
 export const handler = async (event: BridgeEvent, _context: Context) => {
   console.log('[RealtimeBridge] Received event:', event['detail-type']);
 
-  const detail = event.detail || {};
+  const detail = event.detail ?? {};
   // Standardize userId: fallback to dashboard-user, then ensure it's a clean string
-  let userId = detail.userId || 'dashboard-user';
+  let userId = detail.userId ?? 'dashboard-user';
   if (typeof userId !== 'string') userId = 'dashboard-user';
 
   // Clean userId for MQTT topic (no special chars except allowed ones)

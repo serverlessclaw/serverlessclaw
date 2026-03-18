@@ -21,13 +21,13 @@ export async function handleClarificationRequest(
       originalTask: string;
     };
 
-  const currentDepth = depth || 1;
+  const currentDepth = depth ?? 1;
 
   // Use shared logger
   const { logger } = await import('../../lib/logger');
 
   logger.info(
-    `Relaying clarification request from ${agentId} to Initiator: ${initiatorId || 'Orchestrator'} (Depth: ${currentDepth}, Session: ${sessionId})`
+    `Relaying clarification request from ${agentId} to Initiator: ${initiatorId ?? 'Orchestrator'} (Depth: ${currentDepth}, Session: ${sessionId})`
   );
 
   // 1. Loop Protection - Use shared function
@@ -48,7 +48,7 @@ export async function handleClarificationRequest(
 
   await wakeupInitiator(
     userId,
-    initiatorId || 'main',
+    initiatorId ?? 'main',
     `CLARIFICATION_REQUEST: Agent '${agentId}' needs clarification while working on: "${originalTask}".
       Question:
       ---

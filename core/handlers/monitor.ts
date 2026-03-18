@@ -37,7 +37,7 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
 
   // Normalize buildId if it's an ARN
   if (buildId.startsWith('arn:aws:codebuild:')) {
-    buildId = buildId.split('/').pop() || buildId;
+    buildId = buildId.split('/').pop() ?? buildId;
   }
 
   try {
@@ -126,11 +126,11 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
         const currentFailures = (await ConfigManager.getRawConfig(
           'consecutive_build_failures'
         )) as number;
-        const failures = (currentFailures || 0) + 1;
+        const failures = (currentFailures ?? 0) + 1;
         await ConfigManager.saveRawConfig('consecutive_build_failures', failures);
 
         const threshold =
-          ((await ConfigManager.getRawConfig('circuit_breaker_threshold')) as number) || 3;
+          ((await ConfigManager.getRawConfig('circuit_breaker_threshold')) as number) ?? 3;
 
         if (failures >= threshold) {
           logger.warn(`Circuit Breaker Active! ${failures} build failures. Flipping to HITL mode.`);
@@ -142,7 +142,7 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
           component: 'BuildMonitor',
           issue: 'Failed to update circuit breaker counter in ConfigTable',
           severity: 'medium',
-          userId: userId || 'SYSTEM',
+          userId: userId ?? 'SYSTEM',
           traceId,
           context: { error: String(e), buildId },
         });
@@ -186,7 +186,7 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
           })
         );
         errorLogs =
-          logEvents.events?.map((e: { message?: string }) => e.message).join('\n') ||
+          logEvents.events?.map((e: { message?: string }) => e.message).join('\n') ??
           'Logs are empty.';
       }
 
