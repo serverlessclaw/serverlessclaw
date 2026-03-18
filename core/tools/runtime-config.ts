@@ -22,11 +22,11 @@ export const checkConfig = {
       activeProvider?: string;
     };
 
-    const { AgentRegistry } = await import('../lib/registry');
+    const { ConfigManager } = await import('../lib/registry/config');
 
     // These represent the global DDB-based overrides (from switchModel)
-    const ddbProvider = await AgentRegistry.getRawConfig('active_provider');
-    const ddbModel = await AgentRegistry.getRawConfig('active_model');
+    const ddbProvider = await ConfigManager.getRawConfig('active_provider');
+    const ddbModel = await ConfigManager.getRawConfig('active_model');
 
     return `
 [RUNTIME_CONFIG]

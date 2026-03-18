@@ -80,4 +80,30 @@ describe('MCPBridge', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((MCPBridge as any).clients.size).toBe(9);
   });
+
+  it('should correctly handle managed connectors without spawning local processes', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (AgentRegistry.getRawConfig as any).mockResolvedValue({
+      'google-drive': {
+        type: 'managed',
+        connector_id: 'connector_googledrive',
+        description: 'Google Drive managed connector',
+      },
+    });
+
+    const tools = await MCPBridge.getExternalTools(['google-drive']);
+
+    expect(tools.length).toBe(1);
+    expect(tools[0].name).toBe('google-drive');
+    expect(tools[0].connector_id).toBe('connector_googledrive');
+    expect(tools[0].type).toBe('mcp');
+
+    // Should not have created an MCP client
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((MCPBridge as any).clients.size).toBe(0);
+
+    // Execution should be a placeholder
+    const result = await tools[0].execute({});
+    expect(result).toContain('managed by the model provider');
+  });
 });

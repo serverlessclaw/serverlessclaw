@@ -14,7 +14,7 @@ import {
 import { ClawTracer } from './tracer';
 import { logger } from './logger';
 import { SYSTEM, AGENT_ERRORS, MEMORY_KEYS, CONFIG_KEYS, OPTIMIZATION_POLICIES } from './constants';
-import { AgentRegistry } from './registry';
+import { ConfigManager } from './registry/config';
 import { AgentContext } from './agent/context';
 import { AgentExecutor, AGENT_DEFAULTS, AGENT_LOG_MESSAGES } from './agent/executor';
 import { AgentProcessOptions } from './agent/options';
@@ -155,29 +155,29 @@ export class Agent {
       });
 
       // 2. Model/Provider Resolution
-      let activeModel: string | undefined = this.config?.model;
-      let activeProvider: string | undefined = this.config?.provider;
+      let activeModel = this.config?.model ?? SYSTEM.DEFAULT_MODEL;
+      let activeProvider = this.config?.provider ?? SYSTEM.DEFAULT_PROVIDER;
       let activeProfile = profile;
 
       try {
-        const globalProvider = (await AgentRegistry.getRawConfig(
+        const globalProvider = (await ConfigManager.getRawConfig(
           CONFIG_KEYS.ACTIVE_PROVIDER
         )) as string;
-        const globalModel = (await AgentRegistry.getRawConfig(CONFIG_KEYS.ACTIVE_MODEL)) as string;
+        const globalModel = (await ConfigManager.getRawConfig(CONFIG_KEYS.ACTIVE_MODEL)) as string;
         if (globalProvider) activeProvider = globalProvider;
         if (globalModel) activeModel = globalModel;
 
         if (!process.env.VITEST) {
-          const policy = await AgentRegistry.getRawConfig(CONFIG_KEYS.OPTIMIZATION_POLICY);
+          const policy = await ConfigManager.getRawConfig(CONFIG_KEYS.OPTIMIZATION_POLICY);
           if (policy === OPTIMIZATION_POLICIES.AGGRESSIVE) activeProfile = ReasoningProfile.DEEP;
           else if (policy === OPTIMIZATION_POLICIES.CONSERVATIVE)
             activeProfile = ReasoningProfile.FAST;
 
           if (!globalModel && !activeModel) {
-            const profileMap = (await AgentRegistry.getRawConfig(
+            const profileMap = (await ConfigManager.getRawConfig(
               CONFIG_KEYS.REASONING_PROFILES
             )) as Record<string, string>;
-            if (profileMap && profileMap[activeProfile]) activeModel = profileMap[activeProfile];
+            if (profileMap?.[activeProfile]) activeModel = profileMap[activeProfile];
           }
         }
       } catch {
@@ -188,7 +188,13 @@ export class Agent {
       let contextPrompt = this.systemPrompt;
       if (recoveryContext) contextPrompt += recoveryContext;
       contextPrompt += `\n\n${AgentContext.getMemoryIndexBlock(distilled, lessons.length)}`;
-      contextPrompt += `\n\n${AgentContext.getIdentityBlock(this.config, activeModel || SYSTEM.DEFAULT_MODEL, activeProvider || SYSTEM.DEFAULT_PROVIDER, activeProfile, depth)}`;
+      contextPrompt += `\n\n${AgentContext.getIdentityBlock(
+        this.config,
+        activeModel ?? SYSTEM.DEFAULT_MODEL,
+        activeProvider ?? SYSTEM.DEFAULT_PROVIDER,
+        activeProfile,
+        depth
+      )}`;
 
       const messages: Message[] = [
         { role: MessageRole.SYSTEM, content: contextPrompt },
@@ -200,14 +206,14 @@ export class Agent {
       const executor = new AgentExecutor(
         this.provider,
         this.tools,
-        this.config?.id || 'unknown',
-        this.config?.name || 'SuperClaw'
+        this.config?.id ?? 'unknown',
+        this.config?.name ?? 'SuperClaw'
       );
 
-      let maxIterations = this.config?.maxIterations || AGENT_DEFAULTS.MAX_ITERATIONS;
+      let maxIterations = this.config?.maxIterations ?? AGENT_DEFAULTS.MAX_ITERATIONS;
       try {
         if (!process.env.VITEST) {
-          const customMax = await AgentRegistry.getRawConfig(CONFIG_KEYS.MAX_TOOL_ITERATIONS);
+          const customMax = await ConfigManager.getRawConfig(CONFIG_KEYS.MAX_TOOL_ITERATIONS);
           if (customMax !== undefined) maxIterations = parseConfigInt(customMax, maxIterations);
         }
       } catch {

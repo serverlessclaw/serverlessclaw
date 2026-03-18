@@ -36,6 +36,14 @@ export class ConfigManager {
   }
 
   /**
+   * Fetches a configuration value with a type-safe fallback.
+   */
+  public static async getTypedConfig<T>(key: string, defaultValue: T): Promise<T> {
+    const value = await this.getRawConfig(key);
+    return (value as T) ?? defaultValue;
+  }
+
+  /**
    * Saves a raw configuration value to the ConfigTable.
    */
   public static async saveRawConfig(key: string, value: unknown): Promise<void> {

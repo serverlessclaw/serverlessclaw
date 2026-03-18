@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Agent } from './agent';
 import { IMemory, IProvider, MessageRole, TraceSource, Message } from './types/index';
+import { SYSTEM } from './constants';
 
 // Create persistent mock functions
 const mockGetTraceId = vi.fn();
@@ -9,6 +10,14 @@ const mockGetParentId = vi.fn();
 const mockStartTrace = vi.fn();
 const mockAddStep = vi.fn();
 const mockEndTrace = vi.fn();
+
+// Mock ConfigManager
+vi.mock('./registry/config', () => ({
+  ConfigManager: {
+    getRawConfig: vi.fn(),
+    getTypedConfig: vi.fn(),
+  },
+}));
 
 // Mock Tracer as a class that uses these functions
 vi.mock('./tracer', () => {
@@ -203,8 +212,8 @@ describe('Agent Trace Propagation', () => {
       ]),
       expect.anything(),
       expect.anything(),
-      undefined,
-      undefined,
+      SYSTEM.DEFAULT_MODEL,
+      SYSTEM.DEFAULT_PROVIDER,
       undefined
     );
   });
@@ -244,8 +253,8 @@ describe('Agent Trace Propagation', () => {
       ]),
       expect.anything(),
       expect.anything(),
-      undefined,
-      undefined,
+      SYSTEM.DEFAULT_MODEL,
+      SYSTEM.DEFAULT_PROVIDER,
       undefined
     );
   });
@@ -270,8 +279,8 @@ describe('Agent Trace Propagation', () => {
         expect.any(Array),
         expect.any(Array),
         expect.anything(),
-        undefined,
-        undefined,
+        SYSTEM.DEFAULT_MODEL,
+        SYSTEM.DEFAULT_PROVIDER,
         undefined // No responseFormat in text mode
       );
     });
@@ -306,8 +315,8 @@ describe('Agent Trace Propagation', () => {
         expect.any(Array),
         expect.any(Array),
         expect.anything(),
-        undefined,
-        undefined,
+        SYSTEM.DEFAULT_MODEL,
+        SYSTEM.DEFAULT_PROVIDER,
         expect.objectContaining({
           type: 'json_schema',
           json_schema: expect.objectContaining({ name: 'agent_signal' }),

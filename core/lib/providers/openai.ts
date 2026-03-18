@@ -156,7 +156,14 @@ export class OpenAIProvider implements IProvider {
         ...(hasTools
           ? {
               tools: tools.map((t) => {
-                if (t.type && t.type !== 'function') {
+                if (t.connector_id) {
+                  return {
+                    type: OPENAI.MCP_TYPE,
+                    name: t.name,
+                    connector_id: t.connector_id,
+                  } as any;
+                }
+                if (t.type && t.type !== OPENAI.FUNCTION_TYPE) {
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   return { type: t.type } as any;
                 }

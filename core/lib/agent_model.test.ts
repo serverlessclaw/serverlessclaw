@@ -8,7 +8,7 @@ vi.mock('sst', () => ({
 }));
 import { Agent } from './agent';
 import { IMemory, IProvider, MessageRole } from './types/index';
-import { AgentRegistry } from './registry';
+import { ConfigManager } from './registry/config';
 
 const mockGetTraceId = vi.fn().mockReturnValue('test-trace-id');
 const mockGetNodeId = vi.fn().mockReturnValue('test-node-id');
@@ -17,9 +17,15 @@ const mockStartTrace = vi.fn().mockResolvedValue('test-trace-id');
 const mockAddStep = vi.fn().mockResolvedValue(undefined);
 const mockEndTrace = vi.fn().mockResolvedValue(undefined);
 
+vi.mock('./registry/config', () => ({
+  ConfigManager: {
+    getRawConfig: vi.fn(),
+    getTypedConfig: vi.fn(),
+  },
+}));
+
 vi.mock('./registry', () => ({
   AgentRegistry: {
-    getRawConfig: vi.fn(),
     recordToolUsage: vi.fn(),
   },
 }));
@@ -61,7 +67,7 @@ describe('Agent Model Overrides', () => {
   });
 
   it('should use global model overrides from AgentRegistry', async () => {
-    vi.mocked(AgentRegistry.getRawConfig).mockImplementation(async (key: string) => {
+    vi.mocked(ConfigManager.getRawConfig).mockImplementation(async (key: string) => {
       if (key === 'active_provider') return 'bedrock';
       if (key === 'active_model') return 'anthropic.claude-4.6-sonnet';
       return undefined;
@@ -89,7 +95,7 @@ describe('Agent Model Overrides', () => {
   });
 
   it('should correctly trace the active model and provider in the llm_call step', async () => {
-    vi.mocked(AgentRegistry.getRawConfig).mockImplementation(async (key: string) => {
+    vi.mocked(ConfigManager.getRawConfig).mockImplementation(async (key: string) => {
       if (key === 'active_provider') return 'openrouter';
       if (key === 'active_model') return 'meta-llama/llama-3-70b-instruct';
       return undefined;
@@ -118,7 +124,7 @@ describe('Agent Model Overrides', () => {
   it('should correctly report the active model and provider when checkConfig tool is called', async () => {
     const { checkConfig } = await import('../tools/system');
 
-    vi.mocked(AgentRegistry.getRawConfig).mockImplementation(async (key: string) => {
+    vi.mocked(ConfigManager.getRawConfig).mockImplementation(async (key: string) => {
       if (key === 'active_provider') return 'openai';
       if (key === 'active_model') return 'gpt-4o';
       return undefined;

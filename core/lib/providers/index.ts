@@ -1,23 +1,11 @@
-import {
-  IProvider,
-  Message,
-  ITool,
-  ReasoningProfile,
-  LLMProvider,
-  OpenAIModel,
-  BedrockModel,
-  OpenRouterModel,
-} from '../types/index';
+import { IProvider, Message, ITool, ReasoningProfile, LLMProvider } from '../types/index';
 import { Resource } from 'sst';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
-import { logger } from '../logger';
 
 import { OpenAIProvider } from './openai';
 import { OpenRouterProvider } from './openrouter';
 import { BedrockProvider } from './bedrock';
-
-const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+import { SYSTEM, CONFIG_KEYS } from '../constants';
+import { ConfigManager } from '../registry/config';
 
 interface ProviderResource {
   ActiveProvider?: { value: string };
@@ -26,53 +14,40 @@ interface ProviderResource {
 }
 
 export class ProviderManager implements IProvider {
+  /**
+   * Resolves the active provider and model using a hierarchy:
+   * 1. Direct overrides (parameters)
+   * 2. Hot configuration (DynamoDB ConfigTable)
+   * 3. SST Static Resources (if linked)
+   * 4. System Constants (last resort)
+   */
   static async getActiveProvider(
     overrideProvider?: string,
     overrideModel?: string
   ): Promise<IProvider> {
     const typedResource = Resource as unknown as ProviderResource;
-    let providerType =
-      overrideProvider || typedResource.ActiveProvider?.value || LLMProvider.OPENAI;
-    let model = overrideModel || typedResource.ActiveModel?.value;
 
-    if (!overrideProvider || !overrideModel) {
-      try {
-        if (!overrideProvider) {
-          const { Item } = await db.send(
-            new GetCommand({
-              TableName: typedResource.ConfigTable.name,
-              Key: { key: 'active_provider' },
-            })
-          );
-          if (Item && Item.value) {
-            providerType = Item.value;
-          }
-        }
+    // Resolve Provider
+    const providerType = (overrideProvider ??
+      (await ConfigManager.getTypedConfig(
+        CONFIG_KEYS.ACTIVE_PROVIDER,
+        typedResource.ActiveProvider?.value ?? SYSTEM.DEFAULT_PROVIDER
+      ))) as LLMProvider;
 
-        if (!overrideModel) {
-          const { Item: modelItem } = await db.send(
-            new GetCommand({
-              TableName: typedResource.ConfigTable.name,
-              Key: { key: 'active_model' },
-            })
-          );
-          if (modelItem && modelItem.value) {
-            model = modelItem.value;
-          }
-        }
-      } catch (e) {
-        logger.warn('Could not fetch hot config from ConfigTable, falling back to secrets:', e);
-      }
-    }
+    // Resolve Model
+    const model =
+      overrideModel ??
+      ((await ConfigManager.getRawConfig(CONFIG_KEYS.ACTIVE_MODEL)) as string) ??
+      typedResource.ActiveModel?.value;
 
     switch (providerType) {
       case LLMProvider.BEDROCK:
-        return new BedrockProvider(model || BedrockModel.CLAUDE_4_6);
+        return new BedrockProvider(model ?? SYSTEM.DEFAULT_BEDROCK_MODEL);
       case LLMProvider.OPENROUTER:
-        return new OpenRouterProvider(model || OpenRouterModel.GEMINI_3_FLASH);
+        return new OpenRouterProvider(model ?? SYSTEM.DEFAULT_OPENROUTER_MODEL);
       case LLMProvider.OPENAI:
       default:
-        return new OpenAIProvider(model || OpenAIModel.GPT_5_4);
+        return new OpenAIProvider(model ?? SYSTEM.DEFAULT_OPENAI_MODEL);
     }
   }
 

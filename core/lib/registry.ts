@@ -49,11 +49,11 @@ export class AgentRegistry {
    * Retrieves the retention period in days for a specific item type.
    */
   static async getRetentionDays(item: keyof typeof RETENTION): Promise<number> {
-    const config = (await this.getRawConfig(DYNAMO_KEYS.RETENTION_CONFIG)) as Record<
+    const config = (await ConfigManager.getRawConfig(DYNAMO_KEYS.RETENTION_CONFIG)) as Record<
       string,
       number
     >;
-    return config && config[item] !== undefined ? config[item] : RETENTION[item];
+    return config?.[item] ?? RETENTION[item];
   }
 
   /**
@@ -70,17 +70,20 @@ export class AgentRegistry {
     if (this.backboneConfigs[id]) {
       config = { ...this.backboneConfigs[id] };
       const ddbAgents =
-        (preFetchedConfigs?.[DYNAMO_KEYS.AGENTS_CONFIG] as Record<string, Partial<IAgentConfig>>) ||
-        ((await this.getRawConfig(DYNAMO_KEYS.AGENTS_CONFIG)) as Record<
+        (preFetchedConfigs?.[DYNAMO_KEYS.AGENTS_CONFIG] as Record<string, Partial<IAgentConfig>>) ??
+        ((await ConfigManager.getRawConfig(DYNAMO_KEYS.AGENTS_CONFIG)) as Record<
           string,
           Partial<IAgentConfig>
-        >) ||
+        >) ??
         {};
       if (ddbAgents[id]) Object.assign(config, ddbAgents[id]);
     } else {
       const ddbAgents =
-        (preFetchedConfigs?.[DYNAMO_KEYS.AGENTS_CONFIG] as Record<string, unknown>) ||
-        ((await this.getRawConfig(DYNAMO_KEYS.AGENTS_CONFIG)) as Record<string, unknown>) ||
+        (preFetchedConfigs?.[DYNAMO_KEYS.AGENTS_CONFIG] as Record<string, unknown>) ??
+        ((await ConfigManager.getRawConfig(DYNAMO_KEYS.AGENTS_CONFIG)) as Record<
+          string,
+          unknown
+        >) ??
         {};
       config = ddbAgents[id] as IAgentConfig;
     }
@@ -90,7 +93,7 @@ export class AgentRegistry {
     // 2. Discovery Mode Filter
     const isDiscoveryMode =
       preFetchedConfigs?.[CONFIG_KEYS.SELECTIVE_DISCOVERY_MODE] ??
-      (await this.getRawConfig(CONFIG_KEYS.SELECTIVE_DISCOVERY_MODE)) === true;
+      (await ConfigManager.getRawConfig(CONFIG_KEYS.SELECTIVE_DISCOVERY_MODE)) === true;
 
     if (isDiscoveryMode && config.tools) {
       config.tools = config.tools.filter((t: string) =>
@@ -105,19 +108,19 @@ export class AgentRegistry {
 
     // 3. Tool Overrides
     const toolOverride =
-      (preFetchedConfigs?.[`${id}_tools`] as string[]) ||
-      ((await this.getRawConfig(`${id}_tools`)) as string[]);
+      (preFetchedConfigs?.[`${id}_tools`] as string[]) ??
+      ((await ConfigManager.getRawConfig(`${id}_tools`)) as string[]);
 
     if (toolOverride && Array.isArray(toolOverride)) {
       config.tools = Array.from(
         new Set([
           ...toolOverride,
-          ...(this.backboneConfigs[id]?.tools || AgentRegistry.ESSENTIAL_SYSTEM_TOOLS),
+          ...(this.backboneConfigs[id]?.tools ?? AgentRegistry.ESSENTIAL_SYSTEM_TOOLS),
         ])
       );
     } else {
       config.tools = Array.from(
-        new Set([...(config.tools || []), ...AgentRegistry.ESSENTIAL_SYSTEM_TOOLS])
+        new Set([...(config.tools ?? []), ...AgentRegistry.ESSENTIAL_SYSTEM_TOOLS])
       );
     }
 
@@ -133,12 +136,12 @@ export class AgentRegistry {
   static async getAllConfigs(): Promise<Record<string, IAgentConfig>> {
     // 1. Batch fetch primary configs
     const [ddbConfig, discoveryMode] = await Promise.all([
-      this.getRawConfig(DYNAMO_KEYS.AGENTS_CONFIG),
-      this.getRawConfig('selective_discovery_mode'),
+      ConfigManager.getRawConfig(DYNAMO_KEYS.AGENTS_CONFIG),
+      ConfigManager.getRawConfig('selective_discovery_mode'),
     ]);
 
     const all: Record<string, IAgentConfig> = { ...this.backboneConfigs };
-    const dynamicAgents = (ddbConfig as Record<string, unknown>) || {};
+    const dynamicAgents = (ddbConfig as Record<string, unknown>) ?? {};
     const agentIds = Array.from(new Set([...Object.keys(all), ...Object.keys(dynamicAgents)]));
 
     // 2. Batch fetch tool overrides for all relevant agents

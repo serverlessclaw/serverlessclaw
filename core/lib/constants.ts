@@ -18,6 +18,9 @@ export const SYSTEM = {
   DEFAULT_RECURSION_LIMIT: 15,
   DEFAULT_MODEL: 'gpt-5.4-mini',
   DEFAULT_PROVIDER: 'openai',
+  DEFAULT_OPENAI_MODEL: 'gpt-5.4',
+  DEFAULT_BEDROCK_MODEL: 'global.anthropic.claude-sonnet-4-6',
+  DEFAULT_OPENROUTER_MODEL: 'google/gemini-3-flash-preview',
 } as const;
 
 export const PROTECTED_FILES = [
@@ -206,6 +209,7 @@ export const OPENAI = {
   DEFAULT_FILE_NAME: 'document.pdf',
   DEFAULT_MIME_TYPE: 'application/octet-stream',
   FUNCTION_TYPE: 'function',
+  MCP_TYPE: 'mcp',
 } as const;
 
 /**

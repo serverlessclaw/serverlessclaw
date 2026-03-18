@@ -1,7 +1,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
-import { ITool, JsonSchema } from './types/tool';
+import { ITool, JsonSchema, MCPServerConfig } from './types/index';
 import { logger } from './logger';
 import { AgentRegistry } from './registry';
 import { checkFileSecurity } from './utils/fs-security';
@@ -223,67 +223,76 @@ export class MCPBridge {
    * @returns A promise resolving to an array of consolidated ITool objects.
    */
   static async getExternalTools(requestedTools?: string[]): Promise<ITool[]> {
-    let serversConfig = (await AgentRegistry.getRawConfig('mcp_servers')) as Record<
+    const serversConfig = (await AgentRegistry.getRawConfig('mcp_servers')) as Record<
       string,
-      string | { command: string; env?: Record<string, string> }
+      string | MCPServerConfig
     >;
 
     const allTools: ITool[] = [];
     let configUpdated = false;
 
     // 2026: Ensure default servers exist individually
-    const defaultServers: Record<string, { command: string; env: Record<string, string> }> = {
+    const defaultServers: Record<string, MCPServerConfig> = {
       filesystem: {
         command: 'npx -y @modelcontextprotocol/server-filesystem .',
-        env: {},
       },
       git: {
         command: 'npx -y @cyanheads/git-mcp-server',
-        env: {},
       },
       'google-search': {
         command: 'npx -y @mcp-server/google-search-mcp',
-        env: {},
       },
       puppeteer: {
         command: 'npx -y @kirkdeam/puppeteer-mcp-server',
-        env: {},
       },
       fetch: {
         command: 'npx -y mcp-fetch-server',
-        env: {},
       },
       aws: {
         command: 'npx -y mcp-aws-devops-server',
-        env: {},
       },
       'aws-s3': {
         command: 'npx -y @geunoh/s3-mcp-server',
-        env: {},
       },
     };
 
-    if (!serversConfig) serversConfig = {};
+    const finalConfig = serversConfig || {};
 
     for (const [name, defaultConfig] of Object.entries(defaultServers)) {
-      if (!serversConfig[name]) {
+      if (!finalConfig[name]) {
         logger.info(`Bootstrapping missing default bridge: ${name}`);
-        serversConfig[name] = defaultConfig;
+        finalConfig[name] = defaultConfig;
         configUpdated = true;
       }
     }
 
     if (configUpdated) {
-      await AgentRegistry.saveRawConfig('mcp_servers', serversConfig);
+      await AgentRegistry.saveRawConfig('mcp_servers', finalConfig);
     }
 
-    for (const [name, config] of Object.entries(serversConfig)) {
+    for (const [name, config] of Object.entries(finalConfig)) {
       // Lazy loading: only connect if we don't have requestedTools OR if one of them starts with the server name prefix
       const needsThisServer =
-        !requestedTools || requestedTools.some((t) => t.startsWith(`${name}_`));
+        !requestedTools || requestedTools.some((t) => t === name || t.startsWith(`${name}_`));
 
       if (!needsThisServer) {
         logger.debug(`Skipping MCP server ${name} (not requested by agent)`);
+        continue;
+      }
+
+      // 2026: Support for Managed Connectors (OpenAI-maintained)
+      if (typeof config === 'object' && config.type === 'managed') {
+        logger.info(`Adding Managed Connector: ${name} (${config.connector_id})`);
+        allTools.push({
+          name: config.name || name,
+          description: config.description || `Managed tool for ${name}`,
+          parameters: config.parameters || { type: 'object', properties: {} },
+          connector_id: config.connector_id,
+          type: 'mcp',
+          execute: async () => {
+            return `This tool (${name}) is managed by the model provider and executed autonomously.`;
+          },
+        });
         continue;
       }
 

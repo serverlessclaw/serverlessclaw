@@ -69,6 +69,38 @@ describe('OpenAIProvider', () => {
     );
   });
 
+  it('should correctly map managed connector (MCP) tools for the Responses API', async () => {
+    mockCreateResponse.mockResolvedValue({
+      output_text: 'Hello from Google Drive',
+      output: [],
+    });
+
+    const tools = [
+      {
+        name: 'google_drive',
+        description: 'Access Google Drive',
+        connector_id: 'connector_googledrive',
+        type: 'mcp' as const,
+        parameters: { type: 'object' as const, properties: {} },
+        execute: async () => 'done',
+      },
+    ];
+
+    await provider.call([{ role: MessageRole.USER, content: 'list my files' }], tools);
+
+    expect(mockCreateResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tools: [
+          expect.objectContaining({
+            type: 'mcp',
+            name: 'google_drive',
+            connector_id: 'connector_googledrive',
+          }),
+        ],
+      })
+    );
+  });
+
   it('should correctly format file attachments for the Responses API', async () => {
     mockCreateResponse.mockResolvedValue({
       output_text: 'Hello',
