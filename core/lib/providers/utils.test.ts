@@ -1,11 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import {
-  transformToolsToOpenAI,
-  mapToOpenAIRole,
-  normalizeProfile,
-  capEffort,
-  parseConfigInt,
-} from './utils';
+import { transformToolsToOpenAI, normalizeProfile, capEffort, parseConfigInt } from './utils';
 import { ITool, ReasoningProfile } from '../types/index';
 import { logger } from '../logger';
 
@@ -74,29 +68,6 @@ describe('transformToolsToOpenAI', () => {
   });
 });
 
-describe('mapToOpenAIRole', () => {
-  it('should map system to developer', () => {
-    expect(mapToOpenAIRole('system')).toBe('developer');
-  });
-
-  it('should map developer to developer', () => {
-    expect(mapToOpenAIRole('developer')).toBe('developer');
-  });
-
-  it('should map assistant to assistant', () => {
-    expect(mapToOpenAIRole('assistant')).toBe('assistant');
-  });
-
-  it('should map tool to tool', () => {
-    expect(mapToOpenAIRole('tool')).toBe('tool');
-  });
-
-  it('should map other to user', () => {
-    expect(mapToOpenAIRole('user')).toBe('user');
-    expect(mapToOpenAIRole('unknown')).toBe('user');
-  });
-});
-
 describe('normalizeProfile', () => {
   const capabilities = {
     supportedReasoningProfiles: [ReasoningProfile.STANDARD, ReasoningProfile.FAST],
@@ -109,13 +80,24 @@ describe('normalizeProfile', () => {
   });
 
   it('should fallback to a lower profile if requested is not supported', () => {
+    // Requested DEEP, but model only supports STANDARD/FAST
     expect(normalizeProfile(ReasoningProfile.DEEP, capabilities, 'model')).toBe(
       ReasoningProfile.STANDARD
     );
     expect(vi.mocked(logger.info)).toHaveBeenCalled();
   });
 
-  it('should return standard if no supported profiles found', () => {
+  it('should fallback correctly through the ladder', () => {
+    const haikuCaps = {
+      supportedReasoningProfiles: [ReasoningProfile.FAST],
+    };
+    // Requested STANDARD, but only FAST is supported
+    expect(normalizeProfile(ReasoningProfile.STANDARD, haikuCaps, 'haiku')).toBe(
+      ReasoningProfile.FAST
+    );
+  });
+
+  it('should return standard if no supported profiles found or empty caps', () => {
     expect(
       normalizeProfile(ReasoningProfile.DEEP, { supportedReasoningProfiles: [] }, 'model')
     ).toBe(ReasoningProfile.STANDARD);
@@ -128,6 +110,8 @@ describe('capEffort', () => {
   });
 
   it('should cap effort based on max levels', () => {
+    // Current levels: minimal, low, medium, high, xhigh
+    expect(capEffort('xhigh', 'medium')).toBe('medium');
     expect(capEffort('high', 'medium')).toBe('medium');
     expect(capEffort('low', 'medium')).toBe('low');
   });

@@ -5,10 +5,27 @@ import { TraceSource, SSTResource } from '../lib/types/index';
 import { Resource } from 'sst';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { z } from 'zod';
-import { TelegramUpdateSchema } from '../lib/schema/webhook';
+import { TELEGRAM_UPDATE_SCHEMA } from '../lib/schema/webhook';
 
 const typedResource = Resource as unknown as SSTResource;
-const s3 = new S3Client({});
+
+// Default client for backward compatibility - can be overridden for testing
+const defaultS3 = new S3Client({});
+
+// Allow tests to inject a custom S3 client
+let injectedS3: S3Client | undefined;
+
+/**
+ * Sets a custom S3 client for testing purposes.
+ * @param s3 - The S3 client to use
+ */
+export function setS3Client(s3: S3Client): void {
+  injectedS3 = s3;
+}
+
+function getS3Client(): S3Client {
+  return injectedS3 ?? defaultS3;
+}
 
 /**
  * Main entry point for Telegram webhooks.
@@ -20,12 +37,12 @@ export const handler = async (
 ): Promise<APIGatewayProxyResultV2> => {
   logger.info('Received event:', JSON.stringify(event, null, 2));
 
-  let parsedUpdate: z.infer<typeof TelegramUpdateSchema>;
+  let parsedUpdate: z.infer<typeof TELEGRAM_UPDATE_SCHEMA>;
   try {
     if (!event.body) {
       throw new Error('Missing event body');
     }
-    parsedUpdate = TelegramUpdateSchema.parse(JSON.parse(event.body));
+    parsedUpdate = TELEGRAM_UPDATE_SCHEMA.parse(JSON.parse(event.body));
   } catch (error) {
     logger.error('Failed to parse or validate Telegram update:', error);
     return { statusCode: 400, body: 'Invalid Telegram update format or missing body' };
@@ -175,6 +192,7 @@ async function handleTelegramFile(
   mimeType?: string
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any | null> {
+  const s3 = getS3Client();
   try {
     // 1. Get file path from Telegram
     const fileInfoResponse = await fetch(

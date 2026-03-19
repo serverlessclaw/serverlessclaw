@@ -1,5 +1,5 @@
 import { EventType } from '../../lib/types/index';
-import { CompletionEventSchema, FailureEventSchema } from '../../lib/schema/events';
+import { COMPLETION_EVENT_SCHEMA, FAILURE_EVENT_SCHEMA } from '../../lib/schema/events';
 import { getRecursionLimit, handleRecursionLimitExceeded, wakeupInitiator } from './shared';
 
 /**
@@ -7,6 +7,7 @@ import { getRecursionLimit, handleRecursionLimitExceeded, wakeupInitiator } from
  *
  * @param eventDetail - The detail of the EventBridge event.
  * @param detailType - The type of the EventBridge event.
+ * @since 2026-03-19
  */
 export async function handleTaskResult(
   eventDetail: Record<string, unknown>,
@@ -14,8 +15,8 @@ export async function handleTaskResult(
 ): Promise<void> {
   const isFailure = detailType === EventType.TASK_FAILED;
   const parsedEvent = isFailure
-    ? FailureEventSchema.parse(eventDetail)
-    : CompletionEventSchema.parse(eventDetail);
+    ? FAILURE_EVENT_SCHEMA.parse(eventDetail)
+    : COMPLETION_EVENT_SCHEMA.parse(eventDetail);
 
   const { userId, agentId, task, traceId, initiatorId, depth, sessionId } = parsedEvent;
   const response = 'error' in parsedEvent ? parsedEvent.error : parsedEvent.response;

@@ -12,7 +12,24 @@ import archiver from 'archiver';
 import { formatErrorMessage } from '../lib/utils/error';
 
 const execAsync = promisify(exec);
-const s3 = new S3Client({});
+
+// Default client for backward compatibility - can be overridden for testing
+const defaultS3 = new S3Client({});
+
+// Allow tests to inject a custom S3 client
+let injectedS3: S3Client | undefined;
+
+/**
+ * Sets a custom S3 client for testing purposes.
+ * @param s3 - The S3 client to use
+ */
+export function setS3Client(s3: S3Client): void {
+  injectedS3 = s3;
+}
+
+function getS3Client(): S3Client {
+  return injectedS3 ?? defaultS3;
+}
 
 interface ToolsResource {
   StagingBucket: { name: string };
@@ -25,6 +42,7 @@ interface ToolsResource {
 export const stageChanges = {
   ...toolDefinitions.stageChanges,
   execute: async (args: Record<string, unknown>): Promise<string> => {
+    const s3 = getS3Client();
     const { modifiedFiles } = args as { modifiedFiles: string[] };
     if (!modifiedFiles || modifiedFiles.length === 0) {
       return 'No files to stage.';

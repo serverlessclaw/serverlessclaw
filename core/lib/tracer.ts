@@ -14,11 +14,8 @@ import { logger } from './logger';
 import { filterPIIFromObject } from './utils/pii';
 import type { TraceStep, Trace } from './tracer/types';
 
-// Re-export types for backward compatibility
-export type { TraceStep, Trace } from './tracer/types';
-
-const client = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(client, {
+const defaultClient = new DynamoDBClient({});
+const defaultDocClient = DynamoDBDocumentClient.from(defaultClient, {
   marshallOptions: {
     removeUndefinedValues: true,
   },
@@ -37,6 +34,7 @@ export class ClawTracer {
   private userId: string;
   private source: TraceSource | string;
   private startTime: number;
+  private readonly docClient: DynamoDBDocumentClient;
 
   /**
    * Initializes a new ClawTracer instance.
@@ -46,13 +44,15 @@ export class ClawTracer {
    * @param traceId - Unique ID for the entire conversation/workflow.
    * @param nodeId - Unique ID for this specific agent execution or branch.
    * @param parentId - Optional ID of the node that spawned this one.
+   * @param docClient - Optional DynamoDB Document Client for dependency injection (useful for testing)
    */
   constructor(
     userId: string,
     source: TraceSource | string = TraceSource.UNKNOWN,
     traceId?: string,
     nodeId?: string,
-    parentId?: string
+    parentId?: string,
+    docClient?: DynamoDBDocumentClient
   ) {
     this.userId = userId;
     this.source = source;
@@ -60,6 +60,7 @@ export class ClawTracer {
     this.nodeId = nodeId ?? 'root';
     this.parentId = parentId;
     this.startTime = Date.now();
+    this.docClient = docClient ?? defaultDocClient;
   }
 
   /**
@@ -74,7 +75,7 @@ export class ClawTracer {
     const expiresAt = Math.floor(Date.now() / TIME.MS_PER_SECOND) + days * TIME.SECONDS_IN_DAY;
 
     try {
-      await docClient.send(
+      await this.docClient.send(
         new PutCommand({
           TableName: this.tableName,
           Item: {
@@ -136,7 +137,7 @@ export class ClawTracer {
       timestamp: Date.now(),
     }) as TraceStep;
 
-    await docClient.send(
+    await this.docClient.send(
       new UpdateCommand({
         TableName: this.tableName,
         Key: { traceId: this.traceId, nodeId: this.nodeId },
@@ -158,7 +159,7 @@ export class ClawTracer {
    * @returns A promise that resolves when the trace is closed.
    */
   async endTrace(finalResponse: string, metadata?: Record<string, unknown>): Promise<void> {
-    await docClient.send(
+    await this.docClient.send(
       new UpdateCommand({
         TableName: this.tableName,
         Key: { traceId: this.traceId, nodeId: this.nodeId },
@@ -209,7 +210,7 @@ export class ClawTracer {
    * @returns A promise resolving to an array of trace nodes.
    */
   static async getTrace(traceId: string): Promise<Trace[]> {
-    const response = await docClient.send(
+    const response = await defaultDocClient.send(
       new QueryCommand({
         TableName: typedResource.TraceTable.name,
         KeyConditionExpression: 'traceId = :tid',

@@ -13,10 +13,10 @@ import {
   loadAgentConfig,
   extractBaseUserId,
   getAgentContext,
-  emitTaskEvent,
   isTaskPaused,
-  parseStructuredResponse,
 } from '../lib/utils/agent-helpers';
+import { emitTaskEvent } from '../lib/utils/agent-helpers/event-emitter';
+import { parseStructuredResponse } from '../lib/utils/agent-helpers/llm-utils';
 import { parseConfigInt } from '../lib/providers/utils';
 import { MEMORY_KEYS } from '../lib/constants';
 
@@ -76,7 +76,7 @@ interface PlannerResult {
  * Planner Agent handler. Analyzes capability gaps and generates strategic plans.
  *
  * @param event - The event containing gap details or scheduling information.
- * @param context - The AWS Lambda context.
+ * @param _context - The AWS Lambda context (unused).
  * @returns A promise that resolves to an object with gapId and the plan, or a status object.
  */
 export async function handler(event: PlannerEvent, _context: Context): Promise<PlannerResult> {

@@ -337,7 +337,7 @@ The system's evolution is a co-managed process between the **Strategic Planner**
 Provider-agnostic interface supporting:
 - OpenAI (gpt-5.4 / gpt-5.4-mini)
 - Anthropic (Claude 4.6 Sonnet)
-- Google (Gemini-3 Flash, GLM-5, Minimax 2.5)
+- Google (Gemini-3 Flash, GLM-5, MiniMax-m2.7)
 - Local models (via Ollama or AWS Bedrock)
 
 #### Reasoning Engine & Adapters

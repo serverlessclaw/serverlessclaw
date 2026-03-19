@@ -16,10 +16,10 @@ import {
   isTaskPaused,
   loadAgentConfig,
   extractBaseUserId,
-  emitTaskEvent,
   getAgentContext,
-  parseStructuredResponse,
 } from '../lib/utils/agent-helpers';
+import { emitTaskEvent } from '../lib/utils/agent-helpers/event-emitter';
+import { parseStructuredResponse } from '../lib/utils/agent-helpers/llm-utils';
 import { emitEvent } from '../lib/utils/bus';
 
 interface ReflectorPayload {

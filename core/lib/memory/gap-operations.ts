@@ -18,6 +18,7 @@ import { createMetadata } from './utils';
  * @param base - The base memory provider instance.
  * @param status - The gap status to filter by (default: OPEN).
  * @returns A promise resolving to an array of MemoryInsight objects representing gaps.
+ * @since 2026-03-19
  */
 export async function getAllGaps(
   base: BaseMemoryProvider,
@@ -119,6 +120,7 @@ export async function archiveStaleGaps(
  * @param details - The textual description of the gap.
  * @param metadata - Optional insight metadata.
  * @returns A promise resolving when the gap is recorded.
+ * @since 2026-03-19
  */
 export async function setGap(
   base: BaseMemoryProvider,
@@ -147,6 +149,7 @@ export async function setGap(
  * @param base - The base memory provider instance.
  * @param gapId - The unique identifier for the gap.
  * @returns A promise resolving to the new attempt count.
+ * @since 2026-03-19
  */
 export async function incrementGapAttemptCount(
   base: BaseMemoryProvider,
@@ -184,6 +187,7 @@ export async function incrementGapAttemptCount(
  * @param gapId - The unique identifier for the gap.
  * @param status - The new status to transition to.
  * @returns A promise resolving when the status is updated.
+ * @since 2026-03-19
  */
 export async function updateGapStatus(
   base: BaseMemoryProvider,

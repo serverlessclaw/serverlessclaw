@@ -6,8 +6,9 @@ import { ILockManager } from './types/index';
 import { logger } from './logger';
 import { TIME, LIMITS } from './constants';
 
-const client = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(client);
+// Default client for backward compatibility - can be overridden via constructor for testing
+const defaultClient = new DynamoDBClient({});
+const defaultDocClient = DynamoDBDocumentClient.from(defaultClient);
 const typedResource = Resource as unknown as SSTResource;
 
 const LOCK_PREFIX = 'LOCK#';
@@ -19,6 +20,15 @@ const DYNAMO_ERROR_CONDITIONAL_CHECK_FAILED = 'ConditionalCheckFailedException';
  */
 export class DynamoLockManager implements ILockManager {
   private tableName: string = typedResource.MemoryTable.name;
+  private readonly docClient: DynamoDBDocumentClient;
+
+  /**
+   * Creates a new DynamoLockManager instance.
+   * @param docClient - Optional DynamoDB Document Client for dependency injection (useful for testing)
+   */
+  constructor(docClient?: DynamoDBDocumentClient) {
+    this.docClient = docClient ?? defaultDocClient;
+  }
 
   /**
    * Acquires a distributed lock using DynamoDB's conditional writes.
@@ -45,7 +55,7 @@ export class DynamoLockManager implements ILockManager {
     });
 
     try {
-      await docClient.send(command);
+      await this.docClient.send(command);
       return true;
     } catch (error: unknown) {
       if (error instanceof Error && error.name === DYNAMO_ERROR_CONDITIONAL_CHECK_FAILED) {
@@ -71,7 +81,7 @@ export class DynamoLockManager implements ILockManager {
     });
 
     try {
-      await docClient.send(command);
+      await this.docClient.send(command);
     } catch (error) {
       logger.error('Error releasing lock:', error);
     }

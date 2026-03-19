@@ -10,8 +10,9 @@ import { Resource } from 'sst';
 import { logger } from '../logger';
 import { SSTResource, Message, MessageRole, ConversationMeta } from '../types/index';
 
-const client = new DynamoDBClient({});
-export const docClient = DynamoDBDocumentClient.from(client, {
+// Default client for backward compatibility - can be overridden via constructor for testing
+const defaultClient = new DynamoDBClient({});
+const defaultDocClient = DynamoDBDocumentClient.from(defaultClient, {
   marshallOptions: {
     removeUndefinedValues: true,
   },
@@ -20,8 +21,19 @@ const typedResource = Resource as unknown as SSTResource;
 
 /**
  * Base logic for DynamoDB interactions within the memory system.
+ * @since 2026-03-19
  */
 export class BaseMemoryProvider {
+  protected readonly docClient: DynamoDBDocumentClient;
+
+  /**
+   * Creates a new BaseMemoryProvider.
+   * @param docClient - Optional DynamoDB Document Client for dependency injection (useful for testing)
+   */
+  constructor(docClient?: DynamoDBDocumentClient) {
+    this.docClient = docClient ?? defaultDocClient;
+  }
+
   /**
    * Resolves table name lazily.
    *
@@ -44,7 +56,7 @@ export class BaseMemoryProvider {
       Item: item,
     });
     try {
-      await docClient.send(command);
+      await this.docClient.send(command);
     } catch (error) {
       logger.error('Error putting item into DynamoDB:', error);
     }
@@ -63,7 +75,7 @@ export class BaseMemoryProvider {
       ...params,
     });
     try {
-      const response = await docClient.send(command);
+      const response = await this.docClient.send(command);
       return response.Items ?? [];
     } catch (error) {
       logger.error('Error querying DynamoDB:', error);
@@ -80,7 +92,7 @@ export class BaseMemoryProvider {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public async deleteItem(key: Record<string, any>): Promise<void> {
     try {
-      await docClient.send(
+      await this.docClient.send(
         new DeleteCommand({
           TableName: this.tableName,
           Key: key,
@@ -103,7 +115,7 @@ export class BaseMemoryProvider {
       TableName: this.tableName,
       ...params,
     });
-    return docClient.send(command);
+    return this.docClient.send(command);
   }
 
   /**

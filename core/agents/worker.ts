@@ -10,8 +10,8 @@ import {
   createAgent,
   validatePayload,
   buildProcessOptions,
-  emitTaskEvent,
 } from '../lib/utils/agent-helpers';
+import { emitTaskEvent } from '../lib/utils/agent-helpers/event-emitter';
 
 interface WorkerEvent {
   'detail-type': string;

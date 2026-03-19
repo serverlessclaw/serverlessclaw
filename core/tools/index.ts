@@ -2,6 +2,7 @@ import { toolDefinitions } from './definitions/index';
 import { logger } from '../lib/logger';
 import { ITool } from '../lib/types/index';
 import { formatErrorMessage } from '../lib/utils/error';
+import { CONFIG_KEYS } from '../lib/constants';
 
 // Import split tool implementations
 import * as deploymentTools from './deployment';
@@ -75,8 +76,8 @@ export const TOOLS: Record<string, ITool> = {
       const { provider, model } = args as { provider: string; model: string };
       try {
         const { AgentRegistry } = await import('../lib/registry');
-        await AgentRegistry.saveRawConfig('active_provider', provider);
-        await AgentRegistry.saveRawConfig('active_model', model);
+        await AgentRegistry.saveRawConfig(CONFIG_KEYS.ACTIVE_PROVIDER, provider);
+        await AgentRegistry.saveRawConfig(CONFIG_KEYS.ACTIVE_MODEL, model);
         return `Successfully switched to ${provider} with model ${model}. Hot config applied.`;
       } catch (error) {
         return `Failed to switch model: ${formatErrorMessage(error)}`;
@@ -84,9 +85,6 @@ export const TOOLS: Record<string, ITool> = {
     },
   },
 };
-
-// Export camelCase aliases for compatibility
-export const tools = TOOLS;
 
 /**
  * Dynamically retrieves the tools assigned to a specific agent.

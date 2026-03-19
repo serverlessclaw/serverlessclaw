@@ -11,8 +11,37 @@ import { logger } from './logger';
 import { emitEvent } from './utils/bus';
 import { formatErrorMessage } from './utils/error';
 
-const eventbridge = new EventBridgeClient({});
-const dynamodb = new DynamoDBClient({});
+// Default clients for backward compatibility - can be overridden for testing
+const defaultEventBridge = new EventBridgeClient({});
+const defaultDynamodb = new DynamoDBClient({});
+
+// Allow tests to inject custom clients
+let injectedEventBridge: EventBridgeClient | undefined;
+let injectedDynamodb: DynamoDBClient | undefined;
+
+/**
+ * Sets a custom EventBridge client for testing purposes.
+ * @param client - The EventBridge client to use
+ */
+export function setEventBridgeClient(client: EventBridgeClient): void {
+  injectedEventBridge = client;
+}
+
+/**
+ * Sets a custom DynamoDB client for testing purposes.
+ * @param client - The DynamoDB client to use
+ */
+export function setDynamoDbClient(client: DynamoDBClient): void {
+  injectedDynamodb = client;
+}
+
+function getEventBridgeClient(): EventBridgeClient {
+  return injectedEventBridge ?? defaultEventBridge;
+}
+
+function getDynamoDbClient(): DynamoDBClient {
+  return injectedDynamodb ?? defaultDynamodb;
+}
 
 export interface HealthIssue {
   component: string;
@@ -60,7 +89,7 @@ export async function runDeepHealthCheck(): Promise<{ ok: boolean; details?: str
   try {
     // 1. DynamoDB Circuit Check
     logger.info('Deep Health: Verifying DynamoDB circuit...');
-    await dynamodb.send(
+    await getDynamoDbClient().send(
       new PutItemCommand({
         TableName: typedResource.MemoryTable.name,
         Item: {
@@ -73,7 +102,7 @@ export async function runDeepHealthCheck(): Promise<{ ok: boolean; details?: str
       })
     );
 
-    const getRes = await dynamodb.send(
+    const getRes = await getDynamoDbClient().send(
       new GetItemCommand({
         TableName: typedResource.MemoryTable.name,
         Key: {
@@ -87,7 +116,7 @@ export async function runDeepHealthCheck(): Promise<{ ok: boolean; details?: str
       throw new Error('DynamoDB pulse verification failed: content mismatch');
     }
 
-    await dynamodb.send(
+    await getDynamoDbClient().send(
       new DeleteItemCommand({
         TableName: typedResource.MemoryTable.name,
         Key: {
@@ -99,7 +128,7 @@ export async function runDeepHealthCheck(): Promise<{ ok: boolean; details?: str
 
     // 2. EventBridge Connectivity Check
     logger.info('Deep Health: Verifying EventBridge connectivity...');
-    await eventbridge.send(
+    await getEventBridgeClient().send(
       new ListEventBusesCommand({
         NamePrefix: typedResource.AgentBus.name,
       })

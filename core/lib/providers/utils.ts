@@ -33,28 +33,6 @@ export function transformToolsToOpenAI(tools?: ITool[]): Array<{
 }
 
 /**
- * Maps internal message roles to OpenAI-compatible roles.
- *
- * @param role - The internal message role string.
- * @returns The corresponding OpenAI-compatible role string.
- */
-export function mapToOpenAIRole(
-  role: string
-): 'system' | 'user' | 'assistant' | 'developer' | 'tool' {
-  switch (role) {
-    case 'system':
-    case 'developer':
-      return 'developer';
-    case 'assistant':
-      return 'assistant';
-    case 'tool':
-      return 'tool';
-    default:
-      return 'user';
-  }
-}
-
-/**
  * Normalizes a reasoning profile based on model capabilities.
  * Ensures the agent never requests a profile that will cause a provider error.
  *

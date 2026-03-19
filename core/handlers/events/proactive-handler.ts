@@ -1,8 +1,8 @@
 import { Context } from 'aws-lambda';
 import { logger } from '../../lib/logger';
-import { emitTaskEvent } from '../../lib/utils/agent-helpers';
+import { emitTaskEvent } from '../../lib/utils/agent-helpers/event-emitter';
 import { AgentType } from '../../lib/types/index';
-import { ProactiveHeartbeatPayloadSchema } from '../../lib/schema/events';
+import { PROACTIVE_HEARTBEAT_PAYLOAD_SCHEMA } from '../../lib/schema/events';
 
 /**
  * Handles proactive heartbeat signals from the dynamic scheduler.
@@ -15,7 +15,7 @@ export const handleProactiveHeartbeat = async (
   event: Record<string, unknown>,
   _context: Context
 ): Promise<void> => {
-  const payload = ProactiveHeartbeatPayloadSchema.parse(event);
+  const payload = PROACTIVE_HEARTBEAT_PAYLOAD_SCHEMA.parse(event);
 
   logger.info(
     `Processing proactive heartbeat for goal: ${payload.goalId} (${payload.agentId}/${payload.task})`

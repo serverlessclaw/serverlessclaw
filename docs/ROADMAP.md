@@ -44,7 +44,7 @@ Our goal: the most customizable, cost-effective, and self-evolving personal AI a
 - [x] **Memory Browser**: Inspect distilled facts, session history, and tool registry.
 
 ## ✅ Phase 7: Multi-Model & Hot-Config
-- [x] **Provider Hub**: Unified interface for OpenAI, Bedrock (Claude 4.6), and OpenRouter (Gemini/GLM/Minimax).
+- [x] **Provider Hub**: Unified interface for OpenAI, Bedrock (Claude 4.6), and OpenRouter (Gemini/GLM/MiniMax-m2.7).
 - [x] **Dynamic Routing**: `ProviderManager` for runtime model selection without redeploys.
 - [x] **Config Table**: DynamoDB-backed persistent application settings.
 - [x] **Direct Chat**: Dashboard-integrated neural interface for real-time agent interaction.

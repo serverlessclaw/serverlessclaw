@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { OpenAIProvider } from './openai';
-import { MessageRole, Message } from '../types/index';
+import { MessageRole, Message, ReasoningProfile } from '../types/index';
 
 // Mock OpenAI SDK
 const mockCreateResponse = vi.fn();
@@ -26,6 +26,33 @@ vi.mock('sst', () => ({
     OpenAIApiKey: { value: 'test-key' },
   },
 }));
+
+vi.mock('../constants', async (importOriginal) => {
+  const actual = (await importOriginal()) as any;
+  return {
+    ...actual,
+    OPENAI: {
+      ...actual.OPENAI,
+      ROLES: {
+        USER: 'user',
+        ASSISTANT: 'assistant',
+        DEVELOPER: 'developer',
+      },
+      ITEM_TYPES: {
+        MESSAGE: 'message',
+        FUNCTION_CALL: 'function_call',
+        FUNCTION_CALL_OUTPUT: 'function_call_output',
+      },
+      CONTENT_TYPES: {
+        INPUT_TEXT: 'input_text',
+        INPUT_FILE: 'input_file',
+        IMAGE_URL: 'image_url',
+      },
+      FUNCTION_TYPE: 'function',
+      MCP_TYPE: 'mcp',
+    },
+  };
+});
 
 describe('OpenAIProvider', () => {
   let provider: OpenAIProvider;
@@ -171,6 +198,27 @@ describe('OpenAIProvider', () => {
     expect(mockCreateResponse).toHaveBeenCalledWith(
       expect.objectContaining({
         response_format: responseFormat,
+      })
+    );
+  });
+
+  it('should report correct capabilities including contextWindow', async () => {
+    const caps = await provider.getCapabilities('gpt-5.4');
+    expect(caps.contextWindow).toBe(128000);
+    expect(caps.supportsStructuredOutput).toBe(true);
+    expect(caps.supportedReasoningProfiles).toContain(ReasoningProfile.DEEP);
+  });
+
+  it('should cap reasoning effort for mini models', async () => {
+    mockCreateResponse.mockResolvedValue({ output_text: 'Hi', output: [] });
+
+    // Mini model should support xhigh based on current code
+    provider = new OpenAIProvider('gpt-5.4-mini');
+    await provider.call([{ role: MessageRole.USER, content: 'test' }], [], ReasoningProfile.DEEP);
+
+    expect(mockCreateResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reasoning: { effort: 'xhigh' },
       })
     );
   });

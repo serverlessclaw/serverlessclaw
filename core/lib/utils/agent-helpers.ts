@@ -9,45 +9,8 @@
  */
 
 import { logger } from '../logger';
-import { Resource } from 'sst';
-import {
-  EventType,
-  SSTResource,
-  TraceSource,
-  AgentType,
-  ReasoningProfile,
-  Attachment,
-} from '../types/index';
+import { TraceSource, AgentType, ReasoningProfile } from '../types/index';
 import { AGENT_ERRORS } from '../constants';
-
-/** Singleton agent context - shared across all agent handlers */
-let _eventbridge: import('@aws-sdk/client-eventbridge').EventBridgeClient | undefined;
-let _typedResource: SSTResource | undefined;
-
-/**
- * Get or initialize the shared eventbridge client (singleton pattern).
- *
- * @returns A promise resolving to the shared EventBridgeClient.
- */
-async function getEventBridge(): Promise<import('@aws-sdk/client-eventbridge').EventBridgeClient> {
-  if (!_eventbridge) {
-    const { EventBridgeClient } = await import('@aws-sdk/client-eventbridge');
-    _eventbridge = new EventBridgeClient({});
-  }
-  return _eventbridge;
-}
-
-/**
- * Get typed resource reference.
- *
- * @returns The typed SSTResource object.
- */
-function getTypedResource(): SSTResource {
-  if (!_typedResource) {
-    _typedResource = Resource as unknown as SSTResource;
-  }
-  return _typedResource;
-}
 
 /**
  * Extract the base userId by removing CONV# prefix if present.
@@ -66,6 +29,7 @@ export function extractBaseUserId(userId: string): string {
  *
  * @param event - The input object which may be an EventBridge detail-wrapped event or a direct payload.
  * @returns The extracted payload.
+ * @since 2026-03-19
  */
 export function extractPayload<T extends object>(event: { detail?: T } | T): T {
   return (event as { detail?: T }).detail ?? (event as T);
@@ -140,93 +104,6 @@ export async function createAgent(
   const { Agent } = await import('../agent');
   const agentTools = await getAgentTools(agentId);
   return new Agent(memory, provider, agentTools, config.systemPrompt, config);
-}
-
-/**
- * Emit a task completion or failure event to EventBridge.
- * Used by all agents for universal coordination.
- *
- * @param params - The event parameters including source, agentId, userId, task, etc.
- * @returns A promise resolving when the event is emitted.
- */
-export async function emitTaskEvent(params: {
-  source: string;
-  agentId: string | AgentType;
-  userId: string;
-  task: string;
-  response?: string;
-  error?: string;
-  attachments?: Attachment[];
-  traceId?: string;
-  sessionId?: string;
-  initiatorId?: string;
-  depth?: number;
-  metadata?: Record<string, unknown>;
-}): Promise<void> {
-  const eventbridge = await getEventBridge();
-  const typedResource = getTypedResource();
-  const { PutEventsCommand } = await import('@aws-sdk/client-eventbridge');
-  const isFailure = !!params.error;
-
-  try {
-    await eventbridge.send(
-      new PutEventsCommand({
-        Entries: [
-          {
-            Source: params.source,
-            DetailType: isFailure ? EventType.TASK_FAILED : EventType.TASK_COMPLETED,
-            Detail: JSON.stringify({
-              userId: params.userId,
-              agentId: params.agentId,
-              task: params.task,
-              [isFailure ? 'error' : 'response']: params.error || params.response || '',
-              attachments: params.attachments,
-              traceId: params.traceId,
-              initiatorId: params.initiatorId,
-              depth: params.depth,
-              sessionId: params.sessionId,
-              metadata: params.metadata,
-            }),
-            EventBusName: typedResource.AgentBus.name,
-          },
-        ],
-      })
-    );
-  } catch (e) {
-    logger.error(`Failed to emit ${isFailure ? 'TASK_FAILED' : 'TASK_COMPLETED'}:`, e);
-  }
-}
-
-/**
- * Parse a structured JSON response from an LLM, with fallback for markdown-wrapped JSON.
- * This is used by agents to ensure reliability across different providers and models.
- *
- * @param rawResponse - The raw text response from the LLM.
- * @returns The parsed object.
- * @throws Error if the response cannot be parsed as JSON.
- */
-export function parseStructuredResponse<T>(rawResponse: string): T {
-  try {
-    // 1. Try direct parsing
-    return JSON.parse(rawResponse.trim()) as T;
-  } catch {
-    // 2. Try cleaning potential markdown formatting
-    try {
-      const jsonContent = rawResponse.replace(/```json\n?|\n?```/g, '').trim();
-      return JSON.parse(jsonContent) as T;
-    } catch (innerE) {
-      logger.error('Failed to parse structured response:', {
-        raw: rawResponse,
-        error: (innerE as Error).message,
-      });
-      throw new Error(
-        `Failed to parse structured response from LLM: ${(innerE as Error).message}`,
-        {
-          cause: innerE,
-        }
-      );
-    }
-  }
 }
 
 /** Options for building process options */

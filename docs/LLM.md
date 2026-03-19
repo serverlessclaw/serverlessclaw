@@ -59,11 +59,11 @@ Instead of provider-specific logic scattered throughout the codebase, we use a *
 
 ## Provider Implementations
 
-### 1. OpenAI (Strategic Branching)
-The **OpenAIProvider** dynamically switches between the legacy `Chat Completions` API and the modern `Responses` API depending on the model and reasoning requirements.
+### 1. OpenAI (Responses API Native)
+The **OpenAIProvider** utilizes the modern `Responses` API for all 2026-grade reasoning and tool use.
 
-- **Condition**: `isReasoningModel` (includes `gpt-5` family, `o1`, and `o3` series)
-- **Behavior**: Uses `/v1/responses` for all reasoning models to ensure consistent support for `reasoning_effort` and tool use.
+- **Condition**: Uses `/v1/responses` for all supported models (GPT-5 family).
+- **Behavior**: Ensures consistent support for `reasoning_effort`, strict tool use, and flattened message items.
 - **Mapping**: Our internal `ReasoningProfile` maps to OpenAI's native `ReasoningEffort` levels (`low`, `medium`, `high`, `xhigh`). `gpt-5-mini` specifically supports `xhigh` reasoning effort.
 
 ### 2. AWS Bedrock (Thinking Budgets)
@@ -76,14 +76,27 @@ The **BedrockProvider** utilizes the `ConverseCommand` and fine-tunes Claude 4.6
     - `DEEP`: 32,768 token budget + max output expansion.
 
 ### 3. OpenRouter (Multi-Engine Synergy)
-Supports specialized models like **GLM-5**, **MiniMax-2.5**, and **Gemini-3 Flash** using dynamic pattern matching on model IDs for automatic support of new high-capability models.
+Supports specialized models like **GLM-5**, **MiniMax-m2.7**, and **Gemini-3 Flash** using dynamic pattern matching on model IDs for automatic support of new high-capability models.
 
+- **Dynamic Context Window**: The system automatically adjusts its context management strategy based on the model's reported `contextWindow` capability (e.g., 1M for Gemini-3, 200k+ for GLM/MiniMax).
 - **Route Preference**: `latency` for FAST, `fallback` (with reasoning) for others. Data collection is set to `deny` for privacy.
-- **Extra Body Parameters**: Injects `plugin_id: 'reasoning'` (MiniMax) or `safety_settings` (Gemini) as needed.
+- **Extra Body Parameters**: Injects `plugin_id: 'reasoning'` and `include_reasoning: true` (MiniMax & GLM) or `safety_settings: 'off'` (Gemini) as needed.
+- **Enhanced Compatibility**:
+  - **Gemini-3**: Automatically forces `response_format: { type: 'json_object' }` when JSON output is requested to ensure compatibility with Gemini's strict mode.
+  - **GLM-5**: Enables interleaved reasoning and tool calling support via OpenRouter plugins.
+  - **MiniMax-m2.7**: Full support for interleaved thinking and high-efficiency MoE reasoning.
 
 ---
 
-## 🏗️ Host Capabilities & Built-in Tools
+## 🧠 Dynamic Context Management
+
+Serverless Claw utilizes a **Model-Aware Sliding Window** for context management. Instead of a hardcoded token limit, the `Agent` orchestrator queries the provider for the specific `contextWindow` of the active model.
+
+1. **Discovery**: The `IProvider.getCapabilities()` method returns the model's native context limit.
+2. **Buffer Allocation**: The system reserves a 20% safety margin for the generated response and internal reasoning.
+3. **Sliding Window**: The `ContextManager` populates the context with the most recent messages first, until the model-specific limit is reached.
+4. **Intelligent Summarization**: If the full conversation history exceeds 80% of the model's limit, a background summarization task is triggered to distill older messages into a concise summary for future turns.
+
 
 Serverless Claw distinguishes between local "Custom Skills" and model-native "Built-in Skills". This allows us to leverage provider superpowers like sandboxed code execution or grounded search.
 

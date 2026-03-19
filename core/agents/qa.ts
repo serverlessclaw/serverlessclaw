@@ -9,12 +9,8 @@ import {
 } from '../lib/types/index';
 import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
-import {
-  extractPayload,
-  loadAgentConfig,
-  getAgentContext,
-  emitTaskEvent,
-} from '../lib/utils/agent-helpers';
+import { extractPayload, loadAgentConfig, getAgentContext } from '../lib/utils/agent-helpers';
+import { emitTaskEvent } from '../lib/utils/agent-helpers/event-emitter';
 import { sendOutboundMessage } from '../lib/outbound';
 
 /**
@@ -154,18 +150,16 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
       );
     }
 
-    if (retryGaps.length > 0) {
-      const { tools } = await import('../tools/index');
-      const dispatcher = tools.dispatchTask;
-      await dispatcher.execute({
-        agentId: AgentType.CODER,
-        userId,
-        task: `QA verification failed for gaps: ${retryGaps.join(', ')}.\n\nAudit Report:\n${auditReport}\n\nPlease fix the issues and redeploy.`,
-        metadata: { gapIds: retryGaps },
-        traceId,
-        sessionId,
-      });
-    }
+    const { TOOLS } = await import('../tools/index');
+    const dispatcher = TOOLS.dispatchTask;
+    await dispatcher.execute({
+      agentId: AgentType.CODER,
+      userId,
+      task: `QA verification failed for gaps: ${retryGaps.join(', ')}.\n\nAudit Report:\n${auditReport}\n\nPlease fix the issues and redeploy.`,
+      metadata: { gapIds: retryGaps },
+      traceId,
+      sessionId,
+    });
   }
 
   // 1. Notify user directly in the chat session

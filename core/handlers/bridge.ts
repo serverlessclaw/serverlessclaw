@@ -1,6 +1,6 @@
 import { IoTDataPlaneClient, PublishCommand } from '@aws-sdk/client-iot-data-plane';
 import { Context } from 'aws-lambda';
-import { BridgeEventSchema } from '../lib/schema/events';
+import { BRIDGE_EVENT_SCHEMA } from '../lib/schema/events';
 
 const iot = new IoTDataPlaneClient({});
 
@@ -9,10 +9,10 @@ const iot = new IoTDataPlaneClient({});
  * This allows the dashboard to receive background updates in real-time.
  *
  * @param event - The EventBridge event.
- * @param context - The AWS Lambda context.
+ * @param _context - The AWS Lambda context (unused).
  */
 export async function handler(event: Record<string, unknown>, _context: Context): Promise<void> {
-  const parsedEventResult = BridgeEventSchema.safeParse(event);
+  const parsedEventResult = BRIDGE_EVENT_SCHEMA.safeParse(event);
   if (!parsedEventResult.success) {
     console.error('[RealtimeBridge] Invalid bridge event payload:', parsedEventResult.error);
     return;

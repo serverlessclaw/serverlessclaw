@@ -3,6 +3,7 @@ import { SYSTEM } from '../constants';
 
 /**
  * Handles agent self-awareness and prompt context assembly.
+ * @since 2026-03-19
  */
 export class AgentContext {
   /**

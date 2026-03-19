@@ -72,7 +72,7 @@ export class BedrockProvider implements IProvider {
     profile: ReasoningProfile = ReasoningProfile.STANDARD,
     model?: string,
     _provider?: string,
-    _responseFormat?: import('../types/index').ResponseFormat
+    responseFormat?: import('../types/index').ResponseFormat
   ): Promise<Message> {
     const typedResource = Resource as unknown as BedrockResource;
     const client = new BedrockRuntimeClient({
@@ -242,6 +242,14 @@ export class BedrockProvider implements IProvider {
             }
           : {}),
       },
+      // 2026: Native JSON output support for Claude 4.6 on Bedrock
+      ...(responseFormat?.type === 'json_schema'
+        ? {
+            outputConfig: {
+              format: 'json',
+            },
+          }
+        : {}),
     });
 
     const response = await client.send(command);
@@ -315,7 +323,8 @@ export class BedrockProvider implements IProvider {
             ReasoningProfile.DEEP,
           ]
         : [ReasoningProfile.FAST, ReasoningProfile.STANDARD],
-      supportsStructuredOutput: false,
+      supportsStructuredOutput: isClaude46,
+      contextWindow: 200000,
     };
   }
 }

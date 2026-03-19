@@ -64,6 +64,11 @@ vi.mock('../lib/providers/index', () => ({
 
 vi.mock('../tools/index', () => ({
   getAgentTools: vi.fn().mockResolvedValue([]),
+  TOOLS: {
+    dispatchTask: {
+      execute: vi.fn().mockResolvedValue(undefined),
+    },
+  },
   tools: {
     dispatchTask: {
       execute: vi.fn().mockResolvedValue(undefined),

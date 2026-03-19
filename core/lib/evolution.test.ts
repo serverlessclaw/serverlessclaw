@@ -101,7 +101,10 @@ vi.mock('./tracer', () => ({
 
 vi.mock('./agent/context-manager', () => ({
   ContextManager: {
-    getManagedContext: vi.fn().mockResolvedValue({ messages: [] }),
+    getManagedContext: vi.fn().mockResolvedValue({
+      messages: [{ role: 'user', content: 'Use the test tool' }],
+      totalTokens: 100,
+    }),
     needsSummarization: vi.fn().mockReturnValue(false),
     summarize: vi.fn().mockResolvedValue(undefined),
   },
@@ -142,6 +145,10 @@ describe('Agent Evolution Flow', () => {
     } as unknown as IMemory;
     mockProvider = {
       call: vi.fn(),
+      getCapabilities: vi.fn().mockResolvedValue({
+        supportedReasoningProfiles: [],
+        contextWindow: 10000,
+      }),
     } as unknown as IProvider;
   });
 

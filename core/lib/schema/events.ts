@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const AttachmentSchema = z.object({
+const ATTACHMENT_SCHEMA = z.object({
   type: z.enum(['image', 'file']),
   url: z.string().optional(),
   base64: z.string().optional(),
@@ -11,7 +11,7 @@ const AttachmentSchema = z.object({
 /**
  * Base schema for all event payloads.
  */
-export const BaseEventSchema = z.object({
+export const BASE_EVENT_SCHEMA = z.object({
   source: z.string().optional(),
   userId: z.string().optional(),
   traceId: z.string().optional(),
@@ -25,29 +25,29 @@ export const BaseEventSchema = z.object({
 /**
  * Schema for AgentPayload.
  */
-export const AgentPayloadSchema = BaseEventSchema.extend({
+export const AGENT_PAYLOAD_SCHEMA = BASE_EVENT_SCHEMA.extend({
   task: z.string().optional(),
   response: z.string().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
-  attachments: z.array(AttachmentSchema).optional(),
+  attachments: z.array(ATTACHMENT_SCHEMA).optional(),
   isContinuation: z.boolean().optional(),
 });
 
 /**
  * Schema for TaskEvent.
  */
-export const TaskEventSchema = BaseEventSchema.extend({
+export const TASK_EVENT_SCHEMA = BASE_EVENT_SCHEMA.extend({
   userId: z.string(),
   task: z.string(),
   isContinuation: z.boolean().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
-  attachments: z.array(AttachmentSchema).optional(),
+  attachments: z.array(ATTACHMENT_SCHEMA).optional(),
 });
 
 /**
  * Schema for BuildEvent.
  */
-export const BuildEventSchema = BaseEventSchema.extend({
+export const BUILD_EVENT_SCHEMA = BASE_EVENT_SCHEMA.extend({
   userId: z.string(),
   buildId: z.string(),
   projectName: z.string().optional(),
@@ -59,29 +59,29 @@ export const BuildEventSchema = BaseEventSchema.extend({
 /**
  * Schema for CompletionEvent.
  */
-export const CompletionEventSchema = BaseEventSchema.extend({
+export const COMPLETION_EVENT_SCHEMA = BASE_EVENT_SCHEMA.extend({
   userId: z.string(),
   agentId: z.string(),
   task: z.string(),
   response: z.string(),
-  attachments: z.array(AttachmentSchema).optional(),
+  attachments: z.array(ATTACHMENT_SCHEMA).optional(),
 });
 
 /**
  * Schema for OutboundMessageEvent.
  */
-export const OutboundMessageEventSchema = BaseEventSchema.extend({
+export const OUTBOUND_MESSAGE_EVENT_SCHEMA = BASE_EVENT_SCHEMA.extend({
   userId: z.string(),
   message: z.string(),
   agentName: z.string().optional(),
   memoryContexts: z.array(z.string()).optional(),
-  attachments: z.array(AttachmentSchema).optional(),
+  attachments: z.array(ATTACHMENT_SCHEMA).optional(),
 });
 
 /**
  * Schema for FailureEvent.
  */
-export const FailureEventSchema = BaseEventSchema.extend({
+export const FAILURE_EVENT_SCHEMA = BASE_EVENT_SCHEMA.extend({
   userId: z.string(),
   agentId: z.string(),
   task: z.string(),
@@ -91,7 +91,7 @@ export const FailureEventSchema = BaseEventSchema.extend({
 /**
  * Schema for HealthReportEvent.
  */
-export const HealthReportEventSchema = BaseEventSchema.extend({
+export const HEALTH_REPORT_EVENT_SCHEMA = BASE_EVENT_SCHEMA.extend({
   userId: z.string(),
   component: z.string(),
   issue: z.string(),
@@ -102,7 +102,7 @@ export const HealthReportEventSchema = BaseEventSchema.extend({
 /**
  * Schema for ProactiveHeartbeatPayload.
  */
-export const ProactiveHeartbeatPayloadSchema = BaseEventSchema.extend({
+export const PROACTIVE_HEARTBEAT_PAYLOAD_SCHEMA = BASE_EVENT_SCHEMA.extend({
   agentId: z.string(),
   task: z.string(),
   goalId: z.string(),
@@ -113,7 +113,7 @@ export const ProactiveHeartbeatPayloadSchema = BaseEventSchema.extend({
  * Schema for the detail payload of a BridgeEvent.
  * Allows for userId, sessionId, and other unknown properties.
  */
-const BridgeDetailPayloadSchema = z
+const BRIDGE_DETAIL_PAYLOAD_SCHEMA = z
   .object({
     userId: z.string().optional(),
     sessionId: z.string().optional(),
@@ -124,9 +124,9 @@ const BridgeDetailPayloadSchema = z
  * Schema for BridgeEvent, which bridges AgentBus (EventBridge) to RealtimeBus (IoT Core).
  * Extends a base event structure and includes a detail-type and the detail payload.
  */
-export const BridgeEventSchema = z
+export const BRIDGE_EVENT_SCHEMA = z
   .object({
     'detail-type': z.string(), // EventBridge detail-type
-    detail: BridgeDetailPayloadSchema,
+    detail: BRIDGE_DETAIL_PAYLOAD_SCHEMA,
   })
   .passthrough(); // Allows other EventBridge event properties if any

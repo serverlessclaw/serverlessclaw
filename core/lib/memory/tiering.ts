@@ -14,6 +14,7 @@ export enum RetentionTiers {
 
 /**
  * RetentionManager centralizes logic for system data aging and TTL.
+ * @since 2026-03-19
  */
 export class RetentionManager {
   /**

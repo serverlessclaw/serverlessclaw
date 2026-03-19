@@ -31,6 +31,7 @@ export const AGENT_LOG_MESSAGES = {
 
 /**
  * Handles the iterative execution loop of an agent.
+ * @since 2026-03-19
  */
 export class AgentExecutor {
   constructor(

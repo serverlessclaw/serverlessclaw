@@ -9,7 +9,7 @@ import { EventType, ProactiveHeartbeatPayload } from '../lib/types/agent';
  * Receives the schedule payload and converts it into a system-wide proactive heartbeat signal.
  *
  * @param event - The payload from the AWS Scheduler.
- * @param context - The AWS Lambda context.
+ * @param _context - The AWS Lambda context (unused).
  */
 export async function handler(event: ProactiveHeartbeatPayload, _context: Context): Promise<void> {
   logger.info('HeartbeatHandler triggered by schedule:', JSON.stringify(event, null, 2));

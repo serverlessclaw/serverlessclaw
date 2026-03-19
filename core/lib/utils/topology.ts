@@ -1,16 +1,27 @@
 import { DynamoDBClient, ScanCommand } from '@aws-sdk/client-dynamodb';
 import type { Topology, TopologyNode, TopologyEdge, IAgentConfig } from '../types/index';
-import { ConnectionProfile } from '../types/agent';
 import { ConfigManager } from '../registry/config';
 import { BACKBONE_REGISTRY } from '../backbone';
 import { NODE_TYPE, EDGE_LABEL, NODE_TIER, RESOURCE_ICON } from './topology/constants';
 import { TOOLS } from '../../tools/index';
 
-// Re-export constants and types for backward compatibility
-export { INFRA_NODE_ID, NODE_TYPE, EDGE_LABEL, NODE_TIER } from './topology/constants';
-export type { Topology, TopologyNode, TopologyEdge } from '../types/index';
+// Default client for backward compatibility - can be overridden for testing
+const defaultDb = new DynamoDBClient({});
 
-const db = new DynamoDBClient({});
+// Allow tests to inject a custom DynamoDB client
+let injectedDb: DynamoDBClient | undefined;
+
+/**
+ * Sets a custom DynamoDB client for testing purposes.
+ * @param db - The DynamoDB client to use
+ */
+export function setDbClient(db: DynamoDBClient): void {
+  injectedDb = db;
+}
+
+function getDbClient(): DynamoDBClient {
+  return injectedDb ?? defaultDb;
+}
 
 interface ResourceClassifier {
   match: (key: string) => boolean;
@@ -91,6 +102,7 @@ const CLASSIFIERS: ResourceClassifier[] = [
 /**
  * Discovers the active system topology by reflecting on SST resources and Agent configs.
  * Designed to be highly resilient and truly self-aware.
+ * @since 2026-03-19
  */
 export async function discoverSystemTopology(): Promise<Topology> {
   const { Resource } = await import('sst');
@@ -229,7 +241,7 @@ export async function discoverSystemTopology(): Promise<Topology> {
     try {
       const tableName = await ConfigManager.resolveTableName();
       if (tableName) {
-        const { Items = [] } = await db.send(
+        const { Items = [] } = await getDbClient().send(
           new ScanCommand({
             TableName: tableName,
             FilterExpression: 'begins_with(id, :p)',
@@ -266,20 +278,20 @@ export async function discoverSystemTopology(): Promise<Topology> {
 
   const mapProfileToResource = (profile: string): string | null => {
     const p = profile.toLowerCase();
-    if (p === ConnectionProfile.BUS || p === 'agentbus') return busId;
-    if (p === ConnectionProfile.MEMORY || p === 'memorytable') return 'memorytable';
-    if (p === ConnectionProfile.CONFIG || p === 'configtable') return 'configtable';
-    if (p === ConnectionProfile.TRACE || p === 'tracetable') return 'tracetable';
-    if (p === ConnectionProfile.STORAGE || p === 'stagingbucket') return 'stagingbucket';
-    if (p === ConnectionProfile.CODEBUILD || p === ConnectionProfile.DEPLOYER || p === 'deployer')
-      return 'deployer';
-    if (p === ConnectionProfile.KNOWLEDGE || p === 'knowledgebucket') return 'knowledgebucket';
+    if (p === 'bus' || p === 'agentbus') return busId;
+    if (p === 'memory' || p === 'memorytable') return 'memorytable';
+    if (p === 'config' || p === 'configtable') return 'configtable';
+    if (p === 'trace' || p === 'tracetable') return 'tracetable';
+    if (p === 'storage' || p === 'stagingbucket') return 'stagingbucket';
+    if (p === 'codebuild' || p === 'deployer' || p === 'deployer') return 'deployer';
+    if (p === 'knowledge' || p === 'knowledgebucket') return 'knowledgebucket';
     if (p === 'scheduler') return 'scheduler';
     if (p === 'notifier') return 'notifier';
     return null;
   };
 
   const mapToolToResources = (toolName: string): string[] => {
+    if (!toolName) return [];
     const tool = TOOLS[toolName];
     if (!tool || !tool.connectionProfile) {
       if (toolName === 'sendMessage') return ['notifier'];

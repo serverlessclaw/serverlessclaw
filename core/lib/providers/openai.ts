@@ -243,6 +243,7 @@ export class OpenAIProvider implements IProvider {
         : [ReasoningProfile.FAST, ReasoningProfile.STANDARD],
       maxReasoningEffort,
       supportsStructuredOutput: true,
+      contextWindow: 128000,
     };
   }
 }

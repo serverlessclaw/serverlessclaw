@@ -5,136 +5,41 @@
  */
 
 /**
- * System-wide constants for agent orchestration and resource management.
+ * System-wide defaults and operational limits.
  */
 export const SYSTEM = {
-  USER_ID: 'SYSTEM',
-  DEPLOY_STATS_KEY: 'SYSTEM#DEPLOY_STATS',
-  RECOVERY_KEY: 'SYSTEM#RECOVERY',
-  DEFAULT_DEPLOY_LIMIT: 5,
-  MAX_DEPLOY_LIMIT: 100,
-  // 15 hops allows ~4 full plan→code→QA→reopen cycles before the guard fires.
-  // The old value of 50 allowed ~12 autonomous infrastructure cycles — dangerously high.
-  DEFAULT_RECURSION_LIMIT: 15,
-  DEFAULT_MODEL: 'gpt-5.4-mini',
   DEFAULT_PROVIDER: 'openai',
-  DEFAULT_OPENAI_MODEL: 'gpt-5.4',
-  DEFAULT_BEDROCK_MODEL: 'global.anthropic.claude-sonnet-4-6',
-  DEFAULT_OPENROUTER_MODEL: 'google/gemini-3-flash-preview',
+  DEFAULT_MODEL: 'gpt-5.4-mini',
+  DEFAULT_OPENAI_MODEL: 'gpt-5.4-mini',
+  DEFAULT_BEDROCK_MODEL: 'claude-sonnet-4-6',
+  DEFAULT_OPENROUTER_MODEL: 'zhipu/glm-5',
+  DEFAULT_RECURSION_LIMIT: 15,
+  DEFAULT_DEPLOY_LIMIT: 5,
+  MAX_DEPLOY_LIMIT: 10,
+  RECOVERY_KEY: 'SYSTEM#RECOVERY',
+  DEPLOY_STATS_KEY: 'SYSTEM#DEPLOY_STATS',
+  UPTIME_KEY: 'SYSTEM#UPTIME',
+  USER_ID: 'SYSTEM',
 } as const;
 
-export const PROTECTED_FILES = [
-  'sst.config.ts',
-  'core/tools/index.ts',
-  'core/agents/superclaw.ts',
-  'core/lib/agent.ts',
-  'buildspec.yml',
-  'core/lib/constants.ts',
-  'package.json',
-  'package-lock.json',
-  '.env',
-  'infra/',
-] as const;
-
-export const STORAGE = {
-  STAGING_ZIP: 'staged_changes.zip',
-  TMP_STAGING_ZIP: '/tmp/staged_changes.zip',
-} as const;
-
-export const RETENTION = {
-  MESSAGES_DAYS: 30,
-  TRACES_DAYS: 30,
-  LESSONS_DAYS: 90,
-  SESSIONS_DAYS: 30,
-  ASSETS_DAYS: 30,
-} as const;
-
+/**
+ * DynamoDB Table Item Keys (PK/SK patterns).
+ */
 export const DYNAMO_KEYS = {
+  AGENTS_CONFIG: 'agents_config',
   DEPLOY_LIMIT: 'deploy_limit',
   RECURSION_LIMIT: 'recursion_limit',
-  GLOBAL_PAUSE: 'global_pause',
-  AGENTS_CONFIG: 'agents_config',
-  INFRA_CONFIG: 'infra_config',
-  SYSTEM_TOPOLOGY: 'system_topology',
   RETENTION_CONFIG: 'retention_config',
-  TOOL_USAGE: 'tool_usage',
-} as const;
-
-export const HTTP_STATUS = {
-  OK: 200,
-  BAD_REQUEST: 400,
-  UNAUTHORIZED: 401,
-  FORBIDDEN: 403,
-  NOT_FOUND: 404,
-  INTERNAL_SERVER_ERROR: 500,
-} as const;
-
-export const TRACE_TYPES = {
-  LLM_CALL: 'llm_call',
-  LLM_RESPONSE: 'llm_response',
-  TOOL_CALL: 'tool_call',
-  TOOL_RESULT: 'tool_result',
-  ERROR: 'error',
-} as const;
-
-export const TRACE_STATUS = {
-  STARTED: 'started',
-  COMPLETED: 'completed',
+  TOOL_USAGE: 'tool_usage_global',
+  ACTIVE_PROVIDER: 'active_provider',
+  ACTIVE_MODEL: 'active_model',
+  OPTIMIZATION_POLICY: 'optimization_policy',
+  REASONING_PROFILES: 'reasoning_profiles',
+  MAX_TOOL_ITERATIONS: 'max_tool_iterations',
 } as const;
 
 /**
- * Time conversion constants (in milliseconds)
- * These help eliminate magic number calculations throughout the codebase
- */
-export const TIME = {
-  SECONDS_IN_MINUTE: 60,
-  SECONDS_IN_HOUR: 3600,
-  SECONDS_IN_DAY: 86400,
-  MS_PER_SECOND: 1000,
-  MS_PER_MINUTE: 60000,
-  MS_PER_HOUR: 3600000,
-  MS_PER_DAY: 86400000,
-} as const;
-
-/**
- * Memory and storage limits
- */
-export const LIMITS = {
-  TRACE_TRUNCATE_LENGTH: 5000,
-  MAX_CONTEXT_LENGTH: 10000,
-  DEFAULT_LOCK_TTL: 300,
-  STALE_GAP_DAYS: 30,
-  TWO_YEARS_DAYS: 730,
-} as const;
-
-/**
- * DynamoDB table and index names
- */
-export const DYNAMO = {
-  TABLE_NAME: process.env.MEMORY_TABLE ?? 'ServerlessClaw-Memory',
-  TYPE_TIMESTAMP_INDEX: 'TypeTimestampIndex',
-} as const;
-
-/**
- * Gap status values
- */
-export const GAP_STATUS = {
-  OPEN: 'open',
-  ADDRESSED: 'addressed',
-  DISMISSED: 'dismissed',
-} as const;
-
-/**
- * Memory key prefixes for distilled memory storage
- */
-export const MEMORY_KEYS = {
-  STRATEGIC_REVIEW: 'LAST#STRATEGIC_REVIEW',
-  CONVERSATION_PREFIX: 'CONV#',
-  RECOVERY: 'RECOVERY',
-} as const;
-
-/**
- * Configuration keys for AgentRegistry/DynamoDB.
+ * Configuration Keys for the global ConfigTable.
  */
 export const CONFIG_KEYS = {
   ACTIVE_PROVIDER: 'active_provider',
@@ -142,92 +47,151 @@ export const CONFIG_KEYS = {
   OPTIMIZATION_POLICY: 'optimization_policy',
   REASONING_PROFILES: 'reasoning_profiles',
   MAX_TOOL_ITERATIONS: 'max_tool_iterations',
-  SELECTIVE_DISCOVERY_MODE: 'selective_discovery_mode',
+  RECURSION_LIMIT: 'recursion_limit',
 } as const;
 
 /**
- * Values for optimization policies.
+ * Memory Partition/Sort Key prefixes.
+ */
+export const MEMORY_KEYS = {
+  CONVERSATION_PREFIX: 'CONV#',
+  FACT_PREFIX: 'FACT#',
+  LESSON_PREFIX: 'LESSON#',
+  SUMMARY_PREFIX: 'SUMMARY#',
+  METADATA_PREFIX: 'META#',
+  RECOVERY: 'SYSTEM#RECOVERY',
+  STRATEGIC_REVIEW: 'SYSTEM#STRATEGIC_REVIEW',
+} as const;
+
+/**
+ * HTTP Status Codes.
+ */
+export const HTTP_STATUS = {
+  OK: 200,
+  CREATED: 201,
+  ACCEPTED: 202,
+  BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  NOT_FOUND: 404,
+  CONFLICT: 409,
+  INTERNAL_ERROR: 500,
+  INTERNAL_SERVER_ERROR: 500,
+  SERVICE_UNAVAILABLE: 503,
+} as const;
+
+/**
+ * Trace types for ClawTracer.
+ */
+export const TRACE_TYPES = {
+  LLM_CALL: 'llm_call',
+  LLM_RESPONSE: 'llm_response',
+  TOOL_CALL: 'tool_call',
+  TOOL_RESPONSE: 'tool_result',
+  TOOL_RESULT: 'tool_result',
+  REFLECT: 'reflect',
+  EMIT: 'emit',
+  BRIDGE: 'bridge',
+  ERROR: 'error',
+} as const;
+
+/**
+ * Status values for Traces.
+ */
+export const TRACE_STATUS = {
+  STARTED: 'started',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+  PAUSED: 'paused',
+} as const;
+
+/**
+ * Gap status values.
+ */
+export const GAP_STATUS = {
+  OPEN: 'open',
+  ADDRESSED: 'addressed',
+  DISMISSED: 'dismissed',
+  PLANNED: 'planned',
+} as const;
+
+/**
+ * Retention policies (days).
+ */
+export const RETENTION = {
+  MESSAGES_DAYS: 7,
+  TRACES_DAYS: 30,
+  FACTS_DAYS: 365,
+  LESSONS_DAYS: 90,
+} as const;
+
+/**
+ * Resource Limits.
+ */
+export const LIMITS = {
+  MAX_CONTEXT_LENGTH: 32768,
+  MAX_MESSAGES: 100,
+  STALE_GAP_DAYS: 14,
+  TRACE_TRUNCATE_LENGTH: 2000,
+  DEFAULT_LOCK_TTL: 300,
+  TWO_YEARS_DAYS: 730,
+} as const;
+
+/**
+ * Optimization Policies.
  */
 export const OPTIMIZATION_POLICIES = {
   AGGRESSIVE: 'aggressive',
   CONSERVATIVE: 'conservative',
+  BALANCED: 'balanced',
 } as const;
 
 /**
- * Standardized tool names across the system.
+ * Time constants.
+ */
+export const TIME = {
+  MS_PER_SECOND: 1000,
+  SECONDS_IN_MINUTE: 60,
+  MS_PER_MINUTE: 60000,
+  SECONDS_IN_HOUR: 3600,
+  SECONDS_IN_DAY: 86400,
+} as const;
+
+/**
+ * Registry tool definitions.
  */
 export const TOOLS = {
   dispatchTask: 'dispatchTask',
-  recallKnowledge: 'recallKnowledge',
+  listAgents: 'listAgents',
+  checkConfig: 'checkConfig',
+  registerMCPServer: 'registerMCPServer',
+  inspectTrace: 'inspectTrace',
+  runTests: 'runTests',
+  runShellCommand: 'runShellCommand',
+  stageChanges: 'stageChanges',
+  triggerDeployment: 'triggerDeployment',
+  validateCode: 'validateCode',
+  triggerRollback: 'triggerRollback',
+  queryStats: 'queryStats',
   discoverSkills: 'discoverSkills',
   installSkill: 'installSkill',
   saveMemory: 'saveMemory',
-  checkConfig: 'checkConfig',
-  setSystemConfig: 'setSystemConfig',
-  listSystemConfigs: 'listSystemConfigs',
-  getSystemConfigMetadata: 'getSystemConfigMetadata',
-  listAgents: 'listAgents',
-  fileUpload: 'fileUpload',
-  fileDelete: 'fileDelete',
-  listUploadedFiles: 'listUploadedFiles',
+  seekClarification: 'seekClarification',
+  provideClarification: 'provideClarification',
+  recallKnowledge: 'recallKnowledge',
   sendMessage: 'sendMessage',
-  registerMCPServer: 'registerMCPServer',
   manageGap: 'manageGap',
   reportGap: 'reportGap',
   checkHealth: 'checkHealth',
   inspectTopology: 'inspectTopology',
-  seekClarification: 'seekClarification',
-  provideClarification: 'provideClarification',
-  stageChanges: 'stageChanges',
-  triggerDeployment: 'triggerDeployment',
-  validateCode: 'validateCode',
-  runTests: 'runTests',
-  runShellCommand: 'runShellCommand',
-  inspectTrace: 'inspectTrace',
 } as const;
 
 /**
- * OpenAI-specific API literals for the Responses API.
- */
-export const OPENAI = {
-  ROLES: {
-    USER: 'user',
-    ASSISTANT: 'assistant',
-    SYSTEM: 'system',
-    DEVELOPER: 'developer',
-  },
-  ITEM_TYPES: {
-    MESSAGE: 'message',
-    FUNCTION_CALL: 'function_call',
-    FUNCTION_CALL_OUTPUT: 'function_call_output',
-  },
-  CONTENT_TYPES: {
-    INPUT_TEXT: 'input_text',
-    INPUT_FILE: 'input_file',
-    IMAGE_URL: 'image_url',
-  },
-  DEFAULT_FILE_NAME: 'document.pdf',
-  DEFAULT_MIME_TYPE: 'application/octet-stream',
-  FUNCTION_TYPE: 'function',
-  MCP_TYPE: 'mcp',
-} as const;
-
-/**
- * Memory tiers for retention
- */
-export const MEMORY_TIER = {
-  MESSAGES: 'MESSAGES',
-  DISTILLED: 'DISTILLED',
-  INSIGHTS: 'INSIGHTS',
-  SESSIONS: 'SESSIONS',
-  TRACES: 'TRACES',
-} as const;
-/**
- * Standardized agent error messages for consistent detection and gap reporting.
+ * Common Error Messages.
  */
 export const AGENT_ERRORS = {
   PROCESS_FAILURE:
-    "I encountered an internal processing error while handling your request. I've registered this failure as a strategic gap for my evolution cycle, and my engineering team will review it. Please try again or rephrase your query.",
+    "I encountered an internal error during my cognitive processing cycle and was unable to fulfill your request. This has been logged as a strategic gap for my system's next evolution cycle, and my engineering team will review it. Please try again or rephrase your query.",
   CONNECTION_FAILURE:
     'SYSTEM_ERROR: Connection interrupted or internal failure. Technical details logged as strategic gap.',
 } as const;

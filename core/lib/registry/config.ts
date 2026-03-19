@@ -4,12 +4,30 @@ import { Resource } from 'sst';
 import { SSTResource } from '../types/index';
 import { logger } from '../logger';
 
-const client = new DynamoDBClient({});
-export const docClient = DynamoDBDocumentClient.from(client);
+// Default client for backward compatibility - can be overridden for testing
+const defaultClient = new DynamoDBClient({});
+export const defaultDocClient = DynamoDBDocumentClient.from(defaultClient);
+
+// Allow tests to inject a custom docClient
+let injectedDocClient: DynamoDBDocumentClient | undefined;
+
+/**
+ * Sets a custom docClient for testing purposes.
+ * @param docClient - The DynamoDB Document Client to use
+ */
+export function setDocClient(docClient: DynamoDBDocumentClient): void {
+  injectedDocClient = docClient;
+}
+
+function getDocClient(): DynamoDBDocumentClient {
+  return injectedDocClient ?? defaultDocClient;
+}
+
 const typedResource = Resource as unknown as SSTResource;
 
 /**
  * Handles raw configuration storage and retrieval from DynamoDB.
+ * @since 2026-03-19
  */
 export class ConfigManager {
   /**
@@ -25,7 +43,7 @@ export class ConfigManager {
     }
 
     try {
-      const { Item } = await docClient.send(
+      const { Item } = await getDocClient().send(
         new GetCommand({
           TableName: typedResource.ConfigTable.name,
           Key: { key },
@@ -63,7 +81,7 @@ export class ConfigManager {
     }
 
     try {
-      await docClient.send(
+      await getDocClient().send(
         new PutCommand({
           TableName: typedResource.ConfigTable.name,
           Item: { key, value },

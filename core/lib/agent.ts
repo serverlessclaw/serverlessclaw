@@ -25,9 +25,6 @@ import { AgentEmitter } from './agent/emitter';
 import { parseConfigInt } from './providers/utils';
 import { DEFAULT_SIGNAL_SCHEMA } from './agent/schema';
 
-// Re-export for backward compatibility
-export type { AgentProcessOptions };
-
 // DEFAULT_SIGNAL_SCHEMA moved to ./agent/schema.ts
 
 /**
@@ -204,17 +201,20 @@ export class Agent {
       const fullHistory = [...history, currentMessage];
       const summary = await this.memory.getSummary(storageId);
 
+      const capabilities = await this.provider.getCapabilities(activeModel);
+      const contextLimit = capabilities.contextWindow ?? LIMITS.MAX_CONTEXT_LENGTH;
+
       const managed = await ContextManager.getManagedContext(
         fullHistory,
         summary,
         contextPrompt,
-        LIMITS.MAX_CONTEXT_LENGTH
+        contextLimit
       );
 
       const messages: Message[] = managed.messages;
 
       // 4. Summarization Trigger (Background)
-      if (ContextManager.needsSummarization(fullHistory)) {
+      if (ContextManager.needsSummarization(fullHistory, contextLimit)) {
         // Fire and forget summarization for the next turn
         ContextManager.summarize(this.memory, storageId, this.provider, fullHistory).catch((e) =>
           logger.error('Background summarization failed:', e)
@@ -295,9 +295,7 @@ export class Agent {
           const parsed = JSON.parse(responseText);
           // Standard field names for human messaging
           if (parsed.message) responseText = parsed.message;
-          else if (parsed.plan)
-            responseText = parsed.plan; // Better UX for Planner
-          else if (parsed.response) responseText = parsed.response; // Legacy/Coder
+          else if (parsed.plan) responseText = parsed.plan; // Better UX for Planner
         } catch {
           // Keep raw text if not JSON-parseable (fallback)
         }

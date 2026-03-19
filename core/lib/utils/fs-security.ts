@@ -5,6 +5,7 @@ import { PROTECTED_FILES } from '../constants';
  *
  * @param filePath - The path to the file to check.
  * @returns True if the file path is protected, otherwise false.
+ * @since 2026-03-19
  */
 export function isProtectedPath(filePath: string): boolean {
   if (!filePath) return false;

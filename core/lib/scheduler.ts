@@ -13,6 +13,7 @@ const scheduler = new SchedulerClient({});
 
 /**
  * Service for managing dynamic, goal-oriented schedules using AWS EventBridge Scheduler.
+ * @since 2026-03-19
  */
 export class DynamicScheduler {
   /**

@@ -1,10 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BedrockProvider } from './bedrock';
-import { MessageRole } from '../types/index';
-import { BedrockRuntimeClient, ConverseCommand } from '@aws-sdk/client-bedrock-runtime';
-import { mockClient } from 'aws-sdk-client-mock';
+import { MessageRole, ReasoningProfile } from '../types/index';
+import { ConverseCommand } from '@aws-sdk/client-bedrock-runtime';
 
-const bedrockMock = mockClient(BedrockRuntimeClient);
+// Mock Bedrock SDK
+const mockSend = vi.fn();
+vi.mock('@aws-sdk/client-bedrock-runtime', () => {
+  return {
+    BedrockRuntimeClient: vi.fn().mockImplementation(function () {
+      return { send: mockSend };
+    }),
+    ConverseCommand: vi.fn().mockImplementation(function (args) {
+      return args;
+    }),
+    MessageRole: {
+      ASSISTANT: 'assistant',
+      USER: 'user',
+      SYSTEM: 'system',
+    },
+  };
+});
 
 // Mock SST Resource
 vi.mock('sst', () => ({
@@ -17,34 +32,148 @@ describe('BedrockProvider', () => {
   let provider: BedrockProvider;
 
   beforeEach(() => {
-    bedrockMock.reset();
     vi.clearAllMocks();
-    provider = new BedrockProvider('anthropic.claude-3-5-sonnet-20241022-v2:0');
+    provider = new BedrockProvider('claude-sonnet-4-6');
   });
 
-  it('should correctly map computer_use tool for Anthropic', async () => {
-    bedrockMock.on(ConverseCommand).resolves({
-      output: { message: { content: [{ text: 'Hello' }], role: 'assistant' } },
+  it('should apply correct thinking budgets for different reasoning profiles', async () => {
+    mockSend.mockResolvedValue({
+      output: { message: { role: 'assistant', content: [{ text: 'Hello' }] } },
     });
 
-    const tools = [
+    // Test DEEP profile
+    await provider.call([{ role: MessageRole.USER, content: 'test' }], [], ReasoningProfile.DEEP);
+
+    expect(ConverseCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        additionalModelRequestFields: expect.objectContaining({
+          thinking: { type: 'enabled', budget_tokens: 32768 },
+        }),
+      })
+    );
+
+    // Test FAST profile (thinking should be disabled)
+    vi.clearAllMocks();
+    await provider.call([{ role: MessageRole.USER, content: 'test' }], [], ReasoningProfile.FAST);
+
+    expect(ConverseCommand).toHaveBeenCalledWith(
+      expect.not.objectContaining({
+        additionalModelRequestFields: expect.objectContaining({
+          thinking: expect.anything(),
+        }),
+      })
+    );
+  });
+
+  it('should format multi-modal attachments correctly for Bedrock Converse API', async () => {
+    mockSend.mockResolvedValue({
+      output: { message: { role: 'assistant', content: [{ text: 'I see your image' }] } },
+    });
+
+    const messages = [
       {
-        name: 'computer',
-        description: 'Standard computer tool',
-        type: 'computer_use' as const,
-        parameters: { type: 'object' as const, properties: {} },
-        execute: async () => 'done',
+        role: MessageRole.USER,
+        content: 'What is this?',
+        attachments: [
+          {
+            type: 'image',
+            name: 'test.png',
+            base64: 'SGVsbG8=',
+            mimeType: 'image/png',
+          },
+        ],
       },
     ];
 
-    await provider.call([{ role: MessageRole.USER, content: 'test' }], tools);
+    await provider.call(messages as any, []);
 
-    const calls = bedrockMock.commandCalls(ConverseCommand);
-    const input = calls[0].args[0].input;
+    expect(ConverseCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: expect.arrayContaining([
+          expect.objectContaining({
+            content: expect.arrayContaining([
+              expect.objectContaining({ text: 'What is this?' }),
+              expect.objectContaining({
+                image: expect.objectContaining({ format: 'png' }),
+              }),
+            ]),
+          }),
+        ]),
+      })
+    );
+  });
 
-    expect(input.toolConfig?.tools).toBeDefined();
-    // In our implementation, computer_use tools are mapped to a specific format
-    // that doesn't use the standard toolSpec for computer_use type
-    expect(input.toolConfig?.tools![0]).toHaveProperty('computer');
+  it('should handle tool calls and tool results', async () => {
+    mockSend.mockResolvedValue({
+      output: { message: { role: 'assistant', content: [{ text: 'Done' }] } },
+    });
+
+    const messages = [
+      { role: MessageRole.USER, content: 'call tool' },
+      {
+        role: MessageRole.ASSISTANT,
+        content: '',
+        tool_calls: [{ id: 'tc1', function: { name: 'test_tool', arguments: '{}' } }],
+      },
+      {
+        role: MessageRole.TOOL,
+        content: 'tool result',
+        tool_call_id: 'tc1',
+      },
+    ];
+
+    await provider.call(messages as any, []);
+
+    expect(ConverseCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: expect.arrayContaining([
+          expect.objectContaining({
+            content: expect.arrayContaining([
+              expect.objectContaining({
+                toolResult: expect.objectContaining({ toolUseId: 'tc1' }),
+              }),
+            ]),
+          }),
+        ]),
+      })
+    );
+  });
+
+  it('should include outputConfig: { format: "json" } when responseFormat is requested', async () => {
+    mockSend.mockResolvedValue({
+      output: { message: { role: 'assistant', content: [{ text: '{}' }] } },
+    });
+
+    const responseFormat = {
+      type: 'json_schema' as const,
+      json_schema: {
+        name: 'test_schema',
+        strict: true,
+        schema: { type: 'object', properties: {} },
+      },
+    };
+
+    await provider.call(
+      [{ role: MessageRole.USER, content: 'test' }],
+      [],
+      undefined,
+      undefined,
+      undefined,
+      responseFormat
+    );
+
+    expect(ConverseCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        outputConfig: {
+          format: 'json',
+        },
+      })
+    );
+  });
+
+  it('should report correct capabilities for Claude 4.6', async () => {
+    const caps = await provider.getCapabilities('claude-sonnet-4-6');
+    expect(caps.supportsStructuredOutput).toBe(true);
+    expect(caps.supportedReasoningProfiles).toContain(ReasoningProfile.DEEP);
   });
 });

@@ -1,6 +1,6 @@
-import { toolDefinitions } from '../tools/definitions/index';
 import { IToolDefinition } from './types/index';
 import { logger } from './logger';
+import { toolDefinitions } from '../tools/definitions/index';
 
 /**
  * Validates a tool definition against strict LLM provider requirements.

@@ -39,6 +39,33 @@ vi.mock('sst', () => ({
 // Mock fetch for OpenRouter
 global.fetch = vi.fn();
 
+vi.mock('../constants', async (importOriginal) => {
+  const actual = (await importOriginal()) as any;
+  return {
+    ...actual,
+    OPENAI: {
+      ...actual.OPENAI,
+      ROLES: {
+        USER: 'user',
+        ASSISTANT: 'assistant',
+        DEVELOPER: 'developer',
+      },
+      ITEM_TYPES: {
+        MESSAGE: 'message',
+        FUNCTION_CALL: 'function_call',
+        FUNCTION_CALL_OUTPUT: 'function_call_output',
+      },
+      CONTENT_TYPES: {
+        INPUT_TEXT: 'input_text',
+        INPUT_FILE: 'input_file',
+        IMAGE_URL: 'image_url',
+      },
+      FUNCTION_TYPE: 'function',
+      MCP_TYPE: 'mcp',
+    },
+  };
+});
+
 describe('Provider Attachments Mapping', () => {
   beforeEach(() => {
     vi.clearAllMocks();

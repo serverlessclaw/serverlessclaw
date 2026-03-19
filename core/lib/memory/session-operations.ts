@@ -92,6 +92,7 @@ export async function updateDistilledMemory(
  * @param sessionId - The session identifier.
  * @param meta - Partial conversation metadata to update.
  * @returns A promise resolving when metadata is saved.
+ * @since 2026-03-19
  */
 export async function saveConversationMeta(
   base: BaseMemoryProvider,
@@ -159,6 +160,7 @@ export async function saveLKGHash(base: BaseMemoryProvider, hash: string): Promi
  *
  * @param base - The base memory provider instance.
  * @returns A promise resolving to the latest LKG hash or null if not found.
+ * @since 2026-03-19
  */
 export async function getLatestLKGHash(base: BaseMemoryProvider): Promise<string | null> {
   const items = await base.queryItems({

@@ -1,12 +1,12 @@
 import { z } from 'zod';
 
-const TelegramInboundPhotoSchema = z
+const TELEGRAM_INBOUND_PHOTO_SCHEMA = z
   .object({
     file_id: z.string(),
   })
   .passthrough();
 
-const TelegramDocumentPayloadSchema = z
+const TELEGRAM_DOCUMENT_PAYLOAD_SCHEMA = z
   .object({
     file_id: z.string(),
     file_name: z.string().optional(),
@@ -14,13 +14,13 @@ const TelegramDocumentPayloadSchema = z
   })
   .passthrough();
 
-const TelegramVoicePayloadSchema = z
+const TELEGRAM_VOICE_PAYLOAD_SCHEMA = z
   .object({
     file_id: z.string(),
   })
   .passthrough();
 
-const TelegramMessageSchema = z
+const TELEGRAM_MESSAGE_SCHEMA = z
   .object({
     chat: z
       .object({
@@ -29,9 +29,9 @@ const TelegramMessageSchema = z
       .passthrough(),
     text: z.string().optional(),
     caption: z.string().optional(),
-    photo: z.array(TelegramInboundPhotoSchema).optional(),
-    document: TelegramDocumentPayloadSchema.optional(),
-    voice: TelegramVoicePayloadSchema.optional(),
+    photo: z.array(TELEGRAM_INBOUND_PHOTO_SCHEMA).optional(),
+    document: TELEGRAM_DOCUMENT_PAYLOAD_SCHEMA.optional(),
+    voice: TELEGRAM_VOICE_PAYLOAD_SCHEMA.optional(),
   })
   .passthrough();
 
@@ -39,17 +39,17 @@ const TelegramMessageSchema = z
  * Schema for a generic Telegram update payload.
  * Message is optional because Telegram sends many update types we intentionally ignore.
  */
-export const TelegramUpdateSchema = z
+export const TELEGRAM_UPDATE_SCHEMA = z
   .object({
     update_id: z.number().optional(),
-    message: TelegramMessageSchema.optional(),
+    message: TELEGRAM_MESSAGE_SCHEMA.optional(),
   })
   .passthrough();
 
 /**
  * Schema for a generic Telegram file object.
  */
-export const TelegramFileSchema = z.object({
+export const TELEGRAM_FILE_SCHEMA = z.object({
   file_id: z.string(),
   file_unique_id: z.string(),
   file_size: z.number().optional(),
@@ -59,7 +59,7 @@ export const TelegramFileSchema = z.object({
 /**
  * Schema for a generic Telegram photo size object.
  */
-export const TelegramPhotoSizeSchema = TelegramFileSchema.extend({
+export const TELEGRAM_PHOTO_SIZE_SCHEMA = TELEGRAM_FILE_SCHEMA.extend({
   width: z.number(),
   height: z.number(),
 });
@@ -67,7 +67,7 @@ export const TelegramPhotoSizeSchema = TelegramFileSchema.extend({
 /**
  * Schema for a generic Telegram document object.
  */
-export const TelegramDocumentSchema = TelegramFileSchema.extend({
+export const TELEGRAM_DOCUMENT_SCHEMA = TELEGRAM_FILE_SCHEMA.extend({
   thumb: z.any().optional(), // Specific PhotoSize schema can be added
   file_name: z.string().optional(),
   mime_type: z.string().optional(),
@@ -76,7 +76,7 @@ export const TelegramDocumentSchema = TelegramFileSchema.extend({
 /**
  * Schema for a generic Telegram voice object.
  */
-export const TelegramVoiceSchema = TelegramFileSchema.extend({
+export const TELEGRAM_VOICE_SCHEMA = TELEGRAM_FILE_SCHEMA.extend({
   duration: z.number(),
   mime_type: z.string().optional(),
 });
@@ -84,7 +84,7 @@ export const TelegramVoiceSchema = TelegramFileSchema.extend({
 /**
  * Schema for parsed Telegram message data, used for attachments.
  */
-export const TelegramMessageAttachmentSchema = z.object({
+export const TELEGRAM_MESSAGE_ATTACHMENT_SCHEMA = z.object({
   type: z.enum(['image', 'file']),
   name: z.string().optional(),
   mimeType: z.string().optional(),
@@ -95,8 +95,8 @@ export const TelegramMessageAttachmentSchema = z.object({
 /**
  * Schema for parsed Telegram message object.
  */
-export const ParsedTelegramMessageSchema = z.object({
+export const PARSED_TELEGRAM_MESSAGE_SCHEMA = z.object({
   chatId: z.string(),
   userText: z.string(),
-  attachments: z.array(TelegramMessageAttachmentSchema),
+  attachments: z.array(TELEGRAM_MESSAGE_ATTACHMENT_SCHEMA),
 });

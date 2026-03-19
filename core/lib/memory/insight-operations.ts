@@ -109,6 +109,7 @@ export async function recordMemoryHit(
  * @param lesson - The lesson content.
  * @param metadata - Optional insight metadata.
  * @returns A promise resolving when the lesson is added.
+ * @since 2026-03-19
  */
 export async function addLesson(
   base: BaseMemoryProvider,
@@ -177,6 +178,7 @@ import { getRegisteredMemoryTypes, getMemoryByType } from './utils';
  * @param query - The search query string (supports '*' for all).
  * @param category - Optional category to filter results.
  * @returns A promise resolving to an array of matching MemoryInsight objects.
+ * @since 2026-03-19
  */
 export async function searchInsights(
   base: BaseMemoryProvider,
@@ -262,6 +264,7 @@ export async function searchInsights(
  * @param timestamp - The unique timestamp of the insight.
  * @param metadata - Partial metadata to update.
  * @returns A promise resolving when the metadata is updated.
+ * @since 2026-03-19
  */
 export async function updateInsightMetadata(
   base: BaseMemoryProvider,
@@ -296,6 +299,7 @@ export async function updateInsightMetadata(
  * @param base - The base memory provider instance.
  * @param limit - The maximum number of stale items to retrieve.
  * @returns A promise resolving to an array of low-utilization memory items.
+ * @since 2026-03-19
  */
 export async function getLowUtilizationMemory(
   base: BaseMemoryProvider,

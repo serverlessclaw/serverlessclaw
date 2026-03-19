@@ -21,7 +21,7 @@ const PROVIDERS = {
   },
   openrouter: {
     label: 'OpenRouter (Aggregator)',
-    models: ['zhipu/glm-5', 'minimax/minimax-2.5', 'google/gemini-3-flash-preview'],
+    models: ['zhipu/glm-5', 'minimax/minimax-m2.7', 'google/gemini-3-flash-preview'],
   },
 };
 

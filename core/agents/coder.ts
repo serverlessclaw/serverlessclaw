@@ -16,10 +16,10 @@ import {
   createAgent,
   validatePayload,
   buildProcessOptions,
-  emitTaskEvent,
   getAgentContext,
-  parseStructuredResponse,
 } from '../lib/utils/agent-helpers';
+import { emitTaskEvent } from '../lib/utils/agent-helpers/event-emitter';
+import { parseStructuredResponse } from '../lib/utils/agent-helpers/llm-utils';
 
 /**
  * Coder Agent handler. Processes coding tasks, implements changes,

@@ -5,15 +5,27 @@ import { SelfVerificationStatus } from './types/system';
 import { GapStatus } from './types/index';
 import { runDeepHealthCheck } from './health';
 
-const ddbClient = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(ddbClient);
+// Default client for backward compatibility - can be overridden via constructor for testing
+const defaultDdbClient = new DynamoDBClient({});
+const defaultDocClient = DynamoDBDocumentClient.from(defaultDdbClient);
 
 /**
  * Self-Verification Engine
  *
  * Provides automated health checks for the system's evolution, resilience, and awareness mechanisms.
+ * @since 2026-03-19
  */
 export class SelfVerifier {
+  private readonly docClient: DynamoDBDocumentClient;
+
+  /**
+   * Creates a new SelfVerifier instance.
+   * @param docClient - Optional DynamoDB Document Client for dependency injection (useful for testing)
+   */
+  constructor(docClient?: DynamoDBDocumentClient) {
+    this.docClient = docClient ?? defaultDocClient;
+  }
+
   /**
    * Performs a comprehensive audit of all "Self" mechanisms.
    */
@@ -34,7 +46,7 @@ export class SelfVerifier {
     const memoryTable = Resource.MemoryTable.name;
 
     // Scan for all GAPs
-    const gapResult = await docClient.send(
+    const gapResult = await this.docClient.send(
       new ScanCommand({
         TableName: memoryTable,
         FilterExpression: 'begins_with(id, :gapPrefix)',
@@ -67,7 +79,7 @@ export class SelfVerifier {
     const configTable = Resource.ConfigTable.name;
 
     // 1. Get Limits from Config
-    const configRes = await docClient.send(
+    const configRes = await this.docClient.send(
       new GetCommand({
         TableName: configTable,
         Key: { id: 'system:config' },
@@ -76,7 +88,7 @@ export class SelfVerifier {
     const deployLimit = configRes.Item?.deploy_limit ?? 5;
 
     // 2. Check Circuit Breaker State
-    const statsResult = await docClient.send(
+    const statsResult = await this.docClient.send(
       new GetCommand({
         TableName: memoryTable,
         Key: { id: 'system:deploy-stats' },
@@ -104,7 +116,7 @@ export class SelfVerifier {
     const configTable = Resource.ConfigTable.name;
 
     // 1. Check discovered nodes
-    const topoResult = await docClient.send(
+    const topoResult = await this.docClient.send(
       new GetCommand({
         TableName: configTable,
         Key: { id: 'topology:current' },
@@ -117,7 +129,7 @@ export class SelfVerifier {
 
     // 2. Registry Coverage
     // Compare agents in registry vs agents in topology
-    const registryResult = await docClient.send(
+    const registryResult = await this.docClient.send(
       new ScanCommand({
         TableName: configTable,
         FilterExpression: 'begins_with(id, :agentPrefix)',

@@ -26,6 +26,7 @@ export type ContinuationMetadata = {
 
 /**
  * Handles agent event emission (reflection and continuation tasks).
+ * @since 2026-03-19
  */
 export class AgentEmitter {
   private eventbridge: EventBridgeClient = new EventBridgeClient({});

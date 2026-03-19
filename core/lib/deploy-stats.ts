@@ -12,6 +12,7 @@ const typedResource = Resource as unknown as SSTResource;
  * Retrieves the current deployment count for today.
  *
  * @returns A promise that resolves to the current deployment count.
+ * @since 2026-03-19
  */
 export async function getDeployCountToday(): Promise<number> {
   const today = new Date().toISOString().split('T')[0];

@@ -103,9 +103,14 @@ export class OpenRouterProvider implements IProvider {
         allow_fallbacks: true,
         data_collection: 'deny',
         prompt_cache: true,
+        // Ensure routing to providers supporting requested features (tools, json_schema)
+        ...(responseFormat || (tools && tools.length > 0) ? { require_parameters: true } : {}),
       },
       // 2026: specialized model-specific extra bodies
-      ...(activeModel.includes('minimax') ? { plugin_id: 'reasoning' } : {}),
+      ...(activeModel.includes('minimax')
+        ? { plugin_id: 'reasoning', include_reasoning: true }
+        : {}),
+      ...(activeModel.includes('glm') ? { plugin_id: 'reasoning', include_reasoning: true } : {}),
       ...(activeModel.includes('gemini-3') ? { safety_settings: 'off' } : {}),
     };
 
@@ -136,6 +141,11 @@ export class OpenRouterProvider implements IProvider {
           },
         };
       }
+    }
+
+    // 2026: Force JSON format for models that require explicit mime types (Gemini 3)
+    if (responseFormat?.type === 'json_schema' && activeModel.includes('gemini-3')) {
+      body['response_format'] = { type: 'json_object' };
     }
 
     const response = await fetch(`${baseUrl}/chat/completions`, {
@@ -205,6 +215,11 @@ export class OpenRouterProvider implements IProvider {
       activeModel.includes('claude-3-7') || // Hypothetical 2026 Claude
       activeModel.includes('gpt-5');
 
+    let contextWindow = 128000;
+    if (activeModel.includes('gemini-3')) contextWindow = 1048576;
+    else if (activeModel.includes('minimax')) contextWindow = 205000;
+    else if (activeModel.includes('glm')) contextWindow = 200000;
+
     return {
       supportedReasoningProfiles: isHighCapability
         ? [
@@ -216,6 +231,7 @@ export class OpenRouterProvider implements IProvider {
         : [ReasoningProfile.FAST, ReasoningProfile.STANDARD],
       maxReasoningEffort: 'high', // OpenRouter's reasoning.effort usually caps at high
       supportsStructuredOutput: true,
+      contextWindow,
     };
   }
 }

@@ -9,11 +9,6 @@ export enum LogLevel {
   NONE = 4,
 }
 
-const ENV_LOG_LEVEL = 'LOG_LEVEL';
-const ENV_NODE_ENV = 'NODE_ENV';
-const ENV_VITEST = 'VITEST';
-const ENV_DEBUG_TESTS = 'DEBUG_TESTS';
-
 /**
  * A simple logger class for consistent logging across the application.
  */
@@ -25,7 +20,7 @@ class Logger {
    * Defaults to INFO level unless in a test environment.
    */
   constructor() {
-    const logEnv = process.env[ENV_LOG_LEVEL];
+    const logEnv = process.env.LOG_LEVEL;
     if (logEnv) {
       const levelStr = logEnv.toUpperCase();
       if (levelStr in LogLevel) {
@@ -33,8 +28,8 @@ class Logger {
       }
     }
 
-    if (process.env[ENV_NODE_ENV] === 'test' || process.env[ENV_VITEST]) {
-      this.level = process.env[ENV_DEBUG_TESTS] ? LogLevel.DEBUG : LogLevel.NONE;
+    if (process.env.NODE_ENV === 'test' || process.env.VITEST) {
+      this.level = process.env.DEBUG_TESTS ? LogLevel.DEBUG : LogLevel.NONE;
     }
   }
 

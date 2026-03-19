@@ -121,7 +121,7 @@ export enum BedrockModel {
  */
 export enum OpenRouterModel {
   GLM_5 = 'zhipu/glm-5',
-  MINIMAX_2_5 = 'minimax/minimax-2.5',
+  MINIMAX_M2_7 = 'minimax/minimax-m2.7',
   GEMINI_3_FLASH = 'google/gemini-3-flash-preview',
 }
 
@@ -135,6 +135,8 @@ export interface ICapabilities {
   maxReasoningEffort?: string;
   /** Whether the model supports structured JSON output (json_schema). */
   supportsStructuredOutput?: boolean;
+  /** The maximum context window size (tokens) for this model. */
+  contextWindow?: number;
 }
 
 /**
