@@ -22,7 +22,15 @@ export function createDashboard(ctx: SharedContext): { dashboard: sst.aws.Nextjs
   const dashboard = new sst.aws.Nextjs('ClawCenter', {
     domain: dashboardDomain,
     path: 'dashboard',
-    link: [memoryTable, traceTable, configTable],
+    link: [
+      memoryTable,
+      traceTable,
+      configTable,
+      bus,
+      ...(api ? [api] : []),
+      ...(ctx.realtime ? [ctx.realtime] : []),
+      ...(ctx.secrets.DashboardPassword ? [ctx.secrets.DashboardPassword] : []),
+    ],
     environment: {
       DEPLOYER_NAME: deployer.name,
       DYNAMIC_SCHEDULER_ROLE_ARN: ctx.schedulerRole!.arn,
