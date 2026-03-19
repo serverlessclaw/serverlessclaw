@@ -4,12 +4,12 @@ import { mockClient } from 'aws-sdk-client-mock';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import {
-  listAgents,
-  recallKnowledge,
-  manageAgentTools,
-  dispatchTask,
-  manageGap,
-  saveMemory, // Renamed from saveKnowledge
+  LIST_AGENTS,
+  RECALL_KNOWLEDGE,
+  MANAGE_AGENT_TOOLS,
+  DISPATCH_TASK,
+  MANAGE_GAP,
+  SAVE_MEMORY,
 } from './knowledge';
 import { GapStatus, InsightCategory } from '../lib/types/index';
 
@@ -92,16 +92,16 @@ describe('knowledge tools', () => {
     vi.clearAllMocks();
   });
 
-  describe('listAgents', () => {
+  describe('LIST_AGENTS', () => {
     it('should return a summary of agents', async () => {
-      const result = await listAgents.execute();
+      const result = await LIST_AGENTS.execute();
       expect(result).toContain('[main] Main');
     });
   });
 
-  describe('recallKnowledge', () => {
+  describe('RECALL_KNOWLEDGE', () => {
     it('should return search results from memory', async () => {
-      const result = await recallKnowledge.execute({
+      const result = await RECALL_KNOWLEDGE.execute({
         userId: 'user-1',
         query: 'test',
         category: 'tactical_lesson',
@@ -110,22 +110,22 @@ describe('knowledge tools', () => {
     });
   });
 
-  describe('manageAgentTools', () => {
+  describe('MANAGE_AGENT_TOOLS', () => {
     it('should update agent tools in DDB', async () => {
       ddbMock.on(PutCommand).resolves({});
 
-      const result = await manageAgentTools.execute({ agentId: 'main', toolNames: ['tool1'] });
+      const result = await MANAGE_AGENT_TOOLS.execute({ agentId: 'main', toolNames: ['tool1'] });
 
       expect(result).toContain('Successfully updated tools');
       expect(ddbMock.calls()).toHaveLength(1);
     });
   });
 
-  describe('dispatchTask', () => {
+  describe('DISPATCH_TASK', () => {
     it('should branch trace and dispatch task via EventBridge', async () => {
       ebMock.on(PutEventsCommand).resolves({});
 
-      const result = await dispatchTask.execute({
+      const result = await DISPATCH_TASK.execute({
         agentId: 'coder',
         userId: 'user-1',
         task: 'build something',
@@ -148,18 +148,18 @@ describe('knowledge tools', () => {
     });
   });
 
-  describe('manageGap', () => {
+  describe('MANAGE_GAP', () => {
     it('should update gap status in memory', async () => {
-      const result = await manageGap.execute({ gapId: 'gap-1', status: GapStatus.PLANNED });
+      const result = await MANAGE_GAP.execute({ gapId: 'gap-1', status: GapStatus.PLANNED });
       expect(result).toContain('Successfully updated gap gap-1 to PLANNED');
       expect(mocks.updateGapStatus).toHaveBeenCalledWith('gap-1', GapStatus.PLANNED);
     });
   });
 
-  describe('saveMemory', () => {
+  describe('SAVE_MEMORY', () => {
     // Renamed from saveKnowledge
     it('should save user preference to memory', async () => {
-      const result = await saveMemory.execute({
+      const result = await SAVE_MEMORY.execute({
         userId: 'user-1',
         content: 'likes coffee',
         category: 'user_preference',
@@ -174,7 +174,7 @@ describe('knowledge tools', () => {
     });
 
     it('should save general knowledge as system memory', async () => {
-      const result = await saveMemory.execute({
+      const result = await SAVE_MEMORY.execute({
         userId: 'user-1',
         content: 'new fact',
         category: 'system_knowledge',
@@ -189,10 +189,10 @@ describe('knowledge tools', () => {
     });
   });
 
-  describe('pruneMemory', () => {
+  describe('PRUNE_MEMORY', () => {
     it('should permanently delete a memory item from DDB', async () => {
-      const { pruneMemory } = await import('./knowledge-storage');
-      const result = await pruneMemory.execute({
+      const { PRUNE_MEMORY } = await import('./knowledge-storage');
+      const result = await PRUNE_MEMORY.execute({
         partitionKey: 'LESSON#user-1',
         timestamp: 123456,
       });
@@ -205,8 +205,8 @@ describe('knowledge tools', () => {
     });
 
     it('should fail if partitionKey or timestamp is missing', async () => {
-      const { pruneMemory } = await import('./knowledge-storage');
-      const result = await pruneMemory.execute({
+      const { PRUNE_MEMORY } = await import('./knowledge-storage');
+      const result = await PRUNE_MEMORY.execute({
         partitionKey: 'LESSON#user-1',
       });
 

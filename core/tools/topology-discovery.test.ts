@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { inspectTopology } from './topology-discovery';
+import { INSPECT_TOPOLOGY } from './topology-discovery';
 import { discoverSystemTopology, Topology } from '../lib/utils/topology';
 
 vi.mock('../lib/utils/topology', () => ({
   discoverSystemTopology: vi.fn(),
 }));
 
-describe('inspectTopology tool', () => {
+describe('INSPECT_TOPOLOGY tool', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -23,7 +23,7 @@ describe('inspectTopology tool', () => {
     vi.mocked(discoverSystemTopology).mockResolvedValue(mockTopology as unknown as Topology);
     // Actually, I'll just use @ts-expect-error for the one place I really need a mock that doesn't perfectly match.
 
-    const result = await inspectTopology.execute();
+    const result = await INSPECT_TOPOLOGY.execute();
     const parsed = JSON.parse(result);
 
     expect(parsed.nodes).toHaveLength(2);
@@ -35,7 +35,7 @@ describe('inspectTopology tool', () => {
   it('should handle errors gracefully', async () => {
     vi.mocked(discoverSystemTopology).mockRejectedValue(new Error('Discovery Failed'));
 
-    const result = await inspectTopology.execute();
+    const result = await INSPECT_TOPOLOGY.execute();
     expect(result).toContain('FAILED_TO_DISCOVER_TOPOLOGY');
     expect(result).toContain('Discovery Failed');
   });

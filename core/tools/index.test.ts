@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { tools, getToolDefinitions, getAgentTools } from './index';
+import { TOOLS, getToolDefinitions, getAgentTools } from './index';
 import { IAgentConfig } from '../lib/types/index';
 
 vi.mock('../lib/registry', () => ({
@@ -16,10 +16,10 @@ vi.mock('../lib/mcp', () => ({
 
 describe('tools', () => {
   it('should have switchModel tool defined', () => {
-    expect(tools.switchModel).toBeDefined();
-    expect(tools.switchModel.name).toBe('switchModel');
-    expect(tools.switchModel.description).toBeDefined();
-    expect(tools.switchModel.execute).toBeDefined();
+    expect(TOOLS.SWITCH_MODEL).toBeDefined();
+    expect(TOOLS.SWITCH_MODEL.name).toBe('switchModel');
+    expect(TOOLS.SWITCH_MODEL.description).toBeDefined();
+    expect(TOOLS.SWITCH_MODEL.execute).toBeDefined();
   });
 });
 

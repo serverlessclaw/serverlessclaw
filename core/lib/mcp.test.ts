@@ -32,7 +32,9 @@ vi.mock('./mcp/client-manager', () => ({
 const mockConnect = vi.fn().mockResolvedValue(true);
 const mockListTools = vi
   .fn()
-  .mockResolvedValue({ tools: [{ name: 'test_tool', description: 'desc', inputSchema: {} }] });
+  .mockResolvedValue({
+    tools: [{ name: 'test_tool', description: 'desc', inputSchema: {} }],
+  });
 const mockCallTool = vi.fn().mockResolvedValue({ content: [] });
 
 vi.mock('@modelcontextprotocol/sdk/client/index.js', () => ({
@@ -64,9 +66,11 @@ describe('MCPBridge', () => {
     });
 
     const mockClient = {
-      listTools: vi.fn().mockResolvedValue({
-        tools: [{ name: 'test_tool', description: 'desc', inputSchema: {} }],
-      }),
+      listTools: vi
+        .fn()
+        .mockResolvedValue({
+          tools: [{ name: 'test_tool', description: 'desc', inputSchema: {} }],
+        }),
     };
     vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
 
@@ -77,7 +81,11 @@ describe('MCPBridge', () => {
 
     // Verify MCPClientManager.connect was called only for srv1
     expect(MCPClientManager.connect).toHaveBeenCalledTimes(1);
-    expect(MCPClientManager.connect).toHaveBeenCalledWith('srv1', expect.any(String), undefined);
+    expect(MCPClientManager.connect).toHaveBeenCalledWith(
+      'srv1',
+      expect.any(String),
+      undefined
+    );
   });
 
   it('should load all servers if no requestedTools provided', async () => {
@@ -88,9 +96,11 @@ describe('MCPBridge', () => {
     });
 
     const mockClient = {
-      listTools: vi.fn().mockResolvedValue({
-        tools: [{ name: 'test_tool', description: 'desc', inputSchema: {} }],
-      }),
+      listTools: vi
+        .fn()
+        .mockResolvedValue({
+          tools: [{ name: 'test_tool', description: 'desc', inputSchema: {} }],
+        }),
     };
     vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
 
@@ -124,6 +134,6 @@ describe('MCPBridge', () => {
 
     // Execution should be a placeholder
     const result = await tools[0].execute({});
-    expect(result).toContain('managed');
+    expect(result).toContain('Managed');
   });
 });
