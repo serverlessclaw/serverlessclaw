@@ -47,14 +47,14 @@ export const LIST_SYSTEM_CONFIGS = {
   ...toolDefinitions.listSystemConfigs,
   execute: async (): Promise<string> => {
     try {
-      const { docClient } = await import('../lib/registry/config');
+      const { defaultDocClient } = await import('../lib/registry/config');
       const { ConfigTable } = Resource as unknown as Record<string, { name: string }>;
 
       if (!ConfigTable?.name) {
         return 'ConfigTable not linked. Unable to list configurations.';
       }
 
-      const { Items } = await docClient.send(
+      const { Items } = await defaultDocClient.send(
         new ScanCommand({
           TableName: ConfigTable.name,
         })
@@ -64,9 +64,9 @@ export const LIST_SYSTEM_CONFIGS = {
         return 'No system configurations found.';
       }
 
-      const configMap = Items.map((item) => `- ${item.key}: ${JSON.stringify(item.value)}`).join(
-        '\n'
-      );
+      const configMap = Items.map(
+        (item: Record<string, any>) => `- ${item.key}: ${JSON.stringify(item.value)}`
+      ).join('\n');
 
       return `[SYSTEM_CONFIGURATIONS]\n${configMap}`;
     } catch (e: unknown) {

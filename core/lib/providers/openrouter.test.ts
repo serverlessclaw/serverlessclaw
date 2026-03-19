@@ -126,7 +126,7 @@ describe('OpenRouterProvider', () => {
       {
         name: 'test_tool',
         description: 'test',
-        parameters: { type: 'object', properties: {} },
+        parameters: { type: 'object' as const, properties: {} },
         execute: async () => 'done',
       },
     ];

@@ -194,14 +194,6 @@ export const TOOLS = {
   fileUpload: 'fileUpload',
   fileDelete: 'fileDelete',
   listUploadedFiles: 'listUploadedFiles',
-  runShellCommand: 'runShellCommand',
-  stageChanges: 'stageChanges',
-  triggerDeployment: 'triggerDeployment',
-  validateCode: 'validateCode',
-  triggerRollback: 'triggerRollback',
-  queryStats: 'queryStats',
-  runTests: 'runTests',
-  inspectTrace: 'inspectTrace',
 } as const;
 
 /**
@@ -247,6 +239,8 @@ export const PROTECTED_FILES = [
 export const STORAGE = {
   MAX_FILE_SIZE_MB: 10,
   ALLOWED_EXTENSIONS: ['.ts', '.tsx', '.js', '.jsx', '.json', '.md', '.txt', '.yml', '.yaml'],
+  TMP_STAGING_ZIP: '/tmp/staging.zip',
+  STAGING_ZIP: 'staging.zip',
 } as const;
 
 /**

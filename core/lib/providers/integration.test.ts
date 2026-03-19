@@ -125,7 +125,7 @@ describe('Backend API Integration', () => {
     vi.spyOn(ContextManager, 'getManagedContext').mockResolvedValue({
       messages: [
         {
-          role: 'user' as any,
+          role: MessageRole.USER,
           content: 'See attached file',
           attachments: [
             {
@@ -137,7 +137,6 @@ describe('Backend API Integration', () => {
           ],
         },
       ],
-      totalTokens: 100,
     });
 
     // 3. Process
@@ -181,7 +180,7 @@ describe('Backend API Integration', () => {
     const calls = mockRunLoop.mock.calls[0];
     const receivedMessages = calls[0] as Message[];
 
-    const userMessage = receivedMessages.find((m) => m.role === 'user')!;
+    const userMessage = receivedMessages.find((m) => m.role === MessageRole.USER)!;
     expect(userMessage).toBeDefined();
     expect(userMessage.attachments).toBeDefined();
     expect(userMessage.attachments![0]).toMatchObject({
