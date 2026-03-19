@@ -41,9 +41,9 @@
   },
   "tools": {
     "pattern-detect": {
-      "minSimilarity": 0.8,
+      "minSimilarity": 0.6,
       "minLines": 5,
-      "minSharedTokens": 10,
+      "minSharedTokens": 5,
       "approx": true,
       "batchSize": 300,
       "maxCandidatesPerBlock": 500,
