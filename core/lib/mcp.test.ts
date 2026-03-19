@@ -64,7 +64,11 @@ describe('MCPBridge', () => {
     });
 
     const mockClient = {
-      listTools: vi.fn().mockResolvedValue({ tools: [{ name: 'test_tool', description: 'desc', inputSchema: {} }] }),
+      listTools: vi
+        .fn()
+        .mockResolvedValue({
+          tools: [{ name: 'test_tool', description: 'desc', inputSchema: {} }],
+        }),
     };
     vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
 
@@ -86,7 +90,11 @@ describe('MCPBridge', () => {
     });
 
     const mockClient = {
-      listTools: vi.fn().mockResolvedValue({ tools: [{ name: 'test_tool', description: 'desc', inputSchema: {} }] }),
+      listTools: vi
+        .fn()
+        .mockResolvedValue({
+          tools: [{ name: 'test_tool', description: 'desc', inputSchema: {} }],
+        }),
     };
     vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
 
