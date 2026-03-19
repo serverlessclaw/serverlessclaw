@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { INSPECT_TOPOLOGY } from './topology-discovery';
 import { discoverSystemTopology } from '../lib/utils/topology';
+import { Topology } from '../lib/types/index';
 
 vi.mock('../lib/utils/topology', () => ({
   discoverSystemTopology: vi.fn(),

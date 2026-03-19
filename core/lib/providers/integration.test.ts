@@ -137,6 +137,7 @@ describe('Backend API Integration', () => {
           ],
         },
       ],
+      tokenEstimate: 100,
     });
 
     // 3. Process
