@@ -96,7 +96,6 @@ describe('EventHandler - Clarification', () => {
       },
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await handler(event as any, {} as any);
 
     const { EventBridgeClient } = await import('@aws-sdk/client-eventbridge');
@@ -134,7 +133,6 @@ describe('EventHandler - Clarification', () => {
       },
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await handler(event as any, {} as any);
 
     const { sendOutboundMessage } = await import('../lib/outbound');

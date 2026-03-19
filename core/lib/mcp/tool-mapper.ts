@@ -8,6 +8,7 @@ import { MCPClientManager } from './client-manager';
  * Maps raw MCP tools to ServerlessClaw ITool interface.
  */
 export class MCPToolMapper {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static mapTools(serverName: string, client: Client, rawTools: any[]): ITool[] {
     return rawTools.map((mcpTool) => {
       const isFilesystemTool =
@@ -48,12 +49,12 @@ export class MCPToolMapper {
               arguments: toolArgs,
             });
             return JSON.stringify(result.content);
-          } catch (execError: any) {
+          } catch (execError: unknown) {
             logger.error(
               `MCP Tool Execution Error (${serverName}:${mcpTool.name}):`,
-              execError.message
+              (execError as Error).message
             );
-            if (execError?.message?.includes('Connection closed')) {
+            if ((execError as Error)?.message?.includes('Connection closed')) {
               MCPClientManager.deleteClient(serverName);
             }
             throw execError;

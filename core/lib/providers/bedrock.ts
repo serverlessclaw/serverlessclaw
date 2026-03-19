@@ -250,6 +250,7 @@ export class BedrockProvider implements IProvider {
             },
           }
         : {}),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
 
     const response = await client.send(command);

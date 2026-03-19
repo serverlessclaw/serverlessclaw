@@ -65,7 +65,7 @@ export const LIST_SYSTEM_CONFIGS = {
       }
 
       const configMap = Items.map(
-        (item: Record<string, any>) => `- ${item.key}: ${JSON.stringify(item.value)}`
+        (item: Record<string, unknown>) => `- ${item.key}: ${JSON.stringify(item.value)}`
       ).join('\n');
 
       return `[SYSTEM_CONFIGURATIONS]\n${configMap}`;

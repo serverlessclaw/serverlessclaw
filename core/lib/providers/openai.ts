@@ -165,7 +165,7 @@ export class OpenAIProvider implements IProvider {
                     type: OPENAI.MCP_TYPE,
                     name: t.name,
                     connector_id: t.connector_id,
-                  } as any;
+                  };
                 }
                 if (t.type && t.type !== OPENAI.FUNCTION_TYPE) {
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any

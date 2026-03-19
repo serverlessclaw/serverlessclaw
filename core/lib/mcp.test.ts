@@ -57,7 +57,6 @@ describe('MCPBridge', () => {
   });
 
   it('should lazy load ONLY requested servers', async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (AgentRegistry.getRawConfig as any).mockResolvedValue({
       srv1: { command: 'npx srv1' },
       srv2: { command: 'npx srv2' },
@@ -81,7 +80,6 @@ describe('MCPBridge', () => {
   });
 
   it('should load all servers if no requestedTools provided', async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (AgentRegistry.getRawConfig as any).mockResolvedValue({
       srv1: { command: 'npx srv1' },
       srv2: { command: 'npx srv2' },
@@ -103,7 +101,6 @@ describe('MCPBridge', () => {
   });
 
   it('should correctly handle managed connectors without spawning local processes', async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (AgentRegistry.getRawConfig as any).mockResolvedValue({
       'google-drive': {
         type: 'managed',

@@ -98,7 +98,6 @@ describe('EventHandler', () => {
 
       mockProcess.mockResolvedValue({ responseText: 'Rebooting component...' });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await handler(event as any, {} as any);
 
       // Verify Agent.process was called with triage prompt
@@ -138,7 +137,6 @@ describe('EventHandler', () => {
 
       mockProcess.mockResolvedValue({ responseText: 'TASK_PAUSED: Need permission' });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await handler(event as any, {} as any);
 
       const { sendOutboundMessage } = await import('../lib/outbound');
@@ -162,7 +160,6 @@ describe('EventHandler', () => {
 
       mockProcess.mockResolvedValue({ responseText: 'Investigating failure...' });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await handler(event as any, {} as any);
 
       // Verify Agent.process was called
@@ -203,7 +200,6 @@ describe('EventHandler', () => {
         },
       };
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await handler(event as any, {} as any);
 
       const { sendOutboundMessage } = await import('../lib/outbound');
@@ -249,7 +245,6 @@ describe('EventHandler', () => {
         },
       };
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await handler(event as any, {} as any);
 
       const { EventBridgeClient } = await import('@aws-sdk/client-eventbridge');
@@ -281,7 +276,6 @@ describe('EventHandler', () => {
         },
       };
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await handler(event as any, {} as any);
 
       const { EventBridgeClient } = await import('@aws-sdk/client-eventbridge');
@@ -313,7 +307,6 @@ describe('EventHandler', () => {
         },
       };
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await handler(event as any, {} as any);
 
       const { sendOutboundMessage } = await import('../lib/outbound');
@@ -340,7 +333,6 @@ describe('EventHandler', () => {
         },
       };
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await handler(event as any, {} as any);
 
       const { sendOutboundMessage } = await import('../lib/outbound');

@@ -79,7 +79,6 @@ describe('Autonomous Loop Closure', () => {
       },
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await eventHandler(mockEvent as any, { getRemainingTimeInMillis: () => 300000 } as any);
 
     const ebCalls = ebMock.commandCalls(PutEventsCommand);
@@ -109,7 +108,6 @@ describe('Autonomous Loop Closure', () => {
     // Mock the tracer start call
     ddbMock.on(PutCommand).resolves({});
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await eventHandler(mockEvent as any, { getRemainingTimeInMillis: () => 300000 } as any);
 
     const ebCalls = ebMock.commandCalls(PutEventsCommand);

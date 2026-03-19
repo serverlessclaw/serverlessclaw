@@ -21,19 +21,16 @@ vi.mock('@aws-sdk/lib-dynamodb', () => ({
   },
   PutCommand: class {
     constructor(public input: unknown) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (this as any).name = 'PutCommand';
     }
   },
   UpdateCommand: class {
     constructor(public input: unknown) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (this as any).name = 'UpdateCommand';
     }
   },
   QueryCommand: class {
     constructor(public input: unknown) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (this as any).name = 'QueryCommand';
     }
   },

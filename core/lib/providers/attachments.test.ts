@@ -101,7 +101,7 @@ describe('Provider Attachments Mapping', () => {
 
       expect(mockCreateResponse).toHaveBeenCalled();
       const input = mockCreateResponse.mock.calls[0][0].input;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       const userMessage = input.find((i: any) => i.type === 'message' && i.role === 'user');
 
       expect(userMessage.content).toHaveLength(3); // text + image + file
@@ -121,7 +121,7 @@ describe('Provider Attachments Mapping', () => {
   describe('OpenRouterProvider', () => {
     it('should correctly map images and files for OpenRouter API', async () => {
       const provider = new OpenRouterProvider(OpenRouterModel.GEMINI_3_FLASH);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       (fetch as any).mockResolvedValue({
         ok: true,
         json: async () => ({
@@ -149,7 +149,7 @@ describe('Provider Attachments Mapping', () => {
       await provider.call(messages);
 
       expect(fetch).toHaveBeenCalled();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       const body = JSON.parse((fetch as any).mock.calls[0][1].body);
       const userMessage = body.messages[0];
 

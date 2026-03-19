@@ -60,7 +60,6 @@ vi.mock('@aws-sdk/client-eventbridge', () => ({
     send = vi.fn().mockResolvedValue({});
   },
   PutEventsCommand: class {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     constructor(public input: any) {}
   },
 }));
@@ -133,7 +132,6 @@ describe('Cognition Reflector Handler', () => {
       },
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await handler(event as any, {} as any);
 
     // Verify memory updates
@@ -156,7 +154,6 @@ describe('Cognition Reflector Handler', () => {
       },
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await handler(event as any, {} as any);
     expect(result).toBe('I updated the facts for you.');
 
@@ -187,7 +184,6 @@ describe('Cognition Reflector Handler', () => {
       },
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await handler(event as any, {} as any);
 
     expect(capturedOptions.profile).toBe('standard');
