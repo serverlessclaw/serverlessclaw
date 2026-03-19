@@ -64,7 +64,7 @@ The **OpenAIProvider** utilizes the modern `Responses` API for all 2026-grade re
 
 - **Condition**: Uses `/v1/responses` for all supported models (GPT-5 family).
 - **Behavior**: Ensures consistent support for `reasoning_effort`, strict tool use, and flattened message items.
-- **Mapping**: Our internal `ReasoningProfile` maps to OpenAI's native `ReasoningEffort` levels (`low`, `medium`, `high`, `xhigh`). `gpt-5-mini` specifically supports `xhigh` reasoning effort.
+- **Mapping**: Our internal `ReasoningProfile` maps to OpenAI's native `ReasoningEffort` levels (`low`, `medium`, `high`, `xhigh`). `gpt-5.4-mini` specifically supports `xhigh` reasoning effort.
 
 ### 2. AWS Bedrock (Thinking Budgets)
 The **BedrockProvider** utilizes the `ConverseCommand` and fine-tunes Claude 4.6 (Sonnet, Haiku, Opus) "thinking" budgets.

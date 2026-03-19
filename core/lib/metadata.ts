@@ -24,7 +24,7 @@ export const SYSTEM_CONFIG_METADATA: Record<string, ConfigOptionMetadata> = {
     label: 'LLM Model',
     description: 'The specific model ID used for system-wide reasoning.',
     implication:
-      'Advanced models (GPT-5.4) improve coding quality; smaller models (GPT-5-mini) reduce cost and latency.',
+      'Advanced models (GPT-5.4) improve coding quality; smaller models (gpt-5.4-mini) reduce cost and latency.',
     default: 'gpt-5.4',
   },
   deploy_limit: {

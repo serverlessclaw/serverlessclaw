@@ -30,7 +30,7 @@ This document outlines the system-wide configuration keys available in the `Conf
   - **Turning OFF**: Maximum autonomy. Agents retain all tools in their registry, allowing faster execution but potentially leading to tool selection confusion in complex prompts.
 
 ### `active_provider` / `active_model`
-- **Default**: `openai` / `gpt-5-mini`
+- **Default**: `openai` / `gpt-5.4-mini`
 - **Purpose**: Hot-swapping the primary LLM backend for all system nodes.
 - **Implications**:
   - **Bedrock (Claude)**: Better for complex coding tasks; higher latency in some regions.

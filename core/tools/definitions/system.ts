@@ -34,7 +34,7 @@ export const systemTools: Record<string, IToolDefinition> = {
         model: {
           type: 'string',
           description:
-            'The specific model ID to use (e.g. gpt-5-mini, google/gemini-3-flash-preview).',
+            'The specific model ID to use (e.g. gpt-5.4-mini, google/gemini-3-flash-preview).',
         },
       },
       required: ['provider', 'model'],

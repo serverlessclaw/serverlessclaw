@@ -13,7 +13,7 @@ import Card from '@/components/ui/Card';
 const PROVIDERS = {
   openai: {
     label: 'OpenAI (Native)',
-    models: ['gpt-5.4', 'gpt-5-mini'],
+    models: ['gpt-5.4', 'gpt-5.4-mini'],
   },
   bedrock: {
     label: 'AWS Bedrock (Native)',
