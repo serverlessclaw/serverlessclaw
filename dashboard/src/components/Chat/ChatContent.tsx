@@ -218,6 +218,23 @@ export default function ChatContent() {
       });
 
       const data = await response.json();
+      
+      // Handle error responses from the API
+      if (!response.ok || data.error) {
+        const errorContent = data.details || data.error || AGENT_ERRORS.PROCESS_FAILURE;
+        console.error('Chat API error:', data);
+        if (currentSessionId === activeSessionRef.current) {
+          setMessages(prev => [...prev, { 
+            role: 'assistant', 
+            content: errorContent, 
+            agentName: 'SystemGuard',
+            isError: true 
+          }]);
+        }
+        fetchSessions();
+        return;
+      }
+      
       if (currentSessionId === activeSessionRef.current) {
         setMessages(prev => {
           if (isDuplicate(seenMessageIds.current, prev, data.messageId, data.reply)) return prev;

@@ -10,6 +10,7 @@ export interface ChatMessage {
   content: string;
   messageId?: string;
   agentName?: string;
+  isError?: boolean;
   attachments?: Array<{
     type: 'image' | 'file';
     url?: string;

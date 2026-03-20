@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, Bot, Terminal, File, Loader2 } from 'lucide-react';
+import { User, Bot, Terminal, File, Loader2, AlertTriangle } from 'lucide-react';
 import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
 import { ChatMessage } from './types';
@@ -30,25 +30,39 @@ export function ChatMessageList({ messages, isLoading, scrollRef }: ChatMessageL
           </div>
       )}
 
-      {messages.map((m, i) => (
+      {messages.map((m, i) => {
+        const isError = m.isError;
+        const errorColor = 'text-red-400';
+        const errorBorder = 'border-red-500/30';
+        const errorBg = 'bg-red-500/5';
+
+        return (
         <div key={i} className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
           <div className={`flex gap-3 max-w-[85%] ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
             <div className={`w-8 h-8 rounded shrink-0 flex items-center justify-center border ${
-              m.role === 'user' ? 'bg-white/5 border-white/10 text-white/100' : 'bg-cyber-green/10 border-cyber-green/30 text-cyber-green'
+              m.role === 'user' 
+                ? 'bg-white/5 border-white/10 text-white/100' 
+                : isError
+                  ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                  : 'bg-cyber-green/10 border-cyber-green/30 text-cyber-green'
             }`}>
-              {m.role === 'user' ? <User size={16} /> : <Bot size={16} />}
+              {m.role === 'user' ? <User size={16} /> : isError ? <AlertTriangle size={16} /> : <Bot size={16} />}
             </div>
             <div className="flex flex-col gap-1">
               {m.role === 'assistant' && m.agentName && (
                 <Typography variant="caption" weight="bold" color="primary" className="flex items-center gap-1 pl-1">
-                  <span className="w-1 h-1 rounded-full bg-cyber-green/60 inline-block" />
+                  <span className={`w-1 h-1 rounded-full inline-block ${isError ? 'bg-red-400/60' : 'bg-cyber-green/60'}`} />
                   {m.agentName}
                 </Typography>
               )}
               <div className="flex flex-col gap-2">
                 {m.content && (
                   <Card variant="glass" padding="sm" className={`rounded-lg ${
-                    m.role === 'user' ? 'bg-white/5 text-white/90 border border-white/10' : 'text-cyber-green/90 border-cyber-green/20 shadow-[0_0_20px_rgba(0,255,145,0.05)]'
+                    m.role === 'user' 
+                      ? 'bg-white/5 text-white/90 border border-white/10' 
+                      : isError
+                        ? `${errorBg} ${errorBorder} text-red-300 shadow-[0_0_20px_rgba(239,68,68,0.1)]`
+                        : 'text-cyber-green/90 border-cyber-green/20 shadow-[0_0_20px_rgba(0,255,145,0.05)]'
                   }`}>
                     <ReactMarkdown 
                       remarkPlugins={[remarkGfm]}

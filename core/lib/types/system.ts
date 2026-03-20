@@ -44,6 +44,10 @@ export interface SSTResource {
   OpenRouterApiKey: { value: string };
   /** The AWS region where resources are deployed. */
   AwsRegion: { value: string };
+  /** Secret: Active LLM provider configuration. */
+  ActiveProvider: { value: string };
+  /** Secret: Active LLM model configuration. */
+  ActiveModel: { value: string };
 }
 
 /**
