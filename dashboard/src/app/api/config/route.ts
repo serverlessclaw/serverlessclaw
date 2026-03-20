@@ -8,7 +8,16 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET() {
   try {
-    const realtimeUrl = (Resource as any).RealtimeBus?.url ?? null;
+    const realtime = (Resource as any).RealtimeBus;
+    const rawRealtimeUrl = realtime?.url ?? realtime?.endpoint ?? null;
+    const realtimeUrl =
+      typeof rawRealtimeUrl === 'string'
+        ? rawRealtimeUrl.startsWith('wss://')
+          ? rawRealtimeUrl
+          : rawRealtimeUrl.startsWith('https://')
+            ? rawRealtimeUrl.replace('https://', 'wss://')
+            : `wss://${rawRealtimeUrl}`
+        : null;
 
     if (!realtimeUrl) {
       console.warn('[Config API] RealtimeBus is not linked; realtime URL is unavailable');
