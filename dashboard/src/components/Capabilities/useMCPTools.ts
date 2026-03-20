@@ -26,17 +26,17 @@ export function useMCPTools(initialTools: MCPTool[]): UseMCPToolsResult {
 
   const discoverTools = useCallback(async () => {
     // Only discover if we have placeholder tools (skipConnection mode)
-    const hasPlaceholders = initialTools.some(t => 
+    const placeholderTools = initialTools.filter(t => 
       t.isExternal && t.name.endsWith('_tools')
     );
     
-    if (!hasPlaceholders) {
+    if (placeholderTools.length === 0) {
       // Already have real tools, no need to discover
       return;
     }
 
     setIsLoading(true);
-    setTotalCount(initialTools.filter(t => t.isExternal).length);
+    setTotalCount(placeholderTools.length);
 
     try {
       // Fetch real tools from API
@@ -70,11 +70,11 @@ export function useMCPTools(initialTools: MCPTool[]): UseMCPToolsResult {
 
   // Auto-discover on mount if we have placeholders
   useEffect(() => {
-    const hasPlaceholders = initialTools.some(t => 
+    const placeholderTools = initialTools.filter(t => 
       t.isExternal && t.name.endsWith('_tools')
     );
     
-    if (hasPlaceholders) {
+    if (placeholderTools.length > 0) {
       // Delay slightly to let page render first
       const timer = setTimeout(() => {
         discoverTools();
