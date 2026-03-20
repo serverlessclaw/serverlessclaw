@@ -106,7 +106,7 @@ export default function AgentsPage() {
     try {
       const toolsRes = await fetch(`/api/tools${forceRefresh ? '?refresh=true' : ''}`);
       const toolsData = await toolsRes.json();
-      setAllTools(toolsData);
+      setAllTools(toolsData.tools || []);
       if (forceRefresh) toast.success('Tool cache synchronized');
     } catch (err) {
       console.error('Failed to load tools:', err);
