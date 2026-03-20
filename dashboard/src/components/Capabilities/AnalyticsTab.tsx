@@ -69,7 +69,20 @@ export default function AnalyticsTab({
         </Card>
         <Card variant="glass" padding="lg" className="border-purple-500/20">
           <Typography variant="mono" color="muted" className="text-[10px] tracking-widest opacity-40 mb-2 block">Bridge efficiency</Typography>
-          <Typography variant="h2" color="white" weight="black" className="text-4xl tracking-tighter">{allTools.filter(t => t.isExternal && (t.usage?.count || 0) > 0).length} / {allTools.filter(t => t.isExternal).length}</Typography>
+          <div className="space-y-2">
+            <div className="flex items-baseline gap-2">
+              <Typography variant="h2" color="white" weight="black" className="text-2xl tracking-tighter">
+                {new Set(allTools.filter(t => t.isExternal && (t.usage?.count || 0) > 0).map(t => t.name.split('_')[0])).size}
+              </Typography>
+              <Typography variant="mono" color="muted" className="text-[10px]">/ {new Set(allTools.filter(t => t.isExternal).map(t => t.name.split('_')[0])).size} servers</Typography>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <Typography variant="h2" color="purple-400" weight="black" className="text-2xl tracking-tighter">
+                {allTools.filter(t => t.isExternal && (t.usage?.count || 0) > 0).length}
+              </Typography>
+              <Typography variant="mono" color="muted" className="text-[10px]">/ {allTools.filter(t => t.isExternal).length} tools</Typography>
+            </div>
+          </div>
         </Card>
       </div>
 
