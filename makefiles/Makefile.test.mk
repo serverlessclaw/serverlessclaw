@@ -11,6 +11,7 @@ verify: ## Verify the deployment health. Usage: make verify URL=https://...
 	@curl -s --fail $(URL)/health > /dev/null || { $(call log_error,Health check failed at $(URL)); exit 1; }
 	@$(call log_success,Deployment at $(URL) is healthy)
 
+
 test: ## Run unit tests with vitest
 	@$(call log_step,Running unit tests...)
 	@$(PNPM) run test

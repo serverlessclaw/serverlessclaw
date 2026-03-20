@@ -26,4 +26,7 @@ dashboard/.open-next/
 dashboard/out/
 dashboard/build/
 dashboard/.sst/
-dashboard/sst-env.d.ts
+
+# SST auto-generated type definitions (all locations)
+sst-env.d.ts
+**/sst-env.d.ts
