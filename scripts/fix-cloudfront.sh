@@ -68,9 +68,11 @@ CF_FUNCTION_ARN=$(aws cloudfront list-functions \
 
 # 6. Update distribution with cache behaviors for Next.js
 echo "[INFO] Adding Next.js-specific cache behaviors..."
+
+# First, add the cache behaviors
 CONFIG=$(echo "$CONFIG" | jq \
   --arg cf_func "$CF_FUNCTION_ARN" \
-  '.CacheBehaviors += [
+  '.CacheBehaviors.Items += [
     {
       "PathPattern": "/_next/static/*",
       "ViewerProtocolPolicy": "allow-all",
@@ -124,6 +126,9 @@ CONFIG=$(echo "$CONFIG" | jq \
       "MaxTTL": 604800
     }
   ]')
+
+# Then, update the Quantity to match the Items array length
+CONFIG=$(echo "$CONFIG" | jq '.CacheBehaviors.Quantity = (.CacheBehaviors.Items | length)')
 
 # 7. Update the distribution configuration in AWS
 echo "[INFO] Updating CloudFront distribution..."
