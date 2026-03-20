@@ -46,18 +46,24 @@ export function useMCPTools(initialTools: MCPTool[]): UseMCPToolsResult {
       const data = await response.json();
       const realTools = data.tools.filter((t: MCPTool) => t.isExternal);
       
+      // Only count MCP server tools for the counter
+      const mcpServerNames = placeholderTools.map(t => t.name.replace('_tools', ''));
+      const mcpServerTools = realTools.filter((t: MCPTool) => 
+        mcpServerNames.some(name => t.name.startsWith(name + '_'))
+      );
+      
       // Simulate progressive discovery for UX
-      for (let i = 0; i < realTools.length; i++) {
+      for (let i = 0; i < mcpServerTools.length; i++) {
         await new Promise(resolve => setTimeout(resolve, 200));
         setDiscoveredCount(i + 1);
         setMcpTools(prev => {
           const localTools = prev.filter(t => !t.isExternal);
-          const discoveredSoFar = realTools.slice(0, i + 1);
+          const discoveredSoFar = mcpServerTools.slice(0, i + 1);
           return [...localTools, ...discoveredSoFar];
         });
       }
 
-      toast.success(`Discovered ${realTools.length} MCP tools`);
+      toast.success(`Discovered ${mcpServerTools.length} MCP tools`);
     } catch (error) {
       console.error('Error discovering MCP tools:', error);
       toast.error('Failed to discover MCP tools');
