@@ -18,6 +18,8 @@ interface CyberSelectProps {
   disabled?: boolean;
   className?: string;
   name?: string;
+  size?: 'sm' | 'md' | 'lg';
+  compact?: boolean;
 }
 
 export default function CyberSelect({
@@ -28,6 +30,8 @@ export default function CyberSelect({
   disabled = false,
   className = '',
   name,
+  size = 'md',
+  compact = false,
 }: CyberSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -45,13 +49,14 @@ export default function CyberSelect({
   }, []);
 
   return (
-    <div ref={containerRef} className={`relative min-w-[200px] ${className}`}>
+    <div ref={containerRef} className={`relative ${compact ? 'min-w-[120px]' : 'min-w-[200px]'} ${className}`}>
       {/* Hidden input for form submission compatibility */}
       {name && <input type="hidden" name={name} value={value} />}
 
       <Button
         type="button"
         variant="outline"
+        size={size}
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={`w-full justify-between font-mono bg-black/40

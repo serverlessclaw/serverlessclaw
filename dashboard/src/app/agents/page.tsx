@@ -21,6 +21,7 @@ interface AgentConfig {
   systemPrompt: string;
   provider?: string;
   model?: string;
+  reasoningProfile?: string;
   enabled: boolean;
   tools: string[];
   isBackbone?: boolean;
@@ -40,6 +41,14 @@ const PROVIDERS = {
     models: ['zhipu/glm-5', 'minimax/minimax-m2.7', 'google/gemini-3-flash-preview'],
   },
 };
+
+const REASONING_PROFILES = [
+  { value: '', label: 'INHERIT_SYSTEM_DEFAULT' },
+  { value: 'fast', label: 'Fast' },
+  { value: 'standard', label: 'Standard' },
+  { value: 'thinking', label: 'Thinking' },
+  { value: 'deep', label: 'Deep' },
+];
 
 /** AgentsPage — manages the Neural Agent Registry: configure agent personas, toggle tool scopes, and register new dynamic agents without redeploying. */
 export default function AgentsPage() {
@@ -143,6 +152,7 @@ export default function AgentsPage() {
           agent.systemPrompt !== initial.systemPrompt ||
           agent.model !== initial.model ||
           agent.provider !== initial.provider ||
+          agent.reasoningProfile !== initial.reasoningProfile ||
           agent.enabled !== initial.enabled
         );
       }).map(a => a.name ?? a.id);
@@ -416,7 +426,7 @@ export default function AgentsPage() {
                         <textarea
                           value={agent.systemPrompt}
                           onChange={(e) => updateAgent(agent.id, { systemPrompt: e.target.value })}
-                          className={`w-full bg-black/40 border border-white/10 rounded p-4 text-xs text-white/90 font-mono min-h-[280px] outline-none focus:border-${THEME.COLORS.INTEL}/40 transition-all leading-relaxed custom-scrollbar`}
+                          className={`w-full bg-black/40 border border-white/10 rounded p-4 text-xs text-white/90 font-mono min-h-[280px] lg:min-h-[360px] outline-none focus:border-${THEME.COLORS.INTEL}/40 transition-all leading-relaxed custom-scrollbar`}
                           placeholder="Enter the system instructions for this agent..."
                         />
                       )}
@@ -462,6 +472,16 @@ export default function AgentsPage() {
                               }
                               disabled={!agent.provider}
                               placeholder={agent.provider ? 'SELECT_MODEL' : 'SELECT_PROVIDER_FIRST'}
+                              className="w-full"
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Typography variant="mono" weight="bold" color="white" uppercase className="text-[9px] opacity-60">Reasoning Profile</Typography>
+                            <CyberSelect
+                              value={agent.reasoningProfile || ''}
+                              onChange={(val) => updateAgent(agent.id, { reasoningProfile: val })}
+                              options={REASONING_PROFILES}
                               className="w-full"
                             />
                           </div>
