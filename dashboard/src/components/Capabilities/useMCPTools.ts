@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 interface MCPTool {
   name: string;
   description: string;
-  usage: { count: number; lastUsed: number };
+  usage?: { count: number; lastUsed: number };
   isExternal: boolean;
 }
 

@@ -85,33 +85,35 @@ export class MCPBridge {
       await AgentRegistry.saveRawConfig('mcp_servers', finalConfig);
     }
 
-    for (const [name, config] of Object.entries(finalConfig)) {
+    const serverPromises = Object.entries(finalConfig).map(async ([name, config]) => {
       const needsThisServer =
         !requestedTools || requestedTools.some((t) => t === name || t.startsWith(`${name}_`));
-      if (!needsThisServer) continue;
+      if (!needsThisServer) return [];
 
       if (typeof config === 'object' && config.type === 'managed') {
-        allTools.push({
-          name: config.name ?? name,
-          description: config.description ?? `Managed tool for ${name}`,
-          parameters: config.parameters ?? { type: 'object', properties: {} },
-          connector_id: config.connector_id,
-          type: 'mcp',
-          execute: async () => `Managed tool (${name}) executed autonomously by provider.`,
-        });
-        continue;
+        return [
+          {
+            name: config.name ?? name,
+            description: config.description ?? `Managed tool for ${name}`,
+            parameters: config.parameters ?? { type: 'object' as const, properties: {} },
+            connector_id: config.connector_id,
+            type: 'mcp' as const,
+            execute: async () => `Managed tool (${name}) executed autonomously by provider.`,
+          },
+        ];
       }
 
       // When skipConnection is true, return placeholder definitions without connecting
       if (skipConnection) {
-        allTools.push({
-          name: `${name}_tools`,
-          description: `Tools from ${name} MCP server`,
-          parameters: { type: 'object', properties: {} },
-          type: 'mcp',
-          execute: async () => `MCP server ${name} placeholder`,
-        });
-        continue;
+        return [
+          {
+            name: `${name}_tools`,
+            description: `Tools from ${name} MCP server`,
+            parameters: { type: 'object' as const, properties: {} },
+            type: 'mcp' as const,
+            execute: async () => `MCP server ${name} placeholder`,
+          },
+        ];
       }
 
       let connectionString: string;
@@ -122,9 +124,13 @@ export class MCPBridge {
       else if (config.type === 'local' || !config.type) {
         connectionString = config.command;
         env = config.env;
-      } else continue;
+      } else return [];
 
-      const serverTools = await this.getToolsFromServer(name, connectionString, env);
+      return await this.getToolsFromServer(name, connectionString, env);
+    });
+
+    const results = await Promise.all(serverPromises);
+    for (const serverTools of results) {
       allTools.push(...serverTools);
     }
 

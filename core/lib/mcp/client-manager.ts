@@ -62,7 +62,7 @@ export class MCPClientManager {
         connectionString.includes(process.env.MCP_HUB_URL ?? '___none___');
       // Reduce timeout for local MCP servers to prevent dashboard timeouts
       // Local servers should start quickly or fail fast
-      const connectTimeout = isHub ? 5000 : 10000;
+      const connectTimeout = isHub ? 5000 : 30000;
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(
           () => reject(new Error(`MCP Connection timeout after ${connectTimeout}ms`)),
