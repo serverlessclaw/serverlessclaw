@@ -19,8 +19,7 @@ fi
 echo "Found Distribution ID: $DIST_ID"
 
 # 2. Identify Lambda Function URL for ClawCenter Server
-SERVER_URL=$(aws lambda get-function-url-config --function-name "serverlessclaw-$STAGE-ClawCenterServerApsoutheast2Function" --query "FunctionUrl" --output text 2>/dev/null || \
-             aws lambda list-functions --query "Functions[?contains(FunctionName, 'ClawCenterServer')].FunctionName" --output text | head -n 1 | xargs -I {} aws lambda get-function-url-config --function-name {} --query "FunctionUrl" --output text)
+SERVER_URL=$(aws lambda list-functions --query "Functions[?contains(FunctionName, '$APP_NAME-$STAGE-ClawCenterServer')].FunctionName" --output text | head -n 1 | xargs -I {} aws lambda get-function-url-config --function-name {} --query "FunctionUrl" --output text)
 
 if [ -z "$SERVER_URL" ] || [ "$SERVER_URL" == "None" ]; then
     echo "Error: Could not find Lambda Function URL for ClawCenter Server"
