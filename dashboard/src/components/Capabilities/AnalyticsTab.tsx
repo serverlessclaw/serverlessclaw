@@ -1,0 +1,213 @@
+'use client';
+
+import React from 'react';
+import { Activity, Cpu, Zap, Loader2 } from 'lucide-react';
+import Button from '../ui/Button';
+import Typography from '../ui/Typography';
+import Card from '../ui/Card';
+import Badge from '../ui/Badge';
+import CyberConfirm from '../CyberConfirm';
+import type { Tool } from '@/lib/types/ui';
+
+import { AgentConfig, ConfirmModalState } from './types';
+
+interface AnalyticsTabProps {
+  allTools: Tool[];
+  agents: AgentConfig[];
+  optimisticAgents: AgentConfig[];
+  setOptimisticAgents: React.Dispatch<React.SetStateAction<AgentConfig[]>>;
+  handleDetachTool: (agentId: string, toolName: string) => void;
+  confirmModal: ConfirmModalState;
+  setConfirmModal: React.Dispatch<React.SetStateAction<ConfirmModalState>>;
+  isPending: boolean;
+}
+
+export default function AnalyticsTab({ 
+  allTools, 
+  agents, 
+  optimisticAgents,
+  handleDetachTool,
+  confirmModal,
+  setConfirmModal,
+  isPending
+}: AnalyticsTabProps) {
+  const sortedByUsage = [...allTools].sort((a, b) => (b.usage?.count ?? 0) - (a.usage?.count ?? 0));
+  const totalInvocations = allTools.reduce((acc, t) => acc + (t.usage?.count ?? 0), 0);
+
+  return (
+    <section className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <CyberConfirm 
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        variant={confirmModal.variant}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      {isPending && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
+          <Card variant="glass" padding="lg" className="flex flex-col items-center gap-6 border-cyber-blue/20 shadow-[0_0_50px_rgba(0,224,255,0.1)]">
+            <Loader2 size={48} className="text-cyber-blue animate-spin" />
+            <div className="space-y-2 text-center">
+               <Typography variant="caption" weight="black" color="intel" className="tracking-[0.5em] block">Synchronizing Neural Network...</Typography>
+              <Typography variant="mono" color="muted" className="tracking-[0.3em] block text-[8px]">Rewriting cognitive pathways</Typography>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Global Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card variant="glass" padding="lg" className="border-cyber-blue/20">
+          <Typography variant="mono" color="muted" className="text-[10px] tracking-widest opacity-40 mb-2 block">Total neural invocations</Typography>
+          <Typography variant="h2" color="white" weight="black" glow className="text-4xl tracking-tighter">{totalInvocations}</Typography>
+        </Card>
+        <Card variant="glass" padding="lg" className="border-cyber-green/20">
+          <Typography variant="mono" color="muted" className="text-[10px] tracking-widest opacity-40 mb-2 block">Most active skill</Typography>
+          <Typography variant="h2" color="primary" weight="black" className="text-xl truncate tracking-tight">{sortedByUsage[0]?.name || 'N/A'}</Typography>
+        </Card>
+        <Card variant="glass" padding="lg" className="border-purple-500/20">
+          <Typography variant="mono" color="muted" className="text-[10px] tracking-widest opacity-40 mb-2 block">Bridge efficiency</Typography>
+          <Typography variant="h2" color="white" weight="black" className="text-4xl tracking-tighter">{allTools.filter(t => t.isExternal && (t.usage?.count || 0) > 0).length} / {allTools.filter(t => t.isExternal).length}</Typography>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+        {/* Per-Agent Usage & Pruning */}
+        <div className="xl:col-span-12 space-y-6">
+          <h4 className="text-[12px] font-black uppercase tracking-[0.4em] text-white/40 flex items-center gap-2">
+            <Activity size={16} className="text-cyber-blue" /> Per-agent efficiency audit
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {optimisticAgents.filter(a => a.id !== 'monitor' && a.id !== 'events' && a.id !== 'recovery').map(agent => {
+              const agentUsage = agent.usage ?? {};
+              const neverUsedTools = agent.tools.filter(t => !agentUsage[t]);
+              const lowUsageTools = agent.tools
+                .filter(t => agentUsage[t] && agentUsage[t].count < 3)
+                .sort((a, b) => (agentUsage[a]?.count ?? 0) - (agentUsage[b]?.count ?? 0));
+
+              return (
+                <Card key={agent.id} variant="glass" padding="lg" className="border-white/5 bg-black/40">
+                  <div className="flex justify-between items-start mb-6 border-b border-white/5 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-cyber-blue/10 flex items-center justify-center text-cyber-blue border border-cyber-blue/20 shadow-[0_0_15px_rgba(0,224,255,0.1)]">
+                        {agent.id === 'main' ? <Zap size={16} /> : <Cpu size={16} />}
+                      </div>
+                      <Typography variant="body" weight="black" color="white" className="tracking-widest capitalize">{agent.name}</Typography>
+                    </div>
+                    <Badge variant="outline" className="text-[8px] opacity-40">Efficiency: {Math.round((agent.tools.length - neverUsedTools.length) / (agent.tools.length ?? 1) * 100)}%</Badge>
+                  </div>
+
+                  <div className="space-y-6">
+                    {/* Pruning Candidates */}
+                    {(neverUsedTools.length > 0 || lowUsageTools.length > 0) && (
+                      <div>
+                        <Typography variant="mono" color="muted" className="text-[9px] tracking-widest mb-3 block text-red-500/60 font-bold">Optimization advisory</Typography>
+                        <div className="flex flex-wrap gap-2">
+                          {neverUsedTools.map(t => (
+                            <button 
+                              key={t} 
+                              onClick={() => handleDetachTool(agent.id, t)}
+                              className="group flex items-center gap-2 px-2 py-1 bg-red-500/5 border border-red-500/20 rounded hover:bg-red-500/20 transition-all"
+                              title="Detaching this tool will save tokens"
+                            >
+                              <span className="text-[9px] font-black text-red-400">{t}</span>
+                              <span className="text-[8px] opacity-40 text-red-400 font-bold tracking-tighter">Detach</span>
+                            </button>
+                          ))}
+                          {lowUsageTools.map(t => (
+                            <button 
+                              key={t} 
+                              onClick={() => handleDetachTool(agent.id, t)}
+                              className="group flex items-center gap-2 px-2 py-1 bg-orange-500/5 border border-orange-500/20 rounded hover:bg-orange-500/20 transition-all"
+                            >
+                              <span className="text-[9px] font-black text-orange-400">{t}</span>
+                              <span className="text-[8px] opacity-40 text-orange-400 font-bold tracking-tighter">{agentUsage[t].count} calls</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <Typography variant="mono" color="muted" className="text-[9px] tracking-widest mb-3 block opacity-40">Active tool profile</Typography>
+                      <div className="grid grid-cols-2 gap-4">
+                        {agent.tools.filter(t => agentUsage[t] && agentUsage[t].count >= 3).map(t => (
+                          <div key={t} className="flex justify-between items-center bg-white/[0.02] p-2 rounded border border-white/5">
+                            <span className="text-[10px] font-black text-white/60 truncate mr-2">{t}</span>
+                            <span className="text-[10px] font-mono text-cyber-green">{agentUsage[t].count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Total Leaderboard */}
+        <div className="xl:col-span-12 space-y-6 pt-10">
+          <h4 className="text-[12px] font-black uppercase tracking-[0.4em] text-white/40 flex items-center gap-2">
+            <Activity size={16} className="text-cyber-blue" /> Total neural invocations
+          </h4>
+          <Card variant="solid" className="border-white/5 bg-black/40 overflow-hidden">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-white/5 bg-white/[0.02]">
+                  <th className="p-4 text-[10px] font-black tracking-widest text-white/40">Capability</th>
+                  <th className="p-4 text-[10px] font-black tracking-widest text-white/40">Total invocations</th>
+                  <th className="p-4 text-[10px] font-black tracking-widest text-white/40">Last active</th>
+                  <th className="p-4 text-[10px] font-black tracking-widest text-white/40">Attached nodes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedByUsage
+                  .filter(t => (t.usage?.count || 0) > 0)
+                  .map(tool => {
+                    const attachedAgents = optimisticAgents.filter(a => a.tools.includes(tool.name));
+                    return (
+                      <tr key={tool.name} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
+                        <td className="p-4">
+                          <div className="flex flex-col">
+                            <span className={`text-xs font-black tracking-wider ${tool.isExternal ? 'text-purple-400' : 'text-yellow-500'}`}>{tool.name}</span>
+                            {tool.isExternal && <span className="text-[8px] opacity-30 font-bold">External bridge</span>}
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-2">
+                            <div className="h-1.5 bg-white/5 rounded-full flex-1 max-w-[100px] overflow-hidden">
+                              <div 
+                                className={`h-full ${tool.isExternal ? 'bg-purple-500' : 'bg-yellow-500'}`} 
+                                style={{ width: `${Math.min(100, (tool.usage?.count ?? 0) / (sortedByUsage[0]?.usage?.count ?? 1) * 100)}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-mono font-bold text-white/80">{tool.usage?.count}</span>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <span className="text-[10px] font-mono text-white/40">{tool.usage?.lastUsed ? new Date(tool.usage.lastUsed).toLocaleTimeString() : 'NEVER'}</span>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex -space-x-2">
+                            {attachedAgents.map(a => (
+                              <div key={a.id} title={a.name} className="w-6 h-6 rounded-full bg-cyber-blue/20 border border-cyber-blue/40 flex items-center justify-center text-[8px] font-black text-cyber-blue ring-2 ring-black">
+                                {a.name.substring(0, 1)}
+                              </div>
+                            ))}
+                            {attachedAgents.length === 0 && <span className="text-[10px] text-white/10 italic">Unassigned</span>}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </Card>
+        </div>
+      </div>
+    </section>
+  );
+}

@@ -1,6 +1,10 @@
 import { Resource } from 'sst';
 import { ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { SSTResource } from '../lib/types/system';
 import { toolDefinitions } from './definitions/index';
+
+// Cast Resource to SSTResource type to access infrastructure resources
+const typedResource = Resource as unknown as SSTResource;
 
 /**
  * Retrieves the current runtime configuration, including active LLM provider and model.
@@ -35,7 +39,7 @@ INITIATOR: ${initiatorId}
 TRACE_ID: ${traceId}
 ACTIVE_PROVIDER: ${injectedProvider ?? ddbProvider ?? 'openai (default)'}
 ACTIVE_MODEL: ${injectedModel ?? ddbModel ?? 'gpt-5.4-mini (default)'}
-STAGING_BUCKET: ${Resource.StagingBucket.name}
+STAGING_BUCKET: ${typedResource.StagingBucket.name}
     `.trim();
   },
 };

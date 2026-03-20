@@ -1,13 +1,16 @@
 import { Resource } from 'sst';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
-import { SelfVerificationStatus } from './types/system';
+import { SSTResource, SelfVerificationStatus } from './types/system';
 import { GapStatus } from './types/index';
 import { runDeepHealthCheck } from './health';
 
 // Default client for backward compatibility - can be overridden via constructor for testing
 const defaultDdbClient = new DynamoDBClient({});
 const defaultDocClient = DynamoDBDocumentClient.from(defaultDdbClient);
+
+// Cast Resource to SSTResource type to access infrastructure resources
+const typedResource = Resource as unknown as SSTResource;
 
 /**
  * Self-Verification Engine
@@ -43,7 +46,7 @@ export class SelfVerifier {
    * Verifies the evolution mechanism by checking gap statistics.
    */
   async verifyEvolution() {
-    const memoryTable = Resource.MemoryTable.name;
+    const memoryTable = typedResource.MemoryTable.name;
 
     // Scan for all GAPs
     const gapResult = await this.docClient.send(
@@ -75,8 +78,8 @@ export class SelfVerifier {
    * Verifies the resilience mechanism by checking circuit breakers and health probes.
    */
   async verifyResilience() {
-    const memoryTable = Resource.MemoryTable.name;
-    const configTable = Resource.ConfigTable.name;
+    const memoryTable = typedResource.MemoryTable.name;
+    const configTable = typedResource.ConfigTable.name;
 
     // 1. Get Limits from Config
     const configRes = await this.docClient.send(
@@ -113,7 +116,7 @@ export class SelfVerifier {
    * Verifies the awareness mechanism by checking topology discovery.
    */
   async verifyAwareness() {
-    const configTable = Resource.ConfigTable.name;
+    const configTable = typedResource.ConfigTable.name;
 
     // 1. Check discovered nodes
     const topoResult = await this.docClient.send(

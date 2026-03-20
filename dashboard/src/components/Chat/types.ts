@@ -1,3 +1,10 @@
+/**
+ * Chat-specific types for the dashboard
+ * Re-exports shared types from core to avoid duplication
+ */
+import type { ConversationMeta } from '../../../core/lib/types/memory';
+export type { ConversationMeta };
+
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -16,16 +23,7 @@ export interface HistoryMessage {
   role: string;
   content: string;
   agentName?: string;
-  attachments?: ChatMessage['attachments'];
-}
-
-export interface ConversationMeta {
-  sessionId: string;
-  title: string;
-  lastMessage: string;
-  updatedAt: number;
-  isPinned?: boolean;
-  expiresAt?: number;
+  attachments: ChatMessage['attachments'];
 }
 
 export interface AttachmentPreview {
