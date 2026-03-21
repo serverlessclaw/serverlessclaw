@@ -120,8 +120,9 @@ export async function addLesson(
 ): Promise<void> {
   const { expiresAt, type } = await RetentionManager.getExpiresAt('LESSON', userId);
   const timestamp = Date.now();
+  const normalizedUserId = userId.replace(/^(LESSON#)+/, '');
   await base.putItem({
-    userId: `LESSON#${userId}`,
+    userId: `LESSON#${normalizedUserId}`,
     timestamp,
     type,
     expiresAt,
@@ -138,10 +139,11 @@ export async function addLesson(
  * @returns A promise resolving to an array of lesson content strings.
  */
 export async function getLessons(base: BaseMemoryProvider, userId: string): Promise<string[]> {
+  const normalizedUserId = userId.replace(/^(LESSON#)+/, '');
   const items = await base.queryItems({
     KeyConditionExpression: 'userId = :userId',
     ExpressionAttributeValues: {
-      ':userId': `LESSON#${userId}`,
+      ':userId': `LESSON#${normalizedUserId}`,
     },
     Limit: 10,
     ScanIndexForward: false,
@@ -226,13 +228,14 @@ export async function searchInsights(
     }
   }
 
-  // If we have no filter, we should probably use the GSI to get latest memories of any type
-  // but Scan is easier for a general "search everything" if the table isn't massive.
   // For 2026 scale, we'll use a Scan with Filter for general search.
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result = await (base as any).docClient.send(
     new ScanCommand({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       TableName: (base as any).tableName,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ...(params as any),
     })
   );

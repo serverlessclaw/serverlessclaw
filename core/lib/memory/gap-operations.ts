@@ -130,7 +130,9 @@ export async function setGap(
   metadata?: InsightMetadata
 ): Promise<void> {
   const { expiresAt, type } = await RetentionManager.getExpiresAt('GAP', '');
-  const normalizedId = gapId.replace(/^(GAP#)+/, '');
+  const nId = gapId.replace(/^(GAP#)+/, '').replace(/^(PROC#)+/, '');
+  const numericIdMatch = nId.match(/(\d+)$/);
+  const normalizedId = numericIdMatch ? numericIdMatch[1] : nId;
   const parsedGapId = Number.parseInt(normalizedId, 10);
   const gapTimestamp = Number.isNaN(parsedGapId) ? Date.now() : parsedGapId;
   await base.putItem({
@@ -196,8 +198,11 @@ export async function updateGapStatus(
   gapId: string,
   status: GapStatus
 ): Promise<void> {
-  // Normalize ID: remove any leading GAP# prefixes (handles double-prefixing robustness)
-  const numericId = gapId.replace(/^(GAP#)+/, '');
+  // Normalize ID: remove any leading GAP# prefixes and intermediate garbage before the final ID
+  // e.g., GAP#GAP#PROC#123 -> 123, GAP#GAP#MY_GAP -> MY_GAP
+  const normalizedId = gapId.replace(/^(GAP#)+/, '').replace(/^(PROC#)+/, '');
+  const numericIdMatch = normalizedId.match(/(\d+)$/);
+  const numericId = numericIdMatch ? numericIdMatch[1] : normalizedId;
   const parsedNumericId = Number.parseInt(numericId, 10);
   const defaultTimestamp = Number.isNaN(parsedNumericId) ? 0 : parsedNumericId;
   const params: Record<string, unknown> = {
@@ -228,7 +233,12 @@ export async function updateGapStatus(
     let found = false;
     for (const s of allStatuses) {
       const gaps = await getAllGaps(base, s);
-      const target = gaps.find((g) => g.id.replace(/^(GAP#)+/, '') === numericId);
+      const target = gaps.find((g) => {
+        const gIdNorm = g.id.replace(/^(GAP#)+/, '').replace(/^(PROC#)+/, '');
+        const gIdMatch = gIdNorm.match(/(\d+)$/);
+        const gIdFinal = gIdMatch ? gIdMatch[1] : gIdNorm;
+        return gIdFinal === numericId;
+      });
       if (target) {
         params.Key = { userId: target.id, timestamp: target.timestamp };
 

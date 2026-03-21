@@ -48,17 +48,18 @@ export async function deleteConversation(
   userId: string,
   sessionId: string
 ): Promise<void> {
-  const conversations = await base.listConversations(userId);
+  const normalizedUserId = userId.replace(/^(SESSIONS#)+/, '');
+  const conversations = await base.listConversations(normalizedUserId);
   const existing = conversations.find((c) => c.sessionId === sessionId);
 
   if (existing) {
     await base.deleteItem({
-      userId: `SESSIONS#${userId}`,
+      userId: `SESSIONS#${normalizedUserId}`,
       timestamp: existing.updatedAt,
     });
   }
 
-  await base.clearHistory(`CONV#${userId}#${sessionId}`);
+  await base.clearHistory(`CONV#${normalizedUserId}#${sessionId}`);
 }
 
 /**
@@ -75,9 +76,10 @@ export async function updateDistilledMemory(
   userId: string,
   facts: string
 ): Promise<void> {
-  const { expiresAt } = await RetentionManager.getExpiresAt('DISTILLED', userId);
+  const normalizedUserId = userId.replace(/^(DISTILLED#)+/, '');
+  const { expiresAt } = await RetentionManager.getExpiresAt('DISTILLED', normalizedUserId);
   await base.putItem({
-    userId: `DISTILLED#${userId}`,
+    userId: `DISTILLED#${normalizedUserId}`,
     timestamp: 0,
     type: 'DISTILLED',
     expiresAt,
@@ -101,12 +103,13 @@ export async function saveConversationMeta(
   sessionId: string,
   meta: Partial<ConversationMeta>
 ): Promise<void> {
-  const conversations = await base.listConversations(userId);
+  const normalizedUserId = userId.replace(/^(SESSIONS#)+/, '');
+  const conversations = await base.listConversations(normalizedUserId);
   const existing = conversations.find((c) => c.sessionId === sessionId);
 
   if (existing) {
     await base.deleteItem({
-      userId: `SESSIONS#${userId}`,
+      userId: `SESSIONS#${normalizedUserId}`,
       timestamp: existing.updatedAt,
     });
   }
@@ -118,14 +121,14 @@ export async function saveConversationMeta(
     // Pinned items do not expire (effectively)
     expiresAt = 0;
   } else {
-    const retention = await RetentionManager.getExpiresAt('SESSIONS', userId);
+    const retention = await RetentionManager.getExpiresAt('SESSIONS', normalizedUserId);
     expiresAt = retention.expiresAt;
   }
 
-  const { type } = await RetentionManager.getExpiresAt('SESSIONS', userId);
+  const { type } = await RetentionManager.getExpiresAt('SESSIONS', normalizedUserId);
 
   await base.putItem({
-    userId: `SESSIONS#${userId}`,
+    userId: `SESSIONS#${normalizedUserId}`,
     timestamp: Date.now(),
     type,
     expiresAt,
