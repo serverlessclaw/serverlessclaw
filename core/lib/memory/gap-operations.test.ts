@@ -44,7 +44,7 @@ describe('Gap Operations — Prefix Handling', () => {
       await setGap(base, 'GAP#12345', 'some details');
 
       const calls = ddbMock.commandCalls(PutCommand);
-      expect(calls[0].args[0].input.Item.userId).toBe('GAP#12345');
+      expect(calls[0].args[0].input.Item!.userId).toBe('GAP#12345');
     });
 
     it('should add GAP# prefix if gapId is raw numeric', async () => {
@@ -53,7 +53,7 @@ describe('Gap Operations — Prefix Handling', () => {
       await setGap(base, '12345', 'some details');
 
       const calls = ddbMock.commandCalls(PutCommand);
-      expect(calls[0].args[0].input.Item.userId).toBe('GAP#12345');
+      expect(calls[0].args[0].input.Item!.userId).toBe('GAP#12345');
     });
 
     it('should handle triple prefixing by normalizing to single GAP#', async () => {
@@ -62,7 +62,7 @@ describe('Gap Operations — Prefix Handling', () => {
       await setGap(base, 'GAP#GAP#GAP#12345', 'some details');
 
       const calls = ddbMock.commandCalls(PutCommand);
-      expect(calls[0].args[0].input.Item.userId).toBe('GAP#12345');
+      expect(calls[0].args[0].input.Item!.userId).toBe('GAP#12345');
     });
   });
 
@@ -73,7 +73,7 @@ describe('Gap Operations — Prefix Handling', () => {
       await updateGapStatus(base, 'GAP#GAP#12345', GapStatus.PLANNED);
 
       const calls = ddbMock.commandCalls(UpdateCommand);
-      expect(calls[0].args[0].input.Key.userId).toBe('GAP#12345');
+      expect(calls[0].args[0].input.Key!.userId).toBe('GAP#12345');
     });
 
     it('should find gap via search if timestamp is unknown even with messy prefix', async () => {
