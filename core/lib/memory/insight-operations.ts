@@ -10,6 +10,7 @@ import { RetentionManager } from './tiering';
 import type { BaseMemoryProvider } from './base';
 import { filterPII } from '../utils/pii';
 import { createMetadata } from './utils';
+import { ScanCommand } from '@aws-sdk/lib-dynamodb';
 
 /**
  * Shared implementation for adding granular records (Insights/Memories).
@@ -174,53 +175,71 @@ import { getRegisteredMemoryTypes, getMemoryByType } from './utils';
  * Searches for insights across all categories.
  *
  * @param base - The base memory provider instance.
- * @param userId - The user identifier to scope user-specific insights.
+ * @param userId - Optional user identifier to scope user-specific insights.
  * @param query - The search query string (supports '*' for all).
  * @param category - Optional category to filter results.
- * @returns A promise resolving to an array of matching MemoryInsight objects.
+ * @param limit - Pagination limit.
+ * @param lastEvaluatedKey - Pagination token.
+ * @returns A promise resolving to an array of matching MemoryInsight objects and a pagination token.
  * @since 2026-03-19
  */
 export async function searchInsights(
   base: BaseMemoryProvider,
-  userId: string,
-  query: string,
-  category?: InsightCategory
-): Promise<MemoryInsight[]> {
-  const scopes = [`USER#${userId}`, 'SYSTEM#GLOBAL', `LESSON#${userId}`, `DISTILLED#${userId}`];
-  let allItems: Record<string, unknown>[] = [];
+  userId?: string,
+  query: string = '',
+  category?: InsightCategory,
+  limit: number = 50,
+  lastEvaluatedKey?: Record<string, unknown>
+): Promise<{ items: MemoryInsight[]; lastEvaluatedKey?: Record<string, unknown> }> {
+  // If query is empty and no specific scope, we might want to just return recent items of all types
+  // For a dashboard search, we often want to search everything.
 
-  // 1. Fetch by explicit partition keys
-  for (const scope of scopes) {
-    const items = await base.queryItems({
-      KeyConditionExpression: 'userId = :userId',
-      ExpressionAttributeValues: {
-        ':userId': scope,
-      },
-      Limit: 50,
-    });
-    allItems = [...allItems, ...items];
+  const params: Record<string, unknown> = {
+    Limit: limit,
+    ExclusiveStartKey: lastEvaluatedKey,
+  };
+
+  const filterExpressions: string[] = [];
+  const expressionAttributeValues: Record<string, unknown> = {};
+  const expressionAttributeNames: Record<string, string> = {};
+
+  if (query && query !== '*' && query !== '') {
+    filterExpressions.push('contains(content, :query)');
+    expressionAttributeValues[':query'] = query;
   }
 
-  // 2. Fetch GAPs properly using the GSI (since GAP# is a prefix, not a full PK)
-  const gaps = await getMemoryByType(base, 'GAP', 50);
-  allItems = [...allItems, ...gaps];
+  if (category) {
+    filterExpressions.push('metadata.category = :category');
+    expressionAttributeValues[':category'] = category;
+  }
 
-  // 3. Fetch dynamically registered types (if they aren't already captured by SYSTEM#GLOBAL or USER# scopes)
-  const registeredTypes = await getRegisteredMemoryTypes(base);
-  for (const rType of registeredTypes) {
-    if (rType.startsWith('MEMORY:')) {
-      const dynamicItems = await getMemoryByType(base, rType, 50);
-      allItems = [...allItems, ...dynamicItems];
+  // If we have a userId, we can scope the search to that user's partition
+  // but memory items are spread across multiple partition keys (USER#, LESSON#, DISTILLED#, GAP# prefix)
+  // Global search usually requires a Scan if we want to search everything across all partition keys
+  // unless we use the TypeTimestampIndex to search by type.
+
+  if (filterExpressions.length > 0) {
+    params.FilterExpression = filterExpressions.join(' AND ');
+    params.ExpressionAttributeValues = expressionAttributeValues;
+    if (Object.keys(expressionAttributeNames).length > 0) {
+      params.ExpressionAttributeNames = expressionAttributeNames;
     }
   }
 
-  // Deduplicate by userId and timestamp
-  const uniqueItemsMap = new Map<string, Record<string, unknown>>();
-  allItems.forEach((item) => {
-    uniqueItemsMap.set(`${item.userId}-${item.timestamp}`, item);
-  });
+  // If we have no filter, we should probably use the GSI to get latest memories of any type
+  // but Scan is easier for a general "search everything" if the table isn't massive.
+  // For 2026 scale, we'll use a Scan with Filter for general search.
 
-  let allInsights: MemoryInsight[] = Array.from(uniqueItemsMap.values()).map((item) => {
+  const result = await (base as any).docClient.send(
+    new ScanCommand({
+      TableName: (base as any).tableName,
+      ...(params as any),
+    })
+  );
+
+  const items = (result.Items ?? []) as Record<string, unknown>[];
+
+  const allInsights: MemoryInsight[] = items.map((item) => {
     const scope = item.userId as string;
     const metadata = (item.metadata as InsightMetadata) ?? {
       category: scope.startsWith('DISTILLED')
@@ -244,16 +263,10 @@ export async function searchInsights(
     };
   });
 
-  if (category) {
-    allInsights = allInsights.filter((i) => i.metadata.category === category);
-  }
-
-  if (query && query !== '*' && query !== '') {
-    const lowerQuery = query.toLowerCase();
-    allInsights = allInsights.filter((i) => i.content.toLowerCase().includes(lowerQuery));
-  }
-
-  return allInsights.sort((a, b) => b.timestamp - a.timestamp);
+  return {
+    items: allInsights.sort((a, b) => b.timestamp - a.timestamp),
+    lastEvaluatedKey: result.LastEvaluatedKey,
+  };
 }
 
 /**

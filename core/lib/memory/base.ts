@@ -68,21 +68,36 @@ export class BaseMemoryProvider {
    * Internal helper for Query commands.
    *
    * @param params - The DynamoDB QueryCommand parameters.
-   * @returns A promise resolving to an array of items.
+   * @returns A promise resolving to an object containing items and an optional LastEvaluatedKey.
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public async queryItems(params: any): Promise<any[]> {
+  public async queryItemsPaginated(params: any): Promise<{ items: any[]; lastEvaluatedKey?: any }> {
     const command = new QueryCommand({
       TableName: this.tableName,
       ...params,
     });
     try {
       const response = await this.docClient.send(command);
-      return response.Items ?? [];
+      return {
+        items: response.Items ?? [],
+        lastEvaluatedKey: response.LastEvaluatedKey,
+      };
     } catch (error) {
       logger.error('Error querying DynamoDB:', error);
-      return [];
+      return { items: [] };
     }
+  }
+
+  /**
+   * Internal helper for Query commands (legacy non-paginated).
+   *
+   * @param params - The DynamoDB QueryCommand parameters.
+   * @returns A promise resolving to an array of items.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  public async queryItems(params: any): Promise<any[]> {
+    const { items } = await this.queryItemsPaginated(params);
+    return items;
   }
 
   /**

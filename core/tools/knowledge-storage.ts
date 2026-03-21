@@ -134,7 +134,8 @@ export const RECALL_KNOWLEDGE = {
       category?: string;
     };
     const memory = getMemory();
-    const results = await memory.searchInsights(userId, query, category as InsightCategory);
+    const searchResponse = await memory.searchInsights(userId, query, category as InsightCategory);
+    const results = searchResponse.items;
 
     if (results.length === 0) return 'No relevant knowledge found.';
 
@@ -238,7 +239,12 @@ export const SAVE_MEMORY = {
     // --- Start Semantic Deduplication ---
     try {
       // 1. Search for existing memories in the same category and scope
-      const existing = await memory.searchInsights(baseUserId, '*', category as InsightCategory);
+      const searchResponse = await memory.searchInsights(
+        baseUserId,
+        '*',
+        category as InsightCategory
+      );
+      const existing = searchResponse.items;
 
       // 2. Filter for the exact same scope to avoid pruning global knowledge from a user context
       const relevantExisting = existing.filter((e) => e.id === scopeId);

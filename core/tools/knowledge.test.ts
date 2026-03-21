@@ -39,11 +39,16 @@ vi.mock('sst', () => ({
 vi.mock('../lib/memory', () => ({
   DynamoMemory: vi.fn().mockImplementation(function () {
     return {
-      searchInsights: vi
-        .fn()
-        .mockResolvedValue([
-          { content: 'insight 1', metadata: { category: 'lesson', impact: 10, urgency: 10 } },
-        ]),
+      searchInsights: vi.fn().mockResolvedValue({
+        items: [
+          {
+            id: 'insight-1',
+            timestamp: 123,
+            content: 'insight 1',
+            metadata: { category: 'lesson', impact: 10, urgency: 10 },
+          },
+        ],
+      }),
       updateGapStatus: mocks.updateGapStatus,
       getDistilledMemory: mocks.getDistilledMemory,
       updateDistilledMemory: mocks.updateDistilledMemory,

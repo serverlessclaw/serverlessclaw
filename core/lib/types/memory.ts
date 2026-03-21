@@ -135,10 +135,12 @@ export interface IGapManager {
 export interface IMemory extends IHistoryStore, IKnowledgeStore, IGapManager {
   /** Searches across all memory types (lessons, gaps, distilled) using keyword search. */
   searchInsights(
-    userId: string,
-    query: string,
-    category?: InsightCategory
-  ): Promise<MemoryInsight[]>;
+    userId?: string,
+    query?: string,
+    category?: InsightCategory,
+    limit?: number,
+    lastEvaluatedKey?: any
+  ): Promise<{ items: MemoryInsight[]; lastEvaluatedKey?: any }>;
 
   /** Adds a new granular memory item into the user or global scope. */
   addMemory(

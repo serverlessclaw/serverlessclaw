@@ -112,11 +112,13 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
    * Searches for insights across all categories
    */
   async searchInsights(
-    userId: string,
-    query: string,
-    category?: InsightCategory
-  ): Promise<MemoryInsight[]> {
-    return InsightOps.searchInsights(this, userId, query, category);
+    userId?: string,
+    query: string = '',
+    category?: InsightCategory,
+    limit: number = 50,
+    lastEvaluatedKey?: Record<string, unknown>
+  ): Promise<{ items: MemoryInsight[]; lastEvaluatedKey?: Record<string, unknown> }> {
+    return InsightOps.searchInsights(this, userId, query, category, limit, lastEvaluatedKey);
   }
 
   /**
@@ -139,6 +141,17 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
     meta: Partial<ConversationMeta>
   ): Promise<void> {
     return SessionOps.saveConversationMeta(this, userId, sessionId, meta);
+  }
+
+  /**
+   * Universal fetcher for memory items by their type using the GSI.
+   */
+  async getMemoryByTypePaginated(
+    type: string,
+    limit: number = 100,
+    lastEvaluatedKey?: Record<string, unknown>
+  ): Promise<{ items: Record<string, unknown>[]; lastEvaluatedKey?: Record<string, unknown> }> {
+    return MemoryUtils.getMemoryByTypePaginated(this, type, limit, lastEvaluatedKey);
   }
 
   /**

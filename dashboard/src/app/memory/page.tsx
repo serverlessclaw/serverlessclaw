@@ -1,32 +1,48 @@
 import { Resource } from 'sst';
 export const dynamic = 'force-dynamic';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, ScanCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { 
   Database, 
-  History, 
-  Wrench, 
   Clock, 
   Brain,
-  Search,
-  ChevronRight,
-  Shield,
+  Search as SearchIcon,
   Trash2,
   TrendingUp,
   Lightbulb,
   Target,
   BarChart2,
-  Zap
+  Zap,
+  Filter
 } from 'lucide-react';
-import { tools } from '@/lib/tool-definitions';
 import { revalidatePath } from 'next/cache';
+import Link from 'next/link';
 import Button from '@/components/ui/Button';
 import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import MemoryPrioritySelector from '@/components/MemoryPrioritySelector';
+import MemoryTabs from './MemoryTabs';
+import MemorySearch from './MemorySearch';
+import MemoryPagination from './MemoryPagination';
 
-async function getMemoryData() {
+interface MemoryMetadata {
+  priority?: number;
+  category?: string;
+  impact?: number;
+  hitCount?: number;
+  lastAccessed?: number;
+}
+
+interface MemoryItem {
+  userId: string;
+  timestamp: number;
+  content: string;
+  metadata?: MemoryMetadata;
+  type?: string;
+}
+
+async function getMemoryData(activeTab: string, query: string, nextToken?: string, subType?: string) {
   const { DynamoMemory } = await import('@claw/core/lib/memory');
   const memory = new DynamoMemory();
   
@@ -35,89 +51,68 @@ async function getMemoryData() {
   const knownTypes = new Set(['DISTILLED', 'LESSON', 'GAP', 'SESSION', 'MEMORY:USER_PREFERENCE']);
   const dynamicTypes = registeredTypes.filter(type => !knownTypes.has(type));
 
-  // 2. Build the parallel fetch queue
-  const fetchPromises = [
-    memory.getMemoryByType('DISTILLED', 50),
-    memory.getMemoryByType('MEMORY:USER_PREFERENCE', 50),
-    memory.getMemoryByType('LESSON', 50),
-    memory.getMemoryByType('GAP', 50),
-    memory.getMemoryByType('SESSION', 50),
-    ...dynamicTypes.map(t => memory.getMemoryByType(t, 20)) // Fetch a sensible limit for dynamic types
-  ];
+  const parsedNext = nextToken ? JSON.parse(Buffer.from(nextToken, 'base64').toString()) : undefined;
 
-  // 3. Execute all queries in parallel
-  const results = await Promise.all(fetchPromises);
-  
-  const distilled = results[0];
-  const preferences = results[1];
-  const lessons = results[2];
-  const gaps = results[3];
-  const sessions = results[4];
-
-  // Group all dynamic types into a single structure
-  const dynamicCategories: Record<string, any[]> = {};
-  dynamicTypes.forEach((type, index) => {
-    const items = results[5 + index];
-    if (items && items.length > 0) {
-      dynamicCategories[type] = items;
-    }
-  });
-
-  // Merge preferences into distilled facts as they serve a similar UI purpose
-  const allDistilled = [...distilled, ...preferences];
-
-  // If we have no data at all, might be an old table without 'type' fields
-  if (gaps.length === 0 && lessons.length === 0 && allDistilled.length === 0 && sessions.length === 0 && Object.keys(dynamicCategories).length === 0) {
-    console.log('[MemoryVault] No typed data found, falling back to Scan for migration support');
-    const client = new DynamoDBClient({});
-    const docClient = DynamoDBDocumentClient.from(client);
-    
-    let allItems: any[] = [];
-    let lastKey: any = undefined;
-    
-    do {
-      const { Items, LastEvaluatedKey } = await docClient.send(
-        new ScanCommand({
-          TableName: (Resource as any).MemoryTable.name,
-          ExclusiveStartKey: lastKey,
-          Limit: 100 // Limit scan per chunk to avoid timeout
-        })
-      );
-      if (Items) allItems = [...allItems, ...Items];
-      lastKey = LastEvaluatedKey;
-    } while (lastKey && allItems.length < 500); // Guard rails
-    
-    return {
-        distilled: allItems.filter(item => item.userId?.startsWith('DISTILLED#') || item.userId?.startsWith('USER#')),
-        lessons: allItems.filter(item => item.userId?.startsWith('LESSON#') || item.userId?.startsWith('TACTICAL#')),
-        gaps: allItems.filter(item => item.userId?.startsWith('GAP#')),
-        sessions: Array.from(new Set(allItems
-            .filter(item => !item.userId?.includes('#') && item.timestamp)
-            .map(item => item.userId)))
-            .map(userId => ({
-            userId,
-            lastActive: Math.max(...allItems
-                .filter(item => item.userId === userId)
-                .map(item => item.timestamp ?? 0))
-            })),
-        dynamicCategories: {}
-    };
+  // Handle Search Tab
+  if (activeTab === 'search' || query) {
+     const result = await memory.searchInsights(undefined, query, undefined, 20, parsedNext);
+     return {
+         items: result.items as MemoryItem[],
+         nextToken: result.lastEvaluatedKey ? Buffer.from(JSON.stringify(result.lastEvaluatedKey)).toString('base64') : undefined,
+         counts: {
+            facts: 0, lessons: 0, gaps: 0, dynamic: 0
+         },
+         dynamicTypes
+     };
   }
+
+  // Define counts fetcher (parallel)
+  const countPromises = [
+    memory.getMemoryByType('DISTILLED', 1),
+    memory.getMemoryByType('LESSON', 1),
+    memory.getMemoryByType('GAP', 1),
+    ...dynamicTypes.map(t => memory.getMemoryByType(t, 1))
+  ];
   
-  return { 
-    distilled: allDistilled, 
-    lessons, 
-    dynamicCategories,
-    gaps: gaps.sort((a, b) => {
-      const prioA = a.metadata?.priority ?? 5;
-      const prioB = b.metadata?.priority ?? 5;
-      if (prioA !== prioB) return prioB - prioA;
-      return (b.timestamp ?? 0) - (a.timestamp ?? 0);
-    }), 
-    sessions: sessions.map(s => ({
-        userId: s.userId.replace('SESSIONS#', ''),
-        lastActive: s.timestamp
-    }))
+  // For pagination, we only fetch the active tab's data
+  let items: MemoryItem[] = [];
+  let next: Record<string, unknown> | undefined = undefined;
+
+  if (activeTab === 'facts') {
+      const res = await memory.getMemoryByTypePaginated('DISTILLED', 20, parsedNext);
+      items = res.items as MemoryItem[];
+      next = res.lastEvaluatedKey;
+  } else if (activeTab === 'lessons') {
+      const res = await memory.getMemoryByTypePaginated('LESSON', 20, parsedNext);
+      items = res.items as MemoryItem[];
+      next = res.lastEvaluatedKey;
+  } else if (activeTab === 'gaps') {
+      const res = await memory.getMemoryByTypePaginated('GAP', 20, parsedNext);
+      items = res.items as MemoryItem[];
+      next = res.lastEvaluatedKey;
+  } else if (activeTab === 'dynamic') {
+      const typeToFetch = subType || dynamicTypes[0];
+      if (typeToFetch) {
+        const res = await memory.getMemoryByTypePaginated(typeToFetch, 20, parsedNext);
+        items = res.items as MemoryItem[];
+        next = res.lastEvaluatedKey;
+      }
+  }
+
+  // Get total counts for badges (limit to a reasonable number or just check existence)
+  // Real implementation might need a dedicated count metadata record for performance
+  const countResults = await Promise.all(countPromises);
+
+  return {
+    items,
+    nextToken: next ? Buffer.from(JSON.stringify(next)).toString('base64') : undefined,
+    dynamicTypes,
+    counts: {
+        facts: countResults[0].length > 0 ? '50+' : 0, // Placeholder for real counts
+        lessons: countResults[1].length > 0 ? '50+' : 0,
+        gaps: countResults[2].length > 0 ? '50+' : 0,
+        dynamic: dynamicTypes.length
+    }
   };
 }
 
@@ -130,36 +125,44 @@ async function pruneMemory(formData: FormData) {
   const docClient = DynamoDBDocumentClient.from(client);
 
   await docClient.send(new DeleteCommand({
-    TableName: (Resource as any).MemoryTable.name,
+    TableName: (Resource as { MemoryTable: { name: string } }).MemoryTable.name,
     Key: { userId, timestamp }
   }));
 
   revalidatePath('/memory');
 }
 
-async function prioritizeMemory(formData: FormData) {
-  'use server';
-  const userId = formData.get('userId') as string;
-  const timestamp = parseInt(formData.get('timestamp') as string);
-  const priority = parseInt(formData.get('priority') as string);
+/** MemoryVault — tiered memory inspector. Supports human-in-the-loop prioritisation and memory pruning. */
+export default async function MemoryVault({ 
+    searchParams 
+}: { 
+    searchParams: Promise<{ tab?: string, q?: string, next?: string, type?: string }> 
+}) {
+  const params = await searchParams;
+  const query = params.q || '';
+  const activeTab = query ? 'search' : (params.tab || 'facts');
+  const nextToken = params.next;
+  const subType = params.type;
 
-  const { DynamoMemory } = await import('@claw/core/lib/memory');
-  const memory = new DynamoMemory();
+  const { items, nextToken: next, dynamicTypes } = await getMemoryData(activeTab, query, nextToken, subType);
   
-  await memory.updateInsightMetadata(userId, timestamp, { priority });
+  const tabs = [
+    { id: 'facts', label: 'Distilled Facts', count: items.length, icon: <Brain size={14} /> },
+    { id: 'lessons', label: 'Tactical Lessons', count: items.length, icon: <Lightbulb size={14} /> },
+    { id: 'gaps', label: 'Strategic Gaps', count: items.length, icon: <Target size={14} /> },
+  ];
 
-  revalidatePath('/memory');
-}
+  if (dynamicTypes.length > 0) {
+    tabs.push({ id: 'dynamic', label: 'Miscellaneous', count: dynamicTypes.length, icon: <Database size={14} /> });
+  }
 
-/** MemoryVault — tiered memory inspector. Displays DISTILLED facts, tactical INSIGHTS, strategic GAPS, and agent SESSIONS. Supports human-in-the-loop prioritisation and memory pruning. */
-export default async function MemoryVault() {
-  const { distilled, lessons, gaps, sessions, dynamicCategories } = await getMemoryData();
-  
-  const toolList = Object.values(tools);
+  if (query) {
+    tabs.unshift({ id: 'search', label: 'Search Results', count: items.length, icon: <SearchIcon size={14} /> });
+  }
 
   return (
-    <main className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-blue/5 via-transparent to-transparent">
-      <header className="flex justify-between items-end border-b border-white/5 pb-6">
+    <main className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-8 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-blue/5 via-transparent to-transparent">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-white/5 pb-8 gap-6">
         <div>
           <Typography variant="h2" color="white" glow uppercase>
             Neural Reserve
@@ -168,275 +171,120 @@ export default async function MemoryVault() {
             Human-Agent Collaborative Memory Tiering & Prioritization Hub.
           </Typography>
         </div>
-        <div className="flex gap-4 text-center">
-            <div className="flex flex-col items-center">
-                <Typography variant="mono" color="muted" className="text-[10px] uppercase tracking-widest opacity-40 mb-1">FACTS</Typography>
-                <Badge variant="primary" className="px-4 py-1 font-black text-xs">{distilled.length}</Badge>
-            </div>
-            <div className="flex flex-col items-center">
-                <Typography variant="mono" color="muted" className="text-[10px] uppercase tracking-widest opacity-40 mb-1">LESSONS</Typography>
-                <Badge variant="primary" className={`px-4 py-1 font-black text-xs bg-blue-500/10 text-blue-400 border-blue-500/20`}>{lessons.length}</Badge>
-            </div>
-            <div className="flex flex-col items-center">
-                <Typography variant="mono" color="muted" className="text-[10px] uppercase tracking-widest opacity-40 mb-1">GAPS</Typography>
-                <Badge variant="primary" className={`px-4 py-1 font-black text-xs bg-red-500/10 text-red-400 border-red-500/20`}>{gaps.length}</Badge>
-            </div>
-        </div>
+        <MemorySearch />
       </header>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-10">
-        <div className="xl:col-span-8 space-y-12">
-          {/* Strategic Gaps - Prioritization Hub */}
-          <section>
-            <div className="flex items-center justify-between mb-6">
-              <Typography variant="h3" color="danger" weight="bold" uppercase className="flex items-center gap-2 opacity-60">
-                <Target size={14} className="text-amber-500" /> Strategic Capability Gaps (Co-Managed)
-              </Typography>
-              <Badge variant="primary" className="opacity-50">
-                Collaboration Mode: Active
-              </Badge>
-            </div>
-            <div className="grid gap-4">
-              {gaps.length > 0 ? (
-                gaps.map((gap, i) => (
-                    <Card key={i} variant="glass" padding="md" className={`border-amber-500/10 bg-amber-500/[0.02] group relative overflow-hidden ${gap.metadata?.priority >= 8 ? 'ring-1 ring-amber-500/30' : ''}`}>
-                        <div className="absolute -right-8 -top-8 w-24 h-24 bg-amber-500/5 rotate-45 border border-amber-500/10"></div>
-                        
-                        <div className="flex justify-between items-start mb-3 relative z-10">
-                            <div className="flex flex-col gap-1">
-                              <Badge variant="primary" className="bg-amber-500/10 text-amber-500">
-                                  {gap.metadata?.category ?? 'STRATEGIC_GAP'}
-                              </Badge>
-                              <Typography variant="mono" color="muted" className="text-[9px]">ID: {gap.userId.split('#')[1]}</Typography>
-                            </div>
-                            
-                             <div className="flex items-center gap-4">
-                                <MemoryPrioritySelector 
-                                  userId={gap.userId} 
-                                  timestamp={gap.timestamp} 
-                                  currentPriority={gap.metadata?.priority ?? 5} 
-                                />
+      <MemoryTabs tabs={tabs} />
 
-                               <form action={pruneMemory} className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <input type="hidden" name="userId" value={gap.userId} />
-                                  <input type="hidden" name="timestamp" value={gap.timestamp} />
-                                  <Button variant="ghost" size="sm" type="submit" className="text-white/50 hover:text-red-500 p-0 h-auto" icon={<Trash2 size={14} />} />
-                               </form>
-                            </div>
+      <div className="max-w-6xl animate-in fade-in slide-in-from-bottom-2 duration-500 min-h-[400px]">
+        {/* Dynamic Types Sub-navigation */}
+        {activeTab === 'dynamic' && (
+          <div className="flex flex-wrap gap-2 mb-8 p-4 bg-white/[0.02] border border-white/5 rounded-lg">
+             <div className="flex items-center gap-2 mr-4 opacity-50">
+                <Filter size={14} className="text-purple-400" />
+                <Typography variant="mono" className="text-[10px] uppercase font-bold tracking-widest">Type Filter:</Typography>
+             </div>
+             {dynamicTypes.map(type => (
+                 <Link 
+                    key={type} 
+                    href={`/memory?tab=dynamic&type=${type}`}
+                    className={`px-3 py-1 rounded text-[10px] font-bold uppercase transition-all ${
+                        (subType === type || (!subType && dynamicTypes[0] === type))
+                        ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' 
+                        : 'bg-white/5 text-muted hover:bg-white/10 hover:text-white border border-transparent'
+                    }`}
+                 >
+                    {type.replace('MEMORY:', '').replace(/_/g, ' ')}
+                 </Link>
+             ))}
+          </div>
+        )}
+
+        {items.length === 0 ? (
+          <Card variant="solid" padding="lg" className="h-64 flex flex-col items-center justify-center opacity-20 border-dashed">
+            <SearchIcon size={48} className="mb-4 text-muted" />
+            <Typography variant="caption" uppercase className="tracking-[0.3em]">No memory records found in this sector</Typography>
+            {query && <Typography variant="body" color="muted" className="mt-2">Try adjusting your search query or filters.</Typography>}
+          </Card>
+        ) : (
+          <div className="grid gap-6">
+            {items.map((item, i) => (
+                <Card 
+                  key={`${item.userId}-${item.timestamp}-${i}`} 
+                  variant={activeTab === 'facts' ? 'solid' : 'glass'} 
+                  padding="md" 
+                  className={`group relative overflow-hidden transition-all hover:border-white/20 ${
+                    item.metadata?.priority && item.metadata.priority >= 8 ? 'ring-1 ring-amber-500/30' : ''
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-4 relative z-10">
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-3">
+                            <Badge 
+                                variant={
+                                    item.userId.startsWith('GAP') ? 'danger' : 
+                                    item.userId.startsWith('LESSON') ? 'primary' : 
+                                    item.userId.startsWith('DISTILLED') ? 'intel' : 'audit'
+                                }
+                                className="uppercase tracking-widest px-3"
+                            >
+                                {item.metadata?.category || item.type?.replace('MEMORY:', '') || 'UNKNOWN'}
+                            </Badge>
+                            <Typography variant="mono" color="muted" className="text-[9px] opacity-40 uppercase tracking-tighter">
+                                ID :: {item.userId.split('#')[1] || item.userId}
+                            </Typography>
                         </div>
+                    </div>
 
-                        <Typography variant="body" color="white" weight="medium" className="leading-relaxed pr-8 relative z-10 block">
-                            {gap.content}
-                        </Typography>
-
-                         <div className="mt-4 flex gap-4 relative z-10 border-t border-white/5 pt-3">
-                             <div className="flex items-center gap-1.5">
-                               <TrendingUp size={10} className="text-cyber-green" /> 
-                               <Typography variant="mono" color="muted" className="text-[9px]" uppercase>Impact: {gap.metadata?.impact ?? 5}/10</Typography>
-                             </div>
-                             <div className="flex items-center gap-1.5">
-                               <Clock size={10} className="text-white/50" />
-                               <Typography variant="mono" color="muted" className="text-[9px]" uppercase>Detected: {new Date(gap.timestamp).toLocaleDateString()}</Typography>
-                             </div>
-                         </div>
-                    </Card>
-                ))
-               ) : (
-                <Card variant="solid" padding="md" className="h-24 flex items-center justify-center opacity-20 border-dashed">
-                   <Typography variant="caption" uppercase className="tracking-widest">Autonomous self-assessment: complete. No major gaps detected.</Typography>
-                </Card>
-              )}
-            </div>
-          </section>
-
-          {/* Tactical Lessons - Focus Mode */}
-          <section>
-            <Typography variant="caption" weight="black" uppercase className="tracking-[0.2em] flex items-center gap-2 mb-6 text-cyber-green opacity-60">
-              <Lightbulb size={14} className="text-cyber-green" /> Tactical Lessons (Heuristics)
-            </Typography>
-            <div className="grid gap-3">
-              {lessons.length > 0 ? (
-                lessons.map((lesson, i) => (
-                  <Card key={i} variant="glass" padding="md" className={`border-cyber-green/10 bg-cyber-green/[0.02] group relative ${lesson.metadata?.priority >= 8 ? 'bg-cyber-green/[0.05] border-cyber-green/30' : ''}`}>
-                    <div className="flex justify-between items-start">
-                      <div className="flex flex-col gap-1 mb-2">
-                        <Typography variant="mono" color="primary" weight="bold" uppercase className="text-[9px] tracking-tighter opacity-50 block">
-                          NEURAL_CORRECTION :: {lesson.userId.split('#')[1]}
-                        </Typography>
-                        {lesson.metadata?.priority >= 8 && <Badge variant="primary">HOT_PATH</Badge>}
-                      </div>
-
-                      <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <form action={prioritizeMemory}>
-                          <input type="hidden" name="userId" value={lesson.userId} />
-                          <input type="hidden" name="timestamp" value={lesson.timestamp} />
-                          <input type="hidden" name="priority" value={lesson.metadata?.priority >= 8 ? 5 : 10} />
-                          <Button variant={lesson.metadata?.priority >= 8 ? 'primary' : 'outline'} size="sm" type="submit" uppercase className="text-[9px] px-2 h-auto">
-                            {lesson.metadata?.priority >= 8 ? 'UNFOCUS' : 'FOCUS'}
-                          </Button>
-                        </form>
-                        
+                    <div className="flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <MemoryPrioritySelector 
+                            userId={item.userId} 
+                            timestamp={item.timestamp} 
+                            currentPriority={item.metadata?.priority ?? 5} 
+                        />
                         <form action={pruneMemory}>
-                            <input type="hidden" name="userId" value={lesson.userId} />
-                            <input type="hidden" name="timestamp" value={lesson.timestamp} />
+                            <input type="hidden" name="userId" value={item.userId} />
+                            <input type="hidden" name="timestamp" value={item.timestamp} />
                             <Button variant="ghost" size="sm" type="submit" className="text-white/50 hover:text-red-500 p-0 h-auto" icon={<Trash2 size={14} />} />
                         </form>
-                      </div>
                     </div>
-                    <Typography variant="body" color="white" italic className="leading-relaxed opacity-90 block mt-1">
-                       "{lesson.content}"
-                    </Typography>
-                    
-                    <div className="mt-3 flex gap-3 opacity-60">
-                      <div className="flex items-center gap-1">
-                        <BarChart2 size={10} />
-                        <Typography variant="mono" className="text-[8px] uppercase">Recalls: {lesson.metadata?.hitCount ?? 0}</Typography>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock size={10} />
-                        <Typography variant="mono" className="text-[8px] uppercase">Last: {lesson.metadata?.lastAccessed ? new Date(lesson.metadata.lastAccessed).toLocaleDateString() : 'Never'}</Typography>
-                      </div>
-                    </div>
-                  </Card>
-                ))
-              ) : (
-                <Card variant="solid" padding="md" className="h-20 flex items-center justify-center opacity-20 border-dashed">
-                  <Typography variant="caption" uppercase className="tracking-widest">NO_TACTICAL_LESSONS_INDEXED</Typography>
-                </Card>
-              )}
-            </div>
-          </section>
+                  </div>
 
-          <section>
-            <Typography variant="caption" weight="black" uppercase className="tracking-[0.2em] flex items-center gap-2 mb-6 text-cyber-blue opacity-60">
-              <Brain size={14} className="text-cyber-blue" /> Distilled Neural Constants
-            </Typography>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {distilled.length > 0 ? (
-                // Simple deduplication based on content snippets
-                Array.from(new Map(distilled.map(item => [item.content?.toString().substring(0, 50), item])).values()).map((fact, i) => (
-                  <Card key={i} variant="solid" padding="sm" className="relative group border-cyber-blue/10 bg-cyber-blue/[0.01]">
-                    <form action={pruneMemory} className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <input type="hidden" name="userId" value={fact.userId as string} />
-                        <input type="hidden" name="timestamp" value={fact.timestamp as number} />
-                        <Button variant="ghost" size="sm" type="submit" className="text-white/50 hover:text-red-500 p-0 h-auto" icon={<Trash2 size={14} />} />
-                    </form>
-                    <Typography variant="caption" weight="bold" color="intel" uppercase className="mb-2 block opacity-40">
-                      {String(fact.userId).replace('DISTILLED#', 'CONST::').replace('USER#', 'PREF::')}
-                    </Typography>
-                    <Typography variant="body" color="white" italic className="leading-relaxed opacity-70 block">
-                      {fact.content as string}
-                    </Typography>
+                  <Typography variant="body" color="white" className="leading-relaxed relative z-10 block whitespace-pre-wrap pr-10">
+                     {activeTab === 'facts' || item.userId.startsWith('DISTILLED') ? <span className="italic opacity-80">&quot;{item.content}&quot;</span> : item.content}
+                  </Typography>
 
-                    <div className="mt-4 pt-2 border-t border-white/5 flex gap-3 opacity-40">
-                      <div className="flex items-center gap-1">
-                        <Zap size={10} className="text-cyber-blue" />
-                        <Typography variant="mono" className="text-[8px] uppercase">Utility: {(fact.metadata as any)?.hitCount ?? 0}</Typography>
+                  <div className="mt-6 pt-4 border-t border-white/5 flex flex-wrap gap-6 relative z-10 opacity-50 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-2">
+                         <BarChart2 size={12} className="text-cyber-blue" />
+                         <Typography variant="mono" className="text-[10px] uppercase tracking-widest">Utility: {item.metadata?.hitCount ?? 0}</Typography>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Clock size={10} />
-                        <Typography variant="mono" className="text-[8px] uppercase">Last Recalled: {(fact.metadata as any)?.lastAccessed ? new Date((fact.metadata as any).lastAccessed).toLocaleDateString() : 'Never'}</Typography>
+                      <div className="flex items-center gap-2">
+                         <Clock size={12} />
+                         <Typography variant="mono" className="text-[10px] uppercase tracking-widest">Last Recalled: {item.metadata?.lastAccessed ? new Date(item.metadata.lastAccessed).toLocaleDateString() : 'Never'}</Typography>
                       </div>
-                    </div>
-                  </Card>
-                ))
-              ) : (
-                <Card variant="solid" padding="lg" className="h-32 col-span-2 flex flex-col items-center justify-center opacity-20 border-dashed">
-                  <Search size={24} className="mb-2" />
-                  <Typography variant="caption" uppercase>NO_DISTILLED_FACTS_FOUND</Typography>
-                </Card>
-              )}
-            </div>
-          </section>
-
-          {/* Dynamically Discovered Knowledge Types */}
-          {Object.entries(dynamicCategories ?? {}).map(([type, items]) => (
-            <section key={type}>
-              <Typography variant="caption" weight="black" uppercase className="tracking-[0.2em] flex items-center gap-2 mb-6 text-purple-400 opacity-60">
-                <Database size={14} className="text-purple-400" /> {type.replace('MEMORY:', '').replace(/_/g, ' ')}
-              </Typography>
-              <div className="grid grid-cols-1 gap-4">
-                {items.map((item, i) => (
-                  <Card key={i} variant="solid" padding="sm" className={`relative group border-purple-500/10 bg-purple-500/[0.01] ${!item.metadata?.hitCount ? 'opacity-60 grayscale-[0.5]' : ''}`}>
-                    <form action={pruneMemory} className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <input type="hidden" name="userId" value={item.userId} />
-                        <input type="hidden" name="timestamp" value={item.timestamp} />
-                        <Button variant="ghost" size="sm" type="submit" className="text-white/50 hover:text-red-500 p-0 h-auto" icon={<Trash2 size={14} />} />
-                    </form>
-                    <div className="flex flex-col gap-1 mb-2">
-                        <Typography variant="mono" color="intel" weight="bold" uppercase className="text-[9px] tracking-tighter opacity-50 block">
-                          ID :: {item.userId.split('#')[1]}
-                        </Typography>
-                    </div>
-                    <Typography variant="body" color="white" className="leading-relaxed opacity-80 block whitespace-pre-wrap">
-                      {item.content}
-                    </Typography>
-
-                    <div className="mt-4 pt-2 border-t border-white/5 flex gap-4 opacity-40">
-                      <div className="flex items-center gap-1">
-                        <BarChart2 size={10} className="text-purple-400" />
-                        <Typography variant="mono" className="text-[8px] uppercase">Hits: {item.metadata?.hitCount ?? 0}</Typography>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock size={10} />
-                        <Typography variant="mono" className="text-[8px] uppercase">Last: {item.metadata?.lastAccessed ? new Date(item.metadata.lastAccessed).toLocaleDateString() : 'Never'}</Typography>
-                      </div>
-                      {!item.metadata?.hitCount && (
-                        <div className="ml-auto flex items-center gap-1 text-amber-500/60">
-                          <Typography variant="mono" className="text-[8px] uppercase">STALE_CANDIDATE</Typography>
+                      {item.metadata?.impact && (
+                        <div className="flex items-center gap-2">
+                            <TrendingUp size={12} className="text-cyber-green" />
+                            <Typography variant="mono" className="text-[10px] uppercase tracking-widest">Impact: {item.metadata.impact}/10</Typography>
                         </div>
                       )}
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-
-        {/* Right: Arsenal & Sessions */}
-        <div className="xl:col-span-4 space-y-10">
-          <Card variant="glass" padding="lg" className="border-white/10 bg-black/40">
-            <div className="flex items-center justify-between mb-6">
-              <Typography variant="caption" weight="black" uppercase className="tracking-[0.2em] flex items-center gap-2">
-                <Wrench size={14} className="text-yellow-500" /> Active Arsenal
-              </Typography>
-              <Typography variant="mono" weight="bold" color="primary" className="text-[8px] animate-pulse">CAPABLE</Typography>
-            </div>
-            <div className="space-y-3">
-              {toolList.slice(0, 12).map((tool, i) => (
-                <div key={i} className="px-3 py-2 bg-white/[0.02] border border-white/5 rounded flex items-center justify-between group">
-                  <Typography variant="caption" weight="bold" color="white" uppercase className="tracking-tight group-hover:text-yellow-500/80 transition-colors">
-                    {tool.name}
-                  </Typography>
-                  <Shield size={10} className="text-white/10 group-hover:text-cyber-green" />
-                </div>
-              ))}
-              {toolList.length > 12 && (
-                <Typography variant="mono" color="muted" className="text-center text-[9px] pt-2 border-t border-white/5 mt-4 block capitalize">
-                  + {toolList.length - 12} more specialized nodes
-                </Typography>
-              )}
-            </div>
-          </Card>
-
-          <Card variant="glass" padding="lg" className="border-white/5 bg-black/20">
-            <Typography variant="caption" weight="black" uppercase className="tracking-[0.2em] flex items-center gap-2 mb-6 opacity-60">
-              <History size={14} /> Cognitive Sessions
-            </Typography>
-            <div className="space-y-3">
-              {sessions.map((session, i) => (
-                <div key={i} className="flex justify-between items-center text-[10px] p-2.5 hover:bg-white/5 rounded transition-colors group border border-transparent hover:border-white/5">
-                  <Typography variant="mono" color="muted" className="truncate max-w-[120px] tracking-tighter uppercase">{session.userId}</Typography>
-                  <div className="flex items-center gap-3">
-                    <Typography variant="mono" color="muted" className="group-hover:text-cyber-green">{new Date(session.lastActive).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Typography>
-                    <div className="w-1 h-1 bg-cyber-green rounded-full shadow-[0_0_5px_rgba(52,211,153,0.5)]"></div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
+
+                  {/* High Priority Accent */}
+                  {item.metadata?.priority && item.metadata.priority >= 8 && (
+                      <div className="absolute top-0 right-0 w-16 h-16 pointer-events-none overflow-hidden">
+                          <div className="absolute top-[-25px] right-[-25px] w-[50px] h-[50px] bg-amber-500 rotate-45 flex items-end justify-center pb-1 shadow-[0_0_15px_rgba(245,158,11,0.5)]">
+                              <Zap size={10} className="text-black" />
+                          </div>
+                      </div>
+                  )}
+                </Card>
+            ))}
+          </div>
+        )}
+
+        <MemoryPagination nextToken={next} />
       </div>
     </main>
   );

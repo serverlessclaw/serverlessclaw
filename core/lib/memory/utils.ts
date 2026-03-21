@@ -41,14 +41,16 @@ export function createMetadata(
  * @param base - The base memory provider instance.
  * @param type - The memory type string (e.g., 'GAP', 'LESSON').
  * @param limit - Maximum items to retrieve.
- * @returns A promise resolving to an array of memory items.
+ * @param lastEvaluatedKey - Pagination token.
+ * @returns A promise resolving to an array of memory items and a next token.
  */
-export async function getMemoryByType(
+export async function getMemoryByTypePaginated(
   base: BaseMemoryProvider,
   type: string,
-  limit: number = 100
-): Promise<Record<string, unknown>[]> {
-  return (await base.queryItems({
+  limit: number = 100,
+  lastEvaluatedKey?: Record<string, unknown>
+): Promise<{ items: Record<string, unknown>[]; lastEvaluatedKey?: Record<string, unknown> }> {
+  const result = await (base as any).queryItemsPaginated({
     IndexName: 'TypeTimestampIndex',
     KeyConditionExpression: '#type = :type',
     ExpressionAttributeNames: {
@@ -59,7 +61,30 @@ export async function getMemoryByType(
     },
     ScanIndexForward: false,
     Limit: limit,
-  })) as Record<string, unknown>[];
+    ExclusiveStartKey: lastEvaluatedKey,
+  });
+
+  return {
+    items: result.items as Record<string, unknown>[],
+    lastEvaluatedKey: result.lastEvaluatedKey,
+  };
+}
+
+/**
+ * Universal fetcher for memory items by their type using the GSI (legacy non-paginated).
+ *
+ * @param base - The base memory provider instance.
+ * @param type - The memory type string (e.g., 'GAP', 'LESSON').
+ * @param limit - Maximum items to retrieve.
+ * @returns A promise resolving to an array of memory items.
+ */
+export async function getMemoryByType(
+  base: BaseMemoryProvider,
+  type: string,
+  limit: number = 100
+): Promise<Record<string, unknown>[]> {
+  const { items } = await getMemoryByTypePaginated(base, type, limit);
+  return items;
 }
 
 /**
