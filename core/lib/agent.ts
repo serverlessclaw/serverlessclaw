@@ -244,7 +244,6 @@ export class Agent {
       const {
         responseText: initialResponseText,
         paused,
-        pauseMessage,
         attachments: resultAttachments,
       } = await executor.runLoop(messages, {
         activeModel,
@@ -270,7 +269,7 @@ export class Agent {
       if (paused) {
         await this.memory.addMessage(storageId, {
           role: MessageRole.ASSISTANT,
-          content: pauseMessage!,
+          content: responseText,
           agentName: this.config?.name ?? 'SuperClaw',
           traceId,
         });
@@ -283,7 +282,7 @@ export class Agent {
           parentId: parentId ?? 'unknown',
           attachments: incomingAttachments,
         });
-        return { responseText: pauseMessage!, attachments: resultAttachments, traceId };
+        return { responseText, attachments: resultAttachments, traceId };
       }
 
       // 5. Finalize and Response

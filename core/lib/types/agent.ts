@@ -65,6 +65,7 @@ export interface CompletionEvent extends BaseEvent {
   task: string;
   response: string;
   attachments?: Attachment[];
+  userNotified?: boolean;
 }
 
 /**
@@ -84,6 +85,7 @@ export interface FailureEvent extends BaseEvent {
   agentId: string;
   task: string;
   error: string;
+  userNotified?: boolean;
 }
 
 /**

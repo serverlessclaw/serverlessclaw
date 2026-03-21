@@ -64,7 +64,7 @@ export const DISPATCH_TASK = {
         depth: (depth ?? 0) + 1,
         sessionId,
       });
-      return `Task successfully dispatched to ${agentId} agent. Trace ID: ${childTracer.getTraceId()}`;
+      return `TASK_PAUSED: Task successfully dispatched to ${agentId} agent. Trace ID: ${childTracer.getTraceId()}`;
     } catch (error) {
       return `Failed to dispatch task: ${formatErrorMessage(error)}`;
     }

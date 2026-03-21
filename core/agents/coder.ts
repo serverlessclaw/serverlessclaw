@@ -37,6 +37,8 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
     return;
   }
 
+  const baseUserId = extractBaseUserId(userId);
+
   // 1. Transition gaps to PROGRESS
   const { memory, provider } = await getAgentContext();
   if (gapIds && gapIds.length > 0) {
@@ -107,9 +109,9 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
   if (!isTaskPaused(rawResponse)) {
     await sendOutboundMessage(
       'coder.agent',
-      userId,
+      baseUserId,
       responseText,
-      [userId],
+      [baseUserId],
       sessionId,
       config.name,
       resultAttachments
@@ -133,7 +135,7 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
     await emitTaskEvent({
       source: 'coder.agent',
       agentId: AgentType.CODER,
-      userId,
+      userId: baseUserId,
       task: task || '',
       response: responseText,
       attachments: resultAttachments,

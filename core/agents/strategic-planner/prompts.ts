@@ -199,14 +199,15 @@ export async function buildProactiveReviewPrompt(
 }
 
 /**
- * Builds the reactive (single gap) prompt.
+ * Builds the reactive prompt for a specific task or gap.
  *
- * @param payload - The planner payload containing gap details.
+ * @param payload - The planner payload containing task/gap details.
  * @param telemetry - System telemetry string.
  * @returns The formatted prompt string.
  */
 export function buildReactivePrompt(payload: PlannerPayload, telemetry: string): string {
   const { details, metadata } = payload;
+  const task = (payload as Record<string, unknown>).task || details || 'Strategic Review';
 
   const signals = metadata
     ? `
@@ -217,5 +218,21 @@ export function buildReactivePrompt(payload: PlannerPayload, telemetry: string):
     `
     : '';
 
-  return `GAP IDENTIFIED: ${details}\n${signals}\n${telemetry}\n\nUSER CONTEXT: Please design a STRATEGIC_PLAN to fix this gap for user ${payload.contextUserId}.`;
+  const context = payload.gapId
+    ? `CAPABILITY GAP IDENTIFIED: ${task}`
+    : `ARCHITECTURAL TASK/INQUIRY: ${task}`;
+
+  return `
+    ${context}
+    ${signals}
+    ${telemetry}
+
+    USER CONTEXT: Please analyze the request for user ${payload.userId}.
+    
+    INSTRUCTIONS:
+    1. If this is a capability gap (gapId present), design a STRATEGIC_PLAN to fix it.
+    2. If this is an architectural inquiry or system question, use your tools (listAgents, inspectTopology) to provide a deep, accurate answer.
+    3. Always return your response in the specified JSON format.
+    4. If you are just answering a question and no code changes are required, set 'coveredGapIds' to an empty array.
+  `;
 }

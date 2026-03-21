@@ -7,9 +7,9 @@ LOCAL_STAGE ?= local
 
 .PHONY: dev deploy diff synth remove remove-local clear-port
 
-dev: ## Start SST in development mode
-	@$(call log_step,Starting SST dev mode on stage $(LOCAL_STAGE)...)
-	@$(call load_env); $(SST) dev --stage $(LOCAL_STAGE)
+dev: ## Start SST in development mode (mono mode)
+	@$(call log_step,Starting SST dev mode on stage $(LOCAL_STAGE) in mono mode...)
+	@$(call load_env); $(SST) dev --stage $(LOCAL_STAGE) --mode=mono
 
 deploy: ## Deploy SST to the environment (default: dev)
 	@$(call log_step,Deploying to environment: $(ENV)...)

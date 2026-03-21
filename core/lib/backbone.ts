@@ -25,6 +25,7 @@ const TOOL_MANAGE_GAP = TOOLS.manageGap;
 const TOOL_REPORT_GAP = TOOLS.reportGap;
 const TOOL_CHECK_HEALTH = TOOLS.checkHealth;
 const TOOL_INSPECT_TOPOLOGY = TOOLS.inspectTopology;
+const TOOL_LIST_AGENTS = TOOLS.listAgents;
 /**
  * Backbone Registry: The single source of truth for essential system components.
  * Reserved for LLM-based Agents and logic-based Handlers.
@@ -47,7 +48,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     tools: [
       TOOLS.dispatchTask,
 
-      TOOLS.listAgents,
+      TOOL_LIST_AGENTS,
       TOOL_RECALL_KNOWLEDGE,
 
       TOOLS.checkConfig,
@@ -147,11 +148,12 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     defaultCommunicationMode: 'json',
     tools: [
       TOOL_RECALL_KNOWLEDGE,
-      'dispatchTask',
+      TOOLS.dispatchTask,
       TOOL_MANAGE_GAP,
       TOOL_REPORT_GAP,
       TOOL_SEND_MESSAGE,
-      'manageAgentTools',
+      TOOLS.listAgents,
+      TOOLS.manageAgentTools,
       TOOL_DISCOVER_SKILLS,
       TOOL_INSTALL_SKILL,
       TOOL_SAVE_MEMORY,

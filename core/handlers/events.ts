@@ -18,10 +18,11 @@ export async function handler(
   },
   context: Context
 ): Promise<void> {
-  logger.info('EventHandler received event:', JSON.stringify(event, null, 2));
-
   const detailType = event['detail-type'];
   const eventDetail = event.detail;
+
+  console.log(`[EVENTS] Received: ${detailType} | Session: ${eventDetail.sessionId ?? 'N/A'}`);
+  logger.info('EventHandler received event:', JSON.stringify(event, null, 2));
 
   switch (detailType) {
     case EventType.SYSTEM_BUILD_FAILED: {

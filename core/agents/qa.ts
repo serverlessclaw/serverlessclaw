@@ -9,7 +9,12 @@ import {
 } from '../lib/types/agent';
 import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
-import { extractPayload, loadAgentConfig, getAgentContext } from '../lib/utils/agent-helpers';
+import {
+  extractPayload,
+  loadAgentConfig,
+  getAgentContext,
+  extractBaseUserId,
+} from '../lib/utils/agent-helpers';
 import { emitTaskEvent } from '../lib/utils/agent-helpers/event-emitter';
 import { sendOutboundMessage } from '../lib/outbound';
 
@@ -38,6 +43,8 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
     logger.warn('QA Auditor received incomplete payload, skipping verification.');
     return;
   }
+
+  const baseUserId = extractBaseUserId(userId);
 
   // 1. Discovery & Initialization
   const config = await loadAgentConfig(AgentType.QA);
@@ -142,9 +149,9 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
     if (escalatedGaps.length > 0) {
       await sendOutboundMessage(
         'qa.agent',
-        userId,
+        baseUserId,
         `⚠️ **Evolution Escalation Required**\n\nGaps ${escalatedGaps.join(', ')} have failed QA verification ${MAX_REOPEN_ATTEMPTS} times and cannot be autonomously resolved.\n\nPlease review the implementation manually and re-approve when ready.`,
-        [userId],
+        [baseUserId],
         traceId,
         config.name
       );
@@ -154,7 +161,7 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
     const dispatcher = TOOLS.dispatchTask;
     await dispatcher.execute({
       agentId: AgentType.CODER,
-      userId,
+      userId: baseUserId,
       task: `QA verification failed for gaps: ${retryGaps.join(', ')}.\n\nAudit Report:\n${auditReport}\n\nPlease fix the issues and redeploy.`,
       metadata: { gapIds: retryGaps },
       traceId,
@@ -165,9 +172,9 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
   // 1. Notify user directly in the chat session
   await sendOutboundMessage(
     'qa.agent',
-    userId,
+    baseUserId,
     `🔍 **QA Audit Complete**\n\n${auditReport}`,
-    [userId],
+    [baseUserId],
     traceId,
     config.name,
     resultAttachments
@@ -177,7 +184,7 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
   await emitTaskEvent({
     source: 'qa.agent',
     agentId: AgentType.QA,
-    userId,
+    userId: baseUserId,
     task: `Audit gaps: ${gapIds.join(', ')}`,
     response: auditReport,
     attachments: resultAttachments,

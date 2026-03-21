@@ -1,4 +1,4 @@
-import { EventType } from '../core/lib/types/agent';
+import { EventType, AgentType } from '../core/lib/types/agent';
 import { SharedContext, getValidSecrets, AGENT_CONFIG } from './shared';
 
 const RECOVERY_SCHEDULE_RATE = 'rate(15 minutes)';
@@ -225,7 +225,9 @@ export function createAgents(ctx: SharedContext): {
     },
   });
   bus.subscribe('EvolutionPlanSubscriber', plannerAgent.arn, {
-    pattern: { detailType: [EventType.EVOLUTION_PLAN] },
+    pattern: {
+      detailType: [EventType.EVOLUTION_PLAN, `${AgentType.STRATEGIC_PLANNER}_task`],
+    },
   });
 
   // 3. Event Handler (System errors)
@@ -249,6 +251,7 @@ export function createAgents(ctx: SharedContext): {
         EventType.TASK_FAILED,
         EventType.SYSTEM_HEALTH_REPORT,
         EventType.HEARTBEAT_PROACTIVE,
+        EventType.CONTINUATION_TASK,
       ],
     },
   });
@@ -271,7 +274,9 @@ export function createAgents(ctx: SharedContext): {
     },
   });
   bus.subscribe('ReflectTaskSubscriber', reflectorAgent.arn, {
-    pattern: { detailType: [EventType.REFLECT_TASK] },
+    pattern: {
+      detailType: [EventType.REFLECT_TASK, `${AgentType.COGNITION_REFLECTOR}_task`],
+    },
   });
 
   // 7. QA Agent (Verifies satisfaction after deploy)
@@ -293,7 +298,11 @@ export function createAgents(ctx: SharedContext): {
   });
   bus.subscribe('QaVerificationSubscriber', qaAgent.arn, {
     pattern: {
-      detailType: [EventType.SYSTEM_BUILD_SUCCESS, EventType.CODER_TASK_COMPLETED],
+      detailType: [
+        EventType.SYSTEM_BUILD_SUCCESS,
+        EventType.CODER_TASK_COMPLETED,
+        `${AgentType.QA}_task`,
+      ],
     },
   });
 
@@ -337,6 +346,16 @@ export function createAgents(ctx: SharedContext): {
             EventType.REFLECT_TASK,
             EventType.EVOLUTION_PLAN,
             EventType.SYSTEM_BUILD_FAILED,
+            EventType.SYSTEM_BUILD_SUCCESS,
+            EventType.TASK_COMPLETED,
+            EventType.TASK_FAILED,
+            EventType.SYSTEM_HEALTH_REPORT,
+            EventType.HEARTBEAT_PROACTIVE,
+            EventType.CONTINUATION_TASK,
+            EventType.OUTBOUND_MESSAGE,
+            `${AgentType.STRATEGIC_PLANNER}_task`,
+            `${AgentType.COGNITION_REFLECTOR}_task`,
+            `${AgentType.QA}_task`,
           ],
         },
       ],

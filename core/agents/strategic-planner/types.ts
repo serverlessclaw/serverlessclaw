@@ -12,8 +12,10 @@ export interface PlannerMetadata {
 
 export interface PlannerPayload {
   gapId?: string;
-  details?: string;
-  contextUserId: string;
+  details?: string; // Legacy
+  task?: string; // Standard
+  userId: string; // Standard
+  contextUserId?: string; // Legacy
   metadata?: PlannerMetadata;
   isScheduledReview?: boolean;
   traceId?: string;

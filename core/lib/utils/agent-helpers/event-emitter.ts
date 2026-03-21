@@ -53,6 +53,7 @@ export async function emitTaskEvent(params: {
   initiatorId?: string;
   depth?: number;
   metadata?: Record<string, unknown>;
+  userNotified?: boolean;
 }): Promise<void> {
   const eventbridge = await getEventBridge();
   const typedResource = getTypedResource();
@@ -77,6 +78,7 @@ export async function emitTaskEvent(params: {
               depth: params.depth,
               sessionId: params.sessionId,
               metadata: params.metadata,
+              userNotified: params.userNotified,
             }),
             EventBusName: typedResource.AgentBus.name,
           },

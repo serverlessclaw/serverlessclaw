@@ -30,6 +30,8 @@ export async function handler(event: Record<string, unknown>, _context: Context)
   const safeUserId = userId.replace(/[#+]/g, '_');
   const sessionId = detail.sessionId;
 
+  console.log(`[RealtimeBridge] Routing: User=${userId} | Session=${sessionId}`);
+
   // If we have a sessionId, we can target the specific chat session
   // Otherwise fallback to the generic user signal topic
   const topic = sessionId

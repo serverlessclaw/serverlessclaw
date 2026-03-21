@@ -3,6 +3,7 @@ import { DynamoMemory } from '../lib/memory';
 import { MessageRole } from '../lib/types/llm';
 import { Attachment } from '../lib/types/agent';
 import { logger } from '../lib/logger';
+import { extractBaseUserId } from '../lib/utils/agent-helpers';
 
 const memory = new DynamoMemory();
 
@@ -24,21 +25,27 @@ interface NotifierEvent {
  * @returns A promise that resolves when the notification has been processed.
  */
 export const handler = async (event: NotifierEvent): Promise<void> => {
-  logger.info('NotifierAgent received event:', JSON.stringify(event, null, 2));
+  logger.info('[NOTIFIER] Received event:', JSON.stringify(event, null, 2));
 
   // The event is wrapped by EventBridge, the actual payload is in event.detail
   const payload = event.detail;
   if (!payload || !payload.userId || !payload.message) {
-    logger.error('Missing userId or message in OUTBOUND_MESSAGE event');
+    logger.error('[NOTIFIER] Missing userId or message in OUTBOUND_MESSAGE event');
     return;
   }
 
   const { userId, message, memoryContexts, sessionId, agentName, attachments } = payload;
 
+  // Defensive Normalization: Ensure we have the base user ID for syncing and Telegram
+  const baseUserId = extractBaseUserId(userId);
+  logger.info(
+    `[NOTIFIER] Normalized User: ${baseUserId} | Session: ${sessionId} | Contexts: ${memoryContexts?.length ?? 0}`
+  );
+
   const contextsToSync = new Set<string>(memoryContexts ?? []);
-  contextsToSync.add(userId); // Always sync to the base user history
+  contextsToSync.add(baseUserId); // Always sync to the base user history
   if (sessionId) {
-    contextsToSync.add(`CONV#${userId}#${sessionId}`);
+    contextsToSync.add(`CONV#${baseUserId}#${sessionId}`);
   }
 
   for (const contextId of contextsToSync) {
@@ -59,13 +66,13 @@ export const handler = async (event: NotifierEvent): Promise<void> => {
   if (attachments && attachments.length > 0) {
     for (const attachment of attachments) {
       if (attachment.url) {
-        await sendTelegramMedia(userId, attachment, message);
+        await sendTelegramMedia(baseUserId, attachment, message);
       } else {
         logger.warn('Skipping attachment without URL for Telegram:', attachment.name);
       }
     }
   } else {
-    await sendTelegramMessage(userId, message);
+    await sendTelegramMessage(baseUserId, message);
   }
 
   // Future Adapters (Slack, Discord, Dashboard WebSockets) can be added here

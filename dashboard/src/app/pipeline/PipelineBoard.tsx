@@ -175,7 +175,7 @@ export default function PipelineBoard({
                 return (
                   <div 
                       key={gap.userId} 
-                      className={`glass-card p-4 border-white/5 hover:border-white/20 transition-all group relative overflow-hidden bg-black/40 ${selectedGaps.has(gap.userId) ? 'ring-1 ring-indigo-500/50 bg-indigo-500/5' : ''}`}
+                      className={`glass-card pt-3 pl-3 pr-3 pb-2 border-white/5 hover:border-white/20 transition-all group relative overflow-hidden bg-black/40 ${selectedGaps.has(gap.userId) ? 'ring-1 ring-indigo-500/50 bg-indigo-500/5' : ''}`}
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-2">
@@ -214,7 +214,7 @@ export default function PipelineBoard({
                         </button>
                     </div>
 
-                    <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/5">
+                    <div className="flex items-center justify-between pt-2 border-t border-white/5">
                       <div className="flex items-center gap-2 text-[8px] text-white/30 font-mono">
                         <Clock size={8} />
                         {new Date(gap.timestamp).toLocaleDateString()}

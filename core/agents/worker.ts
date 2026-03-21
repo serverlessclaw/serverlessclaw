@@ -59,12 +59,18 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
     return;
   }
 
+  const baseUserId = extractBaseUserId(userId);
+
   // 1. Discovery: Load dynamic config
   const config = await loadAgentConfig(agentId);
 
   // 2. Initialization: Setup tools and prompt
   const { memory, provider } = await getAgentContext();
   const agent = await createAgent(agentId, config, memory, provider);
+
+  const isSocial = config?.category === 'social';
+  const isTextMode = config?.defaultCommunicationMode === 'text';
+  const shouldSpeakDirectly = isSocial || isTextMode;
 
   // 3. Execution
   const { responseText, attachments: resultAttachments } = await agent.process(
@@ -85,13 +91,26 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
 
   logger.info(`Worker Agent [${agentId}] completed task:`, responseText);
 
-  // 4. Notification (Optional: Worker could be silent or chatty)
+  // 4. Notification
   if (!isTaskPaused(responseText)) {
     const isFailure = detectFailure(responseText);
+
+    if (shouldSpeakDirectly && !isFailure) {
+      await sendOutboundMessage(
+        `${agentId}.agent`,
+        baseUserId,
+        responseText,
+        [baseUserId],
+        sessionId,
+        config?.name,
+        resultAttachments
+      );
+    }
+
     await emitTaskEvent({
       source: `${agentId}.agent`,
       agentId,
-      userId,
+      userId: baseUserId,
       task,
       [isFailure ? 'error' : 'response']: responseText,
       attachments: resultAttachments,
@@ -99,6 +118,7 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
       sessionId,
       initiatorId: payload.initiatorId,
       depth: payload.depth,
+      userNotified: shouldSpeakDirectly && !isFailure,
     });
   }
 

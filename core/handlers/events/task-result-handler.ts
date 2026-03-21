@@ -18,7 +18,8 @@ export async function handleTaskResult(
     ? FAILURE_EVENT_SCHEMA.parse(eventDetail)
     : COMPLETION_EVENT_SCHEMA.parse(eventDetail);
 
-  const { userId, agentId, task, traceId, initiatorId, depth, sessionId } = parsedEvent;
+  const { userId, agentId, task, traceId, initiatorId, depth, sessionId, userNotified } =
+    parsedEvent;
   const response = 'error' in parsedEvent ? parsedEvent.error : parsedEvent.response;
 
   const currentDepth = depth ?? 1;
@@ -27,7 +28,7 @@ export async function handleTaskResult(
   const { logger } = await import('../../lib/logger');
 
   logger.info(
-    `Relaying ${isFailure ? 'failure' : 'completion'} from ${agentId} to Initiator: ${initiatorId ?? 'Orchestrator'} (Depth: ${currentDepth}, Session: ${sessionId})`
+    `Relaying ${isFailure ? 'failure' : 'completion'} from ${agentId} to Initiator: ${initiatorId ?? 'Orchestrator'} (Depth: ${currentDepth}, Session: ${sessionId}, UserNotified: ${userNotified})`
   );
 
   // 1. Loop Protection - Use shared function
@@ -67,6 +68,7 @@ export async function handleTaskResult(
       Please continue your logic based on this result.`,
     traceId,
     sessionId,
-    currentDepth
+    currentDepth,
+    userNotified
   );
 }

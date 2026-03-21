@@ -97,6 +97,8 @@ export class AgentExecutor {
     let responseText = '';
     const attachments: NonNullable<Message['attachments']> = [];
 
+    console.log(`[EXECUTOR] Available Tools: ${this.tools.map((t) => t.name).join(', ')}`);
+
     // 0. Global Pause Check (Kill Switch)
     try {
       const { DYNAMO_KEYS } = await import('../constants');
@@ -167,6 +169,10 @@ export class AgentExecutor {
         effectiveResponseFormat
       );
 
+      console.log(
+        `[EXECUTOR] AI Response: ${aiResponse.content?.substring(0, 50)}... | Tools: ${aiResponse.tool_calls?.length ?? 0}`
+      );
+
       await tracer.addStep({
         type: 'llm_response',
         content: {
@@ -182,6 +188,7 @@ export class AgentExecutor {
 
         for (const toolCall of aiResponse.tool_calls) {
           const tool = this.tools.find((t) => t.name === toolCall.function.name);
+          console.log(`[EXECUTOR] Found tool ${toolCall.function.name}: ${!!tool}`);
           if (tool) {
             const args = JSON.parse(toolCall.function.arguments);
             // Context injection
@@ -200,6 +207,10 @@ export class AgentExecutor {
               task: userText,
             });
 
+            console.log(
+              `[EXECUTOR] Calling tool: ${tool.name} | Args:`,
+              JSON.stringify(args).substring(0, 100)
+            );
             await tracer.addStep({ type: 'tool_call', content: { toolName: tool.name, args } });
 
             const rawResult = await tool.execute(args);
@@ -207,6 +218,9 @@ export class AgentExecutor {
               typeof rawResult === 'string'
                 ? rawResult
                 : (rawResult as ToolResult).text || JSON.stringify(rawResult) || '';
+            console.log(
+              `[EXECUTOR] Tool Result: ${tool.name} | Success: ${!resultText.startsWith('FAILED')}`
+            );
 
             // Collect attachments from result
             if (typeof rawResult !== 'string') {
@@ -242,7 +256,7 @@ export class AgentExecutor {
             // 4. HITL/Pause Optimization: Break loop immediately if tool returns TASK_PAUSED
             if (resultText.startsWith('TASK_PAUSED')) {
               return {
-                responseText: resultText,
+                responseText: aiResponse.content || resultText,
                 paused: true,
                 pauseMessage: resultText,
                 attachments,

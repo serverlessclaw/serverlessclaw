@@ -1,5 +1,6 @@
 import { emitEvent } from './utils/bus';
 import { EventType, Attachment } from './types/agent';
+import { extractBaseUserId } from './utils/agent-helpers';
 
 /**
  * Sends an outbound message event to the system bus.
@@ -24,8 +25,11 @@ export async function sendOutboundMessage(
   attachments?: Attachment[],
   messageId?: string
 ): Promise<void> {
+  // Normalize userId to base form to ensure consistent routing and syncing
+  const baseUserId = extractBaseUserId(userId);
+
   await emitEvent(source, EventType.OUTBOUND_MESSAGE, {
-    userId,
+    userId: baseUserId,
     message,
     memoryContexts,
     sessionId,

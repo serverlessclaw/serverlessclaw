@@ -31,8 +31,12 @@ export async function emitEvent(
         },
       ],
     });
+
+    logger.info(
+      `[BUS_EMIT] From: ${source} | Type: ${type} | Session: ${(detail as Record<string, unknown>).sessionId ?? 'N/A'} | User: ${(detail as Record<string, unknown>).userId ?? 'N/A'}`
+    );
+
     await eventbridge.send(command);
-    logger.info(`Event emitted from ${source}: ${type}`);
   } catch (error) {
     logger.error(`Failed to emit event from ${source}:`, error);
     throw error;

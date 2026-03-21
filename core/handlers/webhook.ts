@@ -36,6 +36,7 @@ export const handler = async (
   event: APIGatewayProxyEventV2,
   context: Context
 ): Promise<APIGatewayProxyResultV2> => {
+  console.log('[WEBHOOK] Start | Event:', event.body?.substring(0, 100));
   logger.info('Received event:', JSON.stringify(event, null, 2));
 
   let parsedUpdate: z.infer<typeof TELEGRAM_UPDATE_SCHEMA>;
@@ -45,12 +46,14 @@ export const handler = async (
     }
     parsedUpdate = TELEGRAM_UPDATE_SCHEMA.parse(JSON.parse(event.body));
   } catch (error) {
+    console.error('[WEBHOOK] Parse Error:', error);
     logger.error('Failed to parse or validate Telegram update:', error);
     return { statusCode: 400, body: 'Invalid Telegram update format or missing body' };
   }
 
   const message = parsedUpdate.message;
   if (!message) {
+    console.log('[WEBHOOK] No message in update');
     // Non-message updates should be acknowledged so Telegram does not retry.
     return { statusCode: 200, body: 'OK' };
   }
@@ -63,15 +66,18 @@ export const handler = async (
     !!message.voice;
 
   if (!hasActionableContent) {
+    console.log('[WEBHOOK] No actionable content');
     return { statusCode: 200, body: 'OK' };
   }
 
   const chatId = message.chat.id.toString();
   const userText = message.text ?? message.caption ?? '';
+  console.log(`[WEBHOOK] User: ${chatId} | Text: ${userText.substring(0, 50)}`);
 
   const attachments = await processTelegramMedia(message);
 
   // Lazy load dependencies to reduce initial context budget
+  console.log('[WEBHOOK] Lazy loading deps...');
   const [
     { DynamoMemory },
     { ProviderManager },
@@ -93,21 +99,28 @@ export const handler = async (
   const lockManager = new DynamoLockManager();
 
   // 1. Acquire Lock
+  console.log('[WEBHOOK] Acquiring lock...');
   const acquired = await lockManager.acquire(chatId, 60);
   if (!acquired) {
+    console.warn(`[WEBHOOK] Lock busy for ${chatId}`);
     logger.info(`Could not acquire lock for session ${chatId}. Task probably in progress.`);
     return { statusCode: 200, body: 'Task in progress' };
   }
 
   try {
     // 2. Process message via Agent
+    console.log('[WEBHOOK] Loading config...');
     const config = await AgentRegistry.getAgentConfig('main');
     if (!config) throw new Error('Main agent config missing');
 
     const { profile, cleanText } = SuperClaw.parseCommand(userText);
 
+    console.log('[WEBHOOK] Loading tools...');
     const agentTools = await getAgentTools('main');
+    console.log(`[WEBHOOK] Tools loaded: ${agentTools.map((t) => t.name).join(', ')}`);
+
     const agent = new SuperClaw(memory, provider, agentTools, config);
+    console.log('[WEBHOOK] Starting agent process...');
     const { responseText, attachments: resultAttachments } = await agent.process(
       chatId,
       cleanText,
@@ -116,10 +129,13 @@ export const handler = async (
         context,
         source: TraceSource.TELEGRAM,
         attachments,
+        sessionId: chatId,
       }
     );
+    console.log('[WEBHOOK] Process complete. Response length:', responseText.length);
 
     // 3. Send response to Notifier via AgentBus
+    console.log('[WEBHOOK] Sending outbound message...');
     await sendOutboundMessage(
       'webhook.handler',
       chatId,
@@ -129,6 +145,10 @@ export const handler = async (
       'SuperClaw',
       resultAttachments
     );
+    console.log('[WEBHOOK] All done.');
+  } catch (err) {
+    console.error('[WEBHOOK] Execution Error:', err);
+    throw err;
   } finally {
     // 4. Release Lock
     await lockManager.release(chatId);

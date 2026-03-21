@@ -29,14 +29,14 @@ import type { PlannerEvent, PlannerResult, PlannerPayload } from './strategic-pl
  * @returns A promise that resolves to an object with gapId and the plan, or a status object.
  */
 export async function handler(event: PlannerEvent, _context: Context): Promise<PlannerResult> {
-  logger.info('Planner Agent received task:', JSON.stringify(event, null, 2));
+  logger.info('[PLANNER] Received task:', JSON.stringify(event, null, 2));
 
   // EventBridge wraps the payload in 'detail'
   const payload = extractPayload<PlannerPayload>(event);
   const {
+    userId,
+    task = 'Strategic Review',
     gapId,
-    details,
-    contextUserId,
     metadata,
     isScheduledReview,
     traceId,
@@ -45,11 +45,20 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
     sessionId,
   } = payload;
 
+  logger.info(
+    `[PLANNER] Input: User=${userId} | Session=${sessionId} | Task=${task.substring(0, 50)}`
+  );
+
+  if (!userId) {
+    logger.error('Planner Agent received payload without userId. Aborting.');
+    return { status: 'FAILED_MISSING_USER_ID' };
+  }
+
   const isProactive =
     (metadata as unknown as Record<string, unknown>)?.isProactive || isScheduledReview;
 
   // Extract base userId (remove CONV# prefix if present)
-  const baseUserId = extractBaseUserId(contextUserId);
+  const baseUserId = extractBaseUserId(userId);
 
   // 1. Fetch System Context
   const config = await loadAgentConfig(AgentType.STRATEGIC_PLANNER);
@@ -73,7 +82,7 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
         goalId: GOAL_ID,
         agentId: AgentType.STRATEGIC_PLANNER,
         task: 'Proactive Strategic Review',
-        userId: contextUserId,
+        userId: userId,
         frequencyHrs,
         metadata: { isProactive: true },
       });
@@ -106,7 +115,10 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
     plannerPrompt = proactiveResult.prompt;
   } else {
     // Reactionary single gap handling
-    plannerPrompt = buildReactivePrompt(payload, telemetry);
+    plannerPrompt = buildReactivePrompt(
+      { ...payload, contextUserId: userId, details: task },
+      telemetry
+    );
   }
 
   // 2. Self-Evolution Loop Protection (Cool-down)
@@ -120,7 +132,7 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
 
   // 3. Process with High Reasoning
   const { responseText: rawResponse, attachments: resultAttachments } = await plannerAgent.process(
-    contextUserId,
+    userId,
     plannerPrompt,
     {
       profile: ReasoningProfile.DEEP,
@@ -174,9 +186,9 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
   // 1. Notify user directly in the chat session
   await sendOutboundMessage(
     'planner.agent',
-    contextUserId,
+    baseUserId,
     `🚀 **Strategic Plan Generated**\n\n${plan}`,
-    [contextUserId],
+    [baseUserId],
     sessionId,
     config.name,
     resultAttachments
@@ -188,15 +200,16 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
   if (!isTaskPaused(rawResponse)) {
     await emitTaskEvent({
       source: 'planner.agent',
-      userId: contextUserId,
+      userId: baseUserId,
       agentId: AgentType.STRATEGIC_PLANNER,
-      task: isScheduledReview ? 'Scheduled Review' : details || 'Strategic Review',
+      task: isScheduledReview ? 'Scheduled Review' : task,
       response: plan,
       error: isFailure ? plan : undefined,
       traceId,
       initiatorId: payload.initiatorId,
       depth: payload.depth,
       sessionId,
+      userNotified: true,
     });
   }
 
@@ -208,7 +221,7 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
   // 5. Gap Sink: Mark covered gaps as PLANNED
   const processedGapIds: string[] = [];
   if (!isFailure) {
-    if (isScheduledReview) {
+    if (isScheduledReview || coveredGapIds.length > 0) {
       logger.info(`Marking ${coveredGapIds.length} gaps as PLANNED based on structured output.`);
       for (const gId of coveredGapIds) {
         const numericId = gId.replace('GAP#', '');
@@ -229,13 +242,13 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
 
   const evolutionMode = await getEvolutionMode();
 
-  if (evolutionMode === EvolutionMode.AUTO && !isFailure) {
+  if (evolutionMode === EvolutionMode.AUTO && !isFailure && processedGapIds.length > 0) {
     logger.info('Evolution mode is auto, dispatching CODER_TASK directly.');
     await sendOutboundMessage(
       'planner.agent',
-      contextUserId,
+      baseUserId,
       `🚀 **Autonomous Evolution Triggered**\n\nI have identified a capability gap and designed a plan to fix it. The Coder Agent is now executing the following STRATEGIC_PLAN:\n\n${plan}`,
-      [contextUserId],
+      [baseUserId],
       sessionId,
       config.name,
       undefined
@@ -244,7 +257,7 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
     const { DISPATCH_TASK: dispatcher } = await import('../tools/knowledge-agent');
     await dispatcher.execute({
       agentId: AgentType.CODER,
-      userId: contextUserId,
+      userId: baseUserId,
       task: plan,
       metadata: {
         gapIds: processedGapIds,
@@ -252,13 +265,13 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
       traceId,
       sessionId,
     });
-  } else if (!isFailure) {
+  } else if (!isFailure && processedGapIds.length > 0) {
     logger.info('Evolution mode is hitl, asking for approval.');
     await sendOutboundMessage(
       'planner.agent',
-      contextUserId,
+      baseUserId,
       `🚀 **NEW STRATEGIC PLAN PROPOSED**\n\n${plan}\n\nReply with 'APPROVE' to execute.`,
-      [contextUserId],
+      [baseUserId],
       sessionId,
       config.name,
       undefined

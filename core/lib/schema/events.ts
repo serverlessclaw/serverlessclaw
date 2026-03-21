@@ -65,6 +65,7 @@ export const COMPLETION_EVENT_SCHEMA = BASE_EVENT_SCHEMA.extend({
   task: z.string(),
   response: z.string(),
   attachments: z.array(ATTACHMENT_SCHEMA).optional(),
+  userNotified: z.boolean().optional(),
 });
 
 /**
@@ -86,6 +87,7 @@ export const FAILURE_EVENT_SCHEMA = BASE_EVENT_SCHEMA.extend({
   agentId: z.string(),
   task: z.string(),
   error: z.string(),
+  userNotified: z.boolean().optional(),
 });
 
 /**

@@ -16,8 +16,12 @@ export const agentTools: Record<string, IToolDefinition> = {
             'The unique ID of the agent to invoke (e.g., coder, planner, or a custom agent ID).',
         },
         task: { type: 'string', description: 'The specific task for the sub-agent.' },
+        metadata: {
+          type: 'object',
+          description: 'Optional task metadata or signals.',
+        },
       },
-      required: ['agentId', 'task'],
+      required: ['agentId', 'task', 'metadata'],
       additionalProperties: false,
     },
     connectionProfile: ['bus'],

@@ -28,6 +28,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const { SUPERCLAW_SYSTEM_PROMPT } = await import('@claw/core/agents/superclaw');
     const { TraceSource } = await import('@claw/core/lib/types/index');
 
+    console.log('[Chat API] Debug - Core Library version check: 2026-03-21-V2');
     const memory = new DynamoMemory();
     const provider = new ProviderManager();
     const agentTools = await getAgentTools('main');

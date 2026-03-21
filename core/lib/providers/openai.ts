@@ -185,6 +185,13 @@ export class OpenAIProvider implements IProvider {
           : {}),
       })) as unknown as OpenAIResponse; // Isolate unsafe access
 
+      console.log(`[OPENAI] Raw Output Array Size: ${response.output?.length ?? 0}`);
+      if (response.output) {
+        response.output.forEach((item, i) => {
+          console.log(`[OPENAI] Output Item ${i}: Type=${item.type} | Name=${item.name ?? 'N/A'}`);
+        });
+      }
+
       // Extract output
       const content = response.output_text ?? '';
       const toolCalls: Message['tool_calls'] = [];

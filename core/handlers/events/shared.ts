@@ -25,7 +25,8 @@ export async function wakeupInitiator(
   task: string,
   traceId: string | undefined,
   sessionId: string | undefined,
-  depth: number = 0
+  depth: number = 0,
+  userNotified: boolean = false
 ): Promise<void> {
   if (!initiatorId || !task) return;
 
@@ -33,10 +34,12 @@ export async function wakeupInitiator(
     ? initiatorId.replace('.agent', '')
     : initiatorId;
 
+  const finalTask = userNotified ? `${task}\n(USER_ALREADY_NOTIFIED: true)` : task;
+
   await emitEvent('events.handler', EventType.CONTINUATION_TASK, {
     userId,
     agentId: initiatorAgentId,
-    task,
+    task: finalTask,
     traceId,
     initiatorId,
     sessionId,
@@ -125,7 +128,7 @@ export async function processEventWithAgent(
     throw new Error(`Agent configuration for '${agentId}' not found.`);
   }
 
-  const agentTools = await loadAgentTools(agentId === 'main' ? 'events' : agentId);
+  const agentTools = await loadAgentTools(agentId);
   const agent = new Agent(memory, provider, agentTools, config.systemPrompt, config);
 
   const { responseText, attachments: resultAttachments } = await agent.process(

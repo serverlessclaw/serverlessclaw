@@ -17,6 +17,7 @@ export async function getAgentTools(agentId: string): Promise<ITool[]> {
   const { MCPBridge } = await import('../lib/mcp');
   const { TOOLS } = await import('./index');
 
+  console.log(`[TOOLS] Resolving tools for: ${agentId}`);
   const config = await AgentRegistry.getAgentConfig(agentId);
 
   if (!config || !config.tools) {
@@ -24,14 +25,24 @@ export async function getAgentTools(agentId: string): Promise<ITool[]> {
     return [];
   }
 
+  console.log(`[TOOLS] Configured tools for ${agentId}: ${config.tools.join(', ')}`);
+
   // 1. Resolve local tools
   const localTools = config.tools
     .map((name: string) => (TOOLS as Record<string, ITool>)[name])
     .filter((t: ITool | undefined): t is ITool => !!t);
 
+  console.log(`[TOOLS] Local tools found: ${localTools.map((t) => t.name).join(', ')}`);
+
   // 2. Resolve external MCP tools if any match the requested tool names
   const externalTools = await MCPBridge.getExternalTools(config.tools);
   const matchedExternal = externalTools.filter((t) => config.tools!.includes(t.name));
+
+  if (matchedExternal.length > 0) {
+    console.log(
+      `[TOOLS] External MCP tools found: ${matchedExternal.map((t) => t.name).join(', ')}`
+    );
+  }
 
   return [...localTools, ...matchedExternal];
 }

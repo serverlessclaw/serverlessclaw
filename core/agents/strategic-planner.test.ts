@@ -142,7 +142,7 @@ describe('Strategic Planner — selective PLANNED marking', () => {
 
     const event = {
       detail: {
-        contextUserId: 'user-1',
+        userId: 'user-1',
         isScheduledReview: true,
         traceId: 'trace-1',
       },
@@ -176,8 +176,8 @@ describe('Strategic Planner — selective PLANNED marking', () => {
     const event = {
       detail: {
         gapId: 'GAP#5001',
-        details: 'some gap',
-        contextUserId: 'user-1',
+        task: 'some gap',
+        userId: 'user-1',
       },
     };
 
@@ -199,8 +199,8 @@ describe('Strategic Planner — selective PLANNED marking', () => {
     const event = {
       detail: {
         gapId: 'GAP#5002',
-        details: 'some gap description',
-        contextUserId: 'user-1',
+        task: 'some gap description',
+        userId: 'user-1',
       },
     };
 
@@ -222,7 +222,7 @@ describe('Strategic Planner — selective PLANNED marking', () => {
 
     const event = {
       detail: {
-        contextUserId: 'user-1',
+        userId: 'user-1',
         isScheduledReview: true,
       },
     };

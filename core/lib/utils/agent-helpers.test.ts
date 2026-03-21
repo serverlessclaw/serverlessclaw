@@ -6,6 +6,10 @@ describe('extractBaseUserId', () => {
     expect(extractBaseUserId('CONV#user123')).toBe('user123');
   });
 
+  it('should extract base userId from deep dashboard session identifiers', () => {
+    expect(extractBaseUserId('CONV#dashboard-user#session_123')).toBe('dashboard-user');
+  });
+
   it('should return original userId when no CONV# prefix', () => {
     expect(extractBaseUserId('user123')).toBe('user123');
   });
