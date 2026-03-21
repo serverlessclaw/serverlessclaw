@@ -9,39 +9,23 @@ import {
 import { GapStatus } from '@claw/core/lib/types';
 import { revalidatePath } from 'next/cache';
 import PipelineBoard from './PipelineBoard';
+import { DynamoMemory } from '@claw/core/lib/memory';
+import { GapItem } from '@claw/core/lib/types/memory';
 
-interface GapItem {
-  userId: string;
-  timestamp: number;
-  content: string;
-  status: GapStatus;
-  metadata?: {
-    impact?: number;
-    priority?: number;
-  };
-}
+
+
 
 async function getGaps(): Promise<GapItem[]> {
   try {
-    const client = new DynamoDBClient({});
-    const docClient = DynamoDBDocumentClient.from(client);
-    
-    const { Items } = await docClient.send(
-      new ScanCommand({
-        TableName: (Resource as Record<string, { name: string }>).MemoryTable.name,
-        FilterExpression: 'begins_with(userId, :prefix)',
-        ExpressionAttributeValues: {
-          ':prefix': 'GAP#',
-        },
-      })
-    );
-    
-    return (Items as GapItem[] ?? []).sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
+    const memory = new DynamoMemory();
+    const items = await memory.listByPrefix('GAP#');
+    return (items as GapItem[] ?? []).sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
   } catch (e) {
     console.error('Error fetching gaps:', e);
     return [];
   }
 }
+
 
 async function updateStatus(gapId: string, status: string) {
   'use server';

@@ -39,7 +39,7 @@ interface ToolsResource {
 /**
  * Stages modified files to S3 for a new deployment.
  */
-export const stageChanges = {
+export const STAGE_CHANGES = {
   ...toolDefinitions.stageChanges,
   execute: async (args: Record<string, unknown>): Promise<string> => {
     const s3 = getS3Client();
@@ -87,7 +87,7 @@ export const stageChanges = {
 /**
  * Executes an arbitrary shell command in a given directory.
  */
-export const runShellCommand = {
+export const RUN_SHELL_COMMAND = {
   ...toolDefinitions.runShellCommand,
   execute: async (args: Record<string, unknown>): Promise<string> => {
     const { command, dir_path } = args as { command: string; dir_path?: string };
@@ -106,7 +106,7 @@ export const runShellCommand = {
 /**
  * Runs the autonomous test suite using 'npm test'.
  */
-export const runTests = {
+export const RUN_TESTS = {
   ...toolDefinitions.runTests,
   execute: async (): Promise<string> => {
     try {

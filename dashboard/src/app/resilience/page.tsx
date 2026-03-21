@@ -14,6 +14,8 @@ import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import { THEME } from '@/lib/theme';
+import { DynamoMemory } from '@claw/core/lib/memory';
+
 
 async function getHealth() {
   try {
@@ -37,25 +39,15 @@ async function getHealth() {
 
 async function getRecoveryLogs() {
   try {
-    const client = new DynamoDBClient({});
-    const docClient = DynamoDBDocumentClient.from(client);
-    
-    const { Items } = await docClient.send(
-      new ScanCommand({
-        TableName: Resource.MemoryTable.name,
-        FilterExpression: 'begins_with(userId, :prefix)',
-        ExpressionAttributeValues: {
-          ':prefix': 'DISTILLED#RECOVERY',
-        },
-      })
-    );
-    
-    return (Items ?? []).sort((a, b) => b.timestamp - a.timestamp);
+    const memory = new DynamoMemory();
+    const items = await memory.listByPrefix('DISTILLED#RECOVERY');
+    return (items ?? []).sort((a: any, b: any) => b.timestamp - a.timestamp);
   } catch (e) {
     console.error('Error fetching recovery logs:', e);
     return [];
   }
 }
+
 
 /** ResilienceHub — displays the live health status, recovery logs, and Dead Man's Switch circuit-breaker state for the ClawCenter Observability sector. */
 export default async function ResilienceHub() {

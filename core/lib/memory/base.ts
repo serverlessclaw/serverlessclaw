@@ -5,7 +5,9 @@ import {
   QueryCommand,
   DeleteCommand,
   UpdateCommand,
+  ScanCommand,
 } from '@aws-sdk/lib-dynamodb';
+
 import { Resource } from 'sst';
 import { logger } from '../logger';
 import { SSTResource } from '../types/system';
@@ -133,6 +135,30 @@ export class BaseMemoryProvider {
       ...params,
     });
     return this.docClient.send(command);
+  }
+
+  /**
+   * Internal helper for Scan commands with a prefix filter on the Hash Key (userId).
+   * Note: This is a Scan operation, use sparingly on large tables.
+   *
+   * @param prefix - The prefix to search for in the userId field.
+   * @returns A promise resolving to an array of items.
+   */
+  public async scanByPrefix(prefix: string): Promise<any[]> {
+    const command = new ScanCommand({
+      TableName: this.tableName,
+      FilterExpression: 'begins_with(userId, :prefix)',
+      ExpressionAttributeValues: {
+        ':prefix': prefix,
+      },
+    });
+    try {
+      const response = await this.docClient.send(command);
+      return response.Items ?? [];
+    } catch (error) {
+      logger.error('Error scanning DynamoDB by prefix:', error);
+      return [];
+    }
   }
 
   /**

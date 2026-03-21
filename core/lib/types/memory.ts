@@ -1,4 +1,5 @@
 import { Message } from './llm';
+import { GapStatus } from './agent';
 
 /**
  * Categories for memory insights to help the agent organize and prioritize knowledge.
@@ -54,6 +55,20 @@ export interface MemoryInsight {
   metadata: InsightMetadata;
   /** Timestamp (Unix epoch) when the insight was first recorded or last updated. */
   timestamp: number;
+}
+
+/**
+ * Represents an identified capability gap, used primarily in dashboard views.
+ */
+export interface GapItem {
+  userId: string;
+  timestamp: number;
+  content: string;
+  status: GapStatus;
+  metadata?: {
+    impact?: number;
+    priority?: number;
+  };
 }
 
 /**
@@ -156,4 +171,9 @@ export interface IMemory extends IHistoryStore, IKnowledgeStore, IGapManager {
     timestamp: number,
     metadata: Partial<InsightMetadata>
   ): Promise<void>;
+
+  /**
+   * Universal fetcher for memory items by their prefix.
+   */
+  listByPrefix(prefix: string): Promise<any[]>;
 }

@@ -18,17 +18,10 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { GapStatus } from '@claw/core/lib/types';
+import { GapItem } from '@claw/core/lib/types/memory';
 
-interface GapItem {
-  userId: string;
-  timestamp: number;
-  content: string;
-  status: GapStatus;
-  metadata?: {
-    impact?: number;
-    priority?: number;
-  };
-}
+
+
 
 interface PipelineBoardProps {
   initialGaps: GapItem[];

@@ -223,4 +223,11 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   async updateSummary(userId: string, summary: string): Promise<void> {
     return SessionOps.updateSummary(this, userId, summary);
   }
+
+  /**
+   * Universal fetcher for memory items by their prefix.
+   */
+  async listByPrefix(prefix: string): Promise<any[]> {
+    return this.scanByPrefix(prefix);
+  }
 }
