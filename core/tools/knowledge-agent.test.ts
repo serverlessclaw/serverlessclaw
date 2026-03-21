@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { DISPATCH_TASK, SEEK_CLARIFICATION } from './knowledge-agent';
+import { DISPATCH_TASK, SEEK_CLARIFICATION, LIST_AGENTS } from './knowledge-agent';
 import { emitEvent } from '../lib/utils/bus';
 
 // Mock dependencies
@@ -10,6 +10,7 @@ vi.mock('../lib/utils/bus', () => ({
 vi.mock('../lib/registry', () => ({
   AgentRegistry: {
     getAgentConfig: vi.fn().mockResolvedValue({ enabled: true }),
+    getAllConfigs: vi.fn().mockResolvedValue({}),
   },
 }));
 
@@ -28,6 +29,32 @@ vi.mock('../lib/tracer', () => ({
 describe('Knowledge Agent Tools (Delegation Signals)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe('LIST_AGENTS', () => {
+    it('should list enabled agents but exclude main', async () => {
+      const { AgentRegistry } = await import('../lib/registry');
+      vi.mocked(AgentRegistry.getAllConfigs).mockResolvedValueOnce({
+        main: { id: 'main', name: 'SuperClaw', enabled: true, description: 'Orchestrator' } as any,
+        coder: { id: 'coder', name: 'Coder', enabled: true, description: 'Writes code' } as any,
+        disabled: { id: 'bad', name: 'Bad', enabled: false, description: 'Off' } as any,
+      });
+
+      const result = await LIST_AGENTS.execute();
+
+      expect(result).toContain('- [coder] Coder: Writes code');
+      expect(result).not.toContain('SuperClaw');
+      expect(result).not.toContain('[main]');
+      expect(result).not.toContain('Bad');
+    });
+
+    it('should return helpful message when no agents available', async () => {
+      const { AgentRegistry } = await import('../lib/registry');
+      vi.mocked(AgentRegistry.getAllConfigs).mockResolvedValueOnce({});
+
+      const result = await LIST_AGENTS.execute();
+      expect(result).toBe('No enabled agents found in the registry.');
+    });
   });
 
   describe('DISPATCH_TASK', () => {

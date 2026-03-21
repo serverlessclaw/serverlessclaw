@@ -14,11 +14,11 @@ export const LIST_AGENTS = {
     const configs = await AgentRegistry.getAllConfigs();
 
     const summary = Object.values(configs)
-      .filter((a) => a.enabled)
+      .filter((a) => a.enabled && a.id !== 'main')
       .map((a) => `- [${a.id}] ${a.name}: ${a.description} (Backbone: ${a.isBackbone ?? false})`)
       .join('\n');
 
-    return summary ?? 'No enabled agents found in the registry.';
+    return summary || 'No enabled agents found in the registry.';
   },
 };
 

@@ -98,9 +98,17 @@ describe('knowledge tools', () => {
   });
 
   describe('LIST_AGENTS', () => {
-    it('should return a summary of agents', async () => {
+    it('should return a summary of agents excluding main', async () => {
+      // Mock AgentRegistry.getAllConfigs via the file mock
+      const { AgentRegistry } = await import('../lib/registry');
+      vi.mocked(AgentRegistry.getAllConfigs).mockResolvedValueOnce({
+        main: { id: 'main', name: 'Main', enabled: true, description: 'desc' } as any,
+        coder: { id: 'coder', name: 'Coder', enabled: true, description: 'dev' } as any,
+      });
+
       const result = await LIST_AGENTS.execute();
-      expect(result).toContain('[main] Main');
+      expect(result).toContain('[coder] Coder: dev');
+      expect(result).not.toContain('[main] Main');
     });
   });
 
