@@ -163,6 +163,9 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
     }
   );
 
+  const planId = `PLAN-${Date.now()}`;
+  logger.info(`[PLANNER] Generated Plan ID: ${planId}`);
+
   logger.info('Strategic Plan Raw Response:', rawResponse);
 
   let status = 'SUCCESS';
@@ -197,7 +200,12 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
       [baseUserId],
       sessionId,
       config.name,
-      resultAttachments
+      resultAttachments,
+      undefined,
+      [
+        { label: '🚀 Approve', value: `APPROVE ${planId}` },
+        { label: '🤔 Clarify', value: `CLARIFY ${planId}` },
+      ]
     );
   } else {
     logger.warn(`Skipping user notification for failed or empty strategic plan: ${plan}`);
@@ -242,10 +250,14 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
     }
   }
 
-  // 6. Save plan for QA auditing
+  // 6. Save plan for QA auditing and HITL resolution
   for (const gapIdToSave of processedGapIds) {
     await memory.updateDistilledMemory(`PLAN#${gapIdToSave}`, plan);
   }
+  await memory.updateDistilledMemory(
+    `PLAN#${planId}`,
+    JSON.stringify({ plan, gapIds: processedGapIds })
+  );
 
   const evolutionMode = await getEvolutionMode();
 
@@ -285,5 +297,5 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
     );
   }
 
-  return { gapId, plan: plan };
+  return { gapId, plan, planId };
 }

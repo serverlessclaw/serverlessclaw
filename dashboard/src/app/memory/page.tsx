@@ -48,7 +48,7 @@ async function getMemoryData(activeTab: string, query: string, nextToken?: strin
   
   // 1. Fetch the dynamic registry of memory types
   let registeredTypes = await memory.getRegisteredMemoryTypes();
-  const knownTypes = new Set(['DISTILLED', 'LESSON', 'GAP', 'SESSION', 'MEMORY:USER_PREFERENCE']);
+  const knownTypes = new Set(['DISTILLED', 'LESSON', 'GAP', 'SESSION']);
   
   // FALLBACK DISCOVERY: If registry is empty, try to find types via a shallow scan
   if (registeredTypes.length === 0) {
@@ -65,7 +65,7 @@ async function getMemoryData(activeTab: string, query: string, nextToken?: strin
     }
   }
 
-  const dynamicTypes = registeredTypes.filter(type => !knownTypes.has(type));
+  const dynamicTypes = registeredTypes.filter(type => !knownTypes.has(type)).sort();
   console.log('[MemoryVault] Discovered types:', registeredTypes, 'Filtered dynamic types:', dynamicTypes);
 
   const parsedNext = nextToken ? JSON.parse(Buffer.from(nextToken, 'base64').toString()) : undefined;
@@ -84,7 +84,6 @@ async function getMemoryData(activeTab: string, query: string, nextToken?: strin
   }
 
   // Define counts fetcher (parallel)
-  // 2026 Strategy: Fetch enough to show approximate numbers without expensive full table counts
   const countPromises = [
     memory.getMemoryByType('DISTILLED', 50),
     memory.getMemoryByType('LESSON', 50),
@@ -118,7 +117,10 @@ async function getMemoryData(activeTab: string, query: string, nextToken?: strin
   }
 
   const countResults = await Promise.all(countPromises);
-  const formatCount = (arr: unknown[]) => arr.length === 50 ? '50+' : arr.length;
+  const formatCount = (arr: unknown[]) => (Array.isArray(arr) && arr.length === 50) ? '50+' : (Array.isArray(arr) ? arr.length : 0);
+
+  const dynamicCounts = countResults.slice(3);
+  const totalDynamic = dynamicCounts.reduce((acc, curr) => acc + (Array.isArray(curr) ? curr.length : 0), 0);
 
   return {
     items,
@@ -128,7 +130,7 @@ async function getMemoryData(activeTab: string, query: string, nextToken?: strin
         facts: formatCount(countResults[0]),
         lessons: formatCount(countResults[1]),
         gaps: formatCount(countResults[2]),
-        dynamic: dynamicTypes.length
+        dynamic: totalDynamic >= 50 * dynamicTypes.length && dynamicTypes.length > 0 ? '50+' : totalDynamic
     }
   };
 }
@@ -170,7 +172,7 @@ export default async function MemoryVault({
   ];
 
   if (dynamicTypes.length > 0) {
-    tabs.push({ id: 'dynamic', label: 'Miscellaneous', count: counts.dynamic, icon: <Database size={14} /> });
+    tabs.push({ id: 'dynamic', label: 'Dynamic Memory', count: counts.dynamic, icon: <Database size={14} /> });
   }
 
   if (query) {
@@ -239,13 +241,14 @@ export default async function MemoryVault({
                         <div className="flex items-center gap-3">
                             <Badge 
                                 variant={
-                                    item.userId.startsWith('GAP') ? 'danger' : 
-                                    item.userId.startsWith('LESSON') ? 'primary' : 
-                                    item.userId.startsWith('DISTILLED') ? 'intel' : 'audit'
+                                    (item.userId.startsWith('GAP') || item.type === 'GAP' || item.type === 'MEMORY:STRATEGIC_GAP') ? 'danger' : 
+                                    (item.userId.startsWith('LESSON') || item.type === 'LESSON' || item.type === 'MEMORY:TACTICAL_LESSON') ? 'primary' : 
+                                    (item.userId.startsWith('DISTILLED') || item.type === 'DISTILLED' || item.type === 'MEMORY:SYSTEM_KNOWLEDGE') ? 'intel' : 
+                                    (item.type === 'MEMORY:USER_PREFERENCE' || item.userId.startsWith('USER#')) ? 'success' : 'audit'
                                 }
                                 className="uppercase tracking-widest px-3"
                             >
-                                {item.metadata?.category || item.type?.replace('MEMORY:', '') || 'UNKNOWN'}
+                                {item.metadata?.category || item.type?.replace('MEMORY:', '').replace(/_/g, ' ') || 'UNKNOWN'}
                             </Badge>
                             <Typography variant="mono" color="muted" className="text-[9px] opacity-40 uppercase tracking-tighter">
                                 ID :: {item.userId.split('#')[1] || item.userId}
