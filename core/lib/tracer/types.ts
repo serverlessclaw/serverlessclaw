@@ -31,6 +31,8 @@ export interface Trace {
   userId: string;
   /** The origin of the request (e.g., 'dashboard', 'telegram', 'system'). */
   source: TraceSource | string;
+  /** The ID of the agent executing this trace node. */
+  agentId?: string;
   /** Start timestamp of the trace. */
   timestamp: number;
   /** Current status of the trace. */

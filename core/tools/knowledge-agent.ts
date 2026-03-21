@@ -50,7 +50,7 @@ export const DISPATCH_TASK = {
 
     const { ClawTracer } = await import('../lib/tracer');
     const tracer = new ClawTracer(userId, 'system', traceId, nodeId);
-    const childTracer = tracer.getChildTracer();
+    const childTracer = tracer.getChildTracer(undefined, agentId);
 
     try {
       await emitEvent(initiatorId ?? 'main', `${agentId}_task`, {
@@ -116,21 +116,32 @@ export const SET_SYSTEM_CONFIG = {
 export const SEEK_CLARIFICATION = {
   ...toolDefinitions.seekClarification,
   execute: async (args: Record<string, unknown>): Promise<string> => {
-    const { userId, question, traceId, initiatorId, depth, sessionId, originalTask, task } =
-      args as {
-        userId: string;
-        question: string;
-        traceId?: string;
-        initiatorId?: string;
-        depth?: number;
-        sessionId?: string;
-        originalTask?: string;
-        task?: string;
-      };
+    const {
+      userId,
+      agentId,
+      question,
+      traceId,
+      initiatorId,
+      depth,
+      sessionId,
+      originalTask,
+      task,
+    } = args as {
+      userId: string;
+      agentId?: string;
+      question: string;
+      traceId?: string;
+      initiatorId?: string;
+      depth?: number;
+      sessionId?: string;
+      originalTask?: string;
+      task?: string;
+    };
 
     try {
       await emitEvent(initiatorId ?? 'main', EventType.CLARIFICATION_REQUEST, {
         userId,
+        agentId,
         question,
         traceId,
         initiatorId: initiatorId ?? 'main',

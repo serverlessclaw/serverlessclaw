@@ -33,6 +33,7 @@ export class ClawTracer {
   private parentId?: string;
   private userId: string;
   private source: TraceSource | string;
+  private agentId?: string;
   private startTime: number;
   private readonly docClient: DynamoDBDocumentClient;
 
@@ -44,6 +45,7 @@ export class ClawTracer {
    * @param traceId - Unique ID for the entire conversation/workflow.
    * @param nodeId - Unique ID for this specific agent execution or branch.
    * @param parentId - Optional ID of the node that spawned this one.
+   * @param agentId - Optional ID of the agent executing this trace.
    * @param docClient - Optional DynamoDB Document Client for dependency injection (useful for testing)
    */
   constructor(
@@ -52,6 +54,7 @@ export class ClawTracer {
     traceId?: string,
     nodeId?: string,
     parentId?: string,
+    agentId?: string,
     docClient?: DynamoDBDocumentClient
   ) {
     this.userId = userId;
@@ -59,6 +62,7 @@ export class ClawTracer {
     this.traceId = traceId ?? uuidv4();
     this.nodeId = nodeId ?? 'root';
     this.parentId = parentId;
+    this.agentId = agentId;
     this.startTime = Date.now();
     this.docClient = docClient ?? defaultDocClient;
   }
@@ -84,6 +88,7 @@ export class ClawTracer {
             parentId: this.parentId,
             userId: this.userId,
             source: this.source,
+            agentId: this.agentId,
             timestamp: this.startTime,
             status: TRACE_STATUS.STARTED,
             initialContext,
@@ -112,15 +117,18 @@ export class ClawTracer {
    * Spawns a new child tracer for parallel or delegated execution.
    *
    * @param newNodeId - Optional ID for the new node.
+   * @param childAgentId - Optional ID for the agent executing the child trace.
    * @returns A new ClawTracer instance correctly linked to this parent.
    */
-  getChildTracer(newNodeId?: string): ClawTracer {
+  getChildTracer(newNodeId?: string, childAgentId?: string): ClawTracer {
     return new ClawTracer(
       this.userId,
       this.source,
       this.traceId,
       newNodeId ?? uuidv4(),
-      this.nodeId
+      this.nodeId,
+      childAgentId ?? this.agentId,
+      this.docClient
     );
   }
 

@@ -203,6 +203,7 @@ export class AgentExecutor {
               userId: args.userId ?? userId,
               mainConversationId,
               agentName: this.agentName,
+              agentId: this.agentId,
               activeModel,
               activeProvider,
               task: userText,

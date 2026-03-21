@@ -105,7 +105,8 @@ export class Agent {
       source,
       incomingTraceId,
       incomingNodeId,
-      incomingParentId
+      incomingParentId,
+      this.config?.id
     );
     const traceId = tracer.getTraceId();
     const nodeId = tracer.getNodeId();
