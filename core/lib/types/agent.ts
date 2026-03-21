@@ -76,6 +76,11 @@ export interface OutboundMessageEvent extends BaseEvent {
   agentName?: string;
   memoryContexts?: string[];
   attachments?: Attachment[];
+  options?: {
+    label: string;
+    value: string;
+    type?: 'primary' | 'secondary' | 'danger';
+  }[];
 }
 
 /**

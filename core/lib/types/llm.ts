@@ -69,6 +69,14 @@ export interface Message {
     completion_tokens: number;
     total_tokens: number;
   };
+  /**
+   * Optional UI options (buttons) associated with the message.
+   */
+  options?: Array<{
+    label: string;
+    value: string;
+    type?: 'primary' | 'secondary' | 'danger';
+  }>;
 }
 
 /**

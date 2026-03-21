@@ -2,6 +2,7 @@ import React from 'react';
 import { User, Bot, Terminal, File, Loader2 } from 'lucide-react';
 import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
 import { ChatMessage } from './types';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -10,9 +11,10 @@ interface ChatMessageListProps {
   messages: ChatMessage[];
   isLoading: boolean;
   scrollRef: React.RefObject<HTMLDivElement | null>;
+  onOptionClick?: (value: string) => void;
 }
 
-export function ChatMessageList({ messages, isLoading, scrollRef }: ChatMessageListProps) {
+export function ChatMessageList({ messages, isLoading, scrollRef, onOptionClick }: ChatMessageListProps) {
   return (
     <div 
       ref={scrollRef}
@@ -112,6 +114,22 @@ export function ChatMessageList({ messages, isLoading, scrollRef }: ChatMessageL
                           </a>
                         )}
                       </div>
+                    ))}
+                  </div>
+                )}
+
+                {m.options && m.options.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {m.options.map((opt, oi) => (
+                      <Button
+                        key={oi}
+                        variant={opt.type === 'primary' ? 'primary' : opt.type === 'danger' ? 'danger' : 'outline'}
+                        size="sm"
+                        className="!py-1 !px-3 text-[10px] font-mono tracking-wider uppercase border border-white/10"
+                        onClick={() => onOptionClick?.(opt.value)}
+                      >
+                        {opt.label}
+                      </Button>
                     ))}
                   </div>
                 )}

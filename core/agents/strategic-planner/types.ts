@@ -22,14 +22,15 @@ export interface PlannerPayload {
   initiatorId?: string;
   depth?: number;
   sessionId?: string;
+  planId?: string;
 }
 
 export interface PlannerEvent {
   detail?: PlannerPayload;
 }
-
 export interface PlannerResult {
   gapId?: string;
   plan?: string;
+  planId?: string;
   status?: string;
 }

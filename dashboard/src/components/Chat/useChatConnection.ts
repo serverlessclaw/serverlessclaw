@@ -40,6 +40,7 @@ export function useChatConnection(activeSessionId: string, setMessages: React.Di
             content: m.content,
             agentName: m.agentName ?? (m.role === 'assistant' || m.role === 'system' ? 'SuperClaw' : undefined),
             attachments: m.attachments,
+            options: m.options,
           })).filter((m: ChatMessage) => m.content || (m.attachments && m.attachments.length > 0));
 
           // Preserve local-only error messages (like connection failures)
@@ -94,7 +95,9 @@ export function useChatConnection(activeSessionId: string, setMessages: React.Di
                     role: 'assistant',
                     content: data.message,
                     messageId: data.messageId,
-                    agentName: data.agentName ?? 'SuperClaw'
+                    agentName: data.agentName ?? 'SuperClaw',
+                    attachments: data.attachments,
+                    options: data.options,
                   }];
                 });
               } else if (currentActiveId) {

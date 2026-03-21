@@ -2,7 +2,7 @@
  * Chat-specific types for the dashboard
  * Re-exports shared types from core to avoid duplication
  */
-import type { ConversationMeta } from '../../../core/lib/types/memory';
+import type { ConversationMeta } from '../../../../core/lib/types/memory';
 export type { ConversationMeta };
 
 export interface ChatMessage {
@@ -18,6 +18,11 @@ export interface ChatMessage {
     name?: string;
     mimeType?: string;
   }>;
+  options?: Array<{
+    label: string;
+    value: string;
+    type?: 'primary' | 'secondary' | 'danger';
+  }>;
 }
 
 export interface HistoryMessage {
@@ -25,6 +30,7 @@ export interface HistoryMessage {
   content: string;
   agentName?: string;
   attachments: ChatMessage['attachments'];
+  options?: ChatMessage['options'];
 }
 
 export interface AttachmentPreview {

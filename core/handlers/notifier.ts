@@ -15,6 +15,11 @@ interface NotifierEvent {
     sessionId?: string;
     agentName?: string;
     attachments?: Attachment[];
+    options?: {
+      label: string;
+      value: string;
+      type?: 'primary' | 'secondary' | 'danger';
+    }[];
   };
 }
 
@@ -34,7 +39,7 @@ export const handler = async (event: NotifierEvent): Promise<void> => {
     return;
   }
 
-  const { userId, message, memoryContexts, sessionId, agentName, attachments } = payload;
+  const { userId, message, memoryContexts, sessionId, agentName, attachments, options } = payload;
 
   // Defensive Normalization: Ensure we have the base user ID for syncing and Telegram
   const baseUserId = extractBaseUserId(userId);
@@ -56,6 +61,7 @@ export const handler = async (event: NotifierEvent): Promise<void> => {
         content: message,
         agentName: agentName,
         attachments: attachments,
+        options: options,
       });
     } catch (e) {
       logger.error(`Failed to sync context to ${contextId}:`, e);
@@ -66,13 +72,13 @@ export const handler = async (event: NotifierEvent): Promise<void> => {
   if (attachments && attachments.length > 0) {
     for (const attachment of attachments) {
       if (attachment.url) {
-        await sendTelegramMedia(baseUserId, attachment, message);
+        await sendTelegramMedia(baseUserId, attachment, message, options);
       } else {
         logger.warn('Skipping attachment without URL for Telegram:', attachment.name);
       }
     }
   } else {
-    await sendTelegramMessage(baseUserId, message);
+    await sendTelegramMessage(baseUserId, message, options);
   }
 
   // Future Adapters (Slack, Discord, Dashboard WebSockets) can be added here
@@ -86,20 +92,32 @@ export const handler = async (event: NotifierEvent): Promise<void> => {
  * @param text - The text of the message to send.
  * @returns A promise that resolves when the message has been sent.
  */
-async function sendTelegramMessage(chatId: string, text: string): Promise<void> {
+async function sendTelegramMessage(
+  chatId: string,
+  text: string,
+  options?: { label: string; value: string }[]
+): Promise<void> {
   try {
     const token = (Resource as unknown as { TelegramBotToken: { value: string } }).TelegramBotToken
       .value;
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
 
+    const body: Record<string, unknown> = {
+      chat_id: chatId,
+      text: text,
+      parse_mode: 'Markdown',
+    };
+
+    if (options && options.length > 0) {
+      body.reply_markup = {
+        inline_keyboard: [options.map((opt) => ({ text: opt.label, callback_data: opt.value }))],
+      };
+    }
+
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: text,
-        parse_mode: 'Markdown',
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -117,7 +135,8 @@ async function sendTelegramMessage(chatId: string, text: string): Promise<void> 
 async function sendTelegramMedia(
   chatId: string,
   attachment: Attachment,
-  caption?: string
+  caption?: string,
+  options?: { label: string; value: string }[]
 ): Promise<void> {
   try {
     const token = (Resource as unknown as { TelegramBotToken: { value: string } }).TelegramBotToken
@@ -132,15 +151,23 @@ async function sendTelegramMedia(
     }
 
     const url = `https://api.telegram.org/bot${token}/${method}`;
+    const body: Record<string, unknown> = {
+      chat_id: chatId,
+      [bodyKey]: attachment.url,
+      caption: caption,
+      parse_mode: 'Markdown',
+    };
+
+    if (options && options.length > 0) {
+      body.reply_markup = {
+        inline_keyboard: [options.map((opt) => ({ text: opt.label, callback_data: opt.value }))],
+      };
+    }
+
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        [bodyKey]: attachment.url,
-        caption: caption,
-        parse_mode: 'Markdown',
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {

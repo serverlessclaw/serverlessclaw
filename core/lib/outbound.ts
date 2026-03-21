@@ -23,7 +23,12 @@ export async function sendOutboundMessage(
   sessionId?: string,
   agentName?: string,
   attachments?: Attachment[],
-  messageId?: string
+  messageId?: string,
+  options?: {
+    label: string;
+    value: string;
+    type?: 'primary' | 'secondary' | 'danger';
+  }[]
 ): Promise<void> {
   // Normalize userId to base form to ensure consistent routing and syncing
   const baseUserId = extractBaseUserId(userId);
@@ -36,5 +41,6 @@ export async function sendOutboundMessage(
     agentName,
     attachments,
     messageId,
+    options,
   });
 }

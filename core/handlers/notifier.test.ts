@@ -105,4 +105,30 @@ describe('Notifier Handler', () => {
     const syncCalls = mockAddMessage.mock.calls.map((c) => c[0]);
     expect(syncCalls).not.toContain('CONV#CONV#dashboard-user#session_123#session_123');
   });
+
+  it('should include inline keyboard buttons when options are provided', async () => {
+    const event = {
+      detail: {
+        userId: '123456789',
+        message: 'Plan proposed',
+        options: [
+          { label: '🚀 Approve', value: 'APPROVE PLAN-1' },
+          { label: '🤔 Clarify', value: 'CLARIFY PLAN-1' },
+        ],
+      },
+    } as any;
+
+    (global.fetch as any).mockResolvedValue({ ok: true });
+
+    await handler(event);
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/sendMessage'),
+      expect.objectContaining({
+        body: expect.stringContaining(
+          '"reply_markup":{"inline_keyboard":[[{"text":"🚀 Approve","callback_data":"APPROVE PLAN-1"},{"text":"🤔 Clarify","callback_data":"CLARIFY PLAN-1"}]]}'
+        ),
+      })
+    );
+  });
 });

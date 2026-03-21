@@ -133,6 +133,7 @@ export default function ChatContent() {
             content: m.content,
             agentName: m.agentName ?? (m.role === 'assistant' || m.role === 'system' ? 'SuperClaw' : undefined),
             attachments: m.attachments,
+            options: m.options,
           })).filter((m: ChatMessage) => m.content || (m.attachments && m.attachments.length > 0));
 
           // Preserve local-only error messages that aren't in history yet
@@ -406,6 +407,12 @@ export default function ChatContent() {
           messages={messages} 
           isLoading={isLoading} 
           scrollRef={scrollRef} 
+          onOptionClick={(value) => {
+            setInput(value + ' ');
+            // Focus the textarea if possible
+            const textarea = document.querySelector('textarea');
+            if (textarea) textarea.focus();
+          }}
         />
 
         <ChatInput 
