@@ -11,6 +11,7 @@ import * as knowledgeTools from './knowledge';
 import * as schedulerTools from './scheduler';
 import * as metadataTools from './metadata';
 import * as debugTools from './debug';
+import * as validationTools from './validation';
 
 // Filter knowledgeTools to only include ITool exports (exclude utility functions like formatErrorMessage)
 const knowledgeToolEntries = Object.entries(knowledgeTools).filter(
@@ -33,6 +34,12 @@ export const TOOLS: Record<string, ITool> = {
   ),
   ...Object.fromEntries(
     Object.entries(rollbackTools).map(([k, v]) => [
+      k.includes('_') ? k.toLowerCase().replace(/_([a-z])/g, (_, p1) => p1.toUpperCase()) : k,
+      v,
+    ])
+  ),
+  ...Object.fromEntries(
+    Object.entries(validationTools).map(([k, v]) => [
       k.includes('_') ? k.toLowerCase().replace(/_([a-z])/g, (_, p1) => p1.toUpperCase()) : k,
       v,
     ])

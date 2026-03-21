@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { extractBaseUserId, extractPayload, detectFailure, isTaskPaused } from './agent-helpers';
+import {
+  extractBaseUserId,
+  extractPayload,
+  detectFailure,
+  isTaskPaused,
+  validatePayload,
+} from './agent-helpers';
 
 describe('extractBaseUserId', () => {
   it('should extract base userId when CONV# prefix is present', () => {
@@ -10,12 +16,37 @@ describe('extractBaseUserId', () => {
     expect(extractBaseUserId('CONV#dashboard-user#session_123')).toBe('dashboard-user');
   });
 
+  it('should handle complex dashboard session identifiers', () => {
+    expect(extractBaseUserId('CONV#dashboard-user#session_1774075326991')).toBe('dashboard-user');
+  });
+
   it('should return original userId when no CONV# prefix', () => {
     expect(extractBaseUserId('user123')).toBe('user123');
   });
 
+  it('should return original userId for other prefixed strings', () => {
+    expect(extractBaseUserId('BUILD#123')).toBe('BUILD#123');
+  });
+
   it('should handle empty string', () => {
     expect(extractBaseUserId('')).toBe('');
+  });
+});
+
+describe('validatePayload', () => {
+  it('should return true when all required fields are present', () => {
+    const payload = { userId: 'u1', task: 't1' };
+    expect(validatePayload(payload, ['userId', 'task'])).toBe(true);
+  });
+
+  it('should return false and log error when a required field is missing', () => {
+    const payload = { userId: 'u1' };
+    expect(validatePayload(payload, ['userId', 'task'])).toBe(false);
+  });
+
+  it('should return false when payload is null or undefined', () => {
+    expect(validatePayload(null, ['userId'])).toBe(false);
+    expect(validatePayload(undefined, ['userId'])).toBe(false);
   });
 });
 

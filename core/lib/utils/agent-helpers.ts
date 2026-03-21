@@ -165,9 +165,13 @@ export function buildProcessOptions(params: ProcessOptionsParams): {
  * @returns True if all required fields are present, false otherwise.
  */
 export function validatePayload(
-  payload: Record<string, unknown>,
+  payload: Record<string, unknown> | null | undefined,
   requiredFields: string[]
 ): boolean {
+  if (!payload) {
+    logger.error('Invalid event payload: payload is null or undefined');
+    return false;
+  }
   for (const field of requiredFields) {
     if (!payload[field]) {
       logger.error(`Invalid event payload: missing ${field}`);

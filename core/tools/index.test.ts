@@ -14,6 +14,34 @@ vi.mock('../lib/mcp', () => ({
   },
 }));
 
+describe('tools registration logic', () => {
+  it('should map UPPER_SNAKE_CASE to camelCase correctly', () => {
+    // Example: DISPATCH_TASK -> dispatchTask
+    expect(TOOLS.dispatchTask).toBeDefined();
+    expect(TOOLS.triggerDeployment).toBeDefined();
+  });
+
+  it('should preserve existing camelCase exports', () => {
+    // Example: stageChanges -> stageChanges
+    expect(TOOLS.stageChanges).toBeDefined();
+    expect(TOOLS.runTests).toBeDefined();
+    expect(TOOLS.validateCode).toBeDefined();
+  });
+
+  it('should not lowercase existing camelCase keys', () => {
+    expect(TOOLS.stagechanges).toBeUndefined();
+    expect(TOOLS.runtests).toBeUndefined();
+  });
+
+  it('should handle tools with multiple underscores', () => {
+    // If any exist, e.g. AWS_S3_READ_FILE -> awsS3ReadFile
+    const s3Tool = Object.keys(TOOLS).find((k) => k.toLowerCase() === 'awss3readfile');
+    if (s3Tool) {
+      expect(s3Tool).toBe('awsS3ReadFile');
+    }
+  });
+});
+
 describe('tools', () => {
   it('should have switchModel tool defined', () => {
     expect(TOOLS.switchModel).toBeDefined();
