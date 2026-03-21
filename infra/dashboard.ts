@@ -91,7 +91,6 @@ export function createDashboard(ctx: SharedContext): { dashboard: sst.aws.Nextjs
                     customOriginConfig: {
                       ...origin.customOriginConfig,
                       originProtocolPolicy: 'https-only',
-                      originResponseTimeout: 60,
                     },
                   };
                 }
