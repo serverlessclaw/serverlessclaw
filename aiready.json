@@ -53,7 +53,7 @@
     "context-analyzer": {
       "maxContextBudget": 128000,
       "minCohesion": 0.6,
-      "maxDepth": 7,
+      "maxDepth": 8,
       "maxFragmentation": 0.4,
       "focus": "all",
       "includeNodeModules": false
