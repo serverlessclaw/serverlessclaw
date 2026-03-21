@@ -13,7 +13,9 @@ import {
   Trash2,
   Play,
   CheckSquare,
-  Square
+  Square,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { GapStatus } from '@claw/core/lib/types';
 
@@ -42,6 +44,7 @@ export default function PipelineBoard({
   triggerBatchEvolution 
 }: PipelineBoardProps) {
   const [selectedGaps, setSelectedGaps] = useState<Set<string>>(new Set());
+  const [expandedGaps, setExpandedGaps] = useState<Set<string>>(new Set());
   const [processing, setProcessing] = useState<string | null>(null);
 
   const toggleSelection = (gapId: string) => {
@@ -52,6 +55,16 @@ export default function PipelineBoard({
       newSelection.add(gapId);
     }
     setSelectedGaps(newSelection);
+  };
+
+  const toggleExpand = (gapId: string) => {
+    const newExpanded = new Set(expandedGaps);
+    if (newExpanded.has(gapId)) {
+      newExpanded.delete(gapId);
+    } else {
+      newExpanded.add(gapId);
+    }
+    setExpandedGaps(newExpanded);
   };
 
   const handleUpdateStatus = async (gapId: string, status: string) => {
@@ -156,78 +169,84 @@ export default function PipelineBoard({
               )}
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
-              {colGaps.map((gap) => (
-                <div 
-                    key={gap.userId} 
-                    className={`glass-card p-4 border-white/5 hover:border-white/20 transition-all group relative overflow-hidden bg-black/40 ${selectedGaps.has(gap.userId) ? 'ring-1 ring-indigo-500/50 bg-indigo-500/5' : ''}`}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => toggleSelection(gap.userId)} className="text-white/20 hover:text-white/60 transition-colors">
-                            {selectedGaps.has(gap.userId) ? <CheckSquare size={12} className="text-indigo-500" /> : <Square size={12} />}
-                        </button>
-                        <div className="text-[8px] font-mono text-white/30 uppercase">ID: {gap.userId.split('#')[1]}</div>
-                    </div>
-                    <div className="flex gap-2">
-                      {processing === gap.userId ? (
-                        <div className="w-1.5 h-1.5 rounded-full bg-cyber-blue animate-spin"></div>
-                      ) : (
-                        <button 
-                            onClick={() => handlePrune(gap.userId, gap.timestamp)}
-                            className="opacity-0 group-hover:opacity-100 text-white/20 hover:text-red-500 transition-all"
-                        >
-                            <Trash2 size={12} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <p className="text-[11px] text-white/100 leading-relaxed font-medium mb-4 line-clamp-3">
-                    {gap.content}
-                  </p>
-
-                  <div className="flex items-center justify-between mt-auto pt-3 border-t border-white/5">
-                    <div className="flex items-center gap-2 text-[9px] text-white/40 font-mono">
-                      <Clock size={10} />
-                      {new Date(gap.timestamp).toLocaleDateString()}
+            <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar pb-10">
+              {colGaps.map((gap) => {
+                const isExpanded = expandedGaps.has(gap.userId);
+                return (
+                  <div 
+                      key={gap.userId} 
+                      className={`glass-card p-4 border-white/5 hover:border-white/20 transition-all group relative overflow-hidden bg-black/40 ${selectedGaps.has(gap.userId) ? 'ring-1 ring-indigo-500/50 bg-indigo-500/5' : ''}`}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-2">
+                          <button onClick={() => toggleSelection(gap.userId)} className="text-white/20 hover:text-white/60 transition-colors">
+                              {selectedGaps.has(gap.userId) ? <CheckSquare size={12} className="text-indigo-500" /> : <Square size={12} />}
+                          </button>
+                          <div className="text-[8px] font-mono text-white/30 uppercase">ID: {gap.userId.split('#').slice(-1)[0]}</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1.5 text-[7px] text-white/20 uppercase font-black">
+                            <span className="flex items-center gap-0.5"><TrendingUp size={7} className="text-cyber-green" /> {gap.metadata?.impact ?? 5}</span>
+                            <span className="flex items-center gap-0.5"><Brain size={7} className="text-amber-500" /> {gap.metadata?.priority ?? 5}</span>
+                        </div>
+                        {processing === gap.userId ? (
+                          <div className="w-1.5 h-1.5 rounded-full bg-cyber-blue animate-spin"></div>
+                        ) : (
+                          <button 
+                              onClick={() => handlePrune(gap.userId, gap.timestamp)}
+                              className="opacity-0 group-hover:opacity-100 text-white/20 hover:text-red-500 transition-all"
+                          >
+                              <Trash2 size={12} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     
-                    <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {columns.find(c => {
-                        const currentIndex = columns.findIndex(col => col.status === gap.status);
-                        return columns.indexOf(c) === currentIndex + 1;
-                      }) && (
+                    <div className="relative">
+                        <p className={`text-[11px] text-white/100 leading-relaxed font-medium mb-2 ${isExpanded ? '' : 'line-clamp-3'}`}>
+                        {gap.content}
+                        </p>
                         <button 
-                            onClick={() => handleUpdateStatus(gap.userId, columns[columns.findIndex(c => c.status === gap.status) + 1].status)}
-                            disabled={!!processing}
-                            className="cursor-pointer text-[9px] font-bold bg-white/10 hover:bg-white/20 px-2 py-1 rounded flex items-center gap-1 transition-colors uppercase tracking-tight"
+                            onClick={() => toggleExpand(gap.userId)}
+                            className="text-[8px] text-cyber-blue/60 hover:text-cyber-blue uppercase font-bold flex items-center gap-0.5 mb-2 transition-colors"
                         >
-                            Advance <ArrowRight size={10} />
+                            {isExpanded ? <><ChevronUp size={10} /> Show Less</> : <><ChevronDown size={10} /> Show Full Detail</>}
                         </button>
-                      )}
-                      {gap.status !== columns[0].status && (
-                        <button 
-                            onClick={() => handleUpdateStatus(gap.userId, columns[columns.findIndex(c => c.status === gap.status) - 1].status)}
-                            disabled={!!processing}
-                            className="cursor-pointer text-[9px] font-bold text-white/40 hover:text-white/80 px-2 py-1 transition-colors uppercase tracking-tight"
-                        >
-                            Revert
-                        </button>
-                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/5">
+                      <div className="flex items-center gap-2 text-[8px] text-white/30 font-mono">
+                        <Clock size={8} />
+                        {new Date(gap.timestamp).toLocaleDateString()}
+                      </div>
+                      
+                      <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {columns.find(c => {
+                          const currentIndex = columns.findIndex(col => col.status === gap.status);
+                          return columns.indexOf(c) === currentIndex + 1;
+                        }) && (
+                          <button 
+                              onClick={() => handleUpdateStatus(gap.userId, columns[columns.findIndex(c => c.status === gap.status) + 1].status)}
+                              disabled={!!processing}
+                              className="cursor-pointer text-[8px] font-bold bg-white/10 hover:bg-white/20 px-2 py-1 rounded flex items-center gap-1 transition-colors uppercase tracking-tight"
+                          >
+                              Advance <ArrowRight size={8} />
+                          </button>
+                        )}
+                        {gap.status !== columns[0].status && (
+                          <button 
+                              onClick={() => handleUpdateStatus(gap.userId, columns[columns.findIndex(c => c.status === gap.status) - 1].status)}
+                              disabled={!!processing}
+                              className="cursor-pointer text-[8px] font-bold text-white/40 hover:text-white/80 px-2 py-1 transition-colors uppercase tracking-tight"
+                          >
+                              Revert
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
-
-                  <div className="mt-2 flex gap-3 text-[8px] text-white/30 uppercase font-bold tracking-tighter">
-                      <div className="flex items-center gap-1">
-                          <TrendingUp size={8} className="text-cyber-green" /> Imp: {gap.metadata?.impact ?? 5}
-                      </div>
-                      <div className="flex items-center gap-1">
-                          <Brain size={8} className="text-amber-500" /> Prio: {gap.metadata?.priority ?? 5}
-                      </div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
 
               {colGaps.length === 0 && (
                 <div className="h-32 flex items-center justify-center text-white/5 border border-dashed border-white/5 rounded-lg">
