@@ -42,11 +42,11 @@ describe('Knowledge Agent Tools (Delegation Signals)', () => {
       const result = await DISPATCH_TASK.execute(args);
 
       expect(result).toContain('TASK_PAUSED');
-      expect(result).toContain('Task successfully dispatched to coder agent');
+      expect(result).toContain('successfully dispatched this task to the **coder** agent');
 
       // Verify event emission
       expect(emitEvent).toHaveBeenCalledWith(
-        'main.agent',
+        'main',
         'coder_task',
         expect.objectContaining({
           userId: 'user-1',
@@ -78,7 +78,7 @@ describe('Knowledge Agent Tools (Delegation Signals)', () => {
       const result = await SEEK_CLARIFICATION.execute(args);
 
       expect(result).toContain('TASK_PAUSED');
-      expect(result).toContain('Clarification request sent to main.agent');
+      expect(result).toContain('sent a clarification request to **main.agent**');
 
       expect(emitEvent).toHaveBeenCalledWith(
         'main.agent',

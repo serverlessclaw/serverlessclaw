@@ -53,18 +53,18 @@ export const DISPATCH_TASK = {
     const childTracer = tracer.getChildTracer();
 
     try {
-      await emitEvent(initiatorId ?? 'main.agent', `${agentId}_task`, {
+      await emitEvent(initiatorId ?? 'main', `${agentId}_task`, {
         userId,
         task,
         metadata,
         traceId: childTracer.getTraceId(),
         nodeId: childTracer.getNodeId(),
         parentId: childTracer.getParentId(),
-        initiatorId: initiatorId ?? 'main.agent',
+        initiatorId: initiatorId ?? 'main',
         depth: (depth ?? 0) + 1,
         sessionId,
       });
-      return `TASK_PAUSED: Task successfully dispatched to ${agentId} agent. Trace ID: ${childTracer.getTraceId()}`;
+      return `TASK_PAUSED: I have successfully dispatched this task to the **${agentId}** agent. They are processing it now, and I will update you as soon as they respond (Trace: ${childTracer.getTraceId()}).`;
     } catch (error) {
       return `Failed to dispatch task: ${formatErrorMessage(error)}`;
     }
@@ -129,16 +129,16 @@ export const SEEK_CLARIFICATION = {
       };
 
     try {
-      await emitEvent(initiatorId ?? 'main.agent', EventType.CLARIFICATION_REQUEST, {
+      await emitEvent(initiatorId ?? 'main', EventType.CLARIFICATION_REQUEST, {
         userId,
         question,
         traceId,
-        initiatorId,
+        initiatorId: initiatorId ?? 'main',
         depth: (depth ?? 0) + 1,
         sessionId,
         originalTask: originalTask ?? task ?? 'Unknown task',
       });
-      return `TASK_PAUSED: Clarification request sent to ${initiatorId ?? 'initiator'}. Waiting for response.`;
+      return `TASK_PAUSED: I've sent a clarification request to **${initiatorId ?? 'main'}**. I'll wait for their response before continuing with your task.`;
     } catch (error) {
       return `Failed to seek clarification: ${formatErrorMessage(error)}`;
     }

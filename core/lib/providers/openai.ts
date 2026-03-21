@@ -157,8 +157,23 @@ export class OpenAIProvider implements IProvider {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         input: responsesInput as any,
         reasoning: { effort: reasoningEffort as OpenAI.ReasoningEffort },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ...(responseFormat ? { response_format: responseFormat as any } : {}),
+        // 2026 Responses API: response_format has moved to text.format
+        ...(responseFormat
+          ? {
+              text: {
+                format:
+                  responseFormat.type === 'json_schema'
+                    ? {
+                        type: 'json_schema',
+                        name: responseFormat.json_schema?.name ?? 'response',
+                        schema: responseFormat.json_schema?.schema ?? {},
+                        strict: responseFormat.json_schema?.strict ?? true,
+                        description: responseFormat.json_schema?.description,
+                      }
+                    : { type: responseFormat.type },
+              },
+            }
+          : {}),
         ...(hasTools
           ? {
               tools: tools.map((t) => {

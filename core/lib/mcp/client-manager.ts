@@ -37,8 +37,27 @@ export class MCPClientManager {
         transport = new SSEClientTransport(new URL(connectionString));
       } else {
         const parts = connectionString.split(' ');
-        const command = parts[0];
+        let command = parts[0];
         const args = parts.slice(1);
+
+        // Resolve npx full path if needed (especially for Lambda)
+        if (command === 'npx') {
+          try {
+            const { execSync } = await import('child_process');
+            command = execSync('which npx', { encoding: 'utf8' }).trim();
+          } catch {
+            // Fallback for AWS Lambda Node.js runtimes
+            const fs = await import('fs');
+            const commonPaths = ['/var/lang/bin/npx', '/usr/bin/npx', '/usr/local/bin/npx'];
+            for (const p of commonPaths) {
+              if (fs.existsSync(p)) {
+                command = p;
+                break;
+              }
+            }
+          }
+        }
+
         transport = new StdioClientTransport({
           command,
           args,

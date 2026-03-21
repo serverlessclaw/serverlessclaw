@@ -138,7 +138,7 @@ describe('knowledge tools', () => {
         nodeId: 'node-parent',
       });
 
-      expect(result).toContain('Task successfully dispatched');
+      expect(result).toContain('I have successfully dispatched this task');
 
       const ebCalls = ebMock.commandCalls(PutEventsCommand);
       expect(ebCalls).toHaveLength(1);

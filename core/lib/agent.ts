@@ -244,6 +244,7 @@ export class Agent {
       const {
         responseText: initialResponseText,
         paused,
+        asyncWait,
         attachments: resultAttachments,
       } = await executor.runLoop(messages, {
         activeModel,
@@ -274,14 +275,17 @@ export class Agent {
           traceId,
         });
 
-        await this.emitter.emitContinuation(userId, userText, tracer.getTraceId() ?? 'unknown', {
-          initiatorId: currentInitiator,
-          depth,
-          sessionId,
-          nodeId: nodeId ?? 'unknown',
-          parentId: parentId ?? 'unknown',
-          attachments: incomingAttachments,
-        });
+        // Only emit continuation if NOT waiting for an asynchronous delegation/event
+        if (!asyncWait) {
+          await this.emitter.emitContinuation(userId, userText, tracer.getTraceId() ?? 'unknown', {
+            initiatorId: currentInitiator,
+            depth,
+            sessionId,
+            nodeId: nodeId ?? 'unknown',
+            parentId: parentId ?? 'unknown',
+            attachments: incomingAttachments,
+          });
+        }
         return { responseText, attachments: resultAttachments, traceId };
       }
 

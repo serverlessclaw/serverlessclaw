@@ -32,6 +32,16 @@ vi.mock('@claw/core/agents/superclaw', () => ({
   SUPERCLAW_SYSTEM_PROMPT: 'test-prompt',
 }));
 
+vi.mock('@claw/core/lib/registry', () => ({
+  AgentRegistry: {
+    getAgentConfig: vi.fn().mockResolvedValue({
+      id: 'main',
+      name: 'SuperClaw',
+      systemPrompt: 'test-prompt',
+    }),
+  },
+}));
+
 // The route imports TraceSource from both /index and bare path — mock both to be safe
 vi.mock('@claw/core/lib/types/index', () => ({
   TraceSource: { DASHBOARD: 'dashboard' },

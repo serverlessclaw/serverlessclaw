@@ -149,6 +149,8 @@ export interface ResponseFormat {
   json_schema: {
     /** A descriptive name for the schema. */
     name: string;
+    /** Optional description of what the response format is for. */
+    description?: string;
     /** Whether to strictly enforce the schema (OpenAI specific). */
     strict: boolean;
     /** The actual JSON schema object. */

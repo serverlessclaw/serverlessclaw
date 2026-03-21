@@ -71,6 +71,7 @@ export class AgentExecutor {
   ): Promise<{
     responseText: string;
     paused?: boolean;
+    asyncWait?: boolean;
     pauseMessage?: string;
     attachments?: NonNullable<Message['attachments']>;
   }> {
@@ -256,8 +257,10 @@ export class AgentExecutor {
             // 4. HITL/Pause Optimization: Break loop immediately if tool returns TASK_PAUSED
             if (resultText.startsWith('TASK_PAUSED')) {
               return {
-                responseText: aiResponse.content || resultText,
+                // Strips 'TASK_PAUSED:' prefix and '(Trace: ...)' suffix for a cleaner user experience
+                responseText: aiResponse.content || this.formatUserFriendlyResponse(resultText),
                 paused: true,
+                asyncWait: true,
                 pauseMessage: resultText,
                 attachments,
               };
@@ -294,5 +297,16 @@ export class AgentExecutor {
       responseText: responseText ?? 'Sorry, I reached my iteration limit.',
       attachments: attachments.length > 0 ? attachments : undefined,
     };
+  }
+
+  /**
+   * Cleans up technical signaling from tool results for user display.
+   * Strips 'TASK_PAUSED:' and '(Trace: ...)' metadata.
+   */
+  private formatUserFriendlyResponse(text: string): string {
+    return text
+      .replace(/^TASK_PAUSED:\s*/i, '')
+      .replace(/\s*\(Trace: [^)]+\)\.?$/i, '')
+      .trim();
   }
 }

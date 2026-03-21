@@ -183,18 +183,25 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
     logger.warn('Failed to parse Planner structured response, falling back to raw text.', e);
   }
 
-  // 1. Notify user directly in the chat session
-  await sendOutboundMessage(
-    'planner.agent',
-    baseUserId,
-    `🚀 **Strategic Plan Generated**\n\n${plan}`,
-    [baseUserId],
-    sessionId,
-    config.name,
-    resultAttachments
-  );
+  const isFailure =
+    status === 'FAILED' ||
+    plan.startsWith('I encountered an internal error') ||
+    plan === 'Empty response from OpenAI.';
 
-  const isFailure = status === 'FAILED' || plan.startsWith('I encountered an internal error');
+  // 1. Notify user directly in the chat session ONLY if successful and not empty
+  if (!isFailure && plan !== 'Empty response from OpenAI.') {
+    await sendOutboundMessage(
+      'planner.agent',
+      baseUserId,
+      `🚀 **Strategic Plan Generated**\n\n${plan}`,
+      [baseUserId],
+      sessionId,
+      config.name,
+      resultAttachments
+    );
+  } else {
+    logger.warn(`Skipping user notification for failed or empty strategic plan: ${plan}`);
+  }
 
   // 2. Emit Task Result for Universal Coordination
   if (!isTaskPaused(rawResponse)) {

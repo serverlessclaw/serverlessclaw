@@ -13,7 +13,7 @@ import type { PlannerPayload } from './types';
 export function buildTelemetry(toolsList: string): string {
   return `
     [SYSTEM_TELEMETRY]:
-    - ACTIVE_AGENTS: superclaw, main, coder, strategicplanner, reflector, qa
+    - ACTIVE_AGENTS: main, coder, strategic-planner, cognition-reflector, qa
     - AVAILABLE_TOOLS:
     ${toolsList}
   `;
@@ -207,7 +207,7 @@ export async function buildProactiveReviewPrompt(
  */
 export function buildReactivePrompt(payload: PlannerPayload, telemetry: string): string {
   const { details, metadata } = payload;
-  const task = (payload as Record<string, unknown>).task || details || 'Strategic Review';
+  const task = payload.task || details || 'Strategic Review';
 
   const signals = metadata
     ? `

@@ -197,7 +197,14 @@ describe('OpenAIProvider', () => {
 
     expect(mockCreateResponse).toHaveBeenCalledWith(
       expect.objectContaining({
-        response_format: responseFormat,
+        text: expect.objectContaining({
+          format: expect.objectContaining({
+            type: 'json_schema',
+            name: 'test_schema',
+            strict: true,
+            schema: expect.objectContaining({ type: 'object' }),
+          }),
+        }),
       })
     );
   });

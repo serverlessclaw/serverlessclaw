@@ -27,14 +27,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const { Agent } = await import('@claw/core/lib/agent');
     const { SUPERCLAW_SYSTEM_PROMPT } = await import('@claw/core/agents/superclaw');
     const { TraceSource } = await import('@claw/core/lib/types/index');
+    const { AgentRegistry } = await import('@claw/core/lib/registry');
 
     console.log('[Chat API] Debug - Core Library version check: 2026-03-21-V2');
     const memory = new DynamoMemory();
     const provider = new ProviderManager();
+    const config = await AgentRegistry.getAgentConfig('main');
     const agentTools = await getAgentTools('main');
-    const agent = new Agent(memory, provider, agentTools, SUPERCLAW_SYSTEM_PROMPT);
+    const agent = new Agent(memory, provider, agentTools, config?.systemPrompt ?? SUPERCLAW_SYSTEM_PROMPT, config ?? undefined);
 
-    const { responseText, attachments: resultAttachments, traceId } = await agent.process(storageId, text ?? '', { sessionId, source: TraceSource.DASHBOARD, attachments });
+    const { responseText, attachments: resultAttachments, traceId } = await agent.process(storageId, text ?? '', { sessionId, source: TraceSource.DASHBOARD, attachments, initiatorId: 'main' });
 
     // Update conversation metadata for the sidebar
     if (sessionId) {
