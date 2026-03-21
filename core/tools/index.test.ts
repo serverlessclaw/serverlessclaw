@@ -16,10 +16,10 @@ vi.mock('../lib/mcp', () => ({
 
 describe('tools', () => {
   it('should have switchModel tool defined', () => {
-    expect(TOOLS.SWITCH_MODEL).toBeDefined();
-    expect(TOOLS.SWITCH_MODEL.name).toBe('switchModel');
-    expect(TOOLS.SWITCH_MODEL.description).toBeDefined();
-    expect(TOOLS.SWITCH_MODEL.execute).toBeDefined();
+    expect(TOOLS.switchModel).toBeDefined();
+    expect(TOOLS.switchModel.name).toBe('switchModel');
+    expect(TOOLS.switchModel.description).toBeDefined();
+    expect(TOOLS.switchModel.execute).toBeDefined();
   });
 });
 

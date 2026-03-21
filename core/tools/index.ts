@@ -27,50 +27,51 @@ export const TOOLS: Record<string, ITool> = {
   // System & Deployment Tools
   ...Object.fromEntries(
     Object.entries(deploymentTools).map(([k, v]) => [
-      k.toLowerCase().replace(/_([a-z])/g, (g) => g[1]),
+      k.includes('_') ? k.toLowerCase().replace(/_([a-z])/g, (_, p1) => p1.toUpperCase()) : k,
       v,
     ])
   ),
   ...Object.fromEntries(
     Object.entries(rollbackTools).map(([k, v]) => [
-      k.toLowerCase().replace(/_([a-z])/g, (g) => g[1]),
+      k.includes('_') ? k.toLowerCase().replace(/_([a-z])/g, (_, p1) => p1.toUpperCase()) : k,
       v,
     ])
   ),
 
   // File System & Validation Tools
   ...Object.fromEntries(
-    Object.entries(fsTools).map(([k, v]) => [k.toLowerCase().replace(/_([a-z])/g, (g) => g[1]), v])
+    Object.entries(fsTools).map(([k, v]) => [
+      k.includes('_') ? k.toLowerCase().replace(/_([a-z])/g, (_, p1) => p1.toUpperCase()) : k,
+      v,
+    ])
   ),
 
   // Knowledge & Agent Management Tools
   ...Object.fromEntries(
     Object.entries(knowledgeToolsFiltered).map(([k, v]) => [
-      k.toLowerCase().replace(/_([a-z])/g, (g) => g[1]),
+      k.includes('_') ? k.toLowerCase().replace(/_([a-z])/g, (_, p1) => p1.toUpperCase()) : k,
       v,
     ])
   ),
 
-  // Proactive Scheduling Tools
+  // Scheduler Tools
   ...Object.fromEntries(
     Object.entries(schedulerTools).map(([k, v]) => [
-      k.toLowerCase().replace(/_([a-z])/g, (g) => g[1]),
+      k.includes('_') ? k.toLowerCase().replace(/_([a-z])/g, (_, p1) => p1.toUpperCase()) : k,
       v,
     ])
   ),
 
-  // Metadata & SSOT Tools
+  // Debug & Metadata Tools
   ...Object.fromEntries(
     Object.entries(metadataTools).map(([k, v]) => [
-      k.toLowerCase().replace(/_([a-z])/g, (g) => g[1]),
+      k.includes('_') ? k.toLowerCase().replace(/_([a-z])/g, (_, p1) => p1.toUpperCase()) : k,
       v,
     ])
   ),
-
-  // Debug & Investigation Tools
   ...Object.fromEntries(
     Object.entries(debugTools).map(([k, v]) => [
-      k.toLowerCase().replace(/_([a-z])/g, (g) => g[1]),
+      k.includes('_') ? k.toLowerCase().replace(/_([a-z])/g, (_, p1) => p1.toUpperCase()) : k,
       v,
     ])
   ),
@@ -78,7 +79,7 @@ export const TOOLS: Record<string, ITool> = {
   /**
    * Switches the active LLM provider and model for the system.
    */
-  SWITCH_MODEL: {
+  switchModel: {
     ...toolDefinitions.switchModel,
     execute: async (args: Record<string, unknown>): Promise<string> => {
       const { provider, model } = args as { provider: string; model: string };
@@ -93,5 +94,9 @@ export const TOOLS: Record<string, ITool> = {
     },
   },
 };
+
+console.log(
+  `[TOOLS] Registry initialized with ${Object.keys(TOOLS).length} tools: ${Object.keys(TOOLS).join(', ')}`
+);
 
 export { getAgentTools, getToolDefinitions } from './registry-utils';
