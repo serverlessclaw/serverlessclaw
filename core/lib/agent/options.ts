@@ -1,4 +1,5 @@
 import { ReasoningProfile, TraceSource } from '../types/index';
+import { SessionStateManager } from '../session-state';
 
 /**
  * Timeout behavior when agent reaches its time limit.
@@ -38,4 +39,9 @@ export interface AgentProcessOptions {
    * Behavior when agent times out. Default: 'pause'
    */
   timeoutBehavior?: TimeoutBehavior;
+  /**
+   * Session state manager for coordinating concurrent requests.
+   * Enables pending message injection during long-running tasks.
+   */
+  sessionStateManager?: SessionStateManager;
 }

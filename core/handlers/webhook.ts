@@ -2,6 +2,7 @@ import { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-la
 import { sendOutboundMessage } from '../lib/outbound';
 import { logger } from '../lib/logger';
 import { TraceSource } from '../lib/types/agent';
+import { MessageRole } from '../lib/types/llm';
 import { SSTResource } from '../lib/types/system';
 import { Resource } from 'sst';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -81,14 +82,14 @@ export const handler = async (
   const [
     { DynamoMemory },
     { ProviderManager },
-    { DynamoLockManager },
+    { SessionStateManager },
     { getAgentTools },
     { SuperClaw },
     { AgentRegistry },
   ] = await Promise.all([
     import('../lib/memory'),
     import('../lib/providers/index'),
-    import('../lib/lock'),
+    import('../lib/session-state'),
     import('../tools/index'),
     import('../agents/superclaw'),
     import('../lib/registry'),
@@ -96,19 +97,30 @@ export const handler = async (
 
   const memory = new DynamoMemory();
   const provider = new ProviderManager();
-  const lockManager = new DynamoLockManager();
+  const sessionStateManager = new SessionStateManager();
+  const lambdaRequestId = context.awsRequestId;
 
-  // 1. Acquire Lock
-  console.log('[WEBHOOK] Acquiring lock...');
-  const acquired = await lockManager.acquire(chatId, 60);
-  if (!acquired) {
-    console.warn(`[WEBHOOK] Lock busy for ${chatId}`);
-    logger.info(`Could not acquire lock for session ${chatId}. Task probably in progress.`);
-    return { statusCode: 200, body: 'Task in progress' };
+  // 1. Always add message to conversation history first (no message loss)
+  console.log('[WEBHOOK] Recording message to history...');
+  await memory.addMessage(chatId, {
+    role: MessageRole.USER,
+    content: userText,
+    attachments,
+  });
+
+  // 2. Try to acquire processing flag
+  console.log('[WEBHOOK] Checking processing status...');
+  const canProcess = await sessionStateManager.acquireProcessing(chatId, lambdaRequestId);
+
+  if (!canProcess) {
+    // Agent is currently processing - add message to pending queue
+    console.log(`[WEBHOOK] Session ${chatId} busy, queuing message...`);
+    await sessionStateManager.addPendingMessage(chatId, userText, attachments);
+    return { statusCode: 200, body: 'Message queued for processing' };
   }
 
   try {
-    // 2. Process message via Agent
+    // 3. Process message via Agent
     console.log('[WEBHOOK] Loading config...');
     const config = await AgentRegistry.getAgentConfig('main');
     if (!config) throw new Error('Main agent config missing');
@@ -130,11 +142,12 @@ export const handler = async (
         source: TraceSource.TELEGRAM,
         attachments,
         sessionId: chatId,
+        sessionStateManager,
       }
     );
     console.log('[WEBHOOK] Process complete. Response length:', responseText.length);
 
-    // 3. Send response to Notifier via AgentBus
+    // 4. Send response to Notifier via AgentBus
     console.log('[WEBHOOK] Sending outbound message...');
     await sendOutboundMessage(
       'webhook.handler',
@@ -150,8 +163,8 @@ export const handler = async (
     console.error('[WEBHOOK] Execution Error:', err);
     throw err;
   } finally {
-    // 4. Release Lock
-    await lockManager.release(chatId);
+    // 5. Release processing flag
+    await sessionStateManager.releaseProcessing(chatId);
   }
 
   return { statusCode: 200, body: 'OK' };

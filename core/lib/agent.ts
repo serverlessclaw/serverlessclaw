@@ -87,6 +87,7 @@ export class Agent {
       taskTimeoutMs,
       timeoutBehavior = 'pause',
       communicationMode = this.config?.defaultCommunicationMode ?? 'text',
+      sessionStateManager,
     } = options;
 
     const responseFormat =
@@ -268,6 +269,7 @@ export class Agent {
         responseFormat,
         taskTimeoutMs,
         timeoutBehavior,
+        sessionStateManager,
       });
 
       let responseText = initialResponseText;

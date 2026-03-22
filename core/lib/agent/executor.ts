@@ -34,6 +34,10 @@ export const AGENT_LOG_MESSAGES = {
  * @since 2026-03-19
  */
 export class AgentExecutor {
+  // Track the timestamp of the last message we've already seen/injected
+  // to avoid duplicates from history vs pending queue
+  private lastInjectedMessageTimestamp: number = Date.now();
+
   constructor(
     private provider: IProvider,
     private tools: ITool[],
@@ -69,6 +73,7 @@ export class AgentExecutor {
       responseFormat?: import('../types/index').ResponseFormat;
       taskTimeoutMs?: number;
       timeoutBehavior?: 'pause' | 'fail' | 'continue';
+      sessionStateManager?: import('../session-state').SessionStateManager;
     }
   ): Promise<{
     responseText: string;
@@ -96,6 +101,7 @@ export class AgentExecutor {
       responseFormat,
       taskTimeoutMs,
       timeoutBehavior = 'pause',
+      sessionStateManager,
     } = options;
 
     let iterations = 0;
@@ -121,6 +127,53 @@ export class AgentExecutor {
 
     const startTime = Date.now();
     while (iterations < maxIterations) {
+      // 0.5. Pending Message Check - Inject queued messages into context
+      if (sessionStateManager && sessionId) {
+        const pendingMessages = await sessionStateManager.getPendingMessages(sessionId);
+
+        // Filter out messages we've already seen or that are too old (to avoid duplicates with initial history)
+        const newMessages = pendingMessages.filter(
+          (m) => m.timestamp > this.lastInjectedMessageTimestamp
+        );
+
+        if (newMessages.length > 0) {
+          logger.info(
+            `[EXECUTOR] Found ${newMessages.length} new pending messages, injecting into context`
+          );
+
+          // Update our high-water mark
+          this.lastInjectedMessageTimestamp = Math.max(...newMessages.map((m) => m.timestamp));
+
+          // Format pending messages as natural user messages
+          const pendingContent = newMessages
+            .map((m) => `[Queued message]: ${m.content}`)
+            .join('\n\n');
+
+          // Add pending messages to conversation
+          messages.push({
+            role: MessageRole.USER,
+            content: pendingContent,
+          });
+
+          // Also collect attachments from pending messages
+          for (const m of newMessages) {
+            if (m.attachments && m.attachments.length > 0) {
+              attachments.push(...m.attachments);
+            }
+          }
+
+          // Clear ONLY the messages we just injected to avoid race conditions
+          const processedIds = newMessages.map((m) => m.id);
+          await sessionStateManager.clearPendingMessages(sessionId, processedIds);
+          logger.info(
+            `[EXECUTOR] ${processedIds.length} pending messages cleared, continuing with updated context`
+          );
+        }
+
+        // Renew processing flag to prevent expiry during long tasks
+        await sessionStateManager.renewProcessing(sessionId, this.agentId);
+      }
+
       // 1. Timeout Check
       if (context && typeof context.getRemainingTimeInMillis === 'function') {
         const remainingTime = context.getRemainingTimeInMillis();
@@ -162,7 +215,6 @@ export class AgentExecutor {
         logger.warn(
           `Approaching context limit in execution loop: ${currentTokens}/${LIMITS.MAX_CONTEXT_LENGTH}.`
         );
-        // In a more advanced implementation, we could try to summarize intermediate results here
       }
 
       // 2. LLM Call
@@ -294,7 +346,6 @@ export class AgentExecutor {
             // 4. HITL/Pause Optimization: Break loop immediately if tool returns TASK_PAUSED
             if (resultText.startsWith('TASK_PAUSED')) {
               return {
-                // Strips 'TASK_PAUSED:' prefix and '(Trace: ...)' suffix for a cleaner user experience
                 responseText: aiResponse.content || this.formatUserFriendlyResponse(resultText),
                 paused: true,
                 asyncWait: true,

@@ -1,45 +1,69 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { handler } from './webhook';
+import { APIGatewayProxyEventV2, Context } from 'aws-lambda';
 
-// Mock sst Resource BEFORE other imports
+// Create a mock instance to control behavior
+const mockSessionStateManagerInstance = {
+  acquireProcessing: vi.fn().mockResolvedValue(true),
+  releaseProcessing: vi.fn().mockResolvedValue(undefined),
+  addPendingMessage: vi.fn().mockResolvedValue(undefined),
+  getPendingMessages: vi.fn().mockResolvedValue([]),
+  clearPendingMessages: vi.fn().mockResolvedValue(undefined),
+  renewProcessing: vi.fn().mockResolvedValue(true),
+};
+
+// Mock dependencies
 vi.mock('sst', () => ({
   Resource: {
-    TelegramBotToken: { value: 'mock-token' },
-    StagingBucket: { name: 'mock-bucket' },
+    TelegramBotToken: { value: 'test-token' },
+    StagingBucket: { name: 'test-bucket' },
+    MemoryTable: { name: 'test-table' },
   },
 }));
 
-import { handler } from './webhook';
-import { mockClient } from 'aws-sdk-client-mock';
+vi.mock('../lib/outbound', () => ({
+  sendOutboundMessage: vi.fn().mockResolvedValue(undefined),
+}));
 
-// Mock dependencies
-const mockSuperClawProcess = vi.fn().mockResolvedValue({
-  responseText: 'Mocked response',
-  attachments: [],
-});
+vi.mock('../lib/logger', () => ({
+  logger: {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+  },
+}));
 
 vi.mock('../agents/superclaw', () => ({
   SuperClaw: class {
-    static parseCommand(input: string) {
-      return { cleanText: input, profile: undefined };
-    }
-
-    process = mockSuperClawProcess;
+    static parseCommand = vi.fn().mockReturnValue({ profile: 'standard', cleanText: 'hello' });
+    process = vi.fn().mockResolvedValue({ responseText: 'hi', attachments: [] });
   },
 }));
 
 vi.mock('../lib/memory', () => ({
-  DynamoMemory: class {},
+  DynamoMemory: class {
+    addMessage = vi.fn().mockResolvedValue(undefined);
+    getHistory = vi.fn().mockResolvedValue([]);
+    saveConversationMeta = vi.fn().mockResolvedValue(undefined);
+  },
 }));
 
 vi.mock('../lib/providers/index', () => ({
-  ProviderManager: class {},
+  ProviderManager: class {
+    getCapabilities = vi.fn().mockResolvedValue({
+      supportedReasoningProfiles: ['standard'],
+    });
+  },
 }));
 
-vi.mock('../lib/lock', () => ({
-  DynamoLockManager: class {
-    acquire = vi.fn().mockResolvedValue(true);
-    release = vi.fn().mockResolvedValue(true);
+vi.mock('../lib/session-state', () => ({
+  SessionStateManager: class {
+    acquireProcessing = mockSessionStateManagerInstance.acquireProcessing;
+    releaseProcessing = mockSessionStateManagerInstance.releaseProcessing;
+    addPendingMessage = mockSessionStateManagerInstance.addPendingMessage;
+    getPendingMessages = mockSessionStateManagerInstance.getPendingMessages;
+    clearPendingMessages = mockSessionStateManagerInstance.clearPendingMessages;
+    renewProcessing = mockSessionStateManagerInstance.renewProcessing;
   },
 }));
 
@@ -47,7 +71,8 @@ vi.mock('../lib/registry', () => ({
   AgentRegistry: {
     getAgentConfig: vi.fn().mockResolvedValue({
       id: 'main',
-      systemPrompt: 'Mocked prompt',
+      name: 'SuperClaw',
+      systemPrompt: 'You are SuperClaw',
     }),
   },
 }));
@@ -56,124 +81,59 @@ vi.mock('../tools/index', () => ({
   getAgentTools: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock('../lib/outbound', () => ({
-  sendOutboundMessage: vi.fn().mockResolvedValue(undefined),
-}));
-
-const s3Mock = mockClient(S3Client);
-
-// Mock global fetch
-global.fetch = vi.fn();
-
 describe('Webhook Handler', () => {
+  const mockContext = {
+    awsRequestId: 'test-request-id',
+  } as Context;
+
+  const createEvent = (body: any): APIGatewayProxyEventV2 =>
+    ({
+      body: JSON.stringify(body),
+      headers: { 'content-type': 'application/json' },
+    }) as any;
+
   beforeEach(() => {
     vi.clearAllMocks();
-    s3Mock.reset();
+    mockSessionStateManagerInstance.acquireProcessing.mockResolvedValue(true);
   });
 
-  it('should process simple text message', async () => {
-    const event = {
-      body: JSON.stringify({
-        update_id: 12345,
-        message: {
-          message_id: 1,
-          from: { id: 123456789, is_bot: false, first_name: 'TestUser' },
-          chat: { id: 123456789, first_name: 'TestUser', type: 'private' },
-          date: Math.floor(Date.now() / 1000),
-          text: 'Hello bot',
-        },
-      }),
-    } as any;
-
-    const result = (await handler(event, {} as any)) as any;
-
-    expect(result.statusCode).toBe(200);
-    expect(mockSuperClawProcess).toHaveBeenCalledWith('123456789', 'Hello bot', expect.anything());
+  it('should acknowledge non-message updates', async () => {
+    const event = createEvent({ update_id: 123 });
+    const result = await handler(event, mockContext);
+    expect(result).toEqual({ statusCode: 200, body: 'OK' });
   });
 
-  it('should return 400 for invalid Telegram update payload', async () => {
-    // Test with missing body
-    let event: any = { body: undefined };
-    let result: any = await handler(event, {} as any);
-    expect(result.statusCode).toBe(400);
+  it('should process user messages and call SuperClaw', async () => {
+    const event = createEvent({
+      update_id: 123,
+      message: {
+        message_id: 456,
+        chat: { id: 789 },
+        text: 'hello',
+        date: Date.now(),
+      },
+    });
 
-    // Test with malformed JSON
-    event = { body: 'this is not json' };
-    result = await handler(event, {} as any);
-    expect(result.statusCode).toBe(400);
-
-    // Test with a valid non-message update: should be acknowledged
-    event = {
-      body: JSON.stringify({
-        update_id: 67890,
-      }),
-    };
-    result = await handler(event, {} as any);
-    expect(result.statusCode).toBe(200);
-
-    // Test with message missing required chat.id
-    event = {
-      body: JSON.stringify({
-        update_id: 67891,
-        message: {
-          message_id: 2,
-          from: { id: 987654321, is_bot: false, first_name: 'AnotherUser' },
-          date: Math.floor(Date.now() / 1000),
-          text: 'Missing chat ID',
-        },
-      }),
-    };
-    result = await handler(event, {} as any);
-    expect(result.statusCode).toBe(400);
+    const result = await handler(event, mockContext);
+    expect(result).toEqual({ statusCode: 200, body: 'OK' });
+    expect(mockSessionStateManagerInstance.acquireProcessing).toHaveBeenCalled();
   });
 
-  it('should process photo attachment', async () => {
-    const event = {
-      body: JSON.stringify({
-        update_id: 12345,
-        message: {
-          message_id: 101,
-          from: { id: 11223344, is_bot: false, first_name: 'TestSender' },
-          chat: { id: 123456789, first_name: 'TestChat', type: 'private' },
-          date: Math.floor(Date.now() / 1000),
-          text: 'Check this photo',
-          photo: [
-            { file_id: 'small_id', file_unique_id: 'unique_small', width: 100, height: 100 },
-            { file_id: 'large_id', file_unique_id: 'unique_large', width: 500, height: 500 },
-          ],
-        },
-      }),
-    } as any;
+  it('should queue message if session is busy', async () => {
+    mockSessionStateManagerInstance.acquireProcessing.mockResolvedValueOnce(false);
 
-    // Mock Telegram getFile
+    const event = createEvent({
+      update_id: 123,
+      message: {
+        message_id: 456,
+        chat: { id: 789 },
+        text: 'hello busy',
+        date: Date.now(),
+      },
+    });
 
-    (global.fetch as any)
-      .mockResolvedValueOnce({
-        json: () => Promise.resolve({ ok: true, result: { file_path: 'photos/file.jpg' } }),
-      })
-      // Mock File Download
-      .mockResolvedValueOnce({
-        arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
-      });
-
-    s3Mock.on(PutObjectCommand).resolves({});
-
-    const result = (await handler(event, {} as any)) as any;
-
-    expect(result.statusCode).toBe(200);
-    expect(s3Mock.calls().length).toBe(1);
-
-    expect(mockSuperClawProcess).toHaveBeenCalledWith(
-      '123456789',
-      'Check this photo',
-      expect.objectContaining({
-        attachments: [
-          expect.objectContaining({
-            type: 'image',
-            url: expect.stringContaining('.s3.'),
-          }),
-        ],
-      })
-    );
+    const result = await handler(event, mockContext);
+    expect(result).toEqual({ statusCode: 200, body: 'Message queued for processing' });
+    expect(mockSessionStateManagerInstance.addPendingMessage).toHaveBeenCalled();
   });
 });

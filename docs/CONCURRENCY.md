@@ -1,21 +1,160 @@
-# Concurrency & Session Isolation
+# Concurrency & Session Management
 
-In a serverless, stateless environment, maintaining session integrity is critical. Serverless Claw uses **Distributed Locking** to ensure that only one reasoning process acts on a session at a time.
+In a serverless, stateless environment, maintaining session integrity requires a different approach than traditional locking. Serverless Claw uses a **Message Queue with Context Injection** pattern instead of mutex locks.
 
-## Distributed Locking (DynamoDB)
+## Core Philosophy
 
-Unlike traditional servers that use in-memory locks, Claw uses a `LOCK#<chatId>` item in the `MemoryTable`.
+**No Message Loss**: Every user message is immediately recorded to DynamoDB. No message is ever dropped.
+
+**Soft Coordination**: Instead of blocking concurrent requests with locks, we use a lightweight processing flag with a short lock TTL. This allows the system to gracefully handle concurrent requests without losing data.
+
+**Natural Context**: When a user sends messages while an agent is processing, those messages are injected into the agent's context as natural conversation turns, creating a seamless experience.
+
+## Architecture
 
 ```text
-[User Msg A] -> [Lambda 1] -> [Acquire Lock] -> [ EXECUTE ] -> [ Release Lock ]
-[User Msg B] -> [Lambda 2] -> [ Lock Check ] -> [ FAIL/EXIT ]
-[User Msg C] -> [Lambda 3] -> [ Lock Check ] -> [ FAIL/EXIT ]
+User Msg A -> Webhook -> Set Processing Flag -> [Agent Processing...]
+User Msg B -> Webhook -> Flag Set? -> Queue Message -> Return 200 OK
+                                                    |
+                                                    v (at next iteration)
+                                          Agent Injects Queued Messages
+                                          -> Continues Processing
 ```
 
-## Mechanism
-1. **Acquisition**: At the start of a request, the handler attempts a conditional `PutItem` for the lock.
-2. **TTL**: Locks have an automatic Time-To-Live (TTL) of 5 minutes to prevent session deadlocks in case of Lambda timeouts or crashes.
-3. **Release**: Upon successful completion or caught error, the lock is explicitly deleted.
+## Key Components
 
-## Session Consistency
-Because all state (History, Gaps, Skills) is stored in DynamoDB, different Lambda invocations can process sequential messages in the same session without losing context, provided they acquire the lock sequentially.
+### 1. Session State (DynamoDB)
+
+Every session has a state record in the `MemoryTable`:
+
+```
+Key: SESSION_STATE#<chatId>
+Value: {
+  sessionId: "12345",
+  processingAgentId: "Lambda-abc123",
+  processingStartedAt: 1711000000000,
+  pendingMessages: [
+    { id: "pending_...", content: "Hello", timestamp: 1711000001000 },
+    { id: "pending_...", content: "Also...", timestamp: 1711000002000 }
+  ],
+  lastMessageAt: 1711000002000,
+  lockExpiresAt: 1711000300000,  // Short TTL for lock timeout
+  expiresAt: 1713592000000       // Long TTL (30 days) for session persistence
+}
+```
+
+### 2. SessionStateManager
+
+The `SessionStateManager` class manages session coordination:
+
+```typescript
+// core/lib/session-state.ts
+export class SessionStateManager {
+  acquireProcessing(sessionId, agentId); // Sets processing flag if not set
+  releaseProcessing(sessionId); // Clears processing flag
+  renewProcessing(sessionId, agentId); // Extends lock TTL during long tasks
+  addPendingMessage(sessionId, content); // Queue a message
+  getPendingMessages(sessionId); // Get all pending messages
+  clearPendingMessages(sessionId, processedIds); // Clear specific messages
+  removePendingMessage(sessionId, messageId); // Remove specific message (UI)
+  updatePendingMessage(sessionId, messageId, newContent); // Edit message (UI)
+}
+```
+
+### 3. Context Injection in AgentExecutor
+
+At each iteration, the executor checks for pending messages and injects them:
+
+```typescript
+// At start of each iteration:
+const pending = await sessionStateManager.getPendingMessages(sessionId);
+// Filter out messages already seen or in initial history
+const newMessages = pending.filter(m => m.timestamp > lastInjectedTimestamp);
+
+if (newMessages.length > 0) {
+  // Inject as natural user messages
+  const content = newMessages.map((m) => `[Queued]: ${m.content}`).join('\n\n');
+  messages.push({ role: 'user', content });
+
+  // Collect attachments
+  attachments.push(...newMessages.flatMap((m) => m.attachments || []));
+
+  // Clear ONLY the messages we just injected
+  await sessionStateManager.clearPendingMessages(sessionId, newMessages.map(m => m.id));
+
+  // Renew processing flag
+  await sessionStateManager.renewProcessing(sessionId, agentId);
+}
+```
+
+## Webhook Flow
+
+```text
+1. Message arrives -> Always add to conversation history (DynamoDB)
+                 |
+                 v
+2. Check processing flag via SessionStateManager
+                 |
+     +-----------+-----------+
+     |                       |
+  Flag not set           Flag set
+     |                       |
+     v                       v
+3. Set flag            4. Add to pending queue
+   (Lambda Request ID)      |
+     |                       |
+     v                       v
+5. Process normally    5. Return 200 "Message queued"
+                 |
+                 v
+6. Release flag (in finally block)
+```
+
+## Crash Recovery
+
+If an agent crashes during processing:
+
+1. The Lambda terminates.
+2. The processing flag is never explicitly released.
+3. However, the lock has a **5-minute lock TTL** (`lockExpiresAt`).
+4. Next message for the session will check `lockExpiresAt < now` and find the lock has expired.
+5. A new agent starts and picks up any pending messages.
+6. The entire session state record persists for **30 days** (`expiresAt`) unless a new message is received.
+
+## UI Integration (ClawCenter Dashboard)
+
+The dashboard can show pending messages with edit/remove capabilities:
+
+### API Endpoints
+
+1. **GET /api/pending-messages?sessionId=...**
+2. **DELETE /api/pending-messages** (body: `{ sessionId, messageId }`)
+3. **PATCH /api/pending-messages** (body: `{ sessionId, messageId, content }`)
+
+## Comparison: Lock vs Queue
+
+| Aspect            | Old (Locking)         | New (Queue)                 |
+| ----------------- | --------------------- | --------------------------- |
+| Message Loss      | Yes - dropped if busy | No - all queued             |
+| User Experience   | "Task in progress"    | Seamless - messages merged  |
+| Concurrent Safety | Sequential only       | Natural coordination        |
+| Crash Recovery    | Lock stuck until TTL  | Auto-recovery via Lock TTL  |
+| Context Awareness | None                  | Full message incorporation  |
+| UI Visibility     | None                  | Edit/remove queued messages |
+| Implementation    | Simple mutex          | Stateful coordination       |
+
+## Configuration
+
+| Parameter                 | Default         | Description                    |
+| ------------------------- | --------------- | ------------------------------ |
+| `LOCK_TTL_SECONDS`        | 300 (5 min)     | Lock timeout for crash recovery|
+| `SESSION_TTL_SECONDS`     | 2,592,000 (30d) | Persistent state TTL           |
+| Pending message retention | Until processed | Messages don't expire prematurely |
+
+## Benefits
+
+1. **No Message Loss**: Every user message is preserved.
+2. **Better UX**: Agent naturally responds to multiple messages.
+3. **Resilient**: Automatic recovery from crashes while maintaining state.
+4. **Observable**: Dashboard can show queued state.
+5. **Flexible**: UI can edit/remove queued messages before processing.
