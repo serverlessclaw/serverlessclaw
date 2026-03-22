@@ -1,58 +1,73 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { sendOutboundMessage } from './outbound';
-import * as bus from './utils/bus';
+import { emitEvent } from './utils/bus';
 import { Attachment } from './types/index';
 
 vi.mock('./utils/bus', () => ({
-  emitEvent: vi.fn().mockResolvedValue(undefined),
+  emitEvent: vi.fn().mockResolvedValue({ success: true, eventId: 'test-id' }),
+  EventPriority: {
+    CRITICAL: 'CRITICAL',
+    HIGH: 'HIGH',
+    NORMAL: 'NORMAL',
+    LOW: 'LOW',
+  },
 }));
 
 describe('sendOutboundMessage', () => {
+  const mockEmitEvent = vi.mocked(emitEvent);
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('should send an outbound message with required parameters', async () => {
-    const mockEmitEvent = vi.mocked(bus.emitEvent);
+  it('should send an outbound message with basic parameters', async () => {
+    const userId = 'user-123';
+    const message = 'Hello world';
 
-    await sendOutboundMessage('webhook.handler', 'user-123', 'Hello world');
+    await sendOutboundMessage('webhook.handler', userId, message);
 
-    expect(mockEmitEvent).toHaveBeenCalledWith('webhook.handler', 'outbound_message', {
-      userId: 'user-123',
-      message: 'Hello world',
-      memoryContexts: undefined,
-      sessionId: undefined,
-      agentName: undefined,
-      attachments: undefined,
-    });
+    expect(mockEmitEvent).toHaveBeenCalledWith(
+      'webhook.handler',
+      'outbound_message',
+      expect.objectContaining({
+        userId: 'user-123',
+        message: 'Hello world',
+      }),
+      { priority: 'HIGH' }
+    );
   });
 
   it('should send an outbound message with all optional parameters', async () => {
-    const mockEmitEvent = vi.mocked(bus.emitEvent);
-    const attachments = [{ name: 'file.txt', type: 'text/plain', content: 'data' }];
+    const source = 'agent.handler';
+    const userId = 'user-456';
+    const message = 'Test message';
+    const memoryContexts = ['context-1', 'context-2'];
+    const sessionId = 'session-789';
+    const agentName = 'test-agent';
+    const attachments = [{ type: 'image', url: 'http://example.com/img.png' }];
 
     await sendOutboundMessage(
-      'agent.handler',
-      'user-456',
-      'Test message',
-      ['context-1', 'context-2'],
-      'session-789',
-      'test-agent',
+      source,
+      userId,
+      message,
+      memoryContexts,
+      sessionId,
+      agentName,
       attachments as Attachment[]
     );
 
-    expect(mockEmitEvent).toHaveBeenCalledWith('agent.handler', 'outbound_message', {
-      userId: 'user-456',
-      message: 'Test message',
-      memoryContexts: ['context-1', 'context-2'],
-      sessionId: 'session-789',
-      agentName: 'test-agent',
-      attachments: attachments,
-    });
-  });
-
-  it('should return a resolved promise', async () => {
-    const result = await sendOutboundMessage('handler', 'user', 'message');
-    expect(result).toBeUndefined();
+    expect(mockEmitEvent).toHaveBeenCalledWith(
+      'agent.handler',
+      'outbound_message',
+      expect.objectContaining({
+        userId: 'user-456',
+        message: 'Test message',
+        memoryContexts,
+        sessionId,
+        agentName,
+        attachments,
+      }),
+      { priority: 'HIGH' }
+    );
   });
 });

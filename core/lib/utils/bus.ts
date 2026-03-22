@@ -1,12 +1,58 @@
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import {
+  DynamoDBDocumentClient,
+  PutCommand,
+  QueryCommand,
+  DeleteCommand,
+} from '@aws-sdk/lib-dynamodb';
 import { EventType } from '../types/index';
 import { logger } from '../logger';
 
 const MAX_RETRIES = 3;
 const INITIAL_BACKOFF_MS = 100;
-const DLQ_TABLE_KEY = 'EVENTBUS#DLQ';
+const DLQ_TYPE = 'DLQ_EVENT';
+const IDEMPOTENCY_TYPE = 'IDEMPOTENCY';
+const IDEMPOTENCY_PREFIX = 'IDEMPOTENCY#';
+const IDEMPOTENCY_TTL_SECONDS = 3600; // 1 hour
+const DLQ_PREFIX = 'EVENTBUS#DLQ';
+
+export enum EventPriority {
+  CRITICAL = 'CRITICAL',
+  HIGH = 'HIGH',
+  NORMAL = 'NORMAL',
+  LOW = 'LOW',
+}
+
+export enum ErrorCategory {
+  TRANSIENT = 'TRANSIENT',
+  PERMANENT = 'PERMANENT',
+  UNKNOWN = 'UNKNOWN',
+}
+
+export interface EventOptions {
+  priority?: EventPriority;
+  idempotencyKey?: string;
+  maxRetries?: number;
+  correlationId?: string;
+}
+
+export interface DlqEntry {
+  userId: string; // The partition key (EVENTBUS#DLQ#...)
+  timestamp: number; // The range key
+  type: string; // DLQ_EVENT
+  source: string;
+  detailType: string;
+  detail: string;
+  retryCount: number;
+  maxRetries: number;
+  lastError?: string;
+  errorCategory?: ErrorCategory;
+  priority: EventPriority;
+  correlationId?: string;
+  createdAt: number;
+  expiresAt: number;
+}
 
 let _eventbridge: EventBridgeClient | null = null;
 let _db: DynamoDBDocumentClient | null = null;
@@ -14,15 +60,16 @@ let _busName: string | null = null;
 let _memoryTableName: string | null = null;
 
 function getEventBridge(): EventBridgeClient {
-  if (!_eventbridge) {
-    _eventbridge = new EventBridgeClient({});
-  }
+  if (!_eventbridge) _eventbridge = new EventBridgeClient({});
   return _eventbridge;
 }
 
 function getDb(): DynamoDBDocumentClient {
   if (!_db) {
-    _db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+    const client = new DynamoDBClient({});
+    _db = DynamoDBDocumentClient.from(client, {
+      marshallOptions: { removeUndefinedValues: true },
+    });
   }
   return _db;
 }
@@ -31,7 +78,8 @@ async function getBusName(): Promise<string> {
   if (_busName === null) {
     try {
       const { Resource } = await import('sst');
-      _busName = Resource.AgentBus?.name ?? 'AgentBus';
+      const resource = Resource as { AgentBus?: { name?: string } };
+      _busName = resource.AgentBus?.name ?? 'AgentBus';
     } catch {
       _busName = 'AgentBus';
     }
@@ -43,7 +91,8 @@ async function getMemoryTableName(): Promise<string> {
   if (_memoryTableName === null) {
     try {
       const { Resource } = await import('sst');
-      _memoryTableName = Resource.MemoryTable?.name ?? 'MemoryTable';
+      const resource = Resource as { MemoryTable?: { name?: string } };
+      _memoryTableName = resource.MemoryTable?.name ?? 'MemoryTable';
     } catch {
       _memoryTableName = 'MemoryTable';
     }
@@ -51,88 +100,353 @@ async function getMemoryTableName(): Promise<string> {
   return _memoryTableName;
 }
 
-async function storeInDLQ(
-  source: string,
-  type: string,
-  detail: Record<string, unknown>
-): Promise<void> {
+function categorizeError(error: unknown): ErrorCategory {
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+
+    if (
+      message.includes('throttling') ||
+      message.includes('rate limit') ||
+      message.includes('timeout') ||
+      message.includes('connection') ||
+      message.includes('temporary') ||
+      message.includes('service unavailable') ||
+      message.includes('too many requests')
+    ) {
+      return ErrorCategory.TRANSIENT;
+    }
+
+    if (
+      message.includes('access denied') ||
+      message.includes('unauthorized') ||
+      message.includes('forbidden') ||
+      message.includes('not found') ||
+      message.includes('invalid') ||
+      message.includes('malformed')
+    ) {
+      return ErrorCategory.PERMANENT;
+    }
+  }
+  return ErrorCategory.UNKNOWN;
+}
+
+async function checkIdempotency(key: string): Promise<boolean> {
   try {
     const tableName = await getMemoryTableName();
+    const result = await getDb().send(
+      new QueryCommand({
+        TableName: tableName,
+        KeyConditionExpression: 'userId = :key',
+        ExpressionAttributeValues: {
+          ':key': `${IDEMPOTENCY_PREFIX}${key}`,
+        },
+        Limit: 1,
+      })
+    );
+    return (result.Items?.length ?? 0) > 0;
+  } catch (error) {
+    logger.error(`Idempotency check failed for ${key}, proceeding anyway:`, error);
+    return false;
+  }
+}
+
+async function storeIdempotencyKey(key: string): Promise<void> {
+  try {
+    const tableName = await getMemoryTableName();
+    const expiresAt = Math.floor(Date.now() / 1000) + IDEMPOTENCY_TTL_SECONDS;
+
     await getDb().send(
       new PutCommand({
         TableName: tableName,
         Item: {
-          userId: `${DLQ_TABLE_KEY}#${Date.now()}#${Math.random().toString(36).slice(2, 8)}`,
+          userId: `${IDEMPOTENCY_PREFIX}${key}`,
           timestamp: Date.now(),
-          type: 'DLQ_EVENT',
-          source,
-          detailType: type,
-          detail: JSON.stringify(detail),
-          retryCount: MAX_RETRIES,
-          expiresAt: Math.floor(Date.now() / 1000) + 3600,
+          type: IDEMPOTENCY_TYPE,
+          expiresAt,
         },
       })
     );
-    logger.warn(`Event stored in DLQ after ${MAX_RETRIES} retries: ${source}/${type}`);
+  } catch (error) {
+    logger.warn(`Failed to store idempotency key ${key}:`, error);
+  }
+}
+
+async function storeInDLQ(
+  source: string,
+  type: string,
+  detail: Record<string, unknown>,
+  options: {
+    retryCount: number;
+    maxRetries: number;
+    lastError?: string;
+    errorCategory?: ErrorCategory;
+    priority: EventPriority;
+    correlationId?: string;
+  }
+): Promise<void> {
+  try {
+    const tableName = await getMemoryTableName();
+    const now = Date.now();
+    const expiresAt = Math.floor(now / 1000) + 86400; // 24 hours for DLQ
+
+    await getDb().send(
+      new PutCommand({
+        TableName: tableName,
+        Item: {
+          userId: `${DLQ_PREFIX}#${now}#${Math.random().toString(36).slice(2, 8)}`,
+          timestamp: now,
+          type: DLQ_TYPE,
+          source,
+          detailType: type,
+          detail: JSON.stringify(detail),
+          retryCount: options.retryCount,
+          maxRetries: options.maxRetries,
+          lastError: options.lastError,
+          errorCategory: options.errorCategory ?? ErrorCategory.UNKNOWN,
+          priority: options.priority,
+          correlationId: options.correlationId,
+          createdAt: now,
+          expiresAt,
+        },
+      })
+    );
+
+    const priorityLabel = options.priority ?? EventPriority.NORMAL;
+    const errorCat = options.errorCategory ?? ErrorCategory.UNKNOWN;
+    logger.warn(
+      `Event stored in DLQ: ${source}/${type} | Retries: ${options.retryCount}/${options.maxRetries} | Priority: ${priorityLabel} | Error: ${errorCat}`
+    );
   } catch (dlqError) {
     logger.error('Failed to store event in DLQ:', dlqError);
   }
 }
 
-/**
- * Shared utility for emitting events to the system AgentBus.
- * Implements retry with exponential backoff and DLQ fallback.
- *
- * @param source - The source identifier for the event (e.g., 'heartbeat.scheduler').
- * @param type - The event type (e.g., EventType.HEARTBEAT_PROACTIVE).
- * @param detail - The event detail payload as a record of key-value pairs.
- */
 export async function emitEvent(
   source: string,
   type: EventType | string,
-  detail: Record<string, unknown>
-): Promise<void> {
+  detail: Record<string, unknown>,
+  options: EventOptions = {}
+): Promise<{ success: boolean; eventId?: string; reason?: string }> {
+  const {
+    priority = EventPriority.NORMAL,
+    idempotencyKey,
+    maxRetries = MAX_RETRIES,
+    correlationId,
+  } = options;
+
+  if (idempotencyKey) {
+    const isDuplicate = await checkIdempotency(idempotencyKey);
+    if (isDuplicate) {
+      logger.info(`Duplicate event detected via idempotency key: ${idempotencyKey}`);
+      return { success: false, reason: 'DUPLICATE' };
+    }
+  }
+
   const busName = await getBusName();
-  const command = new PutEventsCommand({
-    Entries: [
-      {
-        Source: source,
-        DetailType: type,
-        Detail: JSON.stringify(detail),
-        EventBusName: busName,
-      },
-    ],
-  });
+  const detailJson = JSON.stringify(detail);
 
   logger.info(
-    `[BUS_EMIT] From: ${source} | Type: ${type} | Session: ${detail.sessionId ?? 'N/A'} | User: ${detail.userId ?? 'N/A'}`
+    `[BUS_EMIT] From: ${source} | Type: ${type} | Priority: ${priority} | Session: ${detail.sessionId ?? 'N/A'} | User: ${detail.userId ?? 'N/A'} | Correlation: ${correlationId ?? 'N/A'}`
   );
 
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
+      const command = new PutEventsCommand({
+        Entries: [
+          {
+            Source: source,
+            DetailType: type,
+            Detail: detailJson,
+            EventBusName: busName,
+          },
+        ],
+      });
+
       const result = await getEventBridge().send(command);
+
       if (result.FailedEntryCount && result.FailedEntryCount > 0) {
         logger.warn(
-          `EventBridge reported ${result.FailedEntryCount} failed entries on attempt ${attempt}`
+          `EventBridge reported ${result.FailedEntryCount} failed entries on attempt ${attempt}/${maxRetries}`
         );
-        if (attempt < MAX_RETRIES) {
+        if (attempt < maxRetries) {
           const backoff = INITIAL_BACKOFF_MS * Math.pow(2, attempt - 1);
-          await new Promise((resolve) => setTimeout(resolve, backoff));
+          await sleep(backoff);
           continue;
         }
       }
-      return;
+
+      if (idempotencyKey) {
+        await storeIdempotencyKey(idempotencyKey);
+      }
+
+      return { success: true, eventId: result.Entries?.[0]?.EventId };
     } catch (error) {
+      const errorCategory = categorizeError(error);
+      const isPermanent = errorCategory === ErrorCategory.PERMANENT;
+      const isRetryable =
+        errorCategory === ErrorCategory.TRANSIENT || errorCategory === ErrorCategory.UNKNOWN;
+
       logger.error(
-        `EventBridge emit attempt ${attempt}/${MAX_RETRIES} failed from ${source}:`,
+        `EventBridge emit attempt ${attempt}/${maxRetries} failed from ${source} (${errorCategory}):`,
         error
       );
-      if (attempt < MAX_RETRIES) {
+
+      if (isPermanent) {
+        await storeInDLQ(source, type as string, detail, {
+          retryCount: attempt,
+          maxRetries,
+          lastError: error instanceof Error ? error.message : String(error),
+          errorCategory,
+          priority,
+          correlationId,
+        });
+        return { success: false, reason: 'PERMANENT_ERROR' };
+      }
+
+      if (attempt < maxRetries && isRetryable) {
         const backoff = INITIAL_BACKOFF_MS * Math.pow(2, attempt - 1);
-        await new Promise((resolve) => setTimeout(resolve, backoff));
+        await sleep(backoff);
+      } else if (attempt >= maxRetries) {
+        await storeInDLQ(source, type as string, detail, {
+          retryCount: attempt,
+          maxRetries,
+          lastError: error instanceof Error ? error.message : String(error),
+          errorCategory,
+          priority,
+          correlationId,
+        });
+        return { success: false, reason: 'DLQ' };
       }
     }
   }
 
-  await storeInDLQ(source, type as string, detail);
+  return { success: false, reason: 'MAX_RETRIES' };
+}
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function getDlqEntries(limit = 50): Promise<DlqEntry[]> {
+  try {
+    const tableName = await getMemoryTableName();
+    const result = await getDb().send(
+      new QueryCommand({
+        TableName: tableName,
+        IndexName: 'TypeTimestampIndex',
+        KeyConditionExpression: '#type = :type AND #ts > :cutoff',
+        ExpressionAttributeNames: {
+          '#type': 'type',
+          '#ts': 'timestamp',
+        },
+        ExpressionAttributeValues: {
+          ':type': DLQ_TYPE,
+          ':cutoff': Date.now() - 86400000, // Last 24 hours
+        },
+        ScanIndexForward: false, // Newest first
+        Limit: limit,
+      })
+    );
+
+    return (result.Items ?? []) as DlqEntry[];
+  } catch (error) {
+    logger.error('Failed to get DLQ entries:', error);
+    return [];
+  }
+}
+
+/**
+ * Retries an entry from DLQ and deletes it on success.
+ */
+export async function retryDlqEntry(entry: DlqEntry): Promise<boolean> {
+  try {
+    const detail = JSON.parse(entry.detail);
+    const result = await emitEvent(entry.source, entry.detailType, detail, {
+      priority: entry.priority as EventPriority,
+      correlationId: entry.correlationId,
+      maxRetries: 2,
+    });
+
+    if (result.success) {
+      await purgeDlqEntry(entry);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    logger.error('Failed to retry DLQ entry:', error);
+    return false;
+  }
+}
+
+/**
+ * Permanently removes a DLQ entry.
+ */
+export async function purgeDlqEntry(
+  entry: DlqEntry | { userId: string; timestamp: number }
+): Promise<void> {
+  try {
+    const tableName = await getMemoryTableName();
+    await getDb().send(
+      new DeleteCommand({
+        TableName: tableName,
+        Key: { userId: entry.userId, timestamp: entry.timestamp },
+      })
+    );
+    logger.info(`DLQ entry purged: ${entry.userId}`);
+  } catch (error) {
+    logger.error(`Failed to purge DLQ entry ${entry.userId}:`, error);
+  }
+}
+
+export async function emitEventWithIdempotency(
+  source: string,
+  type: EventType | string,
+  detail: Record<string, unknown>,
+  options: Omit<EventOptions, 'idempotencyKey'> = {}
+): Promise<{ success: boolean; eventId?: string; reason?: string }> {
+  const idempotencyKey = `${source}:${type}:${detail.sessionId ?? 'global'}:${detail.traceId ?? Date.now()}`;
+
+  return emitEvent(source, type, detail, {
+    ...options,
+    idempotencyKey,
+  });
+}
+
+export async function emitCriticalEvent(
+  source: string,
+  type: EventType | string,
+  detail: Record<string, unknown>,
+  options: Omit<EventOptions, 'priority'> = {}
+): Promise<{ success: boolean; eventId?: string; reason?: string }> {
+  return emitEvent(source, type, detail, {
+    ...options,
+    priority: EventPriority.CRITICAL,
+    maxRetries: options.maxRetries ?? 5,
+  });
+}
+
+export async function emitHighPriorityEvent(
+  source: string,
+  type: EventType | string,
+  detail: Record<string, unknown>,
+  options: Omit<EventOptions, 'priority'> = {}
+): Promise<{ success: boolean; eventId?: string; reason?: string }> {
+  return emitEvent(source, type, detail, {
+    ...options,
+    priority: EventPriority.HIGH,
+    maxRetries: options.maxRetries ?? 3,
+  });
+}
+
+export async function emitLowPriorityEvent(
+  source: string,
+  type: EventType | string,
+  detail: Record<string, unknown>,
+  options: Omit<EventOptions, 'priority'> = {}
+): Promise<{ success: boolean; eventId?: string; reason?: string }> {
+  return emitEvent(source, type, detail, {
+    ...options,
+    priority: EventPriority.LOW,
+    maxRetries: options.maxRetries ?? 1,
+  });
 }
