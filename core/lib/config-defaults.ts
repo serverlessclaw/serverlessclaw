@@ -1,0 +1,189 @@
+/**
+ * Centralized Configuration Defaults
+ *
+ * This module provides a single source of truth for all configurable system defaults.
+ * It ensures consistency between code, documentation, and runtime configuration.
+ *
+ * All values that can be overridden via ConfigTable are documented here with their
+ * code default, documentation reference, and whether they're hot-swappable.
+ */
+
+export const CONFIG_DEFAULTS = {
+  /** Maximum recursion depth for multi-agent delegation. Default: 15 */
+  RECURSION_LIMIT: {
+    code: 15,
+    hotSwappable: true,
+    configKey: 'recursion_limit',
+    description: 'Maximum depth for agent-to-agent delegation to prevent infinite loops.',
+  },
+
+  /** Default daily deployment limit. Default: 5 */
+  DEPLOY_LIMIT: {
+    code: 5,
+    hotSwappable: true,
+    configKey: 'deploy_limit',
+    description: 'Maximum autonomous deployments per UTC day.',
+  },
+
+  /** Hard cap on daily deployments regardless of config. Default: 100 */
+  MAX_DEPLOY_LIMIT: {
+    code: 100,
+    hotSwappable: false,
+    configKey: null,
+    description: 'Absolute maximum deployments per day to prevent runaway costs.',
+  },
+
+  /** Circuit breaker threshold for consecutive build failures. Default: 3 */
+  CIRCUIT_BREAKER_THRESHOLD: {
+    code: 3,
+    hotSwappable: true,
+    configKey: 'circuit_breaker_threshold',
+    description: 'Consecutive build failures before switching to HITL mode.',
+  },
+
+  /** Maximum recovery attempts before escalation. Default: 2 */
+  MAX_RECOVERY_ATTEMPTS: {
+    code: 2,
+    hotSwappable: false,
+    configKey: null,
+    description: 'Dead Mans Switch recovery attempts before alerting admin.',
+  },
+
+  /** Lock TTL for recovery operations (seconds). Default: 1200 (20 min) */
+  RECOVERY_LOCK_TTL_SECONDS: {
+    code: 1200,
+    hotSwappable: false,
+    configKey: null,
+    description: 'Lock TTL slightly longer than Dead Mans Switch schedule.',
+  },
+
+  /** Default tool iteration limit. Default: 50 */
+  MAX_TOOL_ITERATIONS: {
+    code: 50,
+    hotSwappable: true,
+    configKey: 'max_tool_iterations',
+    description: 'Maximum tool calls per agent process before pausing.',
+  },
+
+  /** TTL for memory traces (days). Default: 30 */
+  TRACE_RETENTION_DAYS: {
+    code: 30,
+    hotSwappable: false,
+    configKey: null,
+    description: 'Days to retain agent execution traces.',
+  },
+
+  /** TTL for messages (days). Default: 7 */
+  MESSAGE_RETENTION_DAYS: {
+    code: 7,
+    hotSwappable: false,
+    configKey: null,
+    description: 'Days to retain conversation messages.',
+  },
+
+  /** Days before a stale gap is auto-archived. Default: 14 */
+  STALE_GAP_DAYS: {
+    code: 14,
+    hotSwappable: true,
+    configKey: 'stale_gap_days',
+    description: 'Days before an open gap is considered stale.',
+  },
+
+  /** Cooldown period after planner run (ms). Default: 21600000 (6 hours) */
+  PLANNER_COOLDOWN_MS: {
+    code: 21600000,
+    hotSwappable: false,
+    configKey: null,
+    description: 'Cooldown between planner evolution cycles.',
+  },
+
+  /** Exponential backoff base time (ms). Default: 900000 (15 min) */
+  BACKOFF_BASE_MS: {
+    code: 900000,
+    hotSwappable: true,
+    configKey: 'backoff_base_ms',
+    description: 'Base time for exponential backoff between gap retries.',
+  },
+
+  /** Agent timeout buffer (ms). Default: 30000 (30 sec) */
+  TIMEOUT_BUFFER_MS: {
+    code: 30000,
+    hotSwappable: false,
+    configKey: null,
+    description: 'Time reserved before Lambda timeout for graceful shutdown.',
+  },
+
+  /** EventBridge emit retry count. Default: 3 */
+  EB_MAX_RETRIES: {
+    code: 3,
+    hotSwappable: false,
+    configKey: null,
+    description: 'Maximum retries for EventBridge emit failures.',
+  },
+
+  /** EventBridge initial backoff (ms). Default: 100 */
+  EB_INITIAL_BACKOFF_MS: {
+    code: 100,
+    hotSwappable: false,
+    configKey: null,
+    description: 'Initial backoff time for EventBridge retries.',
+  },
+
+  /** Default MCP hub connection timeout (ms). Default: 5000 */
+  MCP_HUB_TIMEOUT_MS: {
+    code: 5000,
+    hotSwappable: true,
+    configKey: 'mcp_hub_timeout_ms',
+    description: 'Timeout for MCP hub connections before falling back to local.',
+  },
+
+  /** Lambda memory for backbone agents (MB). Default: 2048 */
+  LARGE_LAMBDA_MEMORY_MB: {
+    code: 2048,
+    hotSwappable: false,
+    configKey: null,
+    description: 'Memory allocation for backbone agents.',
+  },
+
+  /** Lambda timeout for backbone agents (seconds). Default: 900 (15 min) */
+  LARGE_LAMBDA_TIMEOUT_SECONDS: {
+    code: 900,
+    hotSwappable: false,
+    configKey: null,
+    description: 'Timeout for backbone agent Lambdas.',
+  },
+
+  /** Auto-prune low-utilization tools. Default: false */
+  AUTO_PRUNE_ENABLED: {
+    code: false,
+    hotSwappable: true,
+    configKey: 'auto_prune_enabled',
+    description: 'Whether to automatically prune unused tools without HITL.',
+  },
+
+  /** Days before tool considered low-utilization. Default: 30 */
+  TOOL_PRUNE_THRESHOLD_DAYS: {
+    code: 30,
+    hotSwappable: true,
+    configKey: 'tool_prune_threshold_days',
+    description: 'Days without tool usage before auto-prune eligible.',
+  },
+} as const;
+
+export type ConfigKey = keyof typeof CONFIG_DEFAULTS;
+
+export function getConfigValue<K extends ConfigKey>(
+  key: K,
+  runtimeValue?: unknown
+): (typeof CONFIG_DEFAULTS)[K]['code'] {
+  return (runtimeValue ?? CONFIG_DEFAULTS[key].code) as (typeof CONFIG_DEFAULTS)[K]['code'];
+}
+
+export function getHotSwappableKeys(): Array<{ key: ConfigKey; configKey: string }> {
+  return Object.entries(CONFIG_DEFAULTS)
+    .filter(([, def]) => def.hotSwappable && def.configKey)
+    .map(([key, def]) => ({
+      key: key as ConfigKey,
+      configKey: def.configKey!,
+    }));
+}

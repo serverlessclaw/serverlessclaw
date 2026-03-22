@@ -252,6 +252,12 @@ export enum EventType {
   SCHEDULE_TASK = 'schedule_task',
   /** Proactive heartbeat signal indicating a scheduled goal or task activation. */
   HEARTBEAT_PROACTIVE = 'heartbeat_proactive',
+  /** Request to cancel an in-flight task. */
+  TASK_CANCELLED = 'task_cancelled',
+  /** Request to dispatch multiple tasks in parallel. */
+  PARALLEL_TASK_DISPATCH = 'parallel_task_dispatch',
+  /** Parallel task completion with aggregated results. */
+  PARALLEL_TASK_COMPLETED = 'parallel_task_completed',
 }
 
 /**

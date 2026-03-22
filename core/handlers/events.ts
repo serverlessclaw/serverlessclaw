@@ -62,6 +62,18 @@ export async function handler(
       break;
     }
 
+    case EventType.PARALLEL_TASK_DISPATCH: {
+      const { handleParallelDispatch } = await import('./events/parallel-handler');
+      await handleParallelDispatch(event as any);
+      break;
+    }
+
+    case EventType.TASK_CANCELLED: {
+      const { handleTaskCancellation } = await import('./events/cancellation-handler');
+      await handleTaskCancellation(event as any);
+      break;
+    }
+
     case EventType.HEARTBEAT_PROACTIVE: {
       const { handleProactiveHeartbeat } = await import('./events/proactive-handler');
       await handleProactiveHeartbeat(eventDetail, context);

@@ -1,6 +1,11 @@
 import { ReasoningProfile, TraceSource } from '../types/index';
 
 /**
+ * Timeout behavior when agent reaches its time limit.
+ */
+export type TimeoutBehavior = 'pause' | 'fail' | 'continue';
+
+/**
  * Processing options for the agent's process method.
  */
 export interface AgentProcessOptions {
@@ -24,4 +29,13 @@ export interface AgentProcessOptions {
   source?: TraceSource | string;
   responseFormat?: import('../types/index').ResponseFormat;
   communicationMode?: 'json' | 'text';
+  /**
+   * Per-task timeout in milliseconds. Overrides the default timeout.
+   * Default: 300000 (5 minutes)
+   */
+  taskTimeoutMs?: number;
+  /**
+   * Behavior when agent times out. Default: 'pause'
+   */
+  timeoutBehavior?: TimeoutBehavior;
 }

@@ -22,3 +22,46 @@ export const DEFAULT_SIGNAL_SCHEMA: ResponseFormat = {
     },
   },
 };
+
+/**
+ * Result from a single agent task in a parallel execution.
+ */
+export interface AggregatedResult {
+  taskId: string;
+  agentId: string;
+  status: 'success' | 'failed' | 'timeout';
+  result?: unknown;
+  durationMs: number;
+  error?: string;
+}
+
+/**
+ * Aggregated results from parallel agent dispatch.
+ */
+export interface MultiAgentResult {
+  overallStatus: 'success' | 'partial' | 'failed';
+  results: AggregatedResult[];
+  timestamp: string;
+}
+
+/**
+ * Schema for parallel task dispatch parameters.
+ */
+export interface ParallelDispatchParams {
+  tasks: Array<{
+    taskId: string;
+    agentId: string;
+    task: string;
+    metadata?: Record<string, unknown>;
+  }>;
+  barrierTimeoutMs?: number;
+}
+
+/**
+ * Schema for task cancellation.
+ */
+export interface TaskCancellation {
+  taskId: string;
+  initiatorId: string;
+  reason?: string;
+}

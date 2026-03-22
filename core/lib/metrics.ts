@@ -1,0 +1,181 @@
+/**
+ * CloudWatch Metrics Module
+ *
+ * Provides custom metrics for monitoring agent performance, tool execution,
+ * and system health. Metrics are emitted to CloudWatch for alerting and dashboards.
+ *
+ * NOTE: Requires @aws-sdk/client-cloudwatch to be installed for actual CloudWatch emission.
+ * If not available, metrics are logged to console for debugging.
+ */
+
+const NAMESPACE = 'ServerlessClaw';
+
+interface CloudWatchClientType {
+  send: (command: { input: { Namespace: string; MetricData: unknown[] } }) => Promise<void>;
+}
+
+let cloudwatch: CloudWatchClientType | null = null;
+
+async function getCloudWatchClient(): Promise<CloudWatchClientType | null> {
+  if (cloudwatch) return cloudwatch;
+
+  try {
+    const { CloudWatchClient } = await import('@aws-sdk/client-cloudwatch');
+    cloudwatch = new CloudWatchClient({}) as unknown as CloudWatchClientType;
+    return cloudwatch;
+  } catch {
+    return null;
+  }
+}
+
+export interface MetricDatum {
+  MetricName: string;
+  Value: number;
+  Unit?: 'Count' | 'Milliseconds' | 'Seconds';
+  Dimensions?: Array<{ Name: string; Value: string }>;
+}
+
+export async function emitMetrics(metrics: MetricDatum[]): Promise<void> {
+  if (metrics.length === 0) return;
+
+  const cw = await getCloudWatchClient();
+  if (!cw) {
+    console.debug('[METRICS] CloudWatch not available, skipping:', metrics);
+    return;
+  }
+
+  try {
+    await cw.send({
+      input: {
+        Namespace: NAMESPACE,
+        MetricData: metrics.map((m) => ({
+          MetricName: m.MetricName,
+          Value: m.Value,
+          Unit: m.Unit ?? 'Count',
+          Dimensions: m.Dimensions,
+          Timestamp: new Date(),
+        })),
+      },
+    });
+  } catch (error) {
+    console.error('[METRICS] Failed to emit CloudWatch metrics:', error);
+  }
+}
+
+export const Metrics = {
+  agentInvoked(agentId: string): MetricDatum {
+    return {
+      MetricName: 'AgentInvocations',
+      Value: 1,
+      Unit: 'Count',
+      Dimensions: [{ Name: 'AgentId', Value: agentId }],
+    };
+  },
+
+  agentDuration(agentId: string, durationMs: number): MetricDatum {
+    return {
+      MetricName: 'AgentDuration',
+      Value: durationMs,
+      Unit: 'Milliseconds',
+      Dimensions: [{ Name: 'AgentId', Value: agentId }],
+    };
+  },
+
+  toolExecuted(toolName: string, success: boolean): MetricDatum {
+    return {
+      MetricName: 'ToolExecutions',
+      Value: 1,
+      Unit: 'Count',
+      Dimensions: [
+        { Name: 'ToolName', Value: toolName },
+        { Name: 'Success', Value: String(success) },
+      ],
+    };
+  },
+
+  toolDuration(toolName: string, durationMs: number): MetricDatum {
+    return {
+      MetricName: 'ToolDuration',
+      Value: durationMs,
+      Unit: 'Milliseconds',
+      Dimensions: [{ Name: 'ToolName', Value: toolName }],
+    };
+  },
+
+  taskDispatchLatency(latencyMs: number): MetricDatum {
+    return {
+      MetricName: 'TaskDispatchLatency',
+      Value: latencyMs,
+      Unit: 'Milliseconds',
+    };
+  },
+
+  circuitBreakerTriggered(type: 'deploy' | 'recovery' | 'gap'): MetricDatum {
+    return {
+      MetricName: 'CircuitBreakerTriggered',
+      Value: 1,
+      Unit: 'Count',
+      Dimensions: [{ Name: 'Type', Value: type }],
+    };
+  },
+
+  mcpHubPing(success: boolean, _latencyMs: number): MetricDatum {
+    return {
+      MetricName: 'MCPHubPing',
+      Value: success ? 1 : 0,
+      Unit: 'Count',
+      Dimensions: [{ Name: 'Success', Value: String(success) }],
+    };
+  },
+
+  mcpHubLatency(latencyMs: number): MetricDatum {
+    return {
+      MetricName: 'MCPHubLatency',
+      Value: latencyMs,
+      Unit: 'Milliseconds',
+    };
+  },
+
+  eventBridgeEmit(success: boolean, latencyMs: number): MetricDatum {
+    return {
+      MetricName: 'EventBridgeEmit',
+      Value: latencyMs,
+      Unit: 'Milliseconds',
+      Dimensions: [{ Name: 'Success', Value: String(success) }],
+    };
+  },
+
+  dlqEvents(count: number): MetricDatum {
+    return {
+      MetricName: 'DLQEvents',
+      Value: count,
+      Unit: 'Count',
+    };
+  },
+
+  lockAcquired(lockId: string, success: boolean): MetricDatum {
+    return {
+      MetricName: 'LockAcquisition',
+      Value: success ? 1 : 0,
+      Unit: 'Count',
+      Dimensions: [{ Name: 'LockId', Value: lockId }],
+    };
+  },
+
+  deploymentStarted(): MetricDatum {
+    return {
+      MetricName: 'DeploymentStarted',
+      Value: 1,
+      Unit: 'Count',
+    };
+  },
+
+  deploymentCompleted(success: boolean): MetricDatum {
+    return {
+      MetricName: 'DeploymentCompleted',
+      Value: 1,
+      Unit: 'Count',
+      Dimensions: [{ Name: 'Success', Value: String(success) }],
+    };
+  },
+};

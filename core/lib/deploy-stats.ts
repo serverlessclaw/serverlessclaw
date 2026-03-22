@@ -30,27 +30,37 @@ export async function getDeployCountToday(): Promise<number> {
 }
 
 /**
- * Increments the deployment count for today.
+ * Atomically increments the deployment count for today.
+ * Uses conditional expression to prevent race conditions where two concurrent
+ * invocations could both read the same count and both increment, exceeding the limit.
  *
  * @param today - The current date string (YYYY-MM-DD).
- * @param currentCount - The current count to increment from.
- * @returns A promise that resolves when the count is updated.
+ * @param limit - The maximum allowed count before blocking.
+ * @returns A promise that resolves to true if incremented, false if limit reached.
  */
-export async function incrementDeployCount(today: string, currentCount: number): Promise<void> {
-  await db.send(
-    new UpdateCommand({
-      TableName: typedResource.MemoryTable.name,
-      Key: {
-        userId: SYSTEM.DEPLOY_STATS_KEY ?? 'SYSTEM#DEPLOY_STATS',
-        timestamp: 0,
-      },
-      UpdateExpression:
-        currentCount === 0 ? 'SET #count = :one, lastReset = :today' : 'SET #count = #count + :inc',
-      ExpressionAttributeNames: { '#count': 'count' },
-      ExpressionAttributeValues:
-        currentCount === 0 ? { ':one': 1, ':today': today } : { ':inc': 1 },
-    })
-  );
+export async function incrementDeployCount(today: string, limit: number): Promise<boolean> {
+  try {
+    await db.send(
+      new UpdateCommand({
+        TableName: typedResource.MemoryTable.name,
+        Key: {
+          userId: SYSTEM.DEPLOY_STATS_KEY ?? 'SYSTEM#DEPLOY_STATS',
+          timestamp: 0,
+        },
+        UpdateExpression: 'SET #count = if_not_exists(#count, :zero) + :one, lastReset = :today',
+        ConditionExpression: '#count < :limit',
+        ExpressionAttributeNames: { '#count': 'count' },
+        ExpressionAttributeValues: { ':zero': 0, ':one': 1, ':today': today, ':limit': limit },
+      })
+    );
+    return true;
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
+      logger.info('incrementDeployCount: limit reached, skipping increment.');
+      return false;
+    }
+    throw error;
+  }
 }
 
 /**
@@ -76,7 +86,6 @@ export async function rewardDeployLimit(): Promise<void> {
       })
     );
   } catch (error: unknown) {
-    // ConditionalCheckFailedException means count is already 0 — that is fine, nothing to do.
     if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
       logger.info('rewardDeployLimit: count already at 0, skipping decrement.');
       return;

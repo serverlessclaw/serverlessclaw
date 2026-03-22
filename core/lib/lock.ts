@@ -1,5 +1,10 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
+import {
+  DynamoDBDocumentClient,
+  PutCommand,
+  DeleteCommand,
+  UpdateCommand,
+} from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
 import { SSTResource } from './types/system';
 import { ILockManager } from './types/system';
@@ -84,6 +89,42 @@ export class DynamoLockManager implements ILockManager {
       await this.docClient.send(command);
     } catch (error) {
       logger.error('Error releasing lock:', error);
+    }
+  }
+
+  /**
+   * Renews/extends a distributed lock's TTL.
+   *
+   * @param lockId - Unique identifier for the lock to renew.
+   * @param additionalTtlSeconds - Additional time to add to the lock's TTL.
+   * @returns A promise that resolves to true if renewed, false if lock doesn't exist or is held by another owner.
+   */
+  async renew(lockId: string, additionalTtlSeconds: number): Promise<boolean> {
+    const newExpiresAt = Math.floor(Date.now() / TIME.MS_PER_SECOND) + additionalTtlSeconds;
+
+    const command = new UpdateCommand({
+      TableName: this.tableName,
+      Key: {
+        userId: `${LOCK_PREFIX}${lockId}`,
+        timestamp: 0,
+      },
+      UpdateExpression: 'SET expiresAt = :newExpires, renewedAt = :renewedAt',
+      ConditionExpression: 'attribute_exists(userId)',
+      ExpressionAttributeValues: {
+        ':newExpires': newExpiresAt,
+        ':renewedAt': Date.now(),
+      },
+    });
+
+    try {
+      await this.docClient.send(command);
+      return true;
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === DYNAMO_ERROR_CONDITIONAL_CHECK_FAILED) {
+        logger.warn(`Lock renewal failed: lock ${lockId} does not exist or was released`);
+        return false;
+      }
+      throw error;
     }
   }
 }

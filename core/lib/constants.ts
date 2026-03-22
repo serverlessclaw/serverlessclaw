@@ -2,7 +2,12 @@
  * System-wide constants to prevent magic literals and improve AI signal clarity.
  * These constants are used across the Serverless Claw stack for configuration,
  * resource naming, and status codes.
+ *
+ * NOTE: For configurable defaults (recursion_limit, deploy_limit, etc.),
+ * see config-defaults.ts for centralized, hot-swappable configuration.
  */
+
+import { CONFIG_DEFAULTS } from './config-defaults';
 
 /**
  * System-wide defaults and operational limits.
@@ -13,9 +18,9 @@ export const SYSTEM = {
   DEFAULT_OPENAI_MODEL: 'gpt-5.4-mini',
   DEFAULT_BEDROCK_MODEL: 'claude-sonnet-4-6',
   DEFAULT_OPENROUTER_MODEL: 'zhipu/glm-5',
-  DEFAULT_RECURSION_LIMIT: 15,
-  DEFAULT_DEPLOY_LIMIT: 5,
-  MAX_DEPLOY_LIMIT: 10,
+  DEFAULT_RECURSION_LIMIT: CONFIG_DEFAULTS.RECURSION_LIMIT.code,
+  DEFAULT_DEPLOY_LIMIT: CONFIG_DEFAULTS.DEPLOY_LIMIT.code,
+  MAX_DEPLOY_LIMIT: CONFIG_DEFAULTS.MAX_DEPLOY_LIMIT.code,
   RECOVERY_KEY: 'SYSTEM#RECOVERY',
   DEPLOY_STATS_KEY: 'SYSTEM#DEPLOY_STATS',
   UPTIME_KEY: 'SYSTEM#UPTIME',
@@ -123,8 +128,8 @@ export const GAP_STATUS = {
  * Retention policies (days).
  */
 export const RETENTION = {
-  MESSAGES_DAYS: 7,
-  TRACES_DAYS: 30,
+  MESSAGES_DAYS: CONFIG_DEFAULTS.MESSAGE_RETENTION_DAYS.code,
+  TRACES_DAYS: CONFIG_DEFAULTS.TRACE_RETENTION_DAYS.code,
   FACTS_DAYS: 365,
   LESSONS_DAYS: 90,
 } as const;
@@ -135,9 +140,9 @@ export const RETENTION = {
 export const LIMITS = {
   MAX_CONTEXT_LENGTH: 32768,
   MAX_MESSAGES: 100,
-  STALE_GAP_DAYS: 14,
+  STALE_GAP_DAYS: CONFIG_DEFAULTS.STALE_GAP_DAYS.code,
   TRACE_TRUNCATE_LENGTH: 2000,
-  DEFAULT_LOCK_TTL: 300,
+  DEFAULT_LOCK_TTL: CONFIG_DEFAULTS.RECOVERY_LOCK_TTL_SECONDS.code / 3,
   TWO_YEARS_DAYS: 730,
 } as const;
 

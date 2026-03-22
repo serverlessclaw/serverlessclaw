@@ -117,9 +117,9 @@ describe('Dead Man Switch Recovery Handler', () => {
     ddbMock.on(PutCommand).resolves({});
 
     const { handler } = await import('./recovery');
-    // Should not throw
+    // Should not throw - retry logic will attempt multiple times
     await expect(handler()).resolves.not.toThrow();
-    expect(ebMock.commandCalls(PutEventsCommand)).toHaveLength(1);
+    expect(ebMock.commandCalls(PutEventsCommand).length).toBeGreaterThanOrEqual(1);
   });
 
   it('should release lock if any error occurs during recovery flow', async () => {

@@ -62,16 +62,14 @@ export const handler = async (_event?: { detail: Record<string, unknown> }): Pro
   }
 
   try {
-    // 1. Check Circuit Breaker: Recovery Attempt Count
     const attemptCount = await memory.incrementRecoveryAttemptCount();
     logger.info(`Recovery attempt count: ${attemptCount}/${MAX_RECOVERY_ATTEMPTS}`);
 
     if (attemptCount > MAX_RECOVERY_ATTEMPTS) {
       logger.error('CRITICAL: Recovery circuit-breaker triggered. Too many consecutive failures.');
 
-      // Escalation: Send alert to all channels via Notifier
       const alert: OutboundMessageEvent = {
-        userId: 'ADMIN', // Or a system-wide broadcast ID
+        userId: 'ADMIN',
         message: `🚨 *CRITICAL SYSTEM FAILURE*: Automatic recovery has failed after ${attemptCount} attempts. Manual intervention required immediately. Health Check: ${healthUrl}`,
         agentName: 'DeadManSwitch',
       };
@@ -88,14 +86,14 @@ export const handler = async (_event?: { detail: Record<string, unknown> }): Pro
           Item: {
             userId: 'DISTILLED#RECOVERY',
             timestamp: Date.now(),
-            content: `Recovery halted. Circuit-breaker triggered after ${attemptCount} failed attempts. Escallated via Notifier.`,
+            content: `Recovery halted. Circuit-breaker triggered after ${attemptCount} failed attempts. Escalated via Notifier.`,
           },
         })
       );
+      logger.info('Recovery circuit-breaker handled, skipping rollback.');
       return;
     }
 
-    // 2. Retrieve Last Known Good (LKG) Hash
     const lkgHash = await memory.getLatestLKGHash();
     if (!lkgHash) {
       logger.warn('No LKG hash found in memory. Falling back to generic HEAD revert.');
@@ -114,7 +112,6 @@ export const handler = async (_event?: { detail: Record<string, unknown> }): Pro
 
     await codebuild.send(command);
 
-    // 3. Log recovery event for SuperClaw awareness
     await db.send(
       new PutCommand({
         TableName: typedResource.MemoryTable.name,
@@ -129,6 +126,7 @@ export const handler = async (_event?: { detail: Record<string, unknown> }): Pro
     logger.info('Emergency recovery initiated successfully.');
   } catch (recoveryError) {
     logger.error("FATAL: Dead Man's Switch recovery flow failed!", recoveryError);
+  } finally {
     await lockManager.release(RECOVERY_LOCK_ID);
   }
 };

@@ -20,6 +20,7 @@ export function createAgents(ctx: SharedContext): {
   workerAgent: sst.aws.Function;
   bridge: sst.aws.Function;
   heartbeatHandler: sst.aws.Function;
+  concurrencyMonitor: sst.aws.Function;
   schedulerRole: aws.iam.Role;
 } {
   const {
@@ -252,6 +253,8 @@ export function createAgents(ctx: SharedContext): {
         EventType.SYSTEM_HEALTH_REPORT,
         EventType.HEARTBEAT_PROACTIVE,
         EventType.CONTINUATION_TASK,
+        EventType.TASK_CANCELLED,
+        EventType.PARALLEL_TASK_DISPATCH,
       ],
     },
   });
@@ -385,6 +388,46 @@ export function createAgents(ctx: SharedContext): {
     },
   });
 
+  // 10. Concurrency Monitor (System health)
+  const concurrencyMonitor = new sst.aws.Function('ConcurrencyMonitor', {
+    handler: 'core/handlers/concurrency-monitor.handler',
+    dev: liveInLocalOnly,
+    link: [memoryTable, bus],
+    nodejs: { loader: { '.md': 'text' } },
+    permissions: [{ actions: ['lambda:GetAccountSettings'], resources: ['*'] }],
+    memory: AGENT_CONFIG.memory.SMALL,
+    timeout: AGENT_CONFIG.timeout.SHORT,
+    logging: {
+      retention: '1 month',
+    },
+  });
+
+  new aws.scheduler.Schedule('ConcurrencySchedule', {
+    scheduleExpression: 'rate(1 hour)',
+    flexibleTimeWindow: { mode: 'OFF' },
+    target: {
+      arn: concurrencyMonitor.arn,
+      roleArn: new aws.iam.Role('ConcurrencyScheduleRole', {
+        assumeRolePolicy: JSON.stringify({
+          Version: '2012-10-17',
+          Statement: [
+            {
+              Action: 'sts:AssumeRole',
+              Effect: 'Allow',
+              Principal: { Service: 'scheduler.amazonaws.com' },
+            },
+          ],
+        }),
+      }).arn,
+    },
+  });
+
+  new aws.lambda.Permission('ConcurrencyPermission', {
+    action: 'lambda:InvokeFunction',
+    function: concurrencyMonitor.name,
+    principal: 'scheduler.amazonaws.com',
+  });
+
   return {
     coderAgent,
     buildMonitor,
@@ -396,6 +439,7 @@ export function createAgents(ctx: SharedContext): {
     workerAgent,
     bridge,
     heartbeatHandler,
+    concurrencyMonitor,
     schedulerRole,
   };
 }

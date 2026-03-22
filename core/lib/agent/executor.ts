@@ -67,6 +67,8 @@ export class AgentExecutor {
       userText: string;
       mainConversationId: string;
       responseFormat?: import('../types/index').ResponseFormat;
+      taskTimeoutMs?: number;
+      timeoutBehavior?: 'pause' | 'fail' | 'continue';
     }
   ): Promise<{
     responseText: string;
@@ -92,6 +94,8 @@ export class AgentExecutor {
       userText,
       mainConversationId,
       responseFormat,
+      taskTimeoutMs,
+      timeoutBehavior = 'pause',
     } = options;
 
     let iterations = 0;
@@ -115,6 +119,7 @@ export class AgentExecutor {
       logger.error('Failed to check GLOBAL_PAUSE status, proceeding with caution:', e);
     }
 
+    const startTime = Date.now();
     while (iterations < maxIterations) {
       // 1. Timeout Check
       if (context && typeof context.getRemainingTimeInMillis === 'function') {
@@ -127,6 +132,27 @@ export class AgentExecutor {
             pauseMessage: AGENT_LOG_MESSAGES.TASK_PAUSED_TIMEOUT,
             attachments,
           };
+        }
+      }
+
+      // 1.1 Custom Task Timeout Check
+      if (taskTimeoutMs && taskTimeoutMs > 0) {
+        const elapsed = Date.now() - startTime;
+        if (elapsed > taskTimeoutMs) {
+          logger.warn(
+            `Task timeout exceeded: ${elapsed}ms > ${taskTimeoutMs}ms. Behavior: ${timeoutBehavior}`
+          );
+          if (timeoutBehavior === 'fail') {
+            return { responseText: `TASK_FAILED: Execution timed out after ${taskTimeoutMs}ms.` };
+          } else if (timeoutBehavior === 'pause') {
+            return {
+              responseText: AGENT_LOG_MESSAGES.TASK_PAUSED_TIMEOUT,
+              paused: true,
+              pauseMessage: AGENT_LOG_MESSAGES.TASK_PAUSED_TIMEOUT,
+              attachments,
+            };
+          }
+          // 'continue' just falls through
         }
       }
 

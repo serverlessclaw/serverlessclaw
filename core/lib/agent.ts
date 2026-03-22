@@ -84,6 +84,8 @@ export class Agent {
       attachments: incomingAttachments,
       source = TraceSource.UNKNOWN,
       responseFormat: initialResponseFormat,
+      taskTimeoutMs,
+      timeoutBehavior = 'pause',
       communicationMode = this.config?.defaultCommunicationMode ?? 'text',
     } = options;
 
@@ -264,6 +266,8 @@ export class Agent {
         userText,
         mainConversationId: userId,
         responseFormat,
+        taskTimeoutMs,
+        timeoutBehavior,
       });
 
       let responseText = initialResponseText;

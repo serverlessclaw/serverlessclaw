@@ -162,7 +162,7 @@ describe('DynamoMemory Retention', () => {
       expect(calls).toHaveLength(1);
       expect(calls[0].args[0].input).toMatchObject({
         UpdateExpression:
-          'SET attemptCount = if_not_exists(attemptCount, :zero) + :one, updatedAt = :now',
+          'SET attemptCount = if_not_exists(attemptCount, :zero) + :one, updatedAt = :now, lastAttemptTime = :now',
         ReturnValues: 'ALL_NEW',
       });
     });

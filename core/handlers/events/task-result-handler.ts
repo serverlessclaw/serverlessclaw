@@ -71,4 +71,40 @@ export async function handleTaskResult(
     currentDepth,
     userNotified
   );
+
+  // 3. Parallel Dispatch Aggregation
+  // Check if this result is part of a parallel dispatch
+  if (traceId) {
+    const { aggregator } = await import('../../lib/agent/parallel-aggregator');
+    const aggregateState = await aggregator.addResult(userId, traceId, {
+      taskId: (eventDetail.taskId as string) ?? agentId,
+      agentId,
+      status: isFailure ? 'failed' : 'success',
+      result: response,
+      durationMs: 0, // Could be calculated if available
+    });
+
+    if (aggregateState?.isComplete) {
+      logger.info(`Parallel dispatch ${traceId} complete! Emitting aggregated results.`);
+      const { emitEvent } = await import('../../lib/utils/bus');
+
+      const overallStatus = aggregateState.results.every((r) => r.status === 'success')
+        ? 'success'
+        : aggregateState.results.some((r) => r.status === 'success')
+          ? 'partial'
+          : 'failed';
+
+      await emitEvent('events.handler', EventType.PARALLEL_TASK_COMPLETED, {
+        userId,
+        sessionId: aggregateState.sessionId,
+        traceId,
+        initiatorId: aggregateState.initiatorId,
+        overallStatus,
+        results: aggregateState.results,
+        taskCount: aggregateState.taskCount,
+        completedCount: aggregateState.results.length,
+        elapsedMs: 0,
+      });
+    }
+  }
 }

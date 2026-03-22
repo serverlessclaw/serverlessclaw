@@ -41,6 +41,8 @@ export interface InsightMetadata {
   lastAccessed?: number;
   /** Number of times we have attempted to resolve this gap. */
   retryCount?: number;
+  /** Timestamp (Unix epoch) of the last retry attempt. */
+  lastAttemptTime?: number;
 }
 
 /**

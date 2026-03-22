@@ -42,6 +42,7 @@ describe('system tools', () => {
   describe('TRIGGER_DEPLOYMENT', () => {
     it('should trigger deployment if limit not reached', async () => {
       vi.mocked(getDeployCountToday).mockResolvedValue(5);
+      vi.mocked(incrementDeployCount).mockResolvedValue(true);
       ddbMock.on(GetCommand).resolves({ Item: { value: 10 } }); // limit
       codebuildMock.on(StartBuildCommand).resolves({ build: { id: 'build-123' } });
       ddbMock.on(PutCommand).resolves({});

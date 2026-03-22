@@ -163,17 +163,18 @@ export async function incrementGapAttemptCount(
   const parsedNumericId = Number.parseInt(numericId, 10);
   const gapTimestamp = Number.isNaN(parsedNumericId) ? 0 : parsedNumericId;
   try {
+    const now = Date.now();
     const result = await base.updateItem({
       Key: {
         userId: `GAP#${numericId}`,
         timestamp: gapTimestamp,
       },
       UpdateExpression:
-        'SET attemptCount = if_not_exists(attemptCount, :zero) + :one, updatedAt = :now',
+        'SET attemptCount = if_not_exists(attemptCount, :zero) + :one, updatedAt = :now, lastAttemptTime = :now',
       ExpressionAttributeValues: {
         ':zero': 0,
         ':one': 1,
-        ':now': Date.now(),
+        ':now': now,
       },
       ReturnValues: 'ALL_NEW',
     });

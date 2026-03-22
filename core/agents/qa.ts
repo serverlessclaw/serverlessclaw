@@ -166,6 +166,8 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
       metadata: { gapIds: retryGaps },
       traceId,
       sessionId,
+      initiatorId: AgentType.QA,
+      depth: (depth ?? 0) + 1,
     });
   }
 

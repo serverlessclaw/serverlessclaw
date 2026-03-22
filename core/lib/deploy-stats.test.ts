@@ -47,31 +47,31 @@ describe('deploy-stats utility', () => {
   });
 
   describe('incrementDeployCount', () => {
-    it('should send UpdateCommand to increment count', async () => {
+    it('should send UpdateCommand to increment count with atomic condition', async () => {
       const today = new Date().toISOString().split('T')[0];
       ddbMock.on(UpdateCommand).resolves({});
 
-      await incrementDeployCount(today, 5);
+      const result = await incrementDeployCount(today, 5);
 
+      expect(result).toBe(true);
       expect(ddbMock.calls()).toHaveLength(1);
       const call = ddbMock.call(0);
       expect(call.args[0].input).toMatchObject({
         TableName: 'test-memory-table',
-        UpdateExpression: 'SET #count = #count + :inc',
+        UpdateExpression: 'SET #count = if_not_exists(#count, :zero) + :one, lastReset = :today',
+        ConditionExpression: '#count < :limit',
       });
     });
 
-    it('should initialize count if currentCount is 0', async () => {
+    it('should return false when limit is reached (condition fails)', async () => {
       const today = new Date().toISOString().split('T')[0];
-      ddbMock.on(UpdateCommand).resolves({});
+      const error = new Error('Conditional check failed');
+      error.name = 'ConditionalCheckFailedException';
+      ddbMock.on(UpdateCommand).rejects(error);
 
-      await incrementDeployCount(today, 0);
+      const result = await incrementDeployCount(today, 5);
 
-      expect(ddbMock.calls()).toHaveLength(1);
-      const call = ddbMock.call(0);
-      expect(call.args[0].input).toMatchObject({
-        UpdateExpression: 'SET #count = :one, lastReset = :today',
-      });
+      expect(result).toBe(false);
     });
   });
 

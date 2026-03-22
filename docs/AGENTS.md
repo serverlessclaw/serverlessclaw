@@ -26,6 +26,8 @@ We distinguish between **Autonomous Agents** (LLM-powered decision-makers) and *
 | **Event Handler** | `core/handlers/events.ts` | AgentBus System Events | Routes build/health/result/continuation/clarification signals |
 | **Notifier** | `core/handlers/notifier.ts` | AgentBus Event | Formats and sends messages to Telegram/Slack |
 | **Real-time Bridge** | `core/handlers/bridge.ts` | AgentBus Event | Bridges EventBridge signals to AWS IoT Core (MQTT) |
+| **Parallel Handler** | `core/handlers/events/parallel-handler.ts` | `PARALLEL_TASK_DISPATCH` | Handles fan-out to multiple agents with barrier timeout |
+| **Cancellation Handler** | `core/handlers/events/cancellation-handler.ts` | `TASK_CANCELLED` | Manages DynamoDB-backed task cancellation flags |
 | **Deployer** | AWS CodeBuild | `buildspec.yml` | Runs `make deploy ENV=$SST_STAGE` in isolated environment |
 
 ---
