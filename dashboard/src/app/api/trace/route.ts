@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Resource } from 'sst';
 export const dynamic = 'force-dynamic';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, DeleteCommand, ScanCommand, BatchWriteCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
-import { SSTResource } from '@claw/core/lib/types/index';
+import { DynamoDBDocumentClient, ScanCommand, BatchWriteCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { revalidatePath } from 'next/cache';
 
 /**
@@ -17,8 +16,7 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Missing traceId' }, { status: 400 });
     }
 
-    const typedResource = Resource as unknown as SSTResource;
-    const tableName = typedResource.TraceTable?.name;
+    const tableName = Resource.TraceTable.name;
     if (!tableName) {
       console.error('[Trace API] TraceTable not found in resources');
       return NextResponse.json({ error: 'TraceTable not found' }, { status: 500 });
@@ -34,7 +32,7 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
     if (traceId === 'all') {
       console.log('[Trace API] Purging all traces from table:', tableName);
       let deletedCount = 0;
-      let lastKey: Record<string, any> | undefined;
+      let lastKey: Record<string, unknown> | undefined;
       
       try {
         do {
@@ -76,14 +74,17 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
                   // Set unprocessed items for the next retry attempt
                   if (unprocessedCount > 0) {
                     console.warn(`[Trace API] Retrying ${unprocessedCount} unprocessed items...`);
-                    requestItems = result.UnprocessedItems as any;
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    requestItems = result.UnprocessedItems as Record<string, any>;
                     retries++;
                     await new Promise(r => setTimeout(r, Math.pow(2, retries) * 100)); // Exponential backoff
                   } else {
                     requestItems[tableName] = []; // All done
                   }
-                } catch (err: any) {
-                  if (err.name === 'ThrottlingException' || err.__type?.includes('ThrottlingException')) {
+                } catch (err: unknown) {
+                  const errorMsg = err instanceof Error ? err.name : String(err);
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  if (errorMsg === 'ThrottlingException' || (err as any).__type?.includes('ThrottlingException')) {
                     console.warn(`[Trace API] Throttled. Retrying attempt ${retries + 1}...`);
                     retries++;
                     await new Promise(r => setTimeout(r, Math.pow(2, retries) * 200)); // More aggressive backoff
@@ -107,7 +108,7 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
         console.log(`[Trace API] Successfully purged ${deletedCount} trace nodes`);
         revalidatePath('/trace');
         return NextResponse.json({ success: true, count: deletedCount });
-      } catch (scanError: any) {
+      } catch (scanError: unknown) {
         console.error('[Trace API] Error during scan/delete loop:', scanError);
         throw scanError;
       }
@@ -144,9 +145,9 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
 
     revalidatePath('/trace');
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Trace API] Critical failure:', error);
-    const message = error?.message ?? String(error);
+    const message = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ 
       error: message, 
       details: error instanceof Error ? error.stack : undefined 

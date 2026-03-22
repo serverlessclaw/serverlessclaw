@@ -46,7 +46,7 @@ export async function GET(): Promise<NextResponse> {
 
 
     // 4. Static Fallback for initial deployment or broken environments
-    const infraNodes: any[] = [];
+    const infraNodes: Array<{ id: string; type: string; label: string; description?: string }> = [];
     if (Resource.AgentBus) {
       infraNodes.push({ id: INFRA_IDS.BUS, type: 'bus', label: INFRA_LABELS.BUS });
     }

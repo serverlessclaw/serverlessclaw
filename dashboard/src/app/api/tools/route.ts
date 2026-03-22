@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { tools } from '@/lib/tool-definitions';
 import { HTTP_STATUS } from '@/lib/constants';
 import { getToolUsage, getAllTools } from '@/lib/tool-utils';
 

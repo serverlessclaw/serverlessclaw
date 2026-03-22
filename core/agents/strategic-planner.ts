@@ -1,4 +1,5 @@
 import { AgentType, EvolutionMode, GapStatus, TraceSource } from '../lib/types/agent';
+import { InsightCategory } from '../lib/types/memory';
 import { ReasoningProfile } from '../lib/types/llm';
 import { sendOutboundMessage } from '../lib/outbound';
 import { logger } from '../lib/logger';
@@ -212,7 +213,15 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
       const toolGapId = `TOOLOPT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
       const gapContent = `[TOOL_OPTIMIZATION] Action: ${opt.action}, Tool: ${opt.toolName}. Reason: ${opt.reason}`;
       logger.info(`Recording tool optimization gap: ${gapContent}`);
-      await memory.setGap(toolGapId, gapContent, { priority: 5, impact: 6, risk: 2 } as any);
+      await memory.setGap(toolGapId, gapContent, {
+        category: InsightCategory.STRATEGIC_GAP,
+        confidence: 9,
+        impact: 6,
+        complexity: 4,
+        risk: 2,
+        urgency: 5,
+        priority: 5,
+      });
     }
   }
 

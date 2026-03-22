@@ -52,7 +52,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     
     // Persist error to history if we have sessionId
     try {
-      const { text, sessionId } = await req.clone().json();
+      const { sessionId } = await req.clone().json();
       if (sessionId) {
         const { DynamoMemory } = await import('@claw/core/lib/memory');
         const { MessageRole } = await import('@claw/core/lib/types');
@@ -149,7 +149,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       console.log(`[Chat API] Returning ${sessions.length} sessions to frontend`);
       return NextResponse.json({ sessions });
     }
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to fetch sessions' }, { status: 500 });
   }
 }

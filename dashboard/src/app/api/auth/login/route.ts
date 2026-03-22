@@ -8,7 +8,7 @@ import { AUTH, HTTP_STATUS } from '@/lib/constants';
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const { password } = await req.json();
-    const correctPassword = (Resource as any).DashboardPassword?.value;
+    const correctPassword = Resource.DashboardPassword.value;
 
     if (password && correctPassword && password === correctPassword) {
       const response = NextResponse.json({ success: true });

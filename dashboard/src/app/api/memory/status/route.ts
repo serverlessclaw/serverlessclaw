@@ -22,7 +22,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     // Validate status
-    if (!Object.values(GapStatus).includes(status as any)) {
+    if (!Object.values(GapStatus).includes(status as typeof GapStatus[keyof typeof GapStatus])) {
       return NextResponse.json(
         { error: `Invalid status: ${status}. Must be one of ${Object.values(GapStatus).join(', ')}` },
         { status: HTTP_STATUS.BAD_REQUEST }
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const memory = new DynamoMemory();
     
     // Update status
-    await memory.updateGapStatus(gapId, status as any);
+    await memory.updateGapStatus(gapId, status as typeof GapStatus[keyof typeof GapStatus]);
 
     return NextResponse.json({ success: true, gapId, status });
   } catch (error) {

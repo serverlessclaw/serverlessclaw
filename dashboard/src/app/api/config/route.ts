@@ -8,15 +8,14 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET() {
   try {
-    const realtime = (Resource as any).RealtimeBus;
-    const rawRealtimeUrl = realtime?.url ?? realtime?.endpoint ?? null;
+    const realtime = Resource.RealtimeBus;
     const realtimeUrl =
-      typeof rawRealtimeUrl === 'string'
-        ? rawRealtimeUrl.startsWith('wss://')
-          ? rawRealtimeUrl
-          : rawRealtimeUrl.startsWith('https://')
-            ? rawRealtimeUrl.replace('https://', 'wss://')
-            : `wss://${rawRealtimeUrl}`
+      typeof realtime.endpoint === 'string'
+        ? realtime.endpoint.startsWith('wss://')
+          ? realtime.endpoint
+          : realtime.endpoint.startsWith('https://')
+            ? realtime.endpoint.replace('https://', 'wss://')
+            : `wss://${realtime.endpoint}`
         : null;
 
     if (!realtimeUrl) {

@@ -37,7 +37,7 @@ export async function GET(): Promise<NextResponse> {
  */
 export async function POST(request: Request): Promise<NextResponse> {
   try {
-    const tableName = (Resource as any).ConfigTable?.name;
+    const tableName = Resource.ConfigTable.name;
     if (!tableName) {
       return NextResponse.json(
         { error: 'ConfigTable name is missing from resources.' }, 

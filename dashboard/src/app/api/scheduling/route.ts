@@ -1,4 +1,3 @@
-import { Resource } from 'sst';
 import { 
   SchedulerClient, 
   ListSchedulesCommand, 
@@ -131,7 +130,11 @@ export async function PATCH(request: Request) {
     }
 
     await scheduler.send(new UpdateScheduleCommand({
-      ...existing,
+      Name: name,
+      ScheduleExpression: existing.ScheduleExpression,
+      Description: existing.Description,
+      FlexibleTimeWindow: existing.FlexibleTimeWindow,
+      Target: existing.Target,
       State: state,
     }));
 
