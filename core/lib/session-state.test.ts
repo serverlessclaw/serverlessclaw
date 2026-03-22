@@ -5,6 +5,8 @@ import {
   PutCommand,
   GetCommand,
   UpdateCommand,
+  PutCommandInput,
+  UpdateCommandInput,
 } from '@aws-sdk/lib-dynamodb';
 import { SessionStateManager } from './session-state';
 
@@ -32,12 +34,12 @@ describe('SessionStateManager', () => {
 
       expect(result).toBe(true);
       const call = ddbMock.call(0);
-      const item = (call.args[0].input as any).Item;
-      expect(item.processingAgentId).toBe('agent-abc');
-      expect(item.lockExpiresAt).toBeDefined();
-      expect(item.expiresAt).toBeDefined();
+      const item = (call.args[0].input as PutCommandInput).Item;
+      expect(item?.processingAgentId).toBe('agent-abc');
+      expect(item?.lockExpiresAt).toBeDefined();
+      expect(item?.expiresAt).toBeDefined();
       // Ensure lockExpiresAt is smaller than expiresAt (300s vs 30 days)
-      expect(item.lockExpiresAt).toBeLessThan(item.expiresAt);
+      expect(item?.lockExpiresAt).toBeLessThan(item?.expiresAt);
     });
 
     it('should return false when another agent is processing', async () => {
@@ -59,8 +61,8 @@ describe('SessionStateManager', () => {
 
       expect(result).toBe(true);
       const call = ddbMock.call(0);
-      const input = call.args[0].input as any;
-      expect(input.ExpressionAttributeValues[':agentId']).toBe('agent-abc');
+      const input = call.args[0].input as UpdateCommandInput;
+      expect(input.ExpressionAttributeValues?.[':agentId']).toBe('agent-abc');
       expect(input.ConditionExpression).toBe('processingAgentId = :agentId');
     });
 
@@ -83,9 +85,9 @@ describe('SessionStateManager', () => {
 
       expect(ddbMock.calls()).toHaveLength(1);
       const call = ddbMock.call(0);
-      const input = call.args[0].input as any;
+      const input = call.args[0].input as UpdateCommandInput;
       expect(input.UpdateExpression).toContain('pendingMessages');
-      expect(input.ExpressionAttributeValues[':exp']).toBeDefined();
+      expect(input.ExpressionAttributeValues?.[':exp']).toBeDefined();
     });
   });
 
@@ -100,9 +102,9 @@ describe('SessionStateManager', () => {
       await sessionStateManager.clearPendingMessages('session-123', ['msg-1']);
 
       expect(ddbMock.calls()).toHaveLength(2); // 1 get + 1 update
-      const updateCall = ddbMock.call(1).args[0].input as any;
-      expect(updateCall.ExpressionAttributeValues[':remaining']).toEqual([msg2]);
-      expect(updateCall.ExpressionAttributeValues[':current']).toEqual([msg1, msg2]);
+      const updateCall = ddbMock.call(1).args[0].input as UpdateCommandInput;
+      expect(updateCall.ExpressionAttributeValues?.[':remaining']).toEqual([msg2]);
+      expect(updateCall.ExpressionAttributeValues?.[':current']).toEqual([msg1, msg2]);
       expect(updateCall.ConditionExpression).toBe('pendingMessages = :current');
     });
 
@@ -137,7 +139,7 @@ describe('SessionStateManager', () => {
       const result = await sessionStateManager.removePendingMessage('session-123', 'msg-1');
 
       expect(result).toBe(true);
-      const updateCall = ddbMock.call(1).args[0].input as any;
+      const updateCall = ddbMock.call(1).args[0].input as UpdateCommandInput;
       expect(updateCall.ConditionExpression).toBe('pendingMessages = :original');
     });
   });

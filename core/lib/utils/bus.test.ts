@@ -1,11 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mockClient } from 'aws-sdk-client-mock';
-import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
+import {
+  EventBridgeClient,
+  PutEventsCommand,
+  PutEventsCommandInput,
+} from '@aws-sdk/client-eventbridge';
 import {
   DynamoDBDocumentClient,
   QueryCommand,
   PutCommand,
   DeleteCommand,
+  PutCommandInput,
+  QueryCommandInput,
+  DeleteCommandInput,
 } from '@aws-sdk/lib-dynamodb';
 import {
   emitEvent,
@@ -71,7 +78,8 @@ describe('Event Bus', () => {
       expect(result.success).toBe(false);
       expect(result.reason).toBe('DLQ');
       expect(ddbMock.calls()).toHaveLength(1);
-      expect(ddbMock.call(0).args[0].input.Item.type).toBe('DLQ_EVENT');
+      const input = ddbMock.call(0).args[0].input as PutCommandInput;
+      expect(input.Item?.type).toBe('DLQ_EVENT');
     });
 
     it('should store in DLQ immediately on permanent error', async () => {
@@ -97,7 +105,8 @@ describe('Event Bus', () => {
       await emitCriticalEvent('test', 'event', { data: 'urgent' });
 
       const call = eventBridgeMock.call(0);
-      expect(call.args[0].input.Entries[0].Source).toBe('test');
+      const input = call.args[0].input as PutEventsCommandInput;
+      expect(input.Entries?.[0]?.Source).toBe('test');
     });
 
     it('should allow overriding retries in helpers', async () => {
@@ -156,9 +165,9 @@ describe('Event Bus', () => {
       const entries = await getDlqEntries();
 
       expect(entries.length).toBe(1);
-      const call = ddbMock.call(0).args[0].input;
-      expect(call.IndexName).toBe('TypeTimestampIndex');
-      expect(call.ExpressionAttributeValues[':type']).toBe('DLQ_EVENT');
+      const input = ddbMock.call(0).args[0].input as QueryCommandInput;
+      expect(input.IndexName).toBe('TypeTimestampIndex');
+      expect(input.ExpressionAttributeValues?.[':type']).toBe('DLQ_EVENT');
     });
 
     it('should purge DLQ entry', async () => {
@@ -167,8 +176,8 @@ describe('Event Bus', () => {
       await purgeDlqEntry({ userId: 'DLQ#123', timestamp: 456 });
 
       expect(ddbMock.calls()).toHaveLength(1);
-      const call = ddbMock.call(0).args[0].input;
-      expect(call.Key).toEqual({ userId: 'DLQ#123', timestamp: 456 });
+      const input = ddbMock.call(0).args[0].input as DeleteCommandInput;
+      expect(input.Key).toEqual({ userId: 'DLQ#123', timestamp: 456 });
     });
 
     it('should retry DLQ entry and delete on success', async () => {
