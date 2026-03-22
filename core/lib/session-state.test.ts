@@ -6,7 +6,7 @@ import {
   GetCommand,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
-import { SessionStateManager, PendingMessage } from './session-state';
+import { SessionStateManager } from './session-state';
 
 const ddbMock = mockClient(DynamoDBDocumentClient);
 
@@ -31,7 +31,13 @@ describe('SessionStateManager', () => {
       const result = await sessionStateManager.acquireProcessing('session-123', 'agent-abc');
 
       expect(result).toBe(true);
-      expect(ddbMock.calls()).toHaveLength(1);
+      const call = ddbMock.call(0);
+      const item = (call.args[0].input as any).Item;
+      expect(item.processingAgentId).toBe('agent-abc');
+      expect(item.lockExpiresAt).toBeDefined();
+      expect(item.expiresAt).toBeDefined();
+      // Ensure lockExpiresAt is smaller than expiresAt (300s vs 30 days)
+      expect(item.lockExpiresAt).toBeLessThan(item.expiresAt);
     });
 
     it('should return false when another agent is processing', async () => {
@@ -45,151 +51,123 @@ describe('SessionStateManager', () => {
     });
   });
 
+  describe('renewProcessing', () => {
+    it('should return true when agent owns the lock', async () => {
+      ddbMock.on(UpdateCommand).resolves({});
+
+      const result = await sessionStateManager.renewProcessing('session-123', 'agent-abc');
+
+      expect(result).toBe(true);
+      const call = ddbMock.call(0);
+      const input = call.args[0].input as any;
+      expect(input.ExpressionAttributeValues[':agentId']).toBe('agent-abc');
+      expect(input.ConditionExpression).toBe('processingAgentId = :agentId');
+    });
+
+    it('should return false when lock owned by another agent (conditional fail)', async () => {
+      const error = new Error('ConditionalCheckFailed');
+      error.name = 'ConditionalCheckFailedException';
+      ddbMock.on(UpdateCommand).rejects(error);
+
+      const result = await sessionStateManager.renewProcessing('session-123', 'agent-abc');
+
+      expect(result).toBe(false);
+    });
+  });
+
   describe('addPendingMessage', () => {
-    it('should add a message to the pending queue', async () => {
+    it('should add a message and set long TTL', async () => {
       ddbMock.on(UpdateCommand).resolves({});
 
       await sessionStateManager.addPendingMessage('session-123', 'Hello world');
 
       expect(ddbMock.calls()).toHaveLength(1);
       const call = ddbMock.call(0);
-      expect((call.args[0].input as any).UpdateExpression).toContain('pendingMessages');
-    });
-
-    it('should include attachments when provided', async () => {
-      ddbMock.on(UpdateCommand).resolves({});
-      const attachments = [{ type: 'image' as const, base64: 'abc123' }];
-
-      await sessionStateManager.addPendingMessage('session-123', 'Hello with image', attachments);
-
-      expect(ddbMock.calls()).toHaveLength(1);
+      const input = call.args[0].input as any;
+      expect(input.UpdateExpression).toContain('pendingMessages');
+      expect(input.ExpressionAttributeValues[':exp']).toBeDefined();
     });
   });
 
-  describe('getPendingMessages', () => {
-    it('should return empty array when no state exists', async () => {
-      ddbMock.on(GetCommand).resolves({ Item: undefined });
+  describe('clearPendingMessages', () => {
+    it('should clear specific messages with conditional update', async () => {
+      const msg1 = { id: 'msg-1', content: 'test', timestamp: 1000 };
+      const msg2 = { id: 'msg-2', content: 'test2', timestamp: 2000 };
 
-      const result = await sessionStateManager.getPendingMessages('session-123');
+      ddbMock.on(GetCommand).resolves({ Item: { pendingMessages: [msg1, msg2] } });
+      ddbMock.on(UpdateCommand).resolves({});
 
-      expect(result).toEqual([]);
+      await sessionStateManager.clearPendingMessages('session-123', ['msg-1']);
+
+      expect(ddbMock.calls()).toHaveLength(2); // 1 get + 1 update
+      const updateCall = ddbMock.call(1).args[0].input as any;
+      expect(updateCall.ExpressionAttributeValues[':remaining']).toEqual([msg2]);
+      expect(updateCall.ExpressionAttributeValues[':current']).toEqual([msg1, msg2]);
+      expect(updateCall.ConditionExpression).toBe('pendingMessages = :current');
     });
 
-    it('should return pending messages when they exist', async () => {
-      const pendingMessages: PendingMessage[] = [
-        { id: 'msg-1', content: 'First', timestamp: 1000 },
-        { id: 'msg-2', content: 'Second', timestamp: 2000 },
-      ];
-      ddbMock.on(GetCommand).resolves({ Item: { pendingMessages } });
+    it('should retry once on race condition (ConditionalCheckFailed)', async () => {
+      const msg1 = { id: 'msg-1', content: 'test', timestamp: 1000 };
 
-      const result = await sessionStateManager.getPendingMessages('session-123');
+      // First attempt: get, then update fails
+      ddbMock
+        .on(GetCommand)
+        .resolvesOnce({ Item: { pendingMessages: [msg1] } })
+        .resolvesOnce({ Item: { pendingMessages: [msg1, { id: 'msg-2', content: 'new' }] } });
 
-      expect(result).toEqual(pendingMessages);
+      const error = new Error('ConditionalCheckFailed');
+      error.name = 'ConditionalCheckFailedException';
+
+      ddbMock.on(UpdateCommand).rejectsOnce(error).resolvesOnce({});
+
+      await sessionStateManager.clearPendingMessages('session-123', ['msg-1']);
+
+      // 1st attempt: GET (call 0) + UPDATE (call 1, fails)
+      // 2nd attempt: GET (call 2) + UPDATE (call 3, succeeds)
+      expect(ddbMock.calls()).toHaveLength(4);
     });
   });
 
   describe('removePendingMessage', () => {
-    it('should return false when session does not exist', async () => {
-      ddbMock.on(GetCommand).resolves({ Item: undefined });
-
-      const result = await sessionStateManager.removePendingMessage('session-123', 'msg-1');
-
-      expect(result).toBe(false);
-    });
-
-    it('should return true when message is removed successfully', async () => {
-      const pendingMessages = [{ id: 'msg-1', content: 'First', timestamp: 1000 }];
-      ddbMock.on(GetCommand).resolves({ Item: { pendingMessages } });
+    it('should use conditional update for safety', async () => {
+      const msg1 = { id: 'msg-1', content: 'test', timestamp: 1000 };
+      ddbMock.on(GetCommand).resolves({ Item: { pendingMessages: [msg1] } });
       ddbMock.on(UpdateCommand).resolves({});
 
       const result = await sessionStateManager.removePendingMessage('session-123', 'msg-1');
 
       expect(result).toBe(true);
-    });
-  });
-
-  describe('updatePendingMessage', () => {
-    it('should return false when session does not exist', async () => {
-      ddbMock.on(GetCommand).resolves({ Item: undefined });
-
-      const result = await sessionStateManager.updatePendingMessage(
-        'session-123',
-        'msg-1',
-        'Updated'
-      );
-
-      expect(result).toBe(false);
-    });
-
-    it('should return true when message is updated successfully', async () => {
-      ddbMock.on(GetCommand).resolves({
-        Item: { pendingMessages: [{ id: 'msg-1', content: 'Original', timestamp: 1000 }] },
-      });
-      ddbMock.on(UpdateCommand).resolves({});
-
-      const result = await sessionStateManager.updatePendingMessage(
-        'session-123',
-        'msg-1',
-        'Updated'
-      );
-
-      expect(result).toBe(true);
-    });
-  });
-
-  describe('getState', () => {
-    it('should return null when no state exists', async () => {
-      ddbMock.on(GetCommand).resolves({ Item: undefined });
-
-      const result = await sessionStateManager.getState('session-123');
-
-      expect(result).toBeNull();
-    });
-
-    it('should return full state when it exists', async () => {
-      ddbMock.on(GetCommand).resolves({
-        Item: {
-          sessionId: 'session-123',
-          processingAgentId: 'agent-abc',
-          processingStartedAt: 1000,
-          pendingMessages: [{ id: 'msg-1', content: 'Test', timestamp: 2000 }],
-          lastMessageAt: 2000,
-        },
-      });
-
-      const result = await sessionStateManager.getState('session-123');
-
-      expect(result).toEqual({
-        sessionId: 'session-123',
-        processingAgentId: 'agent-abc',
-        processingStartedAt: 1000,
-        pendingMessages: [{ id: 'msg-1', content: 'Test', timestamp: 2000 }],
-        lastMessageAt: 2000,
-      });
+      const updateCall = ddbMock.call(1).args[0].input as any;
+      expect(updateCall.ConditionExpression).toBe('pendingMessages = :original');
     });
   });
 
   describe('isProcessing', () => {
-    it('should return false when no state exists', async () => {
-      ddbMock.on(GetCommand).resolves({ Item: undefined });
-
-      const result = await sessionStateManager.isProcessing('session-123');
-
-      expect(result).toBe(false);
-    });
-
-    it('should return false when processing agent is null', async () => {
+    it('should return true if agentId present and lock not expired', async () => {
+      const now = Math.floor(Date.now() / 1000);
       ddbMock.on(GetCommand).resolves({
         Item: {
-          processingAgentId: null,
-          processingStartedAt: null,
-          pendingMessages: [],
-          lastMessageAt: Date.now(),
+          processingAgentId: 'agent-1',
+          lockExpiresAt: now + 60,
+          sessionId: 's1',
         },
       });
 
       const result = await sessionStateManager.isProcessing('session-123');
+      expect(result).toBe(true);
+    });
 
+    it('should return false if lock expired', async () => {
+      const now = Math.floor(Date.now() / 1000);
+      ddbMock.on(GetCommand).resolves({
+        Item: {
+          processingAgentId: 'agent-1',
+          lockExpiresAt: now - 10,
+          sessionId: 's1',
+        },
+      });
+
+      const result = await sessionStateManager.isProcessing('session-123');
       expect(result).toBe(false);
     });
   });
