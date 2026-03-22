@@ -13,6 +13,8 @@ export enum InsightCategory {
   STRATEGIC_GAP = 'strategic_gap',
   /** General system-wide knowledge and facts. */
   SYSTEM_KNOWLEDGE = 'system_knowledge',
+  /** Recurring failure patterns: tool misuse, hallucinations, timeouts. */
+  FAILURE_PATTERN = 'failure_pattern',
 }
 
 /**
@@ -129,6 +131,14 @@ export interface IKnowledgeStore {
   addLesson(userId: string, lesson: string, metadata?: InsightMetadata): Promise<void>;
   /** Retrieves a set of recent tactical lessons for a user. */
   getLessons(userId: string): Promise<string[]>;
+  /** Records a failure pattern for future cross-referencing. */
+  recordFailurePattern(
+    scopeId: string,
+    content: string,
+    metadata?: Partial<InsightMetadata>
+  ): Promise<number>;
+  /** Retrieves failure patterns relevant to the given context. */
+  getFailurePatterns(scopeId: string, context?: string, limit?: number): Promise<MemoryInsight[]>;
 }
 
 /**

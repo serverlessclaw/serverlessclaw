@@ -132,13 +132,48 @@ describe('TokenTracker', () => {
   });
 
   describe('updateToolRollup', () => {
-    it('should atomically update tool rollup', async () => {
-      await TokenTracker.updateToolRollup('fileRead', true);
+    it('should atomically update tool rollup with duration and tokens', async () => {
+      await TokenTracker.updateToolRollup('fileRead', true, 500, 1000, 500);
 
       expect(mockSend).toHaveBeenCalled();
 
       const item = (mockSend.mock.calls[0] as any[])[0].input;
       expect(item.Key.userId).toMatch(/^TOOL_TOKEN#fileRead#/);
+      expect(item.ExpressionAttributeValues[':dur']).toBe(500);
+      expect(item.ExpressionAttributeValues[':inTok']).toBe(1000);
+      expect(item.ExpressionAttributeValues[':outTok']).toBe(500);
+    });
+  });
+
+  describe('getToolRollupRange', () => {
+    it('should query for tool rollups in range', async () => {
+      mockSend.mockResolvedValueOnce({
+        Items: [
+          {
+            userId: 'TOOL_TOKEN#fileRead#2026-03-22',
+            timestamp: Date.now(),
+            invocationCount: 10,
+            successCount: 9,
+            totalDurationMs: 5000,
+            totalInputTokens: 10000,
+            totalOutputTokens: 5000,
+          },
+        ],
+      });
+
+      const results = await TokenTracker.getToolRollupRange('fileRead', 7);
+      expect(results.length).toBe(1);
+      expect(results[0].totalDurationMs).toBe(5000);
+      expect(mockSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: expect.objectContaining({
+            KeyConditionExpression: 'userId = :pk AND timestamp BETWEEN :start AND :end',
+            ExpressionAttributeValues: expect.objectContaining({
+              ':pk': 'TOOL_TOKEN#fileRead#',
+            }),
+          }),
+        })
+      );
     });
   });
 });

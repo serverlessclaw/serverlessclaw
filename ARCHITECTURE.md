@@ -305,6 +305,34 @@ The system's evolution is a co-managed process between the **Strategic Planner**
 - **Deep Dive**: [Self-Evolution ↗](./docs/EVOLUTION.md)
 - **Deep Dive**: [Health & Recovery ↗](./docs/HEALTH.md)
 
+### Self-Optimization Feedback Loop
+To ensure the system remains efficient, a continuous optimization loop runs in the background.
+
+```text
+    [ Execution ] <----------- (6) selectBestAgent() ----------- [ AgentRouter ]
+          |                                                            ^
+    (1) recordToolUsage()                                              |
+          |                                                   (5) getMetrics()
+    +-----v-----+                                                      |
+    |  Token    | <----------- (4) fetchToolUsage() ----------- [ Strategic ]
+    |  Tracker  |                                               |  Planner  |
+    +-----+-----+                                               +-----+-----+
+          |                                                           |
+    (2) recordFailurePattern()                                 (3) getFailurePatterns()
+          |                                                           |
+    +-----v-----+                                                     |
+    |  Memory   | <---------------------------------------------------+
+    |  (Insights)|
+    +-----------+
+```
+
+1. **Telemetry**: The `Executor` captures token usage, duration, and success for every tool call.
+2. **Failure Learning**: The `Cognition Reflector` captures persistent failure patterns (anti-patterns) in `Memory`.
+3. **Pattern Retrieval**: The `Strategic Planner` retrieves relevant failures before designing plans.
+4. **Tool Audit**: The `Strategic Planner` identifies anomalous tools (high cost/low success) from `TokenTracker` rollups.
+5. **Analytics**: The `AgentRouter` aggregates historical performance metrics from the `TokenTracker`.
+6. **Routing**: The `SuperClaw` uses these metrics to route tasks to the most efficient agent/model combination.
+
 ### Evolution Safeguards
 - **Intent-Based Dual Mode**: Agents toggle between **JSON Mode** (for strict handoffs and state sync) and **Text Mode** (for user-facing empathy). 
 - **Structured JSON Hub**: When in JSON mode, agents emit deterministic signals (`SUCCESS`, `FAILED`, `REOPEN`) matching a strict native schema.

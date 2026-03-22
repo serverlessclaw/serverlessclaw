@@ -51,6 +51,9 @@ export interface ToolTokenRollup {
   timestamp: number;
   invocationCount: number;
   successCount: number;
+  totalDurationMs: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
   expiresAt: number;
 }
 
@@ -199,7 +202,13 @@ export class TokenTracker {
     }
   }
 
-  static async updateToolRollup(toolName: string, success: boolean): Promise<void> {
+  static async updateToolRollup(
+    toolName: string,
+    success: boolean,
+    durationMs?: number,
+    inputTokens?: number,
+    outputTokens?: number
+  ): Promise<void> {
     const ts = dayStart();
     const userId = `TOOL_TOKEN#${toolName}#${dateKey(ts)}`;
     const expiresAt = Math.floor(Date.now() / 1000) + TTL_DAYS_ROLLUP * SECONDS_IN_DAY;
@@ -212,17 +221,45 @@ export class TokenTracker {
           UpdateExpression:
             'SET invocationCount = if_not_exists(invocationCount, :zero) + :one, ' +
             'successCount = if_not_exists(successCount, :zero) + :success, ' +
+            'totalDurationMs = if_not_exists(totalDurationMs, :zero) + :dur, ' +
+            'totalInputTokens = if_not_exists(totalInputTokens, :zero) + :inTok, ' +
+            'totalOutputTokens = if_not_exists(totalOutputTokens, :zero) + :outTok, ' +
             'expiresAt = :expires',
           ExpressionAttributeValues: {
             ':one': 1,
             ':success': success ? 1 : 0,
             ':zero': 0,
+            ':dur': durationMs ?? 0,
+            ':inTok': inputTokens ?? 0,
+            ':outTok': outputTokens ?? 0,
             ':expires': expiresAt,
           },
         })
       );
     } catch (e) {
       logger.warn('Failed to update tool token rollup:', e);
+    }
+  }
+
+  static async getToolRollupRange(toolName: string, days: number): Promise<ToolTokenRollup[]> {
+    const endTs = dayStart();
+    const startTs = endTs - days * SECONDS_IN_DAY * 1000;
+    try {
+      const { Items } = await docClient.send(
+        new QueryCommand({
+          TableName: getTableName(),
+          KeyConditionExpression: 'userId = :pk AND timestamp BETWEEN :start AND :end',
+          ExpressionAttributeValues: {
+            ':pk': `TOOL_TOKEN#${toolName}#`,
+            ':start': startTs,
+            ':end': endTs,
+          },
+          ScanIndexForward: false,
+        })
+      );
+      return (Items as ToolTokenRollup[]) ?? [];
+    } catch {
+      return [];
     }
   }
 }

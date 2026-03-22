@@ -98,6 +98,8 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
     .join('\n    ');
   const telemetry = buildTelemetry(toolsList);
 
+  const failurePatterns = await memory.getFailurePatterns(baseUserId, '*', 5);
+
   let plannerPrompt: string;
 
   if (isProactive) {
@@ -105,7 +107,8 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
       memory,
       baseUserId,
       telemetry,
-      isScheduledReview ?? false
+      isScheduledReview ?? false,
+      failurePatterns
     );
 
     if (!proactiveResult.shouldRun) {
@@ -117,7 +120,8 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
     // Reactionary single gap handling
     plannerPrompt = buildReactivePrompt(
       { ...payload, contextUserId: userId, details: task },
-      telemetry
+      telemetry,
+      failurePatterns
     );
   }
 
@@ -154,6 +158,19 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
               status: { type: 'string', enum: ['SUCCESS', 'FAILED'] },
               plan: { type: 'string' },
               coveredGapIds: { type: 'array', items: { type: 'string' } },
+              toolOptimizations: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    action: { type: 'string', enum: ['PRUNE', 'CONSOLIDATE', 'REPLACE'] },
+                    toolName: { type: 'string' },
+                    reason: { type: 'string' },
+                  },
+                  required: ['action', 'toolName', 'reason'],
+                  additionalProperties: false,
+                },
+              },
             },
             required: ['status', 'plan', 'coveredGapIds'],
             additionalProperties: false,
@@ -171,19 +188,32 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
   let status = 'SUCCESS';
   let plan = rawResponse;
   let coveredGapIds: string[] = [];
+  let toolOptimizations: Array<{ action: string; toolName: string; reason: string }> = [];
 
   try {
     const parsed = parseStructuredResponse<{
       status: string;
       plan: string;
       coveredGapIds: string[];
+      toolOptimizations?: Array<{ action: string; toolName: string; reason: string }>;
     }>(rawResponse);
     status = parsed.status || 'SUCCESS';
     plan = parsed.plan || rawResponse;
     coveredGapIds = parsed.coveredGapIds || [];
+    toolOptimizations = parsed.toolOptimizations || [];
     logger.info(`Parsed Strategic Plan. Status: ${status}, Gaps: ${coveredGapIds.join(', ')}`);
   } catch (e) {
     logger.warn('Failed to parse Planner structured response, falling back to raw text.', e);
+  }
+
+  // 1.5 Generate gaps from toolOptimizations
+  if (toolOptimizations.length > 0) {
+    for (const opt of toolOptimizations) {
+      const toolGapId = `TOOLOPT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const gapContent = `[TOOL_OPTIMIZATION] Action: ${opt.action}, Tool: ${opt.toolName}. Reason: ${opt.reason}`;
+      logger.info(`Recording tool optimization gap: ${gapContent}`);
+      await memory.setGap(toolGapId, gapContent, { priority: 5, impact: 6, risk: 2 } as any);
+    }
   }
 
   const isFailure =

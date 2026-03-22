@@ -43,12 +43,15 @@ The stack evolves by bridging the gap between temporary Lambda execution and per
 The system's evolution follows a strict, verified hierarchy:
 
 1. **Observation**: Reflector identifies a `strategic_gap` from conversation logs.
+   - **Failure Pattern Learning**: Reflector cross-references current failures (tool misuse, hallucinations, timeouts) against known `FAILURE_PATTERN` entries to detect chronic issues.
 2. **Audit & Optimization**: Every 48 hours, the **Strategic Planner** reviews all open gaps and `tool_usage` telemetry.
    - **Deduplication**: Planner performs a semantic check to prevent redundant plans for the same gap.
    - **Gap Aging**: Planner automatically archives gaps older than 30 days to `ARCHIVED` status.
+   - **Anomalous Tool Detection**: Planner proactively identifies tools with high token cost or low success rates and generates `TOOL_OPTIMIZATION` gaps (PRUNE/REPLACE).
 3. **Planning**: Planner designs a `STRATEGIC_PLAN` (Expansion or Pruning).
 4. **Approval**: Depending on `evolution_mode` (`hitl` vs `auto`), the user approves or the system proceeds.
 5. **Implementation**: Coder Agent writes code and triggers deployment.
+   - **Performance-Based Routing**: The **AgentRouter** uses real-time `TokenTracker` metrics (success rate + token efficiency) to select the best agent for the task.
    - **Pre-Deployment Verification**: Coder MUST run `validateCode` and `runTests` BEFORE calling `triggerDeployment`.
 6. **Verification (Mechanical Gating)**: QA Auditor MUST verify the change using system tools (e.g., `checkHealth`, `validateCode`).
 7. **Nudging & Completion**:

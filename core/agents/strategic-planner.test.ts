@@ -7,6 +7,8 @@ const memoryMocks = vi.hoisted(() => ({
   getAllGaps: vi.fn(),
   getDistilledMemory: vi.fn(),
   updateDistilledMemory: vi.fn().mockResolvedValue(undefined),
+  getFailurePatterns: vi.fn().mockResolvedValue([]),
+  setGap: vi.fn().mockResolvedValue(undefined),
 }));
 
 const agentProcess = vi.hoisted(() => vi.fn());
@@ -24,6 +26,8 @@ vi.mock('../lib/memory', () => ({
     getAllGaps = memoryMocks.getAllGaps;
     getDistilledMemory = memoryMocks.getDistilledMemory;
     updateDistilledMemory = memoryMocks.updateDistilledMemory;
+    getFailurePatterns = memoryMocks.getFailurePatterns;
+    setGap = memoryMocks.setGap;
     archiveStaleGaps = vi.fn().mockResolvedValue(0);
     getLowUtilizationMemory = vi.fn().mockResolvedValue([]);
   },
@@ -233,5 +237,39 @@ describe('Strategic Planner — selective PLANNED marking', () => {
     );
     // Should not return COOLDOWN_ACTIVE (that would block all scheduled reviews)
     expect(result).not.toMatchObject({ status: 'COOLDOWN_ACTIVE' });
+  });
+
+  it('should generate tool optimization gaps when planner recommends PRUNE/REPLACE', async () => {
+    // Planner recommends pruning an anomalous tool
+    const planResponse = JSON.stringify({
+      status: 'SUCCESS',
+      plan: 'System is stable, but pruning redundant search tool.',
+      coveredGapIds: [],
+      toolOptimizations: [
+        {
+          action: 'PRUNE',
+          toolName: 'oldSearchTool',
+          reason: 'High token usage and overlapping capability',
+        },
+      ],
+    });
+    agentProcess.mockResolvedValue({ responseText: planResponse });
+
+    const event = {
+      detail: {
+        userId: 'user-1',
+        isScheduledReview: true,
+        traceId: 'trace-opt-1',
+      },
+    };
+
+    await handler(event as any, {} as any);
+
+    // Should call setGap for the optimization recommendation
+    expect(memoryMocks.setGap).toHaveBeenCalledWith(
+      expect.stringMatching(/^TOOLOPT-/),
+      expect.stringContaining('[TOOL_OPTIMIZATION] Action: PRUNE, Tool: oldSearchTool'),
+      expect.any(Object)
+    );
   });
 });

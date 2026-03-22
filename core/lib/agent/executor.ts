@@ -365,7 +365,9 @@ export class AgentExecutor {
             );
             await tracer.addStep({ type: 'tool_call', content: { toolName: tool.name, args } });
 
+            const toolStart = performance.now();
             const rawResult = await tool.execute(args);
+            const toolDurationMs = performance.now() - toolStart;
             const resultText =
               typeof rawResult === 'string'
                 ? rawResult
@@ -396,8 +398,18 @@ export class AgentExecutor {
 
             if (!process.env.VITEST) {
               const toolSuccess = !resultText.startsWith('FAILED');
+              const estimatedInputTokens = Math.ceil(JSON.stringify(args).length / 4);
+              const estimatedOutputTokens = Math.ceil(resultText.length / 4);
               const { emitMetrics, Metrics } = await import('../metrics');
               emitMetrics([Metrics.toolExecuted(tool.name, toolSuccess)]).catch(() => {});
+              const { TokenTracker } = await import('../token-usage');
+              TokenTracker.updateToolRollup(
+                tool.name,
+                toolSuccess,
+                Math.round(toolDurationMs),
+                estimatedInputTokens,
+                estimatedOutputTokens
+              ).catch(() => {});
             }
 
             await tracer.addStep({

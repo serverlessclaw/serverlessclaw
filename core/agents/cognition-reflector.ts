@@ -102,6 +102,7 @@ export const handler = async (
   }
 
   const existingFacts = await memory.getDistilledMemory(baseUserId);
+  const failurePatterns = await memory.getFailurePatterns(baseUserId, '*', 5);
 
   // Get gap context
   const { deployedGaps, activeGaps } = await getGapContext(memory);
@@ -112,7 +113,8 @@ export const handler = async (
     conversation,
     traceContext,
     deployedGaps,
-    activeGaps
+    activeGaps,
+    failurePatterns
   );
 
   // Use 'standard' profile for reflection — FAST was too shallow for reliable gap closure detection

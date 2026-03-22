@@ -275,4 +275,26 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   async incrementClarificationRetry(traceId: string, agentId: string): Promise<number> {
     return ClarificationOps.incrementClarificationRetry(this, traceId, agentId);
   }
+
+  /**
+   * Records a failure pattern for future cross-referencing.
+   */
+  async recordFailurePattern(
+    scopeId: string,
+    content: string,
+    metadata?: Partial<InsightMetadata>
+  ): Promise<number> {
+    return InsightOps.recordFailurePattern(this, scopeId, content, metadata);
+  }
+
+  /**
+   * Retrieves failure patterns relevant to the given context.
+   */
+  async getFailurePatterns(
+    scopeId: string,
+    context?: string,
+    limit?: number
+  ): Promise<MemoryInsight[]> {
+    return InsightOps.getFailurePatterns(this, scopeId, context, limit);
+  }
 }

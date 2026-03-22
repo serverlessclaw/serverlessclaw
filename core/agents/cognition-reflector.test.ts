@@ -18,6 +18,7 @@ vi.mock('../lib/memory', () => ({
     addLesson = mocks.addLesson;
     setGap = mocks.setGap;
     updateGapStatus = mocks.updateGapStatus;
+    getFailurePatterns = vi.fn().mockResolvedValue([]);
   },
 }));
 
@@ -99,6 +100,7 @@ vi.mock('../lib/utils/agent-helpers', () => ({
       addLesson: mocks.addLesson,
       setGap: mocks.setGap,
       updateGapStatus: mocks.updateGapStatus,
+      getFailurePatterns: vi.fn().mockResolvedValue([]),
     },
     provider: {
       call: vi.fn(),

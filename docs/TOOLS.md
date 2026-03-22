@@ -144,9 +144,11 @@ To prevent "Context Window Bloat" and maintain high reasoning performance, Serve
 
 1. **Bootloader Phase**: Agents start with a minimal "Essential" toolset (`DISCOVER_SKILLS`, `RECALL_KNOWLEDGE`, `DISPATCH_TASK`). This keeps initial token costs low and focus high.
 2. **Just-in-Time (JIT) Expansion**: Agents use `DISCOVER_SKILLS` to find specialized local tools or external MCP capabilities only when the task requires them.
-3. **Usage Tracking**: Every successful tool execution is recorded atomically in the `ConfigTable` (`tool_usage` key), tracking both the total `count` and the `lastUsed` timestamp.
-4. **Selective Discovery Mode**: When enabled, the system automatically prunes an agent's toolset back to the "Core 4" (`DISPATCH_TASK`, `RECALL_KNOWLEDGE`, `DISCOVER_SKILLS`, `CHECK_CONFIG`) if it hasn't used a tool recently or if the toolset exceeds a complexity threshold.
-5. **MCP Server Pruning**: The **ClawCenter Dashboard** provides usage analytics for MCP servers, allowing humans or the SuperClaw to `UNREGISTER_MCP_SERVER` if it's no longer providing value to the system.
+3. **Usage Tracking**: Every tool execution is recorded atomically in the `MemoryTable` via the `TokenTracker`, capturing the `count`, `successCount`, `totalDurationMs`, and estimated `totalInputTokens` / `totalOutputTokens`.
+4. **Anomalous Tool Detection**: During the 48-hour strategic review, the **Strategic Planner** identifies "Anomalous Tools" (those with <80% success rate or >100k token cost in 7 days). It generates `TOOL_OPTIMIZATION` gaps to `PRUNE` or `REPLACE` inefficient capabilities.
+5. **Selective Discovery Mode**: When enabled, the system automatically prunes an agent's toolset back to its "Core" defaults if it hasn't used a tool recently or if the toolset exceeds a complexity threshold.
+6. **Performance-Based Routing**: When a task is dispatched, the **AgentRouter** computes a composite score for candidate agents: `CapabilityMatch * SuccessRate - (AvgTokens / 10000)`. This ensures tasks are handled by the most reliable and cost-efficient agent.
+7. **MCP Server Pruning**: The **ClawCenter Dashboard** provides usage analytics for MCP servers, allowing humans or the SuperClaw to `UNREGISTER_MCP_SERVER` if it's no longer providing value to the system.
 
 ### Performance Impact
 - **Context Reduction**: Up to 70% reduction in system prompt size.

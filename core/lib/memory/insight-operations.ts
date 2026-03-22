@@ -356,3 +356,47 @@ export async function getLowUtilizationMemory(
     })
     .slice(0, limit);
 }
+
+/**
+ * Records a failure pattern (tool misuse, hallucination, timeout, etc.)
+ * for future cross-referencing by the cognition reflector and strategic planner.
+ *
+ * @param base - The base memory provider instance.
+ * @param scopeId - The user or agent scope identifier.
+ * @param content - Description of the failure pattern.
+ * @param metadata - Optional metadata (confidence, impact, etc.).
+ * @returns The timestamp of the recorded pattern.
+ */
+export async function recordFailurePattern(
+  base: BaseMemoryProvider,
+  scopeId: string,
+  content: string,
+  metadata?: Partial<InsightMetadata>
+): Promise<number> {
+  return addMemory(base, scopeId, InsightCategory.FAILURE_PATTERN, content, metadata);
+}
+
+/**
+ * Retrieves failure patterns relevant to the given context.
+ *
+ * @param base - The base memory provider instance.
+ * @param scopeId - The user or agent scope identifier.
+ * @param context - Search context (keyword match against content). Use '*' for all.
+ * @param limit - Maximum number of patterns to return.
+ * @returns An array of matching failure pattern insights.
+ */
+export async function getFailurePatterns(
+  base: BaseMemoryProvider,
+  scopeId: string,
+  context: string = '*',
+  limit: number = 5
+): Promise<MemoryInsight[]> {
+  const { items } = await searchInsights(
+    base,
+    scopeId,
+    context,
+    InsightCategory.FAILURE_PATTERN,
+    limit
+  );
+  return items;
+}

@@ -74,10 +74,44 @@ export async function shouldRunProactiveReview(
  */
 export async function fetchToolUsageContext(): Promise<string> {
   try {
-    const { AgentRegistry } = await import('../../lib/registry');
-    const toolUsage = await AgentRegistry.getRawConfig('tool_usage');
-    if (toolUsage) {
-      return `\n[TOOL_USAGE_TELEMETRY]:\n${JSON.stringify(toolUsage, null, 2)}\n`;
+    const { TOOLS } = await import('../../tools/index');
+    const { TokenTracker } = await import('../../lib/token-usage');
+
+    const toolNames = Object.keys(TOOLS);
+    const anomalies: Array<{ toolName: string; stats: Record<string, unknown> }> = [];
+
+    for (const toolName of toolNames) {
+      const rollups = await TokenTracker.getToolRollupRange(toolName, 7);
+      if (!rollups || rollups.length === 0) continue;
+
+      let invocations = 0;
+      let successes = 0;
+      let totalCost = 0;
+
+      for (const r of rollups) {
+        invocations += r.invocationCount || 0;
+        successes += r.successCount || 0;
+        totalCost += (r.totalInputTokens || 0) + (r.totalOutputTokens || 0);
+      }
+
+      if (invocations === 0) continue;
+      const successRate = successes / invocations;
+
+      // Anomaly criteria: < 80% success rate OR very high cost (> 100k tokens in 7 days)
+      if (successRate < 0.8 || totalCost > 100000) {
+        anomalies.push({
+          toolName,
+          stats: {
+            invocations,
+            successRate: (successRate * 100).toFixed(1) + '%',
+            totalCostTokens: totalCost,
+          },
+        });
+      }
+    }
+
+    if (anomalies.length > 0) {
+      return `\n[ANOMALOUS_TOOL_USAGE_TELEMETRY]:\n${JSON.stringify(anomalies, null, 2)}\n`;
     }
   } catch {
     // Silently return empty
@@ -123,7 +157,8 @@ export async function buildProactiveReviewPrompt(
   memory: DynamoMemory,
   baseUserId: string,
   telemetry: string,
-  isScheduledReview: boolean
+  isScheduledReview: boolean,
+  failurePatterns: Array<{ content: string }> = []
 ): Promise<{ prompt: string; shouldRun: boolean; status?: string }> {
   // Check Frequency and Min Gaps
   try {
@@ -176,6 +211,11 @@ export async function buildProactiveReviewPrompt(
     )
     .join('\n');
 
+  const failureContext =
+    failurePatterns.length > 0
+      ? `\n[KNOWN_FAILURE_PATTERNS]:\nAvoid repeating these mistakes:\n${failurePatterns.map((f) => `- ${f.content}`).join('\n')}\n`
+      : '';
+
   const prompt = `
     [PROACTIVE_STRATEGIC_REVIEW]
     I have woken up for a scheduled self-audit. I have detected the following ${allGaps.length} capability gaps:
@@ -183,10 +223,13 @@ export async function buildProactiveReviewPrompt(
     ${telemetry}
     ${toolUsageContext}
     ${staleMemoryContext}
+    ${failureContext}
 
     Please analyze these gaps, the tool usage telemetry, and the memory utilization audit. Prioritize the most critical needs based on ROI (Impact vs Complexity), and design a STRATEGIC_PLAN to either address the MOST IMPORTANT evolution or prune redundant/inefficient tools and stale memories.
     
     If low-utilization memory is no longer relevant, recommend pruning it by suggesting the use of 'pruneMemory' tool or explaining why it should be archived.
+    
+    If you identify tools that are heavily failing or overlapping in the tool usage telemetry, provide 'toolOptimizations' recommendations (e.g. PRUNE, CONSOLIDATE, REPLACE) in your JSON output.
   `;
 
   // Update last review timestamp
@@ -205,7 +248,11 @@ export async function buildProactiveReviewPrompt(
  * @param telemetry - System telemetry string.
  * @returns The formatted prompt string.
  */
-export function buildReactivePrompt(payload: PlannerPayload, telemetry: string): string {
+export function buildReactivePrompt(
+  payload: PlannerPayload,
+  telemetry: string,
+  failurePatterns: Array<{ content: string }> = []
+): string {
   const { details, metadata } = payload;
   const task = payload.task || details || 'Strategic Review';
 
@@ -218,6 +265,15 @@ export function buildReactivePrompt(payload: PlannerPayload, telemetry: string):
     `
     : '';
 
+  const failureContext =
+    failurePatterns.length > 0
+      ? `
+      [KNOWN_FAILURE_PATTERNS]:
+      Avoid repeating these past mistakes during planning:
+      ${failurePatterns.map((f) => `- ${f.content}`).join('\n')}
+      `
+      : '';
+
   const context = payload.gapId
     ? `CAPABILITY GAP IDENTIFIED: ${task}`
     : `ARCHITECTURAL TASK/INQUIRY: ${task}`;
@@ -226,11 +282,12 @@ export function buildReactivePrompt(payload: PlannerPayload, telemetry: string):
     ${context}
     ${signals}
     ${telemetry}
+    ${failureContext}
 
     USER CONTEXT: Please analyze the request for user ${payload.userId}.
     
     INSTRUCTIONS:
-    1. If this is a capability gap (gapId present), design a STRATEGIC_PLAN to fix it.
+    1. If this is a capability gap (gapId present), design a STRATEGIC_PLAN to fix it. Ensure you do not repeat any KNOWN_FAILURE_PATTERNS.
     2. If this is an architectural inquiry or system question, use your tools (listAgents, inspectTopology) to provide a deep, accurate answer.
     3. Always return your response in the specified JSON format.
     4. If you are just answering a question and no code changes are required, set 'coveredGapIds' to an empty array.
