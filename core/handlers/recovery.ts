@@ -10,6 +10,7 @@ import { DynamoLockManager } from '../lib/lock';
 import { DynamoMemory } from '../lib/memory';
 import { emitEvent } from '../lib/utils/bus';
 import { formatErrorMessage } from '../lib/utils/error';
+import { getCircuitBreaker } from '../lib/circuit-breaker';
 
 const codebuild = new CodeBuildClient({});
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -47,6 +48,18 @@ export const handler = async (_event?: { detail: Record<string, unknown> }): Pro
     return;
   } catch (error) {
     logger.error(`System health check FAILED: ${formatErrorMessage(error)}`);
+
+    try {
+      const cb = getCircuitBreaker();
+      const result = await cb.recordFailure('health');
+      if (result.state === 'open') {
+        logger.warn(
+          `Circuit Breaker: Opened after health check failure (${result.failures.length} total in window).`
+        );
+      }
+    } catch (cbError) {
+      logger.error('Failed to record health failure in circuit breaker:', cbError);
+    }
   }
 
   // If we reach here, the health check failed or timed out.

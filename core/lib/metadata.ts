@@ -46,15 +46,35 @@ export const SYSTEM_CONFIG_METADATA: Record<string, ConfigOptionMetadata> = {
     description: 'The autonomy level of the system.',
     implication:
       'HITL requires manual approval; AUTO allows the system to deploy code independently.',
-    safeguard: 'System automatically reverts to HITL if the Circuit Breaker is triggered.',
+    safeguard:
+      'System automatically blocks autonomous deploys if the Circuit Breaker is triggered.',
     default: 'hitl',
   },
   circuit_breaker_threshold: {
     label: 'Circuit Breaker Threshold',
-    description: 'Consecutive build failures before pausing evolution.',
-    implication: 'Stops "Death Spirals" where the system repeatedly tries and fails to fix a bug.',
-    safeguard: 'Forces manual intervention to review the breaking change.',
-    default: '3',
+    description: 'Number of failures in the sliding window before opening the circuit.',
+    implication:
+      'Stops "Death Spirals" where the system repeatedly fails to fix a bug or health check.',
+    safeguard: 'Blocks autonomous deployments until the cooldown period expires.',
+    default: '5',
+  },
+  circuit_breaker_window_ms: {
+    label: 'Circuit Breaker Window (ms)',
+    description: 'Sliding window duration for tracking system failures.',
+    implication: 'Controls the "memory" of recent failures.',
+    default: '3600000',
+  },
+  circuit_breaker_cooldown_ms: {
+    label: 'Circuit Breaker Cooldown (ms)',
+    description: 'Wait time before transitioning from OPEN to HALF-OPEN state.',
+    implication: 'Ensures the system "rests" before attempting a probe deployment.',
+    default: '600000',
+  },
+  circuit_breaker_half_open_max: {
+    label: 'Half-Open Max Probes',
+    description: 'Number of test deployments allowed while in the HALF-OPEN state.',
+    implication: 'Limits the risk of re-failure during recovery.',
+    default: '1',
   },
   reflection_frequency: {
     label: 'Reflection Frequency',

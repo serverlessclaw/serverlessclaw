@@ -8,6 +8,7 @@ import { EventType, GapStatus } from '../lib/types/agent';
 import { SSTResource, TopologyNode } from '../lib/types/system';
 import { reportHealthIssue } from '../lib/health';
 import { emitEvent, EventPriority } from '../lib/utils/bus';
+import { getCircuitBreaker } from '../lib/circuit-breaker';
 
 const codebuild = new CodeBuildClient({});
 const logs = new CloudWatchLogsClient({});
@@ -81,9 +82,10 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
 
       // Reset failure counter on success
       try {
-        await ConfigManager.saveRawConfig('consecutive_build_failures', 0);
+        const cb = getCircuitBreaker();
+        await cb.recordSuccess();
       } catch (e) {
-        logger.error('Failed to reset build failure counter:', e);
+        logger.error('Failed to record build success in circuit breaker:', e);
       }
 
       // Transition gaps to DEPLOYED
@@ -126,26 +128,20 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
     } else if (['FAILED', 'STOPPED', 'TIMED_OUT', 'FAULT'].includes(status)) {
       logger.info(`Build ${buildId} ${status}. Marking ${gapIds.length} gaps as FAILED.`);
 
-      // 2026 Circuit Breaker Logic
+      // Circuit Breaker: record failure in sliding window
       try {
-        const currentFailures = (await ConfigManager.getRawConfig(
-          'consecutive_build_failures'
-        )) as number;
-        const failures = (currentFailures ?? 0) + 1;
-        await ConfigManager.saveRawConfig('consecutive_build_failures', failures);
-
-        const threshold =
-          ((await ConfigManager.getRawConfig('circuit_breaker_threshold')) as number) ?? 3;
-
-        if (failures >= threshold) {
-          logger.warn(`Circuit Breaker Active! ${failures} build failures. Flipping to HITL mode.`);
-          await ConfigManager.saveRawConfig('evolution_mode', 'hitl');
+        const cb = getCircuitBreaker();
+        const result = await cb.recordFailure('deploy', { userId, traceId });
+        if (result.state === 'open') {
+          logger.warn(
+            `Circuit Breaker: Opened after ${result.failures.length} failures in sliding window.`
+          );
         }
       } catch (e) {
-        logger.error('Failed to update circuit breaker counter:', e);
+        logger.error('Failed to record build failure in circuit breaker:', e);
         await reportHealthIssue({
           component: 'BuildMonitor',
-          issue: 'Failed to update circuit breaker counter in ConfigTable',
+          issue: 'Failed to record build failure in circuit breaker',
           severity: 'medium',
           userId: userId ?? 'SYSTEM',
           traceId,

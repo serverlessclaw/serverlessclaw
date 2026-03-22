@@ -1,6 +1,6 @@
 import { logger } from '../logger';
-import { ConfigManager } from '../registry/config';
 import { RETENTION, TIME } from '../constants';
+import { getCircuitBreaker } from '../circuit-breaker';
 
 /**
  * Retention IDs for different system logs based on 2026 usage patterns.
@@ -68,9 +68,9 @@ export class RetentionManager {
    */
   static async performSystemCleanup(): Promise<void> {
     try {
-      await ConfigManager.saveRawConfig('consecutive_build_failures', 0);
+      await getCircuitBreaker().reset();
     } catch {
-      logger.error('Failed to reset build failure counter');
+      logger.error('Failed to reset circuit breaker');
     }
   }
 }

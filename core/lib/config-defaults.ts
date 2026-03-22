@@ -33,12 +33,36 @@ export const CONFIG_DEFAULTS = {
     description: 'Absolute maximum deployments per day to prevent runaway costs.',
   },
 
-  /** Circuit breaker threshold for consecutive build failures. Default: 3 */
+  /** Circuit breaker threshold for failures in sliding window. Default: 5 */
   CIRCUIT_BREAKER_THRESHOLD: {
-    code: 3,
+    code: 5,
     hotSwappable: true,
     configKey: 'circuit_breaker_threshold',
-    description: 'Consecutive build failures before switching to HITL mode.',
+    description: 'Build/health failures within the sliding window before opening the circuit.',
+  },
+
+  /** Sliding window duration for circuit breaker failure tracking. Default: 3600000 (1 hour) */
+  CIRCUIT_BREAKER_WINDOW_MS: {
+    code: 3600000,
+    hotSwappable: true,
+    configKey: 'circuit_breaker_window_ms',
+    description: 'Sliding window duration for circuit breaker failure tracking.',
+  },
+
+  /** Cooldown before transitioning from open to half-open. Default: 600000 (10 minutes) */
+  CIRCUIT_BREAKER_COOLDOWN_MS: {
+    code: 600000,
+    hotSwappable: true,
+    configKey: 'circuit_breaker_cooldown_ms',
+    description: 'Cooldown duration before transitioning from open to half-open state.',
+  },
+
+  /** Max probe deployments allowed in half-open state. Default: 1 */
+  CIRCUIT_BREAKER_HALF_OPEN_MAX: {
+    code: 1,
+    hotSwappable: true,
+    configKey: 'circuit_breaker_half_open_max',
+    description: 'Max probe deployments allowed in half-open state before reopening.',
   },
 
   /** Maximum recovery attempts before escalation. Default: 2 */

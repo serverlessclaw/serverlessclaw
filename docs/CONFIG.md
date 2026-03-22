@@ -12,8 +12,27 @@ This document outlines the system-wide configuration keys available in the `Conf
 - **Hard Cap**: 100
 - **Purpose**: Prevents runaway costs and instability by limiting how many times the autonomous evolution loop can trigger a full CodeBuild/SST deploy.
 - **Implications**:
-  - **Increasing**: Allows more autonomous cycles, potentially fixing complex multi-step gaps faster. However, it increases AWS costs and risks deploying unstable code if the circuit breaker is the only guard.
+  - **Increasing**: Allows more autonomous cycles, potentially fixing complex multi-step gaps faster. However, it increases AWS costs and risks deploying unstable code.
   - **Decreasing**: Enhances safety and reduces cost. May stall evolution if multiple attempts are needed to solve a task.
+
+### `circuit_breaker_threshold`
+- **Default**: 5 (failures in sliding window)
+- **Purpose**: Stops "Death Spirals" where the system repeatedly fails to fix a bug or pass a health check.
+- **Implications**:
+  - **Increasing**: More tolerant of intermittent failures. Risks more wasted tokens on a broken path.
+  - **Decreasing**: More aggressive protection. May block deployment on flakiness.
+
+### `circuit_breaker_window_ms`
+- **Default**: 3600000 (1 hour)
+- **Purpose**: Defines the duration of the "memory" for recent failures.
+
+### `circuit_breaker_cooldown_ms`
+- **Default**: 600000 (10 minutes)
+- **Purpose**: Wait time after the circuit opens before allowing a probe in HALF-OPEN state.
+
+### `circuit_breaker_half_open_max`
+- **Default**: 1
+- **Purpose**: Number of probe deployments allowed while in the HALF-OPEN state before recovery or re-opening.
 
 ### `recursion_limit`
 - **Default**: 15 (agent-to-agent hop depth)

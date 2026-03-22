@@ -8,6 +8,7 @@ import { logger } from '../lib/logger';
 import { SYSTEM, DYNAMO_KEYS } from '../lib/constants';
 import { getDeployCountToday, incrementDeployCount } from '../lib/deploy-stats';
 import { formatErrorMessage } from '../lib/utils/error';
+import { getCircuitBreaker } from '../lib/circuit-breaker';
 
 const codebuild = new CodeBuildClient({});
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -26,9 +27,21 @@ export const TRIGGER_DEPLOYMENT = {
   execute: async (args: Record<string, unknown>): Promise<string> => {
     const today = new Date().toISOString().split('T')[0];
     const typedResource = Resource as unknown as ToolsResource;
+    const cb = getCircuitBreaker();
+    let userId = '';
+    let traceId: string | undefined;
 
     try {
-      const { reason, userId, traceId, initiatorId, sessionId, task, gapIds } = args as {
+      const {
+        reason,
+        userId: uid,
+        traceId: tid,
+        initiatorId,
+        sessionId,
+        task,
+        gapIds,
+        deployType = 'autonomous',
+      } = args as {
         reason: string;
         userId: string;
         traceId?: string;
@@ -36,7 +49,15 @@ export const TRIGGER_DEPLOYMENT = {
         sessionId?: string;
         task?: string;
         gapIds?: string[];
+        deployType?: 'autonomous' | 'emergency';
       };
+      userId = uid;
+      traceId = tid;
+      const proceed = await cb.canProceed(deployType);
+      if (!proceed.allowed) {
+        return `CIRCUIT_BREAKER_ACTIVE: ${proceed.reason}`;
+      }
+
       const count = await getDeployCountToday();
 
       const { Item: configItem } = await db.send(
@@ -129,6 +150,7 @@ export const TRIGGER_DEPLOYMENT = {
 
       return `Deployment started successfully. Build ID: ${buildId}. Reason: ${reason}${warning}`;
     } catch (error) {
+      await cb.recordFailure('deploy', { userId, traceId });
       return `Failed to trigger deployment: ${formatErrorMessage(error)}`;
     }
   },

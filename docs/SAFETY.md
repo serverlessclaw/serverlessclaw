@@ -7,7 +7,8 @@
 | Guardrail                 | Where Implemented                         | Trigger                                 |
 | ------------------------- | ----------------------------------------- | --------------------------------------- |
 | **Resource Labeling**     | `core/tools/index.ts → fileWrite`         | Any write to a protected file           |
-| **Circuit Breaker**       | `core/tools/index.ts → triggerDeployment` | > 5 deployments/day (UTC)               |
+| **Daily Limit**         | `core/lib/deploy-stats.ts`                | > N deployments/day (UTC)               |
+| **Circuit Breaker**     | `core/lib/circuit-breaker.ts`             | Failures in sliding window              |
 | **Self-Healing Loop**     | `core/handlers/monitor.ts`                | CodeBuild FAILED event + Enrichment     |
 | **Dead Man's Switch**     | `core/handlers/recovery.ts`               | 15-min health probe failure             |
 | **Pre-flight Validation** | `core/tools/index.ts → validateCode`      | Called by Coder Agent after writes      |
@@ -78,25 +79,31 @@ This loop is still subject to the **Circuit Breaker** to prevent infinite repair
 
 ## Circuit Breaker Detail
 
-**State**: Stored in DynamoDB `MemoryTable` under key `system:deploy-stats`:
+Serverless Claw employs a two-layer safety architecture to prevent runaway autonomous deployments and protect system integrity.
 
-```json
-{ "id": "system:deploy-stats", "count": 3, "lastReset": "2026-03-09" }
-```
+### Layer 1: Daily Deployment Limit
+**State**: Stored in DynamoDB `MemoryTable` under key `SYSTEM#DEPLOY_STATS`.
 
 **Logic**:
+- Enforces an absolute cap on deployments per UTC day.
+- **Default**: 5 deployments / day.
+- **Reward**: Successful `checkHealth` calls decrement this counter by 1.
+- **Cap**: Enforced hard limit of 100 deployments/day to prevent runaway costs.
 
-- If `lastReset` ≠ today (UTC): reset `count` to 0 (new day).
-- If `count >= LIMIT`: return `CIRCUIT_BREAKER_ACTIVE` — no CodeBuild triggered.
-- On each successful deploy: `count += 1`.
-- On each successful `checkHealth`: `count -= 1` (reward credit).
+### Layer 2: Sliding Window Circuit Breaker
+**State**: Stored in DynamoDB `ConfigTable` under key `circuit_breaker_state`.
 
-**Limit Configuration**:
+**Logic**:
+The system tracks both `deploy` and `health` failures in a persistent sliding window (default: 1 hour).
 
-- **Default**: 5 deployments / UTC day.
-- **Customization**: Set `deploy_limit` in the `ConfigTable` (DynamoDB).
-- **Cap**: The system enforces a hard cap of **100** deployments per day to prevent runaway costs (configured in `core/lib/config-defaults.ts`).
-- **Warning**: Setting a limit > 20 will trigger high-consumption warnings in the logs. High limits significantly increase LLM token consumption and AWS resource costs during autonomous evolution loops.
+1. **Closed (Normal)**: Deployments proceed normally. Transition to **Open** if failures exceed the threshold (default: 5).
+2. **Open (Blocked)**: Autonomous deployments are blocked for a cooldown period (default: 10 minutes).
+3. **Half-Open (Testing)**: After the cooldown, the system allows exactly one probe deployment.
+   - **Success**: Circuit returns to **Closed** and failure history is cleared.
+   - **Failure**: Circuit returns to **Open** and the cooldown is reset.
+
+**Emergency Bypass**:
+Deployments marked as `emergency` (e.g., automated rollbacks) bypass both Layer 1 and Layer 2, but are still logged and reported to the dashboard.
 
 ---
 
@@ -127,7 +134,7 @@ infra/**
   { "status": "ok", "timestamp": "...", "deployCountToday": 2 }
   ```
 
-- **On success**: decrement circuit breaker counter by 1.
+- **On success**: decrements Daily Limit counter by 1 and notifies Circuit Breaker of success.
 - **On failure (503)**: SuperClaw must call `triggerRollback`.
 
 ---
