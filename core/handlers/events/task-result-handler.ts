@@ -48,9 +48,10 @@ export async function handleTaskResult(
   // 2. Dynamic Routing
   // If no initiator is provided, this was likely a background system task (e.g. reflection).
   // We do not wake up anyone in this case to prevent unexpected user-facing messages.
-  if (!initiatorId) {
+  // Also, prevent the main agent from waking itself up to avoid infinite acknowledgment loops.
+  if (!initiatorId || (agentId === 'main' && initiatorId === 'main')) {
     logger.info(
-      `No initiator found for ${agentId} task. Treating as background background completion.`
+      `No continuation needed for ${agentId} task (Initiator: ${initiatorId ?? 'N/A'}). Treating as background completion.`
     );
     return;
   }

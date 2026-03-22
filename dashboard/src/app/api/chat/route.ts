@@ -36,7 +36,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const agentTools = await getAgentTools('main');
     const agent = new Agent(memory, provider, agentTools, config?.systemPrompt ?? SUPERCLAW_SYSTEM_PROMPT, config ?? undefined);
 
-    const { responseText, attachments: resultAttachments, traceId } = await agent.process(storageId, text ?? '', { sessionId, source: TraceSource.DASHBOARD, attachments, initiatorId: 'main' });
+    const { responseText, attachments: resultAttachments, traceId } = await agent.process(storageId, text ?? '', { sessionId, source: TraceSource.DASHBOARD, attachments });
 
     // Update conversation metadata for the sidebar
     if (sessionId) {
