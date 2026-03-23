@@ -2,6 +2,8 @@
  * Single Source of Truth for system-wide configuration parameters.
  * Shared between core agents (reasoning) and dashboard (UI).
  */
+
+import { LLMProvider, OpenAIModel } from './types/llm';
 export interface ConfigOptionMetadata {
   label: string;
   description: string;
@@ -18,14 +20,14 @@ export const SYSTEM_CONFIG_METADATA: Record<string, ConfigOptionMetadata> = {
     implication:
       'Native providers offer the lowest latency. Switching during a session may cause context disruption.',
     risk: 'High provider latency can stall evolution loops.',
-    default: 'openai',
+    default: LLMProvider.OPENAI,
   },
   active_model: {
     label: 'LLM Model',
     description: 'The specific model ID used for system-wide reasoning.',
     implication:
       'Advanced models (GPT-5.4) improve coding quality; smaller models (gpt-5.4-mini) reduce cost and latency.',
-    default: 'gpt-5.4',
+    default: OpenAIModel.GPT_5_4,
   },
   deploy_limit: {
     label: 'Daily Deploy Limit',

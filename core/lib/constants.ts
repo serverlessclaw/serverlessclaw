@@ -8,17 +8,19 @@
  */
 
 import { CONFIG_DEFAULTS } from './config-defaults';
+import { LLMProvider, OpenAIModel, BedrockModel, OpenRouterModel, MiniMaxModel } from './types/llm';
+import { TraceType, TraceStatus, GapStatus, OptimizationPolicy } from './types/constants';
 
 /**
  * System-wide defaults and operational limits.
  */
 export const SYSTEM = {
-  DEFAULT_PROVIDER: 'minimax',
-  DEFAULT_MODEL: 'MiniMax-M2.7',
-  DEFAULT_OPENAI_MODEL: 'gpt-5.4-mini',
-  DEFAULT_BEDROCK_MODEL: 'claude-sonnet-4-6',
-  DEFAULT_OPENROUTER_MODEL: 'MiniMax-M2.7',
-  DEFAULT_MINIMAX_MODEL: 'MiniMax-M2.7',
+  DEFAULT_PROVIDER: LLMProvider.MINIMAX,
+  DEFAULT_MODEL: MiniMaxModel.M2_7,
+  DEFAULT_OPENAI_MODEL: OpenAIModel.GPT_5_4_MINI,
+  DEFAULT_BEDROCK_MODEL: BedrockModel.CLAUDE_4_6,
+  DEFAULT_OPENROUTER_MODEL: OpenRouterModel.GLM_5,
+  DEFAULT_MINIMAX_MODEL: MiniMaxModel.M2_7,
   DEFAULT_RECURSION_LIMIT: CONFIG_DEFAULTS.RECURSION_LIMIT.code,
   DEFAULT_DEPLOY_LIMIT: CONFIG_DEFAULTS.DEPLOY_LIMIT.code,
   MAX_DEPLOY_LIMIT: CONFIG_DEFAULTS.MAX_DEPLOY_LIMIT.code,
@@ -100,35 +102,35 @@ export const HTTP_STATUS = {
  * Trace types for ClawTracer.
  */
 export const TRACE_TYPES = {
-  LLM_CALL: 'llm_call',
-  LLM_RESPONSE: 'llm_response',
-  TOOL_CALL: 'tool_call',
-  TOOL_RESPONSE: 'tool_result',
-  TOOL_RESULT: 'tool_result',
-  REFLECT: 'reflect',
-  EMIT: 'emit',
-  BRIDGE: 'bridge',
-  ERROR: 'error',
+  LLM_CALL: TraceType.LLM_CALL,
+  LLM_RESPONSE: TraceType.LLM_RESPONSE,
+  TOOL_CALL: TraceType.TOOL_CALL,
+  TOOL_RESPONSE: TraceType.TOOL_RESPONSE,
+  TOOL_RESULT: TraceType.TOOL_RESPONSE,
+  REFLECT: TraceType.REFLECT,
+  EMIT: TraceType.EMIT,
+  BRIDGE: TraceType.BRIDGE,
+  ERROR: TraceType.ERROR,
 } as const;
 
 /**
  * Status values for Traces.
  */
 export const TRACE_STATUS = {
-  STARTED: 'started',
-  COMPLETED: 'completed',
-  FAILED: 'failed',
-  PAUSED: 'paused',
+  STARTED: TraceStatus.STARTED,
+  COMPLETED: TraceStatus.COMPLETED,
+  FAILED: TraceStatus.FAILED,
+  PAUSED: TraceStatus.PAUSED,
 } as const;
 
 /**
  * Gap status values.
  */
 export const GAP_STATUS = {
-  OPEN: 'open',
-  ADDRESSED: 'addressed',
-  DISMISSED: 'dismissed',
-  PLANNED: 'planned',
+  OPEN: GapStatus.OPEN,
+  ADDRESSED: GapStatus.ADDRESSED,
+  DISMISSED: GapStatus.DISMISSED,
+  PLANNED: GapStatus.PLANNED,
 } as const;
 
 /**
@@ -157,9 +159,9 @@ export const LIMITS = {
  * Optimization Policies.
  */
 export const OPTIMIZATION_POLICIES = {
-  AGGRESSIVE: 'aggressive',
-  CONSERVATIVE: 'conservative',
-  BALANCED: 'balanced',
+  AGGRESSIVE: OptimizationPolicy.AGGRESSIVE,
+  CONSERVATIVE: OptimizationPolicy.CONSERVATIVE,
+  BALANCED: OptimizationPolicy.BALANCED,
 } as const;
 
 /**

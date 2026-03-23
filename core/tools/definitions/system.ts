@@ -1,4 +1,5 @@
 import { IToolDefinition } from '../../lib/types/index';
+import { LLMProvider } from '../../lib/types/llm';
 
 /**
  * System utility tool definitions.
@@ -28,7 +29,7 @@ export const systemTools: Record<string, IToolDefinition> = {
       properties: {
         provider: {
           type: 'string',
-          enum: ['openai', 'bedrock', 'openrouter'],
+          enum: [LLMProvider.OPENAI, LLMProvider.BEDROCK, LLMProvider.OPENROUTER],
           description: 'The LLM provider to switch to.',
         },
         model: {
