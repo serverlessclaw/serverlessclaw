@@ -35,7 +35,7 @@ describe('Knowledge Agent Tools (Delegation Signals)', () => {
     it('should list enabled agents but exclude main', async () => {
       const { AgentRegistry } = await import('../lib/registry');
       vi.mocked(AgentRegistry.getAllConfigs).mockResolvedValueOnce({
-        main: { id: 'main', name: 'SuperClaw', enabled: true, description: 'Orchestrator' } as any,
+        superclaw: { id: 'superclaw', name: 'SuperClaw', enabled: true, description: 'Orchestrator' } as any,
         coder: { id: 'coder', name: 'Coder', enabled: true, description: 'Writes code' } as any,
         disabled: { id: 'bad', name: 'Bad', enabled: false, description: 'Off' } as any,
       });
@@ -44,7 +44,7 @@ describe('Knowledge Agent Tools (Delegation Signals)', () => {
 
       expect(result).toContain('- [coder] Coder: Writes code');
       expect(result).not.toContain('SuperClaw');
-      expect(result).not.toContain('[main]');
+      expect(result).not.toContain('[superclaw]');
       expect(result).not.toContain('Bad');
     });
 
@@ -73,7 +73,7 @@ describe('Knowledge Agent Tools (Delegation Signals)', () => {
 
       // Verify event emission
       expect(emitEvent).toHaveBeenCalledWith(
-        'main',
+        'superclaw',
         'coder_task',
         expect.objectContaining({
           userId: 'user-1',
@@ -86,14 +86,14 @@ describe('Knowledge Agent Tools (Delegation Signals)', () => {
 
     it('should prevent dispatching to the main agent', async () => {
       const args = {
-        agentId: 'main',
+        agentId: 'superclaw',
         userId: 'user-1',
         task: 'build a feature',
       };
 
       const result = await DISPATCH_TASK.execute(args);
 
-      expect(result).toContain("FAILED: Cannot dispatch tasks to the 'main' agent");
+      expect(result).toContain("FAILED: Cannot dispatch tasks to the 'superclaw' agent");
       expect(emitEvent).not.toHaveBeenCalled();
     });
 
@@ -111,17 +111,17 @@ describe('Knowledge Agent Tools (Delegation Signals)', () => {
       const args = {
         userId: 'user-1',
         question: 'what model should I use?',
-        initiatorId: 'main.agent',
+        initiatorId: 'superclaw.agent',
         task: 'setup system',
       };
 
       const result = await SEEK_CLARIFICATION.execute(args);
 
       expect(result).toContain('TASK_PAUSED');
-      expect(result).toContain('sent a clarification request to **main.agent**');
+      expect(result).toContain('sent a clarification request to **superclaw.agent**');
 
       expect(emitEvent).toHaveBeenCalledWith(
-        'main.agent',
+        'superclaw.agent',
         'clarification_request',
         expect.objectContaining({
           question: 'what model should I use?',

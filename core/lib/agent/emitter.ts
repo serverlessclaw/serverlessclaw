@@ -73,7 +73,7 @@ export class AgentEmitter {
           new PutEventsCommand({
             Entries: [
               {
-                Source: 'main.agent',
+                Source: 'superclaw.agent',
                 DetailType: EventType.REFLECT_TASK,
                 Detail: JSON.stringify({
                   userId,
@@ -117,11 +117,11 @@ export class AgentEmitter {
         new PutEventsCommand({
           Entries: [
             {
-              Source: this.config?.id ?? 'main.agent',
+              Source: this.config?.id ?? 'superclaw.agent',
               DetailType: EventType.CONTINUATION_TASK,
               Detail: JSON.stringify({
                 userId,
-                agentId: this.config?.id ?? 'main',
+                agentId: this.config?.id ?? 'superclaw',
                 task,
                 isContinuation: true,
                 traceId,

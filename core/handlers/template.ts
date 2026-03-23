@@ -29,10 +29,10 @@ export const handler = async (event: { userId: string; data: string }) => {
   const memory = new DynamoMemory();
   const provider = new ProviderManager();
 
-  const config = await AgentRegistry.getAgentConfig(AgentType.MAIN);
+  const config = await AgentRegistry.getAgentConfig(AgentType.SUPERCLAW);
   if (!config) throw new Error('Config load failed');
 
-  const agentTools = await getAgentTools('main');
+  const agentTools = await getAgentTools(AgentType.SUPERCLAW);
   const agent = new Agent(memory, provider, agentTools, config.systemPrompt, config);
 
   // Process task

@@ -92,7 +92,7 @@ export function discoverSstNodes(resourceMap: Record<string, unknown>): Topology
     let tier = classifier?.tier ?? NODE_TIER.INFRA;
 
     // Special Promotion Logic (SuperClaw is top tier)
-    if (key.toLowerCase() === 'superclaw' || key.toLowerCase() === 'main') {
+    if (key.toLowerCase() === 'superclaw') {
       tier = NODE_TIER.APP;
     }
 
@@ -142,7 +142,7 @@ export function mergeBackboneNodes(nodes: TopologyNode[]): TopologyNode[] {
       existingNode.tier = config.topologyOverride?.tier ?? existingNode.tier;
 
       // Reinforce Tier for SuperClaw (it must be at the top), but respect explicit override
-      if (lowerId === 'main' || lowerId === 'superclaw') {
+      if (lowerId === 'superclaw') {
         existingNode.tier = config.topologyOverride?.tier ?? NODE_TIER.APP;
       }
     } else {
@@ -156,7 +156,7 @@ export function mergeBackboneNodes(nodes: TopologyNode[]): TopologyNode[] {
         description: config.description,
         tier:
           config.topologyOverride?.tier ??
-          (lowerId === 'main' || lowerId === 'superclaw' ? NODE_TIER.APP : NODE_TIER.AGENT),
+          (lowerId === 'superclaw' ? NODE_TIER.APP : NODE_TIER.AGENT),
       });
     }
   }

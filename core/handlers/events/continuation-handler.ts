@@ -1,4 +1,5 @@
 import { TASK_EVENT_SCHEMA } from '../../lib/schema/events';
+import { AgentType } from '../../lib/types/index';
 import { logger } from '../../lib/logger';
 import { Context } from 'aws-lambda';
 import { getRecursionLimit, handleRecursionLimitExceeded, processEventWithAgent } from './shared';
@@ -43,7 +44,7 @@ export async function handleContinuationTask(
     return;
   }
 
-  const targetAgentId = agentId ?? 'main';
+  const targetAgentId = agentId ?? AgentType.SUPERCLAW;
   logger.info(`Handling continuation task for agent ${targetAgentId}, user:`, userId, {
     traceId,
     sessionId,

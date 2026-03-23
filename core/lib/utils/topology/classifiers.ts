@@ -67,7 +67,7 @@ export const CLASSIFIERS: ResourceClassifier[] = [
   },
   {
     match: (k) =>
-      ['superclaw', 'main', 'coder', 'strategicplanner', 'reflector', 'qa'].includes(k) ||
+      ['superclaw', 'coder', 'strategicplanner', 'reflector', 'qa'].includes(k) ||
       k.includes('agent') ||
       k.includes('worker'),
     type: NODE_TYPE.AGENT,

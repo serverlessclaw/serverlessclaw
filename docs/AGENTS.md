@@ -304,3 +304,17 @@ To evolve the system with a new specialized node:
 3. **Link Infra**: In `infra/agents.ts`, create the Lambda function and link necessary resources.
 4. **Subscribe**: Ensure the agent is subscribed to its task type in the EventBus.
 5. **Deploy**: Run `make deploy ENV=dev` (or `make dev` for local stage work). The **Build Monitor** will automatically discover the new agent.
+
+## 🧪 Testing Interfaces (Contract-First)
+
+To ensure coordination doesn't break as we add more agents, follow a **Contract-First** development pattern:
+
+1. **Define Schema**: Add or update the `zod` schema in `core/lib/schema/events.ts` for any new event types or field changes.
+2. **Update Types**: Ensure `core/lib/types/agent.ts` matches the schema.
+3. **Add Contract Test**: Add a test case to `core/tests/contract.test.ts` to verify your new event pattern.
+4. **Verify Handler**: Ensure your agent's handler uses `.parse()` and the correct schema to validate incoming `eventDetail`.
+
+Run the contract tests:
+```bash
+npx vitest core/tests/contract.test.ts
+```

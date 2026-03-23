@@ -5,7 +5,7 @@ import { AgentType, AgentCategory } from './types/agent';
 describe('Backbone Registry', () => {
   it('should have all backbone agents defined', () => {
     const expectedAgents = [
-      AgentType.MAIN,
+      AgentType.SUPERCLAW,
       AgentType.CODER,
       AgentType.STRATEGIC_PLANNER,
       AgentType.COGNITION_REFLECTOR,
@@ -20,8 +20,8 @@ describe('Backbone Registry', () => {
   });
 
   it('should have correct agent structure', () => {
-    const mainAgent = BACKBONE_REGISTRY[AgentType.MAIN];
-    expect(mainAgent.id).toBe(AgentType.MAIN);
+    const mainAgent = BACKBONE_REGISTRY[AgentType.SUPERCLAW];
+    expect(mainAgent.id).toBe(AgentType.SUPERCLAW);
     expect(mainAgent.name).toBe('SuperClaw');
     expect(mainAgent.category).toBe(AgentCategory.SYSTEM);
     expect(mainAgent.isBackbone).toBe(true);
@@ -32,7 +32,7 @@ describe('Backbone Registry', () => {
 
   it('should have all system agents enabled', () => {
     const systemAgents = [
-      AgentType.MAIN,
+      AgentType.SUPERCLAW,
       AgentType.CODER,
       AgentType.STRATEGIC_PLANNER,
       AgentType.COGNITION_REFLECTOR,
@@ -45,14 +45,14 @@ describe('Backbone Registry', () => {
   });
 
   it('should have valid connection profiles', () => {
-    const mainAgent = BACKBONE_REGISTRY[AgentType.MAIN];
+    const mainAgent = BACKBONE_REGISTRY[AgentType.SUPERCLAW];
     expect(mainAgent.connectionProfile).toBeDefined();
     expect(Array.isArray(mainAgent.connectionProfile)).toBe(true);
     expect(mainAgent.connectionProfile!.length).toBeGreaterThan(0);
   });
 
   it('should include essential tools in SuperClaw', () => {
-    const mainAgent = BACKBONE_REGISTRY[AgentType.MAIN];
+    const mainAgent = BACKBONE_REGISTRY[AgentType.SUPERCLAW];
     expect(mainAgent.tools).toContain('dispatchTask');
     expect(mainAgent.tools).toContain('recallKnowledge');
     expect(mainAgent.tools).toContain('saveMemory');

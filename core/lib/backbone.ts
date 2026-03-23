@@ -32,8 +32,8 @@ const TOOL_LIST_AGENTS = TOOLS.listAgents;
  * All tools assigned to agents follow camelCase naming conventions.
  */
 export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
-  [AgentType.MAIN]: {
-    id: AgentType.MAIN,
+  [AgentType.SUPERCLAW]: {
+    id: AgentType.SUPERCLAW,
     name: 'SuperClaw',
     systemPrompt: SUPERCLAW_SYSTEM_PROMPT,
     description: 'Orchestrator node. Directs traffic, retrieves memory, and delegates tasks.',

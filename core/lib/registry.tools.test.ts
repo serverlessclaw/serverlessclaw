@@ -20,13 +20,13 @@ vi.mock('@aws-sdk/lib-dynamodb', () => ({
     }),
   },
   GetCommand: class {
-    constructor(public input: unknown) {}
+    constructor(public input: unknown) { }
   },
   PutCommand: class {
-    constructor(public input: unknown) {}
+    constructor(public input: unknown) { }
   },
   UpdateCommand: class {
-    constructor(public input: unknown) {}
+    constructor(public input: unknown) { }
   },
 }));
 
@@ -40,7 +40,7 @@ describe('AgentRegistry Tool Overrides', () => {
     mockSend.mockResolvedValueOnce({ Item: undefined }); // No selective mode
     mockSend.mockResolvedValueOnce({ Item: undefined }); // No tools override
 
-    const config = await AgentRegistry.getAgentConfig(AgentType.MAIN);
+    const config = await AgentRegistry.getAgentConfig(AgentType.SUPERCLAW);
     expect(config?.tools).toContain('dispatchTask');
     expect(config?.tools).toContain('discoverSkills');
   });
@@ -53,7 +53,7 @@ describe('AgentRegistry Tool Overrides', () => {
     // 3. Mock getRawConfig(main_tools)
     mockSend.mockResolvedValueOnce({ Item: { value: ['myCustomTool'] } });
 
-    const config = await AgentRegistry.getAgentConfig(AgentType.MAIN);
+    const config = await AgentRegistry.getAgentConfig(AgentType.SUPERCLAW);
 
     expect(config?.tools).toContain('myCustomTool');
     expect(config?.tools).toContain('discoverSkills'); // Universal
@@ -68,7 +68,7 @@ describe('AgentRegistry Tool Overrides', () => {
     mockSend.mockResolvedValueOnce({ Item: { value: false } });
     mockSend.mockResolvedValueOnce({ Item: { value: [] } }); // Empty override
 
-    const config = await AgentRegistry.getAgentConfig(AgentType.MAIN);
+    const config = await AgentRegistry.getAgentConfig(AgentType.SUPERCLAW);
     expect(config?.tools).toContain('discoverSkills');
     expect(config?.tools).toContain('installSkill');
   });

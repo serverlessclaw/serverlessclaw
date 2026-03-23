@@ -1,4 +1,4 @@
-import { EventType } from '../../lib/types/agent';
+import { EventType, AgentType } from '../../lib/types/agent';
 import { logger } from '../../lib/logger';
 import { emitEvent, EventPriority } from '../../lib/utils/bus';
 import { DynamoMemory } from '../../lib/memory';
@@ -75,7 +75,7 @@ export async function handleClarificationTimeout(
         agentId,
         question: `[RETRY ${newRetryCount}/${maxRetries}] ${question}`,
         traceId,
-        initiatorId: initiatorId ?? 'main',
+        initiatorId: initiatorId ?? AgentType.SUPERCLAW,
         depth: (depth ?? 0) + 1,
         sessionId,
         originalTask,

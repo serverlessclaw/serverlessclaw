@@ -82,7 +82,7 @@ export const INSTALL_SKILL = {
   ...toolDefinitions.installSkill,
   execute: async (args: Record<string, unknown>): Promise<string> => {
     const { skillName, agentId } = args as { skillName: string; agentId?: string };
-    const targetAgentId = agentId ?? 'main';
+    const targetAgentId = agentId ?? 'superclaw';
 
     try {
       const { SkillRegistry } = await import('../lib/skills');
@@ -101,7 +101,7 @@ export const UNINSTALL_SKILL = {
   ...toolDefinitions.uninstallSkill,
   execute: async (args: Record<string, unknown>): Promise<string> => {
     const { skillName, agentId } = args as { skillName: string; agentId?: string };
-    const targetAgentId = agentId ?? 'main';
+    const targetAgentId = agentId ?? 'superclaw';
 
     try {
       const { AgentRegistry } = await import('../lib/registry');

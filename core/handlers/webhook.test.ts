@@ -70,7 +70,7 @@ vi.mock('../lib/session-state', () => ({
 vi.mock('../lib/registry', () => ({
   AgentRegistry: {
     getAgentConfig: vi.fn().mockResolvedValue({
-      id: 'main',
+      id: 'superclaw',
       name: 'SuperClaw',
       systemPrompt: 'You are SuperClaw',
     }),

@@ -1,7 +1,7 @@
 import { getRecursionLimit, handleRecursionLimitExceeded, wakeupInitiator } from './shared';
 import { DynamicScheduler } from '../../lib/scheduler';
 import { ConfigManager } from '../../lib/registry/config';
-import { EventType } from '../../lib/types/agent';
+import { EventType, AgentType } from '../../lib/types/agent';
 
 /**
  * Handles clarification request events - relays clarification question to initiator.
@@ -69,7 +69,7 @@ export async function handleClarificationRequest(
     await memory.saveClarificationRequest({
       userId: `CLARIFICATION#${safeTraceId}#${safeAgentId}`,
       agentId: safeAgentId,
-      initiatorId: initiatorId ?? 'main',
+      initiatorId: initiatorId ?? AgentType.SUPERCLAW,
       question,
       originalTask,
       traceId: safeTraceId,
@@ -91,7 +91,7 @@ export async function handleClarificationRequest(
         userId,
         agentId: safeAgentId,
         traceId: safeTraceId,
-        initiatorId: initiatorId ?? 'main',
+        initiatorId: initiatorId ?? AgentType.SUPERCLAW,
         originalTask,
         question,
         sessionId,
@@ -110,7 +110,7 @@ export async function handleClarificationRequest(
 
   await wakeupInitiator(
     userId,
-    initiatorId ?? 'main',
+    initiatorId ?? AgentType.SUPERCLAW,
     `CLARIFICATION_REQUEST: Agent '${agentId}' needs clarification while working on: "${originalTask}".
       Question:
       ---

@@ -126,7 +126,7 @@ const getAgentIcon = (id: string, iconName?: string) => {
   if (iconName === 'FlaskConical') return <FlaskConical size={16} />;
 
   // Fallbacks if not provided in config
-  if (id === 'main') return <Bot size={16} />;
+  if (id === 'superclaw') return <Bot size={16} />;
   if (id === 'coder') return <Code size={16} />;
   if (id === 'strategic-planner') return <Brain size={16} />;
   if (id === 'cognition-reflector') return <Search size={16} />;
@@ -137,7 +137,7 @@ const getAgentIcon = (id: string, iconName?: string) => {
 
 const getAgentDescription = (id: string) => {
   const descMap: Record<string, string> = {
-    'main': 'SuperClaw. Processes input, retrieves long-term memory, and decides when to delegate tasks to spokes.',
+    'superclaw': 'SuperClaw. Processes input, retrieves long-term memory, and decides when to delegate tasks to spokes.',
     'coder': 'Specialised agent that performs heavy lifting like writing code, modifying infra, and triggering builds.',
     'strategic-planner': 'Strategic intelligence node. Analyzes capability gaps and designs long-term evolution plans.',
     'cognition-reflector': 'Cognitive audit node. Distills facts, lessons, and capability gaps from interaction traces.',
@@ -234,7 +234,7 @@ export function FlowContent() {
               description: node.description ?? getAgentDescription(node.id),
               icon,
               enabled: node.enabled !== undefined ? node.enabled : true,
-              type: node.id === 'main' || node.id === 'superclaw' ? 'Logic_Core' : 
+              type: node.id === 'superclaw' ? 'Logic_Core' : 
                     (node.id === 'agentbus' || node.id === 'bus' ? 'ORCHESTRATOR' :
                     (node.type === 'agent' ? 'Neural_Worker' : 
                     (node.id === 'memorytable' ? 'DATA_STORE' : 
@@ -247,7 +247,7 @@ export function FlowContent() {
 
       // 3. Process Edges
       topology.edges.forEach((edge) => {
-        const isMainOrch = edge.label === 'ORCHESTRATE' || (edge.source === 'main' && edge.target === 'bus');
+        const isMainOrch = edge.label === 'ORCHESTRATE' || (edge.source === 'superclaw' && edge.target === 'bus');
         const isBusSignal = edge.label === 'SIGNAL' || edge.label?.startsWith('SIGNAL_') || edge.source === 'bus';
         const isResult = edge.label === 'RESULT';
         const isInvoke = edge.label === 'INVOKE';

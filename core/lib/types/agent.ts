@@ -190,7 +190,7 @@ export interface IAgentConfig {
  */
 export enum AgentType {
   /** The primary manager agent. */
-  MAIN = 'main',
+  SUPERCLAW = 'superclaw',
   /** Specialized coding and refactoring agent. */
   CODER = 'coder',
   /** Background agent for monitoring builds and deployments. */

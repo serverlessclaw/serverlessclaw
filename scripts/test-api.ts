@@ -44,7 +44,7 @@ async function testChatWithFile() {
 
   const memory = new DynamoMemory();
   const provider = new ProviderManager();
-  const agentTools = await getAgentTools('main');
+  const agentTools = await getAgentTools('superclaw');
   const agent = new Agent(memory, provider, agentTools, SUPERCLAW_SYSTEM_PROMPT);
 
   console.log('[Test] Processing: ' + fileName + ' (' + base64.length + ' bytes base64)');

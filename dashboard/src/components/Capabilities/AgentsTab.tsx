@@ -124,7 +124,7 @@ export default function AgentsTab({
             <div className="space-y-6">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded bg-yellow-500/10 flex items-center justify-center text-yellow-500 border border-yellow-500/20 shadow-[0_0_20px_rgba(234,179,8,0.1)]">
-                   {agent.id === 'main' ? <Zap size={24} /> : agent.id === 'coder' ? <Cpu size={24} /> : <Cpu size={24} />}
+                   {agent.id === 'superclaw' ? <Zap size={24} /> : agent.id === 'coder' ? <Cpu size={24} /> : <Cpu size={24} />}
                 </div>
                 <div>
                   <Typography variant="body" weight="black" color="white" className="tracking-widest uppercase text-sm">
@@ -171,7 +171,7 @@ export default function AgentsTab({
             <div className="p-8 border-b border-white/10 flex justify-between items-center bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-yellow-500/5 via-transparent to-transparent">
               <div className="flex items-center gap-6">
                 <div className="w-14 h-14 rounded bg-yellow-500/20 flex items-center justify-center text-yellow-500 border border-yellow-500/40 shadow-[0_0_30px_rgba(234,179,8,0.2)]">
-                   {selectedAgent.id === 'main' ? <Zap size={32} /> : <Cpu size={32} />}
+                   {selectedAgent.id === 'superclaw' ? <Zap size={32} /> : <Cpu size={32} />}
                 </div>
                 <div>
                   <Typography variant="h3" weight="black" color="primary" className="tracking-[0.3em] mb-1">

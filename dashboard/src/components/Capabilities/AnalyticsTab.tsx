@@ -104,7 +104,7 @@ export default function AnalyticsTab({
                   <div className="flex justify-between items-start mb-6 border-b border-white/5 pb-4">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded bg-cyber-blue/10 flex items-center justify-center text-cyber-blue border border-cyber-blue/20 shadow-[0_0_15px_rgba(0,224,255,0.1)]">
-                        {agent.id === 'main' ? <Zap size={16} /> : <Cpu size={16} />}
+                        {agent.id === 'superclaw' ? <Zap size={16} /> : <Cpu size={16} />}
                       </div>
                       <Typography variant="body" weight="black" color="white" className="tracking-widest capitalize">{agent.name}</Typography>
                     </div>

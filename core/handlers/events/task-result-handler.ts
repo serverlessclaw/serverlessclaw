@@ -1,4 +1,4 @@
-import { EventType } from '../../lib/types/index';
+import { EventType, AgentType } from '../../lib/types/index';
 import { COMPLETION_EVENT_SCHEMA, FAILURE_EVENT_SCHEMA } from '../../lib/schema/events';
 import { getRecursionLimit, handleRecursionLimitExceeded, wakeupInitiator } from './shared';
 
@@ -49,7 +49,7 @@ export async function handleTaskResult(
   // If no initiator is provided, this was likely a background system task (e.g. reflection).
   // We do not wake up anyone in this case to prevent unexpected user-facing messages.
   // Also, prevent the main agent from waking itself up to avoid infinite acknowledgment loops.
-  if (!initiatorId || (agentId === 'main' && initiatorId === 'main')) {
+  if (!initiatorId || (agentId === AgentType.SUPERCLAW && initiatorId === AgentType.SUPERCLAW)) {
     logger.info(
       `No continuation needed for ${agentId} task (Initiator: ${initiatorId ?? 'N/A'}). Treating as background completion.`
     );

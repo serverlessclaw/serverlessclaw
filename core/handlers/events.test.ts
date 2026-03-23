@@ -241,7 +241,7 @@ describe('EventHandler', () => {
           agentId: 'coder',
           task: 'Fix bug',
           response: 'Bug fixed!',
-          initiatorId: 'main',
+          initiatorId: 'superclaw',
           depth: 1,
         },
       };
@@ -272,7 +272,7 @@ describe('EventHandler', () => {
           agentId: 'coder',
           task: 'Fix bug',
           error: 'Timeout',
-          initiatorId: 'main',
+          initiatorId: 'superclaw',
           depth: 1,
         },
       };
@@ -303,7 +303,7 @@ describe('EventHandler', () => {
           agentId: 'coder',
           task: 'Fix bug',
           response: 'Done',
-          initiatorId: 'main',
+          initiatorId: 'superclaw',
           depth: 100, // Very high
         },
       };
@@ -329,7 +329,7 @@ describe('EventHandler', () => {
           userId: 'user-2',
           agentId: 'superclaw',
           task: 'Continue processing',
-          initiatorId: 'main',
+          initiatorId: 'superclaw',
           depth: 100, // Exceeds default limit of 50
         },
       };

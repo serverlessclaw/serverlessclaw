@@ -49,7 +49,7 @@ export function inferNodeEdges(nodes: TopologyNode[]): TopologyEdge[] {
   nodes
     .filter(
       (n) =>
-        n.type === NODE_TYPE.AGENT || n.id === 'monitor' || n.id === 'superclaw' || n.id === 'main'
+        n.type === NODE_TYPE.AGENT || n.id === 'monitor' || n.id === 'superclaw'
     )
     .forEach((agent) => {
       edges.push({
@@ -130,7 +130,7 @@ export function inferNodeEdges(nodes: TopologyNode[]): TopologyEdge[] {
     }
 
     // F. Dashboard (ClawCenter) explicitly linked to SuperClaw
-    const mainAgent = nodes.find((n) => n.id === 'superclaw' || n.id === 'main');
+    const mainAgent = nodes.find((n) => n.id === 'superclaw');
     if (mainAgent) {
       edges.push({
         id: `${dashboardNode.id}-${mainAgent.id}`,

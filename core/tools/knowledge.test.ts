@@ -64,7 +64,7 @@ vi.mock('../lib/memory', () => ({
 vi.mock('../lib/registry', () => ({
   AgentRegistry: {
     getAllConfigs: vi.fn().mockResolvedValue({
-      main: { id: 'main', name: 'Main', description: 'desc', enabled: true, isBackbone: true },
+      superclaw: { id: 'superclaw', name: 'Main', description: 'desc', enabled: true, isBackbone: true },
     }),
     getAgentConfig: vi.fn().mockResolvedValue({ enabled: true, id: 'coder' }),
   },
@@ -102,13 +102,13 @@ describe('knowledge tools', () => {
       // Mock AgentRegistry.getAllConfigs via the file mock
       const { AgentRegistry } = await import('../lib/registry');
       vi.mocked(AgentRegistry.getAllConfigs).mockResolvedValueOnce({
-        main: { id: 'main', name: 'Main', enabled: true, description: 'desc' } as any,
+        superclaw: { id: 'superclaw', name: 'Main', enabled: true, description: 'desc' } as any,
         coder: { id: 'coder', name: 'Coder', enabled: true, description: 'dev' } as any,
       });
 
       const result = await LIST_AGENTS.execute();
       expect(result).toContain('[coder] Coder: dev');
-      expect(result).not.toContain('[main] Main');
+      expect(result).not.toContain('[superclaw] Main');
     });
   });
 
@@ -127,7 +127,7 @@ describe('knowledge tools', () => {
     it('should update agent tools in DDB', async () => {
       ddbMock.on(PutCommand).resolves({});
 
-      const result = await MANAGE_AGENT_TOOLS.execute({ agentId: 'main', toolNames: ['tool1'] });
+      const result = await MANAGE_AGENT_TOOLS.execute({ agentId: 'superclaw', toolNames: ['tool1'] });
 
       expect(result).toContain('Successfully updated tools');
       expect(ddbMock.calls().length).toBeGreaterThanOrEqual(1);

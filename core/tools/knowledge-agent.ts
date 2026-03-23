@@ -14,7 +14,7 @@ export const LIST_AGENTS = {
     const configs = await AgentRegistry.getAllConfigs();
 
     const summary = Object.values(configs)
-      .filter((a) => a.enabled && a.id !== 'main')
+      .filter((a) => a.enabled && a.id !== 'superclaw')
       .map((a) => `- [${a.id}] ${a.name}: ${a.description} (Backbone: ${a.isBackbone ?? false})`)
       .join('\n');
 
@@ -41,8 +41,8 @@ export const DISPATCH_TASK = {
         sessionId?: string;
       };
 
-    if (agentId === 'main') {
-      return `FAILED: Cannot dispatch tasks to the 'main' agent (SuperClaw). The main agent is the orchestrator, not a worker node. Please delegate to a specialized agent like 'strategic-planner' or 'coder'.`;
+    if (agentId === 'superclaw') {
+      return `FAILED: Cannot dispatch tasks to the 'superclaw' agent (SuperClaw). The superclaw agent is the orchestrator, not a worker node. Please delegate to a specialized agent like 'strategic-planner' or 'coder'.`;
     }
 
     const { AgentRegistry } = await import('../lib/registry');
@@ -57,14 +57,14 @@ export const DISPATCH_TASK = {
     const childTracer = tracer.getChildTracer(undefined, agentId);
 
     try {
-      await emitEvent(initiatorId ?? 'main', `${agentId}_task`, {
+      await emitEvent(initiatorId ?? 'superclaw', `${agentId}_task`, {
         userId,
         task,
         metadata,
         traceId: childTracer.getTraceId(),
         nodeId: childTracer.getNodeId(),
         parentId: childTracer.getParentId(),
-        initiatorId: initiatorId ?? 'main',
+        initiatorId: initiatorId ?? 'superclaw',
         depth: (depth ?? 0) + 1,
         sessionId,
       });
@@ -143,17 +143,17 @@ export const SEEK_CLARIFICATION = {
     };
 
     try {
-      await emitEvent(initiatorId ?? 'main', EventType.CLARIFICATION_REQUEST, {
+      await emitEvent(initiatorId ?? 'superclaw', EventType.CLARIFICATION_REQUEST, {
         userId,
         agentId,
         question,
         traceId,
-        initiatorId: initiatorId ?? 'main',
+        initiatorId: initiatorId ?? 'superclaw',
         depth: (depth ?? 0) + 1,
         sessionId,
         originalTask: originalTask ?? task ?? 'Unknown task',
       });
-      return `TASK_PAUSED: I've sent a clarification request to **${initiatorId ?? 'main'}**. I'll wait for their response before continuing with your task.`;
+      return `TASK_PAUSED: I've sent a clarification request to **${initiatorId ?? 'superclaw'}**. I'll wait for their response before continuing with your task.`;
     } catch (error) {
       return `Failed to seek clarification: ${formatErrorMessage(error)}`;
     }

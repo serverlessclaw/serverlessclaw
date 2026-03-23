@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { discoverSystemTopology } from './topology';
 import { BACKBONE_REGISTRY } from '../backbone';
+import { AgentType } from '../types/index';
 
 // Mock ConfigManager
 vi.mock('../registry/config', () => ({
@@ -91,7 +92,7 @@ describe('discoverSystemTopology', () => {
       expect(nodeIds).toContain(lowerId);
 
       const node = topology.nodes.find((n) => n.id === lowerId);
-      if (lowerId === 'main' || lowerId === 'superclaw') {
+      if (lowerId === 'superclaw') {
         expect(node?.tier).toBe('APP');
       }
     });
@@ -161,14 +162,14 @@ describe('discoverSystemTopology', () => {
 
   it('should respect topologyOverride in agent configurations', async () => {
     // Inject an override into a backbone agent for testing
-    BACKBONE_REGISTRY['main'].topologyOverride = {
+    BACKBONE_REGISTRY[AgentType.SUPERCLAW].topologyOverride = {
       label: 'Commander-in-Chief',
       icon: 'Shield',
       tier: 'INFRA',
     };
 
     const { nodes } = await discoverSystemTopology();
-    const mainNode = nodes.find((n) => n.id === 'main');
+    const mainNode = nodes.find((n) => n.id === 'superclaw');
 
     expect(mainNode?.label).toBe('Commander-in-Chief');
     expect(mainNode?.icon).toBe('Shield');

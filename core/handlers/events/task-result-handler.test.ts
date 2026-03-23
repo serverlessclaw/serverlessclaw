@@ -66,7 +66,7 @@ describe('task-result-handler (Direct Voice Flow)', () => {
       agentId: 'planner',
       task: 'Analyze architecture',
       response: 'The architecture is serverless...',
-      initiatorId: 'main',
+      initiatorId: 'superclaw',
       depth: 1,
       sessionId: 'session-456',
       userNotified: true,
@@ -95,7 +95,7 @@ describe('task-result-handler (Direct Voice Flow)', () => {
       agentId: 'coder',
       task: 'Fix bug',
       response: 'Bug fixed',
-      initiatorId: 'main',
+      initiatorId: 'superclaw',
       depth: 1,
       sessionId: 'session-456',
       // userNotified missing
@@ -115,7 +115,7 @@ describe('task-result-handler (Direct Voice Flow)', () => {
       agentId: 'planner',
       task: 'Complex audit',
       error: 'Simulated failure',
-      initiatorId: 'main',
+      initiatorId: 'superclaw',
       depth: 1,
       userNotified: true,
     };

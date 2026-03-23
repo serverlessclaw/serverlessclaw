@@ -60,7 +60,7 @@ describe('AgentExecutor', () => {
       taskId: 'trace-123',
       nodeId: 'node-1',
       parentId: undefined,
-      currentInitiator: 'main',
+      currentInitiator: 'superclaw',
       depth: 0,
       userId: 'user-1',
       userText: 'pause me',
@@ -102,7 +102,7 @@ describe('AgentExecutor', () => {
       taskId: 't1',
       nodeId: 'n1',
       parentId: undefined,
-      currentInitiator: 'main',
+      currentInitiator: 'superclaw',
       depth: 0,
       userId: 'u1',
       userText: 'wait',
@@ -153,7 +153,7 @@ describe('AgentExecutor', () => {
       taskId: 't-123',
       nodeId: 'n-1',
       parentId: undefined,
-      currentInitiator: 'main',
+      currentInitiator: 'superclaw',
       depth: 0,
       userId: 'u-1',
       userText: 'original user query',
@@ -169,13 +169,13 @@ describe('AgentExecutor', () => {
     expect(callArgs.originalUserTask).toBe('original user query'); // New prefixed field
   });
 
-  it('should allow SuperClaw (main) to dispatch to strategic-planner without collision', async () => {
+  it('should allow SuperClaw (superclaw) to dispatch to strategic-planner without collision', async () => {
     // Mimic the real dispatchTask implementation's check
     const mockDispatchTask = {
       name: 'dispatchTask',
       execute: vi.fn().mockImplementation(async (args) => {
-        if (args.agentId === 'main') {
-          return 'FAILED: Cannot dispatch to main';
+        if (args.agentId === 'superclaw') {
+          return 'FAILED: Cannot dispatch to superclaw';
         }
         return `SUCCESS: dispatched to ${args.agentId}`;
       }),
@@ -184,7 +184,7 @@ describe('AgentExecutor', () => {
     const executor = new AgentExecutor(
       mockProvider as any,
       [mockDispatchTask as any],
-      'main',
+      'superclaw',
       'SuperClaw'
     );
 
@@ -215,7 +215,7 @@ describe('AgentExecutor', () => {
       taskId: 'trace-abc',
       nodeId: 'node-1',
       parentId: undefined,
-      currentInitiator: 'main',
+      currentInitiator: 'superclaw',
       depth: 0,
       userId: 'user-789',
       userText: 'How many agents do we have?',
@@ -229,8 +229,8 @@ describe('AgentExecutor', () => {
 
     // Check that we also have the executor context available under safe names
     const finalArgs = (mockDispatchTask.execute as any).mock.calls[0][0];
-    expect(finalArgs.executorAgentId).toBe('main');
-    expect(finalArgs.initiatorId).toBe('main');
+    expect(finalArgs.executorAgentId).toBe('superclaw');
+    expect(finalArgs.initiatorId).toBe('superclaw');
     expect(finalArgs.originalUserTask).toBe('How many agents do we have?');
   });
 
@@ -248,7 +248,7 @@ describe('AgentExecutor', () => {
       taskId: 'task-to-cancel',
       nodeId: 'node-1',
       parentId: undefined,
-      currentInitiator: 'main',
+      currentInitiator: 'superclaw',
       depth: 0,
       userId: 'user-1',
       userText: 'work',
@@ -275,7 +275,7 @@ describe('AgentExecutor', () => {
       taskId: 't1',
       nodeId: 'n1',
       parentId: undefined,
-      currentInitiator: 'main',
+      currentInitiator: 'superclaw',
       depth: 0,
       userId: 'u1',
       userText: 'test',
@@ -313,7 +313,7 @@ describe('AgentExecutor', () => {
       taskId: 't1',
       nodeId: 'n1',
       parentId: undefined,
-      currentInitiator: 'main',
+      currentInitiator: 'superclaw',
       depth: 0,
       userId: 'u1',
       userText: 'test',

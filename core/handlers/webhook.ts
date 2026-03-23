@@ -1,7 +1,7 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
 import { sendOutboundMessage } from '../lib/outbound';
 import { logger } from '../lib/logger';
-import { TraceSource } from '../lib/types/agent';
+import { TraceSource, AgentType } from '../lib/types/agent';
 import { MessageRole } from '../lib/types/llm';
 import { SSTResource } from '../lib/types/system';
 import { Resource } from 'sst';
@@ -122,13 +122,13 @@ export const handler = async (
   try {
     // 3. Process message via Agent
     console.log('[WEBHOOK] Loading config...');
-    const config = await AgentRegistry.getAgentConfig('main');
+    const config = await AgentRegistry.getAgentConfig(AgentType.SUPERCLAW);
     if (!config) throw new Error('Main agent config missing');
 
     const { profile, cleanText } = SuperClaw.parseCommand(userText);
 
     console.log('[WEBHOOK] Loading tools...');
-    const agentTools = await getAgentTools('main');
+    const agentTools = await getAgentTools(AgentType.SUPERCLAW);
     console.log(`[WEBHOOK] Tools loaded: ${agentTools.map((t) => t.name).join(', ')}`);
 
     const agent = new SuperClaw(memory, provider, agentTools, config);

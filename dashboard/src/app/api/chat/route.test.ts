@@ -42,7 +42,7 @@ vi.mock('@claw/core/agents/superclaw', () => ({
 vi.mock('@claw/core/lib/registry', () => ({
   AgentRegistry: {
     getAgentConfig: vi.fn().mockResolvedValue({
-      id: 'main',
+      id: 'superclaw',
       name: 'SuperClaw',
       systemPrompt: 'test-prompt',
     }),
@@ -53,11 +53,13 @@ vi.mock('@claw/core/lib/registry', () => ({
 vi.mock('@claw/core/lib/types/index', () => ({
   TraceSource: { DASHBOARD: 'dashboard' },
   MessageRole: { ASSISTANT: 'assistant' },
+  AgentType: { SUPERCLAW: 'superclaw' },
 }));
 
 vi.mock('@claw/core/lib/types', () => ({
   TraceSource: { DASHBOARD: 'dashboard' },
   MessageRole: { ASSISTANT: 'assistant' },
+  AgentType: { SUPERCLAW: 'superclaw' },
 }));
 
 vi.mock('next/cache', () => ({ revalidatePath: mockRevalidatePath }));
