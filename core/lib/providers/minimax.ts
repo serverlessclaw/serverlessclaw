@@ -71,7 +71,7 @@ export class MiniMaxProvider implements IProvider {
         ? {
             thinking: {
               type: 'enabled',
-              budget_tokens: this.getThinkingBudget(reasoningConfig.effort),
+              budget_tokens: reasoningConfig.budget_tokens,
             },
           }
         : {}),
