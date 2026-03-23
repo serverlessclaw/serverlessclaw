@@ -80,6 +80,7 @@ export class AgentExecutor {
       timeoutBehavior?: 'pause' | 'fail' | 'continue';
       sessionStateManager?: import('../session-state').SessionStateManager;
       approvedToolCalls?: string[];
+      isContinuation?: boolean;
     }
   ): Promise<{
     responseText: string;
@@ -88,6 +89,7 @@ export class AgentExecutor {
     pauseMessage?: string;
     attachments?: NonNullable<Message['attachments']>;
     tool_calls?: ToolCall[];
+    options?: Array<{ label: string; value: string; type?: string }>;
     usage?: {
       totalInputTokens: number;
       totalOutputTokens: number;
@@ -281,7 +283,7 @@ export class AgentExecutor {
       });
 
       let normalizedProfile = activeProfile;
-      let effectiveResponseFormat = undefined;
+      let effectiveResponseFormat: import('../types/index').ResponseFormat | undefined = undefined;
       try {
         const capabilities = await this.provider.getCapabilities(activeModel);
         normalizedProfile = normalizeProfile(activeProfile, capabilities, activeModel ?? 'default');
@@ -560,23 +562,24 @@ export class AgentExecutor {
       activeModel,
       activeProvider,
       activeProfile,
-      _tracer,
+      tracer: _tracer,
       emitter,
-      _context,
+      context: _context,
       traceId,
-      _taskId,
-      _nodeId,
-      _parentId,
-      _currentInitiator,
-      _depth,
+      taskId: _taskId,
+      nodeId: _nodeId,
+      parentId: _parentId,
+      currentInitiator: _currentInitiator,
+      depth: _depth,
       sessionId,
       userId,
-      _userText,
-      _mainConversationId,
+      userText: _userText,
+      mainConversationId: _mainConversationId,
       responseFormat,
-      _taskTimeoutMs,
-      _timeoutBehavior = 'pause',
-      _sessionStateManager,
+      taskTimeoutMs: _taskTimeoutMs,
+      timeoutBehavior: _timeoutBehavior = 'pause',
+      sessionStateManager: _sessionStateManager,
+      approvedToolCalls,
     } = options;
 
     const iterations = 0;
@@ -589,7 +592,7 @@ export class AgentExecutor {
 
       // LLM Streaming Call
       let normalizedProfile = activeProfile;
-      let effectiveResponseFormat = undefined;
+      let effectiveResponseFormat: import('../types/index').ResponseFormat | undefined = undefined;
       try {
         const capabilities = await this.provider.getCapabilities(activeModel);
         normalizedProfile = normalizeProfile(activeProfile, capabilities, activeModel ?? 'default');
