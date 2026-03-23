@@ -4,7 +4,7 @@ import { MCPClientManager } from './client-manager';
 // Mock child_process for npx path resolution
 const mockExecSync = vi.fn().mockReturnValue('/usr/bin/npx\n');
 vi.mock('child_process', () => ({
-  execSync: (cmd: string) => mockExecSync(cmd),
+  execSync: (cmd: string, options: any) => mockExecSync(cmd, options),
 }));
 
 // Mock fs for the fallback in npx resolution
@@ -101,28 +101,18 @@ describe('MCPClientManager', () => {
     expect(mockClose).toHaveBeenCalledTimes(2);
   });
 
-  /*
-  it('handles connection timeout', async () => {
-    vi.useFakeTimers();
-    // Mock connect to never resolve
-    mockConnect.mockReturnValue(new Promise(() => {}));
-    
-    const connectPromise = MCPClientManager.connect('timeout-server', 'http://hub-url/mcp');
-    
-    // The code uses 5000ms if it matches MCP_HUB_URL. 
-    // Let's ensure it matches or just use a large enough time.
-    process.env.MCP_HUB_URL = 'hub-url';
-    
-    await vi.advanceTimersByTimeAsync(5001);
-    
-    await expect(connectPromise).rejects.toThrow('MCP Connection timeout after 5000ms');
+  it('throws error when spawning npx in Lambda environment', async () => {
+    process.env.AWS_LAMBDA_FUNCTION_NAME = 'test-function';
+    await expect(MCPClientManager.connect('npx-server', 'npx @mcp/server')).rejects.toThrow(
+      "Cannot spawn local MCP server 'npx-server' using npx in Lambda environment"
+    );
+    delete process.env.AWS_LAMBDA_FUNCTION_NAME;
   });
 
-  it('resolves npx path for stdio', async () => {
+  it('resolves npx path for stdio when not in Lambda', async () => {
     mockExecSync.mockReturnValue('/usr/bin/npx\n');
     const client = await MCPClientManager.connect('npx-server', 'npx @mcp/server');
     expect(client).toBeDefined();
     expect(mockExecSync).toHaveBeenCalledWith('which npx', expect.any(Object));
   });
-*/
 });

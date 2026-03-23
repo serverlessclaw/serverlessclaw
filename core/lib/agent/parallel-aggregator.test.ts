@@ -49,8 +49,9 @@ describe('ParallelAggregator', () => {
       expect(result).toBe(true);
       expect(mockSend).toHaveBeenCalledWith(expect.any(UpdateCommand));
       const command = mockSend.mock.calls[0][0] as UpdateCommand;
-      expect(command.input.ConditionExpression).toContain('status = :pending');
-      expect(command.input.ExpressionAttributeValues?.[':status']).toBe('success');
+      expect(command.input.ConditionExpression).toContain('#status = :pending');
+      expect(command.input.ExpressionAttributeNames?.['#status']).toBe('status');
+      expect(command.input.ExpressionAttributeValues?.[':pending']).toBe('pending');
     });
 
     it('should return false if already completed (ConditionalCheckFailed)', async () => {
@@ -86,6 +87,8 @@ describe('ParallelAggregator', () => {
 
       const command = mockSend.mock.calls[0][0] as UpdateCommand;
       expect(command.input.UpdateExpression).toContain('results_ids = list_append');
+      expect(command.input.ConditionExpression).toContain('#status = :pending');
+      expect(command.input.ExpressionAttributeNames?.['#status']).toBe('status');
       expect(command.input.ConditionExpression).toContain('NOT contains(results_ids, :taskId)');
       expect(command.input.ExpressionAttributeValues?.[':taskId']).toBe('taskA');
     });

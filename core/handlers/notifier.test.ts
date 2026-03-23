@@ -131,4 +131,30 @@ describe('Notifier Handler', () => {
       })
     );
   });
+
+  it('should escape HTML characters and use HTML parse_mode', async () => {
+    const event = {
+      detail: {
+        userId: '123456789',
+        message: 'Alert & <Notice>',
+      },
+    } as any;
+
+    (global.fetch as any).mockResolvedValue({ ok: true });
+
+    await handler(event);
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/sendMessage'),
+      expect.objectContaining({
+        body: expect.stringContaining('"text":"Alert &amp; &lt;Notice&gt;"'),
+      })
+    );
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        body: expect.stringContaining('"parse_mode":"HTML"'),
+      })
+    );
+  });
 });
