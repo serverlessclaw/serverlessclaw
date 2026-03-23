@@ -163,7 +163,7 @@ export function ChatMessageList({ messages, isLoading, scrollRef, onOptionClick 
         </div>
       ))}
       
-      {isLoading && (
+      {isLoading && !messages.some(m => m.role === 'assistant' && m.messageId && m.content === '') && (
         <div className="flex gap-3 justify-start">
           <div className="w-8 h-8 rounded shrink-0 flex items-center justify-center border bg-cyber-green/10 border-cyber-green/30 text-cyber-green animate-pulse">
               <Bot size={16} />

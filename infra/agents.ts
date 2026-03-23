@@ -372,6 +372,7 @@ export function createAgents(ctx: SharedContext): {
       detailType: [
         {
           'anything-but': [
+            EventType.CHUNK,
             EventType.CODER_TASK,
             EventType.REFLECT_TASK,
             EventType.EVOLUTION_PLAN,
@@ -411,6 +412,7 @@ export function createAgents(ctx: SharedContext): {
   bus.subscribe('RealtimeBridgeSubscriber', bridge.arn, {
     pattern: {
       detailType: [
+        EventType.CHUNK,
         EventType.OUTBOUND_MESSAGE,
         EventType.CODER_TASK_COMPLETED,
         EventType.SYSTEM_BUILD_SUCCESS,
