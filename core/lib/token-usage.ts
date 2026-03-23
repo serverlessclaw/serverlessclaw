@@ -118,7 +118,7 @@ export class TokenTracker {
     const expiresAt = Math.floor(Date.now() / 1000) + TTL_DAYS_ROLLUP * SECONDS_IN_DAY;
 
     try {
-      await docClient.send(
+      const result = await docClient.send(
         new UpdateCommand({
           TableName: getTableName(),
           Key: { userId, timestamp: ts },
@@ -138,19 +138,25 @@ export class TokenTracker {
             ':zero': 0,
             ':expires': expiresAt,
           },
+          ReturnValues: 'ALL_NEW',
         })
       );
 
-      // Second pass: compute avgTokensPerInvocation using atomic arithmetic
-      await docClient.send(
-        new UpdateCommand({
-          TableName: getTableName(),
-          Key: { userId, timestamp: ts },
-          UpdateExpression:
-            'SET avgTokensPerInvocation = (totalInputTokens + totalOutputTokens) / invocationCount',
-          ConditionExpression: 'attribute_exists(invocationCount)',
-        })
-      );
+      // Second pass: compute avgTokensPerInvocation in memory and update
+      const updated = result.Attributes;
+      if (updated && updated.invocationCount > 0) {
+        const avg =
+          (updated.totalInputTokens + updated.totalOutputTokens) / updated.invocationCount;
+        await docClient.send(
+          new UpdateCommand({
+            TableName: getTableName(),
+            Key: { userId, timestamp: ts },
+            UpdateExpression: 'SET avgTokensPerInvocation = :avg',
+            ExpressionAttributeValues: { ':avg': avg },
+            ConditionExpression: 'attribute_exists(invocationCount)',
+          })
+        );
+      }
     } catch (e) {
       if ((e as Error).name !== 'ConditionalCheckFailedException') {
         logger.warn('Failed to update token rollup:', e);

@@ -21,7 +21,7 @@ describe('sendOutboundMessage', () => {
   });
 
   it('should send an outbound message with basic parameters', async () => {
-    const userId = 'user-123';
+    const userId = 'CONV#dashboard-user#session_123';
     const message = 'Hello world';
 
     await sendOutboundMessage('webhook.handler', userId, message);
@@ -30,8 +30,9 @@ describe('sendOutboundMessage', () => {
       'webhook.handler',
       'outbound_message',
       expect.objectContaining({
-        userId: 'user-123',
+        userId: 'CONV#dashboard-user#session_123',
         message: 'Hello world',
+        memoryContexts: ['dashboard-user'],
       }),
       { priority: 'HIGH' }
     );

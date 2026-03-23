@@ -21,6 +21,10 @@ const PROVIDERS = {
     label: 'AWS Bedrock (Native)',
     models: ['global.anthropic.claude-sonnet-4-6'],
   },
+  minimax: {
+    label: 'MiniMax (Native)',
+    models: ['MiniMax-M2.7', 'MiniMax-M2.7-highspeed'],
+  },
   openrouter: {
     label: 'OpenRouter (Aggregator)',
     models: ['zhipu/glm-5', 'minimax/minimax-m2.7', 'google/gemini-3-flash-preview'],

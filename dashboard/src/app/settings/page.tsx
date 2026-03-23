@@ -7,6 +7,7 @@ import SettingsForm from './SettingsForm';
 import Typography from '@/components/ui/Typography';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
+import { SYSTEM } from '@claw/core/lib/constants';
 
 async function getConfig() {
   try {
@@ -14,10 +15,10 @@ async function getConfig() {
     if (!tableName) {
       console.error('ConfigTable name is missing from Resources');
       return {
-        provider: 'unknown',
-        model: 'unknown',
-        evolutionMode: 'unknown',
-        optimizationPolicy: 'unknown',
+        provider: SYSTEM.DEFAULT_PROVIDER,
+        model: SYSTEM.DEFAULT_MODEL,
+        evolutionMode: 'hitl',
+        optimizationPolicy: 'balanced',
       };
     }
     const client = new DynamoDBClient({});
@@ -109,8 +110,8 @@ async function getConfig() {
     ]);
 
     return {
-      provider: providerRes.Item?.value ?? 'openai',
-      model: modelRes.Item?.value ?? 'gpt-5.4',
+      provider: providerRes.Item?.value ?? SYSTEM.DEFAULT_PROVIDER,
+      model: modelRes.Item?.value ?? SYSTEM.DEFAULT_MODEL,
       evolutionMode: modeRes.Item?.value ?? 'hitl',
       optimizationPolicy: policyRes.Item?.value ?? 'balanced',
       reflectionFrequency: reflectRes.Item?.value ?? '10',
@@ -128,10 +129,10 @@ async function getConfig() {
   } catch (e) {
     console.error('Error fetching settings config:', e);
     return {
-      provider: 'error',
-      model: 'error',
-      evolutionMode: 'error',
-      optimizationPolicy: 'error',
+      provider: SYSTEM.DEFAULT_PROVIDER,
+      model: SYSTEM.DEFAULT_MODEL,
+      evolutionMode: 'hitl',
+      optimizationPolicy: 'balanced',
       reflectionFrequency: '3',
       strategicReviewFrequency: '12',
       minGapsForReview: '3',

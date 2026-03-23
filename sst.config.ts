@@ -19,6 +19,9 @@ export default $config({
       },
       defaults: {
         function: {
+          environment: {
+            AWS_PROFILE: '', // Clear profile to avoid conflict warning as SST injects static credentials
+          },
           nodejs: {
             loader: {
               '.md': 'text',

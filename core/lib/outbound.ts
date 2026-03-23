@@ -30,16 +30,16 @@ export async function sendOutboundMessage(
     type?: 'primary' | 'secondary' | 'danger';
   }[]
 ): Promise<void> {
-  // Normalize userId to base form to ensure consistent routing and syncing
+  // Normalize userId to base form for memory syncing, but keep original for routing
   const baseUserId = extractBaseUserId(userId);
 
   await emitEvent(
     source,
     EventType.OUTBOUND_MESSAGE,
     {
-      userId: baseUserId,
+      userId: userId, // Use original ID (e.g. CONV#...) for bridge routing
       message,
-      memoryContexts,
+      memoryContexts: memoryContexts ?? [baseUserId],
       sessionId,
       agentName,
       attachments,

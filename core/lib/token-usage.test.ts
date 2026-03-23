@@ -54,8 +54,16 @@ describe('TokenTracker', () => {
       expect(firstCall.input.Key?.timestamp).toBeGreaterThan(0);
     });
 
-    it('should perform atomic average calculation in second pass', async () => {
-      mockSend.mockResolvedValue({});
+    it('should calculate average in second pass using returned values', async () => {
+      mockSend
+        .mockResolvedValueOnce({
+          Attributes: {
+            totalInputTokens: 100,
+            totalOutputTokens: 50,
+            invocationCount: 1,
+          },
+        })
+        .mockResolvedValueOnce({});
 
       await TokenTracker.updateRollup('test-agent', {
         inputTokens: 100,
@@ -66,9 +74,8 @@ describe('TokenTracker', () => {
 
       expect(mockSend).toHaveBeenCalledTimes(2);
       const secondCall = mockSend.mock.calls[1][0] as UpdateCommand;
-      expect(secondCall.input.UpdateExpression).toBe(
-        'SET avgTokensPerInvocation = (totalInputTokens + totalOutputTokens) / invocationCount'
-      );
+      expect(secondCall.input.UpdateExpression).toBe('SET avgTokensPerInvocation = :avg');
+      expect(secondCall.input.ExpressionAttributeValues?.[':avg']).toBe(150);
     });
   });
 

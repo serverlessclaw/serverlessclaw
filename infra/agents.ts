@@ -392,6 +392,8 @@ export function createAgents(ctx: SharedContext): {
         EventType.SYSTEM_BUILD_FAILED,
         EventType.TASK_COMPLETED,
         EventType.TASK_FAILED,
+        EventType.CONTINUATION_TASK,
+        EventType.CLARIFICATION_REQUEST,
       ],
     },
   });

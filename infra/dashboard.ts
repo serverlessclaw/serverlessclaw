@@ -32,6 +32,7 @@ export function createDashboard(ctx: SharedContext): { dashboard: sst.aws.Nextjs
       ...getValidSecrets(ctx.secrets),
     ],
     environment: {
+      AWS_PROFILE: '', // Clear profile to avoid conflict warning as SST injects static credentials
       DEPLOYER_NAME: deployer.name,
       DYNAMIC_SCHEDULER_ROLE_ARN: ctx.schedulerRole!.arn,
       HEARTBEAT_HANDLER_ARN: ctx.heartbeatHandler!.arn,

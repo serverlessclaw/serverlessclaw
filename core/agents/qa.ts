@@ -149,10 +149,10 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
     if (escalatedGaps.length > 0) {
       await sendOutboundMessage(
         'qa.agent',
-        baseUserId,
+        userId,
         `⚠️ **Evolution Escalation Required**\n\nGaps ${escalatedGaps.join(', ')} have failed QA verification ${MAX_REOPEN_ATTEMPTS} times and cannot be autonomously resolved.\n\nPlease review the implementation manually and re-approve when ready.`,
         [baseUserId],
-        traceId,
+        sessionId,
         config.name
       );
     }
@@ -174,10 +174,10 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
   // 1. Notify user directly in the chat session
   await sendOutboundMessage(
     'qa.agent',
-    baseUserId,
+    userId,
     `🔍 **QA Audit Complete**\n\n${auditReport}`,
     [baseUserId],
-    traceId,
+    sessionId,
     config.name,
     resultAttachments
   );

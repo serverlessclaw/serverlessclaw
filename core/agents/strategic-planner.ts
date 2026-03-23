@@ -234,7 +234,7 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
   if (!isFailure && plan !== 'Empty response from OpenAI.') {
     await sendOutboundMessage(
       'planner.agent',
-      baseUserId,
+      userId,
       `🚀 **Strategic Plan Generated**\n\n${plan}`,
       [baseUserId],
       sessionId,
@@ -304,7 +304,7 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
     logger.info('Evolution mode is auto, dispatching CODER_TASK directly.');
     await sendOutboundMessage(
       'planner.agent',
-      baseUserId,
+      userId,
       `🚀 **Autonomous Evolution Triggered**\n\nI have identified a capability gap and designed a plan to fix it. The Coder Agent is now executing the following STRATEGIC_PLAN:\n\n${plan}`,
       [baseUserId],
       sessionId,
@@ -327,7 +327,7 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
     logger.info('Evolution mode is hitl, asking for approval.');
     await sendOutboundMessage(
       'planner.agent',
-      baseUserId,
+      userId,
       `🚀 **NEW STRATEGIC PLAN PROPOSED**\n\n${plan}\n\nReply with 'APPROVE' to execute.`,
       [baseUserId],
       sessionId,

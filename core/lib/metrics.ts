@@ -11,7 +11,7 @@
 const NAMESPACE = 'ServerlessClaw';
 
 interface CloudWatchClientType {
-  send: (command: { input: { Namespace: string; MetricData: unknown[] } }) => Promise<void>;
+  send: (command: any) => Promise<any>;
 }
 
 let cloudwatch: CloudWatchClientType | null = null;
@@ -45,18 +45,18 @@ export async function emitMetrics(metrics: MetricDatum[]): Promise<void> {
   }
 
   try {
-    await cw.send({
-      input: {
-        Namespace: NAMESPACE,
-        MetricData: metrics.map((m) => ({
-          MetricName: m.MetricName,
-          Value: m.Value,
-          Unit: m.Unit ?? 'Count',
-          Dimensions: m.Dimensions,
-          Timestamp: new Date(),
-        })),
-      },
+    const { PutMetricDataCommand } = await import('@aws-sdk/client-cloudwatch');
+    const command = new PutMetricDataCommand({
+      Namespace: NAMESPACE,
+      MetricData: metrics.map((m) => ({
+        MetricName: m.MetricName,
+        Value: m.Value,
+        Unit: m.Unit ?? 'Count',
+        Dimensions: m.Dimensions,
+        Timestamp: new Date(),
+      })),
     });
+    await cw.send(command);
   } catch (error) {
     console.error('[METRICS] Failed to emit CloudWatch metrics:', error);
   }

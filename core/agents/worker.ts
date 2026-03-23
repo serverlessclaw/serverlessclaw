@@ -101,7 +101,7 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
     if (shouldSpeakDirectly && !isFailure) {
       await sendOutboundMessage(
         `${agentId}.agent`,
-        baseUserId,
+        userId,
         responseText,
         [baseUserId],
         sessionId,

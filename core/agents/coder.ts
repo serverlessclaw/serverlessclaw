@@ -110,7 +110,7 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
   if (!isTaskPaused(rawResponse)) {
     await sendOutboundMessage(
       'coder.agent',
-      baseUserId,
+      userId,
       responseText,
       [baseUserId],
       sessionId,
