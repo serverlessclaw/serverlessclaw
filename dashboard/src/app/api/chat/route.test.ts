@@ -5,12 +5,19 @@ import { NextRequest } from 'next/server';
 
 const mockProcess = vi.fn();
 const mockSaveConversationMeta = vi.fn().mockResolvedValue(undefined);
+const mockGetHistory = vi.fn().mockResolvedValue([]);
+const mockAddMessage = vi.fn().mockResolvedValue(undefined);
+const mockListConversations = vi.fn().mockResolvedValue([]);
+const mockDeleteConversation = vi.fn().mockResolvedValue(undefined);
+const mockRevalidatePath = vi.fn();
 
 vi.mock('@claw/core/lib/memory', () => ({
   DynamoMemory: class {
-    getHistory = vi.fn().mockResolvedValue([]);
-    addMessage = vi.fn().mockResolvedValue(undefined);
+    getHistory = mockGetHistory;
+    addMessage = mockAddMessage;
     saveConversationMeta = mockSaveConversationMeta;
+    listConversations = mockListConversations;
+    deleteConversation = mockDeleteConversation;
   },
 }));
 
@@ -53,7 +60,7 @@ vi.mock('@claw/core/lib/types', () => ({
   MessageRole: { ASSISTANT: 'assistant' },
 }));
 
-vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
+vi.mock('next/cache', () => ({ revalidatePath: mockRevalidatePath }));
 
 vi.mock('@/lib/constants', () => ({
   UI_STRINGS: { MISSING_MESSAGE: 'Missing message', API_CHAT_ERROR: 'Chat error' },
@@ -63,16 +70,24 @@ vi.mock('@/lib/constants', () => ({
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function makeRequest(body: Record<string, unknown>) {
+function makeRequest(
+  body?: Record<string, unknown>,
+  options: { method?: string; searchParams?: Record<string, string> } = {}
+) {
+  const searchParams = new URLSearchParams(options.searchParams);
   return {
-    json: vi.fn().mockResolvedValue(body),
+    json: vi.fn().mockResolvedValue(body ?? {}),
     clone: vi.fn().mockReturnThis(),
+    method: options.method ?? 'POST',
+    nextUrl: {
+      searchParams,
+    },
   } as unknown as NextRequest;
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe('Dashboard API: POST /api/chat — messageId propagation', () => {
+describe('Dashboard API: POST /api/chat', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -142,5 +157,348 @@ describe('Dashboard API: POST /api/chat — messageId propagation', () => {
       'sess-1',
       expect.objectContaining({ lastMessage: expect.any(String) })
     );
+  });
+
+  it('handles attachments in request', async () => {
+    mockProcess.mockResolvedValue({
+      responseText: 'Response with attachments',
+      traceId: 'trace-attach',
+    });
+
+    const { POST } = await import('./route');
+    const attachments = [{ type: 'image', url: 'http://example.com/img.png' }];
+    await POST(makeRequest({ text: 'Check this', sessionId: 'sess-attach', attachments }));
+
+    expect(mockProcess).toHaveBeenCalledWith(
+      'CONV#dashboard-user#sess-attach',
+      'Check this',
+      expect.objectContaining({ attachments })
+    );
+  });
+
+  it('uses userId as storageId when sessionId is not provided', async () => {
+    mockProcess.mockResolvedValue({ responseText: 'done', traceId: 'tid' });
+
+    const { POST } = await import('./route');
+    await POST(makeRequest({ text: 'no session' }));
+
+    expect(mockProcess).toHaveBeenCalledWith(
+      'dashboard-user',
+      'no session',
+      expect.objectContaining({ sessionId: undefined })
+    );
+  });
+
+  it('does not save conversation meta when sessionId is not provided', async () => {
+    mockProcess.mockResolvedValue({ responseText: 'done', traceId: 'tid' });
+
+    const { POST } = await import('./route');
+    await POST(makeRequest({ text: 'no session' }));
+
+    expect(mockSaveConversationMeta).not.toHaveBeenCalled();
+  });
+
+  it('truncates long response text in conversation meta', async () => {
+    const longText = 'A'.repeat(100);
+    mockProcess.mockResolvedValue({ responseText: longText, traceId: 'tid' });
+
+    const { POST } = await import('./route');
+    await POST(makeRequest({ text: 'Hi', sessionId: 'sess-truncate' }));
+
+    expect(mockSaveConversationMeta).toHaveBeenCalledWith(
+      'dashboard-user',
+      'sess-truncate',
+      expect.objectContaining({
+        lastMessage: 'A'.repeat(60) + '...',
+      })
+    );
+  });
+
+  it('returns 500 on agent process error', async () => {
+    mockProcess.mockRejectedValue(new Error('Agent failed'));
+
+    const { POST } = await import('./route');
+    const res = await POST(makeRequest({ text: 'Hi', sessionId: 'sess-error' }));
+    const data = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(data.error).toBe('Internal Server Error');
+    expect(data.details).toBe('Agent failed');
+  });
+
+  it('persists error message to history on agent failure', async () => {
+    mockProcess.mockRejectedValue(new Error('Agent crashed'));
+
+    const { POST } = await import('./route');
+    await POST(makeRequest({ text: 'Hi', sessionId: 'sess-fail' }));
+
+    expect(mockAddMessage).toHaveBeenCalledWith(
+      'CONV#dashboard-user#sess-fail',
+      expect.objectContaining({
+        role: 'assistant',
+        content: 'Process failure',
+      })
+    );
+  });
+
+  it('handles error when persisting error message fails', async () => {
+    mockProcess.mockRejectedValue(new Error('Agent failed'));
+    mockAddMessage.mockRejectedValue(new Error('Storage failed'));
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const { POST } = await import('./route');
+    const res = await POST(makeRequest({ text: 'Hi', sessionId: 'sess-double-fail' }));
+
+    expect(res.status).toBe(500);
+    expect(consoleSpy).toHaveBeenCalledWith('Failed to persist error message:', expect.any(Error));
+
+    consoleSpy.mockRestore();
+  });
+});
+
+describe('Dashboard API: PATCH /api/chat', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('updates conversation metadata with title', async () => {
+    const { PATCH } = await import('./route');
+    const res = await PATCH(makeRequest({ sessionId: 'sess-1', title: 'New Title' }));
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(mockSaveConversationMeta).toHaveBeenCalledWith(
+      'dashboard-user',
+      'sess-1',
+      expect.objectContaining({ title: 'New Title', updatedAt: expect.any(Number) })
+    );
+  });
+
+  it('updates conversation metadata with isPinned', async () => {
+    const { PATCH } = await import('./route');
+    const res = await PATCH(makeRequest({ sessionId: 'sess-2', isPinned: true }));
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(mockSaveConversationMeta).toHaveBeenCalledWith(
+      'dashboard-user',
+      'sess-2',
+      expect.objectContaining({ isPinned: true, updatedAt: expect.any(Number) })
+    );
+  });
+
+  it('updates conversation metadata with both title and isPinned', async () => {
+    const { PATCH } = await import('./route');
+    const res = await PATCH(makeRequest({ sessionId: 'sess-3', title: 'Pinned Chat', isPinned: true }));
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(mockSaveConversationMeta).toHaveBeenCalledWith(
+      'dashboard-user',
+      'sess-3',
+      expect.objectContaining({ title: 'Pinned Chat', isPinned: true, updatedAt: expect.any(Number) })
+    );
+  });
+
+  it('returns 400 when sessionId is missing', async () => {
+    const { PATCH } = await import('./route');
+    const res = await PATCH(makeRequest({ title: 'No Session' }));
+    const data = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(data.error).toBe('Missing sessionId');
+  });
+
+  it('returns 500 when saveConversationMeta fails', async () => {
+    mockSaveConversationMeta.mockRejectedValue(new Error('DynamoDB error'));
+
+    const { PATCH } = await import('./route');
+    const res = await PATCH(makeRequest({ sessionId: 'sess-err', title: 'Fail' }));
+    const data = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(data.error).toBe('Failed to update session');
+  });
+});
+
+describe('Dashboard API: DELETE /api/chat', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('deletes a single session', async () => {
+    const { DELETE } = await import('./route');
+    const req = makeRequest(undefined, { searchParams: { sessionId: 'sess-del-1' } });
+    const res = await DELETE(req);
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(mockDeleteConversation).toHaveBeenCalledWith('dashboard-user', 'sess-del-1');
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/');
+  });
+
+  it('deletes all sessions when sessionId is "all"', async () => {
+    const mockSessions = [
+      { sessionId: 'sess-1' },
+      { sessionId: 'sess-2' },
+      { sessionId: 'sess-3' },
+    ];
+    mockListConversations.mockResolvedValue(mockSessions);
+
+    const { DELETE } = await import('./route');
+    const req = makeRequest(undefined, { searchParams: { sessionId: 'all' } });
+    const res = await DELETE(req);
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.count).toBe(3);
+    expect(mockListConversations).toHaveBeenCalledWith('dashboard-user');
+    expect(mockDeleteConversation).toHaveBeenCalledTimes(3);
+    expect(mockDeleteConversation).toHaveBeenCalledWith('dashboard-user', 'sess-1');
+    expect(mockDeleteConversation).toHaveBeenCalledWith('dashboard-user', 'sess-2');
+    expect(mockDeleteConversation).toHaveBeenCalledWith('dashboard-user', 'sess-3');
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/');
+  });
+
+  it('returns count of 0 when no sessions to delete', async () => {
+    mockListConversations.mockResolvedValue([]);
+
+    const { DELETE } = await import('./route');
+    const req = makeRequest(undefined, { searchParams: { sessionId: 'all' } });
+    const res = await DELETE(req);
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.count).toBe(0);
+    expect(mockDeleteConversation).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when sessionId is missing', async () => {
+    const { DELETE } = await import('./route');
+    const req = makeRequest(undefined, { searchParams: {} });
+    const res = await DELETE(req);
+    const data = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(data.error).toBe('Missing sessionId');
+  });
+
+  it('returns 500 when deleteConversation fails', async () => {
+    mockDeleteConversation.mockRejectedValue(new Error('Delete failed'));
+
+    const { DELETE } = await import('./route');
+    const req = makeRequest(undefined, { searchParams: { sessionId: 'sess-fail' } });
+    const res = await DELETE(req);
+    const data = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(data.error).toBe('Failed to delete session');
+  });
+
+  it('returns 500 when listConversations fails during "all" delete', async () => {
+    mockListConversations.mockRejectedValue(new Error('List failed'));
+
+    const { DELETE } = await import('./route');
+    const req = makeRequest(undefined, { searchParams: { sessionId: 'all' } });
+    const res = await DELETE(req);
+    const data = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(data.error).toBe('Failed to delete session');
+  });
+});
+
+describe('Dashboard API: GET /api/chat', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns list of sessions when no sessionId provided', async () => {
+    const mockSessions = [
+      { sessionId: 'sess-1', title: 'Chat 1', lastMessage: 'Hello' },
+      { sessionId: 'sess-2', title: 'Chat 2', lastMessage: 'Hi there' },
+    ];
+    mockListConversations.mockResolvedValue(mockSessions);
+
+    const { GET } = await import('./route');
+    const req = makeRequest(undefined, { searchParams: {} });
+    const res = await GET(req);
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.sessions).toEqual(mockSessions);
+    expect(mockListConversations).toHaveBeenCalledWith('dashboard-user');
+  });
+
+  it('returns empty array when no sessions exist', async () => {
+    mockListConversations.mockResolvedValue([]);
+
+    const { GET } = await import('./route');
+    const req = makeRequest(undefined, { searchParams: {} });
+    const res = await GET(req);
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.sessions).toEqual([]);
+  });
+
+  it('returns history for a specific session', async () => {
+    const mockHistory = [
+      { role: 'user', content: 'Hello' },
+      { role: 'assistant', content: 'Hi there!' },
+    ];
+    mockGetHistory.mockResolvedValue(mockHistory);
+
+    const { GET } = await import('./route');
+    const req = makeRequest(undefined, { searchParams: { sessionId: 'sess-hist' } });
+    const res = await GET(req);
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.history).toEqual(mockHistory);
+    expect(mockGetHistory).toHaveBeenCalledWith('CONV#dashboard-user#sess-hist');
+  });
+
+  it('returns empty history for session with no messages', async () => {
+    mockGetHistory.mockResolvedValue([]);
+
+    const { GET } = await import('./route');
+    const req = makeRequest(undefined, { searchParams: { sessionId: 'sess-empty' } });
+    const res = await GET(req);
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.history).toEqual([]);
+  });
+
+  it('returns 500 when listConversations fails', async () => {
+    mockListConversations.mockRejectedValue(new Error('Database error'));
+
+    const { GET } = await import('./route');
+    const req = makeRequest(undefined, { searchParams: {} });
+    const res = await GET(req);
+    const data = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(data.error).toBe('Failed to fetch sessions');
+  });
+
+  it('returns 500 when getHistory fails', async () => {
+    mockGetHistory.mockRejectedValue(new Error('History fetch failed'));
+
+    const { GET } = await import('./route');
+    const req = makeRequest(undefined, { searchParams: { sessionId: 'sess-err' } });
+    const res = await GET(req);
+    const data = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(data.error).toBe('Failed to fetch sessions');
   });
 });

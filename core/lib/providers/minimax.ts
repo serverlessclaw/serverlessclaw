@@ -82,7 +82,9 @@ export class MiniMaxProvider implements IProvider {
     }
 
     // Make the API call
-    const response = await client.messages.create(requestParams as any);
+    const response = await client.messages.create(
+      requestParams as unknown as Anthropic.MessageCreateParamsNonStreaming
+    );
 
     // Handle response with thinking blocks
     const content = response.content;
@@ -94,7 +96,10 @@ export class MiniMaxProvider implements IProvider {
     let textContent = '';
     for (const block of content) {
       if (block.type === 'thinking') {
-        logger.debug(`[MiniMax Thinking] for ${activeModel}:`, (block as any).thinking ?? '');
+        logger.debug(
+          `[MiniMax Thinking] for ${activeModel}:`,
+          (block as { thinking?: string }).thinking ?? ''
+        );
       } else if (block.type === 'text') {
         textContent += block.text;
       }

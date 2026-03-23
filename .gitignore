@@ -19,6 +19,7 @@ yarn-error.log*
 .DS_Store
 dist
 *.zip
+coverage
 
 # Next.js Dashboard
 dashboard/.next/
