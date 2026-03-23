@@ -82,6 +82,16 @@ export async function handleParallelBarrierTimeout(
   const overallStatus =
     finalSuccessRate === 1 ? 'success' : finalSuccessRate >= threshold ? 'partial' : 'failed';
 
+  // Atomic completion check
+  const marked = await aggregator.markAsCompleted(userId, traceId, overallStatus);
+
+  if (!marked) {
+    logger.info(
+      `Parallel dispatch ${traceId} already marked as completed, skipping timeout event.`
+    );
+    return;
+  }
+
   logger.info(
     `Parallel barrier timeout for ${traceId}: ${finalSuccessCount}/${totalTasks} succeeded (${Math.round(finalSuccessRate * 100)}%), overall status: ${overallStatus}`
   );

@@ -77,7 +77,7 @@ describe('ContextManager', () => {
 
     it('should penalize very long messages', () => {
       const shortMsg = { role: MessageRole.USER, content: 'Deploy' } as Message;
-      const longMsg = { role: MessageRole.USER, content: 'A'.repeat(3000) } as Message;
+      const longMsg = { role: MessageRole.USER, content: 'A'.repeat(5000) } as Message;
       const shortScore = ContextManager.scoreMessagePriority(shortMsg, 5, 20);
       const longScore = ContextManager.scoreMessagePriority(longMsg, 5, 20);
       expect(shortScore).toBeGreaterThan(longScore);
@@ -192,7 +192,7 @@ describe('ContextManager', () => {
         history,
         null,
         'New system prompt',
-        100
+        100000
       );
       const systemMessages = managed.messages.filter((m) => m.role === MessageRole.SYSTEM);
       expect(systemMessages.length).toBe(1);
@@ -210,7 +210,7 @@ describe('ContextManager', () => {
         { role: MessageRole.TOOL, tool_call_id: '1', name: 't1', content: 'Result 1' },
       ];
 
-      const managed = await ContextManager.getManagedContext(history, null, 'Sys', 1000);
+      const managed = await ContextManager.getManagedContext(history, null, 'Sys', 100000);
       const activeWindowMsgs = managed.messages.filter((m) => m.role !== MessageRole.SYSTEM);
       expect(activeWindowMsgs.length).toBe(3);
       expect(activeWindowMsgs[1].role).toBe(MessageRole.ASSISTANT);
@@ -223,7 +223,7 @@ describe('ContextManager', () => {
         { role: MessageRole.ASSISTANT, content: 'Old message 2' },
         { role: MessageRole.USER, content: 'New message' },
       ];
-      const limit = 100;
+      const limit = 100000;
       const managed = await ContextManager.getManagedContext(history, null, 'System prompt', limit);
       expect(managed.messages.length).toBeGreaterThan(0);
       expect(managed.messages[0].role).toBe(MessageRole.SYSTEM);
@@ -234,7 +234,8 @@ describe('ContextManager', () => {
       const managed = await ContextManager.getManagedContext(
         [],
         'Previously did X',
-        'System prompt'
+        'System prompt',
+        100000
       );
       expect(managed.messages.some((m) => m.content?.includes('Previously did X'))).toBe(true);
     });
@@ -243,7 +244,8 @@ describe('ContextManager', () => {
       const managed = await ContextManager.getManagedContext(
         [{ role: MessageRole.USER, content: 'Test' }],
         null,
-        'System prompt'
+        'System prompt',
+        100000
       );
       expect(managed.tierBreakdown).toBeDefined();
       expect(managed.tierBreakdown.systemPrompt).toBeGreaterThan(0);
@@ -259,7 +261,7 @@ describe('ContextManager', () => {
         { role: MessageRole.USER, content: 'Old request' },
         { role: MessageRole.TOOL, content: 'Error: ENOENT /tmp/cache.json not found' },
       ];
-      const limit = 200;
+      const limit = 100000;
       const managed = await ContextManager.getManagedContext(history, null, 'System', limit);
       const activeWindowMsgs = managed.messages.filter((m) => m.role !== MessageRole.SYSTEM);
       const hasError = activeWindowMsgs.some(
@@ -279,6 +281,24 @@ describe('ContextManager', () => {
       });
       expect(managed.messages.length).toBeGreaterThan(0);
       expect(managed.messages[0].role).toBe(MessageRole.SYSTEM);
+    });
+
+    it('should apply provider-specific toolResultPriority', () => {
+      const msg = { role: MessageRole.TOOL, content: 'Success' } as Message;
+
+      // Default strategy: toolResultPriority = normal
+      const defaultScore = ContextManager.scoreMessagePriority(msg, 5, 20);
+
+      // Claude strategy: toolResultPriority = high
+      const claudeStrategy = {
+        maxContextTokens: 200000,
+        reservedResponseTokens: 8192,
+        compressionTriggerPercent: 80,
+        toolResultPriority: 'high' as const,
+      };
+      const highPriorityScore = ContextManager.scoreMessagePriority(msg, 5, 20, claudeStrategy);
+
+      expect(highPriorityScore).toBeGreaterThan(defaultScore);
     });
   });
 

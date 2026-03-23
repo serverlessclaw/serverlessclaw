@@ -90,20 +90,46 @@ Supports specialized models like **GLM-5**, **MiniMax-m2.7**, and **Gemini-3 Fla
 
 ---
 
-## 🧠 Dynamic Context Management
+## 🧠 Dynamic Context Strategies
 
-Serverless Claw utilizes a **Model-Aware Sliding Window** for context management. Instead of a hardcoded token limit, the `Agent` orchestrator queries the provider for the specific `contextWindow` of the active model.
+Serverless Claw uses a **Model-Aware Context Engine** to optimize reasoning and cost-efficiency. Instead of a one-size-fits-all approach, the `ContextManager` adjusts its behavior based on the active model's specific capabilities.
 
-1. **Discovery**: The `IProvider.getCapabilities()` method returns the model's native context limit.
-2. **Buffer Allocation**: The system reserves a 20% safety margin for the generated response and internal reasoning.
-3. **Sliding Window**: The `ContextManager` populates the context with the most recent messages first, until the model-specific limit is reached.
-4. **Intelligent Summarization**: If the full conversation history exceeds 80% of the model's limit, a background summarization task is triggered to distill older messages into a concise summary for future turns.
+### Strategy Mapping
 
+The system defines specific strategies for different model families in `core/lib/agent/context-strategies.ts`:
+
+| Model / Provider | Max Context | Reserved for Resp | Compression Trigger | Tool Result Priority |
+| :--- | :--- | :--- | :--- | :--- |
+| **Claude 3.5 Sonnet** | 200,000 | 8,192 | 80% | **High** (Keep results) |
+| **GPT-4o** | 128,000 | 4,096 | 80% | **High** (Keep results) |
+| **GPT-4o-mini** | 128,000 | 4,096 | 85% | Normal (Compress) |
+| **Claude 3 Haiku** | 200,000 | 4,096 | 85% | Normal (Compress) |
+
+### Intelligent Priority Scoring
+
+The `ContextManager` performs a multi-factor priority score for every message block:
+
+1. **Base Priority**: `SYSTEM (1.0)` > `TOOL_ERROR (0.9)` > `USER (0.8)` > `TOOL_RESULT (0.6)` > `ASSISTANT (0.4)`.
+2. **Strategy Adjustment**: For high-capability models (Claude 3.5 Sonnet/GPT-4o), tool results are boosted to `0.8` to ensure the agent maintains technical state.
+3. **Recency Bonus**: Newer messages receive a bonus to ensure "flow" is maintained.
+4. **Length Penalty**: Extremely large message blocks (>4,000 chars) are penalized to prevent "context hijacking" by a single verbose tool output.
+
+### Context Size Safeguard
+
+At each iteration, the `AgentExecutor` validates the current context size. If it exceeds **90%** of the model's safety limit, it triggers an immediate "Surgical Rebuild" of the context using the strategy's priority scores to prune low-value information before the next LLM call.
+
+### Intelligent Summarization
+
+If the full conversation history exceeds the model's compression trigger (usually 80%), a background summarization task is triggered to distill older messages into a concise summary for future turns.
+
+---
+
+## 🛠️ Tool Use & Skills Integration
 
 Serverless Claw distinguishes between local "Custom Skills" and model-native "Built-in Skills". This allows us to leverage provider superpowers like sandboxed code execution or grounded search.
 
 ### 1. Built-in Tool Pass-through
-The system supports specific tool types that are executed by the provider instead of our Lambda:
+The system supports specific tool types that are requested by the provider instead of our Lambda:
 - **`code_interpreter`**: Sandboxed Python execution (OpenAI).
 - **`file_search`**: High-performance RAG over uploaded documents (OpenAI).
 - **`web_search`**: Live internet browsing.

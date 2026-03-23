@@ -114,7 +114,7 @@ export class TokenTracker {
     usage: { inputTokens: number; outputTokens: number; toolCalls: number; success: boolean }
   ): Promise<void> {
     const ts = dayStart();
-    const userId = `TOKEN_ROLLUP#${agentId}#${dateKey(ts)}`;
+    const userId = `TOKEN_ROLLUP#${agentId}`;
     const expiresAt = Math.floor(Date.now() / 1000) + TTL_DAYS_ROLLUP * SECONDS_IN_DAY;
 
     try {
@@ -128,7 +128,6 @@ export class TokenTracker {
             'invocationCount = if_not_exists(invocationCount, :zero) + :one, ' +
             'toolCalls = if_not_exists(toolCalls, :zero) + :tools, ' +
             'successCount = if_not_exists(successCount, :zero) + :success, ' +
-            'avgTokensPerInvocation = if_not_exists(avgTokensPerInvocation, :zero), ' +
             'expiresAt = :expires',
           ExpressionAttributeValues: {
             ':inTok': usage.inputTokens,
@@ -142,20 +141,17 @@ export class TokenTracker {
         })
       );
 
-      // Second pass: compute avgTokensPerInvocation
+      // Second pass: compute avgTokensPerInvocation using atomic arithmetic
       await docClient.send(
         new UpdateCommand({
           TableName: getTableName(),
           Key: { userId, timestamp: ts },
-          UpdateExpression: 'SET avgTokensPerInvocation = :total / invocationCount',
-          ExpressionAttributeValues: {
-            ':total': 0, // placeholder — computed via expression
-          },
+          UpdateExpression:
+            'SET avgTokensPerInvocation = (totalInputTokens + totalOutputTokens) / invocationCount',
           ConditionExpression: 'attribute_exists(invocationCount)',
         })
       );
     } catch (e) {
-      // Silently ignore — the first UpdateCommand creates the rollup
       if ((e as Error).name !== 'ConditionalCheckFailedException') {
         logger.warn('Failed to update token rollup:', e);
       }
@@ -163,8 +159,8 @@ export class TokenTracker {
   }
 
   static async getRollup(agentId: string, date?: string): Promise<TokenRollup | null> {
-    const ts = dayStart();
-    const userId = `TOKEN_ROLLUP#${agentId}#${date ?? dateKey()}`;
+    const ts = date ? dayStart(new Date(date).getTime()) : dayStart();
+    const userId = `TOKEN_ROLLUP#${agentId}`;
     try {
       const { Items } = await docClient.send(
         new QueryCommand({
@@ -189,7 +185,7 @@ export class TokenTracker {
           TableName: getTableName(),
           KeyConditionExpression: 'userId = :pk AND timestamp BETWEEN :start AND :end',
           ExpressionAttributeValues: {
-            ':pk': `TOKEN_ROLLUP#${agentId}#`,
+            ':pk': `TOKEN_ROLLUP#${agentId}`,
             ':start': startTs,
             ':end': endTs,
           },

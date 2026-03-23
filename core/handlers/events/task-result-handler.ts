@@ -98,17 +98,24 @@ export async function handleTaskResult(
       const overallStatus =
         successRate === 1 ? 'success' : successRate >= threshold ? 'partial' : 'failed';
 
-      await emitEvent('events.handler', EventType.PARALLEL_TASK_COMPLETED, {
-        userId,
-        sessionId: aggregateState.sessionId,
-        traceId,
-        initiatorId: aggregateState.initiatorId,
-        overallStatus,
-        results: aggregateState.results,
-        taskCount: aggregateState.taskCount,
-        completedCount: aggregateState.results.length,
-        elapsedMs: 0,
-      });
+      // Atomic completion check to prevent double-firing with timeout handler
+      const marked = await aggregator.markAsCompleted(userId, traceId, overallStatus);
+
+      if (marked) {
+        await emitEvent('events.handler', EventType.PARALLEL_TASK_COMPLETED, {
+          userId,
+          sessionId: aggregateState.sessionId,
+          traceId,
+          initiatorId: aggregateState.initiatorId,
+          overallStatus,
+          results: aggregateState.results,
+          taskCount: aggregateState.taskCount,
+          completedCount: aggregateState.results.length,
+          elapsedMs: 0,
+        });
+      } else {
+        logger.info(`Parallel dispatch ${traceId} already marked as completed, skipping event.`);
+      }
     }
   }
 }

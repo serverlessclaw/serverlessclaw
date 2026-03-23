@@ -131,19 +131,52 @@ The dashboard can show pending messages with edit/remove capabilities:
 2. **DELETE /api/pending-messages** (body: `{ sessionId, messageId }`)
 3. **PATCH /api/pending-messages** (body: `{ sessionId, messageId, content }`)
 
-## Comparison: Lock vs Queue
+## Parallel Dispatch & Barrier Sync
 
-| Aspect            | Old (Locking)         | New (Queue)                 |
-| ----------------- | --------------------- | --------------------------- |
-| Message Loss      | Yes - dropped if busy | No - all queued             |
-| User Experience   | "Task in progress"    | Seamless - messages merged  |
-| Concurrent Safety | Sequential only       | Natural coordination        |
-| Crash Recovery    | Lock stuck until TTL  | Auto-recovery via Lock TTL  |
-| Context Awareness | None                  | Full message incorporation  |
-| UI Visibility     | None                  | Edit/remove queued messages |
-| Implementation    | Simple mutex          | Stateful coordination       |
+For complex tasks, the system supports parallel multi-agent execution with atomic aggregation.
 
-## Configuration
+### State Management
+
+Parallel tasks use a specialized aggregator record in `MemoryTable`:
+
+```text
+Key: USER#<id> | PARALLEL#<traceId>
+Value: {
+  status: "pending" | "success" | "partial" | "failed" | "timeout",
+  taskCount: 5,
+  completedCount: 3,
+  results: [...],
+  results_ids: ["taskId1", "taskId2", ...], // Atomic set to prevent duplicates
+  taskMapping: [...],
+  barrierTimeoutAt: 1711000000000
+}
+```
+
+### Race Condition Prevention
+
+To prevent double-emission of completion events between the **Result Handler** and the **Barrier Timeout Handler**, the system uses an atomic `markAsCompleted` operation:
+
+```typescript
+// core/lib/agent/parallel-aggregator.ts
+async markAsCompleted(userId, traceId, status) {
+  // Uses DynamoDB ConditionExpression to ensure status transitions
+  // ONLY from 'pending' to a final state.
+  // Returns true if this caller performed the transition.
+}
+```
+
+### Aggregation Flow
+
+1. **Dispatch**: Initiator emits `PARALLEL_TASK_DISPATCH` and schedules a `PARALLEL_BARRIER_TIMEOUT` one-shot event.
+2. **Execution**: Multiple agents process tasks independently.
+3. **Completion**: As agents finish, `task-result-handler` adds results via `addResult`.
+4. **Synchronization**:
+   - If `completedCount == taskCount`: The Result Handler calls `markAsCompleted`. If successful, it emits `PARALLEL_TASK_COMPLETED`.
+   - If `BARRIER_TIMEOUT` fires: The Timeout Handler calls `markAsCompleted`. If successful, it emits `PARALLEL_TASK_COMPLETED` with partial results.
+
+This ensures that regardless of network latency or Lambda execution timing, exactly **one** completion event is ever emitted for a parallel dispatch.
+
+## Comparison: Lock vs Queue vs Parallel
 
 | Parameter                 | Default         | Description                    |
 | ------------------------- | --------------- | ------------------------------ |

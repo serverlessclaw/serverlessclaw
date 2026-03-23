@@ -35,10 +35,11 @@ vi.mock('../lib/registry/config', () => ({
 }));
 
 // Mock ParallelAggregator
-const { mockInit, mockAddResult, mockGetState } = vi.hoisted(() => ({
+const { mockInit, mockAddResult, mockGetState, mockMarkAsCompleted } = vi.hoisted(() => ({
   mockInit: vi.fn(),
   mockAddResult: vi.fn(),
   mockGetState: vi.fn(),
+  mockMarkAsCompleted: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock('../lib/agent/parallel-aggregator', () => {
@@ -47,12 +48,14 @@ vi.mock('../lib/agent/parallel-aggregator', () => {
       init: mockInit,
       addResult: mockAddResult,
       getState: mockGetState,
+      markAsCompleted: mockMarkAsCompleted,
     },
     ParallelAggregator: vi.fn().mockImplementation(function () {
       return {
         init: mockInit,
         addResult: mockAddResult,
         getState: mockGetState,
+        markAsCompleted: mockMarkAsCompleted,
       };
     }),
   };

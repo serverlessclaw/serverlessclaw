@@ -82,6 +82,42 @@ Serverless Claw implements an automatic, tiered data lifecycle using DynamoDB TT
 | **Agent Traces** | **1 Day**   | Mechanical  | Background agent loops |
 | **System Logs**  | **1 Hour**  | Volatile    | Recovery & signals |
 
+## Operational & Performance Metrics
+
+Beyond conversation and knowledge, the system tracks its own performance to enable cost-aware routing and self-optimization.
+
+### Token Usage Tracking
+
+Every LLM invocation is recorded with granular metadata:
+
+```text
+Key: TOKEN#<agentId>#<timestamp>
+Value: {
+  inputTokens: 1200,
+  outputTokens: 450,
+  totalTokens: 1650,
+  success: true,
+  taskType: "agent_process",
+  model: "claude-3-5-sonnet",
+  durationMs: 4200
+}
+```
+
+### Agent Performance Rollups
+
+The `TokenTracker` maintains daily rollups for every agent, enabling the **Agent Router** to select candidates based on historical efficiency.
+
+- **Partition Key**: `TOKEN_ROLLUP#<agentId>`
+- **Sort Key**: `timestamp` (Day start)
+- **Metrics**: `avgTokensPerInvocation`, `successRate`, `totalInvocations`.
+
+### Cost-Aware Routing
+
+The `AgentRouter` uses these metrics to compute a **Composite Score**:
+`Score = (Capability * SuccessRate) - (AvgTokens / 10000)`
+
+This ensures the system naturally prefers faster, cheaper models (like GPT-4o-mini) for simple tasks while reserving powerful models (like Claude 3.5 Sonnet) for high-complexity strategic planning.
+
 ## High-Performance Indexing (TypeTimestampIndex)
 
 The `MemoryTable` utilizes a Global Secondary Index (GSI) named `TypeTimestampIndex` to enable instantaneous querying. This allows the system to bypass expensive full-table scans when fetching context.

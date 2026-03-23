@@ -51,6 +51,7 @@ export class ParallelAggregator {
           status: 'pending',
           createdAt: Date.now(),
           taskMapping: taskMapping ?? [],
+          results_ids: new Set([]),
         },
       })
     );
@@ -70,6 +71,7 @@ export class ParallelAggregator {
     results: AggregatedResult[];
     initiatorId: string;
     sessionId?: string;
+    status: string;
   } | null> {
     try {
       const response = await docClient.send(
@@ -80,12 +82,18 @@ export class ParallelAggregator {
             timestamp: `${PARALLEL_PREFIX}${traceId}`,
           },
           UpdateExpression:
-            'SET results = list_append(if_not_exists(results, :empty_list), :new_result), completedCount = completedCount + :one',
-          ConditionExpression: 'attribute_exists(userId)',
+            'SET results = list_append(if_not_exists(results, :empty_list), :new_result), ' +
+            'completedCount = completedCount + :one, ' +
+            'results_ids = list_append(if_not_exists(results_ids, :empty_list), :new_id)',
+          ConditionExpression:
+            'attribute_exists(userId) AND status = :pending AND NOT contains(results_ids, :taskId)',
           ExpressionAttributeValues: {
             ':new_result': [result],
+            ':new_id': [result.taskId],
             ':empty_list': [],
             ':one': 1,
+            ':pending': 'pending',
+            ':taskId': result.taskId,
           },
           ReturnValues: 'ALL_NEW',
         })
@@ -102,13 +110,51 @@ export class ParallelAggregator {
         results: updated.results,
         initiatorId: updated.initiatorId,
         sessionId: updated.sessionId,
+        status: updated.status,
       };
     } catch (error: unknown) {
       if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
-        // Not a parallel task or record expired
         return null;
       }
       logger.error('Error adding parallel result:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Atomically marks a parallel dispatch as completed with a specific status.
+   * This prevents multiple handlers from emitting the completion event.
+   */
+  async markAsCompleted(
+    userId: string,
+    traceId: string,
+    status: 'success' | 'partial' | 'failed' | 'timeout'
+  ): Promise<boolean> {
+    try {
+      await docClient.send(
+        new UpdateCommand({
+          TableName: this.tableName,
+          Key: {
+            userId: `USER#${userId}`,
+            timestamp: `${PARALLEL_PREFIX}${traceId}`,
+          },
+          UpdateExpression: 'SET #status = :status, completedAt = :now',
+          ConditionExpression: 'attribute_exists(userId) AND #status = :pending',
+          ExpressionAttributeNames: {
+            '#status': 'status',
+          },
+          ExpressionAttributeValues: {
+            ':status': status,
+            ':pending': 'pending',
+            ':now': Date.now(),
+          },
+        })
+      );
+      return true;
+    } catch (error) {
+      if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
+        return false; // Already completed or doesn't exist
+      }
       throw error;
     }
   }

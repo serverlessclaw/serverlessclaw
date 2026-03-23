@@ -244,7 +244,8 @@ export class AgentExecutor {
           messages,
           this.summary,
           this.systemPrompt,
-          this.contextLimit
+          this.contextLimit,
+          { model: activeModel, provider: activeProvider }
         );
         const prevCount = messages.length;
         messages.length = 0;

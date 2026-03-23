@@ -214,13 +214,22 @@ export class Agent {
         fullHistory,
         summary,
         contextPrompt,
-        contextLimit
+        contextLimit,
+        { model: activeModel, provider: activeProvider }
       );
 
       const messages: Message[] = managed.messages;
 
       // 4. Summarization Trigger (Background)
-      if (await ContextManager.needsSummarization(fullHistory, contextLimit)) {
+      if (
+        await ContextManager.needsSummarization(
+          fullHistory,
+          contextLimit,
+          undefined,
+          activeModel,
+          activeProvider
+        )
+      ) {
         ContextManager.summarize(this.memory, storageId, this.provider, fullHistory).catch((e) =>
           logger.error('Background summarization failed:', e)
         );

@@ -2,6 +2,7 @@ import { IMemory, Message, MessageRole, IProvider, ReasoningProfile } from '../t
 import { LIMITS } from '../constants';
 import { CONFIG_DEFAULTS } from '../config-defaults';
 import { logger } from '../logger';
+import { getContextStrategy, ProviderContextStrategy } from './context-strategies';
 
 export interface ManagedContext {
   messages: Message[];
@@ -19,6 +20,8 @@ export interface GetManagedContextOptions {
   summaryRatio?: number;
   activeWindowRatio?: number;
   triggerRatio?: number;
+  model?: string;
+  provider?: string;
 }
 
 interface MessageBlock {
@@ -46,6 +49,9 @@ export class ContextManager {
     limit: number = LIMITS.MAX_CONTEXT_LENGTH,
     options?: GetManagedContextOptions
   ): Promise<ManagedContext> {
+    const strategy = getContextStrategy(options?.model, options?.provider);
+    const contextLimit = Math.min(limit, strategy.maxContextTokens);
+
     const safetyMargin =
       options?.safetyMargin ??
       (await this.getConfigValue(
@@ -72,8 +78,9 @@ export class ContextManager {
     const systemMessage: Message = { role: MessageRole.SYSTEM, content: systemPrompt };
     const systemTokens = this.estimateTokens([systemMessage]);
 
-    const safetyBudget = Math.floor(limit * safetyMargin);
-    const availableTokens = limit - systemTokens - safetyBudget;
+    const safetyBudget = Math.floor(contextLimit * safetyMargin);
+    const reservedTokens = strategy.reservedResponseTokens;
+    const availableTokens = contextLimit - systemTokens - safetyBudget - reservedTokens;
 
     const compressedBudget = Math.floor(availableTokens * summaryRatio);
     const activeBudget = Math.floor(availableTokens * activeWindowRatio);
@@ -145,7 +152,7 @@ export class ContextManager {
       for (let j = 0; j < block.messages.length; j++) {
         const msg = block.messages[j];
         const msgIndex = block.startIndex + j;
-        const score = this.scoreMessagePriority(msg, msgIndex, cleanHistory.length);
+        const score = this.scoreMessagePriority(msg, msgIndex, cleanHistory.length, strategy);
         if (score > maxScore) maxScore = score;
         totalTokens += this.estimateTokens([msg]);
       }
@@ -188,15 +195,26 @@ export class ContextManager {
     };
   }
 
-  static scoreMessagePriority(msg: Message, recencyIndex: number, totalMessages: number): number {
+  static scoreMessagePriority(
+    msg: Message,
+    recencyIndex: number,
+    totalMessages: number,
+    strategy?: ProviderContextStrategy
+  ): number {
     let base: number;
 
     if (msg.role === MessageRole.SYSTEM) {
       base = this.PRIORITY.SYSTEM;
     } else if (msg.role === MessageRole.TOOL) {
-      base = this.isToolError(msg.content ?? '')
-        ? this.PRIORITY.TOOL_ERROR
-        : this.PRIORITY.TOOL_RESULT;
+      const isError = this.isToolError(msg.content ?? '');
+      if (isError) {
+        base = this.PRIORITY.TOOL_ERROR;
+      } else {
+        base =
+          strategy?.toolResultPriority === 'high'
+            ? this.PRIORITY.TOOL_ERROR - 0.1
+            : this.PRIORITY.TOOL_RESULT;
+      }
     } else if (msg.role === MessageRole.USER) {
       base = this.PRIORITY.USER;
     } else {
@@ -204,7 +222,7 @@ export class ContextManager {
     }
 
     const recencyBonus = totalMessages > 0 ? 0.1 * (recencyIndex / totalMessages) : 0;
-    const lengthPenalty = (msg.content ?? '').length > 2000 ? -0.1 : 0;
+    const lengthPenalty = (msg.content ?? '').length > 4000 ? -0.1 : 0;
 
     return Math.max(0, Math.min(1, base + recencyBonus + lengthPenalty));
   }
@@ -282,23 +300,27 @@ export class ContextManager {
   static async needsSummarization(
     history: Message[],
     limit: number = LIMITS.MAX_CONTEXT_LENGTH,
-    triggerRatio?: number
+    triggerRatio?: number,
+    model?: string,
+    provider?: string
   ): Promise<boolean> {
-    let ratio: number = CONFIG_DEFAULTS.CONTEXT_SUMMARY_TRIGGER_RATIO.code;
-    if (triggerRatio !== undefined) {
-      ratio = triggerRatio;
-    } else {
+    const strategy = getContextStrategy(model, provider);
+    const contextLimit = Math.min(limit, strategy.maxContextTokens);
+
+    let ratio: number = triggerRatio ?? strategy.compressionTriggerPercent / 100;
+    if (triggerRatio === undefined) {
       try {
         const { ConfigManager } = await import('../registry/config');
-        ratio = await ConfigManager.getTypedConfig(
+        const customRatio = await ConfigManager.getTypedConfig<number>(
           CONFIG_DEFAULTS.CONTEXT_SUMMARY_TRIGGER_RATIO.configKey!,
-          ratio
+          -1
         );
+        if (customRatio !== -1) ratio = customRatio;
       } catch {
-        // use code default
+        // use strategy default
       }
     }
-    return this.estimateTokens(history) > limit * ratio;
+    return this.estimateTokens(history) > contextLimit * ratio;
   }
 
   static async summarize(

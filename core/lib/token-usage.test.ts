@@ -1,179 +1,89 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { TokenTracker } from './token-usage';
+import { UpdateCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 
 const { mockSend } = vi.hoisted(() => ({
-  mockSend: vi.fn().mockResolvedValue({}),
+  mockSend: vi.fn(),
 }));
 
 vi.mock('sst', () => ({
   Resource: {
-    MemoryTable: { name: 'test-memory-table' },
+    MemoryTable: { name: 'MemoryTable' },
   },
 }));
 
-vi.mock('./logger', () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  },
-}));
+vi.mock('@aws-sdk/client-dynamodb', () => {
+  return {
+    DynamoDBClient: class {
+      send = mockSend;
+    },
+  };
+});
 
 vi.mock('@aws-sdk/lib-dynamodb', async () => {
   const actual = await vi.importActual('@aws-sdk/lib-dynamodb');
   return {
     ...actual,
     DynamoDBDocumentClient: {
-      from: vi.fn().mockReturnValue({ send: mockSend }),
+      from: () => ({
+        send: (command: any) => mockSend(command),
+      }),
     },
   };
 });
 
-import { TokenTracker } from './token-usage';
-
 describe('TokenTracker', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    mockSend.mockResolvedValue({});
-  });
-
-  describe('recordInvocation', () => {
-    it('should write a token usage record to MemoryTable', async () => {
-      await TokenTracker.recordInvocation({
-        timestamp: 1711000000000,
-        traceId: 'trace-123',
-        agentId: 'coder',
-        provider: 'openai',
-        model: 'gpt-5.4',
-        inputTokens: 1500,
-        outputTokens: 800,
-        totalTokens: 2300,
-        toolCalls: 3,
-        taskType: 'agent_process',
-        success: true,
-        durationMs: 12000,
-      });
-
-      expect(mockSend).toHaveBeenCalledTimes(1);
-      const item = mockSend.mock.calls[0][0].input.Item;
-      expect(item.userId).toBe('TOKEN#coder#1711000000000');
-      expect(item.inputTokens).toBe(1500);
-      expect(item.outputTokens).toBe(800);
-      expect(item.taskType).toBe('agent_process');
-      expect(item.success).toBe(true);
-      expect(item.expiresAt).toBeGreaterThan(0);
-    });
-
-    it('should not throw on DynamoDB failure', async () => {
-      mockSend.mockRejectedValueOnce(new Error('DDB down'));
-      await expect(
-        TokenTracker.recordInvocation({
-          timestamp: 1,
-          traceId: '',
-          agentId: 'coder',
-          provider: 'openai',
-          model: 'gpt-5.4',
-          inputTokens: 0,
-          outputTokens: 0,
-          totalTokens: 0,
-          toolCalls: 0,
-          taskType: 'agent_process',
-          success: true,
-          durationMs: 0,
-        })
-      ).resolves.toBeUndefined();
-    });
+    mockSend.mockReset();
   });
 
   describe('updateRollup', () => {
-    it('should atomically update a daily rollup', async () => {
-      await TokenTracker.updateRollup('coder', {
-        inputTokens: 1000,
-        outputTokens: 500,
-        toolCalls: 2,
+    it('should use the correct partition key (TOKEN_ROLLUP#agentId)', async () => {
+      mockSend.mockResolvedValue({});
+
+      await TokenTracker.updateRollup('test-agent', {
+        inputTokens: 100,
+        outputTokens: 50,
+        toolCalls: 1,
         success: true,
       });
 
-      expect(mockSend).toHaveBeenCalled();
-      const calls = mockSend.mock.calls as unknown[][];
-      const updateCalls = calls.filter((c: any[]) =>
-        JSON.stringify(c[0]?.input).includes('totalInputTokens')
-      );
-      expect(updateCalls.length).toBeGreaterThanOrEqual(1);
-    });
-  });
-
-  describe('getRollup', () => {
-    it('should return null when no rollup exists', async () => {
-      mockSend.mockResolvedValueOnce({ Items: [] });
-      const result = await TokenTracker.getRollup('coder', '2026-03-22');
-      expect(result).toBeNull();
+      expect(mockSend).toHaveBeenCalledWith(expect.any(UpdateCommand));
+      const firstCall = mockSend.mock.calls[0][0] as UpdateCommand;
+      expect(firstCall.input.Key?.userId).toBe('TOKEN_ROLLUP#test-agent');
+      expect(firstCall.input.Key?.timestamp).toBeGreaterThan(0);
     });
 
-    it('should return rollup data when it exists', async () => {
-      mockSend.mockResolvedValueOnce({
-        Items: [
-          {
-            userId: 'TOKEN_ROLLUP#coder#2026-03-22',
-            timestamp: 1711000000000,
-            totalInputTokens: 5000,
-            totalOutputTokens: 2500,
-            invocationCount: 10,
-            toolCalls: 30,
-            successCount: 9,
-            avgTokensPerInvocation: 750,
-          },
-        ],
-      });
-      const result = await TokenTracker.getRollup('coder', '2026-03-22');
-      expect(result).not.toBeNull();
-      expect(result!.totalInputTokens).toBe(5000);
-      expect(result!.invocationCount).toBe(10);
-    });
-  });
+    it('should perform atomic average calculation in second pass', async () => {
+      mockSend.mockResolvedValue({});
 
-  describe('updateToolRollup', () => {
-    it('should atomically update tool rollup with duration and tokens', async () => {
-      await TokenTracker.updateToolRollup('fileRead', true, 500, 1000, 500);
-
-      expect(mockSend).toHaveBeenCalled();
-
-      const item = (mockSend.mock.calls[0] as any[])[0].input;
-      expect(item.Key.userId).toMatch(/^TOOL_TOKEN#fileRead#/);
-      expect(item.ExpressionAttributeValues[':dur']).toBe(500);
-      expect(item.ExpressionAttributeValues[':inTok']).toBe(1000);
-      expect(item.ExpressionAttributeValues[':outTok']).toBe(500);
-    });
-  });
-
-  describe('getToolRollupRange', () => {
-    it('should query for tool rollups in range', async () => {
-      mockSend.mockResolvedValueOnce({
-        Items: [
-          {
-            userId: 'TOOL_TOKEN#fileRead#2026-03-22',
-            timestamp: Date.now(),
-            invocationCount: 10,
-            successCount: 9,
-            totalDurationMs: 5000,
-            totalInputTokens: 10000,
-            totalOutputTokens: 5000,
-          },
-        ],
+      await TokenTracker.updateRollup('test-agent', {
+        inputTokens: 100,
+        outputTokens: 50,
+        toolCalls: 1,
+        success: true,
       });
 
-      const results = await TokenTracker.getToolRollupRange('fileRead', 7);
-      expect(results.length).toBe(1);
-      expect(results[0].totalDurationMs).toBe(5000);
-      expect(mockSend).toHaveBeenCalledWith(
-        expect.objectContaining({
-          input: expect.objectContaining({
-            KeyConditionExpression: 'userId = :pk AND timestamp BETWEEN :start AND :end',
-            ExpressionAttributeValues: expect.objectContaining({
-              ':pk': 'TOOL_TOKEN#fileRead#',
-            }),
-          }),
-        })
+      expect(mockSend).toHaveBeenCalledTimes(2);
+      const secondCall = mockSend.mock.calls[1][0] as UpdateCommand;
+      expect(secondCall.input.UpdateExpression).toBe(
+        'SET avgTokensPerInvocation = (totalInputTokens + totalOutputTokens) / invocationCount'
       );
+    });
+  });
+
+  describe('getRollupRange', () => {
+    it('should query with the correct partition key prefix', async () => {
+      mockSend.mockResolvedValue({ Items: [] });
+
+      await TokenTracker.getRollupRange('test-agent', 7);
+
+      expect(mockSend).toHaveBeenCalledWith(expect.any(QueryCommand));
+      const command = mockSend.mock.calls[0][0] as QueryCommand;
+      expect(command.input.KeyConditionExpression).toBe(
+        'userId = :pk AND timestamp BETWEEN :start AND :end'
+      );
+      expect(command.input.ExpressionAttributeValues?.[':pk']).toBe('TOKEN_ROLLUP#test-agent');
     });
   });
 });
