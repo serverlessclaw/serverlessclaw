@@ -73,6 +73,10 @@ export function createDashboard(ctx: SharedContext): { dashboard: sst.aws.Nextjs
         actions: ['iam:PassRole'],
         resources: [ctx.schedulerRole!.arn],
       },
+      {
+        actions: ['cloudwatch:PutMetricData'],
+        resources: ['*'],
+      },
     ],
     transform: {
       /* eslint-disable-next-line @typescript-eslint/no-explicit-any */

@@ -25,6 +25,14 @@ export function createApi(ctx: SharedContext): { api: sst.aws.ApiGatewayV2 } {
 
   const validSecrets = getValidSecrets(secrets);
 
+  // Global permissions for all API routes (if needed)
+  const apiPermissions = [
+    {
+      actions: ['cloudwatch:PutMetricData'],
+      resources: ['*'],
+    },
+  ];
+
   // Main Webhook
   api.route('ANY /webhook', {
     handler: 'core/handlers/webhook.handler',
@@ -39,6 +47,7 @@ export function createApi(ctx: SharedContext): { api: sst.aws.ApiGatewayV2 } {
       deployer,
       bus,
     ],
+    permissions: apiPermissions,
     timeout: AGENT_CONFIG.timeout.SHORT,
     logging: {
       retention: '1 month',
@@ -51,6 +60,7 @@ export function createApi(ctx: SharedContext): { api: sst.aws.ApiGatewayV2 } {
     nodejs: { loader: { '.md': 'text' } },
     link: [memoryTable, traceTable, configTable, stagingBucket, knowledgeBucket, bus],
     permissions: [
+      ...apiPermissions,
       {
         actions: ['events:ListEventBuses'],
         resources: ['*'],

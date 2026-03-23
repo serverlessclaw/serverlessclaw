@@ -42,7 +42,18 @@ export function createAgents(ctx: SharedContext): {
    * All autonomous agents require access to the Bus, Memory, and Tracing for baseline coordination.
    * New agents should inherit this baseLink array.
    */
-  const baseLink = [bus, memoryTable, traceTable, configTable, knowledgeBucket, ...validSecrets];
+  const baseLink = [
+    bus,
+    memoryTable,
+    traceTable,
+    configTable,
+    knowledgeBucket,
+    ...validSecrets,
+    {
+      actions: ['cloudwatch:PutMetricData'],
+      resources: ['*'],
+    },
+  ];
 
   // 1. Coder Agent
   const coderAgent = new sst.aws.Function('CoderAgent', {
