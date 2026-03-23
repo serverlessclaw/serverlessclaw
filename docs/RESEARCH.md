@@ -1,5 +1,7 @@
 # OpenClaw Core Research Summary
 
+> **Last Updated**: 23 March 2026
+
 This document summarizes the core features of [OpenClaw](https://github.com/openclaw/openclaw) as they apply to our serverless implementation.
 
 ## 1. Core Architecture: Hub-and-Spoke

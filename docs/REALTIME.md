@@ -1,5 +1,7 @@
 # Real-time Multi-Agent Signaling
 
+> **Last Updated**: 23 March 2026
+
 To ensure the **ClawCenter Dashboard** receives instantaneous updates without polling, Serverless Claw uses a **Real-time Bridge** pattern over AWS IoT Core and MQTT.
 
 ## Signaling Architecture

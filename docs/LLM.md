@@ -1,5 +1,7 @@
 # LLM Integration & Reasoning Adapter
 
+> **Last Updated**: 23 March 2026
+
 Serverless Claw implements a provider-agnostic LLM interface that supports advanced 2026-grade reasoning profiles.
 
 ## Core Interface
