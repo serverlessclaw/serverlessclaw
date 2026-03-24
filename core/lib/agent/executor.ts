@@ -582,9 +582,8 @@ export class AgentExecutor {
       approvedToolCalls,
     } = options;
 
-    const iterations = 0;
+    let iterations = 0;
     const _attachments: NonNullable<Message['attachments']> = [];
-    const _startTime = Date.now();
 
     while (iterations < maxIterations) {
       // (Simplified logic: omitted kill-switch and pending message check for brevity in stream,
@@ -701,11 +700,56 @@ export class AgentExecutor {
         yield { tool_calls: toolCalls };
       }
 
-      // (Tool execution logic here... similar to runLoop but simplified for this PR)
-      // For now, if tool calls are detected in a stream, we fall back to runLoop for the tool-iteration phase
-      // to avoid complex async yielding across recursive iterations.
-      logger.info(`[EXECUTOR] Stream detected tool calls, completing via loop.`);
-      break;
+      // Execute each tool call and push results to messages
+      for (const toolCall of toolCalls) {
+        const tool = this.tools.find((t) => t.name === toolCall.function.name);
+        if (tool) {
+          const args = JSON.parse(toolCall.function.arguments);
+          const contextArgs: Record<string, unknown> = {
+            traceId,
+            nodeId: options.nodeId,
+            parentId: options.parentId,
+            executorAgentId: this.agentId,
+            executorAgentName: this.agentName,
+            initiatorId: options.currentInitiator,
+            depth: options.depth,
+            sessionId,
+            userId,
+            mainConversationId: options.mainConversationId,
+            activeModel,
+            activeProvider,
+            originalUserTask: options.userText,
+          };
+          Object.entries(contextArgs).forEach(([key, value]) => {
+            if (args[key] === undefined) args[key] = value;
+          });
+          args.userId = args.userId ?? userId;
+          args.sessionId = args.sessionId ?? sessionId;
+
+          const rawResult = await tool.execute(args);
+          const resultText =
+            typeof rawResult === 'string'
+              ? rawResult
+              : (rawResult as ToolResult).text || JSON.stringify(rawResult) || '';
+
+          messages.push({
+            role: MessageRole.TOOL,
+            tool_call_id: toolCall.id,
+            name: toolCall.function.name,
+            content: resultText,
+          });
+        } else {
+          messages.push({
+            role: MessageRole.TOOL,
+            tool_call_id: toolCall.id,
+            name: toolCall.function.name,
+            content: 'EXECUTED_BY_PROVIDER',
+          });
+        }
+      }
+
+      iterations++;
+      // Continue the loop — the next LLM call will incorporate tool results
     }
   }
 

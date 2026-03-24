@@ -88,22 +88,44 @@ describe('AgentExecutor.streamLoop', () => {
     );
   });
 
-  it('should handle tool calls by breaking the stream loop', async () => {
-    const executor = new AgentExecutor(mockProvider as any, [], 'test-agent', 'Test Agent');
+  it('should execute tool calls and continue the loop to get final response', async () => {
+    const mockToolExecute = vi.fn().mockResolvedValue('tool result');
+    const tools = [
+      {
+        name: 'test_tool',
+        description: 'A test tool',
+        parameters: {},
+        execute: mockToolExecute,
+      },
+    ];
+    const executor = new AgentExecutor(
+      mockProvider as any,
+      tools as any,
+      'test-agent',
+      'Test Agent'
+    );
 
-    async function* mockStreamWithTools() {
-      yield { content: 'I will call a tool.' };
-      yield {
-        tool_calls: [
-          {
-            id: 'call-1',
-            type: 'function',
-            function: { name: 'test_tool', arguments: '{}' },
-          },
-        ],
-      };
+    // First call: returns text + tool_calls
+    // Second call (after tool execution): returns final text
+    let callCount = 0;
+    async function* mockStreamFactory() {
+      callCount++;
+      if (callCount === 1) {
+        yield { content: 'I will call a tool.' };
+        yield {
+          tool_calls: [
+            {
+              id: 'call-1',
+              type: 'function',
+              function: { name: 'test_tool', arguments: '{}' },
+            },
+          ],
+        };
+      } else {
+        yield { content: 'Tool result: done!' };
+      }
     }
-    mockProvider.stream.mockReturnValue(mockStreamWithTools());
+    mockProvider.stream.mockImplementation(() => mockStreamFactory());
 
     const chunks = [];
     const stream = executor.streamLoop([], {
@@ -126,24 +148,19 @@ describe('AgentExecutor.streamLoop', () => {
       chunks.push(chunk);
     }
 
-    // It should yield the content chunk AND the tool_calls chunk before breaking
-    expect(chunks).toHaveLength(2);
+    // First iteration: content + tool_calls
     expect(chunks[0].content).toBe('I will call a tool.');
-    expect(chunks[1].tool_calls).toEqual([
-      {
-        id: 'call-1',
-        type: 'function',
-        function: { name: 'test_tool', arguments: '{}' },
-      },
-    ]);
-    expect(mockEmitter.emitChunk).toHaveBeenCalledWith(
-      'user-1',
-      undefined,
-      'trace-123',
-      'I will call a tool.',
-      'Test Agent',
-      false
-    );
+    expect(chunks[1].tool_calls).toHaveLength(1);
+
+    // Tool was executed
+    expect(mockToolExecute).toHaveBeenCalledTimes(1);
+
+    // Second iteration: final response after tool execution
+    const finalContent = chunks.filter((c) => c.content);
+    expect(finalContent[finalContent.length - 1].content).toBe('Tool result: done!');
+
+    // Provider was called twice (once for tool detection, once for final response)
+    expect(callCount).toBe(2);
   });
 
   it('should yield tool_calls when provider returns only tool_calls with no content (MiniMax scenario)', async () => {
