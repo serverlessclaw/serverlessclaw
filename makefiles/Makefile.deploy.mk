@@ -16,12 +16,6 @@ deploy: ## Deploy SST to the environment (default: dev)
 	@$(call load_env); \
 	./scripts/check-aws-account.sh $(ENV) $$EXPECTED_ACCOUNT && \
 	$(SST) deploy --stage $(ENV) --yes
-	@if [ -f scripts/fix-cloudfront.sh ]; then \
-		$(call log_info,Running CloudFront fix script...); \
-		./scripts/fix-cloudfront.sh $(ENV); \
-	else \
-		$(call log_warning,CloudFront fix script not found, skipping.); \
-	fi
 	@$(call log_success,SST deploy completed)
 
 diff: ## Show SST infrastructure changes

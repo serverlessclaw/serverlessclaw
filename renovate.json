@@ -7,7 +7,6 @@
   "prHourlyLimit": 0,
   "automerge": true,
   "platformAutomerge": true,
-  "platform": "github",
   "prCreation": "not-pending",
   "packageRules": [
     {
@@ -16,13 +15,11 @@
       "automergeType": "pr"
     },
     {
-      "description": "Prevent sst upgrade to v4.3.x+ which has issues with CloudFront generation",
-      "matchPackageNames": ["sst"],
-      "allowedVersions": "<4.3.0"
+      "matchCategories": ["security"],
+      "automerge": true
     }
   ],
   "vulnerabilityAlerts": {
-    "enabled": true,
-    "automerge": true
+    "enabled": true
   }
 }

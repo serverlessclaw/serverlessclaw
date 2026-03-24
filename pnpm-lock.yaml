@@ -87,8 +87,8 @@ importers:
         specifier: ^2.0.7
         version: 2.0.7(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       sst:
-        specifier: ^4.2.2
-        version: 4.2.2
+        specifier: ^4.5.6
+        version: 4.5.6
       tailwindcss:
         specifier: ^4.2.1
         version: 4.2.1
@@ -4710,6 +4710,10 @@ packages:
     resolution: {integrity: sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q==}
     engines: {node: '>=12'}
 
+  picomatch@4.0.4:
+    resolution: {integrity: sha512-QP88BAKvMam/3NxH6vj2o21R6MjxZUAd6nlwAS/pnGvN9IVLocLHxGYIzFhg6fUQ+5th6P4dv4eW9jX3DSIj7A==}
+    engines: {node: '>=12'}
+
   pkce-challenge@5.0.1:
     resolution: {integrity: sha512-wQ0b/W4Fr01qtpHlqSqspcj3EhBvimsdh0KlHhH8HRZnMsEa0ea2fTULOXOS9ccQr3om+GcGRk4e+isrZWV8qQ==}
     engines: {node: '>=16.20.0'}
@@ -5065,8 +5069,18 @@ packages:
     cpu: [arm64]
     os: [darwin]
 
+  sst-darwin-arm64@4.5.6:
+    resolution: {integrity: sha512-L8jzRCEz6NIqlnVblEDa4sZQM3F1rnCmfrG9wMUz9YAqUId27DOvrJE4+QxF5i0eJDk3yUPGN+hxm3j7k+nhrw==}
+    cpu: [arm64]
+    os: [darwin]
+
   sst-darwin-x64@4.2.2:
     resolution: {integrity: sha512-KGIjkYI3WDRNq+z3AGKYe69IvZP8prMm3mbI5ali5cl1hxiq10CAza+N+qpRXCtxt6vgbwdvmIoWTPYoKBtCIA==}
+    cpu: [x64]
+    os: [darwin]
+
+  sst-darwin-x64@4.5.6:
+    resolution: {integrity: sha512-e+QiMwc8jMH2XNSNf+m0ewj3Y0lWwaWai1aPpF+cUWiH2z6wthMOEOMZwESzk3PEiFIbHksmxwMB6/VJjfNwPQ==}
     cpu: [x64]
     os: [darwin]
 
@@ -5075,8 +5089,18 @@ packages:
     cpu: [arm64]
     os: [linux]
 
+  sst-linux-arm64@4.5.6:
+    resolution: {integrity: sha512-AaFqD9OrhrMAWOsHom1Ex6zGqopP7yDWsjBzvM7VK5k7wTnITBLRYlAuTnmEOSU+CaFExT1fJ+Qk817wpqJ6ww==}
+    cpu: [arm64]
+    os: [linux]
+
   sst-linux-x64@4.2.2:
     resolution: {integrity: sha512-1wwjpX0Qxo6OFkF6Q8NM8BT9oQvkZpKDMrUqce86rMuqHEzVo7GTXuqku6ouapjeMN+ZDC2vW2ReiR6W4Eh2Hw==}
+    cpu: [x64]
+    os: [linux]
+
+  sst-linux-x64@4.5.6:
+    resolution: {integrity: sha512-pOXm/VzugTuStD8JTF6FF2/Mw8ru1EVx/9u1NfR5OYk4R++UAP/vDNroA0f+4B4ybCzPfFxVNeD725X0pzxi+A==}
     cpu: [x64]
     os: [linux]
 
@@ -5085,8 +5109,18 @@ packages:
     cpu: [x86]
     os: [linux]
 
+  sst-linux-x86@4.5.6:
+    resolution: {integrity: sha512-ADeTI9m0gyMZY4NCS7+lXsoBWFTMn3QKxc/IBj+e9nERHZbP78ptpH+TzsL7JQ4l68s1SsZszPL8DLUvri8Atg==}
+    cpu: [x86]
+    os: [linux]
+
   sst-win32-arm64@4.2.2:
     resolution: {integrity: sha512-AV9njoZ20SCyCXdcdRrZk9o06o0iOzzb7jAMcAP4EG6SfP/cyTNYoeMW7vEl/8cVWL0SBaTs0tyIzLWT9f84mg==}
+    cpu: [arm64]
+    os: [win32]
+
+  sst-win32-arm64@4.5.6:
+    resolution: {integrity: sha512-PxYMk/x4Tp9H3IWqITCAwXfegLCy60aUSMTKzWlVb6vdku/A2frX0qVgQGlqFxqfyI7FQ/8fQR5JdmPBaiUIIA==}
     cpu: [arm64]
     os: [win32]
 
@@ -5095,13 +5129,27 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  sst-win32-x64@4.5.6:
+    resolution: {integrity: sha512-IS8p1J716nJxnnU2tvIZYvtVt00TeX9pIn8PK59Zb5JQcBC5ncWCkvm1Jpa1lG68BfVXxF/XS5z+CpRaHSTMWQ==}
+    cpu: [x64]
+    os: [win32]
+
   sst-win32-x86@4.2.2:
     resolution: {integrity: sha512-JBREFAzf8NFdh5zB22WGoIeQ24iRxZ1MPF7EvV9zcqLobBFuFWqVwIFkmFkHOT/cP2JhAAniyFnD32O6b1cePw==}
     cpu: [x86]
     os: [win32]
 
+  sst-win32-x86@4.5.6:
+    resolution: {integrity: sha512-iloL0CnLZRj1nm1IbYAVu07i8ujj2zVj51NidwpajsVe+PNOguYdG7avP6ojVz/6JqVlxbh4O4vo3yxRxNOanA==}
+    cpu: [x86]
+    os: [win32]
+
   sst@4.2.2:
     resolution: {integrity: sha512-l/Vy78te8l6Typ/oFCL947WBSShljy3S9ugRSnG3zZAvRI9AC5KZJKHBkt+CT/WSK0eromSOO2FBvG2ErCbaxw==}
+    hasBin: true
+
+  sst@4.5.6:
+    resolution: {integrity: sha512-DjFZPeOLnlsvvb14sr4WFtWGuKUsmezDdLJ+X4hHOUOMCiRKavYKKBVVMDcnx513pxLhCxLjcEk5IKqjQIlmZw==}
     hasBin: true
 
   stable-hash@0.0.5:
@@ -5238,6 +5286,10 @@ packages:
 
   tapable@2.3.0:
     resolution: {integrity: sha512-g9ljZiwki/LfxmQADO3dEY1CbpmXT5Hm2fJ+QaGKwSXUylMybePR7/67YW7jOrrvjEgL1Fmz5kzyAjWVWLlucg==}
+    engines: {node: '>=6'}
+
+  tapable@2.3.2:
+    resolution: {integrity: sha512-1MOpMXuhGzGL5TTCZFItxCc0AARf1EZFQkGqMm7ERKj8+Hgr5oLvJOVFcC+lRmR8hCe2S3jC4T5D7Vg/d7/fhA==}
     engines: {node: '>=6'}
 
   tar-stream@3.1.8:
@@ -11797,6 +11849,8 @@ snapshots:
 
   picomatch@4.0.3: {}
 
+  picomatch@4.0.4: {}
+
   pkce-challenge@5.0.1: {}
 
   playwright-core@1.58.2: {}
@@ -12287,25 +12341,49 @@ snapshots:
   sst-darwin-arm64@4.2.2:
     optional: true
 
+  sst-darwin-arm64@4.5.6:
+    optional: true
+
   sst-darwin-x64@4.2.2:
+    optional: true
+
+  sst-darwin-x64@4.5.6:
     optional: true
 
   sst-linux-arm64@4.2.2:
     optional: true
 
+  sst-linux-arm64@4.5.6:
+    optional: true
+
   sst-linux-x64@4.2.2:
+    optional: true
+
+  sst-linux-x64@4.5.6:
     optional: true
 
   sst-linux-x86@4.2.2:
     optional: true
 
+  sst-linux-x86@4.5.6:
+    optional: true
+
   sst-win32-arm64@4.2.2:
+    optional: true
+
+  sst-win32-arm64@4.5.6:
     optional: true
 
   sst-win32-x64@4.2.2:
     optional: true
 
+  sst-win32-x64@4.5.6:
+    optional: true
+
   sst-win32-x86@4.2.2:
+    optional: true
+
+  sst-win32-x86@4.5.6:
     optional: true
 
   sst@4.2.2:
@@ -12322,6 +12400,21 @@ snapshots:
       sst-win32-arm64: 4.2.2
       sst-win32-x64: 4.2.2
       sst-win32-x86: 4.2.2
+
+  sst@4.5.6:
+    dependencies:
+      aws4fetch: 1.0.18
+      jose: 5.2.3
+      openid-client: 5.6.4
+    optionalDependencies:
+      sst-darwin-arm64: 4.5.6
+      sst-darwin-x64: 4.5.6
+      sst-linux-arm64: 4.5.6
+      sst-linux-x64: 4.5.6
+      sst-linux-x86: 4.5.6
+      sst-win32-arm64: 4.5.6
+      sst-win32-x64: 4.5.6
+      sst-win32-x86: 4.5.6
 
   stable-hash@0.0.5: {}
 
@@ -12483,6 +12576,8 @@ snapshots:
   tailwindcss@4.2.1: {}
 
   tapable@2.3.0: {}
+
+  tapable@2.3.2: {}
 
   tar-stream@3.1.8:
     dependencies:
@@ -12801,7 +12896,7 @@ snapshots:
     dependencies:
       '@oxc-project/runtime': 0.115.0
       lightningcss: 1.32.0
-      picomatch: 4.0.3
+      picomatch: 4.0.4
       postcss: 8.5.8
       rolldown: 1.0.0-rc.9
       tinyglobby: 0.2.15
@@ -12885,7 +12980,7 @@ snapshots:
       mime-types: 2.1.35
       neo-async: 2.6.2
       schema-utils: 4.3.3
-      tapable: 2.3.0
+      tapable: 2.3.2
       terser-webpack-plugin: 5.4.0(esbuild@0.27.4)(webpack@5.105.4(esbuild@0.27.4))
       watchpack: 2.5.1
       webpack-sources: 3.3.4
