@@ -11,7 +11,7 @@
 const NAMESPACE = 'ServerlessClaw';
 
 interface CloudWatchClientType {
-  send: (command: any) => Promise<any>;
+  send: (command: unknown) => Promise<unknown>;
 }
 
 let cloudwatch: CloudWatchClientType | null = null;

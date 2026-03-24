@@ -50,10 +50,9 @@ export class OpenAIProvider implements IProvider {
     _provider?: string,
     responseFormat?: import('../types/index').ResponseFormat
   ): Promise<Message> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const resource = Resource as any;
+    const resource = Resource as Record<string, { value?: string } | undefined>;
     const apiKey =
-      ('OpenAIApiKey' in resource ? resource.OpenAIApiKey.value : undefined) ||
+      ('OpenAIApiKey' in resource ? resource.OpenAIApiKey?.value : undefined) ||
       process.env.OPENAI_API_KEY ||
       'test-key';
     const client = new OpenAI({ apiKey });
@@ -104,8 +103,11 @@ export class OpenAIProvider implements IProvider {
         else if (m.role === MessageRole.ASSISTANT) role = OPENAI.ROLES.ASSISTANT;
         else if (m.role === MessageRole.DEVELOPER) role = OPENAI.ROLES.DEVELOPER;
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const content: any[] = [];
+        type ContentItem =
+          | { type: string; text: string }
+          | { type: string; image_url: { url: string } }
+          | { type: string; filename: string; file_data: string };
+        const content: ContentItem[] = [];
         if (m.content) content.push({ type: OPENAI.CONTENT_TYPES.INPUT_TEXT, text: m.content });
 
         if (m.attachments) {
@@ -153,10 +155,10 @@ export class OpenAIProvider implements IProvider {
     });
 
     try {
+      type ResponseInput = Array<Record<string, unknown>>;
       const response = (await client.responses.create({
         model: activeModel as OpenAI.ResponsesModel,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        input: responsesInput as any,
+        input: responsesInput as ResponseInput,
         reasoning: { effort: reasoningEffort as OpenAI.ReasoningEffort },
         // 2026 Responses API: response_format has moved to text.format
         ...(responseFormat
@@ -178,17 +180,24 @@ export class OpenAIProvider implements IProvider {
         ...(hasTools
           ? {
               tools: tools.map((t) => {
+                type ToolConfig = {
+                  type: string;
+                  server_label?: string;
+                  connector_id?: string;
+                  name?: string;
+                  description?: string;
+                  parameters?: Record<string, unknown>;
+                  strict?: boolean;
+                };
                 if (t.connector_id) {
                   return {
                     type: OPENAI.MCP_TYPE,
                     server_label: t.name,
-
                     connector_id: t.connector_id,
-                  } as any;
+                  } as ToolConfig;
                 }
                 if (t.type && t.type !== OPENAI.FUNCTION_TYPE) {
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  return { type: t.type } as any;
+                  return { type: t.type } as ToolConfig;
                 }
                 return {
                   type: OPENAI.FUNCTION_TYPE,
@@ -196,7 +205,7 @@ export class OpenAIProvider implements IProvider {
                   description: t.description,
                   parameters: t.parameters as unknown as Record<string, unknown>,
                   strict: false,
-                };
+                } as ToolConfig;
               }),
             }
           : {}),
@@ -266,10 +275,9 @@ export class OpenAIProvider implements IProvider {
     _provider?: string,
     responseFormat?: import('../types/index').ResponseFormat
   ): AsyncIterable<import('../types/index').MessageChunk> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const resource = Resource as any;
+    const resource = Resource as Record<string, { value?: string } | undefined>;
     const apiKey =
-      ('OpenAIApiKey' in resource ? resource.OpenAIApiKey.value : undefined) ||
+      ('OpenAIApiKey' in resource ? resource.OpenAIApiKey?.value : undefined) ||
       process.env.OPENAI_API_KEY ||
       'test-key';
     const client = new OpenAI({ apiKey });
@@ -312,8 +320,11 @@ export class OpenAIProvider implements IProvider {
         else if (m.role === MessageRole.ASSISTANT) role = OPENAI.ROLES.ASSISTANT;
         else if (m.role === MessageRole.DEVELOPER) role = OPENAI.ROLES.DEVELOPER;
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const content: any[] = [];
+        type ContentItem =
+          | { type: string; text: string }
+          | { type: string; image_url: { url: string } }
+          | { type: string; filename: string; file_data: string };
+        const content: ContentItem[] = [];
         if (m.content) content.push({ type: OPENAI.CONTENT_TYPES.INPUT_TEXT, text: m.content });
         if (m.attachments) {
           m.attachments.forEach((att) => {
@@ -357,10 +368,10 @@ export class OpenAIProvider implements IProvider {
     });
 
     try {
+      type ResponseInput = Array<Record<string, unknown>>;
       const stream = await client.responses.create({
         model: activeModel as OpenAI.ResponsesModel,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        input: responsesInput as any,
+        input: responsesInput as ResponseInput,
         reasoning: { effort: reasoningEffort as OpenAI.ReasoningEffort },
         stream: true,
         ...(responseFormat
@@ -382,13 +393,21 @@ export class OpenAIProvider implements IProvider {
         ...(tools && tools.length > 0
           ? {
               tools: tools.map((t) => {
+                type ToolConfig = {
+                  type: string;
+                  server_label?: string;
+                  connector_id?: string;
+                  name?: string;
+                  description?: string;
+                  parameters?: Record<string, unknown>;
+                  strict?: boolean;
+                };
                 if (t.connector_id) {
                   return {
                     type: OPENAI.MCP_TYPE,
                     server_label: t.name,
-
                     connector_id: t.connector_id,
-                  } as any;
+                  } as ToolConfig;
                 }
                 return {
                   type: OPENAI.FUNCTION_TYPE,
@@ -396,7 +415,7 @@ export class OpenAIProvider implements IProvider {
                   description: t.description,
                   parameters: t.parameters as unknown as Record<string, unknown>,
                   strict: false,
-                };
+                } as ToolConfig;
               }),
             }
           : {}),

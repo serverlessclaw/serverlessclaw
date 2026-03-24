@@ -1,4 +1,4 @@
-import { GapStatus } from '../../lib/types/index';
+import { GapStatus, InsightCategory } from '../../lib/types/index';
 import type { DynamoMemory } from '../../lib/memory';
 import { MEMORY_KEYS, TIME } from '../../lib/constants';
 import { parseConfigInt } from '../../lib/providers/utils';
@@ -59,7 +59,7 @@ export async function shouldRunProactiveReview(
     const allImprovements = await memory.searchInsights(
       baseUserId,
       '*',
-      'system_improvement' as any
+      InsightCategory.SYSTEM_IMPROVEMENT
     );
 
     if (allGaps.length < minGaps && allImprovements.items.length === 0) {
@@ -212,7 +212,11 @@ export async function buildProactiveReviewPrompt(
   }
 
   // Fetch Improvements
-  const allImprovements = await memory.searchInsights(baseUserId, '*', 'system_improvement' as any);
+  const allImprovements = await memory.searchInsights(
+    baseUserId,
+    '*',
+    InsightCategory.SYSTEM_IMPROVEMENT
+  );
   const improvementSummary = allImprovements.items
     .map((i) => `- [Impact: ${i.metadata.impact}/10] ${i.content}`)
     .join('\n');
