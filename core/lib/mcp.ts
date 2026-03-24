@@ -40,7 +40,7 @@ export class MCPBridge {
       const response = await client.listTools();
       return MCPToolMapper.mapTools(serverName, client, response.tools);
     } catch (e: unknown) {
-      logger.error(`Failed to fetch tools from ${serverName}:`, e);
+      logger.warn(`Failed to fetch tools from ${serverName}:`, e);
       MCPClientManager.deleteClient(serverName);
       return [];
     }

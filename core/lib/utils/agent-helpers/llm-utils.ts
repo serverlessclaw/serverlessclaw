@@ -27,17 +27,19 @@ export function parseStructuredResponse<T>(rawResponse: string): T {
     try {
       const jsonContent = cleaned.replace(/```json\n?|\n?```/g, '').trim();
       return JSON.parse(jsonContent) as T;
-    } catch (innerE) {
+    } catch {
+      // 3. If the response is pure markdown (not JSON), wrap it in a JSON envelope.
+      // This handles cases where the LLM returns markdown despite a JSON schema request.
+      if (cleaned.startsWith('#') || cleaned.startsWith('|') || cleaned.startsWith('- ')) {
+        logger.info('Response is markdown, wrapping in JSON envelope.');
+        return { status: 'SUCCESS', plan: cleaned } as T;
+      }
+
       logger.error('Failed to parse structured response:', {
-        raw: rawResponse,
-        error: (innerE as Error).message,
+        raw: rawResponse.substring(0, 200),
+        error: 'Not valid JSON or markdown',
       });
-      throw new Error(
-        `Failed to parse structured response from LLM: ${(innerE as Error).message}`,
-        {
-          cause: innerE,
-        }
-      );
+      throw new Error('Failed to parse structured response from LLM: not valid JSON or markdown');
     }
   }
 }

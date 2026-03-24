@@ -44,6 +44,9 @@ export class MCPClientManager {
         if (command === 'npx') {
           const isLambda = !!process.env.AWS_LAMBDA_FUNCTION_NAME;
           if (isLambda) {
+            logger.warn(
+              `Cannot spawn local MCP server '${serverName}' using npx in Lambda. Use MCP_HUB_URL for external tools.`
+            );
             throw new Error(
               `Cannot spawn local MCP server '${serverName}' using npx in Lambda environment. Please use MCP_HUB_URL for external tools.`
             );

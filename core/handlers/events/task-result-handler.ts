@@ -3,12 +3,50 @@ import { COMPLETION_EVENT_SCHEMA, FAILURE_EVENT_SCHEMA } from '../../lib/schema/
 import { getRecursionLimit, handleRecursionLimitExceeded, wakeupInitiator } from './shared';
 
 /**
- * In-memory dedup set for EventBridge's at-least-once delivery.
- * Prevents duplicate task_completed/task_failed processing within the same Lambda process.
+ * In-memory fast-path dedup set for EventBridge's at-least-once delivery.
+ * Serves as a hot cache; DynamoDB idempotency is the durable guard for cold starts.
  * Bounded to 10k entries to avoid memory leaks; resets when exceeded.
  */
 const processedEvents = new Set<string>();
 const DEDUP_MAX_SIZE = 10_000;
+
+/**
+ * Checks and marks an event as processed using DynamoDB for cross-invocation dedup.
+ * Falls back gracefully if DynamoDB write fails.
+ */
+async function checkAndMarkProcessed(eventId: string): Promise<boolean> {
+  try {
+    const { DynamoDBClient } = await import('@aws-sdk/client-dynamodb');
+    const { DynamoDBDocumentClient, PutCommand } = await import('@aws-sdk/lib-dynamodb');
+    const { Resource } = await import('sst');
+
+    const tableName = (Resource as unknown as { MemoryTable: { name: string } }).MemoryTable.name;
+    const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+    const expiresAt = Math.floor(Date.now() / 1000) + 3600; // 1 hour TTL
+
+    await db.send(
+      new PutCommand({
+        TableName: tableName,
+        Item: {
+          userId: `IDEMPOTENCY#task_result:${eventId}`,
+          timestamp: Date.now(),
+          type: 'IDEMPOTENCY',
+          expiresAt,
+        },
+        ConditionExpression: 'attribute_not_exists(userId)',
+      })
+    );
+    return true; // Successfully marked — this is the first processing
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
+      return false; // Already processed
+    }
+    // If DynamoDB fails, allow processing (fail-open)
+    const { logger } = await import('../../lib/logger');
+    logger.warn('Idempotency check failed, proceeding:', error);
+    return true;
+  }
+}
 
 /**
  * Handles task completion and failure events - relays results to initiator.
@@ -21,17 +59,25 @@ export async function handleTaskResult(
   eventDetail: Record<string, unknown>,
   detailType: string
 ): Promise<void> {
-  // In-memory dedup: skip if this exact event was already processed
+  const { logger } = await import('../../lib/logger');
+
+  // In-memory fast-path dedup
   const eventId = eventDetail.id as string | undefined;
   if (eventId) {
     if (processedEvents.has(eventId)) {
-      const { logger } = await import('../../lib/logger');
-      logger.info(`Duplicate event ${eventId} detected, skipping.`);
+      logger.info(`Duplicate event ${eventId} detected in-memory, skipping.`);
       return;
     }
     processedEvents.add(eventId);
     if (processedEvents.size > DEDUP_MAX_SIZE) {
       processedEvents.clear();
+    }
+
+    // DynamoDB durable dedup for cold-start resilience
+    const isFirstProcessing = await checkAndMarkProcessed(eventId);
+    if (!isFirstProcessing) {
+      logger.info(`Duplicate event ${eventId} detected in DynamoDB, skipping.`);
+      return;
     }
   }
 
@@ -45,9 +91,6 @@ export async function handleTaskResult(
   const response = 'error' in parsedEvent ? parsedEvent.error : parsedEvent.response;
 
   const currentDepth = depth ?? 1;
-
-  // Use shared logger
-  const { logger } = await import('../../lib/logger');
 
   logger.info(
     `Relaying ${isFailure ? 'failure' : 'completion'} from ${agentId} to Initiator: ${initiatorId ?? 'Orchestrator'} (Depth: ${currentDepth}, Session: ${sessionId}, UserNotified: ${userNotified})`
@@ -97,9 +140,19 @@ export async function handleTaskResult(
 
   // 3. Parallel Dispatch Aggregation
   // Check if this result is part of a parallel dispatch
+  // Only attempt aggregation if the parallel tracking record exists (was initialized via parallel-handler)
   if (traceId) {
     const { aggregator } = await import('../../lib/agent/parallel-aggregator');
     const { ConfigManager } = await import('../../lib/registry/config');
+
+    // Guard: check if parallel state exists before attempting to add result.
+    // Non-parallel tasks have a traceId but no parallel tracking record.
+    const existingState = await aggregator.getState(userId, traceId);
+    if (!existingState) {
+      logger.info(`No parallel dispatch state for traceId ${traceId}, skipping aggregation.`);
+      return;
+    }
+
     const aggregateState = await aggregator.addResult(userId, traceId, {
       taskId: (eventDetail.taskId as string) ?? agentId,
       agentId,

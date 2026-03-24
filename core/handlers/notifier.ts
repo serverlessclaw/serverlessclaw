@@ -69,6 +69,14 @@ export const handler = async (event: NotifierEvent): Promise<void> => {
   }
 
   // 2. Telegram Adapter
+  // Only send via Telegram if the baseUserId is a numeric chat ID.
+  // Dashboard users (e.g., "dashboard-user") don't have Telegram chat IDs.
+  const isTelegramChatId = /^\d+$/.test(baseUserId);
+  if (!isTelegramChatId) {
+    logger.info(`[NOTIFIER] Skipping Telegram for non-numeric userId: ${baseUserId}`);
+    return;
+  }
+
   if (attachments && attachments.length > 0) {
     for (const attachment of attachments) {
       if (attachment.url) {
@@ -85,13 +93,6 @@ export const handler = async (event: NotifierEvent): Promise<void> => {
   // based on ConfigTable preferences
 };
 
-/**
- * Sends a message via the Telegram Bot API.
- *
- * @param chatId - The Telegram chat ID to send the message to.
- * @param text - The text of the message to send.
- * @returns A promise that resolves when the message has been sent.
- */
 /**
  * Sends a message via the Telegram Bot API.
  *

@@ -30,12 +30,39 @@ vi.mock('@aws-sdk/client-eventbridge', () => ({
   }),
 }));
 
-// 3. Mock Outbound
+// 3. Mock DynamoDB for idempotency
+const { mockDdbSend } = vi.hoisted(() => ({
+  mockDdbSend: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock('@aws-sdk/client-dynamodb', () => ({
+  DynamoDBClient: vi.fn().mockImplementation(function () {
+    return {};
+  }),
+}));
+
+vi.mock('@aws-sdk/lib-dynamodb', () => ({
+  DynamoDBDocumentClient: {
+    from: vi.fn().mockImplementation(function () {
+      return { send: mockDdbSend };
+    }),
+  },
+  PutCommand: vi.fn().mockImplementation(function (this: any, args) {
+    this.input = args;
+    return this;
+  }),
+  GetCommand: vi.fn().mockImplementation(function (this: any, args) {
+    this.input = args;
+    return this;
+  }),
+}));
+
+// 4. Mock Outbound
 vi.mock('../../lib/outbound', () => ({
   sendOutboundMessage: vi.fn().mockResolvedValue({}),
 }));
 
-// 4. Mock Logger
+// 5. Mock Logger
 vi.mock('../../lib/logger', () => ({
   logger: {
     info: vi.fn(),
@@ -44,20 +71,35 @@ vi.mock('../../lib/logger', () => ({
   },
 }));
 
-// 5. Mock Registry / Config
+// 6. Mock Registry / Config
 vi.mock('../../lib/registry/config', () => ({
   ConfigManager: {
     getRawConfig: vi.fn().mockResolvedValue('50'),
   },
 }));
 
-// 6. Import code to test
+// 7. Mock ParallelAggregator
+const { mockGetState, mockAddResult } = vi.hoisted(() => ({
+  mockGetState: vi.fn().mockResolvedValue(null),
+  mockAddResult: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock('../../lib/agent/parallel-aggregator', () => ({
+  aggregator: {
+    getState: mockGetState,
+    addResult: mockAddResult,
+  },
+}));
+
+// 8. Import code to test
 import { handleTaskResult } from './task-result-handler';
 import { EventType } from '../../lib/types/agent';
 
 describe('task-result-handler (Direct Voice Flow)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetState.mockResolvedValue(null);
+    mockDdbSend.mockResolvedValue({});
   });
 
   it('should include USER_ALREADY_NOTIFIED marker in continuation task when userNotified is true', async () => {
@@ -139,6 +181,8 @@ describe('task-result-handler (Direct Voice Flow)', () => {
 describe('task-result-handler (Bug 4 — duplicate event dedup)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetState.mockResolvedValue(null);
+    mockDdbSend.mockResolvedValue({});
   });
 
   it('should skip processing when the same event id is received twice', async () => {
@@ -225,5 +269,203 @@ describe('task-result-handler (Bug 4 — duplicate event dedup)', () => {
 
     await handleTaskResult(eventDetail, EventType.TASK_COMPLETED);
     expect(mockSend.mock.calls.length).toBeGreaterThan(afterFirst);
+  });
+});
+
+describe('task-result-handler (parallel aggregator guard)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetState.mockResolvedValue(null);
+    mockAddResult.mockResolvedValue(null);
+    mockDdbSend.mockResolvedValue({});
+  });
+
+  it('should NOT call aggregator.addResult when no parallel state exists', async () => {
+    mockGetState.mockResolvedValue(null);
+
+    const eventDetail = {
+      id: 'evt-parallel-guard-001',
+      userId: 'user-123',
+      agentId: 'strategic-planner',
+      task: 'Plan architecture',
+      response: 'Plan complete',
+      traceId: 'trace-abc',
+      initiatorId: 'superclaw',
+      depth: 1,
+      sessionId: 'session-1',
+    };
+
+    await handleTaskResult(eventDetail, EventType.TASK_COMPLETED);
+
+    // Should have checked state but NOT added result
+    expect(mockGetState).toHaveBeenCalledWith('user-123', 'trace-abc');
+    expect(mockAddResult).not.toHaveBeenCalled();
+  });
+
+  it('should call aggregator.addResult only when parallel state exists', async () => {
+    mockGetState.mockResolvedValue({
+      taskCount: 3,
+      completedCount: 0,
+      results: [],
+      status: 'pending',
+    });
+    mockAddResult.mockResolvedValue({
+      isComplete: false,
+      taskCount: 3,
+      results: [{ taskId: 't1', agentId: 'coder', status: 'success' }],
+      initiatorId: 'superclaw',
+      sessionId: 'session-1',
+      status: 'pending',
+    });
+
+    const eventDetail = {
+      id: 'evt-parallel-guard-002',
+      userId: 'user-123',
+      agentId: 'coder',
+      task: 'Implement feature',
+      response: 'Done',
+      traceId: 'trace-xyz',
+      taskId: 'task-1',
+      initiatorId: 'superclaw',
+      depth: 1,
+      sessionId: 'session-1',
+    };
+
+    await handleTaskResult(eventDetail, EventType.TASK_COMPLETED);
+
+    expect(mockGetState).toHaveBeenCalledWith('user-123', 'trace-xyz');
+    expect(mockAddResult).toHaveBeenCalledWith(
+      'user-123',
+      'trace-xyz',
+      expect.objectContaining({
+        taskId: 'task-1',
+        agentId: 'coder',
+        status: 'success',
+      })
+    );
+  });
+
+  it('should skip aggregation entirely when traceId is missing', async () => {
+    const eventDetail = {
+      id: 'evt-no-trace-001',
+      userId: 'user-123',
+      agentId: 'coder',
+      task: 'Quick fix',
+      response: 'Fixed',
+      initiatorId: 'superclaw',
+      depth: 1,
+    };
+
+    await handleTaskResult(eventDetail, EventType.TASK_COMPLETED);
+
+    // No traceId → no aggregator calls at all
+    expect(mockGetState).not.toHaveBeenCalled();
+    expect(mockAddResult).not.toHaveBeenCalled();
+  });
+});
+
+describe('task-result-handler (DynamoDB idempotency for cold-start dedup)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetState.mockResolvedValue(null);
+    mockDdbSend.mockResolvedValue({});
+  });
+
+  it('should write idempotency record for first-time events', async () => {
+    mockDdbSend.mockResolvedValue({});
+
+    const eventDetail = {
+      id: 'evt-idempotent-001',
+      userId: 'user-123',
+      agentId: 'coder',
+      task: 'Build feature',
+      response: 'Built',
+      initiatorId: 'superclaw',
+      depth: 1,
+    };
+
+    await handleTaskResult(eventDetail, EventType.TASK_COMPLETED);
+
+    // Should have called DynamoDB PutCommand with idempotency key
+    expect(mockDdbSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          TableName: 'test-memorytable',
+          Item: expect.objectContaining({
+            userId: 'IDEMPOTENCY#task_result:evt-idempotent-001',
+            type: 'IDEMPOTENCY',
+          }),
+          ConditionExpression: 'attribute_not_exists(userId)',
+        }),
+      })
+    );
+  });
+
+  it('should skip processing when DynamoDB idempotency check fails (duplicate)', async () => {
+    // Simulate ConditionalCheckFailedException — item already exists
+    const conditionalError = new Error('ConditionalCheckFailedException');
+    conditionalError.name = 'ConditionalCheckFailedException';
+    mockDdbSend.mockRejectedValue(conditionalError);
+
+    const eventDetail = {
+      id: 'evt-idempotent-002',
+      userId: 'user-123',
+      agentId: 'coder',
+      task: 'Build feature',
+      response: 'Built',
+      initiatorId: 'superclaw',
+      depth: 1,
+    };
+
+    await handleTaskResult(eventDetail, EventType.TASK_COMPLETED);
+
+    // Should NOT have emitted any continuation event since it was a duplicate
+    // (wakeupInitiator should not have been called)
+    expect(mockSend).not.toHaveBeenCalled();
+  });
+
+  it('should fail-open and process when DynamoDB is unavailable', async () => {
+    // Simulate generic DynamoDB error (not ConditionalCheckFailedException)
+    mockDdbSend.mockRejectedValue(new Error('Throughput exceeded'));
+
+    const eventDetail = {
+      id: 'evt-idempotent-003',
+      userId: 'user-123',
+      agentId: 'coder',
+      task: 'Build feature',
+      response: 'Built',
+      initiatorId: 'superclaw',
+      depth: 1,
+    };
+
+    await handleTaskResult(eventDetail, EventType.TASK_COMPLETED);
+
+    // Should still process (fail-open) — wakeupInitiator called
+    expect(mockSend).toHaveBeenCalled();
+  });
+
+  it('should use both in-memory and DynamoDB dedup together', async () => {
+    const eventDetail = {
+      id: 'evt-idempotent-004',
+      userId: 'user-123',
+      agentId: 'coder',
+      task: 'Task',
+      response: 'Done',
+      initiatorId: 'superclaw',
+      depth: 1,
+    };
+
+    // First call — both in-memory and DynamoDB should be used
+    await handleTaskResult(eventDetail, EventType.TASK_COMPLETED);
+    const ddbCallsAfterFirst = mockDdbSend.mock.calls.length;
+    const ebCallsAfterFirst = mockSend.mock.calls.length;
+
+    // Second call — in-memory set should catch it before DynamoDB
+    await handleTaskResult(eventDetail, EventType.TASK_COMPLETED);
+
+    // No new DynamoDB calls (in-memory caught it)
+    expect(mockDdbSend.mock.calls.length).toBe(ddbCallsAfterFirst);
+    // No new EventBridge calls
+    expect(mockSend.mock.calls.length).toBe(ebCallsAfterFirst);
   });
 });

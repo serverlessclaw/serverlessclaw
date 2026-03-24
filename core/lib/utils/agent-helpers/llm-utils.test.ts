@@ -114,7 +114,65 @@ describe('parseStructuredResponse', () => {
     );
   });
 
-  it('should handle the exact pattern from the planner bug', () => {
+  it('should wrap markdown response starting with # in JSON envelope', () => {
+    const input =
+      '## Serverless Claw — System Topology Overview\n\n### 1. Agent Roster\n\n| Agent | Role |';
+    const result = parseStructuredResponse<{ status: string; plan: string }>(input);
+    expect(result.status).toBe('SUCCESS');
+    expect(result.plan).toBe(input);
+  });
+
+  it('should wrap markdown table starting with | in JSON envelope', () => {
+    const input = '| Agent | Role |\n|-------|------|\n| main | Orchestrator |';
+    const result = parseStructuredResponse<{ status: string; plan: string }>(input);
+    expect(result.status).toBe('SUCCESS');
+    expect(result.plan).toBe(input);
+  });
+
+  it('should wrap markdown list starting with - in JSON envelope', () => {
+    const input = '- Item 1\n- Item 2\n- Item 3';
+    const result = parseStructuredResponse<{ status: string; plan: string }>(input);
+    expect(result.status).toBe('SUCCESS');
+    expect(result.plan).toBe(input);
+  });
+
+  it('should still throw on non-markdown, non-JSON text', () => {
+    const input = 'This is just plain text with no JSON or markdown formatting.';
+    expect(() => parseStructuredResponse(input)).toThrow(
+      'Failed to parse structured response from LLM'
+    );
+  });
+
+  it('should handle the exact planner bug pattern: markdown with headers and tables', () => {
+    // This is the actual pattern from the planner bug log
+    const input = [
+      '## Serverless Claw — System Topology Overview',
+      '',
+      '### 1. Agent Roster (7 Agents Total)',
+      '',
+      '| Agent ID | Role | Type | Core Responsibility |',
+      '|----------|------|------|---------------------|',
+      '| **main** | Orchestrator | Backbone | Entry point |',
+      '',
+      '---',
+      '',
+      '### 2. Infrastructure Layout',
+      '',
+      '```',
+      '┌─────────────┐',
+      '│  MAIN AGENT │',
+      '└─────────────┘',
+      '```',
+    ].join('\n');
+
+    const result = parseStructuredResponse<{ status: string; plan: string }>(input);
+    expect(result.status).toBe('SUCCESS');
+    expect(result.plan).toContain('## Serverless Claw');
+    expect(result.plan).toContain('| Agent ID |');
+    expect(result.plan).toContain('MAIN AGENT');
+  });
+
+  it('should handle the exact planner bug pattern', () => {
     // This is the actual pattern that caused the bug:
     // The LLM returns plain text with [TOOL_CALL] blocks because
     // no tools were bound to the model call.

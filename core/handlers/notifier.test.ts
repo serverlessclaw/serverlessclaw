@@ -157,4 +157,99 @@ describe('Notifier Handler', () => {
       })
     );
   });
+
+  it('should skip Telegram send for non-numeric userId (dashboard users)', async () => {
+    const event = {
+      detail: {
+        userId: 'dashboard-user',
+        message: 'System notification',
+      },
+    } as any;
+
+    await handler(event);
+
+    // Should sync to memory but NOT send to Telegram
+    expect(mockAddMessage).toHaveBeenCalledWith('dashboard-user', expect.any(Object));
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('should skip Telegram send for CONV# prefixed dashboard userId', async () => {
+    const event = {
+      detail: {
+        userId: 'CONV#dashboard-user#session_123',
+        message: 'Session message',
+        sessionId: 'session_123',
+      },
+    } as any;
+
+    await handler(event);
+
+    // Should sync to memory (base + session contexts)
+    expect(mockAddMessage).toHaveBeenCalledWith('dashboard-user', expect.any(Object));
+    expect(mockAddMessage).toHaveBeenCalledWith(
+      'CONV#dashboard-user#session_123',
+      expect.any(Object)
+    );
+    // But NOT send to Telegram
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('should send to Telegram for numeric userId', async () => {
+    const event = {
+      detail: {
+        userId: '987654321',
+        message: 'Telegram message',
+      },
+    } as any;
+
+    (global.fetch as any).mockResolvedValue({ ok: true });
+
+    await handler(event);
+
+    // Should sync AND send to Telegram
+    expect(mockAddMessage).toHaveBeenCalled();
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/sendMessage'),
+      expect.any(Object)
+    );
+  });
+
+  it('should send to Telegram for CONV# prefixed numeric userId', async () => {
+    const event = {
+      detail: {
+        userId: 'CONV#123456789#session_abc',
+        message: 'Session notification',
+        sessionId: 'session_abc',
+      },
+    } as any;
+
+    (global.fetch as any).mockResolvedValue({ ok: true });
+
+    await handler(event);
+
+    // Should normalize to numeric base and send to Telegram
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/sendMessage'),
+      expect.objectContaining({
+        body: expect.stringContaining('"chat_id":"123456789"'),
+      })
+    );
+  });
+
+  it('should log info when skipping Telegram for non-numeric userId', async () => {
+    const { logger } = await import('../lib/logger');
+
+    const event = {
+      detail: {
+        userId: 'test-user',
+        message: 'Dashboard notification',
+      },
+    } as any;
+
+    await handler(event);
+
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.stringContaining('Skipping Telegram for non-numeric userId: test-user')
+    );
+  });
 });
