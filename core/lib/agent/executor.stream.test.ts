@@ -126,9 +126,16 @@ describe('AgentExecutor.streamLoop', () => {
       chunks.push(chunk);
     }
 
-    // It should yield the content chunk but break when it sees tool_calls
-    expect(chunks).toHaveLength(1);
+    // It should yield the content chunk AND the tool_calls chunk before breaking
+    expect(chunks).toHaveLength(2);
     expect(chunks[0].content).toBe('I will call a tool.');
+    expect(chunks[1].tool_calls).toEqual([
+      {
+        id: 'call-1',
+        type: 'function',
+        function: { name: 'test_tool', arguments: '{}' },
+      },
+    ]);
     expect(mockEmitter.emitChunk).toHaveBeenCalledWith(
       'user-1',
       undefined,

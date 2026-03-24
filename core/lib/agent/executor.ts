@@ -696,6 +696,11 @@ export class AgentExecutor {
       };
       messages.push(aiResponse);
 
+      // Yield tool_calls so the route handler can pass them to the UI
+      if (toolCalls.length > 0) {
+        yield { tool_calls: toolCalls };
+      }
+
       // (Tool execution logic here... similar to runLoop but simplified for this PR)
       // For now, if tool calls are detected in a stream, we fall back to runLoop for the tool-iteration phase
       // to avoid complex async yielding across recursive iterations.
