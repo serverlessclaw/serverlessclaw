@@ -50,7 +50,7 @@ export class OpenAIProvider implements IProvider {
     _provider?: string,
     responseFormat?: import('../types/index').ResponseFormat
   ): Promise<Message> {
-    const resource = Resource as Record<string, { value?: string } | undefined>;
+    const resource = Resource as unknown as Record<string, { value?: string } | undefined>;
     const apiKey =
       ('OpenAIApiKey' in resource ? resource.OpenAIApiKey?.value : undefined) ||
       process.env.OPENAI_API_KEY ||
@@ -155,10 +155,10 @@ export class OpenAIProvider implements IProvider {
     });
 
     try {
-      type ResponseInput = Array<Record<string, unknown>>;
       const response = (await client.responses.create({
         model: activeModel as OpenAI.ResponsesModel,
-        input: responsesInput as ResponseInput,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        input: responsesInput as any,
         reasoning: { effort: reasoningEffort as OpenAI.ReasoningEffort },
         // 2026 Responses API: response_format has moved to text.format
         ...(responseFormat
@@ -206,7 +206,8 @@ export class OpenAIProvider implements IProvider {
                   parameters: t.parameters as unknown as Record<string, unknown>,
                   strict: false,
                 } as ToolConfig;
-              }),
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              }) as any,
             }
           : {}),
       })) as unknown as OpenAIResponse; // Isolate unsafe access
@@ -275,7 +276,7 @@ export class OpenAIProvider implements IProvider {
     _provider?: string,
     responseFormat?: import('../types/index').ResponseFormat
   ): AsyncIterable<import('../types/index').MessageChunk> {
-    const resource = Resource as Record<string, { value?: string } | undefined>;
+    const resource = Resource as unknown as Record<string, { value?: string } | undefined>;
     const apiKey =
       ('OpenAIApiKey' in resource ? resource.OpenAIApiKey?.value : undefined) ||
       process.env.OPENAI_API_KEY ||
@@ -368,10 +369,10 @@ export class OpenAIProvider implements IProvider {
     });
 
     try {
-      type ResponseInput = Array<Record<string, unknown>>;
       const stream = await client.responses.create({
         model: activeModel as OpenAI.ResponsesModel,
-        input: responsesInput as ResponseInput,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        input: responsesInput as any,
         reasoning: { effort: reasoningEffort as OpenAI.ReasoningEffort },
         stream: true,
         ...(responseFormat
@@ -416,7 +417,8 @@ export class OpenAIProvider implements IProvider {
                   parameters: t.parameters as unknown as Record<string, unknown>,
                   strict: false,
                 } as ToolConfig;
-              }),
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              }) as any,
             }
           : {}),
       });
