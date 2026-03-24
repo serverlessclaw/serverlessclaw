@@ -252,4 +252,58 @@ describe('MiniMaxProvider', () => {
     expect(caps.contextWindow).toBe(204800);
     expect(caps.supportedReasoningProfiles).toContain(ReasoningProfile.DEEP);
   });
+
+  it('should include output_config when responseFormat is json_schema', async () => {
+    mockCreateMessage.mockResolvedValue({
+      content: [{ type: 'text', text: '{"name":"John"}' }],
+    });
+
+    const responseFormat = {
+      type: 'json_schema' as const,
+      json_schema: {
+        name: 'person',
+        strict: true,
+        schema: {
+          type: 'object',
+          properties: { name: { type: 'string' } },
+          required: ['name'],
+        },
+      },
+    };
+
+    await provider.call(
+      [{ role: MessageRole.USER, content: 'extract person' }],
+      [],
+      ReasoningProfile.STANDARD,
+      undefined,
+      undefined,
+      responseFormat
+    );
+
+    expect(mockCreateMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        output_config: {
+          format: {
+            type: 'json_schema',
+            schema: {
+              type: 'object',
+              properties: { name: { type: 'string' } },
+              required: ['name'],
+            },
+          },
+        },
+      })
+    );
+  });
+
+  it('should not include output_config when responseFormat is not provided', async () => {
+    mockCreateMessage.mockResolvedValue({
+      content: [{ type: 'text', text: 'Hello' }],
+    });
+
+    await provider.call([{ role: MessageRole.USER, content: 'hi' }]);
+
+    const callArgs = mockCreateMessage.mock.calls[0][0];
+    expect(callArgs.output_config).toBeUndefined();
+  });
 });

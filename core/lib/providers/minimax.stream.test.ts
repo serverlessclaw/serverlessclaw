@@ -95,4 +95,54 @@ describe('MiniMaxProvider.stream', () => {
     expect(chunks[0].tool_calls?.[0].function.name).toBe('my_tool');
     expect(chunks[0].tool_calls?.[0].function.arguments).toBe('{"foo":"bar"}');
   });
+
+  it('should include output_config when responseFormat is provided', async () => {
+    async function* mockAsyncStream() {
+      yield { type: 'content_block_delta', delta: { type: 'text_delta', text: '{"name":"John"}' } };
+    }
+
+    mockCreate.mockResolvedValue(mockAsyncStream());
+
+    const responseFormat = {
+      type: 'json_schema' as const,
+      json_schema: {
+        name: 'person',
+        strict: true,
+        schema: {
+          type: 'object',
+          properties: { name: { type: 'string' } },
+          required: ['name'],
+        },
+      },
+    };
+
+    const stream = provider.stream(
+      [{ role: MessageRole.USER, content: 'extract' }],
+      [],
+      ReasoningProfile.STANDARD,
+      undefined,
+      undefined,
+      responseFormat
+    );
+
+    // Drain the stream
+    for await (const _chunk of stream) {
+      // drain
+    }
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        output_config: {
+          format: {
+            type: 'json_schema',
+            schema: {
+              type: 'object',
+              properties: { name: { type: 'string' } },
+              required: ['name'],
+            },
+          },
+        },
+      })
+    );
+  });
 });

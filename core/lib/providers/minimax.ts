@@ -44,7 +44,7 @@ export class MiniMaxProvider implements IProvider {
     profile: ReasoningProfile = ReasoningProfile.STANDARD,
     model?: string,
     _provider?: string,
-    _responseFormat?: import('../types/index').ResponseFormat
+    responseFormat?: import('../types/index').ResponseFormat
   ): Promise<Message> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const resource = Resource as any;
@@ -80,6 +80,15 @@ export class MiniMaxProvider implements IProvider {
 
     if (tools && tools.length > 0) {
       requestParams['tools'] = this.transformToolsToAnthropic(tools);
+    }
+
+    if (responseFormat?.type === 'json_schema') {
+      requestParams['output_config'] = {
+        format: {
+          type: 'json_schema',
+          schema: responseFormat.json_schema.schema,
+        },
+      };
     }
 
     // Make the API call
@@ -137,7 +146,7 @@ export class MiniMaxProvider implements IProvider {
     profile: ReasoningProfile = ReasoningProfile.STANDARD,
     model?: string,
     _provider?: string,
-    _responseFormat?: import('../types/index').ResponseFormat
+    responseFormat?: import('../types/index').ResponseFormat
   ): AsyncIterable<import('../types/index').MessageChunk> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const resource = Resource as any;
@@ -174,6 +183,15 @@ export class MiniMaxProvider implements IProvider {
 
     if (tools && tools.length > 0) {
       requestParams['tools'] = this.transformToolsToAnthropic(tools);
+    }
+
+    if (responseFormat?.type === 'json_schema') {
+      requestParams['output_config'] = {
+        format: {
+          type: 'json_schema',
+          schema: responseFormat.json_schema.schema,
+        },
+      };
     }
 
     try {
