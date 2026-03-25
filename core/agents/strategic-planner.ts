@@ -56,8 +56,9 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
     return { status: 'FAILED_MISSING_USER_ID' };
   }
 
-  const isProactive =
-    !!((metadata as unknown as Record<string, unknown>)?.isProactive || isScheduledReview);
+  const isProactive = !!(
+    (metadata as unknown as Record<string, unknown>)?.isProactive || isScheduledReview
+  );
 
   // Extract base userId (remove CONV# prefix if present)
   const baseUserId = extractBaseUserId(userId);
@@ -141,50 +142,48 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
   const resultAttachments: any[] = [];
 
   try {
-    const stream = plannerAgent.stream(
-      userId,
-      plannerPrompt,
-      {
-        profile: ReasoningProfile.DEEP,
-        isIsolated: isProactive,
-        initiatorId,
-        depth,
-        traceId,
-        sessionId,
-        source: TraceSource.SYSTEM,
-        communicationMode: isProactive ? 'json' : 'text',
-        responseFormat: isProactive ? {
-          type: 'json_schema',
-          json_schema: {
-            name: 'strategic_plan',
-            strict: true,
-            schema: {
-              type: 'object',
-              properties: {
-                status: { type: 'string', enum: ['SUCCESS', 'FAILED'] },
-                plan: { type: 'string' },
-                coveredGapIds: { type: 'array', items: { type: 'string' } },
-                toolOptimizations: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      action: { type: 'string', enum: ['PRUNE', 'CONSOLIDATE', 'REPLACE'] },
-                      toolName: { type: 'string' },
-                      reason: { type: 'string' },
+    const stream = plannerAgent.stream(userId, plannerPrompt, {
+      profile: ReasoningProfile.DEEP,
+      isIsolated: isProactive,
+      initiatorId,
+      depth,
+      traceId,
+      sessionId,
+      source: TraceSource.SYSTEM,
+      communicationMode: isProactive ? 'json' : 'text',
+      responseFormat: isProactive
+        ? {
+            type: 'json_schema',
+            json_schema: {
+              name: 'strategic_plan',
+              strict: true,
+              schema: {
+                type: 'object',
+                properties: {
+                  status: { type: 'string', enum: ['SUCCESS', 'FAILED'] },
+                  plan: { type: 'string' },
+                  coveredGapIds: { type: 'array', items: { type: 'string' } },
+                  toolOptimizations: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        action: { type: 'string', enum: ['PRUNE', 'CONSOLIDATE', 'REPLACE'] },
+                        toolName: { type: 'string' },
+                        reason: { type: 'string' },
+                      },
+                      required: ['action', 'toolName', 'reason'],
+                      additionalProperties: false,
                     },
-                    required: ['action', 'toolName', 'reason'],
-                    additionalProperties: false,
                   },
                 },
+                required: ['status', 'plan', 'coveredGapIds'],
+                additionalProperties: false,
               },
-              required: ['status', 'plan', 'coveredGapIds'],
-              additionalProperties: false,
             },
-          },
-        } : undefined,
-      }
-    );
+          }
+        : undefined,
+    });
 
     for await (const chunk of stream) {
       if (chunk.content) rawResponse += chunk.content;

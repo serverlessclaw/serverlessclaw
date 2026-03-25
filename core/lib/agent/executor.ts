@@ -104,7 +104,12 @@ export class AgentExecutor {
 
         usage.toolCallCount += toolResult.toolCallCount;
         if (toolResult.paused) {
-          return this.handlePausedToolResult(aiResponse, toolResult, attachments, approvedToolCalls);
+          return this.handlePausedToolResult(
+            aiResponse,
+            toolResult,
+            attachments,
+            approvedToolCalls
+          );
         }
         iterations++;
       } else {
@@ -114,11 +119,22 @@ export class AgentExecutor {
     }
 
     usage.durationMs = Date.now() - loopStartTime;
-    return this.finalizeResult(responseText, iterations, maxIterations, lastAiResponse, attachments, usage);
+    return this.finalizeResult(
+      responseText,
+      iterations,
+      maxIterations,
+      lastAiResponse,
+      attachments,
+      usage
+    );
   }
 
-  async *streamLoop(messages: Message[], options: ExecutorOptions): AsyncIterable<import('../types/index').MessageChunk> {
-    const { maxIterations, tracer, emitter, traceId, sessionId, userId, approvedToolCalls } = options;
+  async *streamLoop(
+    messages: Message[],
+    options: ExecutorOptions
+  ): AsyncIterable<import('../types/index').MessageChunk> {
+    const { maxIterations, tracer, emitter, traceId, sessionId, userId, approvedToolCalls } =
+      options;
     let iterations = 0;
     const usage: ExecutorUsage = {
       totalInputTokens: 0,
@@ -140,11 +156,19 @@ export class AgentExecutor {
     while (iterations < maxIterations) {
       await tracer.addStep({
         type: TRACE_TYPES.LLM_CALL,
-        content: { messageCount: messages.length, model: options.activeModel, provider: options.activeProvider },
+        content: {
+          messageCount: messages.length,
+          model: options.activeModel,
+          provider: options.activeProvider,
+        },
       });
 
       const capabilities = await this.provider.getCapabilities(options.activeModel);
-      const normalizedProfile = normalizeProfile(options.activeProfile, capabilities, options.activeModel ?? 'default');
+      const normalizedProfile = normalizeProfile(
+        options.activeProfile,
+        capabilities,
+        options.activeModel ?? 'default'
+      );
 
       const stream = this.provider.stream(
         messages,
@@ -155,7 +179,9 @@ export class AgentExecutor {
         capabilities.supportsStructuredOutput ? options.responseFormat : undefined
       );
 
-      logger.info(`[Executor] Starting stream loop for agent ${this.agentId} | traceId: ${traceId}`);
+      logger.info(
+        `[Executor] Starting stream loop for agent ${this.agentId} | traceId: ${traceId}`
+      );
 
       let fullContent = '';
       let fullThought = '';
@@ -174,13 +200,16 @@ export class AgentExecutor {
           if (options.communicationMode === 'json') {
             fullContent += chunk.content;
             if (!jsonMessageExtracted) {
-              const messageMatch = fullContent.match(/"(?:message|plan|responseText)"\s*:\s*"((?:[^"\\]|\\.)*)$/);
+              const messageMatch = fullContent.match(
+                /"(?:message|plan|responseText)"\s*:\s*"((?:[^"\\]|\\.)*)$/
+              );
               if (messageMatch) {
                 jsonMessageExtracted = true;
                 let newText = messageMatch[1];
                 // Handle basic escapes if any
                 newText = newText.replace(/\\n/g, '\n').replace(/\\"/g, '"');
-                if (newText && emitter) emitter.emitChunk(userId, sessionId, traceId, newText, this.agentName, false);
+                if (newText && emitter)
+                  emitter.emitChunk(userId, sessionId, traceId, newText, this.agentName, false);
               }
             } else if (emitter) {
               emitter.emitChunk(userId, sessionId, traceId, chunk.content, this.agentName, false);
@@ -211,7 +240,12 @@ export class AgentExecutor {
 
       await tracer.addStep({
         type: TRACE_TYPES.LLM_RESPONSE,
-        content: { content: fullContent, thought: fullThought, tool_calls: toolCalls, usage: usage },
+        content: {
+          content: fullContent,
+          thought: fullThought,
+          tool_calls: toolCalls,
+          usage: usage,
+        },
       });
 
       if (toolCalls.length === 0) break;
@@ -224,7 +258,9 @@ export class AgentExecutor {
       }
 
       // Pre-tool execution acknowledgement for pausing tools
-      const isPauseTool = toolCalls.some(tc => ['dispatchTask', 'seekClarification'].includes(tc.function.name));
+      const isPauseTool = toolCalls.some((tc) =>
+        ['dispatchTask', 'seekClarification'].includes(tc.function.name)
+      );
       if (isPauseTool && !fullContent) {
         const ackMsg = `I'm on it. I'll engage the appropriate agent for you.`;
         if (emitter) {
@@ -269,10 +305,20 @@ export class AgentExecutor {
       }
       iterations++;
     }
-    yield { usage: { prompt_tokens: usage.totalInputTokens, completion_tokens: usage.totalOutputTokens, total_tokens: usage.totalInputTokens + usage.totalOutputTokens } };
+    yield {
+      usage: {
+        prompt_tokens: usage.totalInputTokens,
+        completion_tokens: usage.totalOutputTokens,
+        total_tokens: usage.totalInputTokens + usage.totalOutputTokens,
+      },
+    };
   }
 
-  private async performPreLoopChecks(messages: Message[], attachments: NonNullable<Message['attachments']>, options: ExecutorOptions) {
+  private async performPreLoopChecks(
+    messages: Message[],
+    attachments: NonNullable<Message['attachments']>,
+    options: ExecutorOptions
+  ) {
     if (options.sessionStateManager && options.sessionId) {
       this.lastInjectedMessageTimestamp = await ExecutorHelper.injectPendingMessages(
         messages,
@@ -285,7 +331,12 @@ export class AgentExecutor {
       await options.sessionStateManager.renewProcessing(options.sessionId, this.agentId);
     }
 
-    const timeoutResult = ExecutorHelper.checkTimeouts(Date.now(), options.taskTimeoutMs, options.timeoutBehavior, options.context);
+    const timeoutResult = ExecutorHelper.checkTimeouts(
+      Date.now(),
+      options.taskTimeoutMs,
+      options.timeoutBehavior,
+      options.context
+    );
     if (timeoutResult) return timeoutResult;
 
     const cancellationMsg = await ExecutorHelper.checkCancellation(options.taskId);
@@ -298,11 +349,19 @@ export class AgentExecutor {
   private async callLLM(messages: Message[], options: ExecutorOptions): Promise<Message> {
     await options.tracer.addStep({
       type: TRACE_TYPES.LLM_CALL,
-      content: { messageCount: messages.length, model: options.activeModel, provider: options.activeProvider },
+      content: {
+        messageCount: messages.length,
+        model: options.activeModel,
+        provider: options.activeProvider,
+      },
     });
 
     const capabilities = await this.provider.getCapabilities(options.activeModel);
-    const normalizedProfile = normalizeProfile(options.activeProfile, capabilities, options.activeModel ?? 'default');
+    const normalizedProfile = normalizeProfile(
+      options.activeProfile,
+      capabilities,
+      options.activeModel ?? 'default'
+    );
 
     return this.provider.call(
       messages,
@@ -322,27 +381,41 @@ export class AgentExecutor {
     }
   }
 
-  private handlePausedToolResult(aiResponse: Message, toolResult: any, attachments: any[], approvedToolCalls?: string[]): LoopResult {
+  private handlePausedToolResult(
+    aiResponse: Message,
+    toolResult: any,
+    attachments: any[],
+    approvedToolCalls?: string[]
+  ): LoopResult {
     const isApproval = toolResult.asyncWait && !toolResult.responseText;
     const pendingToolName = this.getPendingToolName(aiResponse, approvedToolCalls);
     const toolIndex = Math.max(0, toolResult.toolCallCount - 1);
     const callId = aiResponse.tool_calls![toolIndex].id;
 
     return {
-      responseText: isApproval ? ExecutorHelper.formatApprovalMessage(pendingToolName, callId) : aiResponse.content || ExecutorHelper.formatUserFriendlyResponse(toolResult.responseText || ''),
+      responseText: isApproval
+        ? ExecutorHelper.formatApprovalMessage(pendingToolName, callId)
+        : aiResponse.content ||
+          ExecutorHelper.formatUserFriendlyResponse(toolResult.responseText || ''),
       paused: true,
       asyncWait: toolResult.asyncWait,
       pauseMessage: isApproval ? `APPROVAL_REQUIRED:${callId}` : toolResult.responseText,
       attachments,
       tool_calls: aiResponse.tool_calls,
-      options: isApproval ? [
-        { label: 'Approve Execution', value: `APPROVE_TOOL_CALL:${callId}`, type: 'primary' },
-        { label: 'Reject', value: `REJECT_TOOL_CALL:${callId}`, type: 'danger' },
-      ] : undefined,
+      options: isApproval
+        ? [
+            { label: 'Approve Execution', value: `APPROVE_TOOL_CALL:${callId}`, type: 'primary' },
+            { label: 'Reject', value: `REJECT_TOOL_CALL:${callId}`, type: 'danger' },
+          ]
+        : undefined,
     };
   }
 
-  private async handleStreamToolCalls(toolCalls: ToolCall[], messages: Message[], options: ExecutorOptions) {
+  private async handleStreamToolCalls(
+    toolCalls: ToolCall[],
+    messages: Message[],
+    options: ExecutorOptions
+  ) {
     const { emitter, userId, sessionId, traceId, approvedToolCalls } = options;
     for (const tc of toolCalls) {
       const tool = this.tools.find((t) => t.name === tc.function.name);
@@ -352,7 +425,16 @@ export class AgentExecutor {
           { label: 'Approve Execution', value: `APPROVE_TOOL_CALL:${tc.id}`, type: 'primary' },
           { label: 'Reject', value: `REJECT_TOOL_CALL:${tc.id}`, type: 'danger' },
         ];
-        if (emitter) emitter.emitChunk(userId, sessionId, traceId, `\n\n${approvalMsg}`, this.agentName, false, opts as any);
+        if (emitter)
+          emitter.emitChunk(
+            userId,
+            sessionId,
+            traceId,
+            `\n\n${approvalMsg}`,
+            this.agentName,
+            false,
+            opts as any
+          );
         return { content: `\n\n${approvalMsg}`, options: opts as any };
       }
     }
@@ -360,7 +442,14 @@ export class AgentExecutor {
     return null;
   }
 
-  private finalizeResult(responseText: string, iterations: number, maxIterations: number, lastAiResponse: Message | undefined, attachments: any[], usage: ExecutorUsage): LoopResult {
+  private finalizeResult(
+    responseText: string,
+    iterations: number,
+    maxIterations: number,
+    lastAiResponse: Message | undefined,
+    attachments: any[],
+    usage: ExecutorUsage
+  ): LoopResult {
     if (!responseText && iterations >= maxIterations) {
       return {
         responseText: AGENT_LOG_MESSAGES.TASK_PAUSED_ITERATION_LIMIT,
@@ -382,7 +471,13 @@ export class AgentExecutor {
   private async manageContext(messages: Message[], model?: string, provider?: string) {
     const currentTokens = ContextManager.estimateTokens(messages);
     if (currentTokens > this.contextLimit * 0.9 && this.systemPrompt) {
-      const rebuilt = await ContextManager.getManagedContext(messages, this.summary, this.systemPrompt, this.contextLimit, { model, provider });
+      const rebuilt = await ContextManager.getManagedContext(
+        messages,
+        this.summary,
+        this.systemPrompt,
+        this.contextLimit,
+        { model, provider }
+      );
       messages.length = 0;
       messages.push(...rebuilt.messages);
       logger.warn(`Context truncation: ${currentTokens}→${rebuilt.tokenEstimate} tokens.`);

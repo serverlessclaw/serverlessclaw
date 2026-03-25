@@ -131,23 +131,19 @@ export async function processEventWithAgent(
   const agentTools = await loadAgentTools(agentId);
   const agent = new Agent(memory, provider, agentTools, config.systemPrompt, config);
 
-  const stream = agent.stream(
-    userId,
-    `${options.handlerTitle}: ${taskContent}`,
-    {
-      context: options.context,
-      isContinuation: options.isContinuation,
-      traceId: options.traceId,
-      sessionId: options.sessionId,
-      depth: options.depth,
-      initiatorId: options.initiatorId,
-      attachments: options.attachments,
-      source: TraceSource.SYSTEM,
-    }
-  );
+  const stream = agent.stream(userId, `${options.handlerTitle}: ${taskContent}`, {
+    context: options.context,
+    isContinuation: options.isContinuation,
+    traceId: options.traceId,
+    sessionId: options.sessionId,
+    depth: options.depth,
+    initiatorId: options.initiatorId,
+    attachments: options.attachments,
+    source: TraceSource.SYSTEM,
+  });
 
   let responseText = '';
-  // resultAttachments from agent.stream are not directly returned as a single array, 
+  // resultAttachments from agent.stream are not directly returned as a single array,
   // they are usually added to memory or yielded in chunks if the provider/executor supports it.
   // In our current Agent.stream implementation, attachments are persistent in memory.
   for await (const chunk of stream) {
@@ -160,7 +156,7 @@ export async function processEventWithAgent(
       : responseText;
 
     const messageId = agentId === 'superclaw' ? options.traceId : `${options.traceId}-${agentId}`;
-    
+
     await sendOutboundMessage(
       options.outboundHandlerName,
       userId,

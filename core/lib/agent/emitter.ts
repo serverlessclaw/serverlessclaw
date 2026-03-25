@@ -160,8 +160,10 @@ export class AgentEmitter {
       // Root orchestrator uses traceId directly to match API response/history
       // Sub-agents use traceId-agentId to maintain distinct bubbles
       const messageId = agentId === 'superclaw' ? traceId : `${traceId}-${agentId}`;
-      
-      logger.info(`[Emitter] Emitting chunk for agent ${agentId} | messageId: ${messageId} | traceId: ${traceId}`);
+
+      logger.info(
+        `[Emitter] Emitting chunk for agent ${agentId} | messageId: ${messageId} | traceId: ${traceId}`
+      );
 
       await this.eventbridge.send(
         new PutEventsCommand({
