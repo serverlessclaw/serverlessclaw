@@ -1,5 +1,4 @@
-import { TraceSource, TaskEvent, EventType } from '../lib/types/agent';
-import { sendOutboundMessage } from '../lib/outbound';
+import { TraceSource, TaskEvent, EventType, Attachment } from '../lib/types/agent';
 import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
 import {
@@ -74,39 +73,53 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
   const isTextMode = config?.defaultCommunicationMode === 'text';
   const shouldSpeakDirectly = isSocial || isTextMode;
 
-  // 3. Execution
-  const { responseText, attachments: resultAttachments } = await agent.process(
-    userId,
-    task,
-    buildProcessOptions({
-      isContinuation,
-      isIsolated: true,
-      initiatorId: payload.initiatorId,
-      depth: payload.depth,
-      traceId,
-      taskId,
-      sessionId,
-      source: TraceSource.SYSTEM,
-      context,
-      communicationMode: config?.defaultCommunicationMode,
-    })
-  );
+  // 3. Execution & Streaming
+  let finalResponseText = '';
+  let finalAttachments: Attachment[] | undefined = undefined;
 
-  logger.info(`Worker Agent [${agentId}] completed task:`, responseText);
+  const processOptions = buildProcessOptions({
+    isContinuation,
+    isIsolated: true,
+    initiatorId: payload.initiatorId,
+    depth: payload.depth,
+    traceId,
+    taskId,
+    sessionId,
+    source: TraceSource.SYSTEM,
+    context,
+    communicationMode: config?.defaultCommunicationMode,
+  });
+
+  if (shouldSpeakDirectly) {
+    logger.info(`Worker Agent [${agentId}] starting stream for direct communication...`);
+    const stream = agent.stream(userId, task, processOptions);
+    for await (const chunk of stream) {
+      if (chunk.content) {
+        finalResponseText += chunk.content;
+      }
+    }
+  } else {
+    const processResult = await agent.process(userId, task, processOptions);
+    finalResponseText = processResult.responseText;
+    finalAttachments = processResult.attachments;
+  }
+
+  logger.info(`Worker Agent [${agentId}] completed task:`, finalResponseText);
 
   // 4. Notification
-  if (!isTaskPaused(responseText)) {
-    const isFailure = detectFailure(responseText);
+  if (!isTaskPaused(finalResponseText)) {
+    const isFailure = detectFailure(finalResponseText);
 
+    // If we streamed, the chunks were already emitted to the bus by the AgentEmitter.
+    // We only need to emit the OUTBOUND_MESSAGE if we didn't stream but should have (fallback),
+    // or if we want to ensure the final state is synced.
+    // Since stream() already emits outbound_message with the final chunks, we can skip it here to avoid duplication.
     if (shouldSpeakDirectly && !isFailure) {
-      await sendOutboundMessage(
-        `${agentId}.agent`,
-        userId,
-        responseText,
-        [baseUserId],
-        sessionId,
-        config?.name,
-        resultAttachments
+      // Only send the final outbound message if we didn't stream it,
+      // but since we *did* stream it, we omit the duplicate sendOutboundMessage call here.
+      // The agent's AgentEmitter handles emitting chunks as outbound_messages.
+      logger.info(
+        `Worker Agent [${agentId}] streaming completed, skipping duplicate final outbound message.`
       );
     }
 
@@ -115,8 +128,8 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
       agentId,
       userId: baseUserId,
       task,
-      [isFailure ? 'error' : 'response']: responseText,
-      attachments: resultAttachments,
+      [isFailure ? 'error' : 'response']: finalResponseText,
+      attachments: finalAttachments,
       traceId,
       taskId,
       sessionId,
@@ -126,5 +139,5 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
     });
   }
 
-  return responseText;
+  return finalResponseText;
 }
