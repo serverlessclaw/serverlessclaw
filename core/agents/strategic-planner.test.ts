@@ -55,7 +55,7 @@ vi.mock('../lib/scheduler', () => ({
 vi.mock('../lib/agent', () => ({
   Agent: class {
     process = agentProcess;
-    stream = async function* () {
+    stream = async function* (this: any) {
       // eslint-disable-next-line prefer-rest-params
       const result = await agentProcess.apply(this, arguments as any);
       yield { content: result.responseText };

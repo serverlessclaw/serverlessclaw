@@ -32,7 +32,7 @@ vi.mock('../lib/providers/index', () => ({
 vi.mock('../lib/agent', () => ({
   Agent: class {
     process = mocks.agentProcess;
-    stream = async function* () {
+    stream = async function* (this: any) {
       // eslint-disable-next-line prefer-rest-params
       const result = await mocks.agentProcess.apply(this, arguments as any);
       yield { content: result.responseText };

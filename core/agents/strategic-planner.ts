@@ -57,7 +57,7 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
   }
 
   const isProactive =
-    (metadata as unknown as Record<string, unknown>)?.isProactive || isScheduledReview;
+    !!((metadata as unknown as Record<string, unknown>)?.isProactive || isScheduledReview);
 
   // Extract base userId (remove CONV# prefix if present)
   const baseUserId = extractBaseUserId(userId);
