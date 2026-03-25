@@ -14,6 +14,7 @@
     "@anthropic-ai/sdk": "^0.39.0",
     "@aws-sdk/client-cloudwatch": "^3.1014.0",
     "@aws-sdk/client-lambda": "^3.1014.0",
+    "@aws/run-mcp-servers-with-aws-lambda": "^0.1.0",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "@openai/agents-core": "^0.7.0",
     "zod": "^4.3.6"

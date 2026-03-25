@@ -1,7 +1,10 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
+import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 import { logger } from '../logger';
+
+const lambdaClient = new LambdaClient({});
 
 /**
  * Manages the lifecycle and connections of MCP clients.
@@ -18,6 +21,13 @@ export class MCPClientManager {
     this.clients.delete(name);
   }
 
+  /**
+   * Connect to an MCP server.
+   * Supports multiple transport types:
+   * - HTTP/HTTPS: Uses SSE transport (for remote servers)
+   * - Lambda ARN: Uses Lambda Invoke transport (for Lambda-based MCP servers)
+   * - Command: Uses stdio transport (for local development)
+   */
   static async connect(
     serverName: string,
     connectionString: string,
@@ -33,9 +43,16 @@ export class MCPClientManager {
 
     connectingPromise = (async () => {
       let transport;
-      if (connectionString.startsWith('http')) {
+
+      // Check if this is a Lambda ARN
+      if (connectionString.startsWith('arn:aws:lambda:')) {
+        logger.info(`Connecting to MCP server ${serverName} via Lambda Invoke`);
+        transport = new LambdaInvokeTransport(connectionString, serverName);
+      } else if (connectionString.startsWith('http')) {
+        // HTTP/HTTPS - use SSE transport
         transport = new SSEClientTransport(new URL(connectionString));
       } else {
+        // Local command - use stdio transport
         const parts = connectionString.split(' ');
         let command = parts[0];
         const args = parts.slice(1);
@@ -125,4 +142,74 @@ export class MCPClientManager {
     }
     this.clients.clear();
   }
+}
+
+/**
+ * Lambda Invoke Transport for MCP servers running as Lambda functions.
+ * Uses the AWS SDK to invoke Lambda functions directly.
+ */
+class LambdaInvokeTransport {
+  constructor(
+    private readonly functionArn: string,
+    private readonly serverName: string
+  ) {}
+
+  async start(): Promise<void> {
+    // No-op for Lambda transport
+  }
+
+  async send(message: string): Promise<void> {
+    try {
+      const result = await lambdaClient.send(
+        new InvokeCommand({
+          FunctionName: this.functionArn,
+          InvocationType: 'RequestResponse',
+          Payload: JSON.stringify({
+            httpMethod: 'POST',
+            path: '/mcp',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: message,
+          }),
+        })
+      );
+
+      if (result.FunctionError) {
+        throw new Error(`Lambda function error: ${result.FunctionError}`);
+      }
+
+      // Process the response and pass to onmessage callback
+      if (result.Payload) {
+        const payload = JSON.parse(Buffer.from(result.Payload).toString());
+        if (payload.statusCode !== 200) {
+          throw new Error(`MCP server returned error: ${payload.body}`);
+        }
+        // The response body contains the MCP response (JSON-RPC message)
+        if (this.onmessage) {
+          this.onmessage(payload.body);
+        }
+      }
+    } catch (error) {
+      logger.error(`Failed to invoke MCP server ${this.serverName}`, {
+        functionArn: this.functionArn,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      if (this.onerror) {
+        this.onerror(error instanceof Error ? error : new Error(String(error)));
+      }
+      throw error;
+    }
+  }
+
+  async close(): Promise<void> {
+    if (this.onclose) {
+      this.onclose();
+    }
+  }
+
+  onclose?: () => void;
+  onerror?: (error: Error) => void;
+  onmessage?: (message: string) => void;
 }

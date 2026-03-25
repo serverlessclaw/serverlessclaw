@@ -82,6 +82,19 @@ export async function loadAgentConfig(
     throw new Error(`Agent '${agentId}' is disabled`);
   }
 
+  // Inject MCP_SERVER_ARNS from environment if present (Lambda environment)
+  if (process.env.MCP_SERVER_ARNS) {
+    try {
+      const mcpArns = JSON.parse(process.env.MCP_SERVER_ARNS);
+      config.mcpServers = {
+        ...(config.mcpServers ?? {}),
+        ...mcpArns,
+      };
+    } catch (e) {
+      logger.warn(`Failed to parse MCP_SERVER_ARNS for agent ${agentId}:`, e);
+    }
+  }
+
   return config;
 }
 

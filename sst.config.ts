@@ -58,6 +58,7 @@ export default $config({
     const { createBus } = await import('./infra/bus.js');
     const { createDeployer } = await import('./infra/deployer.js');
     const { createApi } = await import('./infra/api.js');
+    const { createMCPServers } = await import('./infra/mcp-servers.js');
     const { createAgents } = await import('./infra/agents.js');
     const { createDashboard } = await import('./infra/dashboard.js');
 
@@ -74,6 +75,18 @@ export default $config({
       githubToken: secrets.GitHubToken,
     });
 
+    // 3.5 MCP Servers
+    const mcpServers = createMCPServers({
+      memoryTable,
+      traceTable,
+      configTable,
+      stagingBucket,
+      knowledgeBucket,
+      secrets,
+      bus,
+      deployer,
+    });
+
     // 4. API & Realtime
     const { api } = createApi({
       memoryTable,
@@ -87,18 +100,21 @@ export default $config({
     });
 
     // 5. Sub-Agents (Handlers & Logic)
-    const { heartbeatHandler, schedulerRole } = createAgents({
-      memoryTable,
-      traceTable,
-      configTable,
-      stagingBucket,
-      knowledgeBucket,
-      secrets,
-      bus,
-      deployer,
-      api,
-      realtime,
-    });
+    const { heartbeatHandler, schedulerRole } = createAgents(
+      {
+        memoryTable,
+        traceTable,
+        configTable,
+        stagingBucket,
+        knowledgeBucket,
+        secrets,
+        bus,
+        deployer,
+        api,
+        realtime,
+      },
+      mcpServers
+    );
 
     // 6. ClawCenter (Next.js 16)
     const { dashboard } = createDashboard({

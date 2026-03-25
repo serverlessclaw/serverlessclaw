@@ -1,5 +1,5 @@
 export interface Attachment {
-  type: 'image' | 'file';
+  type: import('./llm').AttachmentType;
   url?: string;
   base64?: string;
   name?: string;
@@ -80,7 +80,7 @@ export interface OutboundMessageEvent extends BaseEvent {
   options?: {
     label: string;
     value: string;
-    type?: 'primary' | 'secondary' | 'danger';
+    type?: import('./llm').ButtonType;
   }[];
 }
 
@@ -177,6 +177,8 @@ export interface IAgentConfig {
   parallelToolCalls?: boolean;
   /** Default communication style (JSON for system, Text for human). */
   defaultCommunicationMode?: 'json' | 'text';
+  /** MCP server ARN mappings for tool execution. */
+  mcpServers?: Record<string, string>;
   /** Explicit UI metadata overrides for topology visualization. */
   topologyOverride?: {
     label?: string;

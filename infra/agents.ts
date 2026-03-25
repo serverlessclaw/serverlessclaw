@@ -1,5 +1,6 @@
 import { EventType, AgentType } from '../core/lib/types/agent';
 import { SharedContext, getValidSecrets, AGENT_CONFIG } from './shared';
+import { MCPServerResources } from './mcp-servers';
 
 const RECOVERY_SCHEDULE_RATE = 'rate(15 minutes)';
 
@@ -7,9 +8,13 @@ const RECOVERY_SCHEDULE_RATE = 'rate(15 minutes)';
  * Deploys the full set of autonomous agents as Lambda functions and sets up their event subscriptions.
  *
  * @param ctx - The shared context containing system resources.
+ * @param mcpServers - Optional MCP server resources to link.
  * @returns A record of the created agent function resources.
  */
-export function createAgents(ctx: SharedContext): {
+export function createAgents(
+  ctx: SharedContext,
+  mcpServers?: MCPServerResources
+): {
   coderAgent: sst.aws.Function;
   buildMonitor: sst.aws.Function;
   eventHandler: sst.aws.Function;
@@ -57,7 +62,29 @@ export function createAgents(ctx: SharedContext): {
       actions: ['cloudwatch:PutMetricData'],
       resources: ['*'],
     },
+    ...(mcpServers
+      ? [
+          {
+            actions: ['lambda:InvokeFunction'],
+            resources: Object.values(mcpServers.servers).map((s) => s.arn),
+          },
+        ]
+      : []),
   ];
+
+  const agentEnv = {
+    SCHEDULER_ROLE_ARN: schedulerRole.arn,
+    HEARTBEAT_HANDLER_ARN: heartbeatHandler.arn,
+    ...(mcpServers
+      ? {
+          MCP_SERVER_ARNS: $util.jsonStringify(
+            Object.fromEntries(
+              Object.entries(mcpServers.servers).map(([name, fn]) => [name, fn.arn])
+            )
+          ),
+        }
+      : {}),
+  };
 
   // 1. Coder Agent
   const coderAgent = new sst.aws.Function('CoderAgent', {
@@ -67,6 +94,7 @@ export function createAgents(ctx: SharedContext): {
     permissions: basePermissions,
     architecture: 'arm64',
     nodejs: { loader: { '.md': 'text' } },
+    environment: agentEnv,
     memory: AGENT_CONFIG.memory.LARGE,
     timeout: AGENT_CONFIG.timeout.MAX,
     logging: {
@@ -239,10 +267,7 @@ export function createAgents(ctx: SharedContext): {
     architecture: 'arm64',
     nodejs: { loader: { '.md': 'text' } },
     permissions: [...basePermissions, ...schedulerPermissions],
-    environment: {
-      SCHEDULER_ROLE_ARN: schedulerRole.arn,
-      HEARTBEAT_HANDLER_ARN: heartbeatHandler.arn,
-    },
+    environment: agentEnv,
     memory: AGENT_CONFIG.memory.LARGE,
     timeout: AGENT_CONFIG.timeout.MAX,
     logging: {
@@ -297,10 +322,7 @@ export function createAgents(ctx: SharedContext): {
     architecture: 'arm64',
     nodejs: { loader: { '.md': 'text' } },
     permissions: [...basePermissions, ...schedulerPermissions],
-    environment: {
-      SCHEDULER_ROLE_ARN: schedulerRole.arn,
-      HEARTBEAT_HANDLER_ARN: heartbeatHandler.arn,
-    },
+    environment: agentEnv,
     memory: AGENT_CONFIG.memory.MEDIUM,
     timeout: AGENT_CONFIG.timeout.MAX,
     logging: {
@@ -321,10 +343,7 @@ export function createAgents(ctx: SharedContext): {
     architecture: 'arm64',
     nodejs: { loader: { '.md': 'text' } },
     permissions: [...basePermissions, ...schedulerPermissions],
-    environment: {
-      SCHEDULER_ROLE_ARN: schedulerRole.arn,
-      HEARTBEAT_HANDLER_ARN: heartbeatHandler.arn,
-    },
+    environment: agentEnv,
     memory: AGENT_CONFIG.memory.LARGE,
     timeout: AGENT_CONFIG.timeout.MAX,
     logging: {
@@ -364,10 +383,7 @@ export function createAgents(ctx: SharedContext): {
     architecture: 'arm64',
     nodejs: { loader: { '.md': 'text' } },
     permissions: [...basePermissions, ...schedulerPermissions],
-    environment: {
-      SCHEDULER_ROLE_ARN: schedulerRole.arn,
-      HEARTBEAT_HANDLER_ARN: heartbeatHandler.arn,
-    },
+    environment: agentEnv,
     memory: AGENT_CONFIG.memory.LARGE,
     timeout: AGENT_CONFIG.timeout.MAX,
     logging: {

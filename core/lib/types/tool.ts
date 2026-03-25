@@ -19,6 +19,24 @@ export interface JsonSchema {
 }
 
 /**
+ * Types of tools available in the system.
+ */
+export enum ToolType {
+  /** Standard function-based tool. */
+  FUNCTION = 'function',
+  /** OpenAI Code Interpreter tool. */
+  CODE_INTERPRETER = 'code_interpreter',
+  /** OpenAI File Search tool. */
+  FILE_SEARCH = 'file_search',
+  /** MCP (Model Context Protocol) tool. */
+  MCP = 'mcp',
+  /** Computer use tool for GUI automation. */
+  COMPUTER_USE = 'computer_use',
+  /** Google Search Retrieval tool. */
+  GOOGLE_SEARCH_RETRIEVAL = 'google_search_retrieval',
+}
+
+/**
  * Metadata definition for a tool, used to inform the LLM about its usage.
  */
 export interface IToolDefinition {
@@ -29,13 +47,7 @@ export interface IToolDefinition {
   /** Schema defining the arguments expected by the tool. */
   parameters: JsonSchema;
   /** The type of tool. */
-  type?:
-    | 'function'
-    | 'code_interpreter'
-    | 'file_search'
-    | 'mcp'
-    | 'computer_use'
-    | 'google_search_retrieval';
+  type?: ToolType;
   /** Optional resource connections this tool utilizes (used for topology discovery). */
   connectionProfile?: string[];
   /** Optional ID for OpenAI Managed Connectors (e.g., connector_googledrive). */

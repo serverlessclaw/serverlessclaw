@@ -180,6 +180,7 @@ export const TOOLS = {
   triggerDeployment: 'triggerDeployment',
   validateCode: 'validateCode',
   triggerRollback: 'triggerRollback',
+  triggerTrunkSync: 'triggerTrunkSync',
   queryStats: 'queryStats',
   discoverSkills: 'discoverSkills',
   installSkill: 'installSkill',

@@ -213,7 +213,19 @@ export interface IMemory extends IHistoryStore, IKnowledgeStore, IGapManager {
   incrementClarificationRetry(traceId: string, agentId: string): Promise<number>;
 }
 
-export type ClarificationStatus = 'pending' | 'answered' | 'timed_out' | 'escalated';
+/**
+ * Lifecycle status of a clarification request.
+ */
+export enum ClarificationStatus {
+  /** Clarification request is pending a response. */
+  PENDING = 'pending',
+  /** Clarification has been answered by the initiator. */
+  ANSWERED = 'answered',
+  /** Clarification request timed out without a response. */
+  TIMED_OUT = 'timed_out',
+  /** Clarification has been escalated to a higher authority. */
+  ESCALATED = 'escalated',
+}
 
 export interface ClarificationState {
   userId: string;

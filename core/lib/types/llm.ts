@@ -34,6 +34,28 @@ export enum MessageRole {
 }
 
 /**
+ * Types of attachments that can be included in messages.
+ */
+export enum AttachmentType {
+  /** Image attachment (photos, screenshots, diagrams). */
+  IMAGE = 'image',
+  /** File attachment (documents, code files, data). */
+  FILE = 'file',
+}
+
+/**
+ * UI button/option types for interactive agent signals.
+ */
+export enum ButtonType {
+  /** Primary action button (most important action). */
+  PRIMARY = 'primary',
+  /** Secondary action button (alternative action). */
+  SECONDARY = 'secondary',
+  /** Danger/destructive action button (requires caution). */
+  DANGER = 'danger',
+}
+
+/**
  * A single message in a conversation thread.
  */
 export interface Message {
@@ -59,7 +81,7 @@ export interface Message {
    * Optional attachments (images, files) associated with the message.
    */
   attachments?: Array<{
-    type: 'image' | 'file';
+    type: AttachmentType;
     url?: string;
     base64?: string;
     name?: string;
@@ -79,7 +101,7 @@ export interface Message {
   options?: Array<{
     label: string;
     value: string;
-    type?: 'primary' | 'secondary' | 'danger';
+    type?: ButtonType;
   }>;
 }
 
