@@ -383,8 +383,13 @@ export class AgentExecutor {
 
   private handlePausedToolResult(
     aiResponse: Message,
-    toolResult: any,
-    attachments: any[],
+    toolResult: {
+      paused?: boolean;
+      responseText?: string;
+      asyncWait?: boolean;
+      toolCallCount: number;
+    },
+    attachments: NonNullable<Message['attachments']>,
     approvedToolCalls?: string[]
   ): LoopResult {
     const isApproval = toolResult.asyncWait && !toolResult.responseText;
@@ -434,9 +439,9 @@ export class AgentExecutor {
             `\n\n${approvalMsg}`,
             this.agentName,
             false,
-            opts as any
+            opts as NonNullable<Message['options']>
           );
-        return { content: `\n\n${approvalMsg}`, options: opts as any };
+        return { content: `\n\n${approvalMsg}`, options: opts as NonNullable<Message['options']> };
       }
     }
     messages.push({ role: MessageRole.ASSISTANT, content: '', tool_calls: toolCalls });
@@ -448,7 +453,7 @@ export class AgentExecutor {
     iterations: number,
     maxIterations: number,
     lastAiResponse: Message | undefined,
-    attachments: any[],
+    attachments: NonNullable<Message['attachments']>,
     usage: ExecutorUsage
   ): LoopResult {
     if (!responseText && iterations >= maxIterations) {
@@ -486,7 +491,7 @@ export class AgentExecutor {
     }
   }
 
-  private async emitTokenMetrics(usage: any, provider?: string) {
+  private async emitTokenMetrics(usage: NonNullable<Message['usage']>, provider?: string) {
     if (!process.env.VITEST) {
       try {
         const { emitMetrics, Metrics } = await import('../metrics');

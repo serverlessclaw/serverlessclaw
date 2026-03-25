@@ -1,4 +1,4 @@
-import { ReasoningProfile } from '../lib/types/llm';
+import { ReasoningProfile, ResponseFormat } from '../lib/types/llm';
 import { EventType, GapStatus, AgentType, TraceSource } from '../lib/types/agent';
 import { InsightCategory } from '../lib/types/memory';
 import { LIMITS } from '../lib/constants';
@@ -130,7 +130,7 @@ export const handler = async (
       sessionId,
       source: TraceSource.SYSTEM,
       communicationMode: 'json',
-      responseFormat: ReflectionReportSchema as any,
+      responseFormat: ReflectionReportSchema as ResponseFormat,
     }
   );
 

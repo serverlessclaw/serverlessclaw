@@ -1,7 +1,7 @@
 /**
  * Simple authorizer for IoT Realtime bus.
  */
-export const handler = async (_event: any) => {
+export const handler = async (_event: unknown) => {
   // Use a stable principalId for the dashboard (must be alphanumeric)
   const principalId = 'dashboardUser';
 

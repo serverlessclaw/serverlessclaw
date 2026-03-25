@@ -4,6 +4,15 @@ import { MCPServerResources } from './mcp-servers';
 
 const RECOVERY_SCHEDULE_RATE = 'rate(15 minutes)';
 
+/** Lambda runtime architecture for all agent functions */
+const LAMBDA_ARCHITECTURE = 'arm64';
+
+/** Node.js loader configuration for markdown files */
+const NODEJS_LOADERS = { '.md': 'text' } as const;
+
+/** Default log retention period for Lambda functions */
+const LOG_RETENTION_PERIOD = '1 month';
+
 /**
  * Deploys the full set of autonomous agents as Lambda functions and sets up their event subscriptions.
  *
@@ -80,12 +89,12 @@ export function createAgents(
     dev: liveInLocalOnly,
     link: baseLink,
     permissions: basePermissions,
-    architecture: 'arm64',
-    nodejs: { loader: { '.md': 'text' } },
+    architecture: LAMBDA_ARCHITECTURE,
+    nodejs: { loader: NODEJS_LOADERS },
     memory: AGENT_CONFIG.memory.SMALL,
     timeout: AGENT_CONFIG.timeout.SHORT,
     logging: {
-      retention: '1 month',
+      retention: LOG_RETENTION_PERIOD,
     },
   });
 
@@ -139,13 +148,13 @@ export function createAgents(
     dev: liveInLocalOnly,
     link: [...baseLink, stagingBucket],
     permissions: basePermissions,
-    architecture: 'arm64',
-    nodejs: { loader: { '.md': 'text' } },
+    architecture: LAMBDA_ARCHITECTURE,
+    nodejs: { loader: NODEJS_LOADERS },
     environment: agentEnv,
     memory: AGENT_CONFIG.memory.LARGE,
     timeout: AGENT_CONFIG.timeout.MAX,
     logging: {
-      retention: '1 month',
+      retention: LOG_RETENTION_PERIOD,
     },
   });
   bus.subscribe('CoderTaskSubscriber', coderAgent.arn, {
@@ -157,8 +166,8 @@ export function createAgents(
     handler: 'core/handlers/monitor.handler',
     dev: liveInLocalOnly,
     link: baseLink,
-    architecture: 'arm64',
-    nodejs: { loader: { '.md': 'text' } },
+    architecture: LAMBDA_ARCHITECTURE,
+    nodejs: { loader: NODEJS_LOADERS },
     permissions: [
       ...basePermissions,
       {
@@ -175,7 +184,7 @@ export function createAgents(
     memory: AGENT_CONFIG.memory.SMALL,
     timeout: AGENT_CONFIG.timeout.MEDIUM,
     logging: {
-      retention: '1 month',
+      retention: LOG_RETENTION_PERIOD,
     },
   });
 
@@ -185,12 +194,12 @@ export function createAgents(
     dev: liveInLocalOnly,
     link: [...baseLink, deployer],
     permissions: basePermissions,
-    architecture: 'arm64',
-    nodejs: { loader: { '.md': 'text' } },
+    architecture: LAMBDA_ARCHITECTURE,
+    nodejs: { loader: NODEJS_LOADERS },
     memory: AGENT_CONFIG.memory.SMALL,
     timeout: AGENT_CONFIG.timeout.MEDIUM,
     logging: {
-      retention: '1 month',
+      retention: LOG_RETENTION_PERIOD,
     },
   });
 
@@ -268,14 +277,14 @@ export function createAgents(
     handler: 'core/agents/strategic-planner.handler',
     dev: liveInLocalOnly,
     link: baseLink,
-    architecture: 'arm64',
-    nodejs: { loader: { '.md': 'text' } },
+    architecture: LAMBDA_ARCHITECTURE,
+    nodejs: { loader: NODEJS_LOADERS },
     permissions: [...basePermissions, ...schedulerPermissions],
     environment: agentEnv,
     memory: AGENT_CONFIG.memory.LARGE,
     timeout: AGENT_CONFIG.timeout.MAX,
     logging: {
-      retention: '1 month',
+      retention: LOG_RETENTION_PERIOD,
     },
   });
   bus.subscribe('EvolutionPlanSubscriber', plannerAgent.arn, {
@@ -290,12 +299,12 @@ export function createAgents(
     dev: liveInLocalOnly,
     link: baseLink,
     permissions: basePermissions,
-    architecture: 'arm64',
-    nodejs: { loader: { '.md': 'text' } },
+    architecture: LAMBDA_ARCHITECTURE,
+    nodejs: { loader: NODEJS_LOADERS },
     memory: AGENT_CONFIG.memory.MEDIUM,
     timeout: AGENT_CONFIG.timeout.LONG,
     logging: {
-      retention: '1 month',
+      retention: LOG_RETENTION_PERIOD,
     },
   });
   bus.subscribe('SystemBuildFailedSubscriber', eventHandler.arn, {
@@ -323,14 +332,14 @@ export function createAgents(
     handler: 'core/agents/cognition-reflector.handler',
     dev: liveInLocalOnly,
     link: baseLink,
-    architecture: 'arm64',
-    nodejs: { loader: { '.md': 'text' } },
+    architecture: LAMBDA_ARCHITECTURE,
+    nodejs: { loader: NODEJS_LOADERS },
     permissions: [...basePermissions, ...schedulerPermissions],
     environment: agentEnv,
     memory: AGENT_CONFIG.memory.MEDIUM,
     timeout: AGENT_CONFIG.timeout.MAX,
     logging: {
-      retention: '1 month',
+      retention: LOG_RETENTION_PERIOD,
     },
   });
   bus.subscribe('ReflectTaskSubscriber', reflectorAgent.arn, {
@@ -344,14 +353,14 @@ export function createAgents(
     handler: 'core/agents/qa.handler',
     dev: liveInLocalOnly,
     link: baseLink,
-    architecture: 'arm64',
-    nodejs: { loader: { '.md': 'text' } },
+    architecture: LAMBDA_ARCHITECTURE,
+    nodejs: { loader: NODEJS_LOADERS },
     permissions: [...basePermissions, ...schedulerPermissions],
     environment: agentEnv,
     memory: AGENT_CONFIG.memory.LARGE,
     timeout: AGENT_CONFIG.timeout.MAX,
     logging: {
-      retention: '1 month',
+      retention: LOG_RETENTION_PERIOD,
     },
   });
   bus.subscribe('QaVerificationSubscriber', qaAgent.arn, {
@@ -370,8 +379,8 @@ export function createAgents(
     dev: liveInLocalOnly,
     link: baseLink,
     permissions: basePermissions,
-    architecture: 'arm64',
-    nodejs: { loader: { '.md': 'text' } },
+    architecture: LAMBDA_ARCHITECTURE,
+    nodejs: { loader: NODEJS_LOADERS },
     memory: AGENT_CONFIG.memory.SMALL,
     timeout: AGENT_CONFIG.timeout.SHORT,
   });
@@ -384,14 +393,14 @@ export function createAgents(
     handler: 'core/agents/worker.handler',
     dev: liveInLocalOnly,
     link: baseLink,
-    architecture: 'arm64',
-    nodejs: { loader: { '.md': 'text' } },
+    architecture: LAMBDA_ARCHITECTURE,
+    nodejs: { loader: NODEJS_LOADERS },
     permissions: [...basePermissions, ...schedulerPermissions],
     environment: agentEnv,
     memory: AGENT_CONFIG.memory.LARGE,
     timeout: AGENT_CONFIG.timeout.MAX,
     logging: {
-      retention: '1 month',
+      retention: LOG_RETENTION_PERIOD,
     },
   });
   // Subscribe to all agent tasks that don't have a specific handler
@@ -431,10 +440,10 @@ export function createAgents(
     dev: liveInLocalOnly,
     link: [ctx.realtime!, bus],
     permissions: basePermissions,
-    architecture: 'arm64',
-    nodejs: { loader: { '.md': 'text' } },
+    architecture: LAMBDA_ARCHITECTURE,
+    nodejs: { loader: NODEJS_LOADERS },
     logging: {
-      retention: '1 month',
+      retention: LOG_RETENTION_PERIOD,
     },
   });
   bus.subscribe('RealtimeBridgeSubscriber', bridge.arn, {
@@ -457,13 +466,13 @@ export function createAgents(
     handler: 'core/handlers/concurrency-monitor.handler',
     dev: liveInLocalOnly,
     link: [memoryTable, bus],
-    architecture: 'arm64',
-    nodejs: { loader: { '.md': 'text' } },
+    architecture: LAMBDA_ARCHITECTURE,
+    nodejs: { loader: NODEJS_LOADERS },
     permissions: [...basePermissions, { actions: ['lambda:GetAccountSettings'], resources: ['*'] }],
     memory: AGENT_CONFIG.memory.SMALL,
     timeout: AGENT_CONFIG.timeout.SHORT,
     logging: {
-      retention: '1 month',
+      retention: LOG_RETENTION_PERIOD,
     },
   });
 

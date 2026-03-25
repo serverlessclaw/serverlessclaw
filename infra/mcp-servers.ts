@@ -1,5 +1,20 @@
 import { SharedContext, getValidSecrets } from './shared';
 
+/** Lambda runtime architecture for all MCP server functions */
+const LAMBDA_ARCHITECTURE = 'arm64';
+
+/** Node.js loader configuration for markdown files */
+const NODEJS_LOADERS = { '.md': 'text' } as const;
+
+/** Default log retention period for Lambda functions */
+const LOG_RETENTION_PERIOD = '1 month';
+
+/** Default memory allocation for warmup handler */
+const WARMUP_HANDLER_MEMORY = '128 MB';
+
+/** Default timeout for warmup handler */
+const WARMUP_HANDLER_TIMEOUT = '60 seconds';
+
 /**
  * Deploys MCP (Model Context Protocol) servers as separate Lambda functions.
  * Each MCP server runs independently for fault isolation and independent scaling.
@@ -104,12 +119,12 @@ export function createMCPServers(ctx: SharedContext): MCPServerResources {
       dev: liveInLocalOnly,
       link: baseLink,
       permissions: basePermissions,
-      architecture: 'arm64',
-      nodejs: { loader: { '.md': 'text' } },
+      architecture: LAMBDA_ARCHITECTURE,
+      nodejs: { loader: NODEJS_LOADERS },
       memory: config.memory,
       timeout: config.timeout,
       logging: {
-        retention: '1 month',
+        retention: LOG_RETENTION_PERIOD,
       },
       environment: {
         MCP_SERVER_NAME: name,
@@ -136,11 +151,11 @@ export function createMCPServers(ctx: SharedContext): MCPServerResources {
         resources: Object.values(servers).map((s) => s.arn),
       },
     ],
-    architecture: 'arm64',
-    memory: '128 MB',
-    timeout: '60 seconds',
+    architecture: LAMBDA_ARCHITECTURE,
+    memory: WARMUP_HANDLER_MEMORY,
+    timeout: WARMUP_HANDLER_TIMEOUT,
     logging: {
-      retention: '1 month',
+      retention: LOG_RETENTION_PERIOD,
     },
     environment: {
       MCP_SERVER_ARNS: $util.jsonStringify(

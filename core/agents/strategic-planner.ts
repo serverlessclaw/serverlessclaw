@@ -1,6 +1,6 @@
 import { AgentType, EvolutionMode, GapStatus, TraceSource } from '../lib/types/agent';
 import { InsightCategory } from '../lib/types/memory';
-import { ReasoningProfile } from '../lib/types/llm';
+import { ReasoningProfile, Message } from '../lib/types/llm';
 import { sendOutboundMessage } from '../lib/outbound';
 import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
@@ -142,7 +142,7 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
 
   // 3. Process with High Reasoning
   let rawResponse = '';
-  const resultAttachments: any[] = [];
+  const resultAttachments: NonNullable<Message['attachments']> = [];
 
   try {
     const stream = plannerAgent.stream(userId, plannerPrompt, {

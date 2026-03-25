@@ -1,5 +1,14 @@
 import { SharedContext, getValidSecrets, AGENT_CONFIG, getDomainConfig } from './shared';
 
+/** Lambda runtime architecture for all API functions */
+const LAMBDA_ARCHITECTURE = 'arm64';
+
+/** Node.js loader configuration for markdown files */
+const NODEJS_LOADERS = { '.md': 'text' } as const;
+
+/** Default log retention period for Lambda functions */
+const LOG_RETENTION_PERIOD = '1 month';
+
 /**
  * Initializes the main API Gateway and its routes.
  *
@@ -36,7 +45,7 @@ export function createApi(ctx: SharedContext): { api: sst.aws.ApiGatewayV2 } {
   // Main Webhook
   api.route('ANY /webhook', {
     handler: 'core/handlers/webhook.handler',
-    nodejs: { loader: { '.md': 'text' } },
+    nodejs: { loader: NODEJS_LOADERS },
     link: [
       memoryTable,
       traceTable,
@@ -48,17 +57,17 @@ export function createApi(ctx: SharedContext): { api: sst.aws.ApiGatewayV2 } {
       bus,
     ],
     permissions: apiPermissions,
-    architecture: 'arm64',
+    architecture: LAMBDA_ARCHITECTURE,
     timeout: AGENT_CONFIG.timeout.SHORT,
     logging: {
-      retention: '1 month',
+      retention: LOG_RETENTION_PERIOD,
     },
   });
 
   // Health Probe
   api.route('GET /health', {
     handler: 'core/handlers/health.handler',
-    nodejs: { loader: { '.md': 'text' } },
+    nodejs: { loader: NODEJS_LOADERS },
     link: [memoryTable, traceTable, configTable, stagingBucket, knowledgeBucket, bus],
     permissions: [
       ...apiPermissions,
@@ -67,12 +76,12 @@ export function createApi(ctx: SharedContext): { api: sst.aws.ApiGatewayV2 } {
         resources: ['*'],
       },
     ],
-    architecture: 'arm64',
+    architecture: LAMBDA_ARCHITECTURE,
     environment: {
       GIT_HASH: process.env.GIT_HASH || 'dev',
     },
     logging: {
-      retention: '1 month',
+      retention: LOG_RETENTION_PERIOD,
     },
   });
 

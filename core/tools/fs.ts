@@ -10,6 +10,7 @@ import { createWriteStream } from 'fs';
 import * as fs from 'fs/promises';
 import archiver from 'archiver';
 import { formatErrorMessage } from '../lib/utils/error';
+import { Message } from '../lib/types';
 
 const execAsync = promisify(exec);
 
@@ -63,8 +64,10 @@ export const STAGE_CHANGES = {
         const { memory } = await getAgentContext();
         const history = await memory.getHistory(sessionId);
 
-        const hasValidated = history.some((m: any) => m.content.includes('Validation Successful'));
-        const hasTestsRun = history.some((m: any) => m.content.includes('Test Results:'));
+        const hasValidated = history.some((m: Message) =>
+          m.content?.includes('Validation Successful')
+        );
+        const hasTestsRun = history.some((m: Message) => m.content?.includes('Test Results:'));
 
         if (!hasValidated || !hasTestsRun) {
           return 'DEFINITION_OF_DONE_VIOLATION: You must run "validateCode" and "runTests" successfully before staging changes for deployment. Ensure you have verified your changes in the current session.';
