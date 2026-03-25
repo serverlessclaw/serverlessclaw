@@ -42,7 +42,15 @@ export function createAgents(ctx: SharedContext): {
    * All autonomous agents require access to the Bus, Memory, and Tracing for baseline coordination.
    * New agents should inherit this baseLink array.
    */
-  const baseLink = [bus, memoryTable, traceTable, configTable, knowledgeBucket, ...validSecrets];
+  const baseLink = [
+    bus,
+    memoryTable,
+    traceTable,
+    configTable,
+    knowledgeBucket,
+    ...validSecrets,
+    ...(ctx.realtime ? [ctx.realtime] : []),
+  ];
 
   const basePermissions = [
     {
@@ -412,15 +420,14 @@ export function createAgents(ctx: SharedContext): {
   bus.subscribe('RealtimeBridgeSubscriber', bridge.arn, {
     pattern: {
       detailType: [
-        EventType.CHUNK,
         EventType.OUTBOUND_MESSAGE,
         EventType.CODER_TASK_COMPLETED,
         EventType.SYSTEM_BUILD_SUCCESS,
         EventType.SYSTEM_BUILD_FAILED,
         EventType.TASK_COMPLETED,
         EventType.TASK_FAILED,
-        EventType.CONTINUATION_TASK,
-        EventType.CLARIFICATION_REQUEST,
+        EventType.RECOVERY_LOG,
+        EventType.SYSTEM_HEALTH_REPORT,
       ],
     },
   });

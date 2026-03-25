@@ -6,14 +6,14 @@ const agentsSource = readFileSync(resolve(__dirname, 'agents.ts'), 'utf-8');
 
 describe('EventBridge routing contracts', () => {
   describe('RealtimeBridgeSubscriber', () => {
-    it('includes EventType.CHUNK in the subscriber pattern', () => {
+    it('excludes EventType.CHUNK from the subscriber pattern to avoid double publishing', () => {
       // Extract the RealtimeBridgeSubscriber block
       const bridgeMatch = agentsSource.match(
         /bus\.subscribe\('RealtimeBridgeSubscriber'[\s\S]*?pattern:\s*\{[\s\S]*?detailType:\s*\[([\s\S]*?)\]/m
       );
       expect(bridgeMatch).toBeTruthy();
       const detailTypes = bridgeMatch![1];
-      expect(detailTypes).toContain('EventType.CHUNK');
+      expect(detailTypes).not.toContain('EventType.CHUNK');
     });
 
     it('includes OUTBOUND_MESSAGE for dashboard notifications', () => {

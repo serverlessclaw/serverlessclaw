@@ -144,7 +144,7 @@ export class AgentEmitter {
   }
 
   /**
-   * Emits a real-time message chunk to the AgentBus
+   * Emits a real-time message chunk directly to the IoT Realtime Bus
    */
   async emitChunk(
     userId: string,
@@ -161,34 +161,31 @@ export class AgentEmitter {
       // Sub-agents use traceId-agentId to maintain distinct bubbles
       const messageId = agentId === 'superclaw' ? traceId : `${traceId}-${agentId}`;
 
-      logger.info(
-        `[Emitter] Emitting chunk for agent ${agentId} | messageId: ${messageId} | traceId: ${traceId}`
-      );
+      // Normalize userId to base form for MQTT topic consistency
+      const { extractBaseUserId } = await import('../utils/agent-helpers');
+      const baseUserId = extractBaseUserId(userId);
+      const safeUserId = baseUserId.replace(/[#+]/g, '_');
 
-      await this.eventbridge.send(
-        new PutEventsCommand({
-          Entries: [
-            {
-              Source: `${agentId}.agent`,
-              DetailType: EventType.CHUNK,
-              Detail: JSON.stringify({
-                userId,
-                sessionId,
-                traceId,
-                messageId,
-                message: chunk,
-                isThought,
-                options,
-                agentName: agentName ?? this.config?.name ?? 'SuperClaw',
-              }),
-              EventBusName: typedResource.AgentBus.name,
-            },
-          ],
-        })
-      );
+      const topic = sessionId
+        ? `users/${safeUserId}/sessions/${sessionId}/signal`
+        : `users/${safeUserId}/signal`;
+
+      const { publishToRealtime } = await import('../utils/realtime');
+
+      await publishToRealtime(topic, {
+        'detail-type': EventType.CHUNK,
+        userId: baseUserId,
+        sessionId,
+        traceId,
+        messageId,
+        message: chunk,
+        isThought,
+        options,
+        agentName: agentName ?? this.config?.name ?? 'SuperClaw',
+      });
     } catch (e) {
       // Don't let chunk emission failures block the main loop
-      logger.warn('Failed to emit chunk:', e);
+      logger.warn('Failed to emit chunk via realtime bus:', e);
     }
   }
 }

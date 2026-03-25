@@ -30,7 +30,7 @@ describe('sendOutboundMessage', () => {
       'webhook.handler',
       'outbound_message',
       expect.objectContaining({
-        userId: 'CONV#dashboard-user#session_123',
+        userId: 'dashboard-user',
         message: 'Hello world',
         memoryContexts: ['dashboard-user'],
       }),

@@ -30,14 +30,14 @@ export async function sendOutboundMessage(
     type?: 'primary' | 'secondary' | 'danger';
   }[]
 ): Promise<void> {
-  // Normalize userId to base form for memory syncing, but keep original for routing
+  // Normalize userId to base form for memory syncing and event routing
   const baseUserId = extractBaseUserId(userId);
 
   await emitEvent(
     source,
     EventType.OUTBOUND_MESSAGE,
     {
-      userId: userId, // Use original ID (e.g. CONV#...) for bridge routing
+      userId: baseUserId, // Send clean, base userId to avoid leaking DynamoDB prefixes (CONV#)
       message,
       memoryContexts: memoryContexts ?? [baseUserId],
       sessionId,
