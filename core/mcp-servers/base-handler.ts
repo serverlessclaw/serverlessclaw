@@ -1,9 +1,11 @@
-import type { Handler, Context, APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import {
-  APIGatewayProxyEventHandler,
-  StdioServerAdapterRequestHandler,
-  type StdioServerParameters,
-} from '@aws/run-mcp-servers-with-aws-lambda';
+  type Handler,
+  type Context,
+  type APIGatewayProxyEvent,
+  type APIGatewayProxyResult,
+} from 'aws-lambda';
+import { stdioServerAdapter } from '@aws/run-mcp-servers-with-aws-lambda';
+import { type StdioServerParameters } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { logger } from '../lib/logger';
 
 /**
@@ -13,10 +15,6 @@ import { logger } from '../lib/logger';
  * @returns A Lambda handler function
  */
 export function createMCPServerHandler(serverParams: StdioServerParameters): Handler {
-  const requestHandler = new APIGatewayProxyEventHandler(
-    new StdioServerAdapterRequestHandler(serverParams)
-  );
-
   return async (event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> => {
     const serverName = process.env.MCP_SERVER_NAME ?? 'unknown';
     const startTime = Date.now();
@@ -28,16 +26,26 @@ export function createMCPServerHandler(serverParams: StdioServerParameters): Han
     });
 
     try {
-      const result = await requestHandler.handle(event, context);
+      // Parse the JSON-RPC request from the API Gateway body
+      const rpcRequest = JSON.parse(event.body || '{}');
+
+      // Use the stdioServerAdapter to handle the request
+      const result = await stdioServerAdapter(serverParams, rpcRequest, context);
 
       const duration = Date.now() - startTime;
       logger.info(`MCP Server ${serverName} completed`, {
         requestId: context.awsRequestId,
         duration,
-        statusCode: result.statusCode,
       });
 
-      return result;
+      return {
+        statusCode: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+        body: JSON.stringify(result),
+      };
     } catch (error) {
       const duration = Date.now() - startTime;
       logger.error(`MCP Server ${serverName} failed`, {

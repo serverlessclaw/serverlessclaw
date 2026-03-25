@@ -1,6 +1,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
+import { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js';
 import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 import { logger } from '../logger';
 
@@ -158,8 +159,9 @@ class LambdaInvokeTransport {
     // No-op for Lambda transport
   }
 
-  async send(message: string): Promise<void> {
+  async send(message: JSONRPCMessage): Promise<void> {
     try {
+      const messageString = JSON.stringify(message);
       const result = await lambdaClient.send(
         new InvokeCommand({
           FunctionName: this.functionArn,
@@ -170,7 +172,7 @@ class LambdaInvokeTransport {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: message,
+            body: messageString,
           }),
         })
       );
@@ -211,5 +213,5 @@ class LambdaInvokeTransport {
 
   onclose?: () => void;
   onerror?: (error: Error) => void;
-  onmessage?: (message: string) => void;
+  onmessage?: (message: JSONRPCMessage) => void;
 }

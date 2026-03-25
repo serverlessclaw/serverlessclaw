@@ -8,6 +8,8 @@ describe('AgentContext', () => {
       const config = {
         id: 'test-agent',
         name: 'Test Agent',
+        systemPrompt: 'You are a test agent.',
+        enabled: true,
       };
       const result = AgentContext.getIdentityBlock(
         config,
