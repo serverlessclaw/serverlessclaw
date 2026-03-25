@@ -156,17 +156,24 @@ export class AgentEmitter {
     options?: Array<{ label: string; value: string; type?: string }>
   ): Promise<void> {
     try {
+      const agentId = this.config?.id ?? 'unknown';
+      // Root orchestrator uses traceId directly to match API response/history
+      // Sub-agents use traceId-agentId to maintain distinct bubbles
+      const messageId = agentId === 'superclaw' ? traceId : `${traceId}-${agentId}`;
+      
+      logger.info(`[Emitter] Emitting chunk for agent ${agentId} | messageId: ${messageId} | traceId: ${traceId}`);
+
       await this.eventbridge.send(
         new PutEventsCommand({
           Entries: [
             {
-              Source: this.config?.id ?? 'superclaw.agent',
+              Source: `${agentId}.agent`,
               DetailType: EventType.CHUNK,
               Detail: JSON.stringify({
                 userId,
                 sessionId,
                 traceId,
-                messageId: traceId,
+                messageId,
                 message: chunk,
                 isThought,
                 options,

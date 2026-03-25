@@ -55,10 +55,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           traceId: clientTraceId || undefined,
         });
         let finalResponse = '';
+        let finalThought = '';
         let streamToolCalls: unknown[] | undefined;
         for await (const chunk of stream) {
           if (chunk.content) finalResponse += chunk.content;
-          if (chunk.thought && !finalResponse) finalResponse += chunk.thought;
+          if (chunk.thought) finalThought += chunk.thought;
           if (chunk.tool_calls) streamToolCalls = chunk.tool_calls;
         }
 
@@ -71,9 +72,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
         return {
           reply: finalResponse,
+          thought: finalThought,
           agentName: 'SuperClaw',
           tool_calls: streamToolCalls,
-          messageId: clientTraceId || undefined,
+          messageId: clientTraceId, // strictly use what client sent to ensure mapping
         };
       })();
 

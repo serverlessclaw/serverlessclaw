@@ -64,10 +64,12 @@ describe('AgentExecutor.streamLoop', () => {
       chunks.push(chunk);
     }
 
-    expect(chunks).toHaveLength(3);
-    expect(chunks[0].content).toBe('Hello');
-    expect(chunks[1].content).toBe(' world');
-    expect(chunks[2].usage).toBeDefined();
+    expect(chunks).toHaveLength(5);
+    expect(chunks[0].messageId).toBe('trace-123');
+    expect(chunks[1].content).toBe('Hello');
+    expect(chunks[2].content).toBe(' world');
+    expect(chunks[3].usage).toBeDefined();
+    expect(chunks[4].usage).toBeDefined();
 
     expect(mockEmitter.emitChunk).toHaveBeenCalledTimes(2);
     expect(mockEmitter.emitChunk).toHaveBeenCalledWith(
@@ -148,9 +150,12 @@ describe('AgentExecutor.streamLoop', () => {
       chunks.push(chunk);
     }
 
+    // Initial metadata chunk
+    expect(chunks[0].messageId).toBe('trace-123');
+
     // First iteration: content + tool_calls
-    expect(chunks[0].content).toBe('I will call a tool.');
-    expect(chunks[1].tool_calls).toHaveLength(1);
+    expect(chunks[1].content).toBe('I will call a tool.');
+    expect(chunks[2].tool_calls).toHaveLength(1);
 
     // Tool was executed
     expect(mockToolExecute).toHaveBeenCalledTimes(1);
@@ -288,9 +293,9 @@ describe('AgentExecutor.streamLoop', () => {
       chunks.push(chunk);
     }
 
-    // Only the content chunk, no tool_calls chunk
-    expect(chunks).toHaveLength(1);
-    expect(chunks[0].content).toBe('Hello there!');
-    expect(chunks[0].tool_calls).toBeUndefined();
+    // Metadata + Content + Final Usage
+    expect(chunks).toHaveLength(3);
+    expect(chunks[1].content).toBe('Hello there!');
+    expect(chunks[1].tool_calls).toBeUndefined();
   });
 });

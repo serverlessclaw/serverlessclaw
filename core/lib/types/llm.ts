@@ -53,6 +53,8 @@ export interface Message {
   agentName?: string;
   /** Link to the isolated mechanical monologue for this message */
   traceId?: string;
+  /** Optional unique identifier for the message (used for streaming reconciliation). */
+  messageId?: string;
   /**
    * Optional attachments (images, files) associated with the message.
    */
@@ -197,6 +199,12 @@ export interface MessageChunk {
     value: string;
     type?: string;
   }>;
+  /** Optional agent name for identifying the source of the chunk. */
+  agentName?: string;
+  /** Optional message ID for UI reconciliation. */
+  messageId?: string;
+  /** Optional type for EventBridge compatibility. */
+  'detail-type'?: string;
   /** Optional usage stats (usually in the final chunk). */
   usage?: {
     prompt_tokens: number;

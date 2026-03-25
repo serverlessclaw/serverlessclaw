@@ -45,6 +45,8 @@ vi.mock('../lib/memory', () => ({
     addMessage = vi.fn().mockResolvedValue(undefined);
     getHistory = vi.fn().mockResolvedValue([]);
     saveConversationMeta = vi.fn().mockResolvedValue(undefined);
+    getSummary = vi.fn().mockResolvedValue(null);
+    updateSummary = vi.fn().mockResolvedValue(undefined);
   },
 }));
 

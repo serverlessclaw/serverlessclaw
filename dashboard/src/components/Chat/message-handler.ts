@@ -20,12 +20,13 @@ export interface IncomingChunk {
  * Determines if an incoming MQTT chunk should be processed based on session routing.
  */
 export function shouldProcessChunk(
-  data: IncomingChunk,
+  data: IncomingChunk & { 'detail-type'?: string },
   currentActiveId: string,
   expectedUserId: string
 ): boolean {
   if (data.userId !== expectedUserId) return false;
-  if (!data.message && !data.isThought) return false;
+  const type = data['detail-type'];
+  if (type !== 'chunk' && type !== 'outbound_message') return false;
   if (!data.sessionId || data.sessionId === currentActiveId) return true;
   return false;
 }
@@ -46,16 +47,18 @@ export function applyChunkToMessages(
   if (existingIndex !== -1) {
     const updated = [...prev];
     const existing = updated[existingIndex];
+    const isFinal = (data as IncomingChunk & { 'detail-type'?: string })['detail-type'] === 'outbound_message';
+    
     if (data.isThought) {
       updated[existingIndex] = {
         ...existing,
-        thought: (existing.thought ?? '') + (data.message ?? ''),
+        thought: isFinal ? (data.message ?? existing.thought) : (existing.thought ?? '') + (data.message ?? ''),
         options: data.options ?? existing.options,
       };
     } else {
       updated[existingIndex] = {
         ...existing,
-        content: (existing.content ?? '') + (data.message ?? ''),
+        content: isFinal ? (data.message ?? existing.content) : (existing.content ?? '') + (data.message ?? ''),
         attachments: data.attachments ?? existing.attachments,
         tool_calls: data.toolCalls || data.tool_calls || existing.tool_calls,
         options: data.options ?? existing.options,
@@ -101,7 +104,7 @@ export function mapHistoryMessage(m: HistoryMessage): ChatMessage {
     attachments: m.attachments,
     options: m.options,
     tool_calls: m.tool_calls,
-    messageId: m.traceId,
+    messageId: m.messageId || m.traceId,
   };
 }
 
@@ -127,11 +130,6 @@ export function mergeHistoryWithMessages(
     }
   });
 
-  // Detect streaming placeholders (assistant messages with empty content and a messageId)
-  const streamingPlaceholders = prev.filter(
-    (m) => m.role === 'assistant' && m.messageId && m.content === ''
-  );
-
   // Preserve local-only messages:
   // 1. Assistant messages that are still streaming (not yet in history with 'assistant' role)
   // 2. Error messages (SystemGuard) that are not in history
@@ -142,22 +140,6 @@ export function mergeHistoryWithMessages(
     // If it's an assistant message, keep it if it's NOT in history yet
     return !historyKeys.has(`${m.role}:${m.messageId}`);
   });
-
-  // If there are active streaming placeholders, we might be in the middle of a turn.
-  // We want to avoid prepending everything and duplicating.
-  if (streamingPlaceholders.length > 0) {
-    const historyUserContent = new Set(history.filter(m => m.role === 'user').map(m => m.content));
-    const newHistoryUserMessages = history.filter(
-      (m) => m.role === 'user' && !prev.some(p => p.role === 'user' && p.content === m.content)
-    );
-    
-    // In streaming mode, we mainly want to refresh the history of PREVIOUS turns
-    // while keeping the CURRENT turn's streaming state.
-    return {
-      messages: [...history, ...localOnly],
-      seenIds,
-    };
-  }
 
   return { messages: [...history, ...localOnly], seenIds };
 }

@@ -300,9 +300,9 @@ export function buildReactivePrompt(
     USER CONTEXT: Please analyze the request for user ${payload.userId}.
     
     INSTRUCTIONS:
-    1. If this is a capability gap (gapId present), design a STRATEGIC_PLAN to fix it. Ensure you do not repeat any KNOWN_FAILURE_PATTERNS.
-    2. If this is an architectural inquiry or system question, use your tools (listAgents, inspectTopology) to provide a deep, accurate answer.
-    3. Always return your response in the specified JSON format.
-    4. If you are just answering a question and no code changes are required, set 'coveredGapIds' to an empty array.
+    1. If this is a capability gap (gapId present), design a STRATEGIC_PLAN to fix it. Ensure you do not repeat any KNOWN_FAILURE_PATTERNS. Always return your response in the specified JSON format.
+    2. If this is an architectural inquiry or system question, use your tools (listAgents, inspectTopology) to provide a deep, accurate answer. You MAY use Rich Markdown (tables, diagrams) instead of the JSON format for these consultations to provide a better user experience.
+    3. If you are just answering a question and no code changes are required, set 'coveredGapIds' to an empty array (if using JSON) or simply provide the markdown answer.
+    4. **CRITICAL**: Do NOT start your response with "The user wants...", "I will analyze...", or any other internal monologue. Speak DIRECTLY to the human user as a Senior Software Architect. Provide only the factual report or plan.
   `;
 }

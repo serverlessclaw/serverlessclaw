@@ -23,6 +23,11 @@ vi.mock('../lib/agent', () => {
     Agent: vi.fn(function () {
       return {
         process: mockProcess,
+        stream: async function* () {
+          // eslint-disable-next-line prefer-rest-params
+          const result = await mockProcess.apply(this, arguments as any);
+          yield { content: result.responseText };
+        },
       };
     }),
   };
@@ -121,7 +126,8 @@ describe('EventHandler', () => {
         undefined,
         'session-1',
         'SuperClaw',
-        []
+        [],
+        'trace-1'
       );
     });
 

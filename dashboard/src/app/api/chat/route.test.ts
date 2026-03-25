@@ -454,8 +454,9 @@ describe('Dashboard API: POST /api/chat (streaming)', () => {
     );
     const data = await res.json();
 
-    // Thought should be captured as fallback when no content
-    expect(data.reply).toBe('Let me think about this...');
+    // Thought should be captured separately
+    expect(data.reply).toBe('');
+    expect(data.thought).toBe('Let me think about this...');
     expect(data.tool_calls).toHaveLength(1);
   });
 });

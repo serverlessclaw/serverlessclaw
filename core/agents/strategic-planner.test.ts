@@ -33,6 +33,8 @@ vi.mock('../lib/memory', () => ({
     searchInsights = memoryMocks.searchInsights;
     archiveStaleGaps = vi.fn().mockResolvedValue(0);
     getLowUtilizationMemory = vi.fn().mockResolvedValue([]);
+    getSummary = vi.fn().mockResolvedValue(null);
+    updateSummary = vi.fn().mockResolvedValue(undefined);
   },
 }));
 
@@ -53,6 +55,11 @@ vi.mock('../lib/scheduler', () => ({
 vi.mock('../lib/agent', () => ({
   Agent: class {
     process = agentProcess;
+    stream = async function* () {
+      // eslint-disable-next-line prefer-rest-params
+      const result = await agentProcess.apply(this, arguments as any);
+      yield { content: result.responseText };
+    };
   },
 }));
 

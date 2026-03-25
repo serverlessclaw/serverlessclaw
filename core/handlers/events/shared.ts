@@ -131,7 +131,7 @@ export async function processEventWithAgent(
   const agentTools = await loadAgentTools(agentId);
   const agent = new Agent(memory, provider, agentTools, config.systemPrompt, config);
 
-  const { responseText, attachments: resultAttachments } = await agent.process(
+  const stream = agent.stream(
     userId,
     `${options.handlerTitle}: ${taskContent}`,
     {
@@ -146,11 +146,21 @@ export async function processEventWithAgent(
     }
   );
 
-  if (!isTaskPaused(responseText)) {
+  let responseText = '';
+  // resultAttachments from agent.stream are not directly returned as a single array, 
+  // they are usually added to memory or yielded in chunks if the provider/executor supports it.
+  // In our current Agent.stream implementation, attachments are persistent in memory.
+  for await (const chunk of stream) {
+    if (chunk.content) responseText += chunk.content;
+  }
+
+  if (!isTaskPaused(responseText) && responseText.trim().length > 0) {
     const finalMessage = options.formatResponse
-      ? options.formatResponse(responseText, resultAttachments ?? [])
+      ? options.formatResponse(responseText, [])
       : responseText;
 
+    const messageId = agentId === 'superclaw' ? options.traceId : `${options.traceId}-${agentId}`;
+    
     await sendOutboundMessage(
       options.outboundHandlerName,
       userId,
@@ -158,11 +168,12 @@ export async function processEventWithAgent(
       undefined,
       options.sessionId,
       'SuperClaw',
-      resultAttachments ?? []
+      [],
+      messageId
     );
   }
 
-  return { responseText, attachments: resultAttachments ?? [] };
+  return { responseText, attachments: [] };
 }
 
 export { EventType, CompletionEvent, FailureEvent, sendOutboundMessage, logger };

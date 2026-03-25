@@ -176,6 +176,13 @@ export class Agent {
         attachments: incomingAttachments,
       });
 
+      // Silent completion if user was already notified by sub-agent
+      if (userText.includes('(USER_ALREADY_NOTIFIED: true)')) {
+        logger.info(`Silent completion for agent ${this.config?.id} (Already Notified)`);
+        await tracer.endTrace('User already notified by sub-agent.');
+        return { responseText: '', attachments: [] };
+      }
+
       // 2. Model/Provider Resolution
       let activeModel = this.config?.model ?? SYSTEM.DEFAULT_MODEL;
       let activeProvider = this.config?.provider ?? SYSTEM.DEFAULT_PROVIDER;
@@ -218,6 +225,13 @@ export class Agent {
         activeProfile,
         depth
       )}`;
+
+      contextPrompt += `
+      [RELATIONSHIP_CONTEXT]:
+      - MODE: ${isIsolated ? 'SYSTEM_TASK' : 'USER_CONSULTATION'}
+      - AUDIENCE: ${isIsolated ? 'Orchestrator' : 'Human User'}
+      - BEHAVIOR: ${isIsolated ? 'Be technical, precise, and structured.' : 'Be friendly, direct, and conversational. Skip internal monologue.'}
+      `;
 
       const currentMessage: Message = {
         role: MessageRole.USER,
@@ -354,6 +368,7 @@ export class Agent {
           content: responseText,
           agentName: this.config?.name ?? 'SuperClaw',
           traceId,
+          messageId: this.config?.id === 'superclaw' ? traceId : `${traceId}-${this.config?.id}`,
           tool_calls: resultToolCalls,
         });
 
@@ -396,6 +411,7 @@ export class Agent {
         content: responseText,
         agentName: this.config?.name ?? 'SuperClaw',
         traceId,
+        messageId: this.config?.id === 'superclaw' ? traceId : `${traceId}-${this.config?.id}`,
         attachments: resultAttachments,
         tool_calls: resultToolCalls,
       });
@@ -526,6 +542,13 @@ export class Agent {
       attachments: incomingAttachments,
     });
 
+    // Silent completion if user was already notified by sub-agent
+    if (userText.includes('(USER_ALREADY_NOTIFIED: true)')) {
+      logger.info(`Silent completion for agent ${this.config?.id} (Already Notified)`);
+      await tracer.endTrace('User already notified by sub-agent.');
+      return;
+    }
+
     const history = await this.memory.getHistory(storageId);
     const [distilled, lessons, prefPrefixed, prefRaw] = await Promise.all([
       this.memory.getDistilledMemory(baseUserId),
@@ -557,6 +580,13 @@ export class Agent {
       activeProfile,
       depth
     )}`;
+
+    contextPrompt += `
+      [RELATIONSHIP_CONTEXT]:
+      - MODE: ${isIsolated ? 'SYSTEM_TASK' : 'USER_CONSULTATION'}
+      - AUDIENCE: ${isIsolated ? 'Orchestrator' : 'Human User'}
+      - BEHAVIOR: ${isIsolated ? 'Be technical, precise, and structured.' : 'Be friendly, direct, and conversational. Skip internal monologue.'}
+      `;
 
     const currentMessage: Message = {
       role: MessageRole.USER,
@@ -606,6 +636,7 @@ export class Agent {
       userText,
       mainConversationId: userId,
       responseFormat,
+      communicationMode,
       taskTimeoutMs,
       timeoutBehavior,
       sessionStateManager,
@@ -641,6 +672,7 @@ export class Agent {
       thought: fullThought,
       agentName: this.config?.name ?? 'SuperClaw',
       traceId,
+      messageId: this.config?.id === 'superclaw' ? traceId : `${traceId}-${this.config?.id}`,
     });
     await tracer.endTrace(fullContent);
   }

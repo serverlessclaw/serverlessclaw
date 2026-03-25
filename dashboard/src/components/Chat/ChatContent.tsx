@@ -120,11 +120,12 @@ export default function ChatContent() {
           const history = data.history.map((m: HistoryMessage) => ({
             role: m.role === 'assistant' || m.role === 'system' ? 'assistant' : 'user',
             content: m.content,
+            thought: m.thought,
             agentName: m.agentName ?? (m.role === 'assistant' || m.role === 'system' ? 'SuperClaw' : undefined),
             attachments: m.attachments,
             options: m.options,
             tool_calls: m.tool_calls,
-            messageId: m.traceId,
+            messageId: m.messageId || m.traceId,
           }));
 
           // Preserve local-only messages (like SystemGuard errors) that aren't in history yet
@@ -188,10 +189,11 @@ export default function ChatContent() {
 
   const sendMessage = async (text: string) => {
     if (!text.trim() && attachments.length === 0) return;
-    if (isLoading) return;
+    if (isLoading || isPostInFlight.current) return;
 
     const userMsg = text.trim();
     const currentAttachments = [...attachments];
+    const tempId = crypto.randomUUID();
     
     setMessages(prev => [...prev, { 
       role: 'user', 
@@ -229,7 +231,7 @@ export default function ChatContent() {
       const response = await fetch('/api/chat?stream=true', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: userMsg, sessionId: currentSessionId, attachments: apiAttachments }),
+        body: JSON.stringify({ text: userMsg, sessionId: currentSessionId, attachments: apiAttachments, traceId: tempId }),
       });
 
       const data = await response.json();
@@ -252,13 +254,15 @@ export default function ChatContent() {
 
       // Append the assistant response (stream now returns full response like non-streaming)
       if (currentSessionId === activeSessionRef.current) {
-        seenMessageIds.current.add(data.messageId);
+        seenMessageIds.current.add(data.messageId || tempId);
         setMessages(prev => {
-          const exists = prev.some(m => m.messageId === data.messageId && m.role === 'assistant');
+          const targetId = data.messageId || tempId;
+          const exists = prev.some(m => m.messageId === targetId && m.role === 'assistant');
           if (exists) {
-            return prev.map(m => m.messageId === data.messageId && m.role === 'assistant' ? {
+            return prev.map(m => m.messageId === targetId && m.role === 'assistant' ? {
               ...m,
               content: data.reply || m.content,
+              thought: data.thought || m.thought,
               tool_calls: data.tool_calls || m.tool_calls,
               agentName: data.agentName || m.agentName
             } : m);
@@ -266,7 +270,8 @@ export default function ChatContent() {
           return [...prev, {
             role: 'assistant',
             content: data.reply || (data.tool_calls ? 'Executing tools...' : ''),
-            messageId: data.messageId,
+            thought: data.thought,
+            messageId: targetId,
             agentName: data.agentName || 'SuperClaw',
             tool_calls: data.tool_calls,
           }];
@@ -342,7 +347,7 @@ export default function ChatContent() {
       }
     } else {
       // Handle other options as standard messages
-      handleSendMessage(value);
+      sendMessage(value);
     }
   };
 

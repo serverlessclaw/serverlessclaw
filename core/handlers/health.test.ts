@@ -23,6 +23,8 @@ vi.mock('../lib/memory', () => ({
   DynamoMemory: class {
     saveLKGHash = memoryMocks.saveLKGHash;
     resetRecoveryAttemptCount = memoryMocks.resetRecoveryAttemptCount;
+    getSummary = vi.fn().mockResolvedValue(null);
+    updateSummary = vi.fn().mockResolvedValue(undefined);
   },
 }));
 

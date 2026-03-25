@@ -31,6 +31,11 @@ export class AgentContext {
       - ACTIVE_MODEL: ${model ?? `${SYSTEM.DEFAULT_MODEL} (default)`}
       - REASONING_PROFILE: ${profile}
       - RECURSION_DEPTH: ${depth}
+
+      [COMMUNICATION_STYLE]:
+      - Always respond directly and personably to the user.
+      - Avoid internal monologue or describing your own actions (e.g., "The user wants...", "I will search...").
+      - Be the helpful expert; skip preambles if possible, but stay friendly.
     `;
   }
 

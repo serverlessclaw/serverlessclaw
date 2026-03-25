@@ -42,7 +42,7 @@ export class RetentionManager {
       upperCategory === 'MEMORY'
     ) {
       tier = RetentionTiers.CRITICAL;
-      type = 'lesson';
+      type = 'LESSON';
     } else if (
       upperCategory === 'TRACE' ||
       upperCategory === 'TRAILS' ||

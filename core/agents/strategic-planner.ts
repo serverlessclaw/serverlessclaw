@@ -14,6 +14,7 @@ import {
 import { emitTaskEvent } from '../lib/utils/agent-helpers/event-emitter';
 import { parseStructuredResponse } from '../lib/utils/agent-helpers/llm-utils';
 import { parseConfigInt } from '../lib/providers/utils';
+import { AGENT_ERRORS } from '../lib/constants';
 import { getEvolutionMode, recordCooldown, isGapInCooldown } from './strategic-planner/evolution';
 import {
   buildProactiveReviewPrompt,
@@ -136,75 +137,93 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
   }
 
   // 3. Process with High Reasoning
-  const { responseText: rawResponse, attachments: resultAttachments } = await plannerAgent.process(
-    userId,
-    plannerPrompt,
-    {
-      profile: ReasoningProfile.DEEP,
-      isIsolated: true,
-      initiatorId,
-      depth,
-      traceId,
-      sessionId,
-      source: TraceSource.SYSTEM,
-      communicationMode: 'json',
-      responseFormat: {
-        type: 'json_schema',
-        json_schema: {
-          name: 'strategic_plan',
-          strict: true,
-          schema: {
-            type: 'object',
-            properties: {
-              status: { type: 'string', enum: ['SUCCESS', 'FAILED'] },
-              plan: { type: 'string' },
-              coveredGapIds: { type: 'array', items: { type: 'string' } },
-              toolOptimizations: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    action: { type: 'string', enum: ['PRUNE', 'CONSOLIDATE', 'REPLACE'] },
-                    toolName: { type: 'string' },
-                    reason: { type: 'string' },
+  let rawResponse = '';
+  const resultAttachments: any[] = [];
+
+  try {
+    const stream = plannerAgent.stream(
+      userId,
+      plannerPrompt,
+      {
+        profile: ReasoningProfile.DEEP,
+        isIsolated: isProactive,
+        initiatorId,
+        depth,
+        traceId,
+        sessionId,
+        source: TraceSource.SYSTEM,
+        communicationMode: isProactive ? 'json' : 'text',
+        responseFormat: isProactive ? {
+          type: 'json_schema',
+          json_schema: {
+            name: 'strategic_plan',
+            strict: true,
+            schema: {
+              type: 'object',
+              properties: {
+                status: { type: 'string', enum: ['SUCCESS', 'FAILED'] },
+                plan: { type: 'string' },
+                coveredGapIds: { type: 'array', items: { type: 'string' } },
+                toolOptimizations: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      action: { type: 'string', enum: ['PRUNE', 'CONSOLIDATE', 'REPLACE'] },
+                      toolName: { type: 'string' },
+                      reason: { type: 'string' },
+                    },
+                    required: ['action', 'toolName', 'reason'],
+                    additionalProperties: false,
                   },
-                  required: ['action', 'toolName', 'reason'],
-                  additionalProperties: false,
                 },
               },
+              required: ['status', 'plan', 'coveredGapIds'],
+              additionalProperties: false,
             },
-            required: ['status', 'plan', 'coveredGapIds'],
-            additionalProperties: false,
           },
-        },
-      },
+        } : undefined,
+      }
+    );
+
+    for await (const chunk of stream) {
+      if (chunk.content) rawResponse += chunk.content;
+      // Attachments from chunks are not currently used in planner but handled for consistency
     }
-  );
+  } catch (error) {
+    const errorDetail = error instanceof Error ? error.message : String(error);
+    logger.error(`[StrategicPlanner] Streaming failure: ${errorDetail}`, error);
+    rawResponse = AGENT_ERRORS.PROCESS_FAILURE;
+  }
 
   const planId = `PLAN-${Date.now()}`;
   logger.info(`[PLANNER] Generated Plan ID: ${planId}`);
 
   logger.info('Strategic Plan Raw Response:', rawResponse);
 
+  const isSystemFailure = rawResponse === AGENT_ERRORS.PROCESS_FAILURE;
+
   let status = 'SUCCESS';
   let plan = rawResponse;
   let coveredGapIds: string[] = [];
   let toolOptimizations: Array<{ action: string; toolName: string; reason: string }> = [];
 
-  try {
-    const parsed = parseStructuredResponse<{
-      status: string;
-      plan: string;
-      coveredGapIds: string[];
-      toolOptimizations?: Array<{ action: string; toolName: string; reason: string }>;
-    }>(rawResponse);
-    status = parsed.status || 'SUCCESS';
-    plan = parsed.plan || rawResponse;
-    coveredGapIds = parsed.coveredGapIds || [];
-    toolOptimizations = parsed.toolOptimizations || [];
-    logger.info(`Parsed Strategic Plan. Status: ${status}, Gaps: ${coveredGapIds.join(', ')}`);
-  } catch (e) {
-    logger.warn('Failed to parse Planner structured response, falling back to raw text.', e);
+  if (!isSystemFailure && isProactive) {
+    try {
+      const parsed = parseStructuredResponse<{
+        status: string;
+        plan: string;
+        coveredGapIds: string[];
+        toolOptimizations?: Array<{ action: string; toolName: string; reason: string }>;
+      }>(rawResponse);
+      status = parsed.status || 'SUCCESS';
+      plan = parsed.plan || rawResponse;
+      coveredGapIds = parsed.coveredGapIds || [];
+      toolOptimizations = parsed.toolOptimizations || [];
+      logger.info(`Parsed Strategic Plan. Status: ${status}, Gaps: ${coveredGapIds.join(', ')}`);
+    } catch (e) {
+      logger.warn('Failed to parse Planner structured response, falling back to raw text.', e);
+    }
   }
 
   // 1.5 Generate gaps from toolOptimizations
@@ -233,14 +252,14 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
   // 1. Notify user directly in the chat session ONLY if successful and not empty
   if (!isFailure && plan !== 'Empty response from OpenAI.') {
     await sendOutboundMessage(
-      'planner.agent',
+      AgentType.STRATEGIC_PLANNER,
       userId,
-      `🚀 **Strategic Plan Generated**\n\n${plan}`,
+      plan.startsWith('🚀') ? plan : `🚀 **Strategic Plan Generated**\n\n${plan}`,
       [baseUserId],
       sessionId,
       config.name,
       resultAttachments,
-      undefined,
+      traceId ? `${traceId}-${AgentType.STRATEGIC_PLANNER}` : undefined,
       [
         { label: '🚀 Approve', value: `APPROVE ${planId}` },
         { label: '🤔 Clarify', value: `CLARIFY ${planId}` },

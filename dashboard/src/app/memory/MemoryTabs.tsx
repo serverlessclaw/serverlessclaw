@@ -8,7 +8,7 @@ import Badge from '@/components/ui/Badge';
 interface Tab {
   id: string;
   label: string;
-  count: number;
+  count: number | string;
   icon: React.ReactNode;
 }
 

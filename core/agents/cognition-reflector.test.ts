@@ -16,9 +16,10 @@ vi.mock('../lib/memory', () => ({
     getAllGaps = vi.fn().mockResolvedValue([]);
     updateDistilledMemory = mocks.updateDistilledMemory;
     addLesson = mocks.addLesson;
-    setGap = mocks.setGap;
     updateGapStatus = mocks.updateGapStatus;
     getFailurePatterns = vi.fn().mockResolvedValue([]);
+    getSummary = vi.fn().mockResolvedValue(null);
+    updateSummary = vi.fn().mockResolvedValue(undefined);
   },
 }));
 
@@ -31,6 +32,11 @@ vi.mock('../lib/providers/index', () => ({
 vi.mock('../lib/agent', () => ({
   Agent: class {
     process = mocks.agentProcess;
+    stream = async function* () {
+      // eslint-disable-next-line prefer-rest-params
+      const result = await mocks.agentProcess.apply(this, arguments as any);
+      yield { content: result.responseText };
+    };
   },
 }));
 
@@ -101,6 +107,8 @@ vi.mock('../lib/utils/agent-helpers', () => ({
       setGap: mocks.setGap,
       updateGapStatus: mocks.updateGapStatus,
       getFailurePatterns: vi.fn().mockResolvedValue([]),
+      getSummary: vi.fn().mockResolvedValue(null),
+      updateSummary: vi.fn().mockResolvedValue(undefined),
     },
     provider: {
       call: vi.fn(),

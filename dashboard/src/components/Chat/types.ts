@@ -51,6 +51,7 @@ export interface HistoryMessage {
   thought?: string;
   agentName?: string;
   traceId?: string; // Added for reconciliation
+  messageId?: string; // Explicit identifier for distinct agent responses
   attachments: ChatMessage['attachments'];
   options?: ChatMessage['options'];
   tool_calls?: ToolCall[];

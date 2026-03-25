@@ -218,10 +218,12 @@ describe('Agent.stream()', () => {
       chunks.push(chunk);
     }
 
-    expect(chunks).toHaveLength(3);
-    expect(chunks[0].content).toBe('Part1');
-    expect(chunks[1].content).toBe('Part2');
-    expect(chunks[2].content).toBe('Part3');
+    expect(chunks).toHaveLength(5);
+    expect(chunks[0].agentName).toBe('Test');
+    expect(chunks[1].content).toBe('Part1');
+    expect(chunks[2].content).toBe('Part2');
+    expect(chunks[3].content).toBe('Part3');
+    expect(chunks[4].usage).toBeDefined();
   });
 
   it('should use provided traceId via emitter for chunk identification', async () => {

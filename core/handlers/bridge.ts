@@ -23,6 +23,8 @@ export async function handler(event: Record<string, unknown>, _context: Context)
   console.log('[RealtimeBridge] Received event:', parsedEvent['detail-type']);
 
   const { detail } = parsedEvent;
+  const eventType = parsedEvent['detail-type'];
+  
   // Standardize userId: fallback to dashboard-user, then ensure it's a clean string
   let userId = detail.userId ?? 'dashboard-user';
   if (typeof userId !== 'string') userId = 'dashboard-user';
@@ -34,9 +36,20 @@ export async function handler(event: Record<string, unknown>, _context: Context)
   const safeUserId = baseUserId.replace(/[#+]/g, '_');
   const sessionId = detail.sessionId;
 
+  // Extract more context for focused logging
+  const messageId = detail.messageId || detail.traceId || 'unknown';
+  const agentName = detail.agentName || 'SuperClaw';
+  const rawMessage = (detail.message || '') as string;
+  const contentSnippet = rawMessage.length > 50 
+    ? rawMessage.substring(0, 50).replace(/\n/g, ' ') + '...'
+    : rawMessage.replace(/\n/g, ' ');
+
   console.log(
-    `[RealtimeBridge] Routing: User=${userId} | BaseUser=${baseUserId} | Session=${sessionId}`
+    `[RealtimeBridge] Routing ${eventType}: User=${userId} | Session=${sessionId} | MsgId=${messageId} | Agent=${agentName}`
   );
+  if (rawMessage) {
+    console.log(`[RealtimeBridge] Content: "${contentSnippet}"${detail.isThought ? ' (thought)' : ''}`);
+  }
 
   // If we have a sessionId, we can target the specific chat session
   // Otherwise fallback to the generic user signal topic
@@ -45,11 +58,13 @@ export async function handler(event: Record<string, unknown>, _context: Context)
     : `users/${safeUserId}/signal`;
 
   try {
-    console.log(`[RealtimeBridge] Publishing to: ${topic}`);
     // AWS IoT requires payload to be a Uint8Array or string
     const command = new PublishCommand({
       topic,
-      payload: Buffer.from(JSON.stringify(detail)),
+      payload: Buffer.from(JSON.stringify({
+        ...detail,
+        'detail-type': eventType
+      })),
       qos: 1,
     });
 

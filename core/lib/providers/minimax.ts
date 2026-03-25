@@ -68,7 +68,7 @@ export class MiniMaxProvider implements IProvider {
       max_tokens: 4096,
       messages: anthropicMessages,
       ...(systemMessage ? { system: systemMessage } : {}),
-      ...(reasoningConfig.enabled
+      ...(reasoningConfig.enabled && responseFormat?.type !== 'json_schema'
         ? {
             thinking: {
               type: 'enabled',
@@ -171,7 +171,7 @@ export class MiniMaxProvider implements IProvider {
       messages: anthropicMessages,
       stream: true,
       ...(systemMessage ? { system: systemMessage } : {}),
-      ...(reasoningConfig.enabled
+      ...(reasoningConfig.enabled && responseFormat?.type !== 'json_schema'
         ? {
             thinking: {
               type: 'enabled',

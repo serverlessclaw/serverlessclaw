@@ -43,6 +43,8 @@ vi.mock('./memory', () => ({
     searchInsights = vi.fn().mockResolvedValue([]);
     setGap = vi.fn().mockResolvedValue(undefined);
     updateGapStatus = vi.fn().mockResolvedValue(undefined);
+    getSummary = vi.fn().mockResolvedValue(null);
+    updateSummary = vi.fn().mockResolvedValue(undefined);
   },
 }));
 
@@ -56,6 +58,9 @@ vi.mock('./providers/index', () => ({
     getCapabilities = vi.fn().mockResolvedValue({
       supportedReasoningProfiles: ['standard'],
       maxReasoningEffort: 'medium',
+    });
+    stream = vi.fn().mockImplementation(async function* () {
+      yield { content: 'Mocked response' };
     });
   },
 }));
