@@ -31,7 +31,7 @@ vi.mock('./registry', () => ({
 }));
 
 // Use vi.hoisted to ensure mock is available for dynamic imports
-const { MockClawTracer } = vi.hoisted(() => {
+const { MockClawTracer, MockAgentExecutorFactory } = vi.hoisted(() => {
   class MockClawTracer {
     getTraceId = mockGetTraceId;
     getNodeId = mockGetNodeId;
@@ -40,23 +40,6 @@ const { MockClawTracer } = vi.hoisted(() => {
     addStep = mockAddStep;
     endTrace = mockEndTrace;
   }
-  return { MockClawTracer };
-});
-
-vi.mock('./tracer', () => ({
-  ClawTracer: MockClawTracer,
-}));
-
-vi.mock('./agent/context-manager', () => ({
-  ContextManager: {
-    getManagedContext: vi.fn().mockResolvedValue({ messages: [] }),
-    needsSummarization: vi.fn().mockReturnValue(false),
-    summarize: vi.fn().mockResolvedValue(undefined),
-  },
-}));
-
-// Hoist the mocked executor so it's available for dynamic imports in Agent
-const { MockAgentExecutorFactory } = vi.hoisted(() => {
   const mockRunLoop = vi.fn().mockImplementation(async function (
     this: any,
     messages: any,
@@ -135,8 +118,20 @@ const { MockAgentExecutorFactory } = vi.hoisted(() => {
     };
   }
 
-  return { MockAgentExecutorFactory };
+  return { MockClawTracer, MockAgentExecutorFactory };
 });
+
+vi.mock('./tracer', () => ({
+  ClawTracer: MockClawTracer,
+}));
+
+vi.mock('./agent/context-manager', () => ({
+  ContextManager: {
+    getManagedContext: vi.fn().mockResolvedValue({ messages: [] }),
+    needsSummarization: vi.fn().mockReturnValue(false),
+    summarize: vi.fn().mockResolvedValue(undefined),
+  },
+}));
 
 vi.mock('./agent/executor', () => ({
   AgentExecutor: MockAgentExecutorFactory,

@@ -409,7 +409,7 @@ export default function ChatContent() {
       />
 
       <main 
-        className={`flex-1 flex flex-col min-w-0 bg-[#0a0a0a] transition-colors relative ${isDragging ? 'bg-cyber-green/5' : ''}`}
+        className={`flex-1 flex flex-col min-w-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-green/5 via-[#0a0a0a] to-[#0a0a0a] transition-colors relative ${isDragging ? 'bg-cyber-green/10' : ''}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -423,7 +423,7 @@ export default function ChatContent() {
           </div>
         )}
         
-        <header className="px-6 py-4 border-b border-white/5 flex justify-between items-center shrink-0 min-h-[70px]">
+        <header className="px-6 pb-6 pt-10 border-b border-white/5 flex flex-col lg:flex-row lg:justify-between lg:items-end shrink-0 min-h-[70px] gap-6">
           <div className="flex-1 min-w-0 mr-4">
             {activeSessionId && currentSession ? (
               <div className="flex items-center gap-3 group/title">

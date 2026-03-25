@@ -21,7 +21,7 @@ export function createMockRunLoop(
   provider: MockProvider,
   tools: Record<string, unknown>,
   agentId: string,
-  agentName: string,
+  agentName: string
 ) {
   return async function mockRunLoop(messages: unknown[], options?: { responseFormat?: string }) {
     const hasToolCalls =
@@ -34,11 +34,18 @@ export function createMockRunLoop(
           m.role === 'assistant' &&
           'tool_calls' in m &&
           Array.isArray(m.tool_calls) &&
-          m.tool_calls.length > 0,
+          m.tool_calls.length > 0
       );
 
     if (hasToolCalls) {
-      const toolCallResponse = await provider.call(messages, tools, undefined, agentId, agentName, options?.responseFormat);
+      const toolCallResponse = await provider.call(
+        messages,
+        tools,
+        undefined,
+        agentId,
+        agentName,
+        options?.responseFormat
+      );
       messages.push(toolCallResponse);
 
       const toolResults = (toolCallResponse.tool_calls as ToolCall[]).map((tc) => ({
@@ -48,11 +55,25 @@ export function createMockRunLoop(
       }));
       messages.push(...toolResults);
 
-      const finalResponse = await provider.call(messages, tools, undefined, agentId, agentName, options?.responseFormat);
+      const finalResponse = await provider.call(
+        messages,
+        tools,
+        undefined,
+        agentId,
+        agentName,
+        options?.responseFormat
+      );
       return finalResponse;
     }
 
-    const response = await provider.call(messages, tools, undefined, agentId, agentName, options?.responseFormat);
+    const response = await provider.call(
+      messages,
+      tools,
+      undefined,
+      agentId,
+      agentName,
+      options?.responseFormat
+    );
     return response;
   };
 }
@@ -62,13 +83,14 @@ export function createMockAgentExecutorFactory(
   tools: Record<string, unknown>,
   agentId: string,
   agentName: string,
+  customRunLoop?: (messages: unknown[], options?: Record<string, unknown>) => Promise<unknown>
 ) {
   return {
     provider,
     tools,
     agentId,
     agentName,
-    runLoop: createMockRunLoop(provider, tools, agentId, agentName),
+    runLoop: customRunLoop ?? createMockRunLoop(provider, tools, agentId, agentName),
   };
 }
 

@@ -278,9 +278,9 @@ export default async function SettingsPage() {
 
   return (
     <main className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-blue/5 via-transparent to-transparent">
-      <header className="flex justify-between items-end border-b border-white/5 pb-6">
+      <header className="flex flex-col lg:flex-row lg:justify-between lg:items-end border-b border-white/5 pb-6 gap-6">
         <div>
-          <Typography variant="h1" color="white" glow uppercase>
+          <Typography variant="h2" color="white" glow uppercase>
             Config
           </Typography>
           <Typography variant="body" color="muted" className="mt-2 block">

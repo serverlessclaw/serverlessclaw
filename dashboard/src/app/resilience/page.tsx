@@ -15,7 +15,8 @@ import { DynamoMemory } from '@claw/core/lib/memory';
 
 
 async function getHealth() {
-  const apiUrl = Resource.WebhookApi.url || process.env.API_URL;
+  const typedResource = Resource as any;
+  const apiUrl = typedResource.WebhookApi?.url || process.env.API_URL;
 
   
   if (!apiUrl) {
@@ -81,11 +82,15 @@ export default async function ResilienceHub() {
   const isHealthy = health.status === 'ok';
 
   return (
-    <main className="flex-1 overflow-y-auto p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-yellow-500/5 via-transparent to-transparent">
-      <header className="flex justify-between items-end border-b border-white/5 pb-6">
+    <main className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-yellow-500/5 via-transparent to-transparent">
+      <header className="flex flex-col lg:flex-row lg:justify-between lg:items-end border-b border-white/5 pb-6 gap-6">
         <div>
-          <Typography variant="h2" weight="bold" color="white" glow className="!text-yellow-500">Resilience Hub</Typography>
-          <Typography variant="body" color="white" className="mt-2 block opacity-80">Autonomous self-healing and system recovery monitor.</Typography>
+          <Typography variant="h2" color="white" glow uppercase>
+            Resilience Hub
+          </Typography>
+          <Typography variant="body" color="muted" className="mt-2 block">
+            Autonomous self-healing and system recovery monitor.
+          </Typography>
         </div>
         <div className="flex gap-4">
           <Card variant="glass" padding="sm" className={`px-4 py-2 min-w-[120px] border-2 ${isHealthy ? 'border-[var(--cyber-green)]/30' : 'border-red-500/50 animate-pulse'}`}>

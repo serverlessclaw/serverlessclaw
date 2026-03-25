@@ -32,7 +32,7 @@ export default function MemorySearch() {
   }, [query, router, searchParams]);
 
   return (
-    <div className="relative w-full max-w-xl">
+    <div className="relative w-full max-w-md">
       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
         <Search size={16} className="text-muted" />
       </div>

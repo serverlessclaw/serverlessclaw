@@ -189,13 +189,13 @@ export default async function MemoryVault({
   }
 
   return (
-    <main className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-8 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-blue/5 via-transparent to-transparent">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-white/5 pb-8 gap-6">
-        <div>
+    <main className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-blue/5 via-transparent to-transparent">
+      <header className="flex flex-col lg:flex-row lg:justify-between lg:items-end border-b border-white/5 pb-6 gap-6">
+        <div className="flex-1 min-w-0">
           <Typography variant="h2" color="white" glow uppercase>
             Neural Reserve
           </Typography>
-          <Typography variant="body" color="muted" className="mt-2 block">
+          <Typography variant="body" color="muted" className="mt-2 block lg:whitespace-nowrap">
             Human-Agent Collaborative Memory Tiering & Prioritization Hub.
           </Typography>
         </div>
