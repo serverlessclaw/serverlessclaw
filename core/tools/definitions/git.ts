@@ -4,23 +4,20 @@ import { IToolDefinition } from '../../lib/types/index';
  * Definitions for Git-related tools.
  */
 export const gitTools: Record<string, IToolDefinition> = {
-  gitSync: {
-    name: 'gitSync',
+  triggerTrunkSync: {
+    name: 'triggerTrunkSync',
     description:
-      'Syncs the current state of the repository with the remote main branch. This tool performs a pull (rebase), commits any local changes, and pushes to the origin main. Only use this after successful QA verification or human approval.',
+      'Triggers a CI/CD job to sync the current verified state back to the origin main branch. This is the official "Trunk Sync" mechanism for the evolution lifecycle. Use ONLY after successful QA verification.',
     parameters: {
       type: 'object',
       properties: {
         commitMessage: {
           type: 'string',
-          description: 'The commit message to use for the sync.',
-        },
-        skipPull: {
-          type: 'boolean',
-          description: 'Whether to skip the pull step (dangerous, only for emergency).',
+          description:
+            'The commit message to use for the sync (e.g., "chore: evolve capability X").',
         },
       },
-      required: ['commitMessage', 'skipPull'],
+      required: ['commitMessage'],
       additionalProperties: false,
     },
   },

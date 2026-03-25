@@ -12,42 +12,29 @@ interface ToolsResource {
 
 /**
  * Triggers a CodeBuild job specifically to sync the repository back to Git.
- * This is called after QA verification passes.
+ * This is the secure "CI/CD Bridge" for the self-evolution lifecycle.
  */
-export const GIT_SYNC = {
-  ...gitTools.gitSync,
+export const TRIGGER_TRUNK_SYNC = {
+  ...gitTools.triggerTrunkSync,
   execute: async (args: Record<string, unknown>): Promise<string> => {
     try {
-      const { commitMessage = 'chore: autonomous improvement [skip ci]' } = args as {
-        commitMessage?: string;
-      };
-
+      const { commitMessage } = args as { commitMessage: string };
       const typedResource = Resource as unknown as ToolsResource;
 
-      logger.info('Triggering Git Sync via CodeBuild (SYNC_ONLY=true)...');
+      logger.info(`Triggering Trunk Sync via CodeBuild (SYNC_ONLY=true): ${commitMessage}`);
 
       const command = new StartBuildCommand({
         projectName: typedResource.Deployer.name,
         environmentVariablesOverride: [
-          {
-            name: 'SYNC_ONLY',
-            value: 'true',
-            type: 'PLAINTEXT',
-          },
-          {
-            name: 'COMMIT_MESSAGE',
-            value: commitMessage,
-            type: 'PLAINTEXT',
-          },
+          { name: 'SYNC_ONLY', value: 'true', type: 'PLAINTEXT' },
+          { name: 'COMMIT_MESSAGE', value: commitMessage, type: 'PLAINTEXT' },
         ],
       });
 
       const response = await codebuild.send(command);
-      const buildId = response.build?.id;
-
-      return `Git Sync triggered successfully. Build ID: ${buildId}. The changes will be pushed to the remote repository shortly.`;
+      return `Trunk Sync triggered successfully. Build ID: ${response.build?.id}. Changes will land in the main branch shortly.`;
     } catch (error) {
-      return `Failed to trigger Git Sync: ${formatErrorMessage(error)}`;
+      return `Failed to trigger Trunk Sync: ${formatErrorMessage(error)}`;
     }
   },
 };

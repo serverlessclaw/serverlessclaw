@@ -49,6 +49,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     defaultCommunicationMode: 'text',
     tools: [
       TOOLS.dispatchTask,
+      'signalOrchestration',
 
       TOOL_LIST_AGENTS,
       TOOL_RECALL_KNOWLEDGE,
@@ -149,6 +150,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     reasoningProfile: ReasoningProfile.DEEP,
     defaultCommunicationMode: 'json',
     tools: [
+      'signalOrchestration',
       TOOL_RECALL_KNOWLEDGE,
       TOOLS.dispatchTask,
       TOOL_MANAGE_GAP,
@@ -223,7 +225,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       TOOL_INSTALL_SKILL,
       TOOL_SAVE_MEMORY,
       TOOL_SEEK_CLARIFICATION,
-      'gitSync',
+      'triggerTrunkSync',
     ],
     connectionProfile: [
       ConnectionProfile.BUS,

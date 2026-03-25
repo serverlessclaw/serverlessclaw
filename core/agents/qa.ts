@@ -69,8 +69,7 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
 
     STEP 2 — VERDICT: After your tool checks, respond with VERIFICATION_SUCCESSFUL or REOPEN_REQUIRED.
 
-    STEP 3 — SYNC (if successful): If verification passes, you MUST call 'gitSync' to finalize the trunk sync back to the repository.
-
+    STEP 3 — SYNC (if successful): If verification passes, you MUST call 'triggerTrunkSync' to finalize the trunk sync back to the repository via the CI/CD bridge.
     Background (Coder's self-report — treat as unverified):
     ${implementationResponse}
 
