@@ -54,7 +54,7 @@ export class AgentExecutor {
   ) {}
 
   async runLoop(messages: Message[], options: ExecutorOptions): Promise<LoopResult> {
-    const { maxIterations, tracer, taskId, approvedToolCalls } = options;
+    const { maxIterations, tracer, approvedToolCalls } = options;
 
     let iterations = 0;
     let responseText = '';
@@ -491,8 +491,10 @@ export class AgentExecutor {
         emitMetrics([
           Metrics.tokensInput(usage.prompt_tokens, this.agentId, provider ?? 'unknown'),
           Metrics.tokensOutput(usage.completion_tokens, this.agentId, provider ?? 'unknown'),
-        ]).catch(() => {});
-      } catch {}
+        ]).catch(() => undefined);
+      } catch {
+        return;
+      }
     }
   }
 
