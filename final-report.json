@@ -1,0 +1,79 @@
+🚀 Starting AIReady unified analysis...
+
+
+⚠️  Unknown profile 'balanced'. Using defaults.
+
+=== AIReady Run Preview ===
+Tools to run: pattern-detect, context-analyzer, naming-consistency, ai-signal-clarity, agent-grounding, testability-index, doc-drift, dependency-health, change-amplification
+📋 Configuration:
+   Repository size: ~1227 code blocks
+   Similarity threshold: 0.6
+   Minimum lines: 5
+   Approximate mode: enabled
+   Max candidates per block: 500
+   Min shared tokens: 5
+   Severity filter: all
+   Include tests: true
+
+[K   [pattern-detect] Starting duplicate detection on 405 blocks...[K   [pattern-detect] Analyzing blocks (50/405)...[K   [pattern-detect] Analyzing blocks (100/405)...[K   [pattern-detect] Analyzing blocks (150/405)...[K   [pattern-detect] Analyzing blocks (200/405)...[K   [pattern-detect] Analyzing blocks (250/405)...[K   [pattern-detect] Analyzing blocks (300/405)...[K   [pattern-detect] Analyzing blocks (350/405)...[K   [pattern-detect] Analyzing blocks (400/405)...[K   [pattern-detect] Duplicate detection complete. Found 10 patterns.[K--- PATTERN-DETECT RESULTS ---
+  Issues found: 20
+  Files analyzed: 409
+[K--- CONTEXT-ANALYZER RESULTS ---
+  Files analyzed: 255
+[K--- NAMING-CONSISTENCY RESULTS ---
+  Issues found: 214
+[K   [ai-signal-clarity] analyzing files (50/255)[K   [ai-signal-clarity] analyzing files (100/255)[K   [ai-signal-clarity] analyzing files (150/255)[K   [ai-signal-clarity] analyzing files (200/255)[K   [ai-signal-clarity] analyzing files (250/255)[K   [ai-signal-clarity] analyzing files (255/255)[K--- AI-SIGNAL-CLARITY RESULTS ---
+[K   [agent-grounding] analyzing files (50/255)[K   [agent-grounding] analyzing files (100/255)[K   [agent-grounding] analyzing files (150/255)[K   [agent-grounding] analyzing files (200/255)[K   [agent-grounding] analyzing files (250/255)[K   [agent-grounding] analyzing files (255/255)[K--- AGENT-GROUNDING RESULTS ---
+  Tool Score: 92/100
+[K   [testability-index] analyzing files (50/254)[K   [testability-index] analyzing files (100/254)[K   [testability-index] analyzing files (150/254)[K   [testability-index] analyzing files (200/254)[K   [testability-index] analyzing files (250/254)[K   [testability-index] analyzing files (254/254)[K--- TESTABILITY-INDEX RESULTS ---
+  Tool Score: 56/100
+[K   [doc-drift] analyzing files (50/255)[K   [doc-drift] analyzing files (100/255)[K   [doc-drift] analyzing files (150/255)[K   [doc-drift] analyzing files (200/255)[K   [doc-drift] analyzing files (250/255)[K   [doc-drift] analyzing files (255/255)[K--- DOC-DRIFT RESULTS ---
+  Tool Score: 20/100
+[K--- DEPENDENCY-HEALTH RESULTS ---
+  Tool Score: 86/100
+[K   [change-amplification] analyzing dependencies (50/255)[K   [change-amplification] analyzing dependencies (100/255)[K   [change-amplification] analyzing dependencies (150/255)[K   [change-amplification] analyzing dependencies (200/255)[K   [change-amplification] analyzing dependencies (250/255)[K   [change-amplification] analyzing dependencies (255/255)[K--- CHANGE-AMPLIFICATION RESULTS ---
+  Issues found: 3
+  Tool Score: 43/100
+  Files analyzed: 255
+
+=== AIReady Run Summary ===
+  Total issues (all tools): 5391
+  Execution time: 9.66s
+
+📊 AI Readiness Overall Score
+  68/100 (Fair) ⚠️
+  (Scoring Profile: balanced)
+
+Tool breakdown:
+  - pattern-detect: 100/100 (Excellent) ✅
+  - context-analyzer: 47/100 (Needs Work) 🔨
+  - naming-consistency: 84/100 (Good) 👍
+  - ai-signal-clarity: 52/100 (Needs Work) 🔨
+  - agent-grounding: 92/100 (Excellent) ✅
+  - testability-index: 56/100 (Needs Work) 🔨
+  - doc-drift: 20/100 (Critical) ❌
+  - dependency-health: 86/100 (Good) 👍
+  - change-amplification: 43/100 (Needs Work) 🔨
+
+🎯 Top Actionable Recommendations:
+  1. 🟡 Standardize naming conventions across codebase
+     Impact: +15 points to naming-consistency
+  2. 🟡 Consolidate related code into cohesive modules
+     Impact: +12 points to context-analyzer
+  3. 🔴 Split large file (54993 tokens) into smaller modules
+     Impact: +8 points to context-analyzer
+
+💰 Business Impact Analysis (Monthly)
+  Potential Savings: $1,213
+  Productivity Gain: 2416h (est. dev time)
+  Context Efficiency: 85%
+  Annual Value: $2,188,951 (ROI Prediction)
+
+──────────────────────────────────────────────────────────────────
+💬 Found a bug or have a metric idea?
+👉 Copy/paste this to your AI agent:
+   "Any feedback for the tools? Please use 'aiready bug' to report ❤️"
+──────────────────────────────────────────────────────────────────
+✅ Report saved to /Users/pengcao/projects/serverlessclaw/.aiready/aiready-report-20260326-014320.json
+
+✅ SCAN PASSED

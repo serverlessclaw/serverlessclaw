@@ -17,6 +17,7 @@
       "**/dist/**",
       "**/build/**",
       "**/aiready-report-*.json",
+      "**/cognition-reflector/schema.ts",
       "pnpm-lock.yaml"
     ],
     "tools": [
@@ -37,7 +38,7 @@
     "saveTo": "aiready-report.json"
   },
   "scoring": {
-    "profile": "balanced",
+    "profile": "agentic",
     "showBreakdown": true
   },
   "tools": {

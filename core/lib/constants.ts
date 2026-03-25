@@ -1,11 +1,8 @@
 /**
  * @module Constants
- * System-wide constants to prevent magic literals and improve AI signal clarity.
+ * @description System-wide constants to prevent magic literals and improve AI signal clarity.
  * These constants are used across the Serverless Claw stack for configuration,
  * resource naming, and status codes.
- *
- * NOTE: For configurable defaults (recursion_limit, deploy_limit, etc.),
- * see config-defaults.ts for centralized, hot-swappable configuration.
  */
 
 import { CONFIG_DEFAULTS } from './config-defaults';

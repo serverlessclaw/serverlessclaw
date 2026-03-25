@@ -1,6 +1,7 @@
 {
   "name": "@claw/core",
   "version": "1.0.0",
+  "description": "Core engine and agent implementation for Serverless Claw.",
   "private": true,
   "type": "module",
   "main": "./lib/index.js",
