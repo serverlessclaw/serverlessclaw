@@ -11,6 +11,10 @@ const memoryMocks = vi.hoisted(() => ({
   getFailurePatterns: vi.fn().mockResolvedValue([]),
   setGap: vi.fn().mockResolvedValue(undefined),
   searchInsights: vi.fn().mockResolvedValue({ items: [], lastEvaluatedKey: null }),
+  acquireGapLock: vi.fn().mockResolvedValue(true),
+  getGapLock: vi.fn().mockResolvedValue(null),
+  getGlobalLessons: vi.fn().mockResolvedValue([]),
+  getFailedPlans: vi.fn().mockResolvedValue([]),
 }));
 
 const agentProcess = vi.hoisted(() => vi.fn());
@@ -35,6 +39,10 @@ vi.mock('../lib/memory', () => ({
     getLowUtilizationMemory = vi.fn().mockResolvedValue([]);
     getSummary = vi.fn().mockResolvedValue(null);
     updateSummary = vi.fn().mockResolvedValue(undefined);
+    acquireGapLock = memoryMocks.acquireGapLock;
+    getGapLock = memoryMocks.getGapLock;
+    getGlobalLessons = memoryMocks.getGlobalLessons;
+    getFailedPlans = memoryMocks.getFailedPlans;
   },
 }));
 

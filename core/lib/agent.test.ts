@@ -120,6 +120,8 @@ describe('Agent Trace Propagation', () => {
       name: 'Test Agent',
       enabled: true,
       systemPrompt: 'System prompt',
+      model: SYSTEM.DEFAULT_MODEL,
+      provider: SYSTEM.DEFAULT_PROVIDER,
     });
 
     await agent.process('user-1', 'Hello', {
@@ -208,6 +210,8 @@ describe('Agent Trace Propagation', () => {
       name: 'Test',
       enabled: true,
       systemPrompt: 'System',
+      model: SYSTEM.DEFAULT_MODEL,
+      provider: SYSTEM.DEFAULT_PROVIDER,
     });
 
     await agent.process('user-1', 'Run code', {});
@@ -240,6 +244,8 @@ describe('Agent Trace Propagation', () => {
       name: 'Test',
       enabled: true,
       systemPrompt: 'System',
+      model: SYSTEM.DEFAULT_MODEL,
+      provider: SYSTEM.DEFAULT_PROVIDER,
     });
 
     await agent.process('user-1', 'What is this?', { attachments });
@@ -281,6 +287,8 @@ describe('Agent Trace Propagation', () => {
         enabled: true,
         systemPrompt: 'System prompt',
         defaultCommunicationMode: 'text',
+        model: SYSTEM.DEFAULT_MODEL,
+        provider: SYSTEM.DEFAULT_PROVIDER,
       });
 
       await agent.process('user-1', 'hi', { source: TraceSource.TELEGRAM });
@@ -316,6 +324,8 @@ describe('Agent Trace Propagation', () => {
         enabled: true,
         systemPrompt: 'System prompt',
         defaultCommunicationMode: 'json',
+        model: SYSTEM.DEFAULT_MODEL,
+        provider: SYSTEM.DEFAULT_PROVIDER,
       });
 
       await agent.process('user-1', 'do math', { source: TraceSource.SYSTEM });
@@ -360,6 +370,8 @@ describe('Agent Trace Propagation', () => {
         enabled: true,
         systemPrompt: 'System prompt',
         defaultCommunicationMode: 'json',
+        model: SYSTEM.DEFAULT_MODEL,
+        provider: SYSTEM.DEFAULT_PROVIDER,
       });
 
       await agent.process('user-1', 'plan', { source: TraceSource.SYSTEM });
