@@ -191,7 +191,7 @@ export async function handleTaskResult(
             traceId,
             taskId: traceId, // Use traceId as taskId for the aggregate event
             initiatorId: aggregateState.initiatorId,
-            depth: aggregateState.depth ?? 0,
+            depth: depth,
             overallStatus,
             results: aggregateState.results,
             taskCount: aggregateState.taskCount,

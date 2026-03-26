@@ -217,7 +217,7 @@ export const CLARIFICATION_TASK_METADATA = z
     originalTask: z.string().optional(),
     retryCount: z.number().default(0),
   })
-  .default({});
+  .default({ retryCount: 0 });
 
 // Zod-inferred types for metadata schemas
 export type CoderTaskMetadata = z.infer<typeof CODER_TASK_METADATA>;
