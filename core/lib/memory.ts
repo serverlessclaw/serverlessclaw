@@ -329,7 +329,14 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
     failureReason: string,
     metadata?: Partial<InsightMetadata>
   ): Promise<number> {
-    return InsightOps.recordFailedPlan(this, planHash, planContent, gapIds, failureReason, metadata);
+    return InsightOps.recordFailedPlan(
+      this,
+      planHash,
+      planContent,
+      gapIds,
+      failureReason,
+      metadata
+    );
   }
 
   /**
