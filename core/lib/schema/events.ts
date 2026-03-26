@@ -174,7 +174,7 @@ export const CODER_TASK_METADATA = z
     targetFile: z.string().optional(),
     branch: z.string().optional(),
   })
-  .default({});
+  .default({ gapIds: [] });
 
 /** Metadata schema for QA audit tasks. */
 export const QA_AUDIT_METADATA = z
@@ -183,7 +183,7 @@ export const QA_AUDIT_METADATA = z
     buildId: z.string().optional(),
     deploymentUrl: z.string().optional(),
   })
-  .default({});
+  .default({ gapIds: [] });
 
 /** Metadata schema for Strategic Planner tasks. */
 export const PLANNER_TASK_METADATA = z
@@ -201,7 +201,7 @@ export const BUILD_TASK_METADATA = z
     buildId: z.string().optional(),
     projectName: z.string().optional(),
   })
-  .default({});
+  .default({ gapIds: [] });
 
 // Zod-inferred types for metadata schemas
 export type CoderTaskMetadata = z.infer<typeof CODER_TASK_METADATA>;

@@ -10,6 +10,7 @@
  * @module schema-type-drift
  */
 import { describe, it, expect } from 'vitest';
+import { HealthSeverity } from '../lib/types/constants';
 import type {
   AgentPayloadInferred,
   TaskEventPayload,
@@ -185,7 +186,7 @@ describe('Schema-Type Drift Detection', () => {
         timestamp: Date.now(),
         component: 'DynamoDB',
         issue: 'Connection timeout',
-        severity: 'critical' as const,
+        severity: HealthSeverity.CRITICAL,
       };
 
       const written: WrittenHealthReportEvent = {
