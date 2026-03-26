@@ -36,8 +36,8 @@ export async function handler(
   logger.info('EventHandler received event:', JSON.stringify(event, null, 2));
 
   try {
-    const { emitMetrics, Metrics } = await import('../lib/metrics');
-    emitMetrics([Metrics.agentInvoked(detailType)]).catch((err) =>
+    const { emitMetrics, METRICS } = await import('../lib/metrics');
+    emitMetrics([METRICS.agentInvoked(detailType)]).catch((err) =>
       logger.warn(`Metrics emission failed for ${detailType}:`, err)
     );
   } catch {

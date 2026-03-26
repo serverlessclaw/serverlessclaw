@@ -569,10 +569,10 @@ export class AgentExecutor {
   private async emitTokenMetrics(usage: NonNullable<Message['usage']>, provider?: string) {
     if (!process.env.VITEST) {
       try {
-        const { emitMetrics, Metrics } = await import('../metrics');
+        const { emitMetrics, METRICS } = await import('../metrics');
         emitMetrics([
-          Metrics.tokensInput(usage.prompt_tokens, this.agentId, provider ?? 'unknown'),
-          Metrics.tokensOutput(usage.completion_tokens, this.agentId, provider ?? 'unknown'),
+          METRICS.tokensInput(usage.prompt_tokens, this.agentId, provider ?? 'unknown'),
+          METRICS.tokensOutput(usage.completion_tokens, this.agentId, provider ?? 'unknown'),
         ]).catch(() => undefined);
       } catch {
         return;

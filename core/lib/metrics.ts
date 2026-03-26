@@ -62,7 +62,7 @@ export async function emitMetrics(metrics: MetricDatum[]): Promise<void> {
   }
 }
 
-export const Metrics = {
+export const METRICS = {
   agentInvoked(agentId: string): MetricDatum {
     return {
       MetricName: 'AgentInvocations',

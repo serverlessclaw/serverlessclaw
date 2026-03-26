@@ -45,8 +45,8 @@ export const handler = async (_event?: { detail: Record<string, unknown> }): Pro
     await eventbridge.send(new ListEventBusesCommand({ NamePrefix: typedResource.AgentBus.name }));
 
     logger.info('System is healthy (Deep Check PASSED). No action needed.');
-    const { emitMetrics, Metrics } = await import('../lib/metrics');
-    emitMetrics([Metrics.mcpHubPing(true, 0)]).catch(() => {});
+    const { emitMetrics, METRICS } = await import('../lib/metrics');
+    emitMetrics([METRICS.mcpHubPing(true, 0)]).catch(() => {});
     return;
   } catch (error) {
     logger.error(`System health check FAILED: ${formatErrorMessage(error)}`);

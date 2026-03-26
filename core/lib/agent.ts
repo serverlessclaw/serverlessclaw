@@ -361,10 +361,10 @@ export class Agent {
       // Emit agent-level metrics + persist token usage
       if (!process.env.VITEST && loopUsage) {
         try {
-          const { emitMetrics, Metrics } = await import('./metrics');
+          const { emitMetrics, METRICS } = await import('./metrics');
           emitMetrics([
-            Metrics.agentDuration(this.config?.id ?? 'unknown', loopUsage.durationMs),
-            Metrics.agentInvoked(this.config?.id ?? 'unknown'),
+            METRICS.agentDuration(this.config?.id ?? 'unknown', loopUsage.durationMs),
+            METRICS.agentInvoked(this.config?.id ?? 'unknown'),
           ]).catch(() => {});
 
           const { TokenTracker } = await import('./token-usage');
@@ -693,10 +693,10 @@ export class Agent {
 
     // After stream completes, emit metrics, save to memory and end trace
     if (!process.env.VITEST) {
-      const { emitMetrics, Metrics } = await import('./metrics');
+      const { emitMetrics, METRICS } = await import('./metrics');
       emitMetrics([
-        Metrics.tokensInput(totalInputTokens, nodeId, activeProvider),
-        Metrics.tokensOutput(totalOutputTokens, nodeId, activeProvider),
+        METRICS.tokensInput(totalInputTokens, nodeId, activeProvider),
+        METRICS.tokensOutput(totalOutputTokens, nodeId, activeProvider),
       ]).catch(() => {});
     }
 

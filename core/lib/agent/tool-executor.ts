@@ -150,8 +150,8 @@ export class ToolExecutor {
         const estimatedOutputTokens = Math.ceil(resultText.length / 4);
 
         try {
-          const { emitMetrics, Metrics } = await import('../metrics');
-          emitMetrics([Metrics.toolExecuted(tool.name, toolSuccess)]).catch(() => {});
+          const { emitMetrics, METRICS } = await import('../metrics');
+          emitMetrics([METRICS.toolExecuted(tool.name, toolSuccess)]).catch(() => {});
 
           const { TokenTracker } = await import('../token-usage');
           TokenTracker.updateToolRollup(

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { emitMetrics, Metrics } from './metrics';
+import { emitMetrics, METRICS } from './metrics';
 
 const mockSend = vi.fn();
 
@@ -24,8 +24,8 @@ describe('Metrics', () => {
     mockSend.mockResolvedValue({});
 
     await emitMetrics([
-      Metrics.agentInvoked('test-agent'),
-      Metrics.tokensInput(100, 'test-agent', 'openai'),
+      METRICS.agentInvoked('test-agent'),
+      METRICS.tokensInput(100, 'test-agent', 'openai'),
     ]);
 
     expect(mockSend).toHaveBeenCalledTimes(1);
