@@ -31,6 +31,23 @@ describe('AgentExecutor.streamLoop', () => {
     };
   });
 
+  const getDefaultOptions = (overrides: Record<string, any> = {}) => ({
+    activeModel: 'gpt-4o',
+    activeProvider: 'openai',
+    activeProfile: ReasoningProfile.STANDARD,
+    maxIterations: 5,
+    tracer: mockTracer as any,
+    traceId: 'trace-123',
+    taskId: 'task-123',
+    nodeId: 'node-1',
+    currentInitiator: 'superclaw',
+    depth: 0,
+    userId: 'user-1',
+    userText: 'test task',
+    mainConversationId: 'conv-1',
+    ...overrides,
+  });
+
   it('should yield chunks and emit them via emitter', async () => {
     const executor = new AgentExecutor(mockProvider as any, [], 'test-agent', 'Test Agent');
 
@@ -43,22 +60,13 @@ describe('AgentExecutor.streamLoop', () => {
     mockProvider.stream.mockReturnValue(mockStream());
 
     const chunks = [];
-    const stream = executor.streamLoop([], {
-      activeProfile: ReasoningProfile.STANDARD,
-      maxIterations: 5,
-      tracer: mockTracer as any,
-      emitter: mockEmitter as any,
-      traceId: 'trace-123',
-      taskId: 'trace-123',
-      nodeId: 'node-1',
-      parentId: undefined,
-      currentInitiator: 'superclaw',
-      depth: 0,
-      userId: 'user-1',
-      userText: 'hello',
-      mainConversationId: 'conv-1',
-      sessionId: 'sess-1',
-    });
+    const stream = executor.streamLoop(
+      [],
+      getDefaultOptions({
+        emitter: mockEmitter as any,
+        sessionId: 'sess-1',
+      })
+    );
 
     for await (const chunk of stream) {
       chunks.push(chunk);
@@ -130,21 +138,12 @@ describe('AgentExecutor.streamLoop', () => {
     mockProvider.stream.mockImplementation(() => mockStreamFactory());
 
     const chunks = [];
-    const stream = executor.streamLoop([], {
-      activeProfile: ReasoningProfile.STANDARD,
-      maxIterations: 5,
-      tracer: mockTracer as any,
-      emitter: mockEmitter as any,
-      traceId: 'trace-123',
-      taskId: 'trace-123',
-      nodeId: 'node-1',
-      parentId: undefined,
-      currentInitiator: 'superclaw',
-      depth: 0,
-      userId: 'user-1',
-      userText: 'call tool',
-      mainConversationId: 'conv-1',
-    });
+    const stream = executor.streamLoop(
+      [],
+      getDefaultOptions({
+        emitter: mockEmitter as any,
+      })
+    );
 
     for await (const chunk of stream) {
       chunks.push(chunk);
@@ -187,22 +186,15 @@ describe('AgentExecutor.streamLoop', () => {
     mockProvider.stream.mockReturnValue(mockMiniMaxStream());
 
     const chunks = [];
-    const stream = executor.streamLoop([], {
-      activeProfile: ReasoningProfile.STANDARD,
-      maxIterations: 5,
-      tracer: mockTracer as any,
-      emitter: mockEmitter as any,
-      traceId: 'trace-mm',
-      taskId: 'trace-mm',
-      nodeId: 'node-1',
-      parentId: undefined,
-      currentInitiator: 'superclaw',
-      depth: 0,
-      userId: 'user-1',
-      userText: 'remember who i am?',
-      mainConversationId: 'conv-1',
-      sessionId: 'sess-mm',
-    });
+    const stream = executor.streamLoop(
+      [],
+      getDefaultOptions({
+        emitter: mockEmitter as any,
+        traceId: 'trace-mm',
+        taskId: 'trace-mm',
+        sessionId: 'sess-mm',
+      })
+    );
 
     for await (const chunk of stream) {
       chunks.push(chunk);
@@ -233,22 +225,15 @@ describe('AgentExecutor.streamLoop', () => {
     mockProvider.stream.mockReturnValue(mockCombinedStream());
 
     const chunks = [];
-    const stream = executor.streamLoop([], {
-      activeProfile: ReasoningProfile.STANDARD,
-      maxIterations: 5,
-      tracer: mockTracer as any,
-      emitter: mockEmitter as any,
-      traceId: 'trace-cmb',
-      taskId: 'trace-cmb',
-      nodeId: 'node-1',
-      parentId: undefined,
-      currentInitiator: 'superclaw',
-      depth: 0,
-      userId: 'user-1',
-      userText: 'search for test',
-      mainConversationId: 'conv-1',
-      sessionId: 'sess-cmb',
-    });
+    const stream = executor.streamLoop(
+      [],
+      getDefaultOptions({
+        emitter: mockEmitter as any,
+        traceId: 'trace-cmb',
+        taskId: 'trace-cmb',
+        sessionId: 'sess-cmb',
+      })
+    );
 
     for await (const chunk of stream) {
       chunks.push(chunk);
@@ -272,22 +257,15 @@ describe('AgentExecutor.streamLoop', () => {
     mockProvider.stream.mockReturnValue(mockTextOnlyStream());
 
     const chunks = [];
-    const stream = executor.streamLoop([], {
-      activeProfile: ReasoningProfile.STANDARD,
-      maxIterations: 5,
-      tracer: mockTracer as any,
-      emitter: mockEmitter as any,
-      traceId: 'trace-txt',
-      taskId: 'trace-txt',
-      nodeId: 'node-1',
-      parentId: undefined,
-      currentInitiator: 'superclaw',
-      depth: 0,
-      userId: 'user-1',
-      userText: 'hello',
-      mainConversationId: 'conv-1',
-      sessionId: 'sess-txt',
-    });
+    const stream = executor.streamLoop(
+      [],
+      getDefaultOptions({
+        emitter: mockEmitter as any,
+        traceId: 'trace-txt',
+        taskId: 'trace-txt',
+        sessionId: 'sess-txt',
+      })
+    );
 
     for await (const chunk of stream) {
       chunks.push(chunk);

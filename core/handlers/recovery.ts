@@ -85,6 +85,10 @@ export const handler = async (_event?: { detail: Record<string, unknown> }): Pro
 
       const alert: OutboundMessageEvent = {
         userId: 'ADMIN',
+        traceId: `recovery-${Date.now()}`,
+        taskId: `recovery-${Date.now()}`,
+        initiatorId: 'DeadManSwitch',
+        depth: 0,
         message: `🚨 *CRITICAL SYSTEM FAILURE*: Automatic recovery has failed after ${attemptCount} attempts. Manual intervention required immediately. Health Check: ${healthUrl}`,
         agentName: 'DeadManSwitch',
       };
