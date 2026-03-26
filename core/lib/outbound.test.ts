@@ -1,74 +1,103 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { sendOutboundMessage } from './outbound';
-import { emitEvent } from './utils/bus';
-import { Attachment } from './types/index';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 vi.mock('./utils/bus', () => ({
-  emitEvent: vi.fn().mockResolvedValue({ success: true, eventId: 'test-id' }),
-  EventPriority: {
-    CRITICAL: 'CRITICAL',
-    HIGH: 'HIGH',
-    NORMAL: 'NORMAL',
-    LOW: 'LOW',
-  },
+  emitEvent: vi.fn().mockResolvedValue(undefined),
+  EventPriority: { HIGH: 'high', NORMAL: 'normal', LOW: 'low' },
 }));
 
-describe('sendOutboundMessage', () => {
-  const mockEmitEvent = vi.mocked(emitEvent);
+vi.mock('./types/agent', () => ({
+  EventType: { OUTBOUND_MESSAGE: 'outbound_message' },
+}));
 
+vi.mock('./utils/agent-helpers', () => ({
+  extractBaseUserId: vi.fn((id: string) => id.replace('CONV#', '')),
+}));
+
+import { sendOutboundMessage } from './outbound';
+import { emitEvent, EventPriority } from './utils/bus';
+import { EventType } from './types/agent';
+
+describe('sendOutboundMessage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('should send an outbound message with basic parameters', async () => {
-    const userId = 'CONV#dashboard-user#session_123';
-    const message = 'Hello world';
-
-    await sendOutboundMessage('webhook.handler', userId, message);
-
-    expect(mockEmitEvent).toHaveBeenCalledWith(
-      'webhook.handler',
-      'outbound_message',
+  it('should emit an outbound message event', async () => {
+    await sendOutboundMessage('test.source', 'user123', 'Hello world');
+    expect(emitEvent).toHaveBeenCalledTimes(1);
+    expect(emitEvent).toHaveBeenCalledWith(
+      'test.source',
+      EventType.OUTBOUND_MESSAGE,
       expect.objectContaining({
-        userId: 'dashboard-user',
+        userId: 'user123',
         message: 'Hello world',
-        memoryContexts: ['dashboard-user'],
       }),
-      { priority: 'HIGH' }
+      expect.objectContaining({ priority: EventPriority.HIGH })
     );
   });
 
-  it('should send an outbound message with all optional parameters', async () => {
-    const source = 'agent.handler';
-    const userId = 'user-456';
-    const message = 'Test message';
-    const memoryContexts = ['context-1', 'context-2'];
-    const sessionId = 'session-789';
-    const agentName = 'test-agent';
-    const attachments = [{ type: 'image', url: 'http://example.com/img.png' }];
-
-    await sendOutboundMessage(
-      source,
-      userId,
-      message,
-      memoryContexts,
-      sessionId,
-      agentName,
-      attachments as Attachment[]
+  it('should normalize userId by stripping CONV# prefix', async () => {
+    await sendOutboundMessage('test.source', 'CONV#user456', 'Hi');
+    expect(emitEvent).toHaveBeenCalledWith(
+      'test.source',
+      EventType.OUTBOUND_MESSAGE,
+      expect.objectContaining({ userId: 'user456' }),
+      expect.anything()
     );
+  });
 
-    expect(mockEmitEvent).toHaveBeenCalledWith(
-      'agent.handler',
-      'outbound_message',
+  it('should include memoryContexts defaulting to baseUserId', async () => {
+    await sendOutboundMessage('test.source', 'user789', 'Test');
+    expect(emitEvent).toHaveBeenCalledWith(
+      'test.source',
+      EventType.OUTBOUND_MESSAGE,
+      expect.objectContaining({ memoryContexts: ['user789'] }),
+      expect.anything()
+    );
+  });
+
+  it('should include optional parameters when provided', async () => {
+    await sendOutboundMessage(
+      'test.source',
+      'user1',
+      'msg',
+      ['ctx1'],
+      'session1',
+      'agent1',
+      [{ type: 'image', url: 'https://example.com/img.png' } as any],
+      'msg-id-1'
+    );
+    expect(emitEvent).toHaveBeenCalledWith(
+      'test.source',
+      EventType.OUTBOUND_MESSAGE,
       expect.objectContaining({
-        userId: 'user-456',
-        message: 'Test message',
-        memoryContexts,
-        sessionId,
-        agentName,
-        attachments,
+        memoryContexts: ['ctx1'],
+        sessionId: 'session1',
+        agentName: 'agent1',
+        messageId: 'msg-id-1',
       }),
-      { priority: 'HIGH' }
+      expect.anything()
+    );
+  });
+
+  it('should include options when provided', async () => {
+    const options = [{ label: 'Yes', value: 'yes', type: 'primary' as const }];
+    await sendOutboundMessage(
+      'test.source',
+      'user1',
+      'Choose',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      options
+    );
+    expect(emitEvent).toHaveBeenCalledWith(
+      'test.source',
+      EventType.OUTBOUND_MESSAGE,
+      expect.objectContaining({ options }),
+      expect.anything()
     );
   });
 });

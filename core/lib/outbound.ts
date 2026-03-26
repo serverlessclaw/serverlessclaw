@@ -13,6 +13,7 @@ import { extractBaseUserId } from './utils/agent-helpers';
  * @param agentName - Optional name of the agent sending the message.
  * @param attachments - Optional attachments to include in the message.
  * @param messageId - Optional ID for the message to track it throughout the system.
+ * @param options - Optional array of interactive button options for the message.
  * @returns A promise that resolves when the event has been sent.
  */
 export async function sendOutboundMessage(

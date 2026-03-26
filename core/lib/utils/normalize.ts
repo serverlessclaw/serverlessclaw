@@ -16,6 +16,9 @@ export function normalizeBaseUserId(userId: string | undefined | null): string {
 
 /**
  * Sanitizes a string for use in AWS IoT MQTT topics.
+ *
+ * @param text - The string to sanitize for MQTT topic compatibility.
+ * @returns A sanitized string safe for use in MQTT topics.
  */
 export function sanitizeMqttTopic(text: string): string {
   if (!text) return 'unknown';

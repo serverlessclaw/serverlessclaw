@@ -8,7 +8,11 @@ import { ChatMessage } from './types';
  *    This allows a full POST response to "win" over a partial MQTT signal with the same ID.
  * 2. Otherwise → fall back to content-equality (covers background events without an ID).
  *
- * Returns `true` when the message is a duplicate and should be dropped.
+ * @param seenIds - Set of message IDs already seen in this session.
+ * @param prev - Array of previous chat messages in the UI state.
+ * @param messageId - Optional message ID for ID-based deduplication.
+ * @param content - The message content for content-based fallback deduplication.
+ * @returns `true` when the message is a duplicate and should be dropped.
  */
 export function isDuplicate(
   seenIds: Set<string>,

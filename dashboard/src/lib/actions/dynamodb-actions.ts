@@ -8,6 +8,10 @@ import { revalidatePath } from 'next/cache';
 /**
  * Deletes a memory item from DynamoDB by userId and timestamp.
  * Used to remove gaps, locks, or other memory items.
+ *
+ * @param userId - The userId (partition key) of the item to delete.
+ * @param timestamp - The timestamp (sort key) of the item to delete.
+ * @param revalidatePathString - The Next.js path to revalidate after deletion.
  */
 export async function deleteMemoryItem(
   userId: string,

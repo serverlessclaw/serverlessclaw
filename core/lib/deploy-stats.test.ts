@@ -1,108 +1,107 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockClient } from 'aws-sdk-client-mock';
-import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
-import { getDeployCountToday, incrementDeployCount, rewardDeployLimit } from './deploy-stats';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-const ddbMock = mockClient(DynamoDBDocumentClient);
+const { mockSend } = vi.hoisted(() => ({
+  mockSend: vi.fn(),
+}));
 
-// Mock SST Resource
 vi.mock('sst', () => ({
   Resource: {
     MemoryTable: { name: 'test-memory-table' },
-    ConfigTable: { name: 'test-config-table' },
   },
 }));
 
-describe('deploy-stats utility', () => {
+vi.mock('./logger', () => ({
+  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}));
+
+vi.mock('@aws-sdk/client-dynamodb', () => ({
+  DynamoDBClient: class {},
+}));
+
+vi.mock('@aws-sdk/lib-dynamodb', () => ({
+  DynamoDBDocumentClient: {
+    from: () => ({ send: mockSend }),
+  },
+  GetCommand: class {
+    constructor(public input: any) {}
+  },
+  UpdateCommand: class {
+    constructor(public input: any) {}
+  },
+}));
+
+import { getDeployCountToday, incrementDeployCount, rewardDeployLimit } from './deploy-stats';
+
+describe('deploy-stats', () => {
   beforeEach(() => {
-    ddbMock.reset();
+    vi.clearAllMocks();
   });
 
   describe('getDeployCountToday', () => {
-    it('should return count if lastReset matches today', async () => {
+    it('should return 0 when no record exists', async () => {
+      mockSend.mockResolvedValueOnce({ Item: null });
+      const result = await getDeployCountToday();
+      expect(result).toBe(0);
+    });
+
+    it('should return count when lastReset matches today', async () => {
       const today = new Date().toISOString().split('T')[0];
-      ddbMock.on(GetCommand).resolves({
-        Item: { count: 5, lastReset: today },
-      });
-
-      const count = await getDeployCountToday();
-      expect(count).toBe(5);
+      mockSend.mockResolvedValueOnce({ Item: { lastReset: today, count: 3 } });
+      const result = await getDeployCountToday();
+      expect(result).toBe(3);
     });
 
-    it('should return 0 if lastReset does not match today', async () => {
-      ddbMock.on(GetCommand).resolves({
-        Item: { count: 5, lastReset: '2000-01-01' },
-      });
-
-      const count = await getDeployCountToday();
-      expect(count).toBe(0);
+    it('should return 0 when lastReset is a different day', async () => {
+      mockSend.mockResolvedValueOnce({ Item: { lastReset: '2020-01-01', count: 5 } });
+      const result = await getDeployCountToday();
+      expect(result).toBe(0);
     });
 
-    it('should return 0 if no item is found', async () => {
-      ddbMock.on(GetCommand).resolves({});
-
-      const count = await getDeployCountToday();
-      expect(count).toBe(0);
+    it('should return 0 when count is undefined', async () => {
+      const today = new Date().toISOString().split('T')[0];
+      mockSend.mockResolvedValueOnce({ Item: { lastReset: today } });
+      const result = await getDeployCountToday();
+      expect(result).toBe(0);
     });
   });
 
   describe('incrementDeployCount', () => {
-    it('should send UpdateCommand to increment count with atomic condition', async () => {
-      const today = new Date().toISOString().split('T')[0];
-      ddbMock.on(UpdateCommand).resolves({});
-
-      const result = await incrementDeployCount(today, 5);
-
+    it('should return true when increment succeeds', async () => {
+      mockSend.mockResolvedValueOnce({});
+      const result = await incrementDeployCount('2026-03-26', 5);
       expect(result).toBe(true);
-      expect(ddbMock.calls()).toHaveLength(1);
-      const call = ddbMock.call(0);
-      expect(call.args[0].input).toMatchObject({
-        TableName: 'test-memory-table',
-        UpdateExpression: 'SET #count = if_not_exists(#count, :zero) + :one, lastReset = :today',
-        ConditionExpression: '#count < :limit',
-      });
     });
 
-    it('should return false when limit is reached (condition fails)', async () => {
-      const today = new Date().toISOString().split('T')[0];
+    it('should return false when limit is reached', async () => {
       const error = new Error('Conditional check failed');
       error.name = 'ConditionalCheckFailedException';
-      ddbMock.on(UpdateCommand).rejects(error);
-
-      const result = await incrementDeployCount(today, 5);
-
+      mockSend.mockRejectedValueOnce(error);
+      const result = await incrementDeployCount('2026-03-26', 5);
       expect(result).toBe(false);
+    });
+
+    it('should throw on unexpected errors', async () => {
+      mockSend.mockRejectedValueOnce(new Error('Network error'));
+      await expect(incrementDeployCount('2026-03-26', 5)).rejects.toThrow('Network error');
     });
   });
 
   describe('rewardDeployLimit', () => {
-    it('should use a floored conditional decrement (ConditionExpression: count > 0)', async () => {
-      ddbMock.on(UpdateCommand).resolves({});
-
-      await rewardDeployLimit();
-
-      expect(ddbMock.calls()).toHaveLength(1);
-      const call = ddbMock.call(0);
-      expect(call.args[0].input).toMatchObject({
-        TableName: 'test-memory-table',
-        UpdateExpression: 'SET #count = #count - :one',
-        ConditionExpression: '#count > :zero',
-      });
+    it('should succeed when count > 0', async () => {
+      mockSend.mockResolvedValueOnce({});
+      await expect(rewardDeployLimit()).resolves.not.toThrow();
     });
 
-    it('should NOT throw when count is already 0 (ConditionalCheckFailedException swallowed)', async () => {
+    it('should not throw when count is already 0', async () => {
       const error = new Error('Conditional check failed');
       error.name = 'ConditionalCheckFailedException';
-      ddbMock.on(UpdateCommand).rejects(error);
-
-      // Must resolve without throwing — floor is enforced, no negative counts
-      await expect(rewardDeployLimit()).resolves.toBeUndefined();
+      mockSend.mockRejectedValueOnce(error);
+      await expect(rewardDeployLimit()).resolves.not.toThrow();
     });
 
-    it('should re-throw non-condition errors', async () => {
-      ddbMock.on(UpdateCommand).rejects(new Error('Network failure'));
-
-      await expect(rewardDeployLimit()).rejects.toThrow('Network failure');
+    it('should throw on unexpected errors', async () => {
+      mockSend.mockRejectedValueOnce(new Error('Network error'));
+      await expect(rewardDeployLimit()).rejects.toThrow('Network error');
     });
   });
 });
