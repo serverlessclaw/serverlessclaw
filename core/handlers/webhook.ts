@@ -38,7 +38,6 @@ export const handler = async (
   context: Context
 ): Promise<APIGatewayProxyResultV2> => {
   logger.info('[WEBHOOK] Start | Event:', event.body?.substring(0, 100));
-  logger.info('Received event:', JSON.stringify(event, null, 2));
 
   let parsedUpdate: z.infer<typeof TELEGRAM_UPDATE_SCHEMA>;
   try {
@@ -47,8 +46,7 @@ export const handler = async (
     }
     parsedUpdate = TELEGRAM_UPDATE_SCHEMA.parse(JSON.parse(event.body));
   } catch (error) {
-    logger.error('[WEBHOOK] Parse Error:', error);
-    logger.error('Failed to parse or validate Telegram update:', error);
+    logger.error('[WEBHOOK] Failed to parse or validate Telegram update:', error);
     return { statusCode: 400, body: 'Invalid Telegram update format or missing body' };
   }
 

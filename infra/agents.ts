@@ -15,6 +15,62 @@ const NODEJS_LOADERS = { '.md': 'text' } as const;
 const LOG_RETENTION_PERIOD = '1 month';
 
 /**
+ * Create an IAM role for EventBridge Scheduler to invoke a Lambda function.
+ * Eliminates the repeated scheduler role pattern across agents.
+ */
+function createSchedulerRole(name: string, targetArn: $util.Input<string>): aws.iam.Role {
+  const role = new aws.iam.Role(`${name}SchedulerRole`, {
+    assumeRolePolicy: JSON.stringify({
+      Version: '2012-10-17',
+      Statement: [
+        {
+          Action: 'sts:AssumeRole',
+          Effect: 'Allow',
+          Principal: { Service: 'scheduler.amazonaws.com' },
+        },
+      ],
+    }),
+  });
+
+  new aws.iam.RolePolicy(`${name}SchedulerPolicy`, {
+    role: role.name,
+    policy: $util.jsonStringify({
+      Version: '2012-10-17',
+      Statement: [
+        {
+          Action: 'lambda:InvokeFunction',
+          Effect: 'Allow',
+          Resource: [targetArn],
+        },
+      ],
+    }),
+  });
+
+  return role;
+}
+
+/**
+ * Create an EventBridge Scheduler schedule that invokes a Lambda function.
+ * Combines schedule, role, and permission creation into one call.
+ */
+function createScheduledInvocation(name: string, rate: string, targetFn: sst.aws.Function): void {
+  new aws.scheduler.Schedule(`${name}Schedule`, {
+    scheduleExpression: rate,
+    flexibleTimeWindow: { mode: 'OFF' },
+    target: {
+      arn: targetFn.arn,
+      roleArn: createSchedulerRole(name, targetFn.arn).arn,
+    },
+  });
+
+  new aws.lambda.Permission(`${name}Permission`, {
+    action: 'lambda:InvokeFunction',
+    function: targetFn.name,
+    principal: 'scheduler.amazonaws.com',
+  });
+}
+
+/**
  * Deploys the full set of autonomous agents as Lambda functions and sets up their event subscriptions.
  *
  * @param ctx - The shared context containing system resources.
@@ -222,32 +278,8 @@ export function createAgents(
     },
   ];
 
-  // 15-min Schedule
-  new aws.scheduler.Schedule('RecoverySchedule', {
-    scheduleExpression: RECOVERY_SCHEDULE_RATE,
-    flexibleTimeWindow: { mode: 'OFF' },
-    target: {
-      arn: deadMansSwitch.arn,
-      roleArn: new aws.iam.Role('RecoveryScheduleRole', {
-        assumeRolePolicy: JSON.stringify({
-          Version: '2012-10-17',
-          Statement: [
-            {
-              Action: 'sts:AssumeRole',
-              Effect: 'Allow',
-              Principal: { Service: 'scheduler.amazonaws.com' },
-            },
-          ],
-        }),
-      }).arn,
-    },
-  });
-
-  new aws.lambda.Permission('RecoveryPermission', {
-    action: 'lambda:InvokeFunction',
-    function: deadMansSwitch.name,
-    principal: 'scheduler.amazonaws.com',
-  });
+  // 15-min Schedule (Dead Man's Switch)
+  createScheduledInvocation('Recovery', RECOVERY_SCHEDULE_RATE, deadMansSwitch);
 
   // 5. CodeBuild Event Rule (Monitor both success and failure for gap lifecycle)
   const buildRule = new aws.cloudwatch.EventRule('BuildRule', {
@@ -477,31 +509,8 @@ export function createAgents(
     },
   });
 
-  new aws.scheduler.Schedule('ConcurrencySchedule', {
-    scheduleExpression: CONCURRENCY_MONITOR_RATE,
-    flexibleTimeWindow: { mode: 'OFF' },
-    target: {
-      arn: concurrencyMonitor.arn,
-      roleArn: new aws.iam.Role('ConcurrencyScheduleRole', {
-        assumeRolePolicy: JSON.stringify({
-          Version: '2012-10-17',
-          Statement: [
-            {
-              Action: 'sts:AssumeRole',
-              Effect: 'Allow',
-              Principal: { Service: 'scheduler.amazonaws.com' },
-            },
-          ],
-        }),
-      }).arn,
-    },
-  });
-
-  new aws.lambda.Permission('ConcurrencyPermission', {
-    action: 'lambda:InvokeFunction',
-    function: concurrencyMonitor.name,
-    principal: 'scheduler.amazonaws.com',
-  });
+  // 1-hour Schedule (Concurrency Monitor)
+  createScheduledInvocation('Concurrency', CONCURRENCY_MONITOR_RATE, concurrencyMonitor);
 
   return {
     coderAgent,

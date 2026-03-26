@@ -7,12 +7,10 @@ import {
   extractPayload,
   detectFailure,
   isTaskPaused,
-  loadAgentConfig,
   extractBaseUserId,
-  createAgent,
   validatePayload,
   buildProcessOptions,
-  getAgentContext,
+  initAgent,
 } from '../lib/utils/agent-helpers';
 import { emitTaskEvent } from '../lib/utils/agent-helpers/event-emitter';
 import { parseStructuredResponse } from '../lib/utils/agent-helpers/llm-utils';
@@ -40,8 +38,10 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
 
   const baseUserId = extractBaseUserId(userId);
 
-  // 1. Transition gaps to PROGRESS
-  const { memory, provider } = await getAgentContext();
+  // 1. Initialize agent (config + context loaded in parallel)
+  const { config, memory, agent } = await initAgent(AgentType.CODER);
+
+  // 2. Transition gaps to PROGRESS
   if (gapIds && gapIds.length > 0) {
     logger.info(`Picking up task. Marking ${gapIds.length} gaps as PROGRESS.`);
     for (const gapId of gapIds) {
@@ -49,10 +49,7 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
     }
   }
 
-  // 2. Process the task
-  const config = await loadAgentConfig(AgentType.CODER);
-
-  const agent = await createAgent('coder', config, memory, provider);
+  // 3. Process the task
   const { responseText: rawResponse, attachments: resultAttachments } = await agent.process(
     userId,
     task || '',

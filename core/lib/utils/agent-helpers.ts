@@ -122,6 +122,28 @@ export async function createAgent(
   return new Agent(memory, provider, agentTools, config.systemPrompt, config);
 }
 
+/**
+ * One-shot initialization: load config, get context, and create agent.
+ * Combines the 3-step pattern (loadAgentConfig → getAgentContext → createAgent)
+ * that every agent handler repeats.
+ *
+ * @param agentId - The agent identifier or type.
+ * @returns A promise resolving to { config, memory, provider, agent }.
+ */
+export async function initAgent(agentId: string | AgentType): Promise<{
+  config: import('../types/index').IAgentConfig;
+  memory: import('../memory').DynamoMemory;
+  provider: import('../providers/index').ProviderManager;
+  agent: import('../agent').Agent;
+}> {
+  const [config, { memory, provider }] = await Promise.all([
+    loadAgentConfig(agentId),
+    getAgentContext(),
+  ]);
+  const agent = await createAgent(String(agentId), config, memory, provider);
+  return { config, memory, provider, agent };
+}
+
 /** Options for building process options */
 export interface ProcessOptionsParams {
   isContinuation?: boolean;

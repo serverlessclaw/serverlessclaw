@@ -2,15 +2,13 @@ import { TraceSource, TaskEvent, EventType, Attachment } from '../lib/types/agen
 import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
 import {
-  getAgentContext,
   extractPayload,
   extractBaseUserId,
   detectFailure,
   isTaskPaused,
-  loadAgentConfig,
-  createAgent,
   validatePayload,
   buildProcessOptions,
+  initAgent,
 } from '../lib/utils/agent-helpers';
 import { emitTaskEvent } from '../lib/utils/agent-helpers/event-emitter';
 
@@ -62,12 +60,8 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
 
   const baseUserId = extractBaseUserId(userId);
 
-  // 1. Discovery: Load dynamic config
-  const config = await loadAgentConfig(agentId);
-
-  // 2. Initialization: Setup tools and prompt
-  const { memory, provider } = await getAgentContext();
-  const agent = await createAgent(agentId, config, memory, provider);
+  // 1. Discovery & Initialization (config + context loaded in parallel)
+  const { config, agent } = await initAgent(agentId);
 
   const isSocial = config?.category === 'social';
   const isTextMode = config?.defaultCommunicationMode === 'text';
