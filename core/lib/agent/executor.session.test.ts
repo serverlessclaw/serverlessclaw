@@ -49,6 +49,8 @@ describe('AgentExecutor - Session Injection', () => {
     const messages = [{ role: MessageRole.USER, content: 'Initial task' }];
 
     await executor.runLoop(messages, {
+      activeModel: 'gpt-4',
+      activeProvider: 'openai',
       activeProfile: ReasoningProfile.STANDARD,
       maxIterations: 5,
       tracer: mockTracer,
@@ -89,6 +91,8 @@ describe('AgentExecutor - Session Injection', () => {
     const messages = [{ role: MessageRole.USER, content: 'Initial task' }];
 
     await executor.runLoop(messages, {
+      activeModel: 'gpt-4',
+      activeProvider: 'openai',
       activeProfile: ReasoningProfile.STANDARD,
       maxIterations: 5,
       tracer: mockTracer,
@@ -134,6 +138,8 @@ describe('AgentExecutor - Session Injection', () => {
     const messages = [{ role: MessageRole.USER, content: 'Initial task' }];
 
     await executor.runLoop(messages, {
+      activeModel: 'gpt-4',
+      activeProvider: 'openai',
       activeProfile: ReasoningProfile.STANDARD,
       maxIterations: 5,
       tracer: mockTracer,

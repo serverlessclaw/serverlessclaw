@@ -131,7 +131,7 @@ export const RECALL_KNOWLEDGE = {
     const { userId, query, category } = args as {
       userId: string;
       query: string;
-      category?: string;
+      category: InsightCategory;
     };
     const memory = getMemory();
     const baseUserId = userId.startsWith('CONV#') ? userId.split('#')[1] : userId;
@@ -139,14 +139,14 @@ export const RECALL_KNOWLEDGE = {
     let searchResponse;
     if (category === 'user_preference') {
       const [prefPrefixed, prefRaw] = await Promise.all([
-        memory.searchInsights(`USER#${baseUserId}`, query, category as InsightCategory),
-        memory.searchInsights(baseUserId, query, category as InsightCategory),
+        memory.searchInsights(`USER#${baseUserId}`, query, category),
+        memory.searchInsights(baseUserId, query, category),
       ]);
       searchResponse = {
-        items: [...(prefPrefixed.items || []), ...(prefRaw.items || [])],
+        items: [...(prefPrefixed.items ?? []), ...(prefRaw.items ?? [])],
       };
     } else {
-      searchResponse = await memory.searchInsights(baseUserId, query, category as InsightCategory);
+      searchResponse = await memory.searchInsights(baseUserId, query, category);
     }
 
     const results = searchResponse.items;
@@ -242,7 +242,7 @@ export const SAVE_MEMORY = {
   execute: async (args: Record<string, unknown>): Promise<string> => {
     const { content, category, userId } = args as {
       content: string;
-      category: string;
+      category: InsightCategory;
       userId: string;
     };
 
@@ -254,10 +254,10 @@ export const SAVE_MEMORY = {
     try {
       // 1. Search for existing memories in both prefixed and raw scopes
       const [searchPrefixed, searchRaw] = await Promise.all([
-        memory.searchInsights(`USER#${baseUserId}`, '*', category as InsightCategory),
-        memory.searchInsights(baseUserId, '*', category as InsightCategory),
+        memory.searchInsights(`USER#${baseUserId}`, '*', category),
+        memory.searchInsights(baseUserId, '*', category),
       ]);
-      const existing = [...(searchPrefixed.items || []), ...(searchRaw.items || [])];
+      const existing = [...(searchPrefixed.items ?? []), ...(searchRaw.items ?? [])];
 
       // 2. Filter for relevant items
       const relevantExisting = existing.filter((e) => e.id === scopeId || e.id === baseUserId);
@@ -293,7 +293,7 @@ export const SAVE_MEMORY = {
     // --- End Semantic Deduplication ---
 
     const metadata = {
-      category: category as InsightCategory,
+      category,
       confidence: 10,
       impact: 5,
       complexity: 1,

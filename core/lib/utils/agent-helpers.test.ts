@@ -44,6 +44,11 @@ describe('validatePayload', () => {
     expect(validatePayload(payload, ['userId', 'task'])).toBe(false);
   });
 
+  it('should return true when payload has falsy but valid values (0, false)', () => {
+    const payload = { userId: 'u1', task: 't1', depth: 0, isContinuation: false };
+    expect(validatePayload(payload, ['userId', 'task', 'depth', 'isContinuation'])).toBe(true);
+  });
+
   it('should return false when payload is null or undefined', () => {
     expect(validatePayload(null, ['userId'])).toBe(false);
     expect(validatePayload(undefined, ['userId'])).toBe(false);

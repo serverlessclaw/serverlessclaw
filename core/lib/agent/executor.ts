@@ -10,31 +10,103 @@ export { AGENT_DEFAULTS, AGENT_LOG_MESSAGES };
 import { ExecutorHelper } from './executor-helper';
 import { ToolExecutor } from './tool-executor';
 
-export interface ExecutorOptions {
-  activeModel?: string;
-  activeProvider?: string;
+/**
+ * Core identity fields that MUST be provided by the caller.
+ * These are resolved upstream in Agent.process() before reaching the executor.
+ */
+export interface ExecutorCoreOptions {
+  /** The LLM model ID (e.g., 'gpt-5.4'). Must be resolved before calling executor. */
+  activeModel: string;
+  /** The LLM provider name (e.g., 'openai'). Must be resolved before calling executor. */
+  activeProvider: string;
+  /** The reasoning profile controlling depth/cost tradeoff. */
   activeProfile: ReasoningProfile;
+  /** Maximum tool-call iterations allowed. */
   maxIterations: number;
+  /** Tracer for observability. */
   tracer: ClawTracer;
-  context?: LambdaContext;
+  /** Global trace ID for DAG correlation. */
   traceId: string;
+  /** Unique task ID for cancellation checks. */
   taskId: string;
+  /** Current node ID in the trace DAG. */
   nodeId: string;
-  parentId?: string;
+  /** The agent that initiated this task (for result routing). */
   currentInitiator: string;
+  /** Current recursion depth for loop protection. */
   depth: number;
-  sessionId?: string;
+  /** The user who owns this conversation. */
   userId: string;
+  /** The raw user text that triggered this execution. */
   userText: string;
+  /** The main conversation storage ID. */
   mainConversationId: string;
+}
+
+/**
+ * Optional feature fields that enhance execution behavior.
+ * These have sensible defaults or are only needed for specific scenarios.
+ */
+export interface ExecutorFeatureOptions {
+  /** Lambda execution context for timeout checks. */
+  context?: LambdaContext;
+  /** Parent node ID in the trace DAG. */
+  parentId?: string;
+  /** Session ID for pending message injection and IoT streaming. */
+  sessionId?: string;
+  /** Response format for structured output. */
   responseFormat?: import('../types/index').ResponseFormat;
+  /** Task timeout in milliseconds. */
   taskTimeoutMs?: number;
+  /** Behavior when timeout is reached. */
   timeoutBehavior?: 'pause' | 'fail' | 'continue';
+  /** Session state manager for concurrent message handling. */
   sessionStateManager?: import('../session-state').SessionStateManager;
+  /** List of approved tool call IDs (for HITL). */
   approvedToolCalls?: string[];
+  /** Whether this is a continuation of a previously paused task. */
   isContinuation?: boolean;
+  /** Communication mode: 'text' for human, 'json' for agent-to-agent. */
   communicationMode?: 'text' | 'json';
+  /** Emitter for real-time streaming to dashboard. */
   emitter?: import('./emitter').AgentEmitter;
+}
+
+/** Combined executor options: core (required) + features (optional). */
+export type ExecutorOptions = ExecutorCoreOptions & ExecutorFeatureOptions;
+
+/**
+ * Validates that all required executor options are present.
+ * Throws with a clear error message if critical fields are missing.
+ * This prevents silent fallbacks from masking upstream configuration bugs.
+ */
+export function validateExecutorOptions(options: ExecutorOptions): void {
+  const required: (keyof ExecutorCoreOptions)[] = [
+    'activeModel',
+    'activeProvider',
+    'activeProfile',
+    'maxIterations',
+    'tracer',
+    'traceId',
+    'taskId',
+    'nodeId',
+    'currentInitiator',
+    'depth',
+    'userId',
+    'userText',
+    'mainConversationId',
+  ];
+
+  const missing = required.filter(
+    (key) => options[key] === undefined || options[key] === null || options[key] === ''
+  );
+
+  if (missing.length > 0) {
+    throw new Error(
+      `ExecutorOptions missing required fields: ${missing.join(', ')}. ` +
+        `Ensure Agent.process() resolves these before passing to AgentExecutor.`
+    );
+  }
 }
 
 /**
@@ -54,6 +126,9 @@ export class AgentExecutor {
   ) {}
 
   async runLoop(messages: Message[], options: ExecutorOptions): Promise<LoopResult> {
+    // Structural enforcement: validate required fields at boundary
+    validateExecutorOptions(options);
+
     const { maxIterations, tracer, approvedToolCalls } = options;
 
     let iterations = 0;

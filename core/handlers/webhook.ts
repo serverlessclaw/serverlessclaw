@@ -59,9 +59,10 @@ export const handler = async (
     return { statusCode: 200, body: 'OK' };
   }
 
+  const { chatId, userText } = message;
+
   const hasActionableContent =
-    !!message.text ||
-    !!message.caption ||
+    userText.length > 0 ||
     !!(message.photo && message.photo.length > 0) ||
     !!message.document ||
     !!message.voice;
@@ -71,8 +72,6 @@ export const handler = async (
     return { statusCode: 200, body: 'OK' };
   }
 
-  const chatId = message.chat.id.toString();
-  const userText = message.text ?? message.caption ?? '';
   console.log(`[WEBHOOK] User: ${chatId} | Text: ${userText.substring(0, 50)}`);
 
   const attachments = await processTelegramMedia(message);

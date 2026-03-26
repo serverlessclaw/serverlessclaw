@@ -75,7 +75,7 @@ export async function discoverSystemTopology(): Promise<Topology> {
     edges.push(...inferNodeEdges(finalNodes));
 
     // 5. Backbone Profile and Tool based edges
-    edges.push(...inferBackboneEdges(finalNodes));
+    edges.push(...(await inferBackboneEdges(finalNodes)));
   } catch (err: unknown) {
     console.error('Critical failure in topology discovery:', err);
   }

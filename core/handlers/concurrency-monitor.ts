@@ -19,6 +19,7 @@ const typedResource = Resource as unknown as SSTResource;
 
 const ALERT_THRESHOLD_PERCENT = 80;
 const CONCURRENCY_KEY = 'SYSTEM#LAMBDA_CONCURRENCY';
+const CONCURRENCY_METRICS_TTL_SECONDS = 3600; // 1 hour retention
 
 interface LambdaAccountSettings {
   AccountUsage?: {
@@ -65,7 +66,7 @@ export const handler = async (): Promise<void> => {
             capacity: Capacity,
             remaining: Remaining,
             utilizationPercent,
-            expiresAt: Math.floor(Date.now() / 1000) + 3600,
+            expiresAt: Math.floor(Date.now() / 1000) + CONCURRENCY_METRICS_TTL_SECONDS,
           },
         })
       );

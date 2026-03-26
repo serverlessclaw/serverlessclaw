@@ -150,7 +150,7 @@ export async function emitTaskEvent(params: {
     userId: params.userId,
     agentId: params.agentId,
     task: params.task,
-    [isFailure ? 'error' : 'response']: params.error || params.response || '',
+    [isFailure ? 'error' : 'response']: isFailure ? (params.error ?? '') : (params.response ?? ''),
     attachments: params.attachments,
     traceId: params.traceId,
     taskId: params.taskId,

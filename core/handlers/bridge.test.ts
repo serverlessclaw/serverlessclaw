@@ -1,9 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handler } from './bridge';
 
-const { mockSend, mockSafeParse } = vi.hoisted(() => ({
+const { mockSend } = vi.hoisted(() => ({
   mockSend: vi.fn(),
-  mockSafeParse: vi.fn(),
 }));
 
 vi.mock('@aws-sdk/client-iot-data-plane', () => ({
@@ -13,10 +12,6 @@ vi.mock('@aws-sdk/client-iot-data-plane', () => ({
   PublishCommand: function PublishCommand(this: any, args: any) {
     Object.assign(this, args);
   },
-}));
-
-vi.mock('../lib/schema/events', () => ({
-  BRIDGE_EVENT_SCHEMA: { safeParse: mockSafeParse },
 }));
 
 const fakeContext = {} as any;
@@ -46,7 +41,6 @@ describe('RealtimeBridge Handler', () => {
 
   it('publishes chunk events to the session-specific IoT topic', async () => {
     const event = chunkEvent();
-    mockSafeParse.mockReturnValue({ success: true, data: event });
 
     await handler(event, fakeContext);
 
@@ -62,8 +56,7 @@ describe('RealtimeBridge Handler', () => {
   });
 
   it('falls back to user signal topic when sessionId is missing', async () => {
-    const event = chunkEvent({ sessionId: undefined });
-    mockSafeParse.mockReturnValue({ success: true, data: event });
+    const event = chunkEvent({ detail: { ...chunkEvent().detail, sessionId: undefined } });
 
     await handler(event, fakeContext);
 
@@ -72,8 +65,7 @@ describe('RealtimeBridge Handler', () => {
   });
 
   it('sanitizes userId with MQTT-unsafe characters', async () => {
-    const event = chunkEvent({ userId: 'user+with#special' });
-    mockSafeParse.mockReturnValue({ success: true, data: event });
+    const event = chunkEvent({ detail: { ...chunkEvent().detail, userId: 'user+with#special' } });
 
     await handler(event, fakeContext);
 
@@ -82,8 +74,7 @@ describe('RealtimeBridge Handler', () => {
   });
 
   it('defaults userId to dashboard-user when missing', async () => {
-    const event = chunkEvent({ userId: undefined });
-    mockSafeParse.mockReturnValue({ success: true, data: event });
+    const event = chunkEvent({ detail: { ...chunkEvent().detail, userId: undefined } });
 
     await handler(event, fakeContext);
 
@@ -92,8 +83,9 @@ describe('RealtimeBridge Handler', () => {
   });
 
   it('normalizes userId with CONV# prefix for MQTT topics', async () => {
-    const event = chunkEvent({ userId: 'CONV#dashboard-user#sess-1' });
-    mockSafeParse.mockReturnValue({ success: true, data: event });
+    const event = chunkEvent({
+      detail: { ...chunkEvent().detail, userId: 'CONV#dashboard-user#sess-1' },
+    });
 
     await handler(event, fakeContext);
 
@@ -102,20 +94,22 @@ describe('RealtimeBridge Handler', () => {
   });
 
   it('does not publish when event schema validation fails', async () => {
-    const event = chunkEvent();
-    mockSafeParse.mockReturnValue({ success: false, error: 'bad payload' });
+    // detail is required and must match BRIDGE_DETAIL_PAYLOAD_SCHEMA
+    const event = { 'detail-type': 'chunk', detail: { userId: 123 } }; // Invalid userId type
 
-    await handler(event, fakeContext);
+    await handler(event as any, fakeContext);
 
     expect(mockSend).not.toHaveBeenCalled();
   });
 
   it('passes thought chunks through to IoT Core unchanged', async () => {
     const event = chunkEvent({
-      message: 'Let me think...',
-      isThought: true,
+      detail: {
+        ...chunkEvent().detail,
+        message: 'Let me think...',
+        isThought: true,
+      },
     });
-    mockSafeParse.mockReturnValue({ success: true, data: event });
 
     await handler(event, fakeContext);
 

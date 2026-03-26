@@ -3,6 +3,7 @@ import { SharedContext, getValidSecrets, AGENT_CONFIG } from './shared';
 import { MCPServerResources } from './mcp-servers';
 
 const RECOVERY_SCHEDULE_RATE = 'rate(15 minutes)';
+const CONCURRENCY_MONITOR_RATE = 'rate(1 hour)';
 
 /** Lambda runtime architecture for all agent functions */
 const LAMBDA_ARCHITECTURE = 'arm64';
@@ -477,7 +478,7 @@ export function createAgents(
   });
 
   new aws.scheduler.Schedule('ConcurrencySchedule', {
-    scheduleExpression: 'rate(1 hour)',
+    scheduleExpression: CONCURRENCY_MONITOR_RATE,
     flexibleTimeWindow: { mode: 'OFF' },
     target: {
       arn: concurrencyMonitor.arn,

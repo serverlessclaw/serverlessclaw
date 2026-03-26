@@ -198,8 +198,8 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
       }>(rawResponse);
       status = parsed.status || 'SUCCESS';
       plan = parsed.plan || rawResponse;
-      coveredGapIds = parsed.coveredGapIds || [];
-      toolOptimizations = parsed.toolOptimizations || [];
+      coveredGapIds = parsed.coveredGapIds ?? [];
+      toolOptimizations = parsed.toolOptimizations ?? [];
       logger.info(`Parsed Strategic Plan. Status: ${status}, Gaps: ${coveredGapIds.join(', ')}`);
     } catch (e) {
       logger.warn('Failed to parse Planner structured response, falling back to raw text.', e);

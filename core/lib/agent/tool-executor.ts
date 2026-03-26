@@ -66,7 +66,7 @@ export class ToolExecutor {
       }
 
       // 2. Argument Preparation & Context Injection
-      const args = JSON.parse(toolCall.function.arguments);
+      let args = JSON.parse(toolCall.function.arguments);
       const contextArgs: Record<string, unknown> = {
         traceId: execContext.traceId,
         nodeId: execContext.nodeId,
@@ -89,6 +89,22 @@ export class ToolExecutor {
       });
       args.userId = args.userId ?? execContext.userId;
       args.sessionId = args.sessionId ?? execContext.sessionId;
+
+      // 2.5 Structural Enforcement (Zod Validation)
+      if (tool.argSchema) {
+        try {
+          args = tool.argSchema.parse(args);
+        } catch (schemaError) {
+          logger.error(`Argument validation failed for tool ${tool.name}:`, schemaError);
+          messages.push({
+            role: MessageRole.TOOL,
+            tool_call_id: toolCall.id,
+            name: toolCall.function.name,
+            content: `FAILED: Argument validation error: ${schemaError instanceof Error ? schemaError.message : String(schemaError)}`,
+          });
+          continue;
+        }
+      }
 
       // 3. Execution
       console.log(

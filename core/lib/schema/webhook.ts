@@ -34,7 +34,13 @@ const TELEGRAM_MESSAGE_SCHEMA = z
     document: TELEGRAM_DOCUMENT_PAYLOAD_SCHEMA.optional(),
     voice: TELEGRAM_VOICE_PAYLOAD_SCHEMA.optional(),
   })
-  .passthrough();
+  .passthrough()
+  .transform((data) => ({
+    ...data,
+    // Source-side normalization of the user's input text
+    userText: data.text ?? data.caption ?? '',
+    chatId: data.chat.id.toString(),
+  }));
 
 /**
  * Schema for a generic Telegram update payload.

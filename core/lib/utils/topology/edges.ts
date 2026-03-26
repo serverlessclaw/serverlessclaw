@@ -1,7 +1,6 @@
 import type { TopologyNode, TopologyEdge } from '../../types/index';
 import { EDGE_LABEL, NODE_TYPE } from './constants';
 import { BACKBONE_REGISTRY } from '../../backbone';
-import { TOOLS } from '../../../tools/index';
 
 /**
  * Maps a connection profile to a resource ID.
@@ -20,11 +19,23 @@ export function mapProfileToResource(profile: string, busId: string): string | n
   return null;
 }
 
+// Lazy-loaded TOOLS reference to break circular dependency with tools/index
+let _toolsCache: Record<string, { connectionProfile?: string[] }> | null = null;
+
+async function getTools(): Promise<Record<string, { connectionProfile?: string[] }>> {
+  if (!_toolsCache) {
+    const { TOOLS } = await import('../../../tools/index');
+    _toolsCache = TOOLS;
+  }
+  return _toolsCache;
+}
+
 /**
  * Maps a tool name to its connected resources.
  */
-export function mapToolToResources(toolName: string): string[] {
+export async function mapToolToResources(toolName: string): Promise<string[]> {
   if (!toolName) return [];
+  const TOOLS = await getTools();
   const tool = TOOLS[toolName];
   if (!tool || !tool.connectionProfile) {
     if (toolName === 'sendMessage') return ['notifier'];
@@ -165,7 +176,7 @@ export function inferNodeEdges(nodes: TopologyNode[]): TopologyEdge[] {
 /**
  * Infers edges based on backbone registry configuration.
  */
-export function inferBackboneEdges(nodes: TopologyNode[]): TopologyEdge[] {
+export async function inferBackboneEdges(nodes: TopologyNode[]): Promise<TopologyEdge[]> {
   const edges: TopologyEdge[] = [];
   const busNode = nodes.find(
     (n) => n.type === NODE_TYPE.BUS || n.id === 'agentbus' || n.id === 'bus'
@@ -189,7 +200,7 @@ export function inferBackboneEdges(nodes: TopologyNode[]): TopologyEdge[] {
 
     if (config.tools) {
       for (const toolName of config.tools) {
-        const targets = mapToolToResources(toolName);
+        const targets = await mapToolToResources(toolName);
         for (const profile of targets) {
           const targetId = mapProfileToResource(profile, busId);
           if (targetId && nodes.find((n) => n.id === targetId)) {

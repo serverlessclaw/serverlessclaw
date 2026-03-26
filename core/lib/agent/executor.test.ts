@@ -25,6 +25,23 @@ describe('AgentExecutor', () => {
     };
   });
 
+  const getDefaultOptions = (overrides: Record<string, any> = {}) => ({
+    activeModel: 'gpt-4o',
+    activeProvider: 'openai',
+    activeProfile: ReasoningProfile.STANDARD,
+    maxIterations: 5,
+    tracer: mockTracer as any,
+    traceId: 'trace-123',
+    taskId: 'task-123',
+    nodeId: 'node-1',
+    currentInitiator: 'superclaw',
+    depth: 0,
+    userId: 'user-1',
+    userText: 'test task',
+    mainConversationId: 'conv-1',
+    ...overrides,
+  });
+
   it('should strip TASK_PAUSED prefix and Trace ID suffix from responseText', async () => {
     const mockTool = {
       name: 'pauseTool',
@@ -52,20 +69,14 @@ describe('AgentExecutor', () => {
       ],
     });
 
-    const result = await executorWithTool.runLoop([], {
-      activeProfile: ReasoningProfile.STANDARD,
-      maxIterations: 5,
-      tracer: mockTracer as any,
-      traceId: 'trace-123',
-      taskId: 'trace-123',
-      nodeId: 'node-1',
-      parentId: undefined,
-      currentInitiator: 'superclaw',
-      depth: 0,
-      userId: 'user-1',
-      userText: 'pause me',
-      mainConversationId: 'conv-1',
-    });
+    const result = await executorWithTool.runLoop(
+      [],
+      getDefaultOptions({
+        traceId: 'trace-123',
+        taskId: 'trace-123',
+        userText: 'pause me',
+      })
+    );
 
     expect(result.paused).toBe(true);
     expect(result.responseText).toBe('I am pausing now');
@@ -73,8 +84,6 @@ describe('AgentExecutor', () => {
   });
 
   it('should handle responses with only TASK_PAUSED prefix', async () => {
-    // Test private method via any cast or just trust the integration test above
-    // Here we'll do another integration-style test for variety
     const mockTool = {
       name: 'simplePause',
       execute: vi.fn().mockResolvedValue('TASK_PAUSED: Just wait.'),
@@ -94,20 +103,15 @@ describe('AgentExecutor', () => {
       ],
     });
 
-    const result = await executorWithTool.runLoop([], {
-      activeProfile: ReasoningProfile.STANDARD,
-      maxIterations: 5,
-      tracer: mockTracer as any,
-      traceId: 't1',
-      taskId: 't1',
-      nodeId: 'n1',
-      parentId: undefined,
-      currentInitiator: 'superclaw',
-      depth: 0,
-      userId: 'u1',
-      userText: 'wait',
-      mainConversationId: 'c1',
-    });
+    const result = await executorWithTool.runLoop(
+      [],
+      getDefaultOptions({
+        traceId: 't1',
+        taskId: 't1',
+        userText: 'wait',
+        mainConversationId: 'c1',
+      })
+    );
 
     expect(result.responseText).toBe('Just wait.');
   });
@@ -145,32 +149,24 @@ describe('AgentExecutor', () => {
       ],
     });
 
-    await executorWithTool.runLoop([], {
-      activeProfile: ReasoningProfile.STANDARD,
-      maxIterations: 1,
-      tracer: mockTracer as any,
-      traceId: 't-123',
-      taskId: 't-123',
-      nodeId: 'n-1',
-      parentId: undefined,
-      currentInitiator: 'superclaw',
-      depth: 0,
-      userId: 'u-1',
-      userText: 'original user query',
-      mainConversationId: 'c-1',
-    });
+    await executorWithTool.runLoop(
+      [],
+      getDefaultOptions({
+        traceId: 't-123',
+        taskId: 't-123',
+        userText: 'original user query',
+      })
+    );
 
-    // The result should contain the arguments provided by the LLM, not the ones from system context
     expect(mockTool.execute).toHaveBeenCalled();
     const callArgs = (mockTool.execute as any).mock.calls[0][0];
-    expect(callArgs.agentId).toBe('special-agent'); // Not 'main-agent'
-    expect(callArgs.task).toBe('sub-task content'); // Not 'original user query'
-    expect(callArgs.executorAgentId).toBe('main-agent'); // New prefixed field
-    expect(callArgs.originalUserTask).toBe('original user query'); // New prefixed field
+    expect(callArgs.agentId).toBe('special-agent');
+    expect(callArgs.task).toBe('sub-task content');
+    expect(callArgs.executorAgentId).toBe('main-agent');
+    expect(callArgs.originalUserTask).toBe('original user query');
   });
 
   it('should allow SuperClaw (superclaw) to dispatch to strategic-planner without collision', async () => {
-    // Mimic the real dispatchTask implementation's check
     const mockDispatchTask = {
       name: 'dispatchTask',
       execute: vi.fn().mockImplementation(async (args) => {
@@ -207,27 +203,20 @@ describe('AgentExecutor', () => {
       ],
     });
 
-    await executor.runLoop([], {
-      activeProfile: ReasoningProfile.STANDARD,
-      maxIterations: 1,
-      tracer: mockTracer as any,
-      traceId: 'trace-abc',
-      taskId: 'trace-abc',
-      nodeId: 'node-1',
-      parentId: undefined,
-      currentInitiator: 'superclaw',
-      depth: 0,
-      userId: 'user-789',
-      userText: 'How many agents do we have?',
-      mainConversationId: 'session-123',
-    });
+    await executor.runLoop(
+      [],
+      getDefaultOptions({
+        traceId: 'trace-abc',
+        taskId: 'trace-abc',
+        userText: 'How many agents do we have?',
+        mainConversationId: 'session-123',
+      })
+    );
 
-    // Verify it SUCCEEDED (did not receive the 'FAILED: Cannot dispatch to main' message)
     expect(mockDispatchTask.execute).toHaveBeenCalled();
     const resultText = (mockDispatchTask.execute as any).mock.results[0].value;
     expect(await resultText).toBe('SUCCESS: dispatched to strategic-planner');
 
-    // Check that we also have the executor context available under safe names
     const finalArgs = (mockDispatchTask.execute as any).mock.calls[0][0];
     expect(finalArgs.executorAgentId).toBe('superclaw');
     expect(finalArgs.initiatorId).toBe('superclaw');
@@ -240,20 +229,14 @@ describe('AgentExecutor', () => {
 
     const executor = new AgentExecutor(mockProvider as any, [], 'agent-1', 'Agent 1');
 
-    const result = await executor.runLoop([], {
-      activeProfile: ReasoningProfile.STANDARD,
-      maxIterations: 5,
-      tracer: mockTracer as any,
-      traceId: 'trace-cancel',
-      taskId: 'task-to-cancel',
-      nodeId: 'node-1',
-      parentId: undefined,
-      currentInitiator: 'superclaw',
-      depth: 0,
-      userId: 'user-1',
-      userText: 'work',
-      mainConversationId: 'session-1',
-    });
+    const result = await executor.runLoop(
+      [],
+      getDefaultOptions({
+        traceId: 'trace-cancel',
+        taskId: 'task-to-cancel',
+        userText: 'work',
+      })
+    );
 
     expect(result.responseText).toContain('TASK_CANCELLED');
     expect(mockProvider.call).not.toHaveBeenCalled();
@@ -267,24 +250,14 @@ describe('AgentExecutor', () => {
       tool_calls: [{ id: 'tc1', type: 'function', function: { name: 't1', arguments: '{}' } }],
     });
 
-    const result = await executor.runLoop([], {
-      activeProfile: ReasoningProfile.STANDARD,
-      maxIterations: 1,
-      tracer: mockTracer as any,
-      traceId: 't1',
-      taskId: 't1',
-      nodeId: 'n1',
-      parentId: undefined,
-      currentInitiator: 'superclaw',
-      depth: 0,
-      userId: 'u1',
-      userText: 'test',
-      mainConversationId: 'c1',
-    });
-
-    if (!result.tool_calls) {
-      console.log('DEBUG: runLoop result:', JSON.stringify(result, null, 2));
-    }
+    const result = await executor.runLoop(
+      [],
+      getDefaultOptions({
+        traceId: 't1',
+        taskId: 't1',
+        userText: 'test',
+      })
+    );
 
     expect(result.tool_calls).toBeDefined();
     expect(result.tool_calls?.[0].id).toBe('tc1');
@@ -305,20 +278,14 @@ describe('AgentExecutor', () => {
       ],
     });
 
-    const result = await executor.runLoop([], {
-      activeProfile: ReasoningProfile.STANDARD,
-      maxIterations: 5,
-      tracer: mockTracer as any,
-      traceId: 't1',
-      taskId: 't1',
-      nodeId: 'n1',
-      parentId: undefined,
-      currentInitiator: 'superclaw',
-      depth: 0,
-      userId: 'u1',
-      userText: 'test',
-      mainConversationId: 'c1',
-    });
+    const result = await executor.runLoop(
+      [],
+      getDefaultOptions({
+        traceId: 't1',
+        taskId: 't1',
+        userText: 'test',
+      })
+    );
 
     expect(result.paused).toBe(true);
     expect(result.tool_calls).toBeDefined();
@@ -353,20 +320,14 @@ describe('AgentExecutor', () => {
       ],
     });
 
-    const result = await executor.runLoop([], {
-      activeProfile: ReasoningProfile.STANDARD,
-      maxIterations: 5,
-      tracer: mockTracer as any,
-      traceId: 't1',
-      taskId: 't1',
-      nodeId: 'n1',
-      parentId: undefined,
-      currentInitiator: 'superclaw',
-      depth: 0,
-      userId: 'u1',
-      userText: 'delete db',
-      mainConversationId: 'c1',
-    });
+    const result = await executor.runLoop(
+      [],
+      getDefaultOptions({
+        traceId: 't1',
+        taskId: 't1',
+        userText: 'delete db',
+      })
+    );
 
     expect(result.paused).toBe(true);
     expect(result.pauseMessage).toBe('APPROVAL_REQUIRED:call-high-risk');
@@ -408,21 +369,16 @@ describe('AgentExecutor', () => {
         content: 'SUCCESS: deleted',
       });
 
-    const result = await executor.runLoop([], {
-      activeProfile: ReasoningProfile.STANDARD,
-      maxIterations: 2,
-      tracer: mockTracer as any,
-      traceId: 't1',
-      taskId: 't1',
-      nodeId: 'n1',
-      parentId: undefined,
-      currentInitiator: 'superclaw',
-      depth: 0,
-      userId: 'u1',
-      userText: 'delete db',
-      mainConversationId: 'c1',
-      approvedToolCalls: ['call-approved'],
-    });
+    const result = await executor.runLoop(
+      [],
+      getDefaultOptions({
+        traceId: 't1',
+        taskId: 't1',
+        userText: 'delete db',
+        maxIterations: 2,
+        approvedToolCalls: ['call-approved'],
+      })
+    );
 
     expect(mockHighRiskTool.execute).toHaveBeenCalled();
     expect(result.responseText).toBe('SUCCESS: deleted');

@@ -228,7 +228,7 @@ export class SessionStateManager {
         return [];
       }
 
-      return (result.Item.pendingMessages as PendingMessage[]) || [];
+      return (result.Item.pendingMessages as PendingMessage[]) ?? [];
     } catch (error) {
       logger.error(`Session ${sessionId}: Failed to get pending messages:`, error);
       return [];
@@ -388,7 +388,7 @@ export class SessionStateManager {
         sessionId: result.Item.sessionId,
         processingAgentId: result.Item.processingAgentId,
         processingStartedAt: result.Item.processingStartedAt,
-        pendingMessages: (result.Item.pendingMessages as PendingMessage[]) || [],
+        pendingMessages: (result.Item.pendingMessages as PendingMessage[]) ?? [],
         lastMessageAt: result.Item.lastMessageAt,
       };
     } catch (error) {

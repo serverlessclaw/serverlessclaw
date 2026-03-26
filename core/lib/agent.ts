@@ -29,6 +29,35 @@ import { DEFAULT_SIGNAL_SCHEMA } from './agent/schema';
 // DEFAULT_SIGNAL_SCHEMA moved to ./agent/schema.ts
 
 /**
+ * Validates that an IAgentConfig has all required fields populated.
+ * Throws with a clear error message if critical fields are missing.
+ * Use this at agent construction time to fail fast on misconfiguration.
+ *
+ * @param config - The agent config to validate.
+ * @param agentType - The agent type name for error messages.
+ */
+export function validateAgentConfig(config: IAgentConfig | undefined, agentType: string): void {
+  if (!config) {
+    throw new Error(
+      `Agent config is required for '${agentType}'. ` +
+        `Ensure AgentRegistry.getAgentConfig() returns a valid config.`
+    );
+  }
+
+  const required: (keyof IAgentConfig)[] = ['id', 'name', 'systemPrompt', 'enabled'];
+  const missing = required.filter(
+    (key) => config[key] === undefined || config[key] === null || config[key] === ''
+  );
+
+  if (missing.length > 0) {
+    throw new Error(
+      `Agent config for '${agentType}' missing required fields: ${missing.join(', ')}. ` +
+        `Ensure the config is fully populated in AgentRegistry or backbone.ts.`
+    );
+  }
+}
+
+/**
  * The core Agent class responsible for orchestrating LLM calls, tool execution,
  * and memory management. It acts as the primary execution engine for both
  * backbone (system) and user-defined agents.
@@ -124,7 +153,7 @@ export class Agent {
     const effectiveTaskId = taskId ?? traceId;
     const nodeId = tracer.getNodeId();
     const parentId = tracer.getParentId();
-    const currentInitiator = initiatorId ?? this.config?.id ?? 'unknown';
+    const currentInitiator = initiatorId ?? this.config?.id ?? 'orchestrator';
 
     if (!isContinuation) {
       await tracer.startTrace({
@@ -150,7 +179,7 @@ export class Agent {
       ]);
 
       const preferences = {
-        items: [...(prefPrefixed.items || []), ...(prefRaw.items || [])],
+        items: [...(prefPrefixed.items ?? []), ...(prefRaw.items ?? [])],
       };
 
       const facts = [
@@ -525,7 +554,7 @@ export class Agent {
     const effectiveTaskId = taskId ?? traceId;
     const nodeId = tracer.getNodeId();
     const parentId = tracer.getParentId();
-    const currentInitiator = initiatorId ?? this.config?.id ?? 'unknown';
+    const currentInitiator = initiatorId ?? this.config?.id ?? 'orchestrator';
 
     if (!isContinuation) {
       await tracer.startTrace({
@@ -562,7 +591,7 @@ export class Agent {
     ]);
 
     const preferences = {
-      items: [...(prefPrefixed.items || []), ...(prefRaw.items || [])],
+      items: [...(prefPrefixed.items ?? []), ...(prefRaw.items ?? [])],
     };
 
     const facts = [

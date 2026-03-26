@@ -1,3 +1,6 @@
+const AUTH_SESSION_TTL_SECONDS = 3600; // 1 hour
+const AUTH_REFRESH_INTERVAL_SECONDS = 300; // 5 minutes
+
 /**
  * Simple authorizer for IoT Realtime bus.
  */
@@ -29,8 +32,8 @@ export const handler = async (_event: unknown) => {
   return {
     isAuthenticated: true,
     principalId,
-    disconnectAfterInSeconds: 3600,
-    refreshAfterInSeconds: 300,
+    disconnectAfterInSeconds: AUTH_SESSION_TTL_SECONDS,
+    refreshAfterInSeconds: AUTH_REFRESH_INTERVAL_SECONDS,
     policyDocuments: [JSON.stringify(policy)],
   };
 };

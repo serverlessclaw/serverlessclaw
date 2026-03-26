@@ -21,6 +21,8 @@ import { AgentProcessOptions } from '../agent/options';
  * @returns The normalized base user identifier.
  */
 export function extractBaseUserId(userId: string): string {
+  if (userId === '') return '';
+  if (!userId || typeof userId !== 'string') return 'unknown';
   return userId.startsWith('CONV#') ? userId.split('#')[1] : userId;
 }
 
@@ -147,8 +149,8 @@ export function buildProcessOptions(params: ProcessOptionsParams): AgentProcessO
   return {
     isContinuation: !!params.isContinuation,
     isIsolated: params.isIsolated ?? true,
-    initiatorId: params.initiatorId,
-    depth: params.depth,
+    initiatorId: params.initiatorId ?? 'orchestrator',
+    depth: params.depth ?? 0,
     traceId: params.traceId,
     taskId: params.taskId,
     sessionId: params.sessionId,
@@ -177,7 +179,7 @@ export function validatePayload(
     return false;
   }
   for (const field of requiredFields) {
-    if (!payload[field]) {
+    if (payload[field] === undefined || payload[field] === null) {
       logger.error(`Invalid event payload: missing ${field}`);
       return false;
     }

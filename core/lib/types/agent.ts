@@ -22,13 +22,13 @@ export interface BaseEvent {
   /** The ID of the user who initiated the session. */
   userId: string;
   /** Global trace ID for correlating all sub-steps. */
-  traceId?: string;
+  traceId: string;
   /** Unique ID for a specific task/execution unit. */
-  taskId?: string;
+  taskId: string;
   /** The agent ID that started this task (for routing results). */
-  initiatorId?: string;
+  initiatorId: string;
   /** Current recursion depth to prevent infinite delegations. */
-  depth?: number;
+  depth: number;
   /** The active session identifier. */
   sessionId?: string;
 }

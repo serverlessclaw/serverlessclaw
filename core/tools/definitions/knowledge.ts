@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { IToolDefinition } from '../../lib/types/index';
 
 /**
@@ -24,6 +25,11 @@ export const knowledgeTools: Record<string, IToolDefinition> = {
       required: ['query', 'category'],
       additionalProperties: false,
     },
+    argSchema: z.object({
+      query: z.string(),
+      category: z.enum(['user_preference', 'tactical_lesson', 'strategic_gap', 'system_knowledge']),
+      userId: z.string(),
+    }),
     connectionProfile: ['memory'],
   },
   saveMemory: {
@@ -43,6 +49,11 @@ export const knowledgeTools: Record<string, IToolDefinition> = {
       required: ['content', 'category'],
       additionalProperties: false,
     },
+    argSchema: z.object({
+      content: z.string(),
+      category: z.enum(['user_preference', 'system_knowledge', 'tactical_lesson']),
+      userId: z.string(),
+    }),
     connectionProfile: ['memory'],
   },
   reportGap: {

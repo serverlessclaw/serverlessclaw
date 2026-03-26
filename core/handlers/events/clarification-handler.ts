@@ -1,8 +1,10 @@
 import { getRecursionLimit, handleRecursionLimitExceeded, wakeupInitiator } from './shared';
 import { DynamicScheduler } from '../../lib/scheduler';
 import { ConfigManager } from '../../lib/registry/config';
-import { EventType, AgentType } from '../../lib/types/agent';
+import { EventType } from '../../lib/types/agent';
 import { ClarificationStatus } from '../../lib/types/memory';
+
+import { AGENT_PAYLOAD_SCHEMA } from '../../lib/schema/events';
 
 /**
  * Handles clarification request events - relays clarification question to initiator.
@@ -13,30 +15,23 @@ import { ClarificationStatus } from '../../lib/types/memory';
 export async function handleClarificationRequest(
   eventDetail: Record<string, unknown>
 ): Promise<void> {
+  const parsed = AGENT_PAYLOAD_SCHEMA.parse(eventDetail);
   const {
     userId,
-    agentId,
-    question,
+    agentId = 'unknown',
+    task,
     traceId,
     initiatorId,
     depth,
     sessionId,
-    originalTask,
-    retryCount,
-  } = eventDetail as unknown as {
-    userId: string;
-    agentId: string;
-    question: string;
-    traceId?: string;
-    initiatorId?: string;
-    depth?: number;
-    sessionId?: string;
-    originalTask: string;
-    retryCount?: number;
-  };
+    metadata,
+  } = parsed;
 
-  const currentDepth = depth ?? 1;
-  const currentRetryCount = retryCount ?? 0;
+  // Flexibility: Look for question and originalTask in direct detail (legacy/tests) OR metadata
+  const question = (eventDetail.question as string) ?? (metadata?.question as string) ?? task;
+  const originalTask =
+    (eventDetail.originalTask as string) ?? (metadata?.originalTask as string) ?? task;
+  const retryCount = (eventDetail.retryCount as number) ?? (metadata?.retryCount as number) ?? 0;
 
   const { logger, DynamoMemory } = await import('../../lib/logger').then(async (m) => {
     const mem = await import('../../lib/memory');
@@ -44,20 +39,20 @@ export async function handleClarificationRequest(
   });
 
   logger.info(
-    `Relaying clarification request from ${agentId} to Initiator: ${initiatorId ?? 'Orchestrator'} (Depth: ${currentDepth}, Session: ${sessionId}, Retry: ${currentRetryCount})`
+    `Relaying clarification request from ${agentId} to Initiator: ${initiatorId} (Depth: ${depth}, Session: ${sessionId}, Retry: ${retryCount})`
   );
 
   const RECURSION_LIMIT = await getRecursionLimit();
 
-  if (currentDepth >= RECURSION_LIMIT) {
+  if (depth >= RECURSION_LIMIT) {
     logger.error(
-      `Recursion Limit Exceeded for CLARIFICATION_REQUEST (Depth: ${currentDepth}) for user ${userId}. Aborting.`
+      `Recursion Limit Exceeded for CLARIFICATION_REQUEST (Depth: ${depth}) for user ${userId}. Aborting.`
     );
     await handleRecursionLimitExceeded(
       userId,
       sessionId,
       'clarification-handler',
-      `I have detected an infinite loop in clarification requests (Depth: ${currentDepth}). I've intervened to stop the process.`
+      `I have detected an infinite loop in clarification requests (Depth: ${depth}). I've intervened to stop the process.`
     );
     return;
   }
@@ -65,20 +60,20 @@ export async function handleClarificationRequest(
   try {
     const memory = new DynamoMemory();
     const safeTraceId = traceId ?? `unknown-${Date.now()}`;
-    const safeAgentId = agentId ?? 'unknown';
+    const safeAgentId = agentId;
 
     await memory.saveClarificationRequest({
       userId: `CLARIFICATION#${safeTraceId}#${safeAgentId}`,
       agentId: safeAgentId,
-      initiatorId: initiatorId ?? AgentType.SUPERCLAW,
+      initiatorId: initiatorId,
       question,
       originalTask,
       traceId: safeTraceId,
       sessionId,
-      depth: currentDepth,
+      depth,
       status: ClarificationStatus.PENDING,
       createdAt: Date.now(),
-      retryCount: currentRetryCount,
+      retryCount,
     });
 
     const timeoutMs =
@@ -92,12 +87,12 @@ export async function handleClarificationRequest(
         userId,
         agentId: safeAgentId,
         traceId: safeTraceId,
-        initiatorId: initiatorId ?? AgentType.SUPERCLAW,
+        initiatorId,
         originalTask,
         question,
         sessionId,
-        depth: currentDepth,
-        retryCount: currentRetryCount,
+        depth,
+        retryCount,
       },
       targetTime,
       EventType.CLARIFICATION_TIMEOUT
@@ -111,7 +106,7 @@ export async function handleClarificationRequest(
 
   await wakeupInitiator(
     userId,
-    initiatorId ?? AgentType.SUPERCLAW,
+    initiatorId,
     `CLARIFICATION_REQUEST: Agent '${agentId}' needs clarification while working on: "${originalTask}".
       Question:
       ---
@@ -120,6 +115,6 @@ export async function handleClarificationRequest(
       Please provide the necessary directions to the agent using the "provideClarification" tool.`,
     traceId,
     sessionId,
-    currentDepth
+    depth
   );
 }

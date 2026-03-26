@@ -1,7 +1,6 @@
 import { IoTDataPlaneClient, PublishCommand } from '@aws-sdk/client-iot-data-plane';
 import { Context } from 'aws-lambda';
 import { BRIDGE_EVENT_SCHEMA } from '../lib/schema/events';
-import { extractBaseUserId } from '../lib/utils/agent-helpers';
 
 const iot = new IoTDataPlaneClient({});
 
@@ -25,21 +24,19 @@ export async function handler(event: Record<string, unknown>, _context: Context)
   const { detail } = parsedEvent;
   const eventType = parsedEvent['detail-type'];
 
-  // Standardize userId: fallback to dashboard-user, then ensure it's a clean string
-  let userId = detail.userId ?? 'dashboard-user';
-  if (typeof userId !== 'string') userId = 'dashboard-user';
+  // All properties are now resolved by BRIDGE_DETAIL_PAYLOAD_SCHEMA at the source
+  const {
+    userId,
+    baseUserId,
+    sessionId,
+    messageId,
+    agentName,
+    message: rawMessage,
+    isThought,
+  } = detail;
 
-  // Normalize userId to base form for MQTT topic consistency
-  const baseUserId = extractBaseUserId(userId);
-
-  // Clean userId for MQTT topic (no special chars except allowed ones)
   const safeUserId = baseUserId.replace(/[#+]/g, '_');
-  const sessionId = detail.sessionId;
 
-  // Extract more context for focused logging
-  const messageId = detail.messageId || detail.traceId || 'unknown';
-  const agentName = detail.agentName || 'SuperClaw';
-  const rawMessage = (detail.message || '') as string;
   const contentSnippet =
     rawMessage.length > 50
       ? rawMessage.substring(0, 50).replace(/\n/g, ' ') + '...'
@@ -49,9 +46,7 @@ export async function handler(event: Record<string, unknown>, _context: Context)
     `[RealtimeBridge] Routing ${eventType}: User=${userId} | Session=${sessionId} | MsgId=${messageId} | Agent=${agentName}`
   );
   if (rawMessage) {
-    console.log(
-      `[RealtimeBridge] Content: "${contentSnippet}"${detail.isThought ? ' (thought)' : ''}`
-    );
+    console.log(`[RealtimeBridge] Content: "${contentSnippet}"${isThought ? ' (thought)' : ''}`);
   }
 
   // If we have a sessionId, we can target the specific chat session

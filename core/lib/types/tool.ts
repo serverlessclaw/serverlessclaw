@@ -46,6 +46,8 @@ export interface IToolDefinition {
   description: string;
   /** Schema defining the arguments expected by the tool. */
   parameters: JsonSchema;
+  /** Optional Zod schema for runtime validation and defaulting of arguments. */
+  argSchema?: import('zod').ZodSchema;
   /** The type of tool. */
   type?: ToolType;
   /** Optional resource connections this tool utilizes (used for topology discovery). */

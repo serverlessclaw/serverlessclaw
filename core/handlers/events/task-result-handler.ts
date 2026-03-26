@@ -90,22 +90,20 @@ export async function handleTaskResult(
     parsedEvent;
   const response = 'error' in parsedEvent ? parsedEvent.error : parsedEvent.response;
 
-  const currentDepth = depth ?? 1;
-
   logger.info(
-    `Relaying ${isFailure ? 'failure' : 'completion'} from ${agentId} to Initiator: ${initiatorId ?? 'Orchestrator'} (Depth: ${currentDepth}, Session: ${sessionId}, UserNotified: ${userNotified})`
+    `Relaying ${isFailure ? 'failure' : 'completion'} from ${agentId} to Initiator: ${initiatorId} (Depth: ${depth}, Session: ${sessionId}, UserNotified: ${userNotified})`
   );
 
   // 1. Loop Protection - Use shared function
   const RECURSION_LIMIT = await getRecursionLimit();
 
-  if (currentDepth >= RECURSION_LIMIT) {
-    logger.error(`Recursion Limit Exceeded (Depth: ${currentDepth}) for user ${userId}. Aborting.`);
+  if (depth >= RECURSION_LIMIT) {
+    logger.error(`Recursion Limit Exceeded (Depth: ${depth}) for user ${userId}. Aborting.`);
     await handleRecursionLimitExceeded(
       userId,
       sessionId,
       'task-result-handler',
-      `I have detected an infinite loop between agents (Depth: ${currentDepth}). I've intervened to stop the process. Please check the orchestration logic. You can increase this limit in the System Config.`
+      `I have detected an infinite loop between agents (Depth: ${depth}). I've intervened to stop the process. Please check the orchestration logic. You can increase this limit in the System Config.`
     );
     return;
   }
@@ -114,9 +112,12 @@ export async function handleTaskResult(
   // If no initiator is provided, this was likely a background system task (e.g. reflection).
   // We do not wake up anyone in this case to prevent unexpected user-facing messages.
   // Also, prevent the main agent from waking itself up to avoid infinite acknowledgment loops.
-  if (!initiatorId || (agentId === AgentType.SUPERCLAW && initiatorId === AgentType.SUPERCLAW)) {
+  if (
+    initiatorId === 'orchestrator' ||
+    (agentId === AgentType.SUPERCLAW && initiatorId === AgentType.SUPERCLAW)
+  ) {
     logger.info(
-      `No continuation needed for ${agentId} task (Initiator: ${initiatorId ?? 'N/A'}). Treating as background completion.`
+      `No continuation needed for ${agentId} task (Initiator: ${initiatorId}). Treating as background completion.`
     );
     return;
   }
@@ -134,7 +135,7 @@ export async function handleTaskResult(
       Please continue your logic based on this result.`,
     traceId,
     sessionId,
-    currentDepth,
+    depth,
     userNotified
   );
 
