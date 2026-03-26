@@ -312,6 +312,16 @@ export class CachedMemory implements IMemory {
   }
 
   // Delegate all other methods directly to underlying memory
+  async clearHistory(userId: string): Promise<void> {
+    await this.underlying.clearHistory(userId);
+    MemoryCaches.conversation.delete(CacheKeys.history(userId));
+    MemoryCaches.conversation.delete(CacheKeys.summary(userId));
+  }
+
+  async listConversations(userId: string): Promise<ConversationMeta[]> {
+    return this.underlying.listConversations(userId);
+  }
+
   async deleteConversation(userId: string, sessionId: string): Promise<void> {
     await this.underlying.deleteConversation(userId, sessionId);
     MemoryCaches.conversation.delete(CacheKeys.history(userId));
