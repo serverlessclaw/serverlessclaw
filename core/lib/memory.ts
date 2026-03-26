@@ -297,4 +297,59 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   ): Promise<MemoryInsight[]> {
     return InsightOps.getFailurePatterns(this, scopeId, context, limit);
   }
+
+  /**
+   * Acquires a lock on a gap to prevent concurrent modification by multiple agents.
+   */
+  async acquireGapLock(gapId: string, agentId: string, ttlMs?: number): Promise<boolean> {
+    return GapOps.acquireGapLock(this, gapId, agentId, ttlMs);
+  }
+
+  /**
+   * Releases a gap lock after work is complete.
+   */
+  async releaseGapLock(gapId: string, agentId: string): Promise<void> {
+    return GapOps.releaseGapLock(this, gapId, agentId);
+  }
+
+  /**
+   * Checks if a gap is currently locked and returns the lock holder info.
+   */
+  async getGapLock(gapId: string): Promise<{ content: string; expiresAt: number } | null> {
+    return GapOps.getGapLock(this, gapId);
+  }
+
+  /**
+   * Records a failed strategic plan so the swarm learns anti-patterns.
+   */
+  async recordFailedPlan(
+    planHash: string,
+    planContent: string,
+    gapIds: string[],
+    failureReason: string,
+    metadata?: Partial<InsightMetadata>
+  ): Promise<number> {
+    return InsightOps.recordFailedPlan(this, planHash, planContent, gapIds, failureReason, metadata);
+  }
+
+  /**
+   * Retrieves previously failed plans to inform the planner about anti-patterns.
+   */
+  async getFailedPlans(limit?: number): Promise<MemoryInsight[]> {
+    return InsightOps.getFailedPlans(this, limit);
+  }
+
+  /**
+   * Adds a system-wide lesson that benefits ALL users and sessions.
+   */
+  async addGlobalLesson(lesson: string, metadata?: Partial<InsightMetadata>): Promise<number> {
+    return InsightOps.addGlobalLesson(this, lesson, metadata);
+  }
+
+  /**
+   * Retrieves system-wide lessons for injection into agent prompts.
+   */
+  async getGlobalLessons(limit?: number): Promise<string[]> {
+    return InsightOps.getGlobalLessons(this, limit);
+  }
 }

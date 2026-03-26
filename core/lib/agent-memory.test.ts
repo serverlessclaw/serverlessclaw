@@ -32,6 +32,7 @@ describe('Agent Memory Recall Regression', () => {
       getHistory: vi.fn().mockResolvedValue([]),
       getDistilledMemory: vi.fn().mockResolvedValue('Distilled Fact'),
       getLessons: vi.fn().mockResolvedValue([]),
+      getGlobalLessons: vi.fn().mockResolvedValue([]),
       addMessage: vi.fn().mockResolvedValue(undefined),
       updateDistilledMemory: vi.fn().mockResolvedValue(undefined),
       searchInsights: vi.fn().mockResolvedValue({ items: [] }),

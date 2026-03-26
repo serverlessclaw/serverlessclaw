@@ -151,6 +151,30 @@ export async function fetchStaleMemoryContext(memory: DynamoMemory): Promise<str
 }
 
 /**
+ * Fetches previously failed plans to warn the planner about anti-patterns.
+ */
+async function fetchFailedPlansContext(memory: DynamoMemory): Promise<string> {
+  try {
+    const failedPlans = await memory.getFailedPlans(5);
+    if (failedPlans.length > 0) {
+      return `\n[FAILED_PLANS_ANTI_PATTERNS]:\nThese strategic plans have previously FAILED. Do NOT repeat these approaches:\n${failedPlans
+        .map((fp) => {
+          try {
+            const data = JSON.parse(fp.content);
+            return `- [${data.gapIds?.join(', ') ?? 'unknown gaps'}] ${data.planSummary} (Reason: ${data.failureReason})`;
+          } catch {
+            return `- ${fp.content.substring(0, 200)}`;
+          }
+        })
+        .join('\n')}\n`;
+    }
+  } catch {
+    // Silently return empty
+  }
+  return '';
+}
+
+/**
  * Builds the proactive strategic review prompt.
  *
  * @param memory - The DynamoDB memory instance.
@@ -226,6 +250,9 @@ export async function buildProactiveReviewPrompt(
       ? `\n[KNOWN_FAILURE_PATTERNS]:\nAvoid repeating these mistakes:\n${failurePatterns.map((f) => `- ${f.content}`).join('\n')}\n`
       : '';
 
+  // Fetch Failed Plans anti-patterns
+  const failedPlansContext = await fetchFailedPlansContext(memory);
+
   const prompt = `
     [PROACTIVE_STRATEGIC_REVIEW]
     I have woken up for a scheduled self-audit. I have detected the following ${allGaps.length} capability gaps:
@@ -237,6 +264,7 @@ export async function buildProactiveReviewPrompt(
     ${toolUsageContext}
     ${staleMemoryContext}
     ${failureContext}
+    ${failedPlansContext}
 
     Please analyze these gaps, the tool usage telemetry, and the memory utilization audit. Prioritize the most critical needs based on ROI (Impact vs Complexity), and design a STRATEGIC_PLAN to either address the MOST IMPORTANT evolution or prune redundant/inefficient tools and stale memories.
     

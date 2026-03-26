@@ -68,4 +68,6 @@ export interface PlannerResult {
   planId?: string;
   /** Operation status code. */
   status?: string;
+  /** The agent ID that currently holds the gap lock (returned when gap is locked). */
+  lockedBy?: string;
 }

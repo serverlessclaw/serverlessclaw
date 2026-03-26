@@ -56,27 +56,42 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
   const { Agent } = await import('../lib/agent');
   const qaAgent = new Agent(memory, providerManager, agentTools, config.systemPrompt, config);
 
-  // IMPORTANT: The Coder's implementation response is provided below only as background context.
-  // Do NOT anchor your verdict on the Coder's self-reported success — it may be inaccurate.
-  // You MUST independently verify using at least one of: validateCode, read_file, listFiles, checkHealth.
-  // Only issue VERIFICATION_SUCCESSFUL after your own mechanical checks confirm the change is live and correct.
-  const auditPrompt = `You are auditing the following gaps independently. Do NOT trust the Coder's response alone.
+  // GAP #3 FIX: Mandatory mechanical verification — tool calls are enforced before verdict
+  const auditPrompt = `You are a strict QA auditor. Your job is to INDEPENDENTLY verify that code changes are correct and live. You MUST NOT trust the Coder's self-report.
 
-    STEP 1 — MECHANICAL CHECK (mandatory): Call at least one verification tool before forming a verdict:
-      - Use 'validateCode' to confirm no type errors were introduced.
-      - Use 'read_file' or 'listFiles' to verify the relevant code was actually written/modified.
-      - Use 'checkHealth' if the change affects a live endpoint.
-
-    STEP 2 — VERDICT: After your tool checks, respond with VERIFICATION_SUCCESSFUL or REOPEN_REQUIRED.
-
-    STEP 3 — SYNC (if successful): If verification passes, you MUST call 'triggerTrunkSync' to finalize the trunk sync back to the repository via the CI/CD bridge.
-    Background (Coder's self-report — treat as unverified):
+    ╔══════════════════════════════════════════════════════════════╗
+    ║  STEP 1 — MANDATORY MECHANICAL VERIFICATION (NON-NEGOTIABLE) ║
+    ╚══════════════════════════════════════════════════════════════╝
+    
+    Before you form ANY verdict, you MUST call at least TWO of these tools:
+    
+    1. 'validateCode' — Run this FIRST to check for type errors and compilation issues.
+    2. 'read_file' or 'filesystem_read_file' — Read the actual files that were claimed to be modified.
+    3. 'checkHealth' — Verify the live system is healthy (especially if the change affects endpoints).
+    4. 'runTests' — Run the test suite to verify no regressions.
+    
+    ⚠️  IF YOU DO NOT CALL ANY VERIFICATION TOOLS, YOUR VERDICT IS AUTOMATICALLY REOPEN_REQUIRED.
+    
+    ╔══════════════════════════════════════════════════════════════╗
+    ║  STEP 2 — VERDICT (after mechanical checks)                  ║
+    ╚══════════════════════════════════════════════════════════════╝
+    
+    Only AFTER your tool checks complete, respond with a JSON verdict:
+    { "status": "SUCCESS", "auditReport": "..." } or { "status": "REOPEN", "auditReport": "..." }
+    
+    The verdict MUST reference specific tool outputs as evidence.
+    
+    ╔══════════════════════════════════════════════════════════════╗
+    ║  STEP 3 — SYNC (only if verification passes)                 ║
+    ╚══════════════════════════════════════════════════════════════╝
+    
+    If verification passes, you MUST call 'triggerTrunkSync' to finalize the trunk sync.
+    
+    Background (Coder's self-report — treat as UNVERIFIED):
     ${implementationResponse}
 
     Target Gaps:
-    ${gapIds.join(', ')}
-
-    Final response MUST include VERIFICATION_SUCCESSFUL or REOPEN_REQUIRED.`;
+    ${gapIds.join(', ')}`;
 
   const { responseText: rawResponse, attachments: resultAttachments } = await qaAgent.process(
     userId,
@@ -157,6 +172,20 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
         sessionId,
         config.name
       );
+    }
+
+    // GAP #2 FIX: Record failed plan as anti-pattern for the swarm to learn from
+    try {
+      const planHash = `qa-reject-${gapIds.join('-')}-${Date.now()}`;
+      await memory.recordFailedPlan(
+        planHash,
+        implementationResponse || 'No implementation response provided',
+        gapIds,
+        `QA_REJECTED: ${auditReport.substring(0, 300)}`
+      );
+      logger.info(`Recorded failed plan for gaps ${gapIds.join(', ')} in negative memory.`);
+    } catch (e) {
+      logger.warn('Failed to record failed plan in negative memory:', e);
     }
 
     // Notify Initiator about the failure so they can decide on the next course of action

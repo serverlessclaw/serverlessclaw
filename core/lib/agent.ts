@@ -172,13 +172,14 @@ export class Agent {
       : userId;
 
     try {
-      // 1. Memory Retrieval
+      // 1. Memory Retrieval (GAP #5: Include global lessons for cross-session knowledge)
       const history = await this.memory.getHistory(storageId);
-      const [distilled, lessons, prefPrefixed, prefRaw] = await Promise.all([
+      const [distilled, lessons, prefPrefixed, prefRaw, globalLessons] = await Promise.all([
         this.memory.getDistilledMemory(baseUserId),
         this.memory.getLessons(baseUserId),
         this.memory.searchInsights(`USER#${baseUserId}`, '*', InsightCategory.USER_PREFERENCE),
         this.memory.searchInsights(baseUserId, '*', InsightCategory.USER_PREFERENCE),
+        this.memory.getGlobalLessons(5),
       ]);
 
       const preferences = {
@@ -216,7 +217,7 @@ export class Agent {
         return { responseText: '', attachments: [] };
       }
 
-      // 2. Model/Provider Resolution
+      // 2. Model/Provider Resolution (GAP #4: Per-agent model selection via AgentRouter)
       let activeModel = this.config?.model ?? SYSTEM.DEFAULT_MODEL;
       let activeProvider = this.config?.provider ?? SYSTEM.DEFAULT_PROVIDER;
       let activeProfile = profile;
@@ -228,6 +229,14 @@ export class Agent {
         const globalModel = (await ConfigManager.getRawConfig(CONFIG_KEYS.ACTIVE_MODEL)) as string;
         if (globalProvider) activeProvider = globalProvider;
         if (globalModel) activeModel = globalModel;
+
+        // GAP #4: If no global override, use AgentRouter for dynamic model selection
+        if (!globalProvider && !globalModel && this.config) {
+          const { AgentRouter } = await import('./agent-router');
+          const routed = AgentRouter.selectModel(this.config, { profile: activeProfile });
+          activeProvider = routed.provider;
+          activeModel = routed.model;
+        }
 
         if (!process.env.VITEST) {
           const policy = await ConfigManager.getRawConfig(CONFIG_KEYS.OPTIMIZATION_POLICY);
@@ -246,11 +255,17 @@ export class Agent {
         logger.warn('Failed to fetch config from DDB, using defaults.');
       }
 
-      // 3. Prompt Assembly
+      // 3. Prompt Assembly (GAP #5: Include global lessons)
+      const globalLessonsBlock =
+        globalLessons.length > 0
+          ? `\n\n[COLLECTIVE_SWARM_INTELLIGENCE]:\nThese are system-wide lessons learned across ALL sessions. Apply them universally:\n${globalLessons.map((l) => `- ${l}`).join('\n')}\n`
+          : '';
+
       let contextPrompt = this.systemPrompt;
       if (recoveryContext) contextPrompt += recoveryContext;
       contextPrompt += `\n\n${AgentContext.getMemoryIndexBlock(distilled, lessons.length, preferences.items.length)}`;
       contextPrompt += `\n\n[INTELLIGENCE]\n${facts.length > 0 ? facts : 'No persistent knowledge available for this user yet.'}\n\n`;
+      contextPrompt += globalLessonsBlock;
       contextPrompt += `\n\n${AgentContext.getIdentityBlock(
         this.config,
         activeModel ?? SYSTEM.DEFAULT_MODEL,

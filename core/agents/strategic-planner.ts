@@ -138,6 +138,16 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
       logger.warn(`Evolution cooldown active for gap ${gapId}. Aborting.`);
       return { status: 'COOLDOWN_ACTIVE' };
     }
+
+    // 2b. Conflict Detection: Acquire gap lock to prevent race conditions
+    const lockAcquired = await memory.acquireGapLock(gapId, AgentType.STRATEGIC_PLANNER);
+    if (!lockAcquired) {
+      const lockInfo = await memory.getGapLock(gapId);
+      logger.warn(
+        `Gap ${gapId} is locked by ${lockInfo?.content ?? 'unknown'}. Skipping to prevent conflict.`
+      );
+      return { status: 'GAP_LOCKED', lockedBy: lockInfo?.content };
+    }
   }
 
   // 3. Process with High Reasoning

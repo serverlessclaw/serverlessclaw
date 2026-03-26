@@ -143,6 +143,79 @@ export async function getLessons(base: BaseMemoryProvider, userId: string): Prom
   return queryLatestContentByUserId(base, `LESSON#${normalizedUserId}`, 10);
 }
 
+// =============================================================================
+// GAP #5 FIX: Cross-Session Knowledge — Global Lessons Namespace
+// =============================================================================
+
+const GLOBAL_LESSON_PREFIX = 'SYSTEM_LESSON#';
+
+/**
+ * Adds a system-wide lesson that benefits ALL users and sessions.
+ * These are discovered during cross-session analysis and represent
+ * universal truths the swarm has learned.
+ *
+ * @param base - The base memory provider instance.
+ * @param lesson - The lesson content (should not contain PII).
+ * @param metadata - Optional insight metadata.
+ * @returns The timestamp of the recorded global lesson.
+ */
+export async function addGlobalLesson(
+  base: BaseMemoryProvider,
+  lesson: string,
+  metadata?: Partial<InsightMetadata>
+): Promise<number> {
+  const { expiresAt } = await RetentionManager.getExpiresAt('LESSON', '');
+  const timestamp = Date.now();
+  await base.putItem({
+    userId: `${GLOBAL_LESSON_PREFIX}${timestamp}`,
+    timestamp,
+    type: 'SYSTEM_LESSON',
+    expiresAt,
+    content: filterPII(lesson),
+    metadata: createMetadata(
+      {
+        category: InsightCategory.SYSTEM_KNOWLEDGE,
+        confidence: metadata?.confidence ?? 8,
+        impact: metadata?.impact ?? 7,
+        complexity: metadata?.complexity ?? 3,
+        risk: metadata?.risk ?? 2,
+        urgency: metadata?.urgency ?? 5,
+        priority: metadata?.priority ?? 6,
+      },
+      timestamp
+    ),
+  });
+  return timestamp;
+}
+
+/**
+ * Retrieves system-wide lessons for injection into agent prompts.
+ * These lessons apply to ALL users and represent the swarm's collective intelligence.
+ *
+ * @param base - The base memory provider instance.
+ * @param limit - Maximum number of global lessons to return.
+ * @returns An array of global lesson content strings.
+ */
+export async function getGlobalLessons(
+  base: BaseMemoryProvider,
+  limit: number = 10
+): Promise<string[]> {
+  const items = await base.queryItems({
+    IndexName: 'TypeTimestampIndex',
+    KeyConditionExpression: '#type = :type',
+    ExpressionAttributeNames: {
+      '#type': 'type',
+    },
+    ExpressionAttributeValues: {
+      ':type': 'SYSTEM_LESSON',
+    },
+    ScanIndexForward: false,
+    Limit: limit,
+  });
+
+  return items.map((item) => item.content as string).filter(Boolean);
+}
+
 /**
  * Adds a new granular memory item into the user or global scope.
  *
@@ -430,4 +503,97 @@ export async function getFailurePatterns(
     limit
   );
   return items;
+}
+
+// =============================================================================
+// GAP #2 FIX: FAILED_PLANS# — Negative Memory Tier
+// =============================================================================
+
+/**
+ * Records a failed strategic plan so the swarm learns what NOT to do.
+ * Prevents the planner from retrying structurally identical failed approaches.
+ *
+ * @param base - The base memory provider instance.
+ * @param planHash - A hash or summary of the failed plan for deduplication.
+ * @param planContent - The full plan text that failed.
+ * @param gapIds - The gap IDs this plan was meant to address.
+ * @param failureReason - Why the plan failed (build error, QA rejection, etc.).
+ * @param metadata - Optional insight metadata.
+ * @returns The timestamp of the recorded failed plan.
+ */
+export async function recordFailedPlan(
+  base: BaseMemoryProvider,
+  planHash: string,
+  planContent: string,
+  gapIds: string[],
+  failureReason: string,
+  metadata?: Partial<InsightMetadata>
+): Promise<number> {
+  const { expiresAt } = await RetentionManager.getExpiresAt('MEMORY', '');
+  const timestamp = Date.now();
+  const content = JSON.stringify({
+    planHash,
+    planSummary: planContent.substring(0, 500),
+    gapIds,
+    failureReason,
+    planLength: planContent.length,
+  });
+
+  await base.putItem({
+    userId: `FAILED_PLAN#${planHash}`,
+    timestamp,
+    type: 'FAILED_PLAN',
+    expiresAt,
+    content,
+    metadata: createMetadata(
+      {
+        category: InsightCategory.FAILURE_PATTERN,
+        confidence: metadata?.confidence ?? 9,
+        impact: metadata?.impact ?? 8,
+        complexity: metadata?.complexity ?? 5,
+        risk: metadata?.risk ?? 6,
+        urgency: metadata?.urgency ?? 7,
+        priority: metadata?.priority ?? 7,
+      },
+      timestamp
+    ),
+  });
+
+  return timestamp;
+}
+
+/**
+ * Retrieves previously failed plans to inform the planner about anti-patterns.
+ *
+ * @param base - The base memory provider instance.
+ * @param limit - Maximum number of failed plans to return.
+ * @returns An array of failed plan records.
+ */
+export async function getFailedPlans(
+  base: BaseMemoryProvider,
+  limit: number = 10
+): Promise<MemoryInsight[]> {
+  const items = await base.queryItems({
+    IndexName: 'TypeTimestampIndex',
+    KeyConditionExpression: '#type = :type',
+    ExpressionAttributeNames: {
+      '#type': 'type',
+    },
+    ExpressionAttributeValues: {
+      ':type': 'FAILED_PLAN',
+    },
+    ScanIndexForward: false,
+    Limit: limit,
+  });
+
+  return items.map((item) => ({
+    id: item.userId as string,
+    content: item.content as string,
+    timestamp: item.timestamp as number,
+    metadata: createMetadata(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (item.metadata as any) ?? { category: InsightCategory.FAILURE_PATTERN },
+      item.timestamp as number
+    ),
+  }));
 }

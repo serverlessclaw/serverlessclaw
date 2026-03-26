@@ -141,6 +141,10 @@ export interface IKnowledgeStore {
   ): Promise<number>;
   /** Retrieves failure patterns relevant to the given context. */
   getFailurePatterns(scopeId: string, context?: string, limit?: number): Promise<MemoryInsight[]>;
+  /** Adds a system-wide lesson that benefits ALL users and sessions. */
+  addGlobalLesson(lesson: string, metadata?: Partial<InsightMetadata>): Promise<number>;
+  /** Retrieves system-wide lessons for injection into agent prompts. */
+  getGlobalLessons(limit?: number): Promise<string[]>;
 }
 
 /**
@@ -155,6 +159,24 @@ export interface IGapManager {
   updateGapStatus(gapId: string, status: string): Promise<void>;
   /** Archives stale gaps older than specified days. Returns count of archived gaps. */
   archiveStaleGaps(staleDays?: number): Promise<number>;
+  /** Atomically increments the attempt counter on a capability gap. */
+  incrementGapAttemptCount(gapId: string): Promise<number>;
+  /** Acquires a lock on a gap to prevent concurrent modification by multiple agents. */
+  acquireGapLock(gapId: string, agentId: string, ttlMs?: number): Promise<boolean>;
+  /** Releases a gap lock after work is complete. */
+  releaseGapLock(gapId: string, agentId: string): Promise<void>;
+  /** Checks if a gap is currently locked and returns the lock holder info. */
+  getGapLock(gapId: string): Promise<{ content: string; expiresAt: number } | null>;
+  /** Records a failed strategic plan so the swarm learns anti-patterns. */
+  recordFailedPlan(
+    planHash: string,
+    planContent: string,
+    gapIds: string[],
+    failureReason: string,
+    metadata?: Partial<InsightMetadata>
+  ): Promise<number>;
+  /** Retrieves previously failed plans to inform the planner about what NOT to do. */
+  getFailedPlans(limit?: number): Promise<MemoryInsight[]>;
 }
 
 /**

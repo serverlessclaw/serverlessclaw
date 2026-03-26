@@ -118,6 +118,7 @@ describe('Agent Evolution Flow', () => {
       getHistory: vi.fn().mockResolvedValue([]),
       getDistilledMemory: vi.fn().mockResolvedValue(''),
       getLessons: vi.fn().mockResolvedValue([]),
+      getGlobalLessons: vi.fn().mockResolvedValue([]),
       addMessage: vi.fn().mockResolvedValue(undefined),
       updateDistilledMemory: vi.fn().mockResolvedValue(undefined),
       searchInsights: vi.fn().mockResolvedValue([]),

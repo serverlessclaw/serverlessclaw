@@ -14,6 +14,12 @@ import type { BaseMemoryProvider } from './base';
 import { createMetadata } from './utils';
 
 /**
+ * Default gap lock TTL in milliseconds (30 minutes).
+ * Prevents race conditions when multiple planners/coders work on the same gap.
+ */
+const GAP_LOCK_TTL_MS = 30 * 60 * 1000;
+
+/**
  * Retrieves all capability gaps filtered by status.
  *
  * @param base - The base memory provider instance.
@@ -287,5 +293,123 @@ export async function updateGapStatus(
     } else {
       logger.error(`Error updating gap ${gapId} status:`, error);
     }
+  }
+}
+
+// =============================================================================
+// GAP #1 FIX: Conflict Detection — Gap-Level Locking
+// =============================================================================
+
+/**
+ * Attempts to acquire a lock on a gap to prevent race conditions
+ * when multiple planners or coders try to work on the same gap simultaneously.
+ *
+ * @param base - The base memory provider instance.
+ * @param gapId - The gap ID to lock.
+ * @param agentId - The agent requesting the lock.
+ * @param ttlMs - Lock time-to-live in milliseconds (default: 30 minutes).
+ * @returns A promise resolving to true if the lock was acquired, false if already locked.
+ */
+export async function acquireGapLock(
+  base: BaseMemoryProvider,
+  gapId: string,
+  agentId: string,
+  ttlMs: number = GAP_LOCK_TTL_MS
+): Promise<boolean> {
+  const lockKey = `GAP_LOCK#${gapId.replace(/^(GAP#)+/, '')}`;
+  const now = Date.now();
+  const expiresAt = now + ttlMs;
+
+  try {
+    // Try to atomically acquire the lock — fails if it already exists and isn't expired
+    await base.putItem({
+      userId: lockKey,
+      timestamp: now,
+      type: 'GAP_LOCK',
+      content: agentId,
+      status: 'LOCKED',
+      expiresAt: Math.floor(expiresAt / 1000), // DynamoDB TTL uses seconds
+      metadata: createMetadata({ category: 'system_knowledge' as InsightCategory }),
+    });
+    logger.info(`Gap lock acquired: ${gapId} by ${agentId}`);
+    return true;
+  } catch {
+    // Lock might already exist — check if it's expired
+    const existing = await getGapLock(base, gapId);
+    if (!existing || existing.expiresAt * 1000 < now) {
+      // Lock expired, try again
+      try {
+        await base.putItem({
+          userId: lockKey,
+          timestamp: now,
+          type: 'GAP_LOCK',
+          content: agentId,
+          status: 'LOCKED',
+          expiresAt: Math.floor(expiresAt / 1000),
+          metadata: createMetadata({ category: 'system_knowledge' as InsightCategory }),
+        });
+        logger.info(`Gap lock acquired (after expiry): ${gapId} by ${agentId}`);
+        return true;
+      } catch {
+        logger.warn(`Failed to acquire gap lock for ${gapId} (double race).`);
+        return false;
+      }
+    }
+    logger.info(`Gap ${gapId} is already locked by ${existing.content}`);
+    return false;
+  }
+}
+
+/**
+ * Releases a gap lock after work is complete.
+ *
+ * @param base - The base memory provider instance.
+ * @param gapId - The gap ID to unlock.
+ * @param agentId - The agent releasing the lock (must match the lock holder).
+ */
+export async function releaseGapLock(
+  base: BaseMemoryProvider,
+  gapId: string,
+  agentId: string
+): Promise<void> {
+  const lockKey = `GAP_LOCK#${gapId.replace(/^(GAP#)+/, '')}`;
+  try {
+    await base.deleteItem({
+      userId: lockKey,
+      timestamp: 0,
+    });
+    logger.info(`Gap lock released: ${gapId} by ${agentId}`);
+  } catch (e) {
+    logger.warn(`Failed to release gap lock for ${gapId}:`, e);
+  }
+}
+
+/**
+ * Checks if a gap is currently locked and returns the lock holder info.
+ *
+ * @param base - The base memory provider instance.
+ * @param gapId - The gap ID to check.
+ * @returns The lock record if active, or null if unlocked.
+ */
+export async function getGapLock(
+  base: BaseMemoryProvider,
+  gapId: string
+): Promise<{ content: string; expiresAt: number } | null> {
+  const lockKey = `GAP_LOCK#${gapId.replace(/^(GAP#)+/, '')}`;
+  try {
+    const items = await base.queryItems({
+      KeyConditionExpression: 'userId = :lockKey',
+      ExpressionAttributeValues: {
+        ':lockKey': lockKey,
+      },
+    });
+    if (items.length === 0) return null;
+    const lock = items[0];
+    return {
+      content: lock.content as string,
+      expiresAt: (lock.expiresAt as number) ?? 0,
+    };
+  } catch {
+    return null;
   }
 }
