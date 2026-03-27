@@ -46,7 +46,7 @@ export const handler = async (_event?: { detail: Record<string, unknown> }): Pro
 
     logger.info('System is healthy (Deep Check PASSED). No action needed.');
     const { emitMetrics, METRICS } = await import('../lib/metrics');
-    emitMetrics([METRICS.mcpHubPing(true, 0)]).catch(() => {});
+    emitMetrics([METRICS.mcpHubPing({ success: true, latencyMs: 0 })]).catch(() => {});
     return;
   } catch (error) {
     logger.error(`System health check FAILED: ${formatErrorMessage(error)}`);

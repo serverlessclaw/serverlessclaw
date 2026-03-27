@@ -81,7 +81,7 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
     if (status === BuildStatus.SUCCEEDED) {
       logger.info(`Build ${buildId} SUCCEEDED. Marking ${gapIds.length} gaps as DEPLOYED.`);
       const { emitMetrics, METRICS } = await import('../lib/metrics');
-      emitMetrics([METRICS.deploymentCompleted(true)]).catch((err) =>
+      emitMetrics([METRICS.deploymentCompleted({ success: true })]).catch((err) =>
         logger.warn('Metrics emission failed after build success:', err)
       );
 
@@ -137,7 +137,7 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
     ) {
       logger.info(`Build ${buildId} ${status}. Marking ${gapIds.length} gaps as FAILED.`);
       const { emitMetrics, METRICS } = await import('../lib/metrics');
-      emitMetrics([METRICS.deploymentCompleted(false)]).catch((err) =>
+      emitMetrics([METRICS.deploymentCompleted({ success: false })]).catch((err) =>
         logger.warn('Metrics emission failed after build failure:', err)
       );
 

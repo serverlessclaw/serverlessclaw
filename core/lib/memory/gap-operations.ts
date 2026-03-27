@@ -11,7 +11,7 @@ import { logger } from '../logger';
 import { RetentionManager } from './tiering';
 import { LIMITS, TIME } from '../constants';
 import type { BaseMemoryProvider } from './base';
-import { createMetadata } from './utils';
+import { createMetadata, queryByTypeAndMap } from './utils';
 
 /**
  * Default gap lock TTL in milliseconds (30 minutes).
@@ -31,30 +31,9 @@ export async function getAllGaps(
   base: BaseMemoryProvider,
   status: GapStatus = GapStatus.OPEN
 ): Promise<MemoryInsight[]> {
-  const items = await base.queryItems({
-    IndexName: 'TypeTimestampIndex',
-    KeyConditionExpression: '#type = :type',
-    FilterExpression: '#status = :status',
-    ExpressionAttributeNames: {
-      '#type': 'type',
-      '#status': 'status',
-    },
-    ExpressionAttributeValues: {
-      ':type': 'GAP',
-      ':status': status,
-    },
+  return queryByTypeAndMap(base, 'GAP', InsightCategory.STRATEGIC_GAP, 100, '#status = :status', {
+    ':status': status,
   });
-
-  return items.map((item) => ({
-    id: item.userId as string,
-    content: item.content as string,
-    timestamp: item.timestamp as number,
-    metadata: createMetadata(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (item.metadata as any) ?? { category: InsightCategory.STRATEGIC_GAP },
-      item.timestamp as number
-    ),
-  }));
 }
 
 /**

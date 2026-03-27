@@ -1,4 +1,4 @@
-import { InsightMetadata, InsightCategory } from '../types/index';
+import { InsightMetadata, InsightCategory, MemoryInsight } from '../types/index';
 import type { BaseMemoryProvider } from './base';
 
 /**
@@ -134,4 +134,86 @@ export async function queryLatestContentByUserId(
   });
 
   return items.map((item) => item.content as string);
+}
+
+/**
+ * Query items by type using the TypeTimestampIndex GSI and return content strings.
+ * Consolidates the common pattern used by getGlobalLessons, getFailedPlans, etc.
+ *
+ * @param base - The base memory provider instance.
+ * @param type - The memory type string (e.g., 'SYSTEM_LESSON', 'FAILED_PLAN').
+ * @param limit - Maximum number of items to return.
+ * @returns A promise resolving to an array of content strings.
+ */
+export async function queryByTypeAndGetContent(
+  base: BaseMemoryProvider,
+  type: string,
+  limit: number = 10
+): Promise<string[]> {
+  const items = await base.queryItems({
+    IndexName: 'TypeTimestampIndex',
+    KeyConditionExpression: '#type = :type',
+    ExpressionAttributeNames: {
+      '#type': 'type',
+    },
+    ExpressionAttributeValues: {
+      ':type': type,
+    },
+    ScanIndexForward: false,
+    Limit: limit,
+  });
+
+  return items.map((item) => item.content as string).filter(Boolean);
+}
+
+/**
+ * Query items by type using the TypeTimestampIndex GSI and map to MemoryInsight.
+ * Consolidates the common pattern used by getAllGaps, getFailedPlans, getGlobalLessons, etc.
+ *
+ * @param base - The base memory provider instance.
+ * @param type - The memory type string (e.g., 'GAP', 'SYSTEM_LESSON', 'FAILED_PLAN').
+ * @param defaultCategory - The default InsightCategory for metadata creation.
+ * @param limit - Maximum number of items to return.
+ * @param filterExpression - Optional additional filter expression.
+ * @param expressionAttributeValues - Optional additional expression attribute values for the filter.
+ * @returns A promise resolving to an array of MemoryInsight objects.
+ */
+export async function queryByTypeAndMap(
+  base: BaseMemoryProvider,
+  type: string,
+  defaultCategory: InsightCategory,
+  limit: number = 100,
+  filterExpression?: string,
+  expressionAttributeValues?: Record<string, unknown>
+): Promise<MemoryInsight[]> {
+  const params: Record<string, unknown> = {
+    IndexName: 'TypeTimestampIndex',
+    KeyConditionExpression: '#type = :type',
+    ExpressionAttributeNames: {
+      '#type': 'type',
+    },
+    ExpressionAttributeValues: {
+      ':type': type,
+      ...expressionAttributeValues,
+    },
+    ScanIndexForward: false,
+    Limit: limit,
+  };
+
+  if (filterExpression) {
+    params.FilterExpression = filterExpression;
+  }
+
+  const items = await base.queryItems(params);
+
+  return items.map((item) => ({
+    id: item.userId as string,
+    content: item.content as string,
+    timestamp: item.timestamp as number,
+    metadata: createMetadata(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (item.metadata as any) ?? { category: defaultCategory },
+      item.timestamp as number
+    ),
+  }));
 }

@@ -119,12 +119,12 @@ export const METRICS = {
     };
   },
 
-  mcpHubPing(success: boolean, _latencyMs: number): MetricDatum {
+  mcpHubPing(opts: { success: boolean; latencyMs?: number }): MetricDatum {
     return {
       MetricName: 'MCPHubPing',
-      Value: success ? 1 : 0,
+      Value: opts.success ? 1 : 0,
       Unit: 'Count',
-      Dimensions: [{ Name: 'Success', Value: String(success) }],
+      Dimensions: [{ Name: 'Success', Value: String(opts.success) }],
     };
   },
 
@@ -170,12 +170,12 @@ export const METRICS = {
     };
   },
 
-  deploymentCompleted(success: boolean): MetricDatum {
+  deploymentCompleted(opts: { success: boolean }): MetricDatum {
     return {
       MetricName: 'DeploymentCompleted',
       Value: 1,
       Unit: 'Count',
-      Dimensions: [{ Name: 'Success', Value: String(success) }],
+      Dimensions: [{ Name: 'Success', Value: String(opts.success) }],
     };
   },
 

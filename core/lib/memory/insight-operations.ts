@@ -9,7 +9,12 @@ import { MemoryInsight, InsightMetadata, InsightCategory } from '../types/memory
 import { RetentionManager } from './tiering';
 import type { BaseMemoryProvider } from './base';
 import { filterPII } from '../utils/pii';
-import { createMetadata, queryLatestContentByUserId } from './utils';
+import {
+  createMetadata,
+  queryLatestContentByUserId,
+  queryByTypeAndGetContent,
+  queryByTypeAndMap,
+} from './utils';
 import { ScanCommand } from '@aws-sdk/lib-dynamodb';
 
 /**
@@ -200,20 +205,7 @@ export async function getGlobalLessons(
   base: BaseMemoryProvider,
   limit: number = 10
 ): Promise<string[]> {
-  const items = await base.queryItems({
-    IndexName: 'TypeTimestampIndex',
-    KeyConditionExpression: '#type = :type',
-    ExpressionAttributeNames: {
-      '#type': 'type',
-    },
-    ExpressionAttributeValues: {
-      ':type': 'SYSTEM_LESSON',
-    },
-    ScanIndexForward: false,
-    Limit: limit,
-  });
-
-  return items.map((item) => item.content as string).filter(Boolean);
+  return queryByTypeAndGetContent(base, 'SYSTEM_LESSON', limit);
 }
 
 /**
@@ -573,27 +565,5 @@ export async function getFailedPlans(
   base: BaseMemoryProvider,
   limit: number = 10
 ): Promise<MemoryInsight[]> {
-  const items = await base.queryItems({
-    IndexName: 'TypeTimestampIndex',
-    KeyConditionExpression: '#type = :type',
-    ExpressionAttributeNames: {
-      '#type': 'type',
-    },
-    ExpressionAttributeValues: {
-      ':type': 'FAILED_PLAN',
-    },
-    ScanIndexForward: false,
-    Limit: limit,
-  });
-
-  return items.map((item) => ({
-    id: item.userId as string,
-    content: item.content as string,
-    timestamp: item.timestamp as number,
-    metadata: createMetadata(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (item.metadata as any) ?? { category: InsightCategory.FAILURE_PATTERN },
-      item.timestamp as number
-    ),
-  }));
+  return queryByTypeAndMap(base, 'FAILED_PLAN', InsightCategory.FAILURE_PATTERN, limit);
 }
