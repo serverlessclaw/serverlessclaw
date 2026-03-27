@@ -2,44 +2,24 @@
  * @module PrioritizeAPI
  * API for manually adjusting the impact, urgency, and priority of identified system gaps.
  */
-import { NextRequest, NextResponse } from 'next/server';
-export const dynamic = 'force-dynamic';
+import { withApiHandler, requireFields } from '@/lib/api-handler';
 import { DynamoMemory } from '@claw/core/lib/memory';
-import { HTTP_STATUS } from '@/lib/constants';
+
+export const dynamic = 'force-dynamic';
 
 /**
  * POST handler for prioritizing memory insights.
- * Updates the metadata (priority, urgency, impact) for a specific memory insight.
- * 
- * @param req - The incoming NextRequest containing the update parameters.
- * @returns A promise that resolves to a NextResponse indicating success or failure.
  */
-export async function POST(req: NextRequest): Promise<NextResponse> {
-  try {
-    const { userId, timestamp, priority, urgency, impact } = await req.json();
+export const POST = withApiHandler(async (body) => {
+  requireFields(body, 'userId', 'timestamp');
 
-    if (!userId || !timestamp) {
-      return NextResponse.json(
-        { error: 'Missing required parameters: userId and timestamp are mandatory.' }, 
-        { status: HTTP_STATUS.BAD_REQUEST }
-      );
-    }
+  const memory = new DynamoMemory();
 
-    const memory = new DynamoMemory();
-    
-    // Update metadata
-    await memory.updateInsightMetadata(userId, timestamp, {
-      priority: typeof priority === 'number' ? (priority as number) : undefined,
-      urgency: typeof urgency === 'number' ? (urgency as number) : undefined,
-      impact: typeof impact === 'number' ? (impact as number) : undefined,
-    });
+  await memory.updateInsightMetadata(body.userId as string, body.timestamp as number, {
+    priority: typeof body.priority === 'number' ? body.priority : undefined,
+    urgency: typeof body.urgency === 'number' ? body.urgency : undefined,
+    impact: typeof body.impact === 'number' ? body.impact : undefined,
+  });
 
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Prioritize API Error:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) },
-      { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
-    );
-  }
-}
+  return { success: true };
+});
