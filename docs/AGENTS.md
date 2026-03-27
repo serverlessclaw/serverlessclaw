@@ -199,6 +199,49 @@ The Council uses `agent_guided` aggregation with a prompt that synthesizes all t
 | `evolution_mode = HITL` | Council + Human Approval |
 | Any Critical finding | Auto-REJECT → back to Planner |
 
+### Multi-Party Collaboration (Shared Sessions)
+
+For complex tasks that require negotiation, peer review, or iterative brainstorming between multiple agents (and humans), the system provides a **Shared Collaboration Session** model. Unlike the default transactional handoff, this model allows all participants to share a persistent conversation history.
+
+#### Roles and Responsibilities
+- **Owner (Moderator)**: The agent that created the session. Responsible for driving consensus, extracting the final structured result, and closing the session.
+- **Participant**: An agent or human invited to the session. Can read history and append messages.
+
+#### Flow
+
+```text
+Initiator (Planner)     Collaboration Tool      AgentBus (EB)       Sub-Agents (xN)      Shared Session (DDB)
+      |                      |                      |                      |                    |
+      +-- createCollab ----->|                      |                      |                    |
+      |   (Owner: Planner) --+----------------------+----------------------+------------------->|
+      |                      |                      |                      |             [INIT shared#collab#ID]
+      |                      |                      |                      |                    |
+      +-- inviteParticipant -+----------------------+----------------------+------------------->|
+      |   (Agent: Coder) ----+                      |                      |             [ADD Participant]
+      |                      |                      |                      |                    |
+      +-- writeToCollab -----+----------------------+----------------------+------------------->|
+      |   (Initial Prompt) --+                      |                      |             [ADD Message]
+      |                      |                      |                      |                    |
+      |                      |             [ AS AGENTS ARE NOTIFIED ]      |                    |
+      |                      |                      |<--- TASK_EVENT ------+                    |
+      |                      |                      | (collabId)           |                    |
+      |                      |                      |                      +-- joinCollab ----->|
+      |                      |                      |                      |                    |
+      |                      |                      |                      +-- getHistory <-----+
+      |                      |                      |                      |                    |
+      |                      |                      |                      +-- writeResult ---->|
+      |                      |                      |                      |                    |
+      |             [ ITERATIVE DISCUSSION ]        |                      |                    |
+      |                      |                      |                      |                    |
+      +-- closeCollab <------+----------------------+----------------------+--------------------+
+          (Final decision)                                                               [ARCHIVE Session]
+```
+
+#### When to use
+- **Council of Agents**: Shared discussion between Security, Performance, and Architect critics.
+- **Human-in-the-loop Debugging**: Real-time collaboration between a human and multiple specialized agents.
+- **Ambiguity Resolution**: When a task is too complex for a single transactional exchange.
+
 ### Granular HITL Tool Approval (Tool-level Gates)
 
 For security-sensitive operations (e.g., deleting data, triggering deployments), tools can be marked with `requiresApproval: true`. The `AgentExecutor` automatically pauses before executing such tools, allowing for granular human oversight without pausing the entire session.

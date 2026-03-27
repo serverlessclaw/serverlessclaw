@@ -176,6 +176,17 @@ async markAsCompleted(userId, traceId, status) {
 
 This ensures that regardless of network latency or Lambda execution timing, exactly **one** completion event is ever emitted for a parallel dispatch.
 
+## Shared Collaboration Session Concurrency
+
+The **Multi-Party Collaboration** system uses a shared conversation key (`shared#collab#<collaborationId>`) to enable multiple agents to participate in a single session.
+
+### Write Concurrency
+Since multiple agents may attempt to write to the same session simultaneously, the system uses **Atomic Records** and **Conditional Writes** in DynamoDB to ensure data integrity:
+
+- **Atomic Records**: Every message is stored as a separate DynamoDB item with a unique timestamp as the sort key. This prevents "clobbering" of messages even if two agents write at the exact same millisecond.
+- **Participant Registry**: The `Collaboration` metadata record is protected via conditional updates (`attribute_not_exists` or `version` checks), ensuring that participant management and status changes are thread-safe.
+- **Turn-Taking**: While the storage is concurrent-safe, agents follow a turn-taking pattern guided by the `Owner` of the session to prevent infinite loops and ensure high-signal coordination.
+
 ## Comparison: Lock vs Queue vs Parallel
 
 | Parameter                 | Default         | Description                    |

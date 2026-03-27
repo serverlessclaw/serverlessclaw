@@ -44,8 +44,8 @@ describe('Collaboration Tools', () => {
     };
     mockMemory.createCollaboration.mockResolvedValue(collab);
 
-    const result = await CREATE_COLLABORATION.execute({ name: 'Test' });
-    const parsed = JSON.parse(result);
+    const result = await CREATE_COLLABORATION.execute({ name: 'Test', agentId: 'test-agent' });
+    const parsed = JSON.parse(result as string);
 
     expect(parsed.success).toBe(true);
     expect(parsed.collaborationId).toBe('c1');
@@ -63,8 +63,11 @@ describe('Collaboration Tools', () => {
     };
     mockMemory.getCollaboration.mockResolvedValue(collab);
 
-    const result = await JOIN_COLLABORATION.execute({ collaborationId: 'c1' });
-    const parsed = JSON.parse(result);
+    const result = await JOIN_COLLABORATION.execute({
+      collaborationId: 'c1',
+      agentId: 'test-agent',
+    });
+    const parsed = JSON.parse(result as string);
 
     expect(parsed.success).toBe(true);
     expect(mockMemory.getCollaboration).toHaveBeenCalledWith('c1');
@@ -77,8 +80,11 @@ describe('Collaboration Tools', () => {
     };
     mockMemory.getCollaboration.mockResolvedValue(collab);
 
-    const result = await JOIN_COLLABORATION.execute({ collaborationId: 'c1' });
-    const parsed = JSON.parse(result);
+    const result = await JOIN_COLLABORATION.execute({
+      collaborationId: 'c1',
+      agentId: 'test-agent',
+    });
+    const parsed = JSON.parse(result as string);
 
     expect(parsed.success).toBe(false);
     expect(parsed.error).toContain('Not a participant');
@@ -91,7 +97,7 @@ describe('Collaboration Tools', () => {
     mockMemory.getHistory.mockResolvedValue([{ role: 'user', content: 'hi', timestamp: 123 }]);
 
     const result = await GET_COLLABORATION_CONTEXT.execute({ collaborationId: 'c1' });
-    const parsed = JSON.parse(result);
+    const parsed = JSON.parse(result as string);
 
     expect(parsed.success).toBe(true);
     expect(parsed.messages).toHaveLength(1);
@@ -107,7 +113,7 @@ describe('Collaboration Tools', () => {
       collaborationId: 'c1',
       content: 'hello',
     });
-    const parsed = JSON.parse(result);
+    const parsed = JSON.parse(result as string);
 
     expect(parsed.success).toBe(true);
     expect(mockMemory.addMessage).toHaveBeenCalledWith(
@@ -119,8 +125,8 @@ describe('Collaboration Tools', () => {
   it('LIST_MY_COLLABORATIONS should list collaborations', async () => {
     mockMemory.listCollaborationsForParticipant.mockResolvedValue([{ collaborationId: 'c1' }]);
 
-    const result = await LIST_MY_COLLABORATIONS.execute({});
-    const parsed = JSON.parse(result);
+    const result = await LIST_MY_COLLABORATIONS.execute({ agentId: 'test-agent' });
+    const parsed = JSON.parse(result as string);
 
     expect(parsed.success).toBe(true);
     expect(parsed.collaborations).toHaveLength(1);
