@@ -5,6 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { HTTP_STATUS } from './constants';
 
 /** Standard API error response shape. */
@@ -114,4 +115,30 @@ export function requireEnum<T extends string>(
       HTTP_STATUS.BAD_REQUEST
     );
   }
+}
+
+/**
+ * Validates a request body against a Zod schema.
+ * Throws ApiError(400) with detailed validation errors if parsing fails.
+ *
+ * @param body - The raw request body.
+ * @param schema - The Zod schema to validate against.
+ * @returns The parsed and validated body with correct types.
+ * @throws {ApiError} If validation fails.
+ *
+ * @example
+ * ```ts
+ * const body = validateBody(rawBody, z.object({ gapId: z.string(), status: z.string() }));
+ * // body.gapId is now typed as string
+ * ```
+ */
+export function validateBody<T extends z.ZodType>(body: unknown, schema: T): z.infer<T> {
+  const result = schema.safeParse(body);
+  if (!result.success) {
+    const issues = result.error.issues
+      .map((i) => `${i.path.join('.')}: ${i.message}`)
+      .join('; ');
+    throw new ApiError(`Validation failed: ${issues}`, HTTP_STATUS.BAD_REQUEST);
+  }
+  return result.data;
 }

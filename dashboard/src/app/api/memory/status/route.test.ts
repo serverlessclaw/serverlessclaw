@@ -49,7 +49,7 @@ describe('Dashboard API: /api/memory/status', () => {
     const data = await res.json();
 
     expect(res.status).toBe(400);
-    expect(data.error).toContain('Missing required parameters');
+    expect(data.error).toContain('Validation failed');
   });
 
   it('should return 400 if status is invalid', async () => {
@@ -61,7 +61,8 @@ describe('Dashboard API: /api/memory/status', () => {
     const data = await res.json();
 
     expect(res.status).toBe(400);
-    expect(data.error).toContain('Invalid status');
+    expect(data.error).toContain('Validation failed');
+    expect(data.error).toContain('status');
   });
 
   it('should return 200 and call updateGapStatus if request is valid', async () => {

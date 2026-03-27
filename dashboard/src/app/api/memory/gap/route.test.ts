@@ -28,7 +28,7 @@ describe('Memory Gap API Route', () => {
     const data = await res.json();
 
     expect(res.status).toBe(400);
-    expect(data.error).toContain('Missing required parameter');
+    expect(data.error).toContain('Validation failed');
   });
 
   it('creates gap and returns success with gapId', async () => {

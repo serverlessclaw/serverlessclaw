@@ -28,7 +28,7 @@ describe('Memory Prioritize API Route', () => {
     const data = await res.json();
 
     expect(res.status).toBe(400);
-    expect(data.error).toContain('Missing required parameters');
+    expect(data.error).toContain('Validation failed');
   });
 
   it('returns 400 if timestamp is missing', async () => {
@@ -41,7 +41,7 @@ describe('Memory Prioritize API Route', () => {
     const data = await res.json();
 
     expect(res.status).toBe(400);
-    expect(data.error).toContain('Missing required parameters');
+    expect(data.error).toContain('Validation failed');
   });
 
   it('updates metadata and returns success', async () => {
@@ -62,20 +62,17 @@ describe('Memory Prioritize API Route', () => {
     });
   });
 
-  it('filters out non-number metadata values', async () => {
+  it('returns 400 if priority is not a number', async () => {
     const { POST } = await import('./route');
     const req = new NextRequest('http://localhost/api/memory/prioritize', {
       method: 'POST',
-      body: JSON.stringify({ userId: 'user1', timestamp: 12345, priority: 'high', urgency: null }),
+      body: JSON.stringify({ userId: 'user1', timestamp: 12345, priority: 'high' }),
     });
     const res = await POST(req);
+    const data = await res.json();
 
-    expect(res.status).toBe(200);
-    expect(mockUpdateInsightMetadata).toHaveBeenCalledWith('user1', 12345, {
-      priority: undefined,
-      urgency: undefined,
-      impact: undefined,
-    });
+    expect(res.status).toBe(400);
+    expect(data.error).toContain('Validation failed');
   });
 
   it('returns 500 on memory error', async () => {
