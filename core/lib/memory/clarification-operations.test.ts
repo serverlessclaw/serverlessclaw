@@ -38,10 +38,15 @@ describe('clarification-operations', () => {
       const state = {
         traceId: 'trace-123',
         agentId: 'coder-agent',
+        initiatorId: 'superclaw',
         question: 'What should I do?',
         originalTask: 'Fix the bug',
         userId: 'user123',
+        depth: 1,
+        sessionId: 'session-123',
         status: ClarificationStatus.PENDING,
+        createdAt: Date.now(),
+        retryCount: 0,
       };
 
       await saveClarificationRequest(mockBase, state);
@@ -60,10 +65,14 @@ describe('clarification-operations', () => {
       const state = {
         traceId: 'trace-123',
         agentId: 'coder-agent',
+        initiatorId: 'superclaw',
         question: 'Test',
         originalTask: 'Task',
         userId: 'user123',
+        depth: 1,
         status: ClarificationStatus.PENDING,
+        createdAt: Date.now(),
+        retryCount: 0,
       };
 
       await saveClarificationRequest(mockBase, state);

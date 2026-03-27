@@ -15,6 +15,7 @@ import {
   getSummary,
   updateSummary,
 } from './session-operations';
+import { MessageRole } from '../types/llm';
 import type { BaseMemoryProvider } from './base';
 
 vi.mock('./tiering', () => ({
@@ -60,21 +61,21 @@ describe('session-operations', () => {
 
   describe('addMessage', () => {
     it('should add a message with tiered retention', async () => {
-      const message = { role: 'user', content: 'Hello' };
+      const message = { role: MessageRole.USER, content: 'Hello' };
       await addMessage(mockBase, 'user123', message);
 
       expect(mockBase.putItem).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: 'user123',
           type: 'msg',
-          role: 'user',
+          role: MessageRole.USER,
           content: 'Hello',
         })
       );
     });
 
     it('should filter PII from message', async () => {
-      const message = { role: 'user', content: 'My email is test@example.com' };
+      const message = { role: MessageRole.USER, content: 'My email is test@example.com' };
       await addMessage(mockBase, 'user123', message);
 
       expect(mockBase.putItem).toHaveBeenCalled();
