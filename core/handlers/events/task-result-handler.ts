@@ -1,4 +1,5 @@
 import { EventType, AgentType } from '../../lib/types/index';
+import { DAGExecutionState } from '../../lib/types/dag';
 import {
   COMPLETION_EVENT_SCHEMA,
   FAILURE_EVENT_SCHEMA,
@@ -143,7 +144,7 @@ export async function handleTaskResult(
     userNotified
   );
 
-  // 3. Parallel Dispatch Aggregation
+  // 3. Parallel Dispatch Aggregation & DAG Execution
   // Check if this result is part of a parallel dispatch
   // Only attempt aggregation if the parallel tracking record exists (was initialized via parallel-handler)
   if (traceId) {
@@ -158,6 +159,120 @@ export async function handleTaskResult(
       return;
     }
 
+    // Check if this is a DAG execution with dependencies
+    const metadata = existingState.metadata as Record<string, unknown> | undefined;
+    const isDagExecution = metadata?.hasDependencies === true;
+
+    if (isDagExecution) {
+      // Handle DAG task completion
+      const taskId = (eventDetail.taskId as string) ?? agentId;
+      logger.info(`DAG task ${taskId} completed. Checking for dependent tasks.`);
+
+      // Import DAG executor functions
+      const dagExecutor = await import('../../lib/agent/dag-executor');
+      const { emitTypedEvent } = await import('../../lib/utils/typed-emit');
+      const { EVENT_SCHEMA_MAP } = await import('../../lib/schema/events');
+
+      // Get or reconstruct DAG state from metadata
+      const metadata = existingState.metadata ?? {};
+      let dagState = metadata.dagState as DAGExecutionState | undefined;
+
+      if (!dagState) {
+        logger.warn(`No DAG state found for traceId ${traceId}, reconstructing from tasks.`);
+        // Reconstruct from stored tasks
+        const tasks = (metadata.tasks as any[]) ?? [];
+        dagState = dagExecutor.buildDependencyGraph(tasks);
+      }
+
+      // Mark task as completed or failed
+      if (isFailure) {
+        dagExecutor.failTask(dagState, taskId, response);
+      } else {
+        dagExecutor.completeTask(dagState, taskId, response);
+      }
+
+      // Get next ready tasks
+      const readyTasks = dagExecutor.getReadyTasks(dagState);
+
+      if (readyTasks.length > 0) {
+        logger.info(
+          `DAG: Dispatching ${readyTasks.length} dependent tasks after ${taskId} completion.`
+        );
+
+        // Dispatch ready tasks
+        for (const task of readyTasks) {
+          // Enrich task with dependency context
+          const enrichedTask = dagExecutor.createTaskWithDependencyContext(task, dagState!.outputs);
+
+          // Resolve correct EventType for the agent
+          let detailType: string = `${task.agentId}_task`;
+          if (!EVENT_SCHEMA_MAP[detailType as SchemaEventType]) {
+            detailType = EventType.CODER_TASK;
+          }
+
+          await emitTypedEvent('agent.dag', detailType as SchemaEventType, {
+            userId,
+            taskId: task.taskId,
+            task: enrichedTask,
+            metadata: { ...task.metadata, parallelDispatchId: traceId, dagExecution: true },
+            traceId,
+            initiatorId: existingState.initiatorId ?? 'dag-executor',
+            depth: (depth ?? 0) + 1,
+            sessionId: existingState.sessionId,
+          });
+        }
+      }
+
+      // Check if DAG execution is complete
+      if (dagExecutor.isExecutionComplete(dagState)) {
+        const summary = dagExecutor.getExecutionSummary(dagState);
+        logger.info(
+          `DAG execution complete for ${traceId}: ` +
+            `${summary.completed} completed, ${summary.failed} failed.`
+        );
+
+        // Update aggregator state
+        await aggregator.addResult(userId, traceId, {
+          taskId,
+          agentId,
+          status: isFailure ? 'failed' : 'success',
+          result: response,
+          durationMs: 0,
+        });
+
+        // Mark as completed if all tasks done
+        if (summary.pending === 0 && summary.ready === 0) {
+          const overallStatus = summary.failed > 0 ? 'partial' : 'success';
+          const marked = await aggregator.markAsCompleted(userId, traceId, overallStatus);
+
+          if (marked) {
+            await emitTypedEvent(
+              'events.handler',
+              EventType.PARALLEL_TASK_COMPLETED as unknown as SchemaEventType,
+              {
+                userId,
+                sessionId: existingState.sessionId,
+                traceId,
+                taskId: traceId,
+                initiatorId: existingState.initiatorId,
+                depth,
+                overallStatus,
+                results: existingState.results ?? [],
+                taskCount: existingState.taskCount,
+                completedCount: summary.completed,
+                elapsedMs: 0,
+                aggregationType: existingState.aggregationType,
+                aggregationPrompt: existingState.aggregationPrompt,
+              }
+            );
+          }
+        }
+      }
+
+      return;
+    }
+
+    // Standard parallel dispatch (non-DAG)
     const aggregateState = await aggregator.addResult(userId, traceId, {
       taskId: (eventDetail.taskId as string) ?? agentId,
       agentId,

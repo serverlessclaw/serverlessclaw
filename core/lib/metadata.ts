@@ -162,4 +162,20 @@ export const SYSTEM_CONFIG_METADATA: Record<string, ConfigOptionMetadata> = {
     risk: 'Too low (<2.0) may cause alert fatigue on normal variance.',
     default: '3.0',
   },
+  escalation_enabled: {
+    label: 'Escalation Engine',
+    description: 'Whether multi-level escalation is enabled for clarification requests.',
+    implication:
+      'When enabled, the system uses configurable ladders (Telegram, Dashboard, Email, etc.) before failing a task.',
+    safeguard: 'Falls back to legacy retry behavior if the escalation engine fails.',
+    default: 'true',
+  },
+  protocol_fallback_enabled: {
+    label: 'Protocol Fallback',
+    description: 'Whether protocol fallback (JSON -> Text) is enabled.',
+    implication:
+      'If JSON parsing fails during agent communication, the system automatically retries in Text mode to preserve task continuity.',
+    safeguard: 'Only triggers after a failed JSON parse or provider error.',
+    default: 'true',
+  },
 };

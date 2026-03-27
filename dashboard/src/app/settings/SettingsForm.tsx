@@ -45,6 +45,8 @@ interface SystemConfig {
   minGapsForReview?: string | number;
   recursionLimit?: string | number;
   deployLimit?: string | number;
+  escalationEnabled?: string;
+  protocolFallbackEnabled?: string;
   consecutiveBuildFailures?: number;
 }
 
@@ -82,6 +84,8 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
   const [minGapsForReview, setMinGapsForReview] = useState(config.minGapsForReview ?? '3');
   const [recursionLimit, setRecursionLimit] = useState(config.recursionLimit ?? '50');
   const [deployLimit, setDeployLimit] = useState(config.deployLimit ?? '5');
+  const [escalationEnabled, setEscalationEnabled] = useState(config.escalationEnabled ?? 'true');
+  const [protocolFallbackEnabled, setProtocolFallbackEnabled] = useState(config.protocolFallbackEnabled ?? 'true');
 
   const hasChanges = 
     activeProvider !== config.provider ||
@@ -95,7 +99,9 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
     String(strategicReviewFrequency) !== String(config.strategicReviewFrequency) ||
     String(minGapsForReview) !== String(config.minGapsForReview) ||
     String(recursionLimit) !== String(config.recursionLimit) ||
-    String(deployLimit) !== String(config.deployLimit);
+    String(deployLimit) !== String(config.deployLimit) ||
+    escalationEnabled !== config.escalationEnabled ||
+    protocolFallbackEnabled !== config.protocolFallbackEnabled;
 
   return (
     <>
@@ -260,6 +266,38 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
                   value={recursionLimit}
                   onChange={(e) => setRecursionLimit(e.target.value)}
                   className={`w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-${THEME.COLORS.PRIMARY} transition-colors font-mono`}
+                />
+              </div>
+              <div className="space-y-2">
+                <Typography variant="caption" weight="bold" color="white" uppercase className="flex items-center">
+                  Escalation Engine
+                  <ConfigTooltip id="escalation_enabled" />
+                </Typography>
+                <CyberSelect
+                  name="escalationEnabled"
+                  value={escalationEnabled}
+                  onChange={setEscalationEnabled}
+                  options={[
+                    { value: 'true', label: 'Enabled (Multi-Channel)' },
+                    { value: 'false', label: 'Disabled (Legacy Only)' },
+                  ]}
+                  className="w-full"
+                />
+              </div>
+              <div className="space-y-2">
+                <Typography variant="caption" weight="bold" color="white" uppercase className="flex items-center">
+                  Protocol Fallback
+                  <ConfigTooltip id="protocol_fallback_enabled" />
+                </Typography>
+                <CyberSelect
+                  name="protocolFallbackEnabled"
+                  value={protocolFallbackEnabled}
+                  onChange={setProtocolFallbackEnabled}
+                  options={[
+                    { value: 'true', label: 'Enabled (JSON → Text)' },
+                    { value: 'false', label: 'Disabled (Fail on JSON Error)' },
+                  ]}
+                  className="w-full"
                 />
               </div>
             </div>

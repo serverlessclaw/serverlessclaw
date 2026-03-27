@@ -10,9 +10,12 @@ import { logger } from '../logger';
 import { TIME } from '../constants';
 import type { BaseMemoryProvider } from './base';
 import { ClarificationStatus, ClarificationState } from '../types/memory';
+import { EscalationState } from '../types/escalation';
 
 const CLARIFICATION_PREFIX = 'CLARIFICATION#';
+const ESCALATION_PREFIX = 'ESCALATION#';
 const TTL_BUFFER_SECONDS = 3600; // 1 hour
+const ESCALATION_TTL_BUFFER_SECONDS = 86400; // 24 hours for escalation state
 
 /**
  * Saves a clarification request to DynamoDB for state persistence.
@@ -65,6 +68,60 @@ export async function getClarificationRequest(
   }
 
   return items[0] as unknown as ClarificationState;
+}
+
+/**
+ * Saves escalation state for a clarification.
+ *
+ * @param base - The base memory provider instance.
+ * @param state - The escalation state to save.
+ * @returns A promise that resolves when the state is saved.
+ */
+export async function saveEscalationState(
+  base: BaseMemoryProvider,
+  state: EscalationState
+): Promise<void> {
+  const pk = `${ESCALATION_PREFIX}${state.traceId}#${state.agentId}`;
+  const item = {
+    ...state,
+    userId: pk,
+    timestamp: 0,
+    type: 'ESCALATION_STATE',
+    expiresAt: Math.floor(Date.now() / TIME.MS_PER_SECOND) + ESCALATION_TTL_BUFFER_SECONDS,
+  };
+
+  await base.putItem(item as unknown as Record<string, unknown>);
+  logger.info(`Saved escalation state: traceId=${state.traceId}, agentId=${state.agentId}`);
+}
+
+/**
+ * Retrieves escalation state for a clarification.
+ *
+ * @param base - The base memory provider instance.
+ * @param traceId - The trace ID.
+ * @param agentId - The agent ID.
+ * @returns A promise resolving to the escalation state or null if not found.
+ */
+export async function getEscalationState(
+  base: BaseMemoryProvider,
+  traceId: string,
+  agentId: string
+): Promise<EscalationState | null> {
+  const pk = `${ESCALATION_PREFIX}${traceId}#${agentId}`;
+
+  const items = await base.queryItems({
+    KeyConditionExpression: 'userId = :pk',
+    ExpressionAttributeValues: {
+      ':pk': pk,
+    },
+    Limit: 1,
+  });
+
+  if (items.length === 0) {
+    return null;
+  }
+
+  return items[0] as unknown as EscalationState;
 }
 
 /**

@@ -9,6 +9,7 @@ import {
 } from './types/index';
 import { BaseMemoryProvider } from './memory/base';
 import { LIMITS } from './constants';
+export { CachedMemory } from './memory/cached-memory';
 
 // Import operations from submodules
 import * as GapOps from './memory/gap-operations';
@@ -260,6 +261,23 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
     status: import('./types/memory').ClarificationStatus
   ): Promise<void> {
     return ClarificationOps.updateClarificationStatus(this, traceId, agentId, status);
+  }
+
+  /**
+   * Saves escalation state for a clarification.
+   */
+  async saveEscalationState(state: import('./types/escalation').EscalationState): Promise<void> {
+    return ClarificationOps.saveEscalationState(this, state);
+  }
+
+  /**
+   * Retrieves escalation state for a clarification.
+   */
+  async getEscalationState(
+    traceId: string,
+    agentId: string
+  ): Promise<import('./types/escalation').EscalationState | null> {
+    return ClarificationOps.getEscalationState(this, traceId, agentId);
   }
 
   /**

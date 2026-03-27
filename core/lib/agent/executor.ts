@@ -9,6 +9,8 @@ import { AGENT_DEFAULTS, AGENT_LOG_MESSAGES, LoopResult, ExecutorUsage } from '.
 export { AGENT_DEFAULTS, AGENT_LOG_MESSAGES };
 import { ExecutorHelper } from './executor-helper';
 import { ToolExecutor } from './tool-executor';
+import { callWithFallback, FallbackResult } from './protocol-fallback';
+import { ConfigManager } from '../registry/config';
 
 /**
  * Core identity fields that MUST be provided by the caller.
@@ -431,6 +433,43 @@ export class AgentExecutor {
       },
     });
 
+    // Check if protocol fallback is enabled
+    const fallbackEnabled = await ConfigManager.getRawConfig('protocol_fallback_enabled');
+
+    if (fallbackEnabled === true && options.communicationMode === 'json') {
+      // Use protocol fallback for JSON mode
+      const result: FallbackResult = await callWithFallback(this.provider, messages, this.tools, {
+        communicationMode: options.communicationMode,
+        responseFormat: options.responseFormat,
+        activeModel: options.activeModel,
+        activeProvider: options.activeProvider,
+        activeProfile: options.activeProfile,
+      });
+
+      // Log fallback usage for monitoring
+      if (result.usedFallback) {
+        logger.info(
+          `Protocol fallback triggered: ${result.originalMode} → ${result.fallbackMode}. ` +
+            `Reason: ${result.parseError}`
+        );
+
+        // Emit metric for fallback usage
+        if (!process.env.VITEST) {
+          try {
+            const { emitMetrics, METRICS } = await import('../metrics');
+            emitMetrics([
+              METRICS.protocolFallback(this.agentId, result.originalMode, result.fallbackMode),
+            ]).catch(() => {});
+          } catch {
+            // Metrics module may not be available
+          }
+        }
+      }
+
+      return result.response;
+    }
+
+    // Standard call without fallback
     const capabilities = await this.provider.getCapabilities(options.activeModel);
     const normalizedProfile = normalizeProfile(
       options.activeProfile,

@@ -430,6 +430,17 @@ export class CachedMemory implements IMemory {
     await this.underlying.updateClarificationStatus(traceId, agentId, status);
   }
 
+  async saveEscalationState(state: import('../types/escalation').EscalationState): Promise<void> {
+    await this.underlying.saveEscalationState(state);
+  }
+
+  async getEscalationState(
+    traceId: string,
+    agentId: string
+  ): Promise<import('../types/escalation').EscalationState | null> {
+    return this.underlying.getEscalationState(traceId, agentId);
+  }
+
   async findExpiredClarifications(): Promise<import('../types/memory').ClarificationState[]> {
     return this.underlying.findExpiredClarifications();
   }

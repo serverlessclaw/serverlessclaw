@@ -1,12 +1,17 @@
 import { EventBridgeEvent } from 'aws-lambda';
 import { EventType } from '../../lib/types/agent';
 import { logger } from '../../lib/logger';
-import { ParallelDispatchParams } from '../../lib/agent/schema';
+import { ParallelDispatchParams, ParallelTaskDefinition } from '../../lib/agent/schema';
 import { DynamicScheduler } from '../../lib/scheduler';
 import { ConfigManager } from '../../lib/registry/config';
 import { TIME, TRACE_TYPES } from '../../lib/constants';
 import { EVENT_SCHEMA_MAP, SchemaEventType } from '../../lib/schema/events';
 import { addTraceStep } from '../../lib/utils/trace-helper';
+import {
+  buildDependencyGraph,
+  validateDependencyGraph,
+  getReadyTasks,
+} from '../../lib/agent/dag-executor';
 
 export interface ParallelTaskEvent {
   userId: string;
@@ -51,21 +56,43 @@ export async function handleParallelDispatch(
 
   const safeTraceId = traceId ?? `parallel-${Date.now()}`;
 
+  // Check if any tasks have dependencies
+  const hasDependencies = tasks.some((t) => t.dependsOn && t.dependsOn.length > 0);
+
   // Trace: Parallel dispatch initiated
   await addTraceStep(safeTraceId, 'root', {
     type: TRACE_TYPES.PARALLEL_DISPATCH,
     content: {
       taskCount: tasks.length,
-      tasks: tasks.map((t) => ({ taskId: t.taskId, agentId: t.agentId, task: t.task })),
+      tasks: tasks.map((t) => ({
+        taskId: t.taskId,
+        agentId: t.agentId,
+        task: t.task,
+        dependsOn: t.dependsOn,
+      })),
       aggregationType: aggregationType ?? 'summary',
       barrierTimeoutMs: timeoutMs,
       initiatorId: initiatorId ?? 'parallel-dispatcher',
       depth,
+      hasDependencies,
     },
     metadata: { event: 'parallel_dispatch', taskCount: tasks.length },
   });
 
   const { aggregator } = await import('../../lib/agent/parallel-aggregator');
+
+  // Store tasks and DAG state in metadata for dependency resolution
+  const aggregatorMetadata: Record<string, unknown> = {
+    tasks,
+    hasDependencies,
+  };
+
+  // If DAG mode, store the initial DAG state
+  if (hasDependencies) {
+    const dagState = buildDependencyGraph(tasks);
+    aggregatorMetadata.dagState = dagState;
+  }
+
   await aggregator.init(
     userId,
     safeTraceId,
@@ -74,30 +101,48 @@ export async function handleParallelDispatch(
     sessionId,
     tasks.map((t) => ({ taskId: t.taskId, agentId: t.agentId })),
     aggregationType,
-    aggregationPrompt
+    aggregationPrompt,
+    aggregatorMetadata
   );
 
-  const { emitTypedEvent } = await import('../../lib/utils/typed-emit');
+  // If dependencies are enabled, use DAG execution
+  if (hasDependencies) {
+    logger.info('DAG mode enabled: Tasks have dependencies');
 
-  for (const task of tasks) {
-    // Resolve correct EventType for the agent
-    let detailType: string = `${task.agentId}_task`;
+    // Build and validate dependency graph
+    const dagState = buildDependencyGraph(tasks);
+    const isValid = validateDependencyGraph(dagState);
 
-    // Generic fallback for unknown agents to use TASK_EVENT_SCHEMA via CODER_TASK key
-    if (!EVENT_SCHEMA_MAP[detailType as SchemaEventType]) {
-      detailType = EventType.CODER_TASK;
+    if (!isValid) {
+      logger.error(
+        'Invalid dependency graph (cycle detected). Falling back to parallel execution.'
+      );
+      // Fall through to standard parallel execution
+    } else {
+      // Get initial ready tasks (no dependencies)
+      const readyTasks = getReadyTasks(dagState);
+
+      if (readyTasks.length === 0) {
+        logger.error('No tasks ready to execute (all have unsatisfied dependencies)');
+        return;
+      }
+
+      // Dispatch ready tasks
+      for (const task of readyTasks) {
+        await dispatchTask(task, safeTraceId, initiatorId, depth, sessionId, userId);
+      }
+
+      logger.info(
+        `DAG mode: Dispatched ${readyTasks.length} initial tasks. ` +
+          `${tasks.length - readyTasks.length} tasks waiting for dependencies.`
+      );
+      return;
     }
+  }
 
-    await emitTypedEvent('agent.parallel', detailType as SchemaEventType, {
-      userId,
-      taskId: task.taskId,
-      task: task.task,
-      metadata: { ...task.metadata, parallelDispatchId: safeTraceId },
-      traceId: safeTraceId,
-      initiatorId: initiatorId ?? 'parallel-dispatcher',
-      depth: (depth ?? 0) + 1,
-      sessionId,
-    });
+  // Standard parallel execution (no dependencies)
+  for (const task of tasks) {
+    await dispatchTask(task, safeTraceId, initiatorId, depth, sessionId, userId);
   }
 
   const targetTime = Date.now() + timeoutMs;
@@ -139,4 +184,37 @@ export async function handleParallelDispatch(
   logger.info(
     `Dispatched ${tasks.length} parallel tasks. Aggregation will happen via task-result-handler.`
   );
+}
+
+/**
+ * Helper function to dispatch a single task
+ */
+async function dispatchTask(
+  task: ParallelTaskDefinition,
+  traceId: string,
+  initiatorId: string | undefined,
+  depth: number | undefined,
+  sessionId: string | undefined,
+  userId: string
+): Promise<void> {
+  const { emitTypedEvent } = await import('../../lib/utils/typed-emit');
+
+  // Resolve correct EventType for the agent
+  let detailType: string = `${task.agentId}_task`;
+
+  // Generic fallback for unknown agents to use TASK_EVENT_SCHEMA via CODER_TASK key
+  if (!EVENT_SCHEMA_MAP[detailType as SchemaEventType]) {
+    detailType = EventType.CODER_TASK;
+  }
+
+  await emitTypedEvent('agent.parallel', detailType as SchemaEventType, {
+    userId,
+    taskId: task.taskId,
+    task: task.task,
+    metadata: { ...task.metadata, parallelDispatchId: traceId },
+    traceId,
+    initiatorId: initiatorId ?? 'parallel-dispatcher',
+    depth: (depth ?? 0) + 1,
+    sessionId,
+  });
 }

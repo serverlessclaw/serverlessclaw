@@ -13,6 +13,7 @@ import { handleParallelBarrierTimeout } from './events/parallel-barrier-timeout-
 import { handleParallelTaskCompleted } from './events/parallel-task-completed-handler';
 import { handleTaskCancellation } from './events/cancellation-handler';
 import { handleProactiveHeartbeat } from './events/proactive-handler';
+import { handleEscalationLevelTimeout } from './events/escalation-handler';
 
 /**
  * Main entry point for the Events Handler.
@@ -106,6 +107,10 @@ export async function handler(
 
       case EventType.HEARTBEAT_PROACTIVE:
         await handleProactiveHeartbeat(eventDetail, context);
+        break;
+
+      case EventType.ESCALATION_LEVEL_TIMEOUT:
+        await handleEscalationLevelTimeout(eventDetail);
         break;
 
       default:

@@ -39,6 +39,8 @@ async function getConfig() {
       protectedRes,
       recursionRes,
       deployRes,
+      escalationRes,
+      fallbackRes,
     ] = await Promise.all([
       docClient.send(
         new GetCommand({
@@ -108,6 +110,18 @@ async function getConfig() {
           Key: { key: 'deploy_limit' },
         })
       ),
+      docClient.send(
+        new GetCommand({
+          TableName: tableName,
+          Key: { key: 'escalation_enabled' },
+        })
+      ),
+      docClient.send(
+        new GetCommand({
+          TableName: tableName,
+          Key: { key: 'protocol_fallback_enabled' },
+        })
+      ),
     ]);
 
     return {
@@ -122,6 +136,8 @@ async function getConfig() {
       circuitBreakerThreshold: cbThresholdRes.Item?.value ?? '5',
       recursionLimit: recursionRes.Item?.value ?? '50',
       deployLimit: deployRes.Item?.value ?? '5',
+      escalationEnabled: escalationRes.Item?.value ?? 'true',
+      protocolFallbackEnabled: fallbackRes.Item?.value ?? 'true',
       consecutiveBuildFailures: cbFailuresRes.Item?.value ?? 0,
       protectedResources: Array.isArray(protectedRes.Item?.value)
         ? protectedRes.Item.value.join(', ')
@@ -140,6 +156,8 @@ async function getConfig() {
       maxToolIterations: '15',
       circuitBreakerThreshold: '5',
       recursionLimit: '50',
+      escalationEnabled: 'true',
+      protocolFallbackEnabled: 'true',
       consecutiveBuildFailures: 0,
       protectedResources: 'sst.config.ts, buildspec.yml, infra/',
     };
@@ -159,6 +177,8 @@ async function updateConfig(formData: FormData) {
   const circuitBreakerThreshold = formData.get('circuitBreakerThreshold') as string;
   const recursionLimit = formData.get('recursionLimit') as string;
   const deployLimit = formData.get('deployLimit') as string;
+  const escalationEnabled = formData.get('escalationEnabled') as string;
+  const protocolFallbackEnabled = formData.get('protocolFallbackEnabled') as string;
   const protectedResources = (formData.get('protectedResources') as string)
     .split(',')
     .map((s) => s.trim())
@@ -254,6 +274,24 @@ async function updateConfig(formData: FormData) {
           Item: {
             key: 'deploy_limit',
             value: deployLimit,
+          },
+        })
+      ),
+      docClient.send(
+        new PutCommand({
+          TableName: tableName,
+          Item: {
+            key: 'escalation_enabled',
+            value: escalationEnabled,
+          },
+        })
+      ),
+      docClient.send(
+        new PutCommand({
+          TableName: tableName,
+          Item: {
+            key: 'protocol_fallback_enabled',
+            value: protocolFallbackEnabled,
           },
         })
       ),

@@ -289,6 +289,22 @@ export const CONFIG_DEFAULTS = {
     configKey: 'alert_token_anomaly_multiplier',
     description: 'Alert if tokens exceed this multiplier above rolling average.',
   },
+
+  /** Whether multi-level escalation is enabled. Default: true */
+  ESCALATION_ENABLED: {
+    code: true,
+    hotSwappable: true,
+    configKey: 'escalation_enabled',
+    description: 'Whether multi-level escalation is enabled for clarification requests.',
+  },
+
+  /** Whether protocol fallback (JSON -> Text) is enabled. Default: true */
+  PROTOCOL_FALLBACK_ENABLED: {
+    code: true,
+    hotSwappable: true,
+    configKey: 'protocol_fallback_enabled',
+    description: 'Automatic fallback to Text mode when JSON communication fails.',
+  },
 } as const;
 
 export type ConfigKey = keyof typeof CONFIG_DEFAULTS;

@@ -70,7 +70,7 @@ export async function handleParallelBarrierTimeout(
     });
 
     if (result) {
-      lastState = result as typeof state;
+      lastState = result as unknown as typeof state;
     }
   }
 

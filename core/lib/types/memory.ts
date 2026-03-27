@@ -228,6 +228,15 @@ export interface IMemory extends IHistoryStore, IKnowledgeStore, IGapManager {
     status: ClarificationStatus
   ): Promise<void>;
 
+  /** Saves escalation state for a clarification. */
+  saveEscalationState(state: import('./escalation').EscalationState): Promise<void>;
+
+  /** Retrieves escalation state for a clarification. */
+  getEscalationState(
+    traceId: string,
+    agentId: string
+  ): Promise<import('./escalation').EscalationState | null>;
+
   /** Finds all expired clarification requests (for orphan detection). */
   findExpiredClarifications(): Promise<ClarificationState[]>;
 
@@ -247,6 +256,8 @@ export enum ClarificationStatus {
   TIMED_OUT = 'timed_out',
   /** Clarification has been escalated to a higher authority. */
   ESCALATED = 'escalated',
+  /** Escalation process has been completed. */
+  ESCALATION_COMPLETED = 'escalation_completed',
 }
 
 export interface ClarificationState {

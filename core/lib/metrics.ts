@@ -202,4 +202,17 @@ export const METRICS = {
       ],
     };
   },
+
+  protocolFallback(agentId: string, originalMode: string, fallbackMode?: string): MetricDatum {
+    return {
+      MetricName: 'ProtocolFallback',
+      Value: 1,
+      Unit: 'Count',
+      Dimensions: [
+        { Name: 'AgentId', Value: agentId },
+        { Name: 'OriginalMode', Value: originalMode },
+        { Name: 'FallbackMode', Value: fallbackMode ?? 'none' },
+      ],
+    };
+  },
 };

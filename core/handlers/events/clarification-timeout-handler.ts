@@ -5,6 +5,7 @@ import { emitEvent, EventPriority } from '../../lib/utils/bus';
 import { DynamoMemory } from '../../lib/memory';
 import { ConfigManager } from '../../lib/registry/config';
 import { sendOutboundMessage } from '../../lib/outbound';
+import { escalationManager } from '../../lib/escalation-manager';
 
 export async function handleClarificationTimeout(
   eventDetail: Record<string, unknown>
@@ -60,6 +61,38 @@ export async function handleClarificationTimeout(
     return;
   }
 
+  // Check if escalation is enabled
+  const escalationEnabled = await ConfigManager.getRawConfig('escalation_enabled');
+
+  if (escalationEnabled === true) {
+    // Use escalation manager for multi-level escalation
+    try {
+      // Check if there's already an escalation in progress to avoid double-starting
+      const existingEscalation = await escalationManager.getEscalationState(traceId, agentId);
+
+      if (existingEscalation) {
+        logger.info(`Escalation already in progress for ${traceId}/${agentId}, ignoring timeout.`);
+        return;
+      }
+
+      // Start new escalation
+      await escalationManager.startEscalation(
+        traceId,
+        agentId,
+        userId,
+        question,
+        originalTask,
+        sessionId
+      );
+      logger.info(`Started escalation for ${traceId}/${agentId}`);
+      return;
+    } catch (error) {
+      logger.error(`Escalation failed, falling back to legacy behavior:`, error);
+      // Fall through to legacy behavior
+    }
+  }
+
+  // Legacy behavior: simple retry mechanism
   const maxRetries =
     ((await ConfigManager.getRawConfig('clarification_max_retries')) as number) ?? 1;
   const newRetryCount = retryCount + 1;

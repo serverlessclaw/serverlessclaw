@@ -45,18 +45,27 @@ export interface MultiAgentResult {
 }
 
 /**
+ * Schema for a single task in parallel dispatch.
+ */
+export interface ParallelTaskDefinition {
+  taskId: string;
+  agentId: string;
+  task: string;
+  metadata?: Record<string, unknown>;
+  /** Task IDs that must complete before this task can start */
+  dependsOn?: string[];
+}
+
+/**
  * Schema for parallel task dispatch parameters.
  */
 export interface ParallelDispatchParams {
-  tasks: Array<{
-    taskId: string;
-    agentId: string;
-    task: string;
-    metadata?: Record<string, unknown>;
-  }>;
+  tasks: ParallelTaskDefinition[];
   barrierTimeoutMs?: number;
   aggregationType?: 'summary' | 'agent_guided';
   aggregationPrompt?: string;
+  /** Enable dependency-aware execution (DAG mode) */
+  enableDependencies?: boolean;
 }
 
 /**

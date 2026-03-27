@@ -166,7 +166,8 @@ describe('Parallel Dispatch Resilience', () => {
           { taskId: 'task-2', agentId: 'qa' },
         ],
         undefined, // aggregationType
-        undefined // aggregationPrompt
+        undefined, // aggregationPrompt
+        expect.any(Object) // aggregatorMetadata
       );
 
       const { emitEvent } = await import('../lib/utils/bus');

@@ -34,7 +34,8 @@ export class ParallelAggregator {
     sessionId?: string,
     taskMapping?: Array<{ taskId: string; agentId: string }>,
     aggregationType?: 'summary' | 'agent_guided',
-    aggregationPrompt?: string
+    aggregationPrompt?: string,
+    metadata?: Record<string, unknown>
   ): Promise<void> {
     const expiresAt = Math.floor(Date.now() / TIME.MS_PER_SECOND) + TIME.SECONDS_IN_HOUR;
 
@@ -56,6 +57,7 @@ export class ParallelAggregator {
           results_ids: [],
           aggregationType,
           aggregationPrompt,
+          metadata: metadata ?? {},
         },
       })
     );
@@ -183,7 +185,25 @@ export class ParallelAggregator {
         },
       })
     );
-    return response.Item;
+    return response.Item as
+      | {
+          userId: string;
+          timestamp: number;
+          taskCount: number;
+          completedCount: number;
+          results: AggregatedResult[];
+          initiatorId: string;
+          sessionId?: string;
+          expiresAt: number;
+          status: string;
+          createdAt: number;
+          taskMapping: Array<{ taskId: string; agentId: string }>;
+          results_ids: string[];
+          aggregationType?: 'summary' | 'agent_guided';
+          aggregationPrompt?: string;
+          metadata?: Record<string, unknown>;
+        }
+      | undefined;
   }
 
   /**

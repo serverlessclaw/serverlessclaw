@@ -324,6 +324,10 @@ export enum EventType {
   CHUNK = 'chunk',
   /** Request for peer review by the Critic Agent (Council of Agents). */
   CRITIC_TASK = 'critic_task',
+  /** Escalation level timeout event. */
+  ESCALATION_LEVEL_TIMEOUT = 'escalation_level_timeout',
+  /** Escalation completed event. */
+  ESCALATION_COMPLETED = 'escalation_completed',
 }
 
 /**
