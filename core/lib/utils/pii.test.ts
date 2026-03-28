@@ -13,6 +13,14 @@ describe('PII Filter', () => {
       expect(filterPII('api_key = some-long-secret-token')).toBe('api_key = [SECRET_REDACTED]');
       expect(filterPII('password is mypassword123')).toBe('password is [SECRET_REDACTED]');
     });
+
+    it('should NOT mask 13-digit timestamps as credit cards', () => {
+      // Gap IDs are 13-digit Unix timestamps (ms) starting with 1
+      expect(filterPII('Gap ID: 1774699882279')).toBe('Gap ID: 1774699882279');
+      expect(filterPII('Plan ID PLAN-1774697744448')).toBe('Plan ID PLAN-1774697744448');
+      // But should still mask actual credit card patterns (16 digits starting with non-1)
+      expect(filterPII('Card: 4532015112830366')).toBe('Card: [CARD_REDACTED]');
+    });
   });
 
   describe('filterPIIFromObject', () => {

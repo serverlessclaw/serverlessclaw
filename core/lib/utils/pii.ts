@@ -14,6 +14,9 @@ const PII_PATTERNS = {
     /\b(api_?key|secret|key|token|auth|password|pwd)(\s*[:=is]+\s*|\s+)(["']?)([a-zA-Z0-9-_.]{4,})\3/gi,
 };
 
+// 13-digit Unix timestamps (milliseconds) starting with 1 — not credit cards
+const TIMESTAMP_13_DIGIT = /^1\d{12}$/;
+
 // Common keywords that usually precede a secret or credential
 const SECRET_KEYWORDS = ['api', 'secret', 'key', 'token', 'auth', 'password', 'pwd'];
 
@@ -36,8 +39,12 @@ export function filterPII(text: string): string {
     return `${key}${sep}${quote}[SECRET_REDACTED]${quote}`;
   });
 
-  // 3. Mask Credit Cards
-  filtered = filtered.replace(PII_PATTERNS.CREDIT_CARD, '[CARD_REDACTED]');
+  // 3. Mask Credit Cards (skip 13-digit timestamps)
+  filtered = filtered.replace(PII_PATTERNS.CREDIT_CARD, (match) => {
+    const digits = match.replace(/[\s-]/g, '');
+    if (TIMESTAMP_13_DIGIT.test(digits)) return match;
+    return '[CARD_REDACTED]';
+  });
 
   // 4. Mask IP Addresses
   filtered = filtered.replace(PII_PATTERNS.IP_ADDRESS, '[IP_REDACTED]');

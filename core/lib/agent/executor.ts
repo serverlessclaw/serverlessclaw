@@ -263,6 +263,10 @@ export class AgentExecutor {
       let fullContent = '';
       let fullThought = '';
 
+      // Strip markdown formatting for overlap comparison.
+      // Providers may send the same text with different formatting (e.g., **[x] vs [x]).
+      const stripMarkdown = (s: string): string => s.replace(/[*_`~]/g, '');
+
       // Detect and strip overlapping prefix from streaming chunks.
       // Some providers send cumulative or overlapping text instead of pure deltas.
       // Returns [newAccumulator, delta] where delta is only the new text to emit.
@@ -273,10 +277,20 @@ export class AgentExecutor {
       ): [string, string] => {
         if (!accumulator) return [chunk, chunk];
         if (!chunk) return [accumulator, ''];
-        const overlapLen = Math.min(maxCheck, accumulator.length, chunk.length);
+        const accStripped = stripMarkdown(accumulator);
+        const chunkStripped = stripMarkdown(chunk);
+        const overlapLen = Math.min(maxCheck, accStripped.length, chunkStripped.length);
         for (let len = overlapLen; len > 0; len--) {
-          if (accumulator.endsWith(chunk.slice(0, len))) {
-            const delta = chunk.slice(len);
+          if (accStripped.endsWith(chunkStripped.slice(0, len))) {
+            // Map stripped position back to original chunk position
+            let strippedIdx = 0;
+            let origIdx = 0;
+            while (strippedIdx < len && origIdx < chunk.length) {
+              if (!/[*_`~]/.test(chunk[origIdx])) strippedIdx++;
+              origIdx++;
+            }
+            const delta = chunk.slice(origIdx);
+            if (!delta) return [accumulator, ''];
             return [accumulator + delta, delta];
           }
         }
