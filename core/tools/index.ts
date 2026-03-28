@@ -11,7 +11,9 @@ import { CONFIG_KEYS } from '../lib/constants';
 import * as deploymentTools from './deployment';
 import * as rollbackTools from './rollback';
 import * as fsTools from './fs';
-import * as knowledgeTools from './knowledge';
+import * as knowledgeAgentTools from './knowledge-agent';
+import * as knowledgeStorageTools from './knowledge-storage';
+import * as knowledgeMcpTools from './knowledge-mcp';
 import * as schedulerTools from './scheduler';
 import * as metadataTools from './metadata';
 import * as debugTools from './debug';
@@ -19,6 +21,13 @@ import * as validationTools from './validation';
 import * as gitTools from './git';
 import * as orchestrationTools from './orchestration';
 import * as collaborationTools from './collaboration';
+
+// Consolidate knowledge tools
+const knowledgeTools = {
+  ...knowledgeAgentTools,
+  ...knowledgeStorageTools,
+  ...knowledgeMcpTools,
+};
 
 // Filter knowledgeTools to only include ITool exports (exclude utility functions like formatErrorMessage)
 const knowledgeToolEntries = Object.entries(knowledgeTools).filter(
