@@ -265,24 +265,32 @@ export class AgentExecutor {
 
       // Detect and strip overlapping prefix from streaming chunks.
       // Some providers send cumulative or overlapping text instead of pure deltas.
-      const appendDedup = (accumulator: string, chunk: string, maxCheck: number = 60): string => {
-        if (!accumulator || !chunk) return accumulator + chunk;
+      // Returns [newAccumulator, delta] where delta is only the new text to emit.
+      const appendDedup = (
+        accumulator: string,
+        chunk: string,
+        maxCheck: number = 80
+      ): [string, string] => {
+        if (!accumulator) return [chunk, chunk];
+        if (!chunk) return [accumulator, ''];
         const overlapLen = Math.min(maxCheck, accumulator.length, chunk.length);
         for (let len = overlapLen; len > 0; len--) {
           if (accumulator.endsWith(chunk.slice(0, len))) {
-            return accumulator + chunk.slice(len);
+            const delta = chunk.slice(len);
+            return [accumulator + delta, delta];
           }
         }
-        return accumulator + chunk;
+        return [accumulator + chunk, chunk];
       };
       const toolCalls: ToolCall[] = [];
       let jsonMessageExtracted = false;
 
       for await (const chunk of stream) {
         if (chunk.thought) {
-          fullThought = appendDedup(fullThought, chunk.thought);
-          if (emitter) {
-            emitter.emitChunk(userId, sessionId, traceId, chunk.thought, this.agentName, true);
+          const [newThought, thoughtDelta] = appendDedup(fullThought, chunk.thought);
+          fullThought = newThought;
+          if (emitter && thoughtDelta) {
+            emitter.emitChunk(userId, sessionId, traceId, thoughtDelta, this.agentName, true);
           }
         }
 
@@ -305,11 +313,11 @@ export class AgentExecutor {
               emitter.emitChunk(userId, sessionId, traceId, chunk.content, this.agentName, false);
             }
           } else {
-            // Text mode: emit chunks to UI as they arrive
-            fullContent = appendDedup(fullContent, chunk.content);
-            if (emitter) {
-              // Standard text mode: emit chunks to UI
-              emitter.emitChunk(userId, sessionId, traceId, chunk.content, this.agentName, false);
+            // Text mode: emit deduped delta to UI
+            const [newContent, contentDelta] = appendDedup(fullContent, chunk.content);
+            fullContent = newContent;
+            if (emitter && contentDelta) {
+              emitter.emitChunk(userId, sessionId, traceId, contentDelta, this.agentName, false);
             }
           }
         }

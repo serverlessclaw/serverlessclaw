@@ -161,6 +161,11 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
             [
               { label: '🚀 Approve', value: `APPROVE ${originalPlanId || traceId}` },
               { label: '🤔 Clarify', value: `CLARIFY ${originalPlanId || traceId}` },
+              {
+                label: '✕ Dismiss',
+                value: `DISMISS ${originalPlanId || traceId}`,
+                type: 'secondary' as const,
+              },
             ]
           );
         }
@@ -379,6 +384,7 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
       [
         { label: '🚀 Approve', value: `APPROVE ${planId}` },
         { label: '🤔 Clarify', value: `CLARIFY ${planId}` },
+        { label: '✕ Dismiss', value: `DISMISS ${planId}`, type: 'secondary' as const },
       ]
     );
   } else {
