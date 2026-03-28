@@ -23,6 +23,9 @@ vi.mock('../lib/utils/agent-helpers', () => ({
     memory: memoryMocks,
     agent: { process: agentProcess },
   }),
+  getAgentContext: vi.fn().mockResolvedValue({
+    memory: memoryMocks,
+  }),
   isTaskPaused: vi.fn(() => false),
   detectFailure: vi.fn(() => false),
 }));

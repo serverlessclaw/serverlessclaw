@@ -68,7 +68,11 @@ export const handler = async (_event?: { detail: Record<string, unknown> }): Pro
   // CRITICAL: Triggering Emergency Recovery
   logger.info("CRITICAL: Initiating Dead Man's Switch Recovery Flow...");
 
-  const lockAcquired = await lockManager.acquire(RECOVERY_LOCK_ID, RECOVERY_LOCK_TTL_SECONDS);
+  const lockAcquired = await lockManager.acquire(
+    RECOVERY_LOCK_ID,
+    'recovery-handler',
+    RECOVERY_LOCK_TTL_SECONDS
+  );
   if (!lockAcquired) {
     logger.info(
       "Dead Man's Switch: Recovery already in progress (lock held). Skipping duplicate trigger."
@@ -146,6 +150,6 @@ export const handler = async (_event?: { detail: Record<string, unknown> }): Pro
   } catch (recoveryError) {
     logger.error("FATAL: Dead Man's Switch recovery flow failed!", recoveryError);
   } finally {
-    await lockManager.release(RECOVERY_LOCK_ID);
+    await lockManager.release(RECOVERY_LOCK_ID, 'recovery-handler');
   }
 };

@@ -3,7 +3,12 @@ import { handler } from '../critic';
 
 const agentMocks = vi.hoisted(() => ({
   process: vi.fn(),
-  executeTool: vi.fn(),
+}));
+
+const memoryMocks = vi.hoisted(() => ({
+  getCollaboration: vi.fn(),
+  checkCollaborationAccess: vi.fn(),
+  addMessage: vi.fn(),
 }));
 
 const emitTaskEventMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
@@ -14,11 +19,13 @@ vi.mock('../../lib/utils/agent-helpers', async (importOriginal) => {
     ...actual,
     initAgent: vi.fn().mockResolvedValue({
       config: { id: 'critic', name: 'Critic Agent', enabled: true },
-      memory: {},
+      memory: memoryMocks,
       agent: {
         process: agentMocks.process,
-        executeTool: agentMocks.executeTool,
       },
+    }),
+    getAgentContext: vi.fn().mockResolvedValue({
+      memory: memoryMocks,
     }),
     extractPayload: vi.fn((event: any) => event.detail || event),
     validatePayload: vi.fn(() => true),
@@ -48,10 +55,15 @@ describe('Critic Agent Collaboration', () => {
       }),
       attachments: [],
     });
-    agentMocks.executeTool.mockResolvedValue(JSON.stringify({ success: true }));
   });
 
   it('should join collaboration and share verdict when collaborationId is provided', async () => {
+    memoryMocks.getCollaboration.mockResolvedValue({
+      collaborationId: 'collab-456',
+      syntheticUserId: 'synth-user-123',
+    });
+    memoryMocks.checkCollaborationAccess.mockResolvedValue(true);
+
     const event = {
       detail: {
         userId: 'user-1',
@@ -68,17 +80,24 @@ describe('Critic Agent Collaboration', () => {
 
     await handler(event as any, {} as any);
 
-    // 1. Verify joinCollaboration was called
-    expect(agentMocks.executeTool).toHaveBeenCalledWith('joinCollaboration', {
-      collaborationId: 'collab-456',
-    });
+    // 1. Verify getCollaboration was called
+    expect(memoryMocks.getCollaboration).toHaveBeenCalledWith('collab-456');
 
-    // 2. Verify writeToCollaboration was called with the verdict
-    expect(agentMocks.executeTool).toHaveBeenCalledWith(
-      'writeToCollaboration',
+    // 2. Verify checkCollaborationAccess was called
+    expect(memoryMocks.checkCollaborationAccess).toHaveBeenCalledWith(
+      'collab-456',
+      'critic',
+      'agent',
+      'editor'
+    );
+
+    // 3. Verify addMessage was called with the verdict
+    expect(memoryMocks.addMessage).toHaveBeenCalledWith(
+      'synth-user-123',
       expect.objectContaining({
-        collaborationId: 'collab-456',
+        role: 'assistant',
         content: expect.stringContaining('CRITIC VERDICT: APPROVED'),
+        agentName: 'critic',
       })
     );
   });
@@ -97,13 +116,8 @@ describe('Critic Agent Collaboration', () => {
 
     await handler(event as any, {} as any);
 
-    expect(agentMocks.executeTool).not.toHaveBeenCalledWith(
-      'joinCollaboration',
-      expect.any(Object)
-    );
-    expect(agentMocks.executeTool).not.toHaveBeenCalledWith(
-      'writeToCollaboration',
-      expect.any(Object)
-    );
+    expect(memoryMocks.getCollaboration).not.toHaveBeenCalled();
+    expect(memoryMocks.checkCollaborationAccess).not.toHaveBeenCalled();
+    expect(memoryMocks.addMessage).not.toHaveBeenCalled();
   });
 });

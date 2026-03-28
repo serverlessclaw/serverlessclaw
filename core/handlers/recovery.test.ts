@@ -129,6 +129,6 @@ describe('Dead Man Switch Recovery Handler', () => {
     const { handler } = await import('./recovery');
     await handler();
 
-    expect(lockMocks.release).toHaveBeenCalledWith('dead-mans-switch-recovery');
+    expect(lockMocks.release).toHaveBeenCalledWith('dead-mans-switch-recovery', 'recovery-handler');
   });
 });

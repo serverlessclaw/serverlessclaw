@@ -10,6 +10,7 @@ import {
   validatePayload,
   buildProcessOptions,
   initAgent,
+  getAgentContext,
 } from '../lib/utils/agent-helpers';
 import { emitTaskEvent } from '../lib/utils/agent-helpers/event-emitter';
 import { parseStructuredResponse } from '../lib/utils/agent-helpers/llm-utils';
@@ -44,18 +45,26 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
 
   // 1. Initialize agent
   const { config, agent } = await initAgent(AgentType.CRITIC);
+  const { memory } = await getAgentContext();
 
   // 1.1 Handle Collaboration
   if (collaborationId) {
     try {
-      const joinResult = await agent.executeTool('joinCollaboration', { collaborationId });
-      const parsedJoin = JSON.parse(joinResult);
-      if (parsedJoin.success) {
-        logger.info(`[CRITIC] Successfully joined collaboration ${collaborationId}`);
-      } else {
-        logger.warn(
-          `[CRITIC] Failed to join collaboration ${collaborationId}: ${parsedJoin.error}`
+      const collaboration = await (memory as any).getCollaboration(collaborationId);
+      if (collaboration) {
+        const hasAccess = await (memory as any).checkCollaborationAccess(
+          collaborationId,
+          AgentType.CRITIC,
+          'agent',
+          'editor'
         );
+        if (hasAccess) {
+          logger.info(`[CRITIC] Successfully joined collaboration ${collaborationId}`);
+        } else {
+          logger.warn(`[CRITIC] No access to collaboration ${collaborationId}`);
+        }
+      } else {
+        logger.warn(`[CRITIC] Collaboration ${collaborationId} not found`);
       }
     } catch (e) {
       logger.error(`[CRITIC] Error joining collaboration ${collaborationId}:`, e);
@@ -125,11 +134,15 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
   // 4.1 Write to Collaboration if active
   if (collaborationId) {
     try {
-      await agent.executeTool('writeToCollaboration', {
-        collaborationId,
-        content: `**CRITIC VERDICT: ${verdict.verdict}**\n\nMode: ${verdict.reviewMode}\nConfidence: ${verdict.confidence}\nSummary: ${verdict.summary}\n\nFindings: ${JSON.stringify(verdict.findings, null, 2)}`,
-      });
-      logger.info(`[CRITIC] Verdict shared in collaboration ${collaborationId}`);
+      const collaboration = await (memory as any).getCollaboration(collaborationId);
+      if (collaboration) {
+        await (memory as any).addMessage(collaboration.syntheticUserId, {
+          role: 'assistant',
+          content: `**CRITIC VERDICT: ${verdict.verdict}**\n\nMode: ${verdict.reviewMode}\nConfidence: ${verdict.confidence}\nSummary: ${verdict.summary}\n\nFindings: ${JSON.stringify(verdict.findings, null, 2)}`,
+          agentName: AgentType.CRITIC,
+        });
+        logger.info(`[CRITIC] Verdict shared in collaboration ${collaborationId}`);
+      }
     } catch (e) {
       logger.error(`[CRITIC] Error sharing verdict in collaboration ${collaborationId}:`, e);
     }
