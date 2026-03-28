@@ -60,8 +60,10 @@ function createScheduledInvocation(
   description?: string
 ): void {
   new aws.scheduler.Schedule(`${name}Schedule`, {
+    name: `${$app.name}-${$app.stage}-${name}`,
     ...(description ? { description } : {}),
     scheduleExpression: rate,
+    state: 'DISABLED',
     flexibleTimeWindow: { mode: 'OFF' },
     target: {
       arn: targetFn.arn,

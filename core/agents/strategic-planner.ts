@@ -279,7 +279,7 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
       depth,
       traceId,
       sessionId,
-      source: TraceSource.SYSTEM,
+      source: TraceSource.DASHBOARD,
       communicationMode: isProactive ? 'json' : 'text',
       responseFormat: isProactive
         ? {

@@ -43,6 +43,8 @@ export interface TraceStepContent {
     total_tokens?: number;
     prompt_tokens?: number;
     completion_tokens?: number;
+    totalInputTokens?: number;
+    totalOutputTokens?: number;
   };
   args?: Record<string, unknown>;
   model?: string;

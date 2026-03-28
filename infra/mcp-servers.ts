@@ -196,8 +196,10 @@ export function createMCPServers(ctx: SharedContext): MCPServerResources {
   // Create EventBridge schedules for warming
   // Critical servers (git, filesystem) - warm every 5 minutes
   new aws.scheduler.Schedule('MCPWarmupCritical', {
+    name: `${$app.name}-${$app.stage}-MCPWarmupCritical`,
     description: 'Warm critical MCP servers (git, filesystem) every 5 min to prevent cold starts',
     scheduleExpression: 'rate(5 minutes)',
+    state: 'DISABLED',
     flexibleTimeWindow: { mode: 'OFF' },
     target: {
       arn: warmupHandler.arn,
@@ -210,8 +212,10 @@ export function createMCPServers(ctx: SharedContext): MCPServerResources {
 
   // Standard servers - warm every 15 minutes
   new aws.scheduler.Schedule('MCPWarmupStandard', {
+    name: `${$app.name}-${$app.stage}-MCPWarmupStandard`,
     description: 'Warm standard MCP servers (google-search, fetch, aws, aws-s3) every 15 min',
     scheduleExpression: 'rate(15 minutes)',
+    state: 'DISABLED',
     flexibleTimeWindow: { mode: 'OFF' },
     target: {
       arn: warmupHandler.arn,
@@ -224,8 +228,10 @@ export function createMCPServers(ctx: SharedContext): MCPServerResources {
 
   // Low-priority servers - warm every 30 minutes
   new aws.scheduler.Schedule('MCPWarmupLowPriority', {
+    name: `${$app.name}-${$app.stage}-MCPWarmupLowPriority`,
     description: 'Warm low-priority MCP servers (puppeteer) every 30 min',
     scheduleExpression: 'rate(30 minutes)',
+    state: 'DISABLED',
     flexibleTimeWindow: { mode: 'OFF' },
     target: {
       arn: warmupHandler.arn,

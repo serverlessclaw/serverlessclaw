@@ -10,6 +10,7 @@ import MemoryDetailModal from './MemoryDetailModal';
 interface MemoryItem {
   userId: string;
   timestamp: number;
+  createdAt: number;
   content: string;
   metadata?: {
     priority?: number;
@@ -17,6 +18,7 @@ interface MemoryItem {
     impact?: number;
     hitCount?: number;
     lastAccessed?: number;
+    createdAt?: number;
   };
   type?: string;
 }
@@ -85,6 +87,7 @@ export default function MemoryTable({ items, pruneAction }: MemoryTableProps) {
                 <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40">Content</th>
                 <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40 text-center">Pri</th>
                 <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40 text-center">Use</th>
+                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40">Created</th>
                 <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40">Last Recalled</th>
                 <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40 text-right">Action</th>
               </tr>
@@ -120,6 +123,12 @@ export default function MemoryTable({ items, pruneAction }: MemoryTableProps) {
                   <td className="px-5 py-3 text-center">
                     <span className="flex items-center justify-center gap-1 text-white/50 font-mono text-xs">
                       <BarChart2 size={10} /> {item.metadata?.hitCount ?? 0}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3">
+                    <span className="flex items-center gap-1 text-cyber-blue/60 font-mono text-[11px]">
+                      <Clock size={10} />
+                      {new Date(item.createdAt || item.metadata?.createdAt || item.timestamp).toLocaleDateString()}
                     </span>
                   </td>
                   <td className="px-5 py-3">

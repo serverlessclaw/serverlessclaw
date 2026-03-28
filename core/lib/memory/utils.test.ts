@@ -60,6 +60,22 @@ describe('memory/utils', () => {
       expect(metadata.lastAccessed).toBeGreaterThanOrEqual(before);
       expect(metadata.lastAccessed).toBeLessThanOrEqual(after);
     });
+
+    it('should set createdAt to provided timestamp', () => {
+      const timestamp = 1234567890;
+      const metadata = createMetadata({}, timestamp);
+
+      expect(metadata.createdAt).toBe(timestamp);
+    });
+
+    it('should allow overriding createdAt via overrides', () => {
+      const timestamp = 1000;
+      const createdAt = 500;
+      const metadata = createMetadata({ createdAt }, timestamp);
+
+      expect(metadata.createdAt).toBe(createdAt);
+      expect(metadata.lastAccessed).toBe(timestamp);
+    });
   });
 
   describe('getMemoryByTypePaginated', () => {
@@ -223,6 +239,52 @@ describe('memory/utils', () => {
       const result = await queryLatestContentByUserId(mockBase, 'user123');
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('queryByTypeAndMap', () => {
+    it('should map items with createdAt correctly', async () => {
+      const { queryByTypeAndMap: qMap } = await import('./utils');
+      const timestamp = 1000;
+      const createdAt = 500;
+      mockBase.queryItems = vi.fn().mockResolvedValue([
+        {
+          userId: 'GAP#1',
+          content: 'Test content',
+          timestamp,
+          createdAt,
+          metadata: { category: InsightCategory.STRATEGIC_GAP },
+        },
+      ]);
+
+      const result = await qMap(mockBase, 'GAP', InsightCategory.STRATEGIC_GAP);
+
+      expect(result[0].createdAt).toBe(createdAt);
+      expect(result[0].timestamp).toBe(timestamp);
+    });
+
+    it('should fallback to metadata.createdAt then timestamp', async () => {
+      const { queryByTypeAndMap: qMap } = await import('./utils');
+      const timestamp = 1000;
+      const createdAt = 500;
+      mockBase.queryItems = vi.fn().mockResolvedValue([
+        {
+          userId: 'GAP#1',
+          content: 'Test',
+          timestamp,
+          metadata: { createdAt },
+        },
+        {
+          userId: 'GAP#2',
+          content: 'Test 2',
+          timestamp: 2000,
+        },
+      ]);
+
+      const result = await qMap(mockBase, 'GAP', InsightCategory.STRATEGIC_GAP);
+
+      expect(result[0].createdAt).toBe(createdAt);
+      expect(result[1].createdAt).toBe(2000);
     });
   });
 });

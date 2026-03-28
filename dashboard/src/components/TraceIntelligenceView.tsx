@@ -79,7 +79,9 @@ export default function TraceIntelligenceView({ initialTraces, sessionTitles }: 
       let totalTokens = 0;
       trace.steps?.forEach((s: TraceStep) => {
         if (s.type === TRACE_TYPES.LLM_RESPONSE && s.content?.usage) {
-            const tokens = s.content.usage?.total_tokens || 0;
+          const usage = s.content.usage;
+          const tokens =
+            usage.total_tokens || (usage.totalInputTokens ?? 0) + (usage.totalOutputTokens ?? 0);
           totalTokens += tokens;
         }
       });

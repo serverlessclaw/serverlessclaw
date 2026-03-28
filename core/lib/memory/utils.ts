@@ -14,6 +14,7 @@ export const DEFAULT_INSIGHT_METADATA: InsightMetadata = {
   priority: 5,
   hitCount: 0,
   lastAccessed: Date.now(),
+  createdAt: Date.now(),
 };
 
 /**
@@ -31,6 +32,7 @@ export function createMetadata(
     ...DEFAULT_INSIGHT_METADATA,
     hitCount: 0,
     lastAccessed: timestamp,
+    createdAt: overrides?.createdAt ?? timestamp,
     ...(overrides ?? {}),
   } as InsightMetadata;
 }
@@ -210,6 +212,8 @@ export async function queryByTypeAndMap(
     id: item.userId as string,
     content: item.content as string,
     timestamp: item.timestamp as number,
+    createdAt:
+      (item.createdAt as number) ?? (item.metadata as any)?.createdAt ?? (item.timestamp as number),
     metadata: createMetadata(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (item.metadata as any) ?? { category: defaultCategory },

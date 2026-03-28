@@ -48,6 +48,8 @@ export interface InsightMetadata {
   retryCount?: number;
   /** Timestamp (Unix epoch) of the last retry attempt. */
   lastAttemptTime?: number;
+  /** Timestamp (Unix epoch) when the memory was first recorded. */
+  createdAt?: number;
 }
 
 /**
@@ -62,6 +64,8 @@ export interface MemoryInsight {
   metadata: InsightMetadata;
   /** Timestamp (Unix epoch) when the insight was first recorded or last updated. */
   timestamp: number;
+  /** Timestamp (Unix epoch) when the insight was first recorded. */
+  createdAt?: number;
 }
 
 /**
@@ -70,6 +74,7 @@ export interface MemoryInsight {
 export interface GapItem {
   userId: string;
   timestamp: number;
+  createdAt?: number;
   content: string;
   status: GapStatus;
   metadata?: {

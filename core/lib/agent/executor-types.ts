@@ -18,6 +18,7 @@ export const AGENT_LOG_MESSAGES = {
 export interface ExecutorUsage {
   totalInputTokens: number;
   totalOutputTokens: number;
+  total_tokens: number;
   toolCallCount: number;
   durationMs: number;
 }

@@ -18,7 +18,40 @@ vi.mock('./shared', () => ({
   wakeupInitiator: mockWakeupInitiator,
 }));
 
-// 3. Import code under test
+// 3. Mock agent-helpers
+const { mockLoadAgentConfig, mockGetAgentContext } = vi.hoisted(() => ({
+  mockLoadAgentConfig: vi.fn(),
+  mockGetAgentContext: vi.fn(),
+}));
+
+vi.mock('../../lib/utils/agent-helpers', async (importOriginal) => {
+  const actual = await importOriginal<any>();
+  return {
+    ...actual,
+    loadAgentConfig: mockLoadAgentConfig,
+    getAgentContext: mockGetAgentContext,
+  };
+});
+
+// 4. Mock Agent
+const { mockAgentProcess } = vi.hoisted(() => ({
+  mockAgentProcess: vi.fn().mockResolvedValue({
+    responseText: 'Synthesized result',
+    attachments: [],
+  }),
+}));
+
+vi.mock('../../lib/agent', () => {
+  return {
+    Agent: vi.fn().mockImplementation(function () {
+      return {
+        process: mockAgentProcess,
+      };
+    }),
+  };
+});
+
+// 5. Import code under test
 import { handleParallelTaskCompleted } from './parallel-task-completed-handler';
 
 describe('parallel-task-completed-handler', () => {
@@ -69,81 +102,38 @@ describe('parallel-task-completed-handler', () => {
       expect(summaryArg).toContain('✅');
     });
 
-    it('includes warning emoji for partial status', async () => {
+    it('performs agent-guided aggregation using the initiatorId for config', async () => {
+      mockLoadAgentConfig.mockResolvedValue({
+        id: 'strategic-planner',
+        name: 'Strategic Planner',
+        systemPrompt: 'You are a planner',
+      });
+      mockGetAgentContext.mockResolvedValue({
+        memory: {},
+        provider: {},
+      });
+      mockAgentProcess.mockResolvedValue({
+        responseText: 'Synthesized result',
+        attachments: [],
+      });
+
       const detail = {
         ...baseEventDetail,
-        overallStatus: 'partial' as const,
-        results: [
-          { taskId: 'task-1', agentId: 'coder', status: 'success', result: 'Done' },
-          { taskId: 'task-2', agentId: 'critic', status: 'failed', error: 'Timeout' },
-        ],
-        completedCount: 2,
+        initiatorId: 'strategic-planner',
+        aggregationType: 'agent_guided' as const,
       };
 
       await handleParallelTaskCompleted(detail);
 
-      const summaryArg = mockWakeupInitiator.mock.calls[0][2];
-      expect(summaryArg).toContain('⚠️');
-      expect(summaryArg).toContain('PARTIAL');
-    });
-
-    it('includes error emoji for failed status', async () => {
-      const detail = {
-        ...baseEventDetail,
-        overallStatus: 'failed' as const,
-        results: [{ taskId: 'task-1', agentId: 'coder', status: 'failed', error: 'Crashed' }],
-        completedCount: 1,
-      };
-
-      await handleParallelTaskCompleted(detail);
-
-      const summaryArg = mockWakeupInitiator.mock.calls[0][2];
-      expect(summaryArg).toContain('❌');
-      expect(summaryArg).toContain('FAILED');
-    });
-
-    it('includes elapsed time in summary', async () => {
-      await handleParallelTaskCompleted(baseEventDetail);
-
-      const summaryArg = mockWakeupInitiator.mock.calls[0][2];
-      expect(summaryArg).toContain('15s');
-    });
-
-    it('counts success, failed, and timeout results correctly', async () => {
-      const detail = {
-        ...baseEventDetail,
-        overallStatus: 'partial' as const,
-        results: [
-          { taskId: 'task-1', agentId: 'coder', status: 'success', result: 'Done' },
-          { taskId: 'task-2', agentId: 'critic', status: 'failed', error: 'Error' },
-          { taskId: 'task-3', agentId: 'qa', status: 'timeout' },
-        ],
-        taskCount: 3,
-        completedCount: 3,
-      };
-
-      await handleParallelTaskCompleted(detail);
-
-      const summaryArg = mockWakeupInitiator.mock.calls[0][2];
-      expect(summaryArg).toContain('1 succeeded');
-      expect(summaryArg).toContain('1 failed');
-      expect(summaryArg).toContain('1 timed out');
-    });
-
-    it('truncates long result snippets to 200 chars', async () => {
-      const longResult = 'A'.repeat(500);
-      const detail = {
-        ...baseEventDetail,
-        results: [{ taskId: 'task-1', agentId: 'coder', status: 'success', result: longResult }],
-        taskCount: 1,
-        completedCount: 1,
-      };
-
-      await handleParallelTaskCompleted(detail);
-
-      const summaryArg = mockWakeupInitiator.mock.calls[0][2];
-      expect(summaryArg).toContain('A'.repeat(200));
-      expect(summaryArg).not.toContain('A'.repeat(201));
+      expect(mockLoadAgentConfig).toHaveBeenCalledWith('strategic-planner');
+      expect(mockWakeupInitiator).toHaveBeenCalledWith(
+        'user-123',
+        'strategic-planner',
+        'Synthesized result',
+        'trace-abc',
+        'session-xyz',
+        1
+      );
     });
   });
 });

@@ -99,7 +99,7 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
     {
       profile: ReasoningProfile.THINKING,
       isIsolated: true,
-      source: TraceSource.SYSTEM,
+      source: TraceSource.DASHBOARD,
       initiatorId,
       depth,
       traceId,

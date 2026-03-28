@@ -62,12 +62,14 @@ async function addRecord(
   await base.putItem({
     userId: scopeId,
     timestamp,
+    createdAt: timestamp,
     type: fullType,
     expiresAt,
     content: scrubbedContent,
     metadata: createMetadata(
       {
         category,
+        createdAt: timestamp,
         ...(metadata ?? {}),
       },
       timestamp
@@ -129,10 +131,14 @@ export async function addLesson(
   await base.putItem({
     userId: `LESSON#${normalizedUserId}`,
     timestamp,
+    createdAt: timestamp,
     type,
     expiresAt,
     content: filterPII(lesson),
-    metadata: createMetadata(metadata ?? { category: InsightCategory.TACTICAL_LESSON }, timestamp),
+    metadata: createMetadata(
+      metadata ?? { category: InsightCategory.TACTICAL_LESSON, createdAt: timestamp },
+      timestamp
+    ),
   });
 }
 
@@ -174,6 +180,7 @@ export async function addGlobalLesson(
   await base.putItem({
     userId: `${GLOBAL_LESSON_PREFIX}${timestamp}`,
     timestamp,
+    createdAt: timestamp,
     type: 'SYSTEM_LESSON',
     expiresAt,
     content: filterPII(lesson),
@@ -186,6 +193,7 @@ export async function addGlobalLesson(
         risk: metadata?.risk ?? 2,
         urgency: metadata?.urgency ?? 5,
         priority: metadata?.priority ?? 6,
+        createdAt: timestamp,
       },
       timestamp
     ),
@@ -364,6 +372,10 @@ function mapToInsights(items: Record<string, unknown>[]): MemoryInsight[] {
       content: item.content as string,
       metadata,
       timestamp: item.timestamp as number,
+      createdAt:
+        (item.createdAt as number) ??
+        (item.metadata as any)?.createdAt ??
+        (item.timestamp as number),
     };
   });
 }
@@ -534,6 +546,7 @@ export async function recordFailedPlan(
   await base.putItem({
     userId: `FAILED_PLAN#${planHash}`,
     timestamp,
+    createdAt: timestamp,
     type: 'FAILED_PLAN',
     expiresAt,
     content,
@@ -546,6 +559,7 @@ export async function recordFailedPlan(
         risk: metadata?.risk ?? 6,
         urgency: metadata?.urgency ?? 7,
         priority: metadata?.priority ?? 7,
+        createdAt: timestamp,
       },
       timestamp
     ),

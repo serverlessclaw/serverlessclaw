@@ -30,6 +30,7 @@ interface MemoryMetadata {
 interface MemoryItem {
   userId: string;
   timestamp: number;
+  createdAt: number;
   content: string;
   metadata?: MemoryMetadata;
   type?: string;

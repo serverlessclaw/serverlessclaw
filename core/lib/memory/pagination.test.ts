@@ -130,7 +130,7 @@ describe('DynamoMemory Pagination & Search', () => {
 
       const result = await memory.searchInsights(undefined, 'pref');
 
-      expect(result.items[0]).toEqual({
+      expect(result.items[0]).toMatchObject({
         id: 'DISTILLED#user1',
         content: 'pref 1',
         timestamp: 123,

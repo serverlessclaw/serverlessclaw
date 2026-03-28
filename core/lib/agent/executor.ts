@@ -140,6 +140,7 @@ export class AgentExecutor {
     const usage: ExecutorUsage = {
       totalInputTokens: 0,
       totalOutputTokens: 0,
+      total_tokens: 0,
       toolCallCount: 0,
       durationMs: 0,
     };
@@ -152,6 +153,21 @@ export class AgentExecutor {
       const aiResponse = await this.callLLM(messages, options);
       lastAiResponse = aiResponse;
       this.updateUsage(usage, aiResponse, options.activeProvider);
+
+      await options.tracer.addStep({
+        type: TRACE_TYPES.LLM_RESPONSE,
+        content: {
+          content: aiResponse.content,
+          thought: aiResponse.thought,
+          tool_calls: aiResponse.tool_calls,
+          usage: {
+            ...aiResponse.usage,
+            totalInputTokens: usage.totalInputTokens,
+            totalOutputTokens: usage.totalOutputTokens,
+            total_tokens: usage.total_tokens,
+          },
+        },
+      });
 
       if (aiResponse.tool_calls && aiResponse.tool_calls.length > 0) {
         messages.push(aiResponse);
@@ -216,6 +232,7 @@ export class AgentExecutor {
     const usage: ExecutorUsage = {
       totalInputTokens: 0,
       totalOutputTokens: 0,
+      total_tokens: 0,
       toolCallCount: 0,
       durationMs: 0,
     };
@@ -526,6 +543,7 @@ export class AgentExecutor {
     if (response.usage) {
       usage.totalInputTokens += response.usage.prompt_tokens;
       usage.totalOutputTokens += response.usage.completion_tokens;
+      usage.total_tokens = usage.totalInputTokens + usage.totalOutputTokens;
       this.emitTokenMetrics(response.usage, provider);
     }
   }

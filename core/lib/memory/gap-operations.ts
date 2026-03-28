@@ -126,11 +126,15 @@ export async function setGap(
   await base.putItem({
     userId: `GAP#${normalizedId}`,
     timestamp: gapTimestamp,
+    createdAt: gapTimestamp,
     type,
     expiresAt,
     content: details,
     status: GapStatus.OPEN,
-    metadata: createMetadata(metadata ?? { category: InsightCategory.STRATEGIC_GAP }, gapTimestamp),
+    metadata: createMetadata(
+      metadata ?? { category: InsightCategory.STRATEGIC_GAP, createdAt: gapTimestamp },
+      gapTimestamp
+    ),
   });
 }
 

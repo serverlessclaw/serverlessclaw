@@ -87,7 +87,13 @@ export async function handleParallelTaskCompleted(
       const { AgentType, TraceSource } = await import('../../lib/types/agent');
       const { ReasoningProfile } = await import('../../lib/types/llm');
 
-      const config = await loadAgentConfig(AgentType.SUPERCLAW); // Reuse SuperClaw for aggregation
+      // 2026 fix: use the actual initiatorId for aggregation if it's a valid agent
+      let config;
+      try {
+        config = await loadAgentConfig(initiatorId as any);
+      } catch {
+        config = await loadAgentConfig(AgentType.SUPERCLAW);
+      }
       const { memory, provider: providerManager } = await getAgentContext();
 
       // Simple aggregator doesn't need tools, just reasoning
