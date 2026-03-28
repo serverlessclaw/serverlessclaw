@@ -1,18 +1,28 @@
 export const INFRA_NODE_ID = {
   API: 'api',
   BUS: 'bus',
+  AGENT_BUS: 'agentbus',
+  WEBHOOK_API: 'webhookapi',
   CODEBUILD: 'codebuild',
   CONFIG: 'config',
+  CONFIG_TABLE: 'configtable',
   MEMORY: 'memory',
+  MEMORY_TABLE: 'memorytable',
   STORAGE: 'storage',
+  STAGING_BUCKET: 'stagingbucket',
   TRACES: 'traces',
+  TRACE_TABLE: 'tracetable',
   KNOWLEDGE: 'knowledge',
+  KNOWLEDGE_BUCKET: 'knowledgebucket',
   NOTIFIER: 'notifier',
   BRIDGE: 'bridge',
+  REALTIME_BRIDGE: 'realtimebridge',
+  REALTIME_BUS: 'realtimebus',
   TELEGRAM: 'telegram',
   DASHBOARD: 'dashboard',
   SCHEDULER: 'scheduler',
   HEARTBEAT: 'heartbeat',
+  DEPLOYER: 'deployer',
 } as const;
 
 /** Canonical icons from Lucide library. */

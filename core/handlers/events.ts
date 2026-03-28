@@ -2,22 +2,11 @@ import { EventType } from '../lib/types/agent';
 import { logger } from '../lib/logger';
 import { reportHealthIssue } from '../lib/health';
 import { Context } from 'aws-lambda';
-import { handleBuildFailure, handleBuildSuccess } from './events/build-handler';
-import { handleContinuationTask } from './events/continuation-handler';
-import { handleHealthReport } from './events/health-handler';
-import { handleTaskResult } from './events/task-result-handler';
-import { handleClarificationRequest } from './events/clarification-handler';
-import { handleClarificationTimeout } from './events/clarification-timeout-handler';
-import { handleParallelDispatch } from './events/parallel-handler';
-import { handleParallelBarrierTimeout } from './events/parallel-barrier-timeout-handler';
-import { handleParallelTaskCompleted } from './events/parallel-task-completed-handler';
-import { handleTaskCancellation } from './events/cancellation-handler';
-import { handleProactiveHeartbeat } from './events/proactive-handler';
-import { handleEscalationLevelTimeout } from './events/escalation-handler';
 
 /**
  * Main entry point for the Events Handler.
- * Routes different EventBridge event types to specialized handlers.
+ * Routes different EventBridge event types to specialized handlers via dynamic imports.
+ * Dynamic imports are used to reduce import depth and improve AI signal clarity for the main entry point.
  *
  * @param event - The EventBridge event containing detail-type and detail.
  * @param context - The AWS Lambda context.
@@ -50,36 +39,52 @@ export async function handler(
 
   try {
     switch (detailType) {
-      case EventType.SYSTEM_BUILD_FAILED:
+      case EventType.SYSTEM_BUILD_FAILED: {
+        const { handleBuildFailure } = await import('./events/build-handler');
         await handleBuildFailure(eventDetail, context);
         break;
+      }
 
-      case EventType.SYSTEM_BUILD_SUCCESS:
+      case EventType.SYSTEM_BUILD_SUCCESS: {
+        const { handleBuildSuccess } = await import('./events/build-handler');
         await handleBuildSuccess(eventDetail);
         break;
+      }
 
-      case EventType.CONTINUATION_TASK:
+      case EventType.CONTINUATION_TASK: {
+        const { handleContinuationTask } = await import('./events/continuation-handler');
         await handleContinuationTask(eventDetail, context);
         break;
+      }
 
-      case EventType.SYSTEM_HEALTH_REPORT:
+      case EventType.SYSTEM_HEALTH_REPORT: {
+        const { handleHealthReport } = await import('./events/health-handler');
         await handleHealthReport(eventDetail, context);
         break;
+      }
 
       case EventType.TASK_COMPLETED:
-      case EventType.TASK_FAILED:
+      case EventType.TASK_FAILED: {
+        const { handleTaskResult } = await import('./events/task-result-handler');
         await handleTaskResult(eventDetail, detailType);
         break;
+      }
 
-      case EventType.CLARIFICATION_REQUEST:
+      case EventType.CLARIFICATION_REQUEST: {
+        const { handleClarificationRequest } = await import('./events/clarification-handler');
         await handleClarificationRequest(eventDetail);
         break;
+      }
 
-      case EventType.CLARIFICATION_TIMEOUT:
+      case EventType.CLARIFICATION_TIMEOUT: {
+        const { handleClarificationTimeout } =
+          await import('./events/clarification-timeout-handler');
         await handleClarificationTimeout(eventDetail);
         break;
+      }
 
-      case EventType.PARALLEL_TASK_DISPATCH:
+      case EventType.PARALLEL_TASK_DISPATCH: {
+        const { handleParallelDispatch } = await import('./events/parallel-handler');
         await handleParallelDispatch(
           event as unknown as import('aws-lambda').EventBridgeEvent<
             string,
@@ -87,16 +92,24 @@ export async function handler(
           >
         );
         break;
+      }
 
-      case EventType.PARALLEL_BARRIER_TIMEOUT:
+      case EventType.PARALLEL_BARRIER_TIMEOUT: {
+        const { handleParallelBarrierTimeout } =
+          await import('./events/parallel-barrier-timeout-handler');
         await handleParallelBarrierTimeout(eventDetail);
         break;
+      }
 
-      case EventType.PARALLEL_TASK_COMPLETED:
+      case EventType.PARALLEL_TASK_COMPLETED: {
+        const { handleParallelTaskCompleted } =
+          await import('./events/parallel-task-completed-handler');
         await handleParallelTaskCompleted(eventDetail);
         break;
+      }
 
-      case EventType.TASK_CANCELLED:
+      case EventType.TASK_CANCELLED: {
+        const { handleTaskCancellation } = await import('./events/cancellation-handler');
         await handleTaskCancellation(
           event as unknown as import('aws-lambda').EventBridgeEvent<
             string,
@@ -104,14 +117,19 @@ export async function handler(
           >
         );
         break;
+      }
 
-      case EventType.HEARTBEAT_PROACTIVE:
+      case EventType.HEARTBEAT_PROACTIVE: {
+        const { handleProactiveHeartbeat } = await import('./events/proactive-handler');
         await handleProactiveHeartbeat(eventDetail, context);
         break;
+      }
 
-      case EventType.ESCALATION_LEVEL_TIMEOUT:
+      case EventType.ESCALATION_LEVEL_TIMEOUT: {
+        const { handleEscalationLevelTimeout } = await import('./events/escalation-handler');
         await handleEscalationLevelTimeout(eventDetail);
         break;
+      }
 
       default:
         logger.warn(`Unhandled event type: ${detailType}`);

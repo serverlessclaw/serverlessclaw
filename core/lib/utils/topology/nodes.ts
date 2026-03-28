@@ -1,49 +1,50 @@
 import type { TopologyNode, IAgentConfig } from '../../types/index';
 import { BACKBONE_REGISTRY } from '../../backbone';
-import { NODE_TYPE, NODE_TIER, RESOURCE_ICON } from './constants';
+import { NODE_TYPE, NODE_TIER, RESOURCE_ICON, INFRA_NODE_ID } from './constants';
 import { classifyResource } from './classifiers';
 
 /**
- * Orphan nodes that should be added even if not found in SST resources.
+ * Orphan nodes that should be added to the topology even if they are not
+ * explicitly discovered in SST linked resources.
  */
 export const ORPHAN_NODES: TopologyNode[] = [
   {
-    id: 'dashboard',
+    id: INFRA_NODE_ID.DASHBOARD,
     label: 'ClawCenter (Next.js)',
     icon: RESOURCE_ICON.DASHBOARD,
     type: NODE_TYPE.DASHBOARD,
     tier: NODE_TIER.APP,
   },
   {
-    id: 'scheduler',
+    id: INFRA_NODE_ID.SCHEDULER,
     label: 'AWS Scheduler',
     icon: RESOURCE_ICON.CALENDAR,
     type: NODE_TYPE.INFRA,
     tier: NODE_TIER.APP,
-  }, // USER FEEDBACK: Top Tier
+  },
   {
-    id: 'telegram',
+    id: INFRA_NODE_ID.TELEGRAM,
     label: 'Telegram',
     icon: RESOURCE_ICON.SEND,
     type: NODE_TYPE.INFRA,
     tier: NODE_TIER.APP,
   },
   {
-    id: 'heartbeat',
+    id: INFRA_NODE_ID.HEARTBEAT,
     label: 'Heartbeat Engine',
     icon: RESOURCE_ICON.SIGNAL,
     type: NODE_TYPE.INFRA,
     tier: NODE_TIER.COMM,
   },
   {
-    id: 'realtimebridge',
+    id: INFRA_NODE_ID.REALTIME_BRIDGE,
     label: 'Realtime Bridge (Lambda)',
     icon: RESOURCE_ICON.SIGNAL,
     type: NODE_TYPE.INFRA,
     tier: NODE_TIER.COMM,
   },
   {
-    id: 'realtimebus',
+    id: INFRA_NODE_ID.REALTIME_BUS,
     label: 'Realtime Bus (IoT Core)',
     icon: RESOURCE_ICON.RADIO,
     type: NODE_TYPE.INFRA,
@@ -52,9 +53,10 @@ export const ORPHAN_NODES: TopologyNode[] = [
 ];
 
 /**
- * Sensitive words that should be filtered out from resource discovery.
+ * List of sensitive substrings that identify infrastructure configuration or
+ * credentials which should be hidden from the public topology view.
  */
-const SENSITIVE_WORDS = [
+const SENSITIVE_RESOURCE_KEYWORDS = [
   'token',
   'key',
   'password',
@@ -66,124 +68,145 @@ const SENSITIVE_WORDS = [
 ];
 
 /**
- * Checks if a resource key should be filtered out.
+ * Determines if a resource key contains sensitive information or is metadata
+ * that should not be visualized as a node.
+ *
+ * @param key The resource key name.
+ * @returns True if the key is sensitive or excluded.
  */
 function isSensitiveKey(key: string): boolean {
   const lowerKey = key.toLowerCase();
-  return SENSITIVE_WORDS.some((word) => lowerKey.includes(word)) || lowerKey === 'app';
+  return SENSITIVE_RESOURCE_KEYWORDS.some((word) => lowerKey.includes(word)) || lowerKey === 'app';
 }
 
 /**
- * Discovers nodes from SST Linked Resources.
+ * Discovers topology nodes by analyzing SST Linked Resources.
+ *
+ * @param resourceMap The record of resources from SST.
+ * @returns An array of discovered TopologyNodes.
  */
 export function discoverSstNodes(resourceMap: Record<string, unknown>): TopologyNode[] {
-  const nodes: TopologyNode[] = [];
+  const discoveredNodes: TopologyNode[] = [];
 
-  Object.keys(resourceMap).forEach((key) => {
-    const res = resourceMap[key];
-    if (!res || typeof res !== 'object') return;
+  Object.keys(resourceMap).forEach((resourceKey) => {
+    const resourceValue = resourceMap[resourceKey];
+    if (!resourceValue || typeof resourceValue !== 'object') return;
 
-    if (isSensitiveKey(key)) return;
+    if (isSensitiveKey(resourceKey)) return;
 
-    const classifier = classifyResource(key);
-    const type = classifier?.type ?? NODE_TYPE.INFRA;
-    const icon = classifier?.icon ?? RESOURCE_ICON.DATABASE;
-    const label = classifier?.label ?? key;
-    let tier = classifier?.tier ?? NODE_TIER.INFRA;
+    const resourceClassifier = classifyResource(resourceKey);
+    const nodeType = resourceClassifier?.type ?? NODE_TYPE.INFRA;
+    const nodeIcon = resourceClassifier?.icon ?? RESOURCE_ICON.DATABASE;
+    const nodeLabel = resourceClassifier?.label ?? resourceKey;
+    let nodeTier = resourceClassifier?.tier ?? NODE_TIER.INFRA;
 
     // Special Promotion Logic (SuperClaw is top tier)
-    if (key.toLowerCase() === 'superclaw') {
-      tier = NODE_TIER.APP;
+    if (resourceKey.toLowerCase() === 'superclaw') {
+      nodeTier = NODE_TIER.APP;
     }
 
-    nodes.push({
-      id: classifier?.idOverride ?? key.toLowerCase(),
-      type: type as TopologyNode['type'],
-      label,
-      icon,
+    discoveredNodes.push({
+      id: resourceClassifier?.idOverride ?? resourceKey.toLowerCase(),
+      type: nodeType as TopologyNode['type'],
+      label: nodeLabel,
+      icon: nodeIcon,
       isBackbone: true,
-      tier,
+      tier: nodeTier,
     });
   });
 
-  return nodes;
+  return discoveredNodes;
 }
 
 /**
- * Adds orphan nodes that are not in the SST resource map.
+ * Ensures required orphan nodes are present in the final node list.
+ *
+ * @param existingNodes The currently discovered nodes.
+ * @returns The augmented list of nodes including orphans.
  */
 export function addOrphanNodes(existingNodes: TopologyNode[]): TopologyNode[] {
-  const result = [...existingNodes];
+  const updatedNodes = [...existingNodes];
 
-  ORPHAN_NODES.forEach((orphan) => {
-    if (!result.find((n) => n.id === orphan.id)) {
-      result.push(orphan);
+  ORPHAN_NODES.forEach((orphanNode) => {
+    if (!updatedNodes.some((node) => node.id === orphanNode.id)) {
+      updatedNodes.push(orphanNode);
     }
   });
 
-  return result;
+  return updatedNodes;
 }
 
 /**
- * Merges backbone metadata with discovered nodes.
+ * Enriches discovered nodes with metadata from the hardcoded backbone registry.
+ *
+ * @param nodes The current list of topology nodes.
+ * @returns The enriched list of nodes.
  */
 export function mergeBackboneNodes(nodes: TopologyNode[]): TopologyNode[] {
-  const result = [...nodes];
+  const mergedNodes = [...nodes];
 
-  for (const [id, config] of Object.entries(BACKBONE_REGISTRY)) {
-    const lowerId = id.toLowerCase();
-    const existingNode = result.find((n) => n.id === lowerId);
+  for (const [agentId, agentConfig] of Object.entries(BACKBONE_REGISTRY)) {
+    const lowerAgentId = agentId.toLowerCase();
+    const existingNodeIndex = mergedNodes.findIndex((node) => node.id === lowerAgentId);
 
-    if (existingNode) {
-      // Enrichment
-      existingNode.label = config.topologyOverride?.label || config.name || existingNode.label;
-      existingNode.description = config.description;
-      existingNode.icon = config.topologyOverride?.icon ?? existingNode.icon;
-      existingNode.tier = config.topologyOverride?.tier ?? existingNode.tier;
+    if (existingNodeIndex !== -1) {
+      const node = mergedNodes[existingNodeIndex];
+      // Enrichment from backbone config
+      node.label = agentConfig.topologyOverride?.label || agentConfig.name || node.label;
+      node.description = agentConfig.description;
+      node.icon = agentConfig.topologyOverride?.icon ?? node.icon;
+      node.tier = agentConfig.topologyOverride?.tier ?? node.tier;
 
-      // Reinforce Tier for SuperClaw (it must be at the top), but respect explicit override
-      if (lowerId === 'superclaw') {
-        existingNode.tier = config.topologyOverride?.tier ?? NODE_TIER.APP;
+      // Reinforce Tier for SuperClaw (top-level orchestration)
+      if (lowerAgentId === 'superclaw') {
+        node.tier = agentConfig.topologyOverride?.tier ?? NODE_TIER.APP;
       }
     } else {
-      result.push({
-        id: lowerId,
+      mergedNodes.push({
+        id: lowerAgentId,
         type: NODE_TYPE.AGENT,
-        label: config.topologyOverride?.label || config.name || lowerId,
+        label: agentConfig.topologyOverride?.label || agentConfig.name || lowerAgentId,
         icon:
-          config.topologyOverride?.icon ??
-          (config.isBackbone ? RESOURCE_ICON.BRAIN : RESOURCE_ICON.BOT),
-        description: config.description,
+          agentConfig.topologyOverride?.icon ??
+          (agentConfig.isBackbone ? RESOURCE_ICON.BRAIN : RESOURCE_ICON.BOT),
+        description: agentConfig.description,
         tier:
-          config.topologyOverride?.tier ??
-          (lowerId === 'superclaw' ? NODE_TIER.APP : NODE_TIER.AGENT),
+          agentConfig.topologyOverride?.tier ??
+          (lowerAgentId === 'superclaw' ? NODE_TIER.APP : NODE_TIER.AGENT),
       });
     }
   }
 
-  return result;
+  return mergedNodes;
 }
 
 /**
- * Adds dynamic agents from database scan results.
+ * Adds dynamic agent instances discovered from the database.
+ *
+ * @param nodes The current list of nodes.
+ * @param items Raw database scan results containing agent configurations.
+ * @returns The final set of topology nodes.
  */
 export function addDynamicAgents(nodes: TopologyNode[], items: unknown[]): TopologyNode[] {
-  const result = [...nodes];
+  const finalNodes = [...nodes];
 
-  for (const item of items) {
-    const agent = (item as { config?: { M?: Record<string, unknown> } }).config
+  for (const dbItem of items) {
+    const agentConfig = (dbItem as { config?: { M?: Record<string, unknown> } }).config
       ?.M as unknown as IAgentConfig;
-    if (!agent.id || result.find((n) => n.id === agent.id.toLowerCase())) continue;
 
-    const lowerAgentId = agent.id.toLowerCase();
-    result.push({
+    if (!agentConfig.id) continue;
+
+    const lowerAgentId = agentConfig.id.toLowerCase();
+    if (finalNodes.some((node) => node.id === lowerAgentId)) continue;
+
+    finalNodes.push({
       id: lowerAgentId,
       type: NODE_TYPE.AGENT,
-      label: agent.topologyOverride?.label || agent.name || lowerAgentId,
-      icon: agent.topologyOverride?.icon ?? RESOURCE_ICON.BOT,
-      tier: agent.topologyOverride?.tier ?? NODE_TIER.AGENT,
+      label: agentConfig.topologyOverride?.label || agentConfig.name || lowerAgentId,
+      icon: agentConfig.topologyOverride?.icon ?? RESOURCE_ICON.BOT,
+      tier: agentConfig.topologyOverride?.tier ?? NODE_TIER.AGENT,
     });
   }
 
-  return result;
+  return finalNodes;
 }

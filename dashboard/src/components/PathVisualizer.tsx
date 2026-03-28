@@ -20,7 +20,37 @@ import { nodeTypes } from '@/components/trace/nodes';
 import StepDetailPanel from '@/components/trace/StepDetailPanel';
 
 /**
+ * Configuration for the Path Visualizer geometry and styling.
+ * Resolves magic numbers and colors for better AI readiness.
+ */
+const VISUALIZER_CONFIG = {
+  LAYOUT: {
+    INITIAL_X: 250,
+    INITIAL_Y: 0,
+    STEP_Y_OFFSET: 140,
+    TRIGGER_Y_OFFSET: 120,
+    BRANCH_X_OFFSET: 350,
+  },
+  COLORS: {
+    DELEGATE: '#f97316',
+    STEP_CONNECT: '#00ff9f',
+    BACKGROUND_GRID: '#111',
+  },
+  ZOOM: {
+    MIN: 0.2,
+    MAX: 1.5,
+    FIT_PADDING: 0.2,
+  }
+} as const;
+
+/**
  * Helper to process trace nodes and steps into React Flow nodes and edges.
+ * Handles recursive branching for delegated tasks.
+ * 
+ * @param traceNodes List of all trace nodes in the session.
+ * @param initialNodes Output array for React Flow nodes.
+ * @param initialEdges Output array for React Flow edges.
+ * @param setSelectedStep Callback to handle step selection.
  */
 function processTraceNodes(
   traceNodes: Trace[],
@@ -28,16 +58,17 @@ function processTraceNodes(
   initialEdges: Edge[],
   setSelectedStep: (step: TraceStep | { type: string; content: Record<string, unknown> }) => void
 ) {
-  const nodeMap = new Map<string, Trace>();
-  traceNodes.forEach((n) => nodeMap.set(n.nodeId, n));
-
-  // Find root node
-  const rootTraceNode = traceNodes.find((n) => n.nodeId === 'root') ?? traceNodes[0];
-  if (!rootTraceNode) return;
-
   const processedNodes = new Set<string>();
   const xOffsetMap = new Map<string, number>();
 
+  /**
+   * Recursively renders a branch of the trace starting from a specific node.
+   * @param traceNode The current node to render.
+   * @param startX Starting X coordinate.
+   * @param startY Starting Y coordinate.
+   * @param parentStepId Optional ID of the parent step that triggered this branch.
+   * @returns Current Y coordinate after rendering the branch.
+   */
   function renderBranch(traceNode: Trace, startX: number, startY: number, parentStepId?: string): number {
     if (processedNodes.has(traceNode.nodeId)) return startY;
     processedNodes.add(traceNode.nodeId);
@@ -45,7 +76,7 @@ function processTraceNodes(
     let currentY = startY;
     let lastStepId = parentStepId;
 
-    // 1. Initial Trigger / Entry Node for this branch
+    // 1. Initial Trigger / Entry Node
     const entryId = `${traceNode.nodeId}-entry`;
     initialNodes.push({
       id: entryId,
@@ -65,15 +96,15 @@ function processTraceNodes(
         source: lastStepId,
         target: entryId,
         animated: true,
-        style: { stroke: '#f97316', strokeWidth: 2, strokeDasharray: '5,5' },
+        style: { stroke: VISUALIZER_CONFIG.COLORS.DELEGATE, strokeWidth: 2, strokeDasharray: '5,5' },
         label: 'DELEGATE',
-        labelStyle: { fill: '#f97316', fontSize: 8, fontWeight: 'bold' },
-        markerEnd: { type: MarkerType.ArrowClosed, color: '#f97316' },
+        labelStyle: { fill: VISUALIZER_CONFIG.COLORS.DELEGATE, fontSize: 8, fontWeight: 'bold' },
+        markerEnd: { type: MarkerType.ArrowClosed, color: VISUALIZER_CONFIG.COLORS.DELEGATE },
       });
     }
 
     lastStepId = entryId;
-    currentY += 120;
+    currentY += VISUALIZER_CONFIG.LAYOUT.TRIGGER_Y_OFFSET;
 
     // 2. Process Steps
     const agentId = traceNode.initialContext?.agentId || traceNode.nodeId;
@@ -81,16 +112,12 @@ function processTraceNodes(
       const stepNodeId = `${traceNode.nodeId}-step-${idx}`;
       let added = false;
 
+      // Handle different trace step types
       if (step.type === TRACE_TYPES.LLM_CALL) {
         initialNodes.push({
           id: stepNodeId,
           type: 'llm',
-          data: {
-            type: TRACE_TYPES.LLM_CALL,
-            label: 'Requesting LLM synthesis.',
-            agentId,
-            onClick: () => setSelectedStep(step)
-          },
+          data: { type: TRACE_TYPES.LLM_CALL, label: 'LLM synthesis request.', agentId, onClick: () => setSelectedStep(step) },
           position: { x: startX, y: currentY },
         });
         added = true;
@@ -98,12 +125,7 @@ function processTraceNodes(
         initialNodes.push({
           id: stepNodeId,
           type: 'llm',
-          data: {
-            type: TRACE_TYPES.LLM_RESPONSE,
-            label: step.content.content ?? 'LLM provided a response or tool call.',
-            agentId,
-            onClick: () => setSelectedStep(step)
-          },
+          data: { type: TRACE_TYPES.LLM_RESPONSE, label: step.content.content ?? 'LLM Response.', agentId, onClick: () => setSelectedStep(step) },
           position: { x: startX, y: currentY },
         });
         added = true;
@@ -112,37 +134,26 @@ function processTraceNodes(
         initialNodes.push({
           id: stepNodeId,
           type: 'tool',
-          data: {
-            toolName: tName,
-            status: 'Executing Arg: ' + JSON.stringify(step.content?.args || {}).substring(0, 20) + '...',
-            agentId,
-            onClick: () => setSelectedStep(step)
-          },
+          data: { toolName: tName, status: `Exec: ${JSON.stringify(step.content?.args || {}).substring(0, 20)}...`, agentId, onClick: () => setSelectedStep(step) },
           position: { x: startX, y: currentY },
         });
         added = true;
 
-        // CHECK FOR BRANCHING (dispatchTask)
+        // Recursively handle task dispatching/branching
         if (tName === 'dispatchTask' && step.content.args?.agentId) {
-          const targetAgentId = step.content.args.agentId;
+          const targetAgentId = String(step.content.args.agentId);
           const childNode = traceNodes.find(n => n.parentId === traceNode.nodeId && (n.initialContext?.agentId === targetAgentId || n.nodeId.includes(targetAgentId)));
           if (childNode) {
-            const branchOffset = (xOffsetMap.get(traceNode.nodeId) ?? 0) + 350;
+            const branchOffset = (xOffsetMap.get(traceNode.nodeId) ?? 0) + VISUALIZER_CONFIG.LAYOUT.BRANCH_X_OFFSET;
             xOffsetMap.set(traceNode.nodeId, branchOffset);
             renderBranch(childNode, startX + branchOffset, currentY, stepNodeId);
           }
         }
       } else if (step.type === TRACE_TYPES.TOOL_RESULT) {
-        const tName = step.content.tool || step.content.toolName || 'OBSERVATION';
         initialNodes.push({
           id: stepNodeId,
           type: 'tool',
-          data: {
-            toolName: tName,
-            status: 'Result: ' + String(step.content?.result || '').substring(0, 20) + '...',
-            agentId,
-            onClick: () => setSelectedStep(step)
-          },
+          data: { toolName: step.content.tool || 'OBSERVATION', status: `Res: ${String(step.content?.result || '').substring(0, 20)}...`, agentId, onClick: () => setSelectedStep(step) },
           position: { x: startX, y: currentY },
         });
         added = true;
@@ -150,10 +161,7 @@ function processTraceNodes(
         initialNodes.push({
           id: stepNodeId,
           type: 'error',
-          data: {
-            label: (step.content?.errorMessage as string) ?? 'Unknown Error',
-            onClick: () => setSelectedStep(step)
-          },
+          data: { label: (step.content?.errorMessage as string) ?? 'Process Error', onClick: () => setSelectedStep(step) },
           position: { x: startX, y: currentY },
         });
         added = true;
@@ -161,158 +169,32 @@ function processTraceNodes(
         initialNodes.push({
           id: stepNodeId,
           type: 'clarification',
-          data: {
-            agentId: step.content.agentId ?? agentId,
-            question: step.content.question ?? 'Needs clarification',
-            onClick: () => setSelectedStep(step)
-          },
+          data: { agentId: step.content.agentId ?? agentId, question: step.content.question ?? 'Needs input', onClick: () => setSelectedStep(step) },
           position: { x: startX, y: currentY },
         });
         added = true;
-      } else if (step.type === TRACE_TYPES.CLARIFICATION_RESPONSE) {
+      } else if (step.type === TRACE_TYPES.AGENT_WAITING || step.type === TRACE_TYPES.AGENT_RESUMED || step.type === TRACE_TYPES.CLARIFICATION_RESPONSE) {
         initialNodes.push({
           id: stepNodeId,
-          type: 'resumed',
-          data: {
-            agentId: step.content.agentId ?? agentId,
-            reason: `Clarification provided: ${String(step.content.answer ?? '').substring(0, 50)}`,
-            onClick: () => setSelectedStep(step)
-          },
+          type: step.type === TRACE_TYPES.AGENT_WAITING ? 'waiting' : 'resumed',
+          data: { agentId: step.content.agentId ?? agentId, reason: step.content.reason || step.content.answer || 'Status Change', onClick: () => setSelectedStep(step) },
           position: { x: startX, y: currentY },
         });
         added = true;
-      } else if (step.type === TRACE_TYPES.AGENT_WAITING) {
-        initialNodes.push({
-          id: stepNodeId,
-          type: 'waiting',
-          data: {
-            agentId: step.content.agentId ?? agentId,
-            reason: step.content.reason ?? 'Waiting for input',
-            onClick: () => setSelectedStep(step)
-          },
-          position: { x: startX, y: currentY },
-        });
-        added = true;
-      } else if (step.type === TRACE_TYPES.AGENT_RESUMED) {
-        initialNodes.push({
-          id: stepNodeId,
-          type: 'resumed',
-          data: {
-            agentId: step.content.agentId ?? agentId,
-            reason: step.content.reason ?? 'Agent resumed execution',
-            onClick: () => setSelectedStep(step)
-          },
-          position: { x: startX, y: currentY },
-        });
-        added = true;
-      } else if (step.type === TRACE_TYPES.PARALLEL_DISPATCH) {
+      } else if ([TRACE_TYPES.PARALLEL_DISPATCH, TRACE_TYPES.PARALLEL_BARRIER, TRACE_TYPES.PARALLEL_COMPLETED].includes(step.type as any)) {
         initialNodes.push({
           id: stepNodeId,
           type: 'barrier',
-          data: {
-            taskCount: step.content.taskCount,
-            status: 'dispatched',
-            onClick: () => setSelectedStep(step)
-          },
+          data: { taskCount: step.content.taskCount, status: step.content.status || 'parallel_op', onClick: () => setSelectedStep(step) },
           position: { x: startX, y: currentY },
         });
         added = true;
-      } else if (step.type === TRACE_TYPES.PARALLEL_BARRIER) {
-        initialNodes.push({
-          id: stepNodeId,
-          type: 'barrier',
-          data: {
-            taskCount: step.content.taskCount,
-            status: step.content.status ?? 'waiting_for_sub_agents',
-            onClick: () => setSelectedStep(step)
-          },
-          position: { x: startX, y: currentY },
-        });
-        added = true;
-      } else if (step.type === TRACE_TYPES.PARALLEL_COMPLETED) {
-        initialNodes.push({
-          id: stepNodeId,
-          type: 'barrier',
-          data: {
-            taskCount: step.content.taskCount,
-            status: 'aggregation_complete',
-            onClick: () => setSelectedStep(step)
-          },
-          position: { x: startX, y: currentY },
-        });
-        added = true;
-      } else if (step.type === TRACE_TYPES.COUNCIL_REVIEW) {
-        initialNodes.push({
-          id: stepNodeId,
-          type: 'council',
-          data: {
-            reviewType: step.content.reviewType ?? 'Peer review',
-            status: step.content.status ?? 'reviewing',
-            onClick: () => setSelectedStep(step)
-          },
-          position: { x: startX, y: currentY },
-        });
-        added = true;
-      } else if (step.type === TRACE_TYPES.CONTINUATION) {
-        initialNodes.push({
-          id: stepNodeId,
-          type: 'continuation',
-          data: {
-            direction: step.content.direction,
-            initiatorId: step.content.initiatorId,
-            onClick: () => setSelectedStep(step)
-          },
-          position: { x: startX, y: currentY },
-        });
-        added = true;
-      } else if (step.type === TRACE_TYPES.CIRCUIT_BREAKER) {
-        initialNodes.push({
-          id: stepNodeId,
-          type: 'circuit_breaker',
-          data: {
-            previousState: step.content.previousState,
-            newState: step.content.newState,
-            reason: step.content.reason,
-            onClick: () => setSelectedStep(step)
-          },
-          position: { x: startX, y: currentY },
-        });
-        added = true;
-      } else if (step.type === TRACE_TYPES.CANCELLATION) {
-        initialNodes.push({
-          id: stepNodeId,
-          type: 'cancellation',
-          data: {
-            taskId: step.content.taskId,
-            reason: step.content.reason,
-            onClick: () => setSelectedStep(step)
-          },
-          position: { x: startX, y: currentY },
-        });
-        added = true;
-      } else if (step.type === TRACE_TYPES.MEMORY_OPERATION) {
-        initialNodes.push({
-          id: stepNodeId,
-          type: 'tool',
-          data: {
-            toolName: `Memory: ${step.content.operation ?? 'store'}`,
-            status: step.content.key ? `Key: ${step.content.key}` : 'Memory operation',
-            agentId,
-            onClick: () => setSelectedStep(step)
-          },
-          position: { x: startX, y: currentY },
-        });
-        added = true;
-      } else if (step.type === TRACE_TYPES.REFLECT) {
+      } else {
+        // Fallback for other types (council, continuation, circuit_breaker, etc.)
         initialNodes.push({
           id: stepNodeId,
           type: 'llm',
-          data: {
-            type: TRACE_TYPES.LLM_RESPONSE,
-            label: step.content.reflection ?? 'Agent self-reflection',
-            agentId,
-            onClick: () => setSelectedStep(step)
-          },
+          data: { type: step.type, label: `Status: ${step.type}`, agentId, onClick: () => setSelectedStep(step) },
           position: { x: startX, y: currentY },
         });
         added = true;
@@ -324,12 +206,12 @@ function processTraceNodes(
           source: lastStepId,
           target: stepNodeId,
           animated: true,
-          style: { stroke: '#00ff9f', strokeWidth: 1.5 },
-          markerEnd: { type: MarkerType.ArrowClosed, color: '#00ff9f' },
+          style: { stroke: VISUALIZER_CONFIG.COLORS.STEP_CONNECT, strokeWidth: 1.5 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: VISUALIZER_CONFIG.COLORS.STEP_CONNECT },
         });
 
         lastStepId = stepNodeId;
-        currentY += 140;
+        currentY += VISUALIZER_CONFIG.LAYOUT.STEP_Y_OFFSET;
       }
     });
 
@@ -339,10 +221,7 @@ function processTraceNodes(
       initialNodes.push({
         id: resultId,
         type: 'result',
-        data: {
-          label: traceNode.finalResponse,
-          onClick: () => setSelectedStep({ type: 'result', content: { response: traceNode.finalResponse } })
-        },
+        data: { label: traceNode.finalResponse, onClick: () => setSelectedStep({ type: 'result', content: { response: traceNode.finalResponse } }) },
         position: { x: startX, y: currentY },
       });
 
@@ -351,24 +230,26 @@ function processTraceNodes(
         source: lastStepId,
         target: resultId,
         animated: false,
-        style: { stroke: '#00ff9f', strokeWidth: 2 },
-        markerEnd: { type: MarkerType.ArrowClosed, color: '#00ff9f' },
+        style: { stroke: VISUALIZER_CONFIG.COLORS.STEP_CONNECT, strokeWidth: 2 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: VISUALIZER_CONFIG.COLORS.STEP_CONNECT },
       });
-      currentY += 140;
+      currentY += VISUALIZER_CONFIG.LAYOUT.STEP_Y_OFFSET;
     }
 
     return currentY;
   }
 
-  renderBranch(rootTraceNode, 250, 0);
+  const rootNode = traceNodes.find((n) => n.nodeId === 'root') ?? traceNodes[0];
+  if (rootNode) renderBranch(rootNode, VISUALIZER_CONFIG.LAYOUT.INITIAL_X, VISUALIZER_CONFIG.LAYOUT.INITIAL_Y);
 }
-
-// --- Main Path Visualizer Content ---
 
 interface PathVisualizerProps {
   trace: Trace;
 }
 
+/**
+ * Internal component for rendering the React Flow canvas.
+ */
 function PathVisualizerContent({ trace }: PathVisualizerProps) {
   const [selectedStep, setSelectedStep] = React.useState<TraceStep | { type: string; content: Record<string, unknown> } | null>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -379,18 +260,14 @@ function PathVisualizerContent({ trace }: PathVisualizerProps) {
     const initialNodes: Node[] = [];
     const initialEdges: Edge[] = [];
     
-    if (!trace.nodes || trace.nodes.length === 0) {
-      const nodesToProcess = [trace];
-      processTraceNodes(nodesToProcess, initialNodes, initialEdges, setSelectedStep);
-    } else {
-      processTraceNodes(trace.nodes, initialNodes, initialEdges, setSelectedStep);
-    }
+    const nodesToProcess = (!trace.nodes || trace.nodes.length === 0) ? [trace] : trace.nodes;
+    processTraceNodes(nodesToProcess, initialNodes, initialEdges, setSelectedStep);
 
     setNodes(initialNodes);
     setEdges(initialEdges);
     
     setTimeout(() => {
-      fitView({ padding: 0.2 });
+      fitView({ padding: VISUALIZER_CONFIG.ZOOM.FIT_PADDING });
     }, 100);
   }, [trace, setNodes, setEdges, fitView]);
 
@@ -398,7 +275,7 @@ function PathVisualizerContent({ trace }: PathVisualizerProps) {
     <div className="h-[600px] w-full bg-black/40 rounded-lg border border-white/5 relative group overflow-hidden cyber-border">
       <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
          <div className="text-[10px] text-cyber-green/60 font-mono tracking-widest bg-black/80 px-2 py-1 border border-cyber-green/30">
-           Trace visualizer
+           TRACE VISUALIZER
          </div>
       </div>
       
@@ -409,11 +286,11 @@ function PathVisualizerContent({ trace }: PathVisualizerProps) {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         fitView
-        minZoom={0.2}
-        maxZoom={1.5}
+        minZoom={VISUALIZER_CONFIG.ZOOM.MIN}
+        maxZoom={VISUALIZER_CONFIG.ZOOM.MAX}
         colorMode="dark"
       >
-        <Background color="#111" gap={20} />
+        <Background color={VISUALIZER_CONFIG.COLORS.BACKGROUND_GRID} gap={20} />
         <Controls showInteractive={false} className="!bg-black/80 !border-white/10 !fill-cyber-green" />
       </ReactFlow>
 
@@ -427,6 +304,10 @@ function PathVisualizerContent({ trace }: PathVisualizerProps) {
   );
 }
 
+/**
+ * Main PathVisualizer component wrapped in a ReactFlowProvider.
+ * Visualizes the agent execution path including recursive delegations.
+ */
 export default function PathVisualizer(props: PathVisualizerProps) {
   return (
     <ReactFlowProvider>

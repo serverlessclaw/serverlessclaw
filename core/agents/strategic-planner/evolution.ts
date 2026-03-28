@@ -30,7 +30,12 @@ export async function getEvolutionMode(): Promise<EvolutionMode> {
 export const COOLDOWN_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 /**
- * Checks if a gap is in cooldown period.
+ * Checks if a gap is in its cooldown period to prevent excessive re-analysis.
+ *
+ * @param memory The DynamoDB memory provider.
+ * @param gapId The identifier of the gap to check.
+ * @param baseUserId The unique ID of the user owning the gap.
+ * @returns A promise resolving to true if the gap is in cooldown.
  */
 export async function isGapInCooldown(
   memory: DynamoMemory,

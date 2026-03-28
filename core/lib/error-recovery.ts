@@ -158,6 +158,9 @@ export function classifyError(error: Error | string | any): ErrorClass {
 
 /**
  * Gets recovery strategy based on error class.
+ *
+ * @param errorClass The classification of the error (transient, permanent, unknown).
+ * @param overrides Optional partial strategy to override defaults.
  */
 export function getRecoveryStrategy(
   errorClass: ErrorClass,
@@ -223,6 +226,9 @@ export function sleep(ms: number): Promise<void> {
 
 /**
  * Executes a function with retry logic and exponential backoff.
+ *
+ * @param fn The asynchronous function to execute.
+ * @param options Retry configuration options.
  */
 export async function withRetry<T>(
   fn: () => Promise<T>,
@@ -388,6 +394,9 @@ export async function withResilientExecution<T>(
 
 /**
  * Provider-specific recovery with model fallback.
+ *
+ * @param providers Array of providers with their names and execution functions.
+ * @param options Fallback configuration options.
  */
 export async function withProviderFallback<T>(
   providers: Array<{ name: string; fn: () => Promise<T> }>,
@@ -419,6 +428,10 @@ export async function withProviderFallback<T>(
 
 /**
  * Circuit breaker aware MCP tool execution.
+ *
+ * @param toolName The name of the MCP tool being executed.
+ * @param execute The function that performs the tool call.
+ * @param fallback Optional fallback function if execution fails.
  */
 export async function withMCPResilience<T>(
   toolName: string,

@@ -52,9 +52,17 @@ function getResolvedNpxPath(): string {
 export function createMCPServerHandler(serverParams: StdioServerParameters): Handler {
   // Resolve the full npx path once at handler creation time to avoid ENOENT errors
   // when the MCP SDK calls spawn() with shell: false
+  // Also ensure PATH is included in env so spawned child processes can find node
   const resolvedParams: StdioServerParameters =
     serverParams.command === 'npx'
-      ? { ...serverParams, command: getResolvedNpxPath() }
+      ? {
+          ...serverParams,
+          command: getResolvedNpxPath(),
+          env: {
+            ...serverParams.env,
+            PATH: process.env.PATH ?? '/var/lang/bin:/usr/local/bin:/usr/bin',
+          },
+        }
       : serverParams;
 
   return async (event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> => {

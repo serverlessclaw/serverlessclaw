@@ -5,6 +5,7 @@ import {
   ReasoningProfile,
   MessageRole,
   OpenRouterModel,
+  Attachment,
 } from '../types/index';
 import { Resource } from 'sst';
 import { logger } from '../logger';
@@ -15,6 +16,33 @@ const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 const PROJECT_REFERER = 'https://github.com/serverlessclaw/serverlessclaw';
 const PROJECT_TITLE = 'Serverless Claw';
 const DEFAULT_DYNAMIC_THRESHOLD = 0.3;
+
+/**
+ * Standardized OpenRouter values for type safety and AI signal clarity.
+ */
+const OPENROUTER_CONSTANTS = {
+  CONTENT_TYPES: {
+    TEXT: 'text' as const,
+    IMAGE_URL: 'image_url' as const,
+    INPUT_FILE: 'input_file' as const,
+  },
+  MIME_TYPES: {
+    PNG: 'image/png',
+    OCTET_STREAM: 'application/octet-stream',
+  },
+  TOOL_TYPES: {
+    FUNCTION: 'function',
+    GOOGLE_SEARCH: 'google_search_retrieval',
+  },
+  MODELS: {
+    GEMINI_3: 'gemini-3',
+    GLM: 'glm',
+  },
+  RESPONSE_FORMATS: {
+    JSON_SCHEMA: 'json_schema',
+    JSON_OBJECT: 'json_object' as const,
+  },
+} as const;
 
 /**
  * Known context windows for specific models to avoid magic numbers.
@@ -39,6 +67,100 @@ const OPENROUTER_REASONING_MAP: Record<
 };
 
 /**
+ * Interface for SST Resource object to avoid 'as any' assertions.
+ */
+interface ClawSstResource {
+  OpenRouterApiKey?: { value: string };
+  [key: string]: unknown;
+}
+
+/**
+ * Interface for OpenRouter/OpenAI-compatible content blocks.
+ */
+interface OpenRouterContentBlock {
+  type: (typeof OPENROUTER_CONSTANTS.CONTENT_TYPES)[keyof typeof OPENROUTER_CONSTANTS.CONTENT_TYPES];
+  text?: string;
+  image_url?: { url: string };
+  input_file?: { file_id: string };
+}
+
+/**
+ * Interface for OpenRouter API response.
+ */
+interface OpenRouterResponse {
+  choices?: {
+    message: Message & {
+      reasoning_details?: Array<{ text?: string }>;
+    };
+  }[];
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+}
+
+/**
+ * Helper to convert a Claw message to an OpenRouter-compatible message.
+ * @param message The input Claw message.
+ * @returns A formatted message object.
+ */
+function convertToOpenRouterMessage(message: Message) {
+  if (!message.attachments || message.attachments.length === 0) {
+    return message;
+  }
+
+  const content: OpenRouterContentBlock[] = [];
+  if (message.content) {
+    content.push({ type: OPENROUTER_CONSTANTS.CONTENT_TYPES.TEXT, text: message.content });
+  }
+
+  message.attachments.forEach((attachment) => {
+    const block = createContentBlock(attachment);
+    if (block) content.push(block);
+  });
+
+  return {
+    ...message,
+    content:
+      content.length === 1 && content[0].type === OPENROUTER_CONSTANTS.CONTENT_TYPES.TEXT
+        ? message.content
+        : content,
+  };
+}
+
+/**
+ * Helper to create a content block for OpenRouter.
+ * @param attachment The input attachment.
+ * @returns A content block or null if unsupported.
+ */
+function createContentBlock(attachment: Attachment): OpenRouterContentBlock | null {
+  if (attachment.type === 'image') {
+    return {
+      type: OPENROUTER_CONSTANTS.CONTENT_TYPES.IMAGE_URL,
+      image_url: {
+        url:
+          attachment.url ??
+          `data:${attachment.mimeType ?? OPENROUTER_CONSTANTS.MIME_TYPES.PNG};base64,${attachment.base64}`,
+      },
+    };
+  }
+
+  if (attachment.type === 'file') {
+    return {
+      type: OPENROUTER_CONSTANTS.CONTENT_TYPES.INPUT_FILE,
+      input_file: {
+        file_id:
+          attachment.url ??
+          `data:${attachment.mimeType ?? OPENROUTER_CONSTANTS.MIME_TYPES.OCTET_STREAM};base64,${attachment.base64}`,
+      },
+    };
+  }
+
+  return null;
+}
+
+/**
  * Provider for OpenRouter, aggregating multiple high-capability models (GLM, Gemini).
  * Implements dynamic capability detection and standardized reasoning parameters.
  */
@@ -57,7 +179,7 @@ export class OpenRouterProvider implements IProvider {
    * @param profile The preferred reasoning profile.
    * @param model Override for the model ID.
    * @param _provider Ignored provider identifier.
-   * @param responseFormat Preferred format for the response (e.g., JSON schema).
+   * @param responseFormat Preferred format for the response.
    * @returns A promise resolving to the assistant's message.
    */
   async call(
@@ -68,114 +190,64 @@ export class OpenRouterProvider implements IProvider {
     _provider?: string,
     responseFormat?: import('../types/index').ResponseFormat
   ): Promise<Message> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const resource = Resource as any;
-    const apiKey = ('OpenRouterApiKey' in resource ? resource.OpenRouterApiKey.value : '') ?? '';
+    const sstResource = Resource as unknown as ClawSstResource;
+    const apiKey = sstResource.OpenRouterApiKey?.value ?? '';
     const baseUrl = OPENROUTER_BASE_URL;
     const activeModel = model ?? this.model;
 
-    // Fallback if profile not supported
     const capabilities = await this.getCapabilities(activeModel);
     profile = normalizeProfile(profile, capabilities, activeModel);
 
-    const reasoningConfig = OPENROUTER_REASONING_MAP[profile];
-    const reasoningEffort = capEffort(reasoningConfig.effort, capabilities.maxReasoningEffort);
+    const config = OPENROUTER_REASONING_MAP[profile];
+    const reasoningEffort = capEffort(config.effort, capabilities.maxReasoningEffort);
 
-    const processedMessages = messages.map((message) => {
-      if (!message.attachments || message.attachments.length === 0) {
-        return message;
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const content: any[] = [];
-      if (message.content) {
-        content.push({ type: 'text', text: message.content });
-      }
-
-      message.attachments.forEach((attachment) => {
-        if (attachment.type === 'image') {
-          content.push({
-            type: 'image_url',
-            image_url: {
-              url:
-                attachment.url ??
-                `data:${attachment.mimeType ?? 'image/png'};base64,${attachment.base64}`,
-            },
-          });
-        } else if (attachment.type === 'file') {
-          // OpenRouter/OpenAI-compatible file input
-          content.push({
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            type: 'input_file' as any,
-            input_file: {
-              file_id:
-                attachment.url ??
-                `data:${attachment.mimeType ?? 'application/octet-stream'};base64,${attachment.base64}`,
-            },
-          });
-        }
-      });
-
-      return {
-        ...message,
-        content: content.length === 1 && content[0].type === 'text' ? message.content : content,
-      };
-    });
+    const processedMessages = messages.map(convertToOpenRouterMessage);
 
     const body: Record<string, unknown> = {
       model: activeModel,
       messages: processedMessages,
-      route: reasoningConfig.route,
-      reasoning: {
-        effort: reasoningEffort,
-        enabled: reasoningConfig.enabled,
-      },
+      route: config.route,
+      reasoning: { effort: reasoningEffort, enabled: config.enabled },
       ...(responseFormat ? { response_format: responseFormat } : {}),
-      // 2026: Provider routing and privacy defaults
       provider: {
         allow_fallbacks: true,
         data_collection: 'deny',
         prompt_cache: true,
-        // Ensure routing to providers supporting requested features (tools, json_schema)
         ...(responseFormat || (tools && tools.length > 0) ? { require_parameters: true } : {}),
       },
-      // 2026: specialized model-specific extra bodies
-      ...(activeModel.includes('glm') ? { plugin_id: 'reasoning', include_reasoning: true } : {}),
-      ...(activeModel.includes('gemini-3') ? { safety_settings: 'off' } : {}),
+      ...(activeModel.includes(OPENROUTER_CONSTANTS.MODELS.GLM)
+        ? { plugin_id: 'reasoning', include_reasoning: true }
+        : {}),
+      ...(activeModel.includes(OPENROUTER_CONSTANTS.MODELS.GEMINI_3)
+        ? { safety_settings: 'off' }
+        : {}),
     };
 
     if (tools && tools.length > 0) {
       body['tools'] = tools.map((tool) => {
-        if (tool.type && tool.type !== 'function') {
+        if (tool.type && tool.type !== OPENROUTER_CONSTANTS.TOOL_TYPES.FUNCTION)
           return { type: tool.type };
-        }
         return {
-          type: 'function',
-          function: {
-            name: tool.name,
-            description: tool.description,
-            parameters: tool.parameters,
-          },
+          type: OPENROUTER_CONSTANTS.TOOL_TYPES.FUNCTION,
+          function: { name: tool.name, description: tool.description, parameters: tool.parameters },
         };
       });
 
-      // 2026: Specialized Google Gemini Grounded Search
       if (
         activeModel.includes('gemini') &&
-        tools.some((t) => t.type === 'google_search_retrieval')
+        tools.some((t) => t.type === OPENROUTER_CONSTANTS.TOOL_TYPES.GOOGLE_SEARCH)
       ) {
         body['google_search_retrieval'] = {
-          dynamic_retrieval: {
-            mode: 'unspecified',
-            dynamic_threshold: DEFAULT_DYNAMIC_THRESHOLD,
-          },
+          dynamic_retrieval: { mode: 'unspecified', dynamic_threshold: DEFAULT_DYNAMIC_THRESHOLD },
         };
       }
     }
 
-    // 2026: Force JSON format for models that require explicit mime types (Gemini 3)
-    if (responseFormat?.type === 'json_schema' && activeModel.includes('gemini-3')) {
-      body['response_format'] = { type: 'json_object' };
+    if (
+      responseFormat?.type === OPENROUTER_CONSTANTS.RESPONSE_FORMATS.JSON_SCHEMA &&
+      activeModel.includes(OPENROUTER_CONSTANTS.MODELS.GEMINI_3)
+    ) {
+      body['response_format'] = { type: OPENROUTER_CONSTANTS.RESPONSE_FORMATS.JSON_OBJECT };
     }
 
     const response = await fetch(`${baseUrl}/chat/completions`, {
@@ -195,52 +267,34 @@ export class OpenRouterProvider implements IProvider {
       throw new Error(`OpenRouter Provider error: ${response.status} - ${error}`);
     }
 
-    const data = (await response.json()) as {
-      choices?: {
-        message: Message & {
-          reasoning_details?: unknown[];
-        };
-      }[];
-    };
-    const message = data.choices?.[0]?.message;
+    const data = (await response.json()) as OpenRouterResponse;
+    const msg = data.choices?.[0]?.message;
 
-    if (!message) {
-      return createEmptyResponse('OpenRouter');
-    }
+    if (!msg) return createEmptyResponse('OpenRouter');
 
-    // 2026 Log reasoning details for observability if present
-    if (message.reasoning_details) {
+    if (msg.reasoning_details) {
       logger.debug(
         `[OpenRouter Reasoning] for ${activeModel}:`,
-        JSON.stringify(message.reasoning_details)
+        JSON.stringify(msg.reasoning_details)
       );
     }
 
-    // Extract reasoning text for thought field
     let thought: string | undefined;
-    if (message.reasoning_details && Array.isArray(message.reasoning_details)) {
-      const parts = (message.reasoning_details as Array<{ text?: string }>)
-        .filter((detail) => detail.text)
-        .map((detail) => detail.text);
-      if (parts.length > 0) {
-        thought = parts.join('\n\n');
-      }
+    if (msg.reasoning_details && Array.isArray(msg.reasoning_details)) {
+      const parts = msg.reasoning_details.filter((d) => d.text).map((d) => d.text as string);
+      if (parts.length > 0) thought = parts.join('\n\n');
     }
 
     return {
       role: MessageRole.ASSISTANT,
-      content: message.content ?? '',
+      content: msg.content ?? '',
       thought,
-      tool_calls: message.tool_calls,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      usage: (data as any).usage
+      tool_calls: msg.tool_calls,
+      usage: data.usage
         ? {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            prompt_tokens: (data as any).usage.prompt_tokens ?? 0,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            completion_tokens: (data as any).usage.completion_tokens ?? 0,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            total_tokens: (data as any).usage.total_tokens ?? 0,
+            prompt_tokens: data.usage.prompt_tokens ?? 0,
+            completion_tokens: data.usage.completion_tokens ?? 0,
+            total_tokens: data.usage.total_tokens ?? 0,
           }
         : undefined,
     } as Message;
@@ -257,67 +311,25 @@ export class OpenRouterProvider implements IProvider {
     _provider?: string,
     responseFormat?: import('../types/index').ResponseFormat
   ): AsyncIterable<import('../types/index').MessageChunk> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const resource = Resource as any;
-    const apiKey = ('OpenRouterApiKey' in resource ? resource.OpenRouterApiKey.value : '') ?? '';
+    const sstResource = Resource as unknown as ClawSstResource;
+    const apiKey = sstResource.OpenRouterApiKey?.value ?? '';
     const baseUrl = OPENROUTER_BASE_URL;
     const activeModel = model ?? this.model;
 
     const capabilities = await this.getCapabilities(activeModel);
     profile = normalizeProfile(profile, capabilities, activeModel);
 
-    const reasoningConfig = OPENROUTER_REASONING_MAP[profile];
-    const reasoningEffort = capEffort(reasoningConfig.effort, capabilities.maxReasoningEffort);
+    const config = OPENROUTER_REASONING_MAP[profile];
+    const reasoningEffort = capEffort(config.effort, capabilities.maxReasoningEffort);
 
-    const processedMessages = messages.map((message) => {
-      if (!message.attachments || message.attachments.length === 0) {
-        return message;
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const content: any[] = [];
-      if (message.content) {
-        content.push({ type: 'text', text: message.content });
-      }
-
-      message.attachments.forEach((attachment) => {
-        if (attachment.type === 'image') {
-          content.push({
-            type: 'image_url',
-            image_url: {
-              url:
-                attachment.url ??
-                `data:${attachment.mimeType ?? 'image/png'};base64,${attachment.base64}`,
-            },
-          });
-        } else if (attachment.type === 'file') {
-          content.push({
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            type: 'input_file' as any,
-            input_file: {
-              file_id:
-                attachment.url ??
-                `data:${attachment.mimeType ?? 'application/octet-stream'};base64,${attachment.base64}`,
-            },
-          });
-        }
-      });
-
-      return {
-        ...message,
-        content: content.length === 1 && content[0].type === 'text' ? message.content : content,
-      };
-    });
+    const processedMessages = messages.map(convertToOpenRouterMessage);
 
     const body: Record<string, unknown> = {
       model: activeModel,
       messages: processedMessages,
       stream: true,
-      route: reasoningConfig.route,
-      reasoning: {
-        effort: reasoningEffort,
-        enabled: reasoningConfig.enabled,
-      },
+      route: config.route,
+      reasoning: { effort: reasoningEffort, enabled: config.enabled },
       ...(responseFormat ? { response_format: responseFormat } : {}),
       provider: {
         allow_fallbacks: true,
@@ -325,40 +337,39 @@ export class OpenRouterProvider implements IProvider {
         prompt_cache: true,
         ...(responseFormat || (tools && tools.length > 0) ? { require_parameters: true } : {}),
       },
-      ...(activeModel.includes('glm') ? { plugin_id: 'reasoning', include_reasoning: true } : {}),
-      ...(activeModel.includes('gemini-3') ? { safety_settings: 'off' } : {}),
+      ...(activeModel.includes(OPENROUTER_CONSTANTS.MODELS.GLM)
+        ? { plugin_id: 'reasoning', include_reasoning: true }
+        : {}),
+      ...(activeModel.includes(OPENROUTER_CONSTANTS.MODELS.GEMINI_3)
+        ? { safety_settings: 'off' }
+        : {}),
     };
 
     if (tools && tools.length > 0) {
       body['tools'] = tools.map((tool) => {
-        if (tool.type && tool.type !== 'function') {
+        if (tool.type && tool.type !== OPENROUTER_CONSTANTS.TOOL_TYPES.FUNCTION)
           return { type: tool.type };
-        }
         return {
-          type: 'function',
-          function: {
-            name: tool.name,
-            description: tool.description,
-            parameters: tool.parameters,
-          },
+          type: OPENROUTER_CONSTANTS.TOOL_TYPES.FUNCTION,
+          function: { name: tool.name, description: tool.description, parameters: tool.parameters },
         };
       });
 
       if (
         activeModel.includes('gemini') &&
-        tools.some((t) => t.type === 'google_search_retrieval')
+        tools.some((t) => t.type === OPENROUTER_CONSTANTS.TOOL_TYPES.GOOGLE_SEARCH)
       ) {
         body['google_search_retrieval'] = {
-          dynamic_retrieval: {
-            mode: 'unspecified',
-            dynamic_threshold: DEFAULT_DYNAMIC_THRESHOLD,
-          },
+          dynamic_retrieval: { mode: 'unspecified', dynamic_threshold: DEFAULT_DYNAMIC_THRESHOLD },
         };
       }
     }
 
-    if (responseFormat?.type === 'json_schema' && activeModel.includes('gemini-3')) {
-      body['response_format'] = { type: 'json_object' };
+    if (
+      responseFormat?.type === OPENROUTER_CONSTANTS.RESPONSE_FORMATS.JSON_SCHEMA &&
+      activeModel.includes(OPENROUTER_CONSTANTS.MODELS.GEMINI_3)
+    ) {
+      body['response_format'] = { type: OPENROUTER_CONSTANTS.RESPONSE_FORMATS.JSON_OBJECT };
     }
 
     try {
@@ -389,13 +400,12 @@ export class OpenRouterProvider implements IProvider {
       let buffer = '';
       let streamDone = false;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const parseChunk = (line: string): any | null => {
+      const parseChunk = (line: string): (OpenRouterResponse & { done?: boolean }) | null => {
         if (!line.startsWith('data: ')) return null;
-        const data = line.slice(6).trim();
-        if (data === '[DONE]') return { done: true };
+        const dataStr = line.slice(6).trim();
+        if (dataStr === '[DONE]') return { done: true };
         try {
-          return JSON.parse(data);
+          return JSON.parse(dataStr) as OpenRouterResponse;
         } catch {
           return null;
         }
@@ -417,9 +427,8 @@ export class OpenRouterProvider implements IProvider {
             break;
           }
 
-          const choice = parsed.choices?.[0];
+          const choice = (parsed as any).choices?.[0];
 
-          // Yield usage from final chunk (may have no choices)
           if (parsed.usage) {
             yield {
               usage: {
@@ -435,21 +444,16 @@ export class OpenRouterProvider implements IProvider {
           const delta = choice.delta;
           if (!delta) continue;
 
-          if (delta.content) {
-            yield { content: delta.content };
-          }
+          if (delta.content) yield { content: delta.content };
 
           if (delta.reasoning_details && Array.isArray(delta.reasoning_details)) {
-            for (const reasoningDetail of delta.reasoning_details) {
-              if (reasoningDetail.text) {
-                yield { thought: reasoningDetail.text };
-              }
+            for (const detail of delta.reasoning_details) {
+              if (detail.text) yield { thought: (detail as { text: string }).text };
             }
           }
 
-          if (delta.reasoning && typeof delta.reasoning === 'string') {
+          if (delta.reasoning && typeof delta.reasoning === 'string')
             yield { thought: delta.reasoning };
-          }
 
           if (delta.tool_calls && Array.isArray(delta.tool_calls)) {
             for (const toolCall of delta.tool_calls) {
@@ -457,7 +461,7 @@ export class OpenRouterProvider implements IProvider {
                 tool_calls: [
                   {
                     id: toolCall.id ?? '',
-                    type: 'function',
+                    type: OPENROUTER_CONSTANTS.TOOL_TYPES.FUNCTION,
                     function: {
                       name: toolCall.function?.name ?? '',
                       arguments: toolCall.function?.arguments ?? '',
@@ -470,7 +474,6 @@ export class OpenRouterProvider implements IProvider {
         }
       }
 
-      // Process any remaining buffer
       if (buffer.trim()) {
         const parsed = parseChunk(buffer.trim());
         if (parsed && !parsed.done && parsed.usage) {
@@ -497,12 +500,10 @@ export class OpenRouterProvider implements IProvider {
    */
   async getCapabilities(model?: string) {
     const activeModel = model ?? this.model;
-    // 2026: Dynamic capability detection based on model ID patterns.
-    // Standardized reasoning models in OpenRouter usually contain these keywords.
     const isHighCapability =
-      activeModel.includes('glm') ||
-      activeModel.includes('gemini-3') ||
-      activeModel.includes('claude-3-7') || // Hypothetical 2026 Claude
+      activeModel.includes(OPENROUTER_CONSTANTS.MODELS.GLM) ||
+      activeModel.includes(OPENROUTER_CONSTANTS.MODELS.GEMINI_3) ||
+      activeModel.includes('claude-3-7') ||
       activeModel.includes('gpt-5');
 
     return {
@@ -514,11 +515,11 @@ export class OpenRouterProvider implements IProvider {
             ReasoningProfile.DEEP,
           ]
         : [ReasoningProfile.FAST, ReasoningProfile.STANDARD],
-      maxReasoningEffort: 'high', // OpenRouter's reasoning.effort usually caps at high
+      maxReasoningEffort: 'high',
       supportsStructuredOutput: true,
-      contextWindow: activeModel.includes('gemini-3')
+      contextWindow: activeModel.includes(OPENROUTER_CONSTANTS.MODELS.GEMINI_3)
         ? CONTEXT_WINDOWS['gemini-3']
-        : activeModel.includes('glm')
+        : activeModel.includes(OPENROUTER_CONSTANTS.MODELS.GLM)
           ? CONTEXT_WINDOWS['glm']
           : CONTEXT_WINDOWS['default'],
     };

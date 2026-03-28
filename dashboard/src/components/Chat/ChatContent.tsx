@@ -7,6 +7,7 @@ import Typography from '@/components/ui/Typography';
 import CyberConfirm from '@/components/CyberConfirm';
 import Button from '@/components/ui/Button';
 import { AGENT_ERRORS } from '@/lib/constants';
+import { THEME } from '@/lib/theme';
 import { useChatConnection } from './useChatConnection';
 import { ChatSidebar } from './ChatSidebar';
 import { ChatMessageList } from './ChatMessageList';
@@ -14,10 +15,38 @@ import { ChatInput } from './ChatInput';
 import { ChatMessage, AttachmentPreview, HistoryMessage } from './types';
 
 /**
- * ChatContent component - The main interface for the chat dashboard.
+ * Visual constants and style configurations for the Chat component.
+ */
+const CHAT_STYLES = {
+  GRADIENTS: {
+    MAIN_BG: 'bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-green/5 via-[#0a0a0a] to-[#0a0a0a]',
+    DRAG_OVER: 'bg-cyber-green/10',
+  },
+  SHADOWS: {
+    DROP_ZONE: 'shadow-[0_0_50px_rgba(0,255,163,0.2)]',
+  },
+  ANIMATIONS: {
+    PULSE: 'animate-pulse',
+    BOUNCE: 'animate-bounce',
+  }
+} as const;
+
+/**
+ * Interface for the Chat API response.
+ */
+interface ChatApiResponse {
+  reply?: string;
+  thought?: string;
+  messageId?: string;
+  agentName?: string;
+  tool_calls?: any[];
+  error?: string;
+  details?: string;
+}
+
+/**
+ * Main interface for the chat dashboard.
  * Manages chat messages, sessions, file uploads, and session settings.
- * 
- * @returns {JSX.Element} The rendered chat content component.
  */
 export default function ChatContent() {
   // --- UI and Session State ---
@@ -52,7 +81,6 @@ export default function ChatContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Custom hook for managing chat connection and session details
   const { 
     isRealtimeActive, 
     sessions, 
@@ -68,21 +96,18 @@ export default function ChatContent() {
 
   const currentSession = sessions.find(s => s.sessionId === activeSessionId);
 
-  // --- effects ---
-
-  // Sync edited title with current session title
+  // --- Title and Session Sync ---
   useEffect(() => {
     if (currentSession) {
       setEditedTitle(currentSession.title ?? 'Untitled Trace');
     }
   }, [currentSession]);
 
-  // Track active session ID in ref for concurrent processing
   useEffect(() => {
     activeSessionRef.current = activeSessionId;
   }, [activeSessionId]);
 
-  // Handle URL search parameters for session and prompt initialization
+  // URL State Management
   useEffect(() => {
     const sessionFromUrl = searchParams.get('session');
     if (sessionFromUrl && sessionFromUrl !== activeSessionId) {
@@ -94,13 +119,11 @@ export default function ChatContent() {
     const prompt = searchParams.get('prompt');
     if (prompt && !hasProcessedPrompt.current) {
       hasProcessedPrompt.current = true;
-      // Delay to ensure component is ready
       setTimeout(() => sendMessage(prompt), 500);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  // Update URL when active session changes
   useEffect(() => {
     if (activeSessionId) {
       const currentParams = new URLSearchParams(window.location.search);
@@ -110,7 +133,6 @@ export default function ChatContent() {
     }
   }, [activeSessionId, router]);
 
-  // Fetch history when active session changes
   useEffect(() => {
     if (activeSessionId) {
       if (skipNextHistoryFetch.current) {
@@ -126,9 +148,6 @@ export default function ChatContent() {
 
   // --- Session Operations ---
 
-  /**
-   * Saves the edited title of the current chat session.
-   */
   const saveTitle = async () => {
     if (!activeSessionId || !editedTitle.trim()) return;
     try {
@@ -144,12 +163,6 @@ export default function ChatContent() {
     }
   };
 
-  /**
-   * Toggles the pinned status of a chat session.
-   * 
-   * @param {string} sessionId - The ID of the session to toggle.
-   * @param {boolean} isPinned - The new pinned status.
-   */
   const togglePin = async (sessionId: string, isPinned: boolean) => {
     try {
       await fetch('/api/chat', {
@@ -163,11 +176,6 @@ export default function ChatContent() {
     }
   };
 
-  /**
-   * Fetches the chat history for a specific session and merges it with local updates.
-   * 
-   * @param {string} sessionId - The ID of the session to fetch history for.
-   */
   const fetchHistory = async (sessionId: string) => {
     setIsLoading(true);
     try {
@@ -187,13 +195,11 @@ export default function ChatContent() {
             messageId: m.messageId || m.traceId,
           }));
 
-          // Preserve local-only messages (like SystemGuard errors) that aren't in history yet
           const historyIds = new Set(history.map((msg: ChatMessage) => msg.messageId).filter(Boolean));
           const localOnly = prev.filter((msg: ChatMessage) => 
             msg.role === 'assistant' && msg.messageId && !historyIds.has(msg.messageId)
           );
 
-          // Track IDs from history for duplicate prevention
           history.forEach((msg: ChatMessage) => {
             if (msg.messageId) seenMessageIds.current.add(msg.messageId);
           });
@@ -208,7 +214,7 @@ export default function ChatContent() {
     }
   };
 
-  // --- Drag and Drop Handlers ---
+  // --- Drag and Drop Logic ---
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -227,11 +233,6 @@ export default function ChatContent() {
     handleFiles(files);
   };
 
-  /**
-   * Processes files for upload, generates previews, and updates attachment state.
-   * 
-   * @param {File[]} files - The files to process.
-   */
   const handleFiles = async (files: File[]) => {
     const newAttachments = await Promise.all(
       files.map(async (file) => {
@@ -250,13 +251,8 @@ export default function ChatContent() {
     setAttachments(prev => [...prev, ...newAttachments]);
   };
 
-  // --- Messaging and Interaction ---
+  // --- Core Messaging Logic ---
 
-  /**
-   * Sends a message to the chat API and handles the response.
-   * 
-   * @param {string} text - The text of the message to send.
-   */
   const sendMessage = async (text: string) => {
     if (!text.trim() && attachments.length === 0) return;
     if (isLoading || isPostInFlight.current) return;
@@ -265,7 +261,6 @@ export default function ChatContent() {
     const currentAttachments = [...attachments];
     const tempId = crypto.randomUUID();
     
-    // Add user message locally
     setMessages(prev => [...prev, { 
       role: 'user', 
       content: userMsg,
@@ -281,7 +276,6 @@ export default function ChatContent() {
     setAttachments([]);
     isPostInFlight.current = true;
 
-    // Initialize session if needed
     let currentSessionId = activeSessionRef.current;
     if (!currentSessionId) {
        currentSessionId = `session_${Date.now()}`;
@@ -291,7 +285,6 @@ export default function ChatContent() {
     }
 
     try {
-      // Encode attachments as base64
       const apiAttachments = await Promise.all(currentAttachments.map(async (a) => {
         const base64 = await new Promise<string>((resolve) => {
           const reader = new FileReader();
@@ -312,15 +305,13 @@ export default function ChatContent() {
         }),
       });
 
-      const data = await response.json();
+      const data = (await response.json()) as ChatApiResponse;
 
-      // Handle server-side errors
       if (!response.ok || data.error) {
         handleApiError(currentSessionId, data);
         return;
       }
 
-      // Merge assistant response into message list
       if (currentSessionId === activeSessionRef.current) {
         updateAssistantResponse(data, tempId);
       }
@@ -334,10 +325,11 @@ export default function ChatContent() {
   };
 
   /**
-   * Handles errors from the Chat API.
-   * Internal helper extracted from sendMessage.
+   * Internal helper to handle server-side errors from the chat API.
+   * @param sessionId The active session ID.
+   * @param data The error response data.
    */
-  const handleApiError = (sessionId: string, data: any) => {
+  const handleApiError = (sessionId: string, data: ChatApiResponse) => {
     const errorContent = data.details || data.error || AGENT_ERRORS.PROCESS_FAILURE;
     console.error('Chat API error:', data);
     if (sessionId === activeSessionRef.current) {
@@ -352,13 +344,14 @@ export default function ChatContent() {
   };
 
   /**
-   * Updates or appends assistant response message.
-   * Internal helper extracted from sendMessage.
+   * Internal helper to update or append the assistant's message.
+   * @param data The response data from the API.
+   * @param tempId The local temporary ID for tracking.
    */
-  const updateAssistantResponse = (data: any, tempId: string) => {
-    seenMessageIds.current.add(data.messageId || tempId);
+  const updateAssistantResponse = (data: ChatApiResponse, tempId: string) => {
+    const targetId = data.messageId || tempId;
+    seenMessageIds.current.add(targetId);
     setMessages(prev => {
-      const targetId = data.messageId || tempId;
       const exists = prev.some(m => m.messageId === targetId && m.role === 'assistant');
       if (exists) {
         return prev.map(m => m.messageId === targetId && m.role === 'assistant' ? {
@@ -381,11 +374,12 @@ export default function ChatContent() {
   };
 
   /**
-   * Handles network or unexpected processing errors and logs strategic gaps.
-   * Internal helper extracted from sendMessage.
+   * Internal helper to handle connection failures and log gaps.
+   * @param sessionId The active session ID.
+   * @param error The error object.
    */
   const handleConnectionError = async (sessionId: string, error: unknown) => {
-    console.error('Chat error:', error);
+    console.error('Chat connection error:', error);
     const errorMsg = AGENT_ERRORS.CONNECTION_FAILURE;
     if (sessionId === activeSessionRef.current) {
       const errorId = `error_${Date.now()}`;
@@ -403,7 +397,7 @@ export default function ChatContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          details: `Dashboard session ${sessionId} failed during processing. Error: ${error instanceof Error ? error.message : String(error)}`,
+          details: `Chat failure in session ${sessionId}. Error: ${error instanceof Error ? error.message : String(error)}`,
           metadata: { category: 'strategic_gap', urgency: 7, impact: 5 }
         })
       });
@@ -412,11 +406,6 @@ export default function ChatContent() {
     }
   };
 
-  /**
-   * Handles clicks on suggested options or tool approvals.
-   * 
-   * @param {string} value - The value of the clicked option.
-   */
   const handleOptionClick = async (value: string) => {
     if (value.startsWith('APPROVE_TOOL_CALL:')) {
       await handleToolApproval(value.split(':')[1]);
@@ -427,7 +416,7 @@ export default function ChatContent() {
 
   /**
    * Processes approval for a specific tool call.
-   * Internal helper extracted from handleOptionClick.
+   * @param callId The unique ID of the tool call to approve.
    */
   const handleToolApproval = async (callId: string) => {
     const currentSessionId = activeSessionRef.current;
@@ -465,9 +454,6 @@ export default function ChatContent() {
 
   // --- Session Management Handlers ---
 
-  /**
-   * Resets the UI state to allow creating a new chat session.
-   */
   const createNewChat = () => {
     if (!activeSessionId) {
       setIsShaking(true);
@@ -481,18 +467,12 @@ export default function ChatContent() {
     router.push('/', { scroll: false });
   };
 
-  /**
-   * Initiates the deletion flow for a specific session.
-   */
   const deleteSession = (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
     setSessionToDelete(sessionId);
     setShowDeleteConfirm(true);
   };
 
-  /**
-   * Finalizes the deletion of the selected session.
-   */
   const confirmDelete = async () => {
     if (!sessionToDelete) return;
     try {
@@ -511,9 +491,6 @@ export default function ChatContent() {
     setShowDeleteConfirm(false);
   };
 
-  /**
-   * Purges all chat history for the user.
-   */
   const confirmDeleteAll = async () => {
     try {
       const response = await fetch('/api/chat?sessionId=all', { method: 'DELETE' });
@@ -524,7 +501,7 @@ export default function ChatContent() {
         fetchSessions();
       }
     } catch (error) { 
-      console.error('Failed to delete all:', error); 
+      console.error('Failed to delete all history:', error); 
     }
     setShowDeleteAllConfirm(false);
   };
@@ -544,15 +521,15 @@ export default function ChatContent() {
       />
 
       <main 
-        className={`flex-1 flex flex-col min-w-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-green/5 via-[#0a0a0a] to-[#0a0a0a] transition-colors relative ${isDragging ? 'bg-cyber-green/10' : ''}`}
+        className={`flex-1 flex flex-col min-w-0 ${CHAT_STYLES.GRADIENTS.MAIN_BG} transition-colors relative ${isDragging ? CHAT_STYLES.GRADIENTS.DRAG_OVER : ''}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
         {isDragging && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-cyber-green/10 border-2 border-dashed border-cyber-green pointer-events-none">
-            <div className="flex flex-col items-center gap-4 bg-black/80 p-12 rounded-2xl border border-cyber-green/30 shadow-[0_0_50px_rgba(0,255,163,0.2)]">
-              <Paperclip size={64} className="text-cyber-green animate-bounce" />
+            <div className={`flex flex-col items-center gap-4 bg-black/80 p-12 rounded-2xl border border-cyber-green/30 ${CHAT_STYLES.SHADOWS.DROP_ZONE}`}>
+              <Paperclip size={64} className={`text-cyber-green ${CHAT_STYLES.ANIMATIONS.BOUNCE}`} />
               <Typography variant="h2" weight="bold" color="primary" glow>DROP FILES TO UPLOAD</Typography>
             </div>
           </div>
@@ -616,7 +593,7 @@ export default function ChatContent() {
           </div>
           {isRealtimeActive && (
             <div className="flex items-center gap-2 bg-cyber-green/10 px-3 py-1 rounded border border-cyber-green/30">
-               <div className="w-1.5 h-1.5 rounded-full bg-cyber-green animate-pulse" />
+               <div className={`w-1.5 h-1.5 rounded-full bg-cyber-green ${CHAT_STYLES.ANIMATIONS.PULSE}`} />
                <Typography variant="mono" weight="bold" className="text-cyber-green text-[10px]">LIVE</Typography>
             </div>
           )}
