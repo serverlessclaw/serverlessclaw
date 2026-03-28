@@ -220,8 +220,8 @@ export class BaseMemoryProvider {
 
     for (const item of items) {
       await this.deleteItem({
-        userId: item.userId,
-        timestamp: item.timestamp,
+        userId: item.userId as string,
+        timestamp: item.timestamp as number,
       });
     }
     logger.info(`Cleared history for ${userId} (${items.length} items)`);

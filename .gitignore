@@ -20,6 +20,7 @@ yarn-error.log*
 dist
 *.zip
 coverage
+*.tsbuildinfo
 
 # Next.js Dashboard
 dashboard/.next/

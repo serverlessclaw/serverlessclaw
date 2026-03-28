@@ -24,7 +24,7 @@ describe('DynamoLockManager', () => {
     it('should return true if lock is acquired successfully', async () => {
       ddbMock.on(PutCommand).resolves({});
 
-      const result = await lockManager.acquire('test-lock', 30);
+      const result = await lockManager.acquire('test-lock', 'owner-123', 30);
       expect(result).toBe(true);
       expect(ddbMock.calls()).toHaveLength(1);
     });
@@ -34,14 +34,14 @@ describe('DynamoLockManager', () => {
       error.name = 'ConditionalCheckFailedException';
       ddbMock.on(PutCommand).rejects(error);
 
-      const result = await lockManager.acquire('test-lock', 30);
+      const result = await lockManager.acquire('test-lock', 'owner-123', 30);
       expect(result).toBe(false);
     });
 
     it('should throw error if DDB operation fails for other reasons', async () => {
       ddbMock.on(PutCommand).rejects(new Error('Network error'));
 
-      await expect(lockManager.acquire('test-lock')).rejects.toThrow('Network error');
+      await expect(lockManager.acquire('test-lock', 'owner-123')).rejects.toThrow('Network error');
     });
   });
 
@@ -49,7 +49,7 @@ describe('DynamoLockManager', () => {
     it('should send DeleteCommand to release lock', async () => {
       ddbMock.on(DeleteCommand).resolves({});
 
-      await lockManager.release('test-lock');
+      await lockManager.release('test-lock', 'owner-123');
 
       expect(ddbMock.calls()).toHaveLength(1);
       const call = ddbMock.call(0);

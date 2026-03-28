@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 const CreateGapSchema = z.object({
   details: z.string().min(1, 'details is required'),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**
