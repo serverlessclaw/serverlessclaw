@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { 
   Activity, 
   Terminal, 
@@ -10,7 +11,6 @@ import {
   Bot, 
   Wrench, 
   Zap,
-  BarChart3,
   LayoutGrid,
   Cpu
 } from 'lucide-react';
@@ -20,17 +20,36 @@ import DeleteTraceButton from '@/components/DeleteTraceButton';
 import { TRACE_TYPES } from '@claw/core/lib/constants';
 import { Trace, TraceStep } from '@/lib/types/ui';
 
+const CollaborationCanvas = dynamic(() => import('@/components/CollaborationCanvas'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex-1 flex items-center justify-center h-96">
+      <div className="text-cyber-blue animate-pulse font-mono uppercase text-sm tracking-widest">
+        Initializing Collaboration Matrix...
+      </div>
+    </div>
+  )
+});
+
 interface TraceIntelligenceViewProps {
   initialTraces: Trace[];
   sessionTitles?: Record<string, string>;
+  initialTab?: TabType;
 }
 
-type TabType = 'timeline' | 'sessions' | 'models' | 'tools' | 'usage' | 'agents';
+type TabType = 'timeline' | 'sessions' | 'models' | 'tools' | 'agents' | 'live';
 
 export default function TraceIntelligenceView({ initialTraces, sessionTitles }: TraceIntelligenceViewProps) {
   const [activeTab, setActiveTab] = useState<TabType>('timeline');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'started' | 'error'>('all');
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+
+  // Reset expansion when switching tabs
+  React.useEffect(() => {
+    setExpandedGroup(null);
+  }, [activeTab]);
+
 
   // Enhanced trace metadata extraction
   const traces = useMemo(() => {
@@ -79,7 +98,6 @@ export default function TraceIntelligenceView({ initialTraces, sessionTitles }: 
   // Filtering logic
   const filteredTraces = useMemo(() => {
     return traces.filter(trace => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const text = trace.initialContext?.userText || '';
       const matchesSearch = 
         trace.traceId.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -95,8 +113,7 @@ export default function TraceIntelligenceView({ initialTraces, sessionTitles }: 
   // Grouping logic
   const groupedData = useMemo(() => {
     if (activeTab === 'agents') {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const groups: Record<string, any[]> = {};
+      const groups: Record<string, Trace[]> = {};
       filteredTraces.forEach(t => {
         if (!groups[t.agentId]) groups[t.agentId] = [];
         groups[t.agentId].push(t);
@@ -105,8 +122,7 @@ export default function TraceIntelligenceView({ initialTraces, sessionTitles }: 
     }
 
     if (activeTab === 'sessions') {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const groups: Record<string, any[]> = {};
+      const groups: Record<string, Trace[]> = {};
       filteredTraces.forEach(t => {
         const displayTitle = sessionTitles?.[t.sessionId] 
           ? `${sessionTitles[t.sessionId]} (${t.sessionId.substring(0, 8)}...)` 
@@ -118,8 +134,7 @@ export default function TraceIntelligenceView({ initialTraces, sessionTitles }: 
     }
     
     if (activeTab === 'models') {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const groups: Record<string, any[]> = {};
+      const groups: Record<string, Trace[]> = {};
       filteredTraces.forEach(t => {
         if (!groups[t.model]) groups[t.model] = [];
         groups[t.model].push(t);
@@ -128,8 +143,7 @@ export default function TraceIntelligenceView({ initialTraces, sessionTitles }: 
     }
 
     if (activeTab === 'tools') {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const groups: Record<string, any[]> = {};
+      const groups: Record<string, Trace[]> = {};
       filteredTraces.forEach(t => {
         t.toolsUsed.forEach((tool: string) => {
           if (!groups[tool]) groups[tool] = [];
@@ -139,14 +153,9 @@ export default function TraceIntelligenceView({ initialTraces, sessionTitles }: 
       return Object.entries(groups).sort((a, b) => b[1].length - a[1].length);
     }
 
-    if (activeTab === 'usage') {
-      return [...filteredTraces].sort((a, b) => b.totalTokens - a.totalTokens);
-    }
-
     return filteredTraces;
   }, [filteredTraces, activeTab, sessionTitles]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const renderTraceCard = (trace: Trace) => (
     <div key={trace.traceId} className="relative group">
       <Link 
@@ -169,7 +178,7 @@ export default function TraceIntelligenceView({ initialTraces, sessionTitles }: 
               {trace.initialContext?.userText ?? 'System Task'}
             </div>
           </div>
-          <div className="flex items-center justify-between md:justify-end gap-3 md:gap-6 text-[11px] text-white/90 pr-8">
+          <div className="flex items-center justify-between md:justify-end gap-3 md:gap-6 text-[11px] text-white/90 pr-14">
             {(trace.totalTokens ?? 0) > 0 && (
               <div className="flex items-center gap-1.5 text-cyber-green/70 font-mono">
                 <Zap size={12} /> {trace.totalTokens} <span className="text-[9px] opacity-50 uppercase">TKN</span>
@@ -197,7 +206,7 @@ export default function TraceIntelligenceView({ initialTraces, sessionTitles }: 
       </Link>
       
       {/* Absolute positioned delete button outside the link area for safety */}
-      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center z-20">
+      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center z-20">
         <DeleteTraceButton traceId={trace.traceId} />
       </div>
     </div>
@@ -223,84 +232,180 @@ export default function TraceIntelligenceView({ initialTraces, sessionTitles }: 
 
       {/* Tabs & Filters */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-white/5 pb-4">
-        <div className="flex p-1 bg-white/5 rounded-lg border border-white/5">
+        <div className="flex p-1 bg-white/5 rounded-lg border border-white/5 overflow-x-auto">
           {[
+            { id: 'live', label: 'Live', icon: Activity },
             { id: 'timeline', label: 'Timeline', icon: Clock },
             { id: 'sessions', label: 'Sessions', icon: LayoutGrid },
             { id: 'agents', label: 'Agents', icon: Cpu },
             { id: 'models', label: 'Models', icon: Bot },
             { id: 'tools', label: 'Tools', icon: Wrench },
-            { id: 'usage', label: 'Usage', icon: BarChart3 },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as TabType)}
               className={`flex items-center gap-2 px-4 py-2 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all duration-300 ${
                 activeTab === tab.id 
-                  ? 'bg-cyber-blue/10 text-cyber-blue border border-cyber-blue/20 shadow-[0_0_15px_rgba(0,240,255,0.1)]' 
+                  ? tab.id === 'live'
+                    ? 'bg-cyber-green/10 text-cyber-green border border-cyber-green/20 shadow-[0_0_15px_rgba(0,255,136,0.1)]'
+                    : 'bg-cyber-blue/10 text-cyber-blue border border-cyber-blue/20 shadow-[0_0_15px_rgba(0,240,255,0.1)]' 
                   : 'text-white/40 hover:text-white/60 hover:bg-white/5'
               }`}
             >
-              <tab.icon size={14} />
+              <tab.icon size={tab.id === 'live' ? 12 : 14} className={activeTab === tab.id && tab.id === 'live' ? 'animate-pulse' : ''} />
               <span className="hidden md:inline">{tab.label}</span>
             </button>
           ))}
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
-          <div className="relative group">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-cyber-blue transition-colors" />
-            <input 
-              type="text" 
-              placeholder="Filter neural paths..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-xs text-white placeholder:text-white/20 focus:outline-none focus:border-cyber-blue/50 w-full md:w-64 transition-all"
-            />
-          </div>
+          {activeTab !== 'live' && (
+            <>
+              <div className="relative group">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-cyber-blue transition-colors" />
+                <input 
+                  type="text" 
+                  placeholder="Filter neural paths..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-xs text-white placeholder:text-white/20 focus:outline-none focus:border-cyber-blue/50 w-full md:w-64 transition-all"
+                />
+              </div>
 
-          <select 
-            value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as 'all' | 'completed' | 'started' | 'error')}
-            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] font-bold uppercase text-white/70 focus:outline-none focus:border-cyber-blue/50"
-          >
-            <option value="all">ALL_STATUS</option>
-            <option value="completed">COMPLETED</option>
-            <option value="started">RUNNING</option>
-            <option value="error">ERROR</option>
-          </select>
+              <select 
+                value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as 'all' | 'completed' | 'started' | 'error')}
+                className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] font-bold uppercase text-white/70 focus:outline-none focus:border-cyber-blue/50"
+              >
+                <option value="all">ALL_STATUS</option>
+                <option value="completed">COMPLETED</option>
+                <option value="started">RUNNING</option>
+                <option value="error">ERROR</option>
+              </select>
+            </>
+          )}
         </div>
       </div>
 
       {/* Content Rendering */}
       <div className="space-y-6">
-        {activeTab === 'timeline' || activeTab === 'usage' ? (
-          <div className="grid gap-3">
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            {(groupedData as Trace[]).map(trace => renderTraceCard(trace))}
-          </div>
-        ) : (
-          <div className="space-y-8">
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            {(groupedData as Array<[string, Trace[]]>).map(([groupName, groupTraces]) => (
-              <div key={groupName} className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-                  <Typography variant="mono" color="primary" className="text-[10px] font-black tracking-[0.3em] uppercase opacity-80">
-                    {groupName} <span className="text-white/30 ml-2">({groupTraces.length})</span>
-                  </Typography>
-                  <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+        {activeTab === 'live' ? (
+          <div className="glass-card border-white/5 overflow-hidden flex flex-col">
+            <div className="px-6 py-3 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-[0.2em] text-white/70">
+                <Zap size={12} className="text-cyber-green" /> Live Agent Dispatches
+              </div>
+              <div className="flex items-center gap-4 text-[9px] text-white/40">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-cyber-green animate-pulse"></div> RUNNING
                 </div>
-                <div className="grid gap-3">
-                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  {groupTraces.map((trace: Trace) => renderTraceCard(trace))}
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-yellow-500"></div> PENDING
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-cyber-blue"></div> COMPLETED
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-red-500"></div> FAILED
                 </div>
               </div>
-            ))}
+            </div>
+            <div className="h-[600px] relative">
+              <CollaborationCanvas />
+            </div>
+          </div>
+        ) : activeTab === 'timeline' ? (
+          <div className="grid gap-3">
+            {(groupedData as Trace[]).map(trace => renderTraceCard(trace))}
+          </div>
+        ) : expandedGroup ? (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={() => setExpandedGroup(null)}
+                  className="p-2 rounded-full hover:bg-white/5 text-white/40 hover:text-white transition-colors border border-white/5"
+                >
+                  <ChevronRight size={18} className="rotate-180" />
+                </button>
+                <div>
+                  <Typography variant="mono" color="primary" className="text-xs font-black tracking-widest uppercase">
+                    {expandedGroup}
+                  </Typography>
+                  <Typography variant="caption" color="muted" className="text-[10px] uppercase opacity-50">
+                    Grouped Intelligence Paths
+                  </Typography>
+                </div>
+              </div>
+            </div>
+            <div className="grid gap-3">
+              {(groupedData as Array<[string, Trace[]]>)
+                .find(([name]) => name === expandedGroup)?.[1]
+                .map((trace: Trace) => renderTraceCard(trace))}
+            </div>
+          </div>
+        ) : (
+          <div className="glass-card overflow-hidden border-white/5">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-white/5 bg-white/[0.02]">
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40">Neural Group</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40 text-center">Traces</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40 text-center">Resources</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40 text-center">Status</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {(groupedData as Array<[string, Trace[]]>).map(([groupName, groupTraces]) => {
+                    const totalTokens = groupTraces.reduce((acc, t) => acc + (t.totalTokens || 0), 0);
+                    const errorCount = groupTraces.filter(t => t.status === 'error').length;
+                    
+                    return (
+                      <tr key={groupName} className="hover:bg-white/[0.02] transition-colors group">
+                        <td className="px-6 py-4">
+                          <Typography variant="mono" weight="bold" className="text-xs text-white/90 truncate max-w-[300px]">
+                            {groupName}
+                          </Typography>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="text-xs font-mono text-cyber-blue">{groupTraces.length}</span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5 text-xs font-mono text-cyber-green/70">
+                            <Zap size={10} /> {(totalTokens / 1000).toFixed(1)}k
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            {errorCount > 0 ? (
+                              <div className="flex items-center gap-1 text-[10px] font-bold text-red-400 bg-red-400/10 px-2 py-0.5 rounded border border-red-400/20">
+                                {errorCount} ERR
+                              </div>
+                            ) : (
+                              <div className="w-2 h-2 rounded-full bg-cyber-green shadow-[0_0_8px_rgba(0,255,163,0.5)]"></div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button 
+                            onClick={() => setExpandedGroup(groupName)}
+                            className="text-[10px] font-black uppercase tracking-widest text-cyber-blue hover:text-white transition-colors bg-cyber-blue/5 hover:bg-cyber-blue/20 px-3 py-1.5 rounded border border-cyber-blue/20"
+                          >
+                            Explore
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
-        {groupedData.length === 0 && (
+        {activeTab !== 'live' && groupedData.length === 0 && (
           <div className="h-40 flex flex-col items-center justify-center text-white/50 border border-dashed border-white/10 rounded-lg bg-white/[0.02]">
             <Terminal size={32} className="mb-3 opacity-20 animate-pulse" />
             <p className="text-[10px] tracking-[0.2em] font-bold">NO_TRACES_FOUND // FILTER_ACTIVE</p>

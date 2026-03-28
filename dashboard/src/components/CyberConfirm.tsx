@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle, X, Info } from 'lucide-react';
 import Typography from './ui/Typography';
 import Button from './ui/Button';
 
@@ -16,6 +16,33 @@ interface CyberConfirmProps {
   variant?: 'danger' | 'warning' | 'info';
 }
 
+const variantStyles = {
+  danger: {
+    border: 'border-red-500/30',
+    bg: 'bg-red-500/10',
+    text: 'text-red-500',
+    shadow: 'shadow-red-500/20',
+    iconBg: 'bg-red-500/10',
+    iconBorder: 'border-red-500/20',
+  },
+  warning: {
+    border: 'border-yellow-500/30',
+    bg: 'bg-yellow-500/10',
+    text: 'text-yellow-500',
+    shadow: 'shadow-yellow-500/20',
+    iconBg: 'bg-yellow-500/10',
+    iconBorder: 'border-yellow-500/20',
+  },
+  info: {
+    border: 'border-blue-500/30',
+    bg: 'bg-blue-500/10',
+    text: 'text-blue-500',
+    shadow: 'shadow-blue-500/20',
+    iconBg: 'bg-blue-500/10',
+    iconBorder: 'border-blue-500/20',
+  },
+};
+
 export default function CyberConfirm({
   isOpen,
   onConfirm,
@@ -28,45 +55,36 @@ export default function CyberConfirm({
 }: CyberConfirmProps) {
   if (!isOpen) return null;
 
-  const colors = {
-    danger: 'red',
-    warning: 'yellow',
-    info: 'blue'
-  };
-
-  const color = colors[variant];
+  const styles = variantStyles[variant];
+  const Icon = variant === 'info' ? Info : AlertTriangle;
 
   return (
-    <div className="fixed inset-0 z-[200] w-screen h-screen flex items-center justify-center p-4 animate-in fade-in duration-300 overflow-hidden">
-      <div className="absolute inset-0 w-full h-full bg-black/80 backdrop-blur-md" onClick={onCancel} />
-      
-      <div className={`relative w-full max-w-md bg-[#050505] border-2 border-${color}-500/30 shadow-[0_0_50px_rgba(0,0,0,0.5)] rounded-sm p-8 space-y-6 overflow-hidden`}>
-        {/* Cyber background decoration */}
-        <div className={`absolute top-0 right-0 p-2 opacity-5 pointer-events-none`}>
-           <AlertTriangle size={120} className={`text-${color}-500`} />
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+        onClick={onCancel}
+      />
+
+      <div className={`relative w-full max-w-sm bg-[#0a0a0a] ${styles.border} border rounded-lg p-6 space-y-5 shadow-xl overflow-hidden`}>
+        <div className="flex flex-col items-center text-center space-y-3">
+          <div className={`w-14 h-14 rounded-full flex items-center justify-center ${styles.iconBg} ${styles.iconBorder} border`}>
+            <Icon size={24} className={`${styles.text} animate-pulse`} />
+          </div>
+          <Typography variant="h3" weight="black" className="tracking-[0.15em]">
+            {title}
+          </Typography>
+          <Typography variant="caption" color="muted" className="leading-relaxed text-[13px]">
+            {message}
+          </Typography>
         </div>
 
-        <div className="flex flex-col items-center text-center space-y-4 relative">
-          <div className={`w-16 h-16 bg-${color}-500/10 rounded-full flex items-center justify-center text-${color}-500 shadow-[0_0_20px_rgba(0,0,0,0.2)] border border-${color}-500/20`}>
-            <AlertTriangle size={32} className="animate-pulse" />
-          </div>
-          <div className="space-y-2">
-            <Typography variant="h3" weight="black" className="tracking-[0.2em] italic">
-              {title}
-            </Typography>
-            <Typography variant="caption" color="muted" className="leading-relaxed tracking-widest block">
-              {message}
-            </Typography>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-3 relative">
+        <div className="flex flex-col gap-2">
           <Button
             variant={variant === 'danger' ? 'danger' : 'primary'}
-            size="lg"
+            size="md"
             fullWidth
             onClick={onConfirm}
-            className="tracking-[0.3em] font-black"
+            className="tracking-[0.2em] font-black"
           >
             {confirmText}
           </Button>
@@ -76,7 +94,7 @@ export default function CyberConfirm({
             fullWidth
             onClick={onCancel}
             icon={<X size={12} />}
-            className="text-white/40 border border-white/5 font-bold tracking-[0.3em]"
+            className="text-white/40 border border-white/5 font-bold tracking-[0.2em]"
           >
             {cancelText}
           </Button>
