@@ -140,11 +140,15 @@ export default function MemoryDetailModal({ item, onClose, onDelete }: MemoryDet
                   </div>
                 </>
               )}
-              <span className="text-white/10">|</span>
-              <div className="flex items-center gap-1.5 text-[11px] font-mono text-white/30">
-                <Clock size={11} />
-                {new Date(item.timestamp).toLocaleDateString()}
-              </div>
+              {item.timestamp > 0 && (
+                <>
+                  <span className="text-white/10">|</span>
+                  <div className="flex items-center gap-1.5 text-[11px] font-mono text-white/30">
+                    <Clock size={11} />
+                    {new Date(item.timestamp).toLocaleDateString()}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Actions */}

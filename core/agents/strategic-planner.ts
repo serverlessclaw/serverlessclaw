@@ -350,7 +350,7 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
   // 1.5 Generate gaps from toolOptimizations
   if (toolOptimizations.length > 0) {
     for (const opt of toolOptimizations) {
-      const toolGapId = `TOOLOPT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const toolGapId = Date.now().toString();
       const gapContent = `[TOOL_OPTIMIZATION] Action: ${opt.action}, Tool: ${opt.toolName}. Reason: ${opt.reason}`;
       logger.info(`Recording tool optimization gap: ${gapContent}`);
       await memory.setGap(toolGapId, gapContent, {

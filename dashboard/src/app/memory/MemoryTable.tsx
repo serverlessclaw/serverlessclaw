@@ -109,7 +109,7 @@ export default function MemoryTable({ items, pruneAction }: MemoryTableProps) {
                     </Typography>
                   </td>
                   <td className="px-5 py-3 text-center">
-                    {item.metadata?.priority && item.metadata.priority >= 8 ? (
+                    {item.metadata?.priority != null && item.metadata.priority >= 8 ? (
                       <span className="inline-flex items-center gap-1 text-amber-400 font-mono text-xs font-bold">
                         <Zap size={10} /> {item.metadata.priority}
                       </span>

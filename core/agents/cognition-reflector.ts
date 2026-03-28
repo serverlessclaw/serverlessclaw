@@ -168,7 +168,7 @@ export const handler = async (
       if (Array.isArray(parsed.gaps)) {
         for (const gap of parsed.gaps) {
           if (gap.content && gap.content !== 'NONE') {
-            const gapId = Date.now().toString() + '-' + Math.floor(Math.random() * 1000); // ensure uniqueness
+            const gapId = Date.now().toString();
             const metadata = {
               category: InsightCategory.STRATEGIC_GAP,
               confidence: gap.confidence || 5,

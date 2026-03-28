@@ -130,7 +130,7 @@ export async function setGap(
     expiresAt,
     content: details,
     status: GapStatus.OPEN,
-    metadata: createMetadata(metadata ?? { category: InsightCategory.STRATEGIC_GAP }),
+    metadata: createMetadata(metadata ?? { category: InsightCategory.STRATEGIC_GAP }, gapTimestamp),
   });
 }
 
@@ -147,14 +147,18 @@ export async function incrementGapAttemptCount(
   base: BaseMemoryProvider,
   gapId: string
 ): Promise<number> {
-  const numericId = gapId.replace('GAP#', '');
-  const parsedNumericId = Number.parseInt(numericId, 10);
+  // Normalize ID using same logic as setGap()
+  const nId = gapId.replace(/^(GAP#)+/, '').replace(/^(PROC#)+/, '');
+  const numericIdMatch = nId.match(/(\d+)$/);
+  const normalizedId = numericIdMatch ? numericIdMatch[1] : nId;
+  const parsedNumericId = Number.parseInt(normalizedId, 10);
   const gapTimestamp = Number.isNaN(parsedNumericId) ? 0 : parsedNumericId;
+
   try {
     const now = Date.now();
     const result = await base.updateItem({
       Key: {
-        userId: `GAP#${numericId}`,
+        userId: `GAP#${normalizedId}`,
         timestamp: gapTimestamp,
       },
       UpdateExpression:
@@ -168,8 +172,40 @@ export async function incrementGapAttemptCount(
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return ((result as any).Attributes?.attemptCount as number) ?? 1;
-  } catch (error) {
-    logger.error(`Error incrementing attempt count for gap ${gapId}:`, error);
+  } catch {
+    // Fallback: search across all gap statuses to find the item (same as updateGapStatus)
+    logger.warn(`Primary key lookup failed for gap ${gapId}, searching all statuses...`);
+    const allStatuses = Object.values(GapStatus);
+    for (const s of allStatuses) {
+      const gaps = await getAllGaps(base, s);
+      const target = gaps.find((g) => {
+        const gIdNorm = g.id.replace(/^(GAP#)+/, '').replace(/^(PROC#)+/, '');
+        const gIdMatch = gIdNorm.match(/(\d+)$/);
+        const gIdFinal = gIdMatch ? gIdMatch[1] : gIdNorm;
+        return gIdFinal === normalizedId;
+      });
+      if (target) {
+        try {
+          const now = Date.now();
+          const result = await base.updateItem({
+            Key: { userId: target.id, timestamp: target.timestamp },
+            UpdateExpression:
+              'SET attemptCount = if_not_exists(attemptCount, :zero) + :one, updatedAt = :now, lastAttemptTime = :now',
+            ExpressionAttributeValues: {
+              ':zero': 0,
+              ':one': 1,
+              ':now': now,
+            },
+            ReturnValues: 'ALL_NEW',
+          });
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          return ((result as any).Attributes?.attemptCount as number) ?? 1;
+        } catch (e) {
+          logger.error(`Fallback update also failed for gap ${gapId}:`, e);
+        }
+      }
+    }
+    logger.error(`Gap ${gapId} not found in any status for attempt increment`);
     return 1;
   }
 }

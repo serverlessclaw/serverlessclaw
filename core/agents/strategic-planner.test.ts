@@ -286,7 +286,7 @@ describe('Strategic Planner — selective PLANNED marking', () => {
 
     // Should call setGap for the optimization recommendation
     expect(memoryMocks.setGap).toHaveBeenCalledWith(
-      expect.stringMatching(/^TOOLOPT-/),
+      expect.stringMatching(/^\d+$/),
       expect.stringContaining('[TOOL_OPTIMIZATION] Action: PRUNE, Tool: oldSearchTool'),
       expect.any(Object)
     );
