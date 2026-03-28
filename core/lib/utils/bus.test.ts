@@ -10,6 +10,7 @@ import {
   QueryCommand,
   PutCommand,
   DeleteCommand,
+  UpdateCommand,
   PutCommandInput,
   QueryCommandInput,
   DeleteCommandInput,
@@ -22,6 +23,8 @@ import {
   getDlqEntries,
   retryDlqEntry,
   purgeDlqEntry,
+  resetDb,
+  resetEventBridge,
 } from './bus';
 
 const eventBridgeMock = mockClient(EventBridgeClient);
@@ -39,6 +42,8 @@ describe('Event Bus', () => {
     vi.clearAllMocks();
     eventBridgeMock.reset();
     ddbMock.reset();
+    resetDb();
+    resetEventBridge();
   });
 
   describe('emitEvent', () => {
@@ -120,19 +125,44 @@ describe('Event Bus', () => {
   });
 
   describe('Idempotency', () => {
-    it('should detect duplicate events', async () => {
-      ddbMock.on(QueryCommand).resolves({
-        Items: [{ userId: 'IDEMPOTENCY#key' }],
-      });
+    it('should detect duplicate events using Reserve-then-Commit', async () => {
+      const error = new Error('ConditionalCheckFailed');
+      error.name = 'ConditionalCheckFailedException';
+      ddbMock.on(PutCommand).rejects(error);
 
       const result = await emitEvent('test', 'event', { data: 'test' }, { idempotencyKey: 'key' });
 
       expect(result.success).toBe(false);
       expect(result.reason).toBe('DUPLICATE');
+      // Should have tried to Put (reserve) the key
+      const call = ddbMock.call(0);
+      expect(call.args[0] instanceof PutCommand).toBe(true);
+      expect((call.args[0].input as PutCommandInput).Item?.userId).toBe('IDEMPOTENCY#key');
     });
 
-    it('should proceed if idempotency check fails', async () => {
-      ddbMock.on(QueryCommand).rejects(new Error('DDB Down'));
+    it('should commit idempotency key after successful emission', async () => {
+      ddbMock.on(PutCommand).resolves({}); // Reserve
+      ddbMock.on(UpdateCommand).resolves({}); // Commit
+      eventBridgeMock.on(PutEventsCommand).resolves({
+        FailedEntryCount: 0,
+        Entries: [{ EventId: 'id-1' }],
+      });
+
+      const result = await emitEvent('test', 'event', { data: 'test' }, { idempotencyKey: 'key' });
+
+      expect(result.success).toBe(true);
+      expect(ddbMock.calls()).toHaveLength(2); // 1 Reserve (Put) + 1 Commit (Update)
+
+      const reserveCall = ddbMock.call(0).args[0].input as PutCommandInput;
+      expect(reserveCall.Item?.status).toBe('RESERVED');
+
+      const commitCall = ddbMock.call(1).args[0].input as any;
+      expect(commitCall.UpdateExpression).toContain(':committed');
+      expect(commitCall.ExpressionAttributeValues?.[':eventId']).toBe('id-1');
+    });
+
+    it('should proceed if idempotency reservation fails with non-conditional error', async () => {
+      ddbMock.on(PutCommand).rejects(new Error('DDB Down'));
       eventBridgeMock.on(PutEventsCommand).resolves({
         FailedEntryCount: 0,
         Entries: [{ EventId: 'id-1' }],

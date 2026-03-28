@@ -124,4 +124,21 @@ export const collaborationTools: Record<string, IToolDefinition> = {
     },
     connectionProfile: ['memory'],
   },
+
+  closeCollaboration: {
+    name: 'closeCollaboration',
+    description: 'Closes a collaboration session, marking it as finished.',
+    parameters: {
+      type: 'object',
+      properties: {
+        collaborationId: {
+          type: 'string',
+          description: 'ID of the collaboration to close',
+        },
+      },
+      required: ['collaborationId'],
+      additionalProperties: false,
+    },
+    connectionProfile: ['memory'],
+  },
 };

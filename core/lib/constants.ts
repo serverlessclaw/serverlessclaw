@@ -219,8 +219,13 @@ export const TRACE_TYPES = {
   COUNCIL_REVIEW: TraceType.COUNCIL_REVIEW,
   /** Continuation task routing result back to initiator. */
   CONTINUATION: TraceType.CONTINUATION,
-  /** Circuit breaker state change event. */
+  /** Multi-party collaboration session initiated. */
+  COLLABORATION_STARTED: TraceType.COLLABORATION_STARTED,
+  /** Multi-party collaboration session closed. */
+  COLLABORATION_COMPLETED: TraceType.COLLABORATION_COMPLETED,
+  /** A circuit breaker activation event. */
   CIRCUIT_BREAKER: TraceType.CIRCUIT_BREAKER,
+
   /** Task cancellation event. */
   CANCELLATION: TraceType.CANCELLATION,
   /** Memory operation (fact/lesson storage). */

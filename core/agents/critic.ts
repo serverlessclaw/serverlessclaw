@@ -36,11 +36,31 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
   const baseUserId = extractBaseUserId(userId);
   const reviewMode = (metadata?.reviewMode as ReviewMode) ?? 'architect';
   const planId = (metadata?.planId as string) ?? 'unknown';
+  const collaborationId = (metadata?.collaborationId as string) ?? undefined;
 
-  logger.info(`[CRITIC] Reviewing plan ${planId} in ${reviewMode} mode`);
+  logger.info(
+    `[CRITIC] Reviewing plan ${planId} in ${reviewMode} mode ${collaborationId ? `(Collaboration: ${collaborationId})` : ''}`
+  );
 
   // 1. Initialize agent
   const { config, agent } = await initAgent(AgentType.CRITIC);
+
+  // 1.1 Handle Collaboration
+  if (collaborationId) {
+    try {
+      const joinResult = await agent.executeTool('joinCollaboration', { collaborationId });
+      const parsedJoin = JSON.parse(joinResult);
+      if (parsedJoin.success) {
+        logger.info(`[CRITIC] Successfully joined collaboration ${collaborationId}`);
+      } else {
+        logger.warn(
+          `[CRITIC] Failed to join collaboration ${collaborationId}: ${parsedJoin.error}`
+        );
+      }
+    } catch (e) {
+      logger.error(`[CRITIC] Error joining collaboration ${collaborationId}:`, e);
+    }
+  }
 
   // 2. Build review prompt based on mode
   const reviewPrompt = buildReviewPrompt(task || '', reviewMode, planId);
@@ -100,6 +120,19 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
       ],
       summary: rawResponse,
     };
+  }
+
+  // 4.1 Write to Collaboration if active
+  if (collaborationId) {
+    try {
+      await agent.executeTool('writeToCollaboration', {
+        collaborationId,
+        content: `**CRITIC VERDICT: ${verdict.verdict}**\n\nMode: ${verdict.reviewMode}\nConfidence: ${verdict.confidence}\nSummary: ${verdict.summary}\n\nFindings: ${JSON.stringify(verdict.findings, null, 2)}`,
+      });
+      logger.info(`[CRITIC] Verdict shared in collaboration ${collaborationId}`);
+    } catch (e) {
+      logger.error(`[CRITIC] Error sharing verdict in collaboration ${collaborationId}:`, e);
+    }
   }
 
   // 5. Check for critical findings

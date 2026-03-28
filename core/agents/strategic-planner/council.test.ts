@@ -31,6 +31,13 @@ const memoryMocks = vi.hoisted(() => ({
   updateSummary: vi.fn().mockResolvedValue(undefined),
   searchInsights: vi.fn().mockResolvedValue({ items: [], lastEvaluatedKey: null }),
   archiveStaleGaps: vi.fn().mockResolvedValue(0),
+  createCollaboration: vi.fn().mockResolvedValue({
+    collaborationId: 'collab-123',
+    syntheticUserId: 'synth-user-123',
+    success: true,
+  }),
+  addMessage: vi.fn().mockResolvedValue(undefined),
+  closeCollaboration: vi.fn().mockResolvedValue(undefined),
 }));
 
 const emitTypedEventMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
@@ -95,6 +102,9 @@ vi.mock('../../lib/memory', () => ({
     updateSummary = memoryMocks.updateSummary;
     searchInsights = memoryMocks.searchInsights;
     archiveStaleGaps = memoryMocks.archiveStaleGaps;
+    createCollaboration = memoryMocks.createCollaboration;
+    addMessage = memoryMocks.addMessage;
+    closeCollaboration = memoryMocks.closeCollaboration;
   },
 }));
 

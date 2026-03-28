@@ -45,17 +45,24 @@ Value: {
 
 ### 2. SessionStateManager
 
-The `SessionStateManager` class manages session coordination:
+The `SessionStateManager` class manages session coordination using atomic DynamoDB operations:
 
 ```typescript
 // core/lib/session-state.ts
 export class SessionStateManager {
-  acquireProcessing(sessionId, agentId); // Sets processing flag if not set
+  // Uses UpdateCommand + ConditionExpression to set flag ONLY if not held OR expired.
+  // CRITICAL: preserves existing 'pendingMessages' during acquisition.
+  acquireProcessing(sessionId, agentId); 
+  
   releaseProcessing(sessionId); // Clears processing flag
   renewProcessing(sessionId, agentId); // Extends lock TTL during long tasks
   addPendingMessage(sessionId, content); // Queue a message
   getPendingMessages(sessionId); // Get all pending messages
-  clearPendingMessages(sessionId, processedIds); // Clear specific messages
+  
+  // Uses a retry loop with ConditionExpression to safely clear messages 
+  // without losing messages arriving during the clear operation.
+  clearPendingMessages(sessionId, processedIds); 
+  
   removePendingMessage(sessionId, messageId); // Remove specific message (UI)
   updatePendingMessage(sessionId, messageId, newContent); // Edit message (UI)
 }

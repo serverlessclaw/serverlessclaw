@@ -2,10 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mockClient } from 'aws-sdk-client-mock';
 import {
   DynamoDBDocumentClient,
-  PutCommand,
   GetCommand,
   UpdateCommand,
-  PutCommandInput,
   UpdateCommandInput,
 } from '@aws-sdk/lib-dynamodb';
 import { SessionStateManager } from './session-state';
@@ -28,28 +26,41 @@ describe('SessionStateManager', () => {
 
   describe('acquireProcessing', () => {
     it('should return true when no agent is processing', async () => {
-      ddbMock.on(PutCommand).resolves({});
+      ddbMock.on(UpdateCommand).resolves({});
 
       const result = await sessionStateManager.acquireProcessing('session-123', 'agent-abc');
 
       expect(result).toBe(true);
       const call = ddbMock.call(0);
-      const item = (call.args[0].input as PutCommandInput).Item;
-      expect(item?.processingAgentId).toBe('agent-abc');
-      expect(item?.lockExpiresAt).toBeDefined();
-      expect(item?.expiresAt).toBeDefined();
-      // Ensure lockExpiresAt is smaller than expiresAt (300s vs 30 days)
-      expect(item?.lockExpiresAt).toBeLessThan(item?.expiresAt);
+      const input = call.args[0].input as UpdateCommandInput;
+      expect(input.ExpressionAttributeValues?.[':agentId']).toBe('agent-abc');
+      expect(input.ExpressionAttributeValues?.[':lockExp']).toBeDefined();
+      expect(input.ExpressionAttributeValues?.[':exp']).toBeDefined();
     });
 
     it('should return false when another agent is processing', async () => {
       const error = new Error('ConditionalCheckFailed');
       error.name = 'ConditionalCheckFailedException';
-      ddbMock.on(PutCommand).rejects(error);
+      ddbMock.on(UpdateCommand).rejects(error);
 
       const result = await sessionStateManager.acquireProcessing('session-123', 'agent-xyz');
 
       expect(result).toBe(false);
+    });
+
+    it('FIX VERIFIED: should preserve existing pending messages when acquiring lock', async () => {
+      // NOW it uses UpdateCommand which preserves existing data
+      ddbMock.on(UpdateCommand).resolves({});
+
+      await sessionStateManager.acquireProcessing('session-123', 'agent-abc');
+
+      const call = ddbMock.call(0);
+      const input = call.args[0].input as UpdateCommandInput;
+
+      expect(call.args[0].constructor.name).toBe('UpdateCommand');
+      expect(input.UpdateExpression).toContain(
+        'pendingMessages = if_not_exists(pendingMessages, :empty)'
+      );
     });
   });
 

@@ -1,10 +1,5 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import {
-  DynamoDBDocumentClient,
-  PutCommand,
-  GetCommand,
-  UpdateCommand,
-} from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
 import { SSTResource } from './types/system';
 import type { PendingMessage } from './types/session';
@@ -55,7 +50,7 @@ export class SessionStateManager {
 
   /**
    * Attempts to acquire the processing flag for a session.
-   * Uses conditional write to prevent race conditions.
+   * Uses conditional update to prevent race conditions and preserve existing data.
    */
   async acquireProcessing(sessionId: string, agentId: string): Promise<boolean> {
     const key = this.getKey(sessionId);
@@ -65,24 +60,25 @@ export class SessionStateManager {
 
     try {
       await this.docClient.send(
-        new PutCommand({
+        new UpdateCommand({
           TableName: this.tableName,
-          Item: {
+          Key: {
             userId: key,
             timestamp: 0,
-            sessionId,
-            processingAgentId: agentId,
-            processingStartedAt: now,
-            pendingMessages: [],
-            lastMessageAt: now,
-            lockExpiresAt,
-            expiresAt,
           },
+          UpdateExpression:
+            'SET sessionId = :sessionId, processingAgentId = :agentId, processingStartedAt = :now, lockExpiresAt = :lockExp, expiresAt = :exp, pendingMessages = if_not_exists(pendingMessages, :empty)',
           ConditionExpression:
-            'attribute_not_exists(processingAgentId) OR processingAgentId = :null OR lockExpiresAt < :now',
+            'attribute_not_exists(processingAgentId) OR processingAgentId = :null OR lockExpiresAt < :nowSec',
           ExpressionAttributeValues: {
+            ':sessionId': sessionId,
+            ':agentId': agentId,
+            ':now': now,
+            ':lockExp': lockExpiresAt,
+            ':exp': expiresAt,
             ':null': null,
-            ':now': Math.floor(Date.now() / TIME.MS_PER_SECOND),
+            ':nowSec': Math.floor(Date.now() / TIME.MS_PER_SECOND),
+            ':empty': [],
           },
         })
       );
@@ -242,48 +238,53 @@ export class SessionStateManager {
     if (messageIds.length === 0) return;
 
     const key = this.getKey(sessionId);
+    const MAX_ATTEMPTS = 3;
 
-    try {
-      const currentMessages = await this.getPendingMessages(sessionId);
-      const remainingMessages = currentMessages.filter((m) => !messageIds.includes(m.id));
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        const currentMessages = await this.getPendingMessages(sessionId);
+        const remainingMessages = currentMessages.filter((m) => !messageIds.includes(m.id));
 
-      await this.docClient.send(
-        new UpdateCommand({
-          TableName: this.tableName,
-          Key: {
-            userId: key,
-            timestamp: 0,
-          },
-          UpdateExpression: 'SET pendingMessages = :remaining, expiresAt = :exp',
-          ConditionExpression: 'pendingMessages = :current',
-          ExpressionAttributeValues: {
-            ':remaining': remainingMessages,
-            ':current': currentMessages,
-            ':exp': this.getSessionExpiresAt(),
-          },
-        })
-      );
-      logger.info(`Session ${sessionId}: Cleared ${messageIds.length} processed messages`);
-    } catch (error: unknown) {
-      if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
-        logger.warn(
-          `Session ${sessionId}: Race condition detected while clearing pending messages, retrying...`
-        );
-        const freshMessages = await this.getPendingMessages(sessionId);
-        const filtered = freshMessages.filter((m) => !messageIds.includes(m.id));
+        // If no messages were cleared (e.g., they were already cleared), we're done
+        if (remainingMessages.length === currentMessages.length) {
+          return;
+        }
+
         await this.docClient.send(
           new UpdateCommand({
             TableName: this.tableName,
-            Key: { userId: key, timestamp: 0 },
+            Key: {
+              userId: key,
+              timestamp: 0,
+            },
             UpdateExpression: 'SET pendingMessages = :remaining, expiresAt = :exp',
+            ConditionExpression: 'pendingMessages = :current',
             ExpressionAttributeValues: {
-              ':remaining': filtered,
+              ':remaining': remainingMessages,
+              ':current': currentMessages,
               ':exp': this.getSessionExpiresAt(),
             },
           })
         );
-      } else {
-        logger.error(`Session ${sessionId}: Failed to clear pending messages:`, error);
+        logger.info(`Session ${sessionId}: Cleared ${messageIds.length} processed messages`);
+        return;
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
+          if (attempt === MAX_ATTEMPTS) {
+            logger.error(
+              `Session ${sessionId}: Failed to clear pending messages after ${MAX_ATTEMPTS} attempts due to race conditions.`
+            );
+            throw new Error('FAILED_TO_CLEAR_PENDING_MESSAGES_RACE_CONDITION');
+          }
+          logger.warn(
+            `Session ${sessionId}: Race condition detected while clearing pending messages (attempt ${attempt}), retrying...`
+          );
+          // Small random delay before retry to reduce contention
+          await new Promise((resolve) => setTimeout(resolve, Math.random() * 50));
+        } else {
+          logger.error(`Session ${sessionId}: Failed to clear pending messages:`, error);
+          throw error;
+        }
       }
     }
   }

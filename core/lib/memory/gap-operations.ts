@@ -297,44 +297,41 @@ export async function acquireGapLock(
 ): Promise<boolean> {
   const lockKey = `GAP_LOCK#${gapId.replace(/^(GAP#)+/, '')}`;
   const now = Date.now();
-  const expiresAt = now + ttlMs;
+  const expiresAt = Math.floor((now + ttlMs) / 1000); // DynamoDB TTL uses seconds
 
   try {
-    // Try to atomically acquire the lock — fails if it already exists and isn't expired
-    await base.putItem({
-      userId: lockKey,
-      timestamp: now,
-      type: 'GAP_LOCK',
-      content: agentId,
-      status: 'LOCKED',
-      expiresAt: Math.floor(expiresAt / 1000), // DynamoDB TTL uses seconds
-      metadata: createMetadata({ category: 'system_knowledge' as InsightCategory }),
+    // Atomic update to acquire lock if not exists or expired
+    // We use timestamp: 0 for all locks to make deletion reliable
+    await base.updateItem({
+      Key: {
+        userId: lockKey,
+        timestamp: 0,
+      },
+      UpdateExpression:
+        'SET #tp = :type, #content = :agentId, #status = :locked, expiresAt = :exp, acquiredAt = :now',
+      ConditionExpression: 'attribute_not_exists(userId) OR expiresAt < :nowSec',
+      ExpressionAttributeNames: {
+        '#tp': 'type',
+        '#content': 'content',
+        '#status': 'status',
+      },
+      ExpressionAttributeValues: {
+        ':type': 'GAP_LOCK',
+        ':agentId': agentId,
+        ':locked': 'LOCKED',
+        ':exp': expiresAt,
+        ':now': now,
+        ':nowSec': Math.floor(now / 1000),
+      },
     });
     logger.info(`Gap lock acquired: ${gapId} by ${agentId}`);
     return true;
-  } catch {
-    // Lock might already exist — check if it's expired
-    const existing = await getGapLock(base, gapId);
-    if (!existing || existing.expiresAt * 1000 < now) {
-      // Lock expired, try again
-      try {
-        await base.putItem({
-          userId: lockKey,
-          timestamp: now,
-          type: 'GAP_LOCK',
-          content: agentId,
-          status: 'LOCKED',
-          expiresAt: Math.floor(expiresAt / 1000),
-          metadata: createMetadata({ category: 'system_knowledge' as InsightCategory }),
-        });
-        logger.info(`Gap lock acquired (after expiry): ${gapId} by ${agentId}`);
-        return true;
-      } catch {
-        logger.warn(`Failed to acquire gap lock for ${gapId} (double race).`);
-        return false;
-      }
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
+      logger.info(`Gap ${gapId} is already locked by another agent`);
+      return false;
     }
-    logger.info(`Gap ${gapId} is already locked by ${existing.content}`);
+    logger.error(`Failed to acquire gap lock for ${gapId}:`, error);
     return false;
   }
 }
@@ -353,13 +350,25 @@ export async function releaseGapLock(
 ): Promise<void> {
   const lockKey = `GAP_LOCK#${gapId.replace(/^(GAP#)+/, '')}`;
   try {
+    // Only delete if we are the owner
     await base.deleteItem({
       userId: lockKey,
       timestamp: 0,
+      ConditionExpression: '#content = :agentId',
+      ExpressionAttributeNames: {
+        '#content': 'content',
+      },
+      ExpressionAttributeValues: {
+        ':agentId': agentId,
+      },
     });
     logger.info(`Gap lock released: ${gapId} by ${agentId}`);
-  } catch (e) {
-    logger.warn(`Failed to release gap lock for ${gapId}:`, e);
+  } catch (e: unknown) {
+    if (e instanceof Error && e.name === 'ConditionalCheckFailedException') {
+      logger.warn(`Failed to release gap lock for ${gapId}: not owned by ${agentId}`);
+    } else {
+      logger.warn(`Failed to release gap lock for ${gapId}:`, e);
+    }
   }
 }
 
@@ -377,13 +386,20 @@ export async function getGapLock(
   const lockKey = `GAP_LOCK#${gapId.replace(/^(GAP#)+/, '')}`;
   try {
     const items = await base.queryItems({
-      KeyConditionExpression: 'userId = :lockKey',
+      KeyConditionExpression: 'userId = :lockKey AND #ts = :zero',
+      ExpressionAttributeNames: {
+        '#ts': 'timestamp',
+      },
       ExpressionAttributeValues: {
         ':lockKey': lockKey,
+        ':zero': 0,
       },
     });
     if (items.length === 0) return null;
     const lock = items[0];
+    const nowSec = Math.floor(Date.now() / 1000);
+    if ((lock.expiresAt as number) < nowSec) return null;
+
     return {
       content: lock.content as string,
       expiresAt: (lock.expiresAt as number) ?? 0,

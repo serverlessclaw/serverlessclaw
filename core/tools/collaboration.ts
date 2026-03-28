@@ -8,6 +8,8 @@ import { ParticipantType, CollaborationRole } from '../lib/types/collaboration';
 import { getAgentContext } from '../lib/utils/agent-helpers';
 import { ITool } from '../lib/types/tool';
 import { MessageRole } from '../lib/types/llm';
+import { addTraceStep } from '../lib/utils/trace-helper';
+import { TraceType } from '../lib/types/constants';
 
 /**
  * Creates a new collaboration session.
@@ -19,6 +21,7 @@ export const CREATE_COLLABORATION: ITool = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mem = memory as any;
     const agentId = (args.agentId as string) ?? 'unknown';
+    const traceId = (args.traceId as string) ?? undefined;
 
     const collaboration = await mem.createCollaboration(agentId, 'agent', {
       name: args.name as string,
@@ -34,6 +37,17 @@ export const CREATE_COLLABORATION: ITool = {
           }>
         | undefined,
     });
+
+    if (traceId) {
+      await addTraceStep(traceId, 'root', {
+        type: TraceType.COLLABORATION_STARTED,
+        content: {
+          collaborationId: collaboration.collaborationId,
+          name: collaboration.name,
+          participants: collaboration.participants,
+        },
+      });
+    }
 
     return JSON.stringify({
       success: true,
@@ -139,6 +153,8 @@ export const WRITE_TO_COLLABORATION: ITool = {
     const content = args.content as string;
     const role = (args.role as string) ?? 'assistant';
 
+    const traceId = (args.traceId as string) ?? undefined;
+
     const collaboration = await mem.getCollaboration(collaborationId);
     if (!collaboration) {
       return JSON.stringify({ success: false, error: 'Collaboration not found' });
@@ -161,10 +177,60 @@ export const WRITE_TO_COLLABORATION: ITool = {
       agentName: agentId,
     });
 
+    if (traceId) {
+      await addTraceStep(traceId, 'root', {
+        type: TraceType.COUNCIL_REVIEW, // Or add a more generic COLLABORATION_MESSAGE type if needed
+        content: {
+          collaborationId,
+          agentId,
+          content: content.substring(0, 200),
+        },
+      });
+    }
+
     return JSON.stringify({
       success: true,
       message: 'Message written to collaboration session',
     });
+  },
+};
+
+/**
+ * Closes a collaboration session.
+ */
+export const CLOSE_COLLABORATION: ITool = {
+  ...definitions.closeCollaboration,
+  execute: async (args: Record<string, unknown>): Promise<string> => {
+    const { memory } = await getAgentContext();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mem = memory as any;
+    const agentId = (args.agentId as string) ?? 'unknown';
+    const collaborationId = args.collaborationId as string;
+    const traceId = (args.traceId as string) ?? undefined;
+
+    try {
+      await mem.closeCollaboration(collaborationId, agentId, 'agent');
+
+      if (traceId) {
+        await addTraceStep(traceId, 'root', {
+          type: TraceType.COLLABORATION_COMPLETED,
+          content: {
+            collaborationId,
+            status: 'closed',
+          },
+        });
+      }
+
+      return JSON.stringify({
+        success: true,
+        message: `Collaboration ${collaborationId} closed successfully.`,
+      });
+    } catch (error) {
+      return JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   },
 };
 

@@ -142,65 +142,56 @@ describe('session-operations', () => {
   });
 
   describe('saveConversationMeta', () => {
-    it('should save new conversation metadata', async () => {
-      mockBase.listConversations = vi.fn().mockResolvedValue([]);
-
+    it('should save new conversation metadata using updateItem', async () => {
       await saveConversationMeta(mockBase, 'user123', 'sess1', { title: 'Chat 1' });
 
-      expect(mockBase.putItem).toHaveBeenCalledWith(
+      expect(mockBase.updateItem).toHaveBeenCalledWith(
         expect.objectContaining({
-          userId: 'SESSIONS#user123',
-          sessionId: 'sess1',
-          title: 'Chat 1',
-          isPinned: false,
+          Key: expect.objectContaining({
+            userId: 'SESSIONS#user123',
+          }),
+          UpdateExpression: expect.stringContaining('SET sessionId = :sessionId'),
+          ExpressionAttributeValues: expect.objectContaining({
+            ':sessionId': 'sess1',
+            ':title': 'Chat 1',
+            ':pinned': false,
+          }),
         })
       );
     });
 
-    it('should update existing conversation metadata', async () => {
-      const now = Date.now();
-      mockBase.listConversations = vi
-        .fn()
-        .mockResolvedValue([{ sessionId: 'sess1', updatedAt: now, title: 'Old Title' }]);
-
+    it('should update existing conversation metadata atomically', async () => {
+      // With the new implementation, it's just an updateItem call regardless
       await saveConversationMeta(mockBase, 'user123', 'sess1', { title: 'New Title' });
 
-      expect(mockBase.deleteItem).toHaveBeenCalledWith({
-        userId: 'SESSIONS#user123',
-        timestamp: now,
-      });
-      expect(mockBase.putItem).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: 'New Title',
-        })
-      );
+      expect(mockBase.updateItem).toHaveBeenCalled();
+      expect(mockBase.deleteItem).not.toHaveBeenCalled();
     });
 
     it('should set expiresAt to 0 for pinned items', async () => {
-      mockBase.listConversations = vi.fn().mockResolvedValue([]);
-
       await saveConversationMeta(mockBase, 'user123', 'sess1', { isPinned: true });
 
-      expect(mockBase.putItem).toHaveBeenCalledWith(
+      expect(mockBase.updateItem).toHaveBeenCalledWith(
         expect.objectContaining({
-          isPinned: true,
-          expiresAt: 0,
+          ExpressionAttributeValues: expect.objectContaining({
+            ':pinned': true,
+            ':exp': 0,
+          }),
         })
       );
     });
 
-    it('should preserve existing title when not provided', async () => {
-      mockBase.listConversations = vi
-        .fn()
-        .mockResolvedValue([
-          { sessionId: 'sess1', updatedAt: Date.now(), title: 'Existing Title' },
-        ]);
+    it('should use stable timestamp derived from sessionId', async () => {
+      // sess_1711000000000 -> 1711000000000
+      const sessionId = 'sess_1711000000000';
+      await saveConversationMeta(mockBase, 'user123', sessionId, { title: 'Stable' });
 
-      await saveConversationMeta(mockBase, 'user123', 'sess1', { lastMessage: 'New msg' });
-
-      expect(mockBase.putItem).toHaveBeenCalledWith(
+      expect(mockBase.updateItem).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'Existing Title',
+          Key: {
+            userId: 'SESSIONS#user123',
+            timestamp: 1711000000000,
+          },
         })
       );
     });

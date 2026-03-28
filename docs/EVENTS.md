@@ -36,9 +36,15 @@ await emitHighPriorityEvent('agent', 'task.completed', { taskId: '123' });
 await emitLowPriorityEvent('telemetry', 'metrics.update', { metrics: {...} });
 ```
 
-## Idempotency
+## Idempotency (Reserve-then-Commit)
 
-To prevent duplicate event processing, use idempotency keys:
+To prevent duplicate event processing even under high concurrency, the system uses a **Reserve-then-Commit** atomic pattern:
+
+1.  **RESERVE**: `emitEvent` attempts an atomic `PutCommand` with `attribute_not_exists(userId)`.
+2.  **EMIT**: If reservation succeeds, it calls EventBridge `PutEvents`.
+3.  **COMMIT**: Upon success, it updates the record to `COMMITTED` status and attaches the `eventId`.
+
+This ensures that if two agents try to emit the same task simultaneously, one will fail the reservation and the system will correctly return `DUPLICATE`.
 
 ```typescript
 // Automatic idempotency based on source, type, sessionId, and traceId
@@ -46,16 +52,6 @@ await emitEventWithIdempotency('source', 'event.type', {
   sessionId: 'session-123',
   traceId: 'trace-456',
 });
-
-// Custom idempotency key
-await emitEvent(
-  'source',
-  'event.type',
-  { data: 'value' },
-  {
-    idempotencyKey: 'unique-operation-id',
-  }
-);
 ```
 
 **Note**: Idempotency keys are stored in DynamoDB with a 1-hour TTL.

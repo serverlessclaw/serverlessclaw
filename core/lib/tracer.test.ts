@@ -132,6 +132,8 @@ describe('ClawTracer', () => {
         'review_complete',
         'audit_complete',
         'aggregation_complete',
+        'collaboration_started',
+        'collaboration_completed',
       ];
 
       expect(allTypes).toEqual(expect.arrayContaining(expectedTypes));

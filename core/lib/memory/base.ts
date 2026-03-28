@@ -105,18 +105,34 @@ export class BaseMemoryProvider {
   /**
    * Internal helper for Delete commands.
    *
-   * @param key - The primary key of the item to delete.
+   * @param params - The primary key of the item to delete, plus optional conditions.
    * @returns A promise resolving when the operation is complete.
    */
-  public async deleteItem(key: Record<string, unknown>): Promise<void> {
+  public async deleteItem(
+    params: {
+      userId: string;
+      timestamp: number;
+    } & Partial<
+      Pick<
+        import('@aws-sdk/lib-dynamodb').DeleteCommandInput,
+        'ConditionExpression' | 'ExpressionAttributeNames' | 'ExpressionAttributeValues'
+      >
+    >
+  ): Promise<void> {
+    const { userId, timestamp, ...conditions } = params;
     try {
       await this.docClient.send(
         new DeleteCommand({
           TableName: this.tableName,
-          Key: key,
+          Key: { userId, timestamp },
+          ...conditions,
         })
       );
     } catch (error) {
+      // Re-throw conditional check failures so callers can handle them
+      if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
+        throw error;
+      }
       logger.error('Error deleting item from DynamoDB:', error);
     }
   }

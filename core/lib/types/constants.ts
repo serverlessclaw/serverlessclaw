@@ -18,6 +18,8 @@ export enum TraceType {
   PARALLEL_COMPLETED = 'parallel_completed',
   COUNCIL_REVIEW = 'council_review',
   CONTINUATION = 'continuation',
+  COLLABORATION_STARTED = 'collaboration_started',
+  COLLABORATION_COMPLETED = 'collaboration_completed',
   // System Events
   CIRCUIT_BREAKER = 'circuit_breaker',
   CANCELLATION = 'cancellation',

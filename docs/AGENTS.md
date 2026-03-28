@@ -165,21 +165,30 @@ The Critic Agent operates in three modes, each dispatched as a parallel task:
 ```text
 Planner (impact >= 8)
     |
-    +--- PARALLEL_TASK_DISPATCH (3 critic tasks)
+    +--- (1) createCollab ("Council Review")
     |
-    +--- [Security Review] ----+
-    +--- [Performance Review] -+---> [Aggregation (agent_guided)]
-    +--- [Architect Review] --+
-                                    |
-                                    v
-                            [CONTINUATION_TASK → Planner]
-                                    |
-                        +-----------+-----------+
-                        |                       |
-                  [APPROVED]              [REJECTED/CONDITIONAL]
-                        |                       |
-                        v                       v
-              [dispatch to Coder]      [revise plan or escalate to HITL]
+    +--- (2) writeToCollab (Strategic Plan)
+    |
+    +--- (3) PARALLEL_TASK_DISPATCH (3 critic tasks + collabId)
+    |         |
+    |         +--- [Security Review] ----+
+    |         +--- [Performance Review] -+---> [Aggregation (agent_guided)]
+    |         +--- [Architect Review] --+      (Reads shared session context)
+    |                                               |
+    |                                               v
+    +--- (4) [EH ROUTE] <------------------ [CONTINUATION_TASK]
+    |         |
+    |         v
+    +--- (5) [THINK: Verdict?]
+    |         |
+    |         +--- (6) closeCollab (Archive)
+    |         |
+    |         +-----------+-----------+
+    |         |                       |
+    |   [APPROVED]              [REJECTED/CONDITIONAL]
+    |         |                       |
+    |         v                       v
+    |   [dispatch to Coder]      [revise plan or escalate to HITL]
 ```
 
 #### Aggregation

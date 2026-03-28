@@ -39,10 +39,15 @@ export class DynamoLockManager implements ILockManager {
    * Acquires a distributed lock using DynamoDB's conditional writes.
    *
    * @param lockId - Unique identifier for the lock.
+   * @param ownerId - Identifier of the lock holder (e.g., agentId or processId).
    * @param ttlSeconds - Time-to-live for the lock in seconds.
    * @returns A promise that resolves to true if the lock was acquired, false otherwise.
    */
-  async acquire(lockId: string, ttlSeconds: number = LIMITS.DEFAULT_LOCK_TTL): Promise<boolean> {
+  async acquire(
+    lockId: string,
+    ownerId: string,
+    ttlSeconds: number = LIMITS.DEFAULT_LOCK_TTL
+  ): Promise<boolean> {
     const expiresAt = Math.floor(Date.now() / TIME.MS_PER_SECOND) + ttlSeconds;
 
     const command = new PutCommand({
@@ -50,6 +55,7 @@ export class DynamoLockManager implements ILockManager {
       Item: {
         userId: `${LOCK_PREFIX}${lockId}`,
         timestamp: 0,
+        ownerId,
         expiresAt: expiresAt,
         acquiredAt: Date.now(),
       },
@@ -72,34 +78,48 @@ export class DynamoLockManager implements ILockManager {
 
   /**
    * Releases a distributed lock by deleting its record from DynamoDB.
+   * Only releases if the owner matches.
    *
    * @param lockId - Unique identifier for the lock to release.
+   * @param ownerId - Identifier of the lock holder (must match the original owner).
    * @returns A promise that resolves when the release operation is complete.
    */
-  async release(lockId: string): Promise<void> {
+  async release(lockId: string, ownerId: string): Promise<void> {
     const command = new DeleteCommand({
       TableName: this.tableName,
       Key: {
         userId: `${LOCK_PREFIX}${lockId}`,
         timestamp: 0,
       },
+      ConditionExpression: 'ownerId = :ownerId',
+      ExpressionAttributeValues: {
+        ':ownerId': ownerId,
+      },
     });
 
     try {
       await this.docClient.send(command);
-    } catch (error) {
-      logger.error('Error releasing lock:', error);
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === DYNAMO_ERROR_CONDITIONAL_CHECK_FAILED) {
+        logger.warn(
+          `Lock release failed: lock ${lockId} not owned by ${ownerId} or already released`
+        );
+      } else {
+        logger.error('Error releasing lock:', error);
+      }
     }
   }
 
   /**
    * Renews/extends a distributed lock's TTL.
+   * Only renews if the owner matches.
    *
    * @param lockId - Unique identifier for the lock to renew.
+   * @param ownerId - Identifier of the lock holder.
    * @param additionalTtlSeconds - Additional time to add to the lock's TTL.
    * @returns A promise that resolves to true if renewed, false if lock doesn't exist or is held by another owner.
    */
-  async renew(lockId: string, additionalTtlSeconds: number): Promise<boolean> {
+  async renew(lockId: string, ownerId: string, additionalTtlSeconds: number): Promise<boolean> {
     const newExpiresAt = Math.floor(Date.now() / TIME.MS_PER_SECOND) + additionalTtlSeconds;
 
     const command = new UpdateCommand({
@@ -109,10 +129,11 @@ export class DynamoLockManager implements ILockManager {
         timestamp: 0,
       },
       UpdateExpression: 'SET expiresAt = :newExpires, renewedAt = :renewedAt',
-      ConditionExpression: 'attribute_exists(userId)',
+      ConditionExpression: 'attribute_exists(userId) AND ownerId = :ownerId',
       ExpressionAttributeValues: {
         ':newExpires': newExpiresAt,
         ':renewedAt': Date.now(),
+        ':ownerId': ownerId,
       },
     });
 
@@ -121,7 +142,9 @@ export class DynamoLockManager implements ILockManager {
       return true;
     } catch (error: unknown) {
       if (error instanceof Error && error.name === DYNAMO_ERROR_CONDITIONAL_CHECK_FAILED) {
-        logger.warn(`Lock renewal failed: lock ${lockId} does not exist or was released`);
+        logger.warn(
+          `Lock renewal failed: lock ${lockId} does not exist, was released, or is owned by another`
+        );
         return false;
       }
       throw error;

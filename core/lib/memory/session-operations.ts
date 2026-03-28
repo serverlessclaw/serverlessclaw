@@ -90,6 +90,7 @@ export async function updateDistilledMemory(
 
 /**
  * Saves or updates session metadata.
+ * Uses a stable key (SESSIONS#userId + sessionId as timestamp/SK) to prevent duplicates.
  *
  * @param base - The base memory provider instance.
  * @param userId - The user identifier.
@@ -105,38 +106,55 @@ export async function saveConversationMeta(
   meta: Partial<ConversationMeta>
 ): Promise<void> {
   const normalizedUserId = userId.replace(/^(SESSIONS#)+/, '');
-  const conversations = await base.listConversations(normalizedUserId);
-  const existing = conversations.find((c) => c.sessionId === sessionId);
+  const { type } = await RetentionManager.getExpiresAt('SESSIONS', normalizedUserId);
 
-  if (existing) {
-    await base.deleteItem({
-      userId: `SESSIONS#${normalizedUserId}`,
-      timestamp: existing.updatedAt,
-    });
-  }
+  const isPinned = meta.isPinned === true;
+  let expiresAt: number;
 
-  const isPinned = meta.isPinned !== undefined ? meta.isPinned : existing?.isPinned || false;
-
-  let expiresAt: number | undefined;
   if (isPinned) {
-    // Pinned items do not expire (effectively)
     expiresAt = 0;
   } else {
     const retention = await RetentionManager.getExpiresAt('SESSIONS', normalizedUserId);
     expiresAt = retention.expiresAt;
   }
 
-  const { type } = await RetentionManager.getExpiresAt('SESSIONS', normalizedUserId);
+  // Use UpdateCommand to atomically set or update session metadata.
+  // We use the sessionId directly as part of the userId/PartitionKey or a unique timestamp
+  // but to keep current listConversations (query by userId) working,
+  // we'll use a deterministic timestamp derived from sessionId if possible,
+  // or just use a stable identifier.
+  // Actually, listConversations queries by 'SESSIONS#userId'.
+  // If we want it to be unique per sessionId, we should use sessionId as the sort key (timestamp).
 
-  await base.putItem({
-    userId: `SESSIONS#${normalizedUserId}`,
-    timestamp: Date.now(),
-    type,
-    expiresAt,
-    sessionId,
-    isPinned,
-    title: meta.title || existing?.title || 'New Conversation',
-    content: meta.lastMessage || existing?.lastMessage || '',
+  // Convert sessionId to a numeric-ish value if it's a timestamp, otherwise use hash
+  let stableTimestamp = Number.parseInt(sessionId.split('_')[1] || sessionId, 10);
+  if (Number.isNaN(stableTimestamp)) {
+    // Fallback to a hash-based numeric value if sessionId is not timestamp-based
+    stableTimestamp = sessionId.split('').reduce((a, b) => {
+      a = (a << 5) - a + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+  }
+
+  await base.updateItem({
+    Key: {
+      userId: `SESSIONS#${normalizedUserId}`,
+      timestamp: Math.abs(stableTimestamp),
+    },
+    UpdateExpression:
+      'SET sessionId = :sessionId, #tp = :type, expiresAt = :exp, title = :title, content = :content, isPinned = :pinned, updatedAt = :now',
+    ExpressionAttributeNames: {
+      '#tp': 'type',
+    },
+    ExpressionAttributeValues: {
+      ':sessionId': sessionId,
+      ':type': type,
+      ':exp': expiresAt,
+      ':title': meta.title || 'New Conversation',
+      ':content': meta.lastMessage || '',
+      ':pinned': isPinned,
+      ':now': Date.now(),
+    },
   });
 }
 

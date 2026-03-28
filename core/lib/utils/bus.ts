@@ -5,6 +5,7 @@ import {
   PutCommand,
   QueryCommand,
   DeleteCommand,
+  UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { EventType } from '../types/index';
 import { logger } from '../logger';
@@ -144,27 +145,7 @@ function categorizeError(error: unknown): ErrorCategory {
   return ErrorCategory.UNKNOWN;
 }
 
-async function checkIdempotency(key: string): Promise<boolean> {
-  try {
-    const tableName = await getMemoryTableName();
-    const result = await getDb().send(
-      new QueryCommand({
-        TableName: tableName,
-        KeyConditionExpression: 'userId = :key',
-        ExpressionAttributeValues: {
-          ':key': `${IDEMPOTENCY_PREFIX}${key}`,
-        },
-        Limit: 1,
-      })
-    );
-    return (result.Items?.length ?? 0) > 0;
-  } catch (error) {
-    logger.error(`Idempotency check failed for ${key}, proceeding anyway:`, error);
-    return false;
-  }
-}
-
-async function storeIdempotencyKey(key: string): Promise<void> {
+async function reserveIdempotencyKey(key: string): Promise<boolean> {
   try {
     const tableName = await getMemoryTableName();
     const expiresAt = Math.floor(Date.now() / 1000) + IDEMPOTENCY_TTL_SECONDS;
@@ -174,14 +155,46 @@ async function storeIdempotencyKey(key: string): Promise<void> {
         TableName: tableName,
         Item: {
           userId: `${IDEMPOTENCY_PREFIX}${key}`,
-          timestamp: Date.now(),
+          timestamp: 0,
           type: IDEMPOTENCY_TYPE,
+          status: 'RESERVED',
           expiresAt,
         },
+        ConditionExpression: 'attribute_not_exists(userId)',
+      })
+    );
+    return true;
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
+      return false;
+    }
+    logger.error(`Idempotency reservation failed for ${key}:`, error);
+    return true; // Proceed anyway if DDB is just down, to avoid blocking the event
+  }
+}
+
+async function commitIdempotencyKey(key: string, eventId?: string): Promise<void> {
+  try {
+    const tableName = await getMemoryTableName();
+    await getDb().send(
+      new UpdateCommand({
+        TableName: tableName,
+        Key: {
+          userId: `${IDEMPOTENCY_PREFIX}${key}`,
+          timestamp: 0,
+        },
+        UpdateExpression: 'SET #status = :committed, eventId = :eventId, committedAt = :now',
+        ExpressionAttributeNames: { '#status': 'status' },
+        ExpressionAttributeValues: {
+          ':committed': 'COMMITTED',
+          ':eventId': eventId ?? 'N/A',
+          ':now': Date.now(),
+        },
+        ConditionExpression: 'attribute_exists(userId)',
       })
     );
   } catch (error) {
-    logger.warn(`Failed to store idempotency key ${key}:`, error);
+    logger.warn(`Failed to commit idempotency key ${key}:`, error);
   }
 }
 
@@ -249,8 +262,8 @@ export async function emitEvent(
   } = options;
 
   if (idempotencyKey) {
-    const isDuplicate = await checkIdempotency(idempotencyKey);
-    if (isDuplicate) {
+    const reserved = await reserveIdempotencyKey(idempotencyKey);
+    if (!reserved) {
       logger.info(`Duplicate event detected via idempotency key: ${idempotencyKey}`);
       return { success: false, reason: 'DUPLICATE' };
     }
@@ -290,7 +303,7 @@ export async function emitEvent(
       }
 
       if (idempotencyKey) {
-        await storeIdempotencyKey(idempotencyKey);
+        await commitIdempotencyKey(idempotencyKey, result.Entries?.[0]?.EventId);
       }
 
       return { success: true, eventId: result.Entries?.[0]?.EventId };

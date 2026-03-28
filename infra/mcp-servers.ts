@@ -128,6 +128,7 @@ export function createMCPServers(ctx: SharedContext): MCPServerResources {
       },
       environment: {
         MCP_SERVER_NAME: name,
+        PATH: process.env.PATH ?? '',
       },
       // Enable function URL for direct IAM-authenticated access
       url: {

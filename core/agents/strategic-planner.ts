@@ -25,6 +25,7 @@ import type { PlannerEvent, PlannerResult, PlannerPayload } from './strategic-pl
 
 import { INSIGHT_DEFAULTS } from '../lib/constants';
 import { StrategicPlanSchema } from './strategic-planner/schema';
+import { Agent } from '../lib/agent';
 
 /**
  * Planner Agent handler. Analyzes capability gaps and generates strategic plans.
@@ -70,6 +71,11 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
   const config = await loadAgentConfig(AgentType.STRATEGIC_PLANNER);
   const { memory, provider: providerManager } = await getAgentContext();
 
+  const { getAgentTools } = await import('../tools/registry-utils');
+  const agentTools = await getAgentTools(AgentType.STRATEGIC_PLANNER);
+
+  const plannerAgent = new Agent(memory, providerManager, agentTools, config.systemPrompt, config);
+
   // 1.1 Council Review Continuation Logic
   if (task.includes('[COUNCIL_REVIEW_RESULT]') || task.includes('VERDICT:')) {
     logger.info(`[PLANNER] Detected Council review result for trace ${traceId}`);
@@ -98,10 +104,21 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
         gapIds,
         sessionId: originalSessionId,
         planId: originalPlanId,
+        collaborationId: councilCollabId,
       } = JSON.parse(councilDataStr);
 
       const isApproved = task.includes('VERDICT: APPROVED') || task.includes('APPROVED');
       const isConditional = task.includes('VERDICT: CONDITIONAL') || task.includes('CONDITIONAL');
+
+      // Close the Council collaboration session
+      if (councilCollabId) {
+        try {
+          await (memory as any).closeCollaboration(councilCollabId, baseUserId, 'agent');
+          logger.info(`[PLANNER] Closed Council collaboration ${councilCollabId}`);
+        } catch (e) {
+          logger.warn(`[PLANNER] Failed to close collaboration ${councilCollabId}:`, e);
+        }
+      }
 
       if (isApproved || isConditional) {
         logger.info(
@@ -170,9 +187,6 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
     }
   }
 
-  const { getAgentTools } = await import('../tools/registry-utils');
-  const agentTools = await getAgentTools(AgentType.STRATEGIC_PLANNER);
-
   // Self-Scheduling: If this is a proactive review, or we are running for any reason,
   // ensure the NEXT proactive review is scheduled if not already present.
   if (isProactive) {
@@ -197,8 +211,6 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
     }
   }
 
-  const { Agent } = await import('../lib/agent');
-  const plannerAgent = new Agent(memory, providerManager, agentTools, config.systemPrompt, config);
   const toolsList = agentTools
     .map((t: { name: string; description: string }) => `- ${t.name}: ${t.description}`)
     .join('\n    ');
@@ -450,6 +462,26 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
       undefined
     );
 
+    // Create a collaboration session for the Council discussion
+    const collaboration = await (memory as any).createCollaboration(baseUserId, 'agent', {
+      name: `Council Review: ${planId}`,
+      description: `Multi-party peer review for strategic plan ${planId}`,
+      initialParticipants: [
+        { type: 'agent', id: AgentType.CRITIC, role: 'editor' },
+        { type: 'human', id: baseUserId, role: 'viewer' },
+      ],
+      tags: ['council', 'review', planId],
+    });
+    const collaborationId = collaboration.collaborationId;
+    logger.info(`[PLANNER] Created Council collaboration: ${collaborationId}`);
+
+    // Post the plan to the shared session
+    await memory.addMessage(collaboration.syntheticUserId, {
+      role: 'assistant',
+      content: `### COUNCIL REVIEW REQUEST: ${planId}\n\n**Strategic Plan:**\n${plan}\n\n**Context:**\nImpact: ${gapImpact} | Risk: ${gapRisk} | Complexity: ${gapComplexity}\n\nPlease provide your expert feedback and verdict (APPROVED/REJECTED/CONDITIONAL).`,
+      agentName: AgentType.STRATEGIC_PLANNER,
+    });
+
     // Dispatch parallel critic reviews
     const { emitTypedEvent } = await import('../lib/utils/typed-emit');
     const councilTraceId = `${traceId || 'council'}-${planId}`;
@@ -459,19 +491,19 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
         taskId: `critic-security-${planId}`,
         agentId: AgentType.CRITIC,
         task: `Security review of plan:\n\n${plan}`,
-        metadata: { reviewMode: 'security', planId, gapIds: processedGapIds },
+        metadata: { reviewMode: 'security', planId, gapIds: processedGapIds, collaborationId },
       },
       {
         taskId: `critic-performance-${planId}`,
         agentId: AgentType.CRITIC,
         task: `Performance review of plan:\n\n${plan}`,
-        metadata: { reviewMode: 'performance', planId, gapIds: processedGapIds },
+        metadata: { reviewMode: 'performance', planId, gapIds: processedGapIds, collaborationId },
       },
       {
         taskId: `critic-architect-${planId}`,
         agentId: AgentType.CRITIC,
         task: `Architectural review of plan:\n\n${plan}`,
-        metadata: { reviewMode: 'architect', planId, gapIds: processedGapIds },
+        metadata: { reviewMode: 'architect', planId, gapIds: processedGapIds, collaborationId },
       },
     ];
 
@@ -480,7 +512,7 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
       tasks: councilTasks,
       barrierTimeoutMs: 120000, // 2 minutes
       aggregationType: 'agent_guided' as const,
-      aggregationPrompt: `Synthesize the following 3 critic reviews for Plan ${planId}. Return your response starting with [COUNCIL_REVIEW_RESULT] followed by VERDICT: <APPROVED|REJECTED|CONDITIONAL> and a summary of findings. If all reviews are APPROVED, return VERDICT: APPROVED. If ANY review has verdict REJECTED, return VERDICT: REJECTED with consolidated feedback. Always include the Plan ID ${planId} in your response.`,
+      aggregationPrompt: `Synthesize the Council discussion in session ${collaborationId} and the individual reviews for Plan ${planId}. Return your response starting with [COUNCIL_REVIEW_RESULT] followed by VERDICT: <APPROVED|REJECTED|CONDITIONAL> and a summary of findings. If all reviews are APPROVED, return VERDICT: APPROVED. If ANY review has verdict REJECTED, return VERDICT: REJECTED with consolidated feedback. Always include the Plan ID ${planId} and Collaboration ID ${collaborationId} in your response.`,
       traceId: councilTraceId,
       initiatorId: AgentType.STRATEGIC_PLANNER,
       depth: (depth ?? 0) + 1,
@@ -497,6 +529,7 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
         sessionId,
         traceId: councilTraceId,
         planId,
+        collaborationId,
       })
     );
   } else if (evolutionMode === EvolutionMode.AUTO && !isFailure && processedGapIds.length > 0) {
