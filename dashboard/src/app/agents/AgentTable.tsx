@@ -67,11 +67,11 @@ export default function AgentTable({
                         }`}>
                           {isLogicOnly ? <ShieldAlert size={14} /> : (agent.isBackbone ? <Shield size={14} /> : <Bot size={14} />)}
                         </div>
-                        <div>
+                        <div className="flex flex-col">
                           <Typography variant="mono" weight="bold" className="text-xs text-white/90">
                             {agent.name}
                           </Typography>
-                          <Typography variant="mono" className="text-[9px] text-white/30">
+                          <Typography variant="mono" className="text-[9px] text-white/30 mt-0.5">
                             {agent.id}
                           </Typography>
                         </div>

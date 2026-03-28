@@ -1,7 +1,7 @@
 # Serverless Claw
 
 <p align="center">
-  <img src="./logo.png" alt="Serverless Claw Logo" width="400">
+  <img src="./dashboard/public/logo-text.png" alt="Serverless Claw Logo" width="400">
 </p>
 
 <p align="center">

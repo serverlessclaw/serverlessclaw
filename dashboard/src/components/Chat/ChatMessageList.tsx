@@ -34,7 +34,7 @@ export function ChatMessageList({ messages, isLoading, scrollRef, onOptionClick 
       )}
 
       {messages.map((m, i) => (
-        <div key={i} className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+        <div key={m.messageId ? `${m.role}-${m.messageId}` : `local-${i}`} className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
           <div className={`flex gap-3 max-w-[85%] ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
             <div className={`w-8 h-8 rounded shrink-0 flex items-center justify-center border ${
               m.role === 'user' ? 'bg-white/5 border-white/10 text-white/100' : 'bg-cyber-green/10 border-cyber-green/30 text-cyber-green'

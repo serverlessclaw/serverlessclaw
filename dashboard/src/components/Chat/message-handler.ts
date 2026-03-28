@@ -63,9 +63,9 @@ export function applyChunkToMessages(
   }
 
   // Find existing message with matching messageId
-  const existingIndex = prev.findIndex(
-    (m) => m.messageId === data.messageId && m.role === 'assistant'
-  );
+  const existingIndex = data.messageId
+    ? prev.findIndex((m) => m.messageId === data.messageId && m.role === 'assistant')
+    : -1;
 
   if (existingIndex !== -1) {
     const updated = [...prev];

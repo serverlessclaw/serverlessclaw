@@ -264,6 +264,7 @@ export default function ChatContent() {
     setMessages(prev => [...prev, { 
       role: 'user', 
       content: userMsg,
+      messageId: tempId,
       attachments: currentAttachments.map(a => ({
         type: a.type,
         name: a.file.name,

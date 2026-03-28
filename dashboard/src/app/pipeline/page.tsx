@@ -1,6 +1,5 @@
 export const dynamic = 'force-dynamic';
 import {
-  AlertCircle,
   Kanban
 } from 'lucide-react';
 import { GapStatus } from '@claw/core/lib/types';
@@ -118,13 +117,6 @@ export default async function EvolutionPipeline() {
         pruneGap={pruneGap}
         triggerBatchEvolution={triggerBatchEvolution}
       />
-
-      <div className="glass-card p-4 border-white/5 bg-black/40 flex items-center gap-4">
-        <AlertCircle size={18} className="text-amber-500/60" />
-        <p className="text-[10px] text-white/50 italic leading-relaxed">
-          [CONTROL_ADVISORY]: Strategic gaps are identified by the <span className="text-white/100">ST_PLANNER</span> agent. Batch evolution triggers the <span className="text-white/100">CODER</span> agent for selected <span className="text-white/100">READY</span> gaps.
-        </p>
-      </div>
     </main>
   );
 }
