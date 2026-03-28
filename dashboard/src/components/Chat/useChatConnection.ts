@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import mqtt from 'mqtt';
 import { ChatMessage } from './types';
 import type { ConversationMeta } from '@claw/core/lib/types/memory';
-import { shouldProcessChunk, applyChunkToMessages, mergeHistoryWithMessages, IncomingChunk } from './message-handler';
+import { shouldProcessChunk, applyChunkToMessages, mergeHistoryWithMessages } from './message-handler';
 
 export function useChatConnection(activeSessionId: string, setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>, setIsLoading: React.Dispatch<React.SetStateAction<boolean>>, isPostInFlight: React.MutableRefObject<boolean>) {
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
@@ -11,33 +11,6 @@ export function useChatConnection(activeSessionId: string, setMessages: React.Di
   const activeSessionRef = useRef<string>(activeSessionId);
   const skipNextHistoryFetch = useRef<boolean>(false);
   const seenMessageIds = useRef<Set<string>>(new Set());
-
-  // Throttle chunk batching: accumulate chunks and flush once per animation frame
-  const pendingChunks = useRef<IncomingChunk[]>([]);
-  const flushScheduled = useRef(false);
-
-  const flushChunks = useCallback(() => {
-    flushScheduled.current = false;
-    const chunks = pendingChunks.current;
-    if (chunks.length === 0) return;
-    pendingChunks.current = [];
-
-    setMessages(prev => {
-      let result = prev;
-      for (const chunk of chunks) {
-        result = applyChunkToMessages(result, chunk, seenMessageIds.current);
-      }
-      return result;
-    });
-  }, [setMessages]);
-
-  const enqueueChunk = useCallback((chunk: IncomingChunk) => {
-    pendingChunks.current.push(chunk);
-    if (!flushScheduled.current) {
-      flushScheduled.current = true;
-      requestAnimationFrame(flushChunks);
-    }
-  }, [flushChunks]);
 
   useEffect(() => {
     activeSessionRef.current = activeSessionId;
@@ -118,7 +91,7 @@ export function useChatConnection(activeSessionId: string, setMessages: React.Di
             const currentActiveId = activeSessionRef.current;
             
             if (shouldProcessChunk(data, currentActiveId, userId)) {
-              enqueueChunk(data);
+              setMessages(prev => applyChunkToMessages(prev, data, seenMessageIds.current));
             } else {
               if (currentActiveId && !isPostInFlight.current) {
                 fetchHistorySilently(currentActiveId);
