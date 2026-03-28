@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Bot, Save, Plus, Trash2, Shield, Settings2, RefreshCw, Cpu, ChevronRight, ShieldAlert, Wrench } from 'lucide-react';
-import CyberSelect from '@/components/CyberSelect';
+import { Plus, Shield, RefreshCw } from 'lucide-react';
 import { THEME } from '@/lib/theme';
 import { toast } from 'sonner';
 import CyberConfirm from '@/components/CyberConfirm';
@@ -12,6 +11,7 @@ import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import NewAgentModal from './NewAgentModal';
 import AgentToolsModal from './AgentToolsModal';
+import AgentTable from './AgentTable';
 import { Tool, Agent } from '@/lib/types/ui';
 
 // Agent interface moved to ui.ts
@@ -34,14 +34,6 @@ const PROVIDERS = {
     models: ['zhipu/glm-5', 'google/gemini-3-flash-preview'],
   },
 };
-
-const REASONING_PROFILES = [
-  { value: '', label: 'INHERIT_SYSTEM_DEFAULT' },
-  { value: 'fast', label: 'Fast' },
-  { value: 'standard', label: 'Standard' },
-  { value: 'thinking', label: 'Thinking' },
-  { value: 'deep', label: 'Deep' },
-];
 
 /** AgentsPage — manages the Neural Agent Registry: configure agent personas, toggle tool scopes, and register new dynamic agents without redeploying. */
 export default function AgentsPage() {
@@ -323,197 +315,15 @@ export default function AgentsPage() {
       </header>
 
       <div className="max-w-6xl space-y-8 pb-20">
-        <div className="grid grid-cols-1 gap-6">
-          {Object.values(agents).map((agent) => {
-            const isLogicOnly = agent.id === 'monitor' || agent.id === 'recovery' || agent.id === 'events';
-            
-            return (
-              <Card
-                key={agent.id}
-                variant="glass"
-                padding="md"
-                className={`border-l-2 transition-all ${
-                  agent.isBackbone
-                    ? `border-${THEME.COLORS.INTEL} shadow-[0_0_20px_rgba(0,224,255,0.05)]`
-                    : 'border-white/10 hover:border-white/20'
-                }`}
-              >
-                <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 mb-6">
-                  <div className="flex items-center gap-4">
-                    <div
-                      className={`p-3 rounded-sm ${
-                        agent.isBackbone
-                          ? `bg-${THEME.COLORS.INTEL}/20 text-${THEME.COLORS.INTEL}`
-                          : 'bg-white/5 text-white/100'
-                      }`}
-                    >
-                      {isLogicOnly ? <ShieldAlert size={20} /> : (agent.isBackbone ? <Shield size={20} /> : <Bot size={20} />)}
-                    </div>
-                    <div>
-                      <input
-                        value={agent.name}
-                        onChange={(e) => updateAgent(agent.id, { name: e.target.value })}
-                        className="bg-transparent border-none text-white font-bold outline-none focus:ring-1 focus:ring-white/20 rounded px-1 text-base uppercase tracking-tight"
-                        placeholder="Agent Name"
-                      />
-                      <div className="text-[10px] text-white/50 mt-1 font-mono flex items-center gap-2">
-                        {agent.id} 
-                        {agent.isBackbone && <Badge variant="primary" className="py-0">Backbone Protected</Badge>}
-                        {isLogicOnly && <Badge variant="primary" className="bg-yellow-500/10 text-yellow-500 py-0">System Logic Only</Badge>}
-                      </div>
-                    </div>
-                  </div>
-
-                    <div className="flex items-center gap-3 self-end lg:self-center">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedAgentIdForTools(agent.id)}
-                          className="text-white/50 hover:text-[var(--cyber-green)] p-2 h-auto flex items-center gap-2"
-                        >
-                          <Wrench size={14} />
-                          <span className="text-[10px] font-bold uppercase tracking-widest">Tools ({agent.tools?.length ?? 0})</span>
-                        </Button>
-                      <label className={`flex items-center gap-3 ${agent.isBackbone ? 'cursor-not-allowed' : 'cursor-pointer'} group`}>
-                      <Typography variant="caption" weight="bold" color="white" uppercase className="group-hover:text-cyber-green transition-colors">Active Status</Typography>
-                      <div className="relative">
-                        <input
-                          type="checkbox"
-                          checked={agent.enabled}
-                          disabled={agent.isBackbone}
-                          onChange={(e) => updateAgent(agent.id, { enabled: e.target.checked })}
-                          className="sr-only peer"
-                        />
-                        <div className={`w-10 h-5 bg-white/5 rounded-full peer peer-checked:bg-${THEME.COLORS.PRIMARY}/30 relative transition-all border border-white/5 overflow-hidden ${agent.isBackbone ? 'opacity-50 grayscale-[0.5]' : ''} after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white/40 after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:toggle-move peer-checked:after:bg-${THEME.COLORS.PRIMARY} peer-checked:after:shadow-[0_0_8px_rgba(0,255,163,0.8)] shadow-inner`}></div>
-                      </div>
-                      {agent.isBackbone && <Typography variant="mono" color="muted" className="text-[8px]" uppercase>Read Only</Typography>}
-                    </label>
-                    {!agent.isBackbone && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteAgent(agent.id)}
-                        className="text-white/50 hover:text-red-500 p-2 h-auto"
-                        icon={<Trash2 size={16} />}
-                      />
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                  {/* Prompt Section */}
-                  <div className="lg:col-span-7 space-y-3">
-                    <Typography variant="caption" weight="bold" color="white" uppercase className="flex items-center gap-2">
-                      <Settings2 size={12} className={`text-${THEME.COLORS.INTEL}`} /> 
-                      {isLogicOnly ? 'Execution Parameters' : 'System Instructions (System Prompt)'}
-                    </Typography>
-                    <div className="relative">
-                      {isLogicOnly ? (
-                        <Card variant="solid" padding="md" className="w-full text-[10px] text-white/40 font-mono italic leading-relaxed min-h-[280px]">
-                          This agent operates on deterministic system logic rather than autonomous reasoning. 
-                          Instructions are hardcoded in the codebase for maximum reliability and safety.
-                          <br /><br />
-                          <Typography variant="mono" weight="bold" color="white" uppercase className="flex items-center gap-2 mt-4 opacity-60">
-                            <ChevronRight size={10} /> source_path: core/handlers/{agent.id}.ts
-                          </Typography>
-                        </Card>
-                      ) : (
-                        <textarea
-                          value={agent.systemPrompt}
-                          onChange={(e) => updateAgent(agent.id, { systemPrompt: e.target.value })}
-                          className={`w-full bg-black/40 border border-white/10 rounded p-4 text-xs text-white/90 font-mono min-h-[280px] lg:min-h-[360px] outline-none focus:border-${THEME.COLORS.INTEL}/40 transition-all leading-relaxed custom-scrollbar`}
-                          placeholder="Enter the system instructions for this agent..."
-                        />
-                      )}
-                    </div>
-                  </div>
-                  {/* Model & Config Section */}
-                  <div className="lg:col-span-5 space-y-6">
-                    {!isLogicOnly && (
-                      <Card variant="solid" padding="sm" className="space-y-4">
-                        <Typography variant="caption" weight="bold" color="white" uppercase className="flex items-center gap-2">
-                            <Cpu size={12} className={`text-${THEME.COLORS.PRIMARY}`} /> Hardware Alignment
-                        </Typography>
-                        
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <Typography variant="mono" weight="bold" color="white" uppercase className="text-[9px] opacity-60">LLM Provider</Typography>
-                            <CyberSelect
-                              value={agent.provider || ''}
-                              onChange={(val) => updateAgent(agent.id, { provider: val, model: '' })}
-                              options={[
-                                { value: '', label: 'INHERIT_SYSTEM_DEFAULT' },
-                                ...Object.entries(PROVIDERS).map(([id, p]) => ({
-                                  value: id,
-                                  label: p.label,
-                                })),
-                              ]}
-                              className="w-full"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Typography variant="mono" weight="bold" color="white" uppercase className="text-[9px] opacity-60">Model ID</Typography>
-                            <CyberSelect
-                              value={agent.model || ''}
-                              onChange={(val) => updateAgent(agent.id, { model: val })}
-                              options={
-                                agent.provider
-                                  ? PROVIDERS[agent.provider as keyof typeof PROVIDERS]?.models.map((m) => ({
-                                      value: m,
-                                      label: m,
-                                    }))
-                                  : []
-                              }
-                              disabled={!agent.provider}
-                              placeholder={agent.provider ? 'SELECT_MODEL' : 'SELECT_PROVIDER_FIRST'}
-                              className="w-full"
-                            />
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <Typography variant="mono" weight="bold" color="white" uppercase className="text-[9px] opacity-60">Reasoning Profile</Typography>
-                            <CyberSelect
-                              value={agent.reasoningProfile || ''}
-                              onChange={(val) => updateAgent(agent.id, { reasoningProfile: val })}
-                              options={REASONING_PROFILES}
-                              className="w-full"
-                            />
-                          </div>
-                        </div>
-                      </Card>
-                    )}
-
-                    <Card variant="solid" padding="sm" className={`border-${THEME.COLORS.INTEL}/10 bg-${THEME.COLORS.INTEL}/[0.02]`}>
-                      <Typography variant="caption" weight="bold" color="intel" uppercase className="flex items-center gap-2 mb-2">
-                          <ChevronRight size={12} /> Execution Context
-                      </Typography>
-                      <Typography variant="caption" color="white" className="italic block opacity-70">
-                          Agent Type: {agent.isBackbone ? 'PERSISTENT_BACKBONE' : 'DYNAMIC_SPOKE'}.
-                          {isLogicOnly ? ' Core resilience logic.' : ' Authorized to interact with global bus and session memory.'}
-                      </Typography>
-                    </Card>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Floating Save Button */}
-      <div className="fixed bottom-10 right-10 z-30">
-        <Button
-          onClick={() => handleSave()}
-          disabled={saving || !hasChanges}
-          loading={saving}
-          size="lg"
-          icon={<Save size={16} />}
-          uppercase
-          className="shadow-[0_0_20px_rgba(0,0,0,0.5)] scale-105 active:scale-95"
-        >
-          Save Agent Config
-        </Button>
+        <AgentTable
+          agents={agents}
+          updateAgent={updateAgent}
+          deleteAgent={deleteAgent}
+          setSelectedAgentIdForTools={setSelectedAgentIdForTools}
+          onSave={() => handleSave()}
+          saving={saving}
+          hasChanges={hasChanges}
+        />
       </div>
 
       {/* Backbone Warning Modal */}
