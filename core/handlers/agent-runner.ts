@@ -18,14 +18,14 @@ interface WorkerEvent {
 }
 
 /**
- * Worker Agent handler. Dynamically loads agent configurations and executes tasks.
+ * Agent Runner handler. Dynamically loads agent configurations and executes tasks.
  *
  * @param event - The event containing agentId, userId, and task details.
  * @param context - The AWS Lambda context.
  * @returns A promise that resolves to the worker's response string, or undefined on error.
  */
 export async function handler(event: WorkerEvent, context: Context): Promise<string | undefined> {
-  logger.info('Worker Agent received event:', JSON.stringify(event, null, 2));
+  logger.info('Agent Runner received event:', JSON.stringify(event, null, 2));
 
   // Extract agentId from the event source or detail-type
   // Pattern: <agentId>_task
@@ -46,7 +46,7 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
   ];
 
   if (!detailType || (systemEvents as string[]).includes(detailType)) {
-    logger.info('Skipping system event in Worker Agent:', detailType);
+    logger.info('Skipping system event in Agent Runner:', detailType);
     return;
   }
 
@@ -85,7 +85,7 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
   });
 
   if (shouldSpeakDirectly) {
-    logger.info(`Worker Agent [${agentId}] starting stream for direct communication...`);
+    logger.info(`Agent Runner [${agentId}] starting stream for direct communication...`);
     const stream = agent.stream(userId, task, processOptions);
     for await (const chunk of stream) {
       if (chunk.content) {
@@ -98,7 +98,7 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
     finalAttachments = processResult.attachments;
   }
 
-  logger.info(`Worker Agent [${agentId}] completed task:`, finalResponseText);
+  logger.info(`Agent Runner [${agentId}] completed task:`, finalResponseText);
 
   // 4. Notification
   if (!isTaskPaused(finalResponseText)) {
@@ -113,7 +113,7 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
       // but since we *did* stream it, we omit the duplicate sendOutboundMessage call here.
       // The agent's AgentEmitter handles emitting chunks as outbound_messages.
       logger.info(
-        `Worker Agent [${agentId}] streaming completed, skipping duplicate final outbound message.`
+        `Agent Runner [${agentId}] streaming completed, skipping duplicate final outbound message.`
       );
     }
 

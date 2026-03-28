@@ -19,6 +19,10 @@ declare module "sst" {
       "name": string
       "type": "sst.aws.Bus"
     }
+    "AgentRunner": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
     "AwsRegion": {
       "type": "sst.sst.Secret"
       "value": string
@@ -166,10 +170,6 @@ declare module "sst" {
     "WebhookApi": {
       "type": "sst.aws.ApiGatewayV2"
       "url": string
-    }
-    "WorkerAgent": {
-      "name": string
-      "type": "sst.aws.Function"
     }
   }
 }

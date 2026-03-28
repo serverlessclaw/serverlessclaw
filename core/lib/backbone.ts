@@ -15,6 +15,7 @@ import {
   REFLECTOR_SYSTEM_PROMPT,
   QA_SYSTEM_PROMPT,
   CRITIC_SYSTEM_PROMPT,
+  FACILITATOR_SYSTEM_PROMPT,
 } from '../agents/prompts/index';
 
 const TOOL_DISCOVER_SKILLS = TOOLS.discoverSkills;
@@ -279,6 +280,35 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       'writeToCollaboration',
       'closeCollaboration',
       'listMyCollaborations',
+    ],
+    connectionProfile: [
+      ConnectionProfile.BUS,
+      ConnectionProfile.MEMORY,
+      ConnectionProfile.CONFIG,
+      ConnectionProfile.TRACE,
+      ConnectionProfile.KNOWLEDGE,
+    ],
+  },
+  [AgentType.FACILITATOR]: {
+    id: AgentType.FACILITATOR,
+    name: 'Facilitator',
+    systemPrompt: FACILITATOR_SYSTEM_PROMPT,
+    description: 'Moderator node. Manages multi-party collaboration sessions and drives consensus.',
+    category: AgentCategory.SYSTEM,
+    icon: 'MessageSquareShare',
+    enabled: true,
+    isBackbone: true,
+    provider: LLMProvider.MINIMAX,
+    model: MiniMaxModel.M2_7,
+    reasoningProfile: ReasoningProfile.STANDARD,
+    defaultCommunicationMode: 'text',
+    tools: [
+      TOOL_SEND_MESSAGE,
+      'getCollaborationContext',
+      'writeToCollaboration',
+      'closeCollaboration',
+      'listMyCollaborations',
+      TOOL_RECALL_KNOWLEDGE,
     ],
     connectionProfile: [
       ConnectionProfile.BUS,

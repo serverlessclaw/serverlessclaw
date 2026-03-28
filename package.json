@@ -40,7 +40,7 @@
     ]
   },
   "devDependencies": {
-    "@aiready/cli": "^0.15.1",
+    "@aiready/cli": "^0.15.6",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.58.2",
     "@testing-library/jest-dom": "^6.9.1",

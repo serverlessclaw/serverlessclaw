@@ -59,8 +59,16 @@ export async function GET() {
         };
       });
 
+      // Trace ID extraction
+      const userIdParts = item.userId?.split('#') ?? [];
+      const traceId = userIdParts.length > 2 
+        ? userIdParts[2] // PARALLEL#user#trace
+        : userIdParts.length > 1 
+          ? userIdParts[1] // user#trace or PARALLEL#trace
+          : 'unknown';
+
       return {
-        traceId: item.userId?.replace('PARALLEL#', '').split('#')[1] ?? 'unknown',
+        traceId,
         taskCount: item.taskCount as number,
         completedCount: item.completedCount as number,
         initiatorId: item.initiatorId as string,

@@ -10,6 +10,8 @@ import { ITool } from '../lib/types/tool';
 import { MessageRole } from '../lib/types/llm';
 import { addTraceStep } from '../lib/utils/trace-helper';
 import { TraceType } from '../lib/types/constants';
+import { AgentType } from '../lib/types/agent';
+import { emitTypedEvent } from '../lib/utils/typed-emit';
 
 /**
  * Creates a new collaboration session.
@@ -22,6 +24,25 @@ export const CREATE_COLLABORATION: ITool = {
     const mem = memory as any;
     const agentId = (args.agentId as string) ?? 'unknown';
     const traceId = (args.traceId as string) ?? undefined;
+    const userId = (args.userId as string) ?? 'unknown';
+
+    // Ensure Facilitator is invited as an editor (to summarize and close)
+    const initialParticipants =
+      (args.participants as
+        | Array<{
+            type: ParticipantType;
+            id: string;
+            role: CollaborationRole;
+          }>
+        | undefined) ?? [];
+
+    if (!initialParticipants.some((p) => p.id === AgentType.FACILITATOR)) {
+      initialParticipants.push({
+        type: 'agent',
+        id: AgentType.FACILITATOR,
+        role: 'editor',
+      });
+    }
 
     const collaboration = await mem.createCollaboration(agentId, 'agent', {
       name: args.name as string,
@@ -29,13 +50,7 @@ export const CREATE_COLLABORATION: ITool = {
       sessionId: undefined, // Auto-generated
       ttlDays: args.ttlDays as number | undefined,
       tags: args.tags as string[] | undefined,
-      initialParticipants: args.participants as
-        | Array<{
-            type: ParticipantType;
-            id: string;
-            role: CollaborationRole;
-          }>
-        | undefined,
+      initialParticipants,
     });
 
     if (traceId) {
@@ -49,13 +64,26 @@ export const CREATE_COLLABORATION: ITool = {
       });
     }
 
+    // Wake up the Facilitator to start moderating
+    try {
+      await emitTypedEvent('collaboration.tool', `${AgentType.FACILITATOR}_task` as any, {
+        userId,
+        task: `A new collaboration session "${collaboration.name}" has been created. Please start moderating. Collaboration ID: ${collaboration.collaborationId}`,
+        traceId,
+        initiatorId: agentId,
+        metadata: { collaborationId: collaboration.collaborationId },
+      });
+    } catch (e) {
+      console.warn('Failed to wake up Facilitator Agent:', e);
+    }
+
     return JSON.stringify({
       success: true,
       collaborationId: collaboration.collaborationId,
       sessionId: collaboration.sessionId,
       syntheticUserId: collaboration.syntheticUserId,
       participants: collaboration.participants,
-      message: `Collaboration "${collaboration.name}" created. Use collaborationId for shared context.`,
+      message: `Collaboration "${collaboration.name}" created. Use collaborationId for shared context. Facilitator invited.`,
     });
   },
 };

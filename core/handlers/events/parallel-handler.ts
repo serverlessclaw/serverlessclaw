@@ -169,7 +169,7 @@ export async function handleParallelDispatch(
   }
 
   const targetTime = Date.now() + timeoutMs;
-  const timeoutId = `parallel-barrier-${safeTraceId}-${Date.now()}`;
+  const timeoutId = `parallel-barrier-${safeTraceId}`;
 
   try {
     await DynamicScheduler.scheduleOneShotTimeout(
@@ -189,7 +189,33 @@ export async function handleParallelDispatch(
       `Scheduled parallel barrier timeout for ${timeoutId}: ${new Date(targetTime).toISOString()}`
     );
   } catch (error) {
-    logger.warn(`Failed to schedule parallel barrier timeout, proceeding without it:`, error);
+    logger.error(`Failed to schedule parallel barrier timeout for ${timeoutId}:`, error);
+
+    // Mark aggregator as failed to prevent hanging barriers
+    await aggregator.markAsCompleted(userId, safeTraceId, 'failed');
+
+    // Emit a completion event to notify orchestrator of failure
+    const { emitTypedEvent } = await import('../../lib/utils/typed-emit');
+    await emitTypedEvent(
+      'events.handler',
+      EventType.PARALLEL_TASK_COMPLETED as unknown as SchemaEventType,
+      {
+        userId,
+        sessionId,
+        traceId: safeTraceId,
+        taskId: safeTraceId,
+        initiatorId: initiatorId ?? 'parallel-dispatcher',
+        depth,
+        overallStatus: 'failed',
+        results: [],
+        taskCount: tasks.length,
+        completedCount: 0,
+        elapsedMs: 0,
+        aggregationType,
+        aggregationPrompt,
+      }
+    );
+    return;
   }
 
   // Trace: Barrier waiting for sub-agents

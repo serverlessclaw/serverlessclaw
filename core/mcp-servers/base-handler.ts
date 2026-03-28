@@ -4,9 +4,43 @@ import {
   type APIGatewayProxyEvent,
   type APIGatewayProxyResult,
 } from 'aws-lambda';
+import { execSync } from 'child_process';
+import { existsSync } from 'fs';
 import { stdioServerAdapter } from '@aws/run-mcp-servers-with-aws-lambda';
 import { type StdioServerParameters } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { logger } from '../lib/logger';
+
+/**
+ * Resolves the absolute path to the `npx` binary.
+ * The MCP SDK uses `spawn` with `shell: false`, which requires an absolute path.
+ * Falls back to common installation paths if `which` fails.
+ */
+function resolveNpxPath(): string {
+  try {
+    return execSync('which npx', { encoding: 'utf8', timeout: 5000 }).trim();
+  } catch {
+    const commonPaths = [
+      '/var/lang/bin/npx', // AWS Lambda
+      '/opt/homebrew/bin/npx', // macOS ARM (Homebrew)
+      '/usr/local/bin/npx', // macOS Intel (Homebrew)
+      '/usr/bin/npx', // Linux
+    ];
+    for (const p of commonPaths) {
+      if (existsSync(p)) return p;
+    }
+    return 'npx';
+  }
+}
+
+/** Cached resolved npx path to avoid repeated resolution */
+let _resolvedNpxPath: string | undefined;
+
+function getResolvedNpxPath(): string {
+  if (!_resolvedNpxPath) {
+    _resolvedNpxPath = resolveNpxPath();
+  }
+  return _resolvedNpxPath;
+}
 
 /**
  * Creates a Lambda handler for an MCP server using the AWS Labs MCP Lambda library.
@@ -16,6 +50,13 @@ import { logger } from '../lib/logger';
  * @returns A Lambda handler function that processes JSON-RPC requests via API Gateway.
  */
 export function createMCPServerHandler(serverParams: StdioServerParameters): Handler {
+  // Resolve the full npx path once at handler creation time to avoid ENOENT errors
+  // when the MCP SDK calls spawn() with shell: false
+  const resolvedParams: StdioServerParameters =
+    serverParams.command === 'npx'
+      ? { ...serverParams, command: getResolvedNpxPath() }
+      : serverParams;
+
   return async (event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> => {
     const serverName = process.env.MCP_SERVER_NAME ?? 'unknown';
     const startTime = Date.now();
@@ -31,7 +72,7 @@ export function createMCPServerHandler(serverParams: StdioServerParameters): Han
       const rpcRequest = JSON.parse(event.body || '{}');
 
       // Use the stdioServerAdapter to handle the request
-      const result = await stdioServerAdapter(serverParams, rpcRequest, context);
+      const result = await stdioServerAdapter(resolvedParams, rpcRequest, context);
 
       const duration = Date.now() - startTime;
       logger.info(`MCP Server ${serverName} completed`, {

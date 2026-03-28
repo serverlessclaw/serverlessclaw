@@ -25,10 +25,10 @@ describe('EventBridge routing contracts', () => {
     });
   });
 
-  describe('WorkerAgentSubscriber', () => {
+  describe('AgentRunnerSubscriber', () => {
     it('excludes EventType.CHUNK from the anything-but list', () => {
       const workerMatch = agentsSource.match(
-        /bus\.subscribe\('WorkerAgentSubscriber'[\s\S]*?'anything-but':\s*\[([\s\S]*?)\]/m
+        /bus\.subscribe\('AgentRunnerSubscriber'[\s\S]*?'anything-but':\s*\[([\s\S]*?)\]/m
       );
       expect(workerMatch).toBeTruthy();
       const exclusions = workerMatch![1];
@@ -37,7 +37,7 @@ describe('EventBridge routing contracts', () => {
 
     it('excludes all known event types from the anything-but list', () => {
       const workerMatch = agentsSource.match(
-        /bus\.subscribe\('WorkerAgentSubscriber'[\s\S]*?'anything-but':\s*\[([\s\S]*?)\]/m
+        /bus\.subscribe\('AgentRunnerSubscriber'[\s\S]*?'anything-but':\s*\[([\s\S]*?)\]/m
       );
       expect(workerMatch).toBeTruthy();
       const exclusions = workerMatch![1];

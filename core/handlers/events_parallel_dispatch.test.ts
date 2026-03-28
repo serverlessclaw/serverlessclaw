@@ -221,18 +221,19 @@ describe('Parallel Dispatch Resilience', () => {
 
       await handleParallelBarrierTimeout(eventDetail as any);
 
-      expect(mockAddResult).toHaveBeenCalledWith(
-        'user-1',
-        'trace-1',
-        expect.objectContaining({ taskId: 'task-2', status: 'timeout' })
-      );
+      expect(mockMarkAsCompleted).toHaveBeenCalledWith('user-1', 'trace-1', 'partial');
 
       const { emitEvent } = await import('../lib/utils/bus');
       expect(emitEvent).toHaveBeenCalledWith(
         'events.handler',
         EventType.PARALLEL_TASK_COMPLETED,
         expect.objectContaining({
-          overallStatus: 'partial', // 1/2 success = 50% threshold
+          overallStatus: 'partial',
+          results: expect.arrayContaining([
+            expect.objectContaining({ taskId: 'task-1', status: 'success' }),
+            expect.objectContaining({ taskId: 'task-2', status: 'timeout' }),
+          ]),
+          taskCount: 2,
           completedCount: 2,
         }),
         expect.any(Object)

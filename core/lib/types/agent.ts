@@ -262,6 +262,8 @@ export enum AgentType {
   QA = 'qa',
   /** Peer review agent for Council of Agents. */
   CRITIC = 'critic',
+  /** Dedicated moderator for multi-party collaborations. */
+  FACILITATOR = 'facilitator',
 }
 
 /**

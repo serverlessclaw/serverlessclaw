@@ -88,7 +88,7 @@ export function createAgents(
   plannerAgent: sst.aws.Function;
   reflectorAgent: sst.aws.Function;
   notifier: sst.aws.Function;
-  workerAgent: sst.aws.Function;
+  agentRunner: sst.aws.Function;
   bridge: sst.aws.Function;
   heartbeatHandler: sst.aws.Function;
   concurrencyMonitor: sst.aws.Function;
@@ -442,9 +442,9 @@ export function createAgents(
     pattern: { detailType: [EventType.OUTBOUND_MESSAGE] },
   });
 
-  // 8. Generic Worker Agent (Handles dynamic user-defined agents)
-  const workerAgent = new sst.aws.Function('WorkerAgent', {
-    handler: 'core/agents/worker.handler',
+  // 8. Generic Agent Runner (Handles dynamic user-defined agents)
+  const agentRunner = new sst.aws.Function('AgentRunner', {
+    handler: 'core/handlers/agent-runner.handler',
     dev: liveInLocalOnly,
     link: baseLink,
     architecture: LAMBDA_ARCHITECTURE,
@@ -458,7 +458,7 @@ export function createAgents(
     },
   });
   // Subscribe to all agent tasks that don't have a specific handler
-  bus.subscribe('WorkerAgentSubscriber', workerAgent.arn, {
+  bus.subscribe('AgentRunnerSubscriber', agentRunner.arn, {
     pattern: {
       detailType: [
         {
@@ -542,7 +542,7 @@ export function createAgents(
     plannerAgent,
     reflectorAgent,
     notifier,
-    workerAgent,
+    agentRunner,
     bridge,
     heartbeatHandler,
     concurrencyMonitor,

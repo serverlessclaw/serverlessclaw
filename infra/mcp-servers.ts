@@ -128,7 +128,7 @@ export function createMCPServers(ctx: SharedContext): MCPServerResources {
       },
       environment: {
         MCP_SERVER_NAME: name,
-        PATH: process.env.PATH ?? '',
+        PATH: process.env.PATH ?? '/var/lang/bin:/usr/local/bin:/usr/bin',
       },
       // Enable function URL for direct IAM-authenticated access
       url: {
