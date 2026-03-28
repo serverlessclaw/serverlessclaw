@@ -1,7 +1,7 @@
 # Serverless Claw
 
 <p align="center">
-  <img src="./dashboard/public/logo-text.png" alt="Serverless Claw Logo" width="400">
+  <img src="./dashboard/public/hero-evolution.png" alt="Serverless Claw Evolution" width="800">
 </p>
 
 <p align="center">
@@ -18,78 +18,102 @@
 </p>
 
 <p align="center">
-  <strong>Self-evolving AI agents on AWS. $0 when idle.</strong>
-</p>
-
-<p align="center">
-  Agents that write code, test it, and deploy themselves — serverless, zero-trust, and autonomous.
+  <font size="6"><strong>The Self-Evolving AI Agent Swarm</strong></font><br>
+  <em>$0 when idle. Elastic by design. Secure by default.</em>
 </p>
 
 ---
 
-## Why Serverless Claw?
+### 💎 The 3 Pillars of Serverless Claw
 
-**$0 when idle.** Lambda scales to zero. No VPS, no Docker daemon, no 24/7 server. Your agent swarm costs nothing until you send it a message.
+| 🚀 **Infinite Scale** | 🧠 **Self-Evolution** | 🛡️ **Cloud-Native Safety** |
+| :--- | :--- | :--- |
+| **$0 when idle.** Lambda scales to zero. No VPS, no Docker daemon, no 24/7 server costs. | **Council-Verified.** Agents write code, run tests, and redeploy the stack via a peer-reviewed loop. | **Zero Trust.** No SSH keys, no persistent daemons. IAM least-privilege and DMS rollback. |
 
-**Self-evolving, not just executing.** Agents don't just run tasks — they write code, run tests, push to Git, and redeploy the entire stack. A verified lifecycle with QA gating ensures safe evolution.
+---
 
-**Serverless = secure by default.** No SSH keys exposed. No always-on daemon with shell access. IAM policies enforce least-privilege. No ClawHub supply chain attacks.
+## Why Serverless for AI?
 
-![Serverless Claw Dashboard](./dashboard/public/clawcenter.png)
+In 2026, **the 24/7 VPS mascot is dead.** Running agent swarms on persistent pods is an expensive relic of the container era.
+
+- **Cost Efficient**: You pay exactly for the tokens and compute you use. A complex reasoning task might cost $0.05; staying idle costs **$0**.
+- **Instantly Elastic**: Need 1,000 agents to research a topic in parallel? Serverless Claw fans out across AWS Lambda instantly.
+- **Maintenance Free**: No Docker security patches, no OS updates, no resource exhaustion. Just pure intelligence.
+
+---
+
+## Council-Verified Evolution
+
+Serverless Claw doesn't just execute code; it **improves itself**. But unlike raw autonomous systems, every evolution is gated by a **Council of Agents**.
+
+```text
+  [ Cognition Reflector ] ───▶ [ Strategic Planner ]
+                                        │
+                                        ▼
+  [ Coder Agent ] ◀─────── [ Council of Agents ] (Safety Gate)
+        │
+        ▼
+  [ Deployer (CodeBuild) ] ──▶ [ Build Monitor ] ──▶ [ QA Auditor ] ──▶ [ DONE ]
+```
+
+---
 
 ## How It Works
 
+```text
+You (Messenger)        SuperClaw (Lambda)       AgentBus (EB)       Specialized Agents (x8)
+      │                       │                      │                       │
+      └─▶ "Feature X" ────────▶ [THINK: Strategic] ──▶ DISPATCH_TASK ────────▶ [EXECUTE]
+                              │                      │                       │
+      ◀─▶ Real-time Dashboard ◀─ [ASYNC: Pause] ◀──── [BUS ROUTING] ◀────────┤
+                              │                                              │
+      ◀─────────────────────── [IOT CORE / MQTT] ◀── [SIGNAL_ORCH] ◀─────────┘
 ```
-You (Telegram / Discord)
-  └──▶ SuperClaw (Lambda) ──▶ AgentBus (EventBridge)
-         │                        │
-         │                   Coder Agent ──▶ Deployer (CodeBuild)
-         │                        │
-         └──▶ ClawCenter Dashboard ◀── IoT Core (real-time)
-```
 
-When you send a message, **SuperClaw** (running on Lambda) receives it, plans with the **Strategic Planner**, dispatches work to specialized agents via **EventBridge**, and streams results to **ClawCenter** in real-time. Agents can modify their own code, run tests, and trigger a new deployment — all autonomously.
+When you send a message, **SuperClaw** receives it, develops a plan with the **Strategic Planner**, and dispatches tasks to specialized nodes via **EventBridge**. The system implements an **Asynchronous "Pause & Resume"** pattern — agents don't block; they emit a task and terminate, waking up only when a result signal is routed back. High-impact plans are peer-reviewed by the **Council of Agents**, while the **Facilitator** moderates collaborative sessions to drive consensus.
 
-## Architecture at a Glance
+## 🤖 The Multi-Agent Ecosystem
 
-| What                    | How                                                                         |
-| ----------------------- | --------------------------------------------------------------------------- |
-| **7 Autonomous Agents** | SuperClaw, Coder, Worker, Strategic Planner, Reflector, QA Auditor, Critic  |
-| **Self-Evolution**      | Verified refactor → planner loop with QA gating and HITL approval           |
-| **Memory**              | Tiered engine with hit-tracking, neural pruning, human co-management        |
-| **Safety**              | Circuit breakers, Dead Man's Switch (15-min heartbeat), IAM least-privilege |
-| **Observability**       | ClawTracer trace graphs, real-time dashboard, structured signals            |
-| **Multi-Model**         | OpenAI, AWS Bedrock, Gemini, MiniMax — dynamic routing                      |
+| Agent | Responsibilities |
+| :--- | :--- |
+| **SuperClaw** | Orchestrator. Interprets intent, delegates tasks, and deploys. |
+| **Strategic Planner** | Designs long-term evolution and expansion plans. |
+| **Coder Agent** | Writes code, fixes bugs, and performs migrations. |
+| **QA Auditor** | Verifies the technical satisfaction of every deployment. |
+| **Facilitator** | Moderates collaboration between multiple agents and humans. |
+| **Cognition Reflector** | Distills memory and identifies system-wide gaps. |
+| **Critic Agents** | Peer-reviewers for Security, Performance, and Architecture. |
 
-For a full deep-dive into system topology and data flow, see **[ARCHITECTURE.md](./ARCHITECTURE.md)**.
+---
 
-## Quick Start
+## ⚡️ Quick Start (AWS-Native)
 
-**Prerequisites:** AWS account, Node.js 24+, pnpm 10+
+Deploy your first autonomous swarm in 5 minutes.
 
-**Estimated cost:** ~$0.50–$5/month for light use (Lambda free tier covers most idle time)
-
-### 1. Clone & Install
+### 1. Zero-Install Deploy
 
 ```bash
 git clone https://github.com/caopengau/serverlessclaw.git
 cd serverlessclaw && pnpm install
 ```
 
-### 2. Configure Secrets
+### 2. Secure Your Keys
 
 ```bash
 cp .env.example .env
-# Edit .env — you need at minimum:
-#   SST_SECRET_OpenAIApiKey (or use Bedrock/Gemini)
-#   SST_SECRET_TelegramBotToken (or Discord webhook)
+# Essential: SST_SECRET_OpenAIApiKey & SST_SECRET_TelegramBotToken
 ```
 
-### 3. Deploy
+### 3. Launch Local Dev
 
 ```bash
-make dev    # Local development (stage: local)
-make deploy # Deploy to AWS (stage: dev)
+make dev # Live lambda reloading, local DynamoDB, and real-time logs
+```
+
+### 4. Deploy to AWS
+
+```bash
+make deploy ENV=dev # High-availability, production-grade infrastructure
 ```
 
 ## Documentation Hub
@@ -117,7 +141,7 @@ Start with **[INDEX.md](./INDEX.md)** — the progressive context loading map fo
 | **Scalability**          | Manual Cluster        | Docker Swarm          | Hardware-bound        | **Elastic Auto-scale (AWS Native)**      |
 | _Agent Runtime_          |                       |                       |                       |                                          |
 | **Multi-Agent**          | Basic "Fire & Forget" | Containerized Swarms  | Trait-based Modular   | **Non-blocking (Pause & Resume)**        |
-| **Self-Evolution**       | Plugin-based (Static) | Manual (Human-coded)  | Hardware-focused      | **Verified Refactor → Planner Loop**     |
+| **Self-Evolution**       | Plugin-based (Static) | Manual (Human-coded)  | Hardware-focused      | **Verified Council-Reviewed Loop**       |
 | **Communication Mode**   | Natural Language      | Structured (JSON)     | Low-level Buffers     | **Dual-Mode (Intent-Based JSON + Text)** |
 | **Skill Acquisition**    | Static (Hardcoded)    | Static (Hardcoded)    | Static (Config-based) | **Just-in-Time (JIT) Skill Discovery**   |
 | _Tooling & Integration_  |                       |                       |                       |                                          |
@@ -130,7 +154,7 @@ Start with **[INDEX.md](./INDEX.md)** — the progressive context loading map fo
 | _Reliability & Ops_      |                       |                       |                       |                                          |
 | **Observability**        | Standard Text Logs    | Container Logs        | Binary Logs           | **Trace Graphs (`ClawTracer`)**          |
 | **Resilience**           | Manual Recovery       | Restart Container     | Hardware Watchdog     | **Autonomous Heartbeat + Rollback**      |
-| **Resource Safety**      | App-level Permissions | Sandboxing (Docker)   | Memory Safe (Rust)    | **Cloud IAM + Recursion Guards**         |
+| **Resource Safety**      | App-level Permissions | Sandboxing (Docker)   | Memory Safe (Rust)    | **Cloud IAM + Multi-Agent Council**      |
 
 ## Contributing
 

@@ -111,6 +111,28 @@ define track_time
 	exit $$status
 endef
 
+.PHONY: telegram-setup telegram-info telegram-delete
+
+telegram-setup: ## Set Telegram webhook to current API_URL (default: DEV_API_URL)
+	@$(call log_step,Setting Telegram webhook...)
+	@chmod +x ./scripts/telegram-webhook.sh
+	@if [ "$(ENV)" = "prod" ]; then \
+		URL=$$(grep "PROD_API_URL" .env | cut -d '=' -f2)/webhook; \
+	else \
+		URL=$$(grep "DEV_API_URL" .env | cut -d '=' -f2)/webhook; \
+	fi; \
+	./scripts/telegram-webhook.sh set "$$URL"
+
+telegram-info: ## Get current Telegram webhook status
+	@$(call log_info,Fetching Telegram webhook status...)
+	@chmod +x ./scripts/telegram-webhook.sh
+	@./scripts/telegram-webhook.sh get
+
+telegram-delete: ## Delete current Telegram webhook
+	@$(call log_warning,Deleting Telegram webhook!)
+	@chmod +x ./scripts/telegram-webhook.sh
+	@./scripts/telegram-webhook.sh delete
+
 # Usage: $(call verify_clean)
 # Fails if there are uncommitted or untracked changes
 define verify_clean
