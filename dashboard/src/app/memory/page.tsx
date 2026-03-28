@@ -228,7 +228,7 @@ export default async function MemoryVault({
             {query && <Typography variant="body" color="muted" className="mt-2">Try adjusting your search query or filters.</Typography>}
           </Card>
         ) : (
-          <MemoryTable items={items} activeTab={activeTab} pruneAction={pruneMemory} />
+          <MemoryTable items={items} pruneAction={pruneMemory} />
         )}
 
         <MemoryPagination nextToken={next} />

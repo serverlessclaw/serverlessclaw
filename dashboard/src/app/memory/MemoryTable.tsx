@@ -23,7 +23,6 @@ interface MemoryItem {
 
 interface MemoryTableProps {
   items: MemoryItem[];
-  activeTab: string;
   pruneAction: (formData: FormData) => Promise<void>;
 }
 
@@ -39,7 +38,26 @@ function getCategoryLabel(item: MemoryItem) {
   return item.metadata?.category || item.type?.replace('MEMORY:', '').replace(/_/g, ' ') || 'UNKNOWN';
 }
 
-export default function MemoryTable({ items, activeTab, pruneAction }: MemoryTableProps) {
+function getContentPreview(content: string, maxLen: number = 80): string {
+  try {
+    const parsed = JSON.parse(content);
+    if (typeof parsed === 'string') return parsed.length > maxLen ? parsed.slice(0, maxLen) + '...' : parsed;
+    if (typeof parsed === 'object' && parsed !== null) {
+      const summaryKey = ['fact', 'content', 'summary', 'text', 'description', 'message'].find(k => parsed[k]);
+      if (summaryKey && typeof parsed[summaryKey] === 'string') {
+        const val = parsed[summaryKey];
+        return val.length > maxLen ? val.slice(0, maxLen) + '...' : val;
+      }
+      const keys = Object.keys(parsed);
+      return `{ ${keys.join(', ')} }`;
+    }
+    return JSON.stringify(parsed);
+  } catch {
+    return content.length > maxLen ? content.slice(0, maxLen) + '...' : content;
+  }
+}
+
+export default function MemoryTable({ items, pruneAction }: MemoryTableProps) {
   const [selectedItem, setSelectedItem] = useState<MemoryItem | null>(null);
 
   const handleDelete = async (userId: string, timestamp: number) => {
@@ -81,7 +99,7 @@ export default function MemoryTable({ items, activeTab, pruneAction }: MemoryTab
                   </td>
                   <td className="px-5 py-3">
                     <Typography variant="body" className="text-xs text-white/80 max-w-[400px] truncate block">
-                      {item.content.length > 80 ? item.content.slice(0, 80) + '...' : item.content}
+                      {getContentPreview(item.content)}
                     </Typography>
                   </td>
                   <td className="px-5 py-3 text-center">
@@ -135,7 +153,6 @@ export default function MemoryTable({ items, activeTab, pruneAction }: MemoryTab
 
       <MemoryDetailModal
         item={selectedItem}
-        activeTab={activeTab}
         onClose={() => setSelectedItem(null)}
         onDelete={handleDelete}
       />
