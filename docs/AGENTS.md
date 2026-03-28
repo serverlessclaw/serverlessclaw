@@ -1,7 +1,7 @@
 # Agent Registry & Orchestration
 
 > **Agent Context Loading**: Load this file when you need to understand the agent roles, their prompts, and how they coordinate via the AgentBus.
-, or add a new sub-agent.
+> , or add a new sub-agent.
 
 ## 🤖 Agent Roster
 
@@ -9,28 +9,29 @@ We distinguish between **Autonomous Agents** (LLM-powered decision-makers) and *
 
 ### 1. Autonomous Agents (LLM-Powered)
 
-| Agent | Runtime | Config Source | Responsibilities |
-|-------|---------|---------------|-----------------|
-| **SuperClaw** | `core/handlers/webhook.ts` | `core/agents/superclaw.ts` | Interprets user intent, delegates, deploys |
-| **Coder Agent** | `core/agents/coder.ts` | `AgentRegistry` (Backbone) | Writes code, runs pre-flight checks |
-| **Agent Runner** | `core/handlers/agent-runner.ts` | `AgentRegistry` (Dynamic) | Generic runner for any user-defined agent |
-| **Strategic Planner** | `core/agents/strategic-planner.ts` | `AgentRegistry` (Backbone) | Designs strategic evolution plans |
-| **Cognition Reflector** | `core/agents/cognition-reflector.ts` | `AgentRegistry` (Backbone) | Distills memory and extracts gaps |
-| **QA Auditor** | `core/agents/qa.ts` | `AgentRegistry` (Backbone) | Verifies satisfaction of deployed changes |
-| **Critic Agent** | `core/agents/critic.ts` | `AgentRegistry` (Backbone) | Peer review for Council of Agents (security/performance/architect) |
+| Agent                   | Runtime                              | Config Source              | Responsibilities                                                                |
+| ----------------------- | ------------------------------------ | -------------------------- | ------------------------------------------------------------------------------- |
+| **SuperClaw**           | `core/handlers/webhook.ts`           | `core/agents/superclaw.ts` | Interprets user intent, delegates, deploys                                      |
+| **Coder Agent**         | `core/agents/coder.ts`               | `AgentRegistry` (Backbone) | Writes code, runs pre-flight checks                                             |
+| **Agent Runner**        | `core/handlers/agent-runner.ts`      | `AgentRegistry` (Dynamic)  | Generic runner for any user-defined agent                                       |
+| **Strategic Planner**   | `core/agents/strategic-planner.ts`   | `AgentRegistry` (Backbone) | Designs strategic evolution plans                                               |
+| **Cognition Reflector** | `core/agents/cognition-reflector.ts` | `AgentRegistry` (Backbone) | Distills memory and extracts gaps                                               |
+| **QA Auditor**          | `core/agents/qa.ts`                  | `AgentRegistry` (Backbone) | Verifies satisfaction of deployed changes                                       |
+| **Critic Agent**        | `core/agents/critic.ts`              | `AgentRegistry` (Backbone) | Peer review for Council of Agents (security/performance/architect)              |
+| **Facilitator**         | `core/agents/prompts/facilitator.md` | `AgentRegistry` (Backbone) | Moderates multi-party collaboration sessions, drives consensus, closes sessions |
 
 ### 2. System Handlers (Logic-Powered)
 
-| Component | Runtime | Trigger | Responsibilities |
-|-----------|---------|---------|------------------|
-| **Build Monitor** | `core/handlers/monitor.ts` | CodeBuild Event | Observes builds, updates gap status, circuit breaking |
-| **Dead Man's Switch** | `core/handlers/recovery.ts` | EventBridge Schedule (`rate(15 minutes)`) | Deep health checks and emergency rollback orchestration |
-| **Event Handler** | `core/handlers/events.ts` | AgentBus System Events | Routes build/health/result/continuation/clarification signals |
-| **Notifier** | `core/handlers/notifier.ts` | AgentBus Event | Formats and sends messages to Telegram/Slack |
-| **Real-time Bridge** | `core/handlers/bridge.ts` | AgentBus Event | Bridges EventBridge signals to AWS IoT Core (MQTT) |
-| **Parallel Handler** | `core/handlers/events/parallel-handler.ts` | `PARALLEL_TASK_DISPATCH` | Handles fan-out to multiple agents with barrier timeout |
-| **Cancellation Handler** | `core/handlers/events/cancellation-handler.ts` | `TASK_CANCELLED` | Manages DynamoDB-backed task cancellation flags |
-| **Deployer** | AWS CodeBuild | `buildspec.yml` | Runs `make deploy ENV=$SST_STAGE` in isolated environment |
+| Component                | Runtime                                        | Trigger                                   | Responsibilities                                              |
+| ------------------------ | ---------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------- |
+| **Build Monitor**        | `core/handlers/monitor.ts`                     | CodeBuild Event                           | Observes builds, updates gap status, circuit breaking         |
+| **Dead Man's Switch**    | `core/handlers/recovery.ts`                    | EventBridge Schedule (`rate(15 minutes)`) | Deep health checks and emergency rollback orchestration       |
+| **Event Handler**        | `core/handlers/events.ts`                      | AgentBus System Events                    | Routes build/health/result/continuation/clarification signals |
+| **Notifier**             | `core/handlers/notifier.ts`                    | AgentBus Event                            | Formats and sends messages to Telegram/Slack                  |
+| **Real-time Bridge**     | `core/handlers/bridge.ts`                      | AgentBus Event                            | Bridges EventBridge signals to AWS IoT Core (MQTT)            |
+| **Parallel Handler**     | `core/handlers/events/parallel-handler.ts`     | `PARALLEL_TASK_DISPATCH`                  | Handles fan-out to multiple agents with barrier timeout       |
+| **Cancellation Handler** | `core/handlers/events/cancellation-handler.ts` | `TASK_CANCELLED`                          | Manages DynamoDB-backed task cancellation flags               |
+| **Deployer**             | AWS CodeBuild                                  | `buildspec.yml`                           | Runs `make deploy ENV=$SST_STAGE` in isolated environment     |
 
 ---
 
@@ -101,9 +102,10 @@ Initiator (Planner)     AgentBus (EB)       Follower (Coder)      Scheduler (EB)
 
 ### Parallel Dispatch Protocol (Fan-out/Fan-in)
 
-The Parallel Dispatch Protocol enables an agent to delegate multiple independent sub-tasks concurrently. It uses a barrier timeout to ensure the system remains responsive even if some sub-agents stall. 
+The Parallel Dispatch Protocol enables an agent to delegate multiple independent sub-tasks concurrently. It uses a barrier timeout to ensure the system remains responsive even if some sub-agents stall.
 
 It supports two aggregation modes for result processing:
+
 - **Summary**: (Default) Aggregates results into a structured Markdown summary for the initiator.
 - **Agent-guided**: Invokes an aggregator agent to synthesize results and determine the next logical action based on an optional `aggregationPrompt`.
 
@@ -138,15 +140,17 @@ Initiator (Planner)     AgentBus (EB)       Sub-Agents (xN)      Aggregator (DDB
 
 For high-impact strategic plans, the system introduces a **Council of Agents** — a peer review gate that dispatches the plan to three specialized **Critic Agents** for independent review before execution.
 
+The Council uses a **Collaboration Session** for shared context. The **Facilitator Agent** is automatically injected to moderate the review discussion, ensure all critics have submitted their verdicts, and summarize the collective assessment.
+
 #### Trigger Conditions
 
 The Council is activated when any of these metrics exceed the threshold (default: 8/10):
 
-| Metric | Source | Threshold |
-|--------|--------|-----------|
-| **Impact** | Gap metadata | ≥ 8 |
-| **Risk** | Gap metadata | ≥ 8 |
-| **Complexity** | Gap metadata | ≥ 8 |
+| Metric         | Source       | Threshold |
+| -------------- | ------------ | --------- |
+| **Impact**     | Gap metadata | ≥ 8       |
+| **Risk**       | Gap metadata | ≥ 8       |
+| **Complexity** | Gap metadata | ≥ 8       |
 
 If all metrics are below the threshold, the Planner dispatches directly to the Coder (bypassing Council).
 
@@ -154,11 +158,11 @@ If all metrics are below the threshold, the Planner dispatches directly to the C
 
 The Critic Agent operates in three modes, each dispatched as a parallel task:
 
-| Mode | Focus | Red Flags |
-|------|-------|-----------|
-| **Security** | Injection, auth bypass, data exposure | Unsanitized inputs, hardcoded secrets, overly permissive IAM |
-| **Performance** | Latency, memory, cold start, cost | Unbounded loops, missing pagination, N+1 queries |
-| **Architect** | Design coherence, dependencies, blast radius | Circular dependencies, tight coupling, missing error handling |
+| Mode            | Focus                                        | Red Flags                                                     |
+| --------------- | -------------------------------------------- | ------------------------------------------------------------- |
+| **Security**    | Injection, auth bypass, data exposure        | Unsanitized inputs, hardcoded secrets, overly permissive IAM  |
+| **Performance** | Latency, memory, cold start, cost            | Unbounded loops, missing pagination, N+1 queries              |
+| **Architect**   | Design coherence, dependencies, blast radius | Circular dependencies, tight coupling, missing error handling |
 
 #### Flow
 
@@ -201,53 +205,68 @@ The Council uses `agent_guided` aggregation with a prompt that synthesizes all t
 
 #### Auto vs HITL Delineation
 
-| Condition | Behavior |
-|-----------|----------|
-| `impact < 8` AND `evolution_mode = AUTO` | Skip Council → dispatch directly to Coder |
-| `impact >= 8` OR `risk >= 8` OR `complexity >= 8` | Council Required → parallel review |
-| `evolution_mode = HITL` | Council + Human Approval |
-| Any Critical finding | Auto-REJECT → back to Planner |
+| Condition                                         | Behavior                                  |
+| ------------------------------------------------- | ----------------------------------------- |
+| `impact < 8` AND `evolution_mode = AUTO`          | Skip Council → dispatch directly to Coder |
+| `impact >= 8` OR `risk >= 8` OR `complexity >= 8` | Council Required → parallel review        |
+| `evolution_mode = HITL`                           | Council + Human Approval                  |
+| Any Critical finding                              | Auto-REJECT → back to Planner             |
 
 ### Multi-Party Collaboration (Shared Sessions)
 
 For complex tasks that require negotiation, peer review, or iterative brainstorming between multiple agents (and humans), the system provides a **Shared Collaboration Session** model. Unlike the default transactional handoff, this model allows all participants to share a persistent conversation history.
 
+The **Facilitator Agent** is automatically injected as an `editor` participant when any collaboration is created. It is immediately woken up via a `facilitator_task` event to begin moderating the session.
+
 #### Roles and Responsibilities
+
 - **Owner (Moderator)**: The agent that created the session. Responsible for driving consensus, extracting the final structured result, and closing the session.
+- **Facilitator (Auto-injected)**: Dedicated session moderator. Ensures turn-taking, summarizes discussions, and drives consensus. Cannot close the session (only the Owner can).
 - **Participant**: An agent or human invited to the session. Can read history and append messages.
 
 #### Flow
 
 ```text
-Initiator (Planner)     Collaboration Tool      AgentBus (EB)       Sub-Agents (xN)      Shared Session (DDB)
-      |                      |                      |                      |                    |
-      +-- createCollab ----->|                      |                      |                    |
-      |   (Owner: Planner) --+----------------------+----------------------+------------------->|
-      |                      |                      |                      |             [INIT shared#collab#ID]
-      |                      |                      |                      |                    |
-      +-- inviteParticipant -+----------------------+----------------------+------------------->|
-      |   (Agent: Coder) ----+                      |                      |             [ADD Participant]
-      |                      |                      |                      |                    |
-      +-- writeToCollab -----+----------------------+----------------------+------------------->|
-      |   (Initial Prompt) --+                      |                      |             [ADD Message]
-      |                      |                      |                      |                    |
-      |                      |             [ AS AGENTS ARE NOTIFIED ]      |                    |
-      |                      |                      |<--- TASK_EVENT ------+                    |
-      |                      |                      | (collabId)           |                    |
-      |                      |                      |                      +-- joinCollab ----->|
-      |                      |                      |                      |                    |
-      |                      |                      |                      +-- getHistory <-----+
-      |                      |                      |                      |                    |
-      |                      |                      |                      +-- writeResult ---->|
-      |                      |                      |                      |                    |
-      |             [ ITERATIVE DISCUSSION ]        |                      |                    |
-      |                      |                      |                      |                    |
-      +-- closeCollab <------+----------------------+----------------------+--------------------+
-          (Final decision)                                                               [ARCHIVE Session]
+Initiator (Planner)     Collaboration Tool      AgentBus (EB)      Facilitator (Auto)    Sub-Agents (xN)      Shared Session (DDB)
+       |                      |                      |                      |                    |                    |
+       +-- createCollab ----->|                      |                      |                    |                    |
+       |                      |--- [AUTO-INJECT] ----+--------------------->|                    |                    |
+       |                      |   Facilitator as     |                      |                    |                    |
+       |                      |   'editor' participant                      |                    |                    |
+       |   (Owner: Planner) --+----------------------+                      +--------------------+------------------->|
+       |                      |                      |                      |                    |  [INIT shared#collab#ID]
+       |                      |                      |                      |                    |                    |
+       |                      |              [EMIT facilitator_task] ------->                    |                    |
+       |                      |              (Wake up Facilitator)          |                    |                    |
+       |                      |                      |                      |                    |                    |
+       +-- writeToCollab -----+----------------------+                      +--------------------+------------------->|
+       |   (Initial Prompt) --+                      |                      |                    |  [ADD Message]     |
+       |                      |                      |                      |                    |                    |
+       |                      |             [ AS AGENTS ARE NOTIFIED ]      |                    |                    |
+       |                      |                      |<--- TASK_EVENT ------+                    |                    |
+       |                      |                      |<--- TASK_EVENT ------+--------------------+                    |
+       |                      |                      | (collabId)           |                    |                    |
+       |                      |                      |                      +-- getCollabCtx --->|                    |
+       |                      |                      |                      |                    +-- joinCollab ---->|
+       |                      |                      |                      |                    |                    |
+       |                      |              [ FACILITATOR MODERATES ]      |                    |                    |
+       |                      |                      |                      +-- getCollabCtx --->|                    |
+       |                      |                      |                      +-- writeToCollab -->|                    |
+       |                      |                      |                      |  (Summaries,      |                    |
+       |                      |                      |                      |   turn prompts)   |                    |
+       |                      |                      |                      |                    |                    |
+       |                      |                      |                      |                    +-- getHistory ---->|
+       |                      |                      |                      |                    +-- writeToCollab ->|
+       |                      |                      |                      |                    |                    |
+       |             [ ITERATIVE DISCUSSION ]        |                      |                    |                    |
+       |                      |                      |                      |                    |                    |
+       +-- closeCollab <------+----------------------+                      +--------------------+--------------------+
+           (Final decision — only Owner can close)                                                                         [ARCHIVE Session]
 ```
 
 #### When to use
-- **Council of Agents**: Shared discussion between Security, Performance, and Architect critics.
+
+- **Council of Agents**: Shared discussion between Security, Performance, and Architect critics (Facilitator moderates).
 - **Human-in-the-loop Debugging**: Real-time collaboration between a human and multiple specialized agents.
 - **Ambiguity Resolution**: When a task is too complex for a single transactional exchange.
 
@@ -283,12 +302,13 @@ User (Dashboard)       Agent (Lambda)       AgentBus (EB)       High-Risk Tool (
 
 To balance deterministic coordination with natural user interaction, the system supports two communication modes, toggled via `AgentProcessOptions.communicationMode`.
 
-| Mode | Target | Protocol | Benefit |
-|------|--------|----------|---------|
+| Mode     | Target          | Protocol                            | Benefit                                                  |
+| -------- | --------------- | ----------------------------------- | -------------------------------------------------------- |
 | **JSON** | Agents / System | Native JSON Schema (`strict: true`) | Guaranteed parsing, automated state updates, zero regex. |
-| **Text** | Humans (Chat) | Natural Language | Empathy, nuance, and lower token latency. |
+| **Text** | Humans (Chat)   | Natural Language                    | Empathy, nuance, and lower token latency.                |
 
 #### Mode Switching Logic
+
 The `Agent` core automatically injects the **Standard Signal Schema** when `communicationMode: 'json'` is requested. It also performs **Intelligent Response Extraction** to ensure human-readable segments (like plans or messages) are still available for logging and dashboards even when the model output is raw JSON.
 
 ```text
@@ -323,7 +343,9 @@ To ensure reliable orchestration across a distributed swarm of agents, Serverles
 This architectural choice minimizes runtime errors, simplifies agent tool-binding, and provides a clear "contract" for any new agent added to the registry.
 
 ### Routing Metadata
+
 Every event on the `AgentBus` carries critical routing metadata:
+
 - **`traceId`**: Consolidates all agent steps into a single unified timeline.
 - **`initiatorId`**: The ID of the agent that started the task (used to route results back).
 - **`depth`**: Current recursion level. The system automatically terminates tasks exceeding the **Recursion Limit** (Default: 15) to prevent infinite loops. This limit is hot-swappable in the Dashboard Settings.
@@ -335,13 +357,17 @@ Every event on the `AgentBus` carries critical routing metadata:
 Agents are not just autonomous; they are **co-managed** via the ClawCenter dashboard, structured into four sectors: **Intelligence**, **Evolution**, **Infrastructure**, and **Observability**.
 
 ### 1. Neural Agent Registry (Evolution)
-Users can register and configure agents in the **Evolution** sector. 
+
+Users can register and configure agents in the **Evolution** sector.
+
 - **Persona**: Define the system prompt (instructions) for the agent.
 - **Dynamic Scoping**: Toggle tools on/off for specific agents without redeploying.
 - **Immediate Availability**: Once registered, the SuperClaw can immediately delegate tasks to the new node via `dispatchTask`.
 
 ### 2. Global Optimization Policy (Infrastructure)
+
 Users can set a global `optimization_policy` to control system-wide reasoning depth:
+
 - **AGGRESSIVE**: Forces `DEEP` reasoning for all nodes (Highest Quality, Highest Cost).
 - **CONSERVATIVE**: Forces `FAST` reasoning (Lowest Latency, Lowest Cost).
 - **BALANCED**: Respects the task's intended profile.
@@ -376,7 +402,7 @@ Serverless Claw agents are capable of self-provisioning new tools when they enco
 To balance rapid expansion, the system implements a long-term **Efficiency Loop** to identify and remove deadweight.
 
 ```text
-       [ ConfigTable ] 
+       [ ConfigTable ]
               |
        1. RECORD_USAGE (per tool call)
               |
@@ -416,7 +442,7 @@ Serverless Claw is a **proactive self-evolving system** that identifies its own 
     +---------+---------+       5. IMPLEMENT        |   Human Admin     |
     |   Coder           |------------------------>|   (HITL Mode)     |
     |   Agent           |      (DDB: PROGRESS)      +-------------------+
-    +---------+---------+                         
+    +---------+---------+
               |
               | 6. TRIGGER_DEPLOYMENT (CodeBuild -> make deploy)
               |    [CIRCUIT BREAKER]
@@ -476,6 +502,7 @@ To ensure coordination doesn't break as we add more agents, follow a **Contract-
 4. **Verify Handler**: Ensure your agent's handler uses `.parse()` and the correct schema to validate incoming `eventDetail`.
 
 Run the contract tests:
+
 ```bash
 npx vitest core/tests/contract.test.ts
 ```

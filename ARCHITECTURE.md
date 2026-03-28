@@ -7,6 +7,7 @@ This document covers the AWS topology and data flow. For agent logic and orchest
 ## Design Philosophy
 
 **Serverless Claw** is built to be:
+
 1.  **Stateless**: The core execution is entirely stateless, with persistence offloaded to highly available managed services (DynamoDB). Utilizes a **Tiered Retention Policy** (TTL) and Global Secondary Index (GSI) for high-performance context recall.
 2.  **Extensible**: Every major component (Memory, Messaging, Tools) is designed as a pluggable adapter.
 3.  **Low Latency**: Optimized for fast startup times to minimize "time-to-first-token". Implements **Real-time Streaming** via IoT Core (MQTT) to provide instantaneous feedback to human users during long-running reasoning tasks.
@@ -68,7 +69,7 @@ This document covers the AWS topology and data flow. For agent logic and orchest
 
 ## Message Processing Flow
 
-```text
+````text
 User Event      Webhook         AgentBus         LLM Agent        Memory           IoT Bridge       Dashboard
     |              |                |                |                |                 |               |
     +------------->|                |                |                |                 |               |
@@ -113,12 +114,13 @@ User Event      Webhook         Telegram API      Staging Bucket (S3)    SuperCl
     |              |                |                    |                      |
     |              +----------------------------------------------------------->|
     |              |                |                    |    (Process w/ URL)  |
-```
+````
 
 - **S3 Staging**: Media is stored in the `StagingBucket` with a 30-day TTL lifecycle policy.
 - **Vision Integration**: For small images, the Webhook provides a Base64 string directly to the agent's Vision context for zero-latency analysis.
 
 ### Outbound Multi-Modal Flow
+
 When an agent generates a result containing media (e.g., a Python chart or a screenshot), it is relayed via the AgentBus to the Notifier and the Dashboard.
 
 ```text
@@ -139,7 +141,8 @@ SuperClaw (Agent)      AgentBus (EB)         Notifier (Lambda)      Telegram API
 
 - **Persistence**: Outbound attachments are stored in the `MemoryTable` along with the message text, enabling long-term recall and dashboard rendering.
 - **Rendering**: The Dashboard component automatically detects attachment types and renders previews or download links based on MIME types.
-```
+
+````
 
 ---
 
@@ -182,9 +185,9 @@ Agents communicate asynchronously using **AWS EventBridge (The AgentBus)**. This
                     (build/continuation/task-result)
                     (signalOrchestration routes)
                     (Recursion Guard + Trace Propagation)
- ```
+````
 
-- **Pattern**: Standardized events (`CODER_TASK`, `EVOLUTION_PLAN`, `TASK_COMPLETED`, `TASK_FAILED`, `PARALLEL_TASK_DISPATCH`, `TASK_CANCELLED`) flow through the Bus. 
+- **Pattern**: Standardized events (`CODER_TASK`, `EVOLUTION_PLAN`, `TASK_COMPLETED`, `TASK_FAILED`, `PARALLEL_TASK_DISPATCH`, `TASK_CANCELLED`) flow through the Bus.
 - **Strategic Coordination**: Initiator agents use the `signalOrchestration` tool to provide deterministic logic when sub-agents report completion or failure. This tool acts as the state-machine for complex, multi-turn goals.
 - **Atomic Trunk Sync**: The system follows a "Verification-First" sync model. Code lands in the trunk (Git) only after the `QA Auditor` has successfully verified the live environment and called `triggerTrunkSync`.
 - **Relay Loop**: When a sub-agent emits `TASK_COMPLETED` or `TASK_FAILED`, the `EventHandler` routes it back to the `initiatorId` as a `CONTINUATION_TASK`.
@@ -193,11 +196,48 @@ Agents communicate asynchronously using **AWS EventBridge (The AgentBus)**. This
 - **Discovery**: The `AgentRegistry` and `topology.ts` utility perform post-deployment discovery, merging backbone logic with user-defined personas.
 - **Visualization**: The **System Pulse** map in ClawCenter renders a unified, resilient graph of these interactions, covering the full stack from API Gateway to individual agent tools.
 
+---
+
+## Multi-Party Collaboration (Facilitator-Moderated Sessions)
+
+When tasks require negotiation or peer review between multiple agents, the system creates a **Shared Collaboration Session** moderated by the **Facilitator Agent**. The Facilitator is automatically injected as an `editor` participant and woken up via `emitTypedEvent` on every collaboration creation.
+
+```text
+ Initiator (Planner)       createCollab()         AgentBus (EB)        Facilitator           Sub-Agents (xN)       DynamoDB
+        |                      |                      |                    |                      |                    |
+        +-- (1) createCollab ->|                      |                    |                      |                    |
+        |                      +--- [AUTO-INJECT] --->|                    |                      |                    |
+        |                      |   Facilitator as     |                    |                      |                    |
+        |                      |   'editor'           |                    |                      |                    |
+        |                      |                      +-- facilitator_task>|                      |                    |
+        |                      |                      |   (Wake Up)        |                      |                    |
+        |                      +------------------------------------------+--------------------->|                    |
+        |                      |                      |                    |                 [CREATE Session]          |
+        |                      |                      |                    |                      |                    |
+        +-- (2) writeTo ->     |                      |                    +-- getCollabCtx ---->|                    |
+        |    (Plan/Prompt)     |                      |                    |                    +-- join ----------->|
+        |                      |                      |                    |                    |                    |
+        |                      |                      |           [MODERATOR LOOP]              |                    |
+        |                      |                      |                    +-- getCollabCtx --->|                    |
+        |                      |                      |                    +-- writeTo ------->|  [READ Context]    |
+        |                      |                      |                    |  (Summaries,      |                    |
+        |                      |                      |                    |   turn prompts)   |  [WRITE Verdict]   |
+        |                      |                      |                    |                    |                    |
+        |             [ CONSENSUS REACHED ]           |                    |                    |                    |
+        |                      |                      |                    |                    |                    |
+        +-- (3) closeCollab -->|                      |                    +--------------------+--------------------+
+        |    (Owner only)      |                      |                    |                    |              [ARCHIVE]
+        v                      v                      v                    v                      v                    v
+```
+
+- **Deep Dive**: [Agent Roles & Collaboration ↗](./docs/AGENTS.md)
 
 ---
 
 ## 📈 Unified Tracing Architecture
+
 Serverless Claw uses a **Branched Neural Path Tracing** model to visualize complex, parallel multi-agent workflows as a Directed Acyclic Graph (DAG).
+
 - **Deep Dive**: [Tracing & DAG Model ↗](./docs/TRACING.md)
 
 ---
@@ -226,10 +266,13 @@ Serverless Claw has evolved from static tools to a **Dynamic Skill Architecture*
 ```
 
 ### 1. Custom Skills (Internal)
+
 Tools written specifically for the ServerlessClaw environment (e.g., `triggerDeployment`). These run within the agent's AWS Lambda execution context and are defined in `core/tools/`.
 
 ### 2. MCP Skills (External & Hybrid)
+
 Connected via the **Model Context Protocol (MCP)**. This is the primary scaling vector for the system.
+
 - **Hub-First Architecture (New in May 2026)**: The system prioritizes high-speed connections to an external MCP Hub via SSE. This minimizes Lambda startup latency (cold starts) and offloads resource-heavy tasks (like browser automation) to external infrastructure.
 - **Graceful Local Fallback**: If the external Hub is unreachable or times out (5s limit), the `MCPBridge` seamlessly falls back to local spawning using `StdioClientTransport`.
 - **Lambda Environment Hardening**:
@@ -239,14 +282,17 @@ Connected via the **Model Context Protocol (MCP)**. This is the primary scaling 
 - **Dynamic Spawning**: Uses `npx` to fetch and run fallback servers on-demand.
 
 ### 3. Built-in Skills (Model-Native)
+
 Native capabilities provided by the LLM provider (e.g., OpenAI's **Code Interpreter** or Gemini's **Grounded Search**). The system passes these through while maintaining trace visibility.
 
 ### 4. Multi-Modal Capability
+
 Tools can now return **Structured Results** (`ToolResult`) containing text, images, and file metadata, allowing agents to "see" charts generated by Python or screenshots from a browser.
 
 ---
 
 ## 🧠 Infrastructure Discovery
+
 The system implements a **Self-Aware Infrastructure** model where the topology is discovered post-deployment rather than hardcoded.
 
 ```text
@@ -259,7 +305,6 @@ The system implements a **Self-Aware Infrastructure** model where the topology i
 
 - **Deep Dive**: [Infra & Discovery ↗](./docs/INFRASTRUCTURE.md)
 
-
 ---
 
 ## Developer Customization
@@ -267,41 +312,55 @@ The system implements a **Self-Aware Infrastructure** model where the topology i
 Serverless Claw is designed to be highly customizable at every layer.
 
 ### 1. Self-Aware & Evolutionary
+
 Serverless Claw isn't just a collection of scripts; it's a **living system**. It maintains a real-time topology of its own infrastructure and agent connections. The **Build Monitor** automatically scans the stack after every deployment to update the **System Pulse** map. Evolution follows a strict, verified lifecycle (**OPEN** → **PLANNED** → **PROGRESS** → **DEPLOYED** → **DONE**).
 
 ### 2. The Smart Recall Tool
+
 Instead of loading all memories into every prompt, agents use `recallKnowledge(query)`.
+
 - **Workflow**: SuperClaw sees a `[MEMORY_INDEX]`. If it needs details, it calls the tool.
 - **Efficiency**: Reduces input token costs by up to 90% for long-lived sessions.
 
 ### 3. Dynamic Tool Scoping & Discovery
+
 Agents no longer load the entire tool catalog.
+
 - **Registry**: The `AgentRegistry` stores the allowed tool names and system prompts for each agent. It merges backbone defaults from `backbone.ts` with dynamic overrides in DynamoDB.
 - **Autonomous Expansion**: Agents can use `discoverSkills` to find new capabilities in the marketplace and `installSkill` to permanently add them to their own (and others') rosters.
 - **Standard Support Profile**: Dynamic agents are automatically injected with core tools (`recallKnowledge`, `listAgents`, `dispatchTask`, `discoverSkills`) to ensure baseline intelligence and collaboration.
 - **Co-Management**: The **ClawCenter** dashboard serves as the UI for the registry, allowing zero-downtime hot-swaps and (coming soon) usage tracking.
 
 ### 4. Memory Adapters
+
 While the default uses DynamoDB, the system can be adapted to use:
+
 - **Redis (Upstash)** for even lower latency.
 - **PostgreSQL (Drizzle/Prisma)** for complex relational memory.
 - **S3** for long-term archival.
 
 ## 📡 Real-time Communication (IoT Core)
+
 To ensure the **ClawCenter Dashboard** receives instantaneous updates, we use a **Real-time Bridge** pattern over AWS IoT Core and MQTT.
+
 - **Deep Dive**: [Real-time Signaling ↗](./docs/REALTIME.md)
 
 ### 5. Channel Adapters (Fan-Out)
+
 Instead of hardcoding API requests to a single platform, agents emit an `OUTBOUND_MESSAGE` event onto the AgentBus.
+
 - **Notifier Handler**: A dedicated lightweight Lambda (`core/handlers/notifier.ts`) listens to these events.
 - **Multi-Channel**: The Notifier reads user preferences from the `ConfigTable` and fans the message out to the appropriate adapters (Telegram, Slack, and the **Real-time Signal Bridge**).
 
 ## 🔄 Self-Evolution & Stability
+
 The system's evolution is a co-managed process between the **Strategic Planner** and the **Human Admin**. Resilience is ensured via **Structured Signaling** (JSON-based status) and **Atomic Deployment Mapping** (direct gap-to-build syncing).
+
 - **Deep Dive**: [Self-Evolution ↗](./docs/EVOLUTION.md)
 - **Deep Dive**: [Health & Recovery ↗](./docs/HEALTH.md)
 
 ### Self-Optimization Feedback Loop
+
 To ensure the system remains efficient, a continuous optimization loop runs in the background.
 
 ```text
@@ -330,7 +389,8 @@ To ensure the system remains efficient, a continuous optimization loop runs in t
 6. **Routing**: The `SuperClaw` uses these metrics to route tasks to the most efficient agent/model combination.
 
 ### Evolution Safeguards
-- **Intent-Based Dual Mode**: Agents toggle between **JSON Mode** (for strict handoffs and state sync) and **Text Mode** (for user-facing empathy). 
+
+- **Intent-Based Dual Mode**: Agents toggle between **JSON Mode** (for strict handoffs and state sync) and **Text Mode** (for user-facing empathy).
 - **Structured JSON Hub**: When in JSON mode, agents emit deterministic signals (`SUCCESS`, `FAILED`, `REOPEN`) matching a strict native schema.
 - **Atomic Metadata Sync**: The `triggerDeployment` tool handles gap-to-build mapping internally to prevent metadata loss.
 - **Deep Health Probes**: The Dead Man's Switch verifies both API responsiveness and backbone connectivity (EventBus).
@@ -356,15 +416,17 @@ To ensure the system remains efficient, a continuous optimization loop runs in t
                             (EMERGENCY_ROLLBACK=true, LKG_HASH=...)
 ```
 
-
 ### 4. LLM Providers
+
 Provider-agnostic interface supporting:
+
 - OpenAI (gpt-5.4 / gpt-5.4-mini)
 - Anthropic (Claude 4.6 Sonnet)
 - Google (Gemini-3 Flash, GLM-5, MiniMax-m2.7)
 - Local models (via Ollama or AWS Bedrock)
 
 #### Reasoning Engine & Adapters
+
 The system uses a unified **Reasoning Adapter** to map logical "Thinking" states to provider-specific APIs.
 
 ```text
