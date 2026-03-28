@@ -585,6 +585,31 @@ export class Agent {
       ? `${(this.config?.id ?? 'unknown').toUpperCase()}#${userId}#${traceId}`
       : userId;
 
+    // 1. Memory Retrieval
+    const history = await this.memory.getHistory(storageId);
+    const [distilled, lessons, prefPrefixed, prefRaw, globalLessons] = await Promise.all([
+      this.memory.getDistilledMemory(baseUserId),
+      this.memory.getLessons(baseUserId),
+      this.memory.searchInsights(`USER#${baseUserId}`, '*', InsightCategory.USER_PREFERENCE),
+      this.memory.searchInsights(baseUserId, '*', InsightCategory.USER_PREFERENCE),
+      this.memory.getGlobalLessons(5),
+    ]);
+
+    let recoveryContext = '';
+    try {
+      const { SYSTEM, MEMORY_KEYS } = await import('./constants');
+      const { AGENT_LOG_MESSAGES } = await import('./agent/executor');
+      const recoveryData = await this.memory.getDistilledMemory(
+        SYSTEM.RECOVERY_KEY ?? MEMORY_KEYS.RECOVERY
+      );
+      if (recoveryData) {
+        recoveryContext = `${AGENT_LOG_MESSAGES.RECOVERY_LOG_PREFIX}${recoveryData}`;
+        await this.memory.updateDistilledMemory(SYSTEM.RECOVERY_KEY ?? MEMORY_KEYS.RECOVERY, '');
+      }
+    } catch (e) {
+      logger.error('Error checking recovery context:', e);
+    }
+
     await this.memory.addMessage(storageId, {
       role: MessageRole.USER,
       content: userText,
@@ -597,14 +622,6 @@ export class Agent {
       await tracer.endTrace('User already notified by sub-agent.');
       return;
     }
-
-    const history = await this.memory.getHistory(storageId);
-    const [distilled, lessons, prefPrefixed, prefRaw] = await Promise.all([
-      this.memory.getDistilledMemory(baseUserId),
-      this.memory.getLessons(baseUserId),
-      this.memory.searchInsights(`USER#${baseUserId}`, '*', InsightCategory.USER_PREFERENCE),
-      this.memory.searchInsights(baseUserId, '*', InsightCategory.USER_PREFERENCE),
-    ]);
 
     const preferences = {
       items: [...(prefPrefixed.items ?? []), ...(prefRaw.items ?? [])],
@@ -619,9 +636,17 @@ export class Agent {
     const activeProvider = this.config?.provider ?? SYSTEM.DEFAULT_PROVIDER;
     const activeProfile = profile;
 
+    // 3. Prompt Assembly (GAP #5: Include global lessons)
+    const globalLessonsBlock =
+      globalLessons.length > 0
+        ? `\n\n[COLLECTIVE_SWARM_INTELLIGENCE]:\nThese are system-wide lessons learned across ALL sessions. Apply them universally:\n${globalLessons.map((l) => `- ${l}`).join('\n')}\n`
+        : '';
+
     let contextPrompt = this.systemPrompt;
+    if (recoveryContext) contextPrompt += recoveryContext;
     contextPrompt += `\n\n${AgentContext.getMemoryIndexBlock(distilled, lessons.length, preferences.items.length)}`;
     contextPrompt += `\n\n[INTELLIGENCE]\n${facts.length > 0 ? facts : 'No persistent knowledge available for this user yet.'}\n\n`;
+    contextPrompt += globalLessonsBlock;
     contextPrompt += `\n\n${AgentContext.getIdentityBlock(
       this.config,
       activeModel ?? SYSTEM.DEFAULT_MODEL,

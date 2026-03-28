@@ -136,10 +136,50 @@ describe('Agent.stream()', () => {
       content: 'Hello',
     });
 
-    // addMessage(user) must be called BEFORE getHistory
+    // addMessage(user) must be called AFTER getHistory to prevent duplication in fullHistory
     const addUserMessageOrder = vi.mocked(mockMemory.addMessage).mock.invocationCallOrder[0];
     const getHistoryOrder = vi.mocked(mockMemory.getHistory).mock.invocationCallOrder[0];
-    expect(addUserMessageOrder).toBeLessThan(getHistoryOrder);
+    expect(getHistoryOrder).toBeLessThan(addUserMessageOrder);
+  });
+
+  it('should NOT duplicate the current user message in the history passed to ContextManager', async () => {
+    const { ContextManager } = await import('./agent/context-manager');
+    async function* mockStream() {
+      yield { content: 'OK' };
+    }
+    (mockProvider.stream as ReturnType<typeof vi.fn>).mockReturnValue(mockStream());
+
+    // Mock history with one existing message
+    const existingHistory = [{ role: MessageRole.USER, content: 'Previous message' }];
+    vi.mocked(mockMemory.getHistory).mockResolvedValue(existingHistory);
+
+    const agent = new Agent(mockMemory, mockProvider, [], 'System', {
+      id: 'test',
+      name: 'Test',
+      enabled: true,
+      systemPrompt: 'System',
+    });
+
+    const userText = 'Current message';
+    for await (const _ of agent.stream('user-1', userText, {})) {
+      // consume
+    }
+
+    // ContextManager should receive history + current message exactly once
+    expect(ContextManager.getManagedContext).toHaveBeenCalledWith(
+      [...existingHistory, expect.objectContaining({ role: MessageRole.USER, content: userText })],
+      null,
+      expect.any(String),
+      expect.any(Number),
+      expect.any(Object)
+    );
+
+    const callHistory = vi.mocked(ContextManager.getManagedContext).mock.calls[0][0];
+    const currentMessageOccurrences = callHistory.filter(
+      (m: any) => m.role === MessageRole.USER && m.content === userText
+    ).length;
+
+    expect(currentMessageOccurrences).toBe(1);
   });
 
   it('should save user message with attachments', async () => {
