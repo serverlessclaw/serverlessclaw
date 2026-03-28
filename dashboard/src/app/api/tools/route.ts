@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const refresh = searchParams.get('refresh') === 'true';
 
     const usage = await getToolUsage();
-    const allTools = await getAllTools(usage, refresh);
+    const allTools = await getAllTools(usage, { forceRefresh: refresh });
     return NextResponse.json({ tools: allTools });
   } catch (error) {
     console.error('Failed to fetch tools:', error);

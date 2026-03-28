@@ -5,6 +5,16 @@
  */
 import { tools } from './tool-definitions';
 
+/** Options for fetching all tools. */
+interface GetAllToolsOptions {
+  /** If true, bypasses cache and fetches fresh tool definitions from MCP servers. */
+  forceRefresh?: boolean;
+}
+
+/**
+ * Retrieves the usage statistics for all tools.
+ * @returns A record mapping tool names to their usage count and last-used timestamp.
+ */
 export async function getToolUsage(): Promise<Record<string, { count: number; lastUsed: number }>> {
   try {
     const { AgentRegistry } = await import('@claw/core/lib/registry');
@@ -15,7 +25,18 @@ export async function getToolUsage(): Promise<Record<string, { count: number; la
   }
 }
 
-export async function getAllTools(usage: Record<string, { count: number; lastUsed: number }>, forceRefresh = false) {
+/**
+ * Retrieves all available tools (local and MCP) with their usage statistics.
+ * @param usage - Current usage statistics for tools.
+ * @param options - Configuration options for the fetch.
+ * @returns A merged list of local and external tools with usage data.
+ */
+export async function getAllTools(
+  usage: Record<string, { count: number; lastUsed: number }>,
+  options: GetAllToolsOptions = {}
+) {
+  const { forceRefresh = false } = options;
+
   try {
     const { MCPBridge } = await import('@claw/core/lib/mcp');
 

@@ -1,3 +1,8 @@
+/**
+ * Creates the event bus and realtime communication resources for agent orchestration.
+ *
+ * @returns An object containing the AgentBus (EventBridge) and RealtimeBus (IoT Core) instances.
+ */
 export function createBus() {
   const bus = new sst.aws.Bus('AgentBus');
   const realtime = new sst.aws.Realtime('RealtimeBus', {

@@ -42,7 +42,7 @@ describe('Tools API Route', () => {
     const req = new Request('http://localhost/api/tools?refresh=true');
     await GET(req);
 
-    expect(mockGetAllTools).toHaveBeenCalledWith({}, true);
+    expect(mockGetAllTools).toHaveBeenCalledWith({}, { forceRefresh: true });
   });
 
   it('passes refresh=false by default', async () => {
@@ -53,7 +53,7 @@ describe('Tools API Route', () => {
     const req = new Request('http://localhost/api/tools');
     await GET(req);
 
-    expect(mockGetAllTools).toHaveBeenCalledWith({}, false);
+    expect(mockGetAllTools).toHaveBeenCalledWith({}, { forceRefresh: false });
   });
 
   it('returns 500 on error', async () => {
