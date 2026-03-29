@@ -51,8 +51,8 @@ define separator
 	printf '%s$(BOLD)================================================================================$(RESET)\n' "$(1)"
 endef
 
-# Environment handling
-ENV ?= dev
+# Environment handling (2-tier: local or prod)
+ENV ?= prod
 AWS_REGION ?= ap-southeast-2
 
 # Parallelism
@@ -80,7 +80,7 @@ define load_env
 		$(call log_error,AWS_PROFILE is not set. Please ensure it is defined in your .env file.); \
 		exit 1; \
 	fi; \
-	if { [ "$(ENV)" = "dev" ] || [ "$(ENV)" = "production" ]; } && [ -z "$$EXPECTED_ACCOUNT" ]; then \
+	if [ "$(ENV)" = "prod" ] && [ -z "$$EXPECTED_ACCOUNT" ]; then \
 		$(call log_error,EXPECTED_ACCOUNT is not set for stage $(ENV). Please ensure it is defined in your .env file.); \
 		exit 1; \
 	fi
@@ -113,13 +113,14 @@ endef
 
 .PHONY: telegram-setup telegram-info telegram-delete
 
-telegram-setup: ## Set Telegram webhook to current API_URL (default: DEV_API_URL)
-	@$(call log_step,Setting Telegram webhook...)
+telegram-setup: ## Set Telegram webhook to current API_URL (local, dev, or prod)
+	@$(call log_step,Setting Telegram webhook for $(ENV)...)
 	@chmod +x ./scripts/telegram-webhook.sh
-	@if [ "$(ENV)" = "prod" ]; then \
-		URL=$$(grep "PROD_API_URL" .env | cut -d '=' -f2)/webhook; \
-	else \
-		URL=$$(grep "DEV_API_URL" .env | cut -d '=' -f2)/webhook; \
+	@ENV_UPPER=$$(echo $(ENV) | tr '[:lower:]' '[:upper:]'); \
+	URL=$$(grep "^$${ENV_UPPER}_API_URL=" .env | cut -d '=' -f2)/webhook; \
+	if [ -z "$$URL" ] || [ "$$URL" = "/webhook" ]; then \
+		$(call log_error,Could not find $${ENV_UPPER}_API_URL in .env (ENV=$(ENV)). Check that it's defined.); \
+		exit 1; \
 	fi; \
 	./scripts/telegram-webhook.sh set "$$URL"
 

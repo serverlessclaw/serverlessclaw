@@ -28,7 +28,7 @@ export function createApi(ctx: SharedContext): { api: sst.aws.ApiGatewayV2 } {
   } = ctx;
 
   const apiDomain = getDomainConfig('api');
-  const api = new sst.aws.ApiGatewayV2('WebhookApi', {
+  const api = new sst.aws.ApiGatewayV2('WebhookApiV2', {
     domain: apiDomain,
   });
 

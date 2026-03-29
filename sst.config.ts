@@ -16,8 +16,8 @@ export default $config({
   app(input) {
     return {
       name: APP_CONFIG.name,
-      removal: input?.stage === 'dev' ? 'retain' : 'remove',
-      protect: ['dev'].includes(input?.stage),
+      removal: input?.stage === 'prod' ? 'retain' : 'remove',
+      protect: ['prod'].includes(input?.stage),
       home: 'aws',
       providers: {
         aws: {

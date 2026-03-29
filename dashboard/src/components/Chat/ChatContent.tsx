@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Paperclip, Edit2, Check, X } from 'lucide-react';
+import { Paperclip, Edit2, Check, X, Brain } from 'lucide-react';
 import Typography from '@/components/ui/Typography';
 import CyberConfirm from '@/components/CyberConfirm';
 import Button from '@/components/ui/Button';
@@ -497,6 +497,123 @@ export default function ChatContent() {
     }
   };
 
+  /**
+   * Processes rejection for a specific tool call.
+   * @param callId The unique ID of the tool call to reject.
+   * @param comment Optional user comment to send with rejection.
+   */
+  const handleToolRejection = async (callId: string, comment?: string) => {
+    const currentSessionId = activeSessionRef.current;
+    setIsLoading(true);
+    isPostInFlight.current = true;
+    
+    try {
+      const response = await fetch('/api/chat?stream=true', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          text: comment || 'I reject this tool execution.', 
+          sessionId: currentSessionId, 
+          rejectedToolCalls: [callId] 
+        }),
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: `Error during rejection: ${data.error || 'Unknown error'}`, 
+          agentName: 'SystemGuard',
+          isError: true 
+        }]);
+      }
+      fetchSessions();
+    } catch (error) {
+      console.error('Rejection error:', error);
+    } finally {
+      isPostInFlight.current = false;
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Processes clarification for a specific tool call.
+   * @param callId The unique ID of the tool call.
+   * @param comment The user's clarification.
+   */
+  const handleToolClarification = async (callId: string, comment?: string) => {
+    const currentSessionId = activeSessionRef.current;
+    setIsLoading(true);
+    isPostInFlight.current = true;
+    
+    try {
+      const response = await fetch('/api/chat?stream=true', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          text: comment || 'Requesting clarification.', 
+          sessionId: currentSessionId, 
+          clarifiedToolCalls: [callId] 
+        }),
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: `Error during clarification: ${data.error || 'Unknown error'}`, 
+          agentName: 'SystemGuard',
+          isError: true 
+        }]);
+      }
+      fetchSessions();
+    } catch (error) {
+      console.error('Clarification error:', error);
+    } finally {
+      isPostInFlight.current = false;
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Processes task cancellation.
+   * @param taskId The unique ID of the task to cancel.
+   * @param comment Optional user reason for cancellation.
+   */
+  const handleTaskCancellation = async (taskId: string, comment?: string) => {
+    const currentSessionId = activeSessionRef.current;
+    setIsLoading(true);
+    isPostInFlight.current = true;
+    
+    try {
+      const response = await fetch('/api/chat?stream=true', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          text: comment || 'Stop the current task.', 
+          sessionId: currentSessionId, 
+          cancelledTasks: [taskId] 
+        }),
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: `Error during cancellation: ${data.error || 'Unknown error'}`, 
+          agentName: 'SystemGuard',
+          isError: true 
+        }]);
+      }
+      fetchSessions();
+    } catch (error) {
+      console.error('Cancellation error:', error);
+    } finally {
+      isPostInFlight.current = false;
+      setIsLoading(false);
+    }
+  };
+
   // --- Session Management Handlers ---
 
   const createNewChat = () => {
@@ -643,95 +760,6 @@ export default function ChatContent() {
                   <div className="flex items-center gap-3">
                     <Typography variant="h2" weight="bold" color="white" glow className="truncate uppercase">
                        {currentSession?.title || 'Untitled Trace'}
-                    </Typography>
-                    <Button 
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsEditingTitle(true)}
-                      className="p-1 opacity-0 group-hover/title:opacity-50 hover:opacity-100 text-white h-auto"
-                      icon={<Edit2 size={14} />}
-                    />
-                  </div>
-                )}
-              </div>
-            ) : (
-              <Typography variant="h2" weight="bold" color="white" glow className="truncate uppercase">
-                Direct Chat
-              </Typography>
-            )}
-          </div>
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowThinking(!showThinking)}
-              className={`p-1 flex items-center gap-2 transition-colors ${showThinking ? 'text-cyber-green' : 'text-white/40 hover:text-white/70'}`}
-              title={showThinking ? "Hide thinking blocks" : "Show thinking blocks"}
-              icon={<Brain size={18} />}
-            >
-              <span className="text-[10px] font-mono uppercase tracking-wider hidden sm:inline">Thinking</span>
-            </Button>
-
-            {isRealtimeActive && (
-              <div className="flex items-center gap-2 bg-cyber-green/10 px-3 py-1 rounded border border-cyber-green/30">
-                 <div className={`w-1.5 h-1.5 rounded-full bg-cyber-green ${CHAT_STYLES.ANIMATIONS.PULSE}`} />
-                 <Typography variant="mono" weight="bold" className="text-cyber-green text-[10px]">LIVE</Typography>
-              </div>
-            )}
-          </div>
-        </header>
-
-        <ChatMessageList 
-          messages={messages} 
-          isLoading={isLoading} 
-          scrollRef={scrollRef}
-          onOptionClick={handleOptionClick}
-          showThinking={showThinking}
-        />
-
-        <ChatInput 
-          input={input}
-          setInput={setInput}
-          isLoading={isLoading}
-          onSend={(e) => { e.preventDefault(); sendMessage(input); setInput(''); }}
-          attachments={attachments}
-          onRemoveAttachment={(i) => setAttachments(prev => prev.filter((_, idx) => idx !== i))}
-          fileInputRef={fileInputRef}
-          onFileSelect={(e) => { if (e.target.files) handleFiles(Array.from(e.target.files)); }}
-          isShaking={isShaking}
-        />
-
-        {pendingMessages.length > 0 && (
-          <div className="px-6 pb-4">
-            <QueuedMessagesList
-              messages={pendingMessages}
-              onEdit={handleEditQueuedMessage}
-              onRemove={handleRemoveQueuedMessage}
-            />
-          </div>
-        )}
-      </main>
-
-      <CyberConfirm 
-        isOpen={showDeleteConfirm}
-        title="Delete Conversation"
-        message="Are you sure you want to purge this record from memory?"
-        onConfirm={confirmDelete}
-        onCancel={() => setShowDeleteConfirm(false)}
-        variant="warning"
-      />
-      <CyberConfirm 
-        isOpen={showDeleteAllConfirm}
-        title="PURGE ALL HISTORY"
-        message="WARNING: This action is irreversible. All active session history will be destroyed. Continue?"
-        onConfirm={confirmDeleteAll}
-        onCancel={() => setShowDeleteAllConfirm(false)}
-        variant="danger"
-      />
-    </div>
-  );
-}
-ntitled Trace'}
                     </Typography>
                     <Button 
                       variant="ghost"
