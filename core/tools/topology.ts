@@ -21,7 +21,7 @@ export const DISCOVER_PEERS = {
         peers = peers.filter(
           (p) =>
             p.name.toLowerCase().includes(category.toLowerCase()) ||
-            p.description.toLowerCase().includes(category.toLowerCase())
+            (p.description && p.description.toLowerCase().includes(category.toLowerCase()))
         );
       }
 
@@ -35,7 +35,7 @@ export const DISCOVER_PEERS = {
 
       return (
         `Discovered ${peers.length} active peers:\n` +
-        peers.map((p) => `- [${p.id}] ${p.name}: ${p.description}`).join('\n')
+        peers.map((p) => `- [${p.id}] ${p.name}: ${p.description || 'No description'}`).join('\n')
       );
     } catch (error) {
       return `Failed to discover peers: ${formatErrorMessage(error)}`;
@@ -57,14 +57,16 @@ export const REGISTER_PEER = {
     const sourceAgentId = agentId ?? 'superclaw';
 
     try {
-      const topology = (await ConfigManager.getRawConfig(DYNAMO_KEYS.SYSTEM_TOPOLOGY)) || {
+      const topology = ((await ConfigManager.getRawConfig(DYNAMO_KEYS.SYSTEM_TOPOLOGY)) as any) || {
         nodes: [],
         edges: [],
       };
 
       // Add or update the edge in the topology graph
       const edgeId = `${sourceAgentId}->${peerId}`;
-      const existingEdgeIndex = topology.edges.findIndex((e: { id: string }) => e.id === edgeId);
+      const existingEdgeIndex = (topology.edges || []).findIndex(
+        (e: { id: string }) => e.id === edgeId
+      );
 
       const newEdge = {
         id: edgeId,
@@ -77,6 +79,7 @@ export const REGISTER_PEER = {
       if (existingEdgeIndex >= 0) {
         topology.edges[existingEdgeIndex] = newEdge;
       } else {
+        if (!topology.edges) topology.edges = [];
         topology.edges.push(newEdge);
       }
 

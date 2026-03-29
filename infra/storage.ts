@@ -63,11 +63,8 @@ export function createStorage() {
       bucket: {
         lifecycleRules: [
           {
-            id: 'expire-knowledge-shards',
+            id: 'expire-user-uploads',
             enabled: true,
-            filter: {
-              prefix: 'user-uploads/',
-            },
             expiration: {
               days: 90,
             },

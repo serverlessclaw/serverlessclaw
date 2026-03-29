@@ -131,15 +131,10 @@ export async function handler(
         break;
       }
 
-      case EventType.CONSENSUS_REQUEST: {
-        const { handleConsensusRequest } = await import('./events/consensus-handler');
-        await handleConsensusRequest(eventDetail);
-        break;
-      }
-
+      case EventType.CONSENSUS_REQUEST:
       case EventType.CONSENSUS_VOTE: {
-        const { handleConsensusVote } = await import('./events/consensus-handler');
-        await handleConsensusVote(eventDetail);
+        const { handleConsensus } = await import('./events/consensus-handler');
+        await handleConsensus(eventDetail as any, detailType);
         break;
       }
 
