@@ -53,6 +53,7 @@ vi.mock('sst', () => ({
     StrategicPlanner: { name: 'test-planner' },
     ReflectorAgent: { name: 'test-reflector' },
     QaAgent: { name: 'test-qa' },
+    MCPGitServer: { name: 'test-mcp-git' },
   },
 }));
 
@@ -77,6 +78,9 @@ describe('discoverSystemTopology', () => {
     expect(nodeIds).toContain('deployer');
     expect(nodeIds).toContain('dashboard');
     expect(nodeIds).toContain('memorytable');
+    expect(nodeIds).toContain('tracetable');
+    expect(nodeIds).toContain('configtable');
+    expect(nodeIds).toContain('mcpgitserver');
     expect(nodeIds).toContain('realtimebus');
     expect(nodeIds).toContain('telegram');
     expect(nodeIds).toContain('scheduler');

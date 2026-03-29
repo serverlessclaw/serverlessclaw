@@ -481,4 +481,49 @@ export class TrackOrchestrator {
     this.dependencies = [];
     logger.info('All tracks reset');
   }
+
+  /**
+   * Load persisted track state from DynamoDB.
+   * Call this after construction to restore state from a previous invocation.
+   */
+  async loadState(): Promise<void> {
+    for (const track of Object.values(EvolutionTrack)) {
+      try {
+        const items = await this.base.queryItems({
+          KeyConditionExpression: 'userId = :pk',
+          ExpressionAttributeValues: {
+            ':pk': `${MEMORY_KEYS.TRACK_PREFIX}STATE#${track}`,
+          },
+        });
+
+        if (items.length > 0) {
+          const item = items[0];
+          const ctx = this.tracks.get(track)!;
+          ctx.state = (item.state as TrackState) ?? TrackState.IDLE;
+          ctx.activeGaps = (item.activeGaps as string[]) ?? [];
+          ctx.completedGaps = (item.completedGaps as string[]) ?? [];
+          ctx.failedGaps = (item.failedGaps as string[]) ?? [];
+          ctx.totalSpendUsd = (item.totalSpendUsd as number) ?? 0;
+          ctx.startedAt = (item.startedAt as number) ?? 0;
+          ctx.lastActivityAt = (item.lastActivityAt as number) ?? 0;
+          ctx.budgetAllocatedUsd = (item.budgetAllocatedUsd as number) ?? ctx.budgetAllocatedUsd;
+        }
+      } catch (error) {
+        logger.error(`Failed to load state for track ${track}:`, error);
+      }
+    }
+    logger.info('TrackOrchestrator state loaded from DynamoDB');
+  }
+}
+
+/**
+ * Get or create a singleton TrackOrchestrator for Lambda warm starts.
+ * Uses global scope to persist across invocations within the same container.
+ */
+export function getTrackOrchestrator(memory: BaseMemoryProvider): TrackOrchestrator {
+  const g = global as Record<string, unknown>;
+  if (!g._trackOrchestrator) {
+    g._trackOrchestrator = new TrackOrchestrator(memory);
+  }
+  return g._trackOrchestrator as TrackOrchestrator;
 }

@@ -32,6 +32,15 @@ export function mapProfileToResource(profile: string, busId: string): string | n
   if (lowerProfile === INFRA_NODE_ID.SCHEDULER) return INFRA_NODE_ID.SCHEDULER;
   if (lowerProfile === INFRA_NODE_ID.NOTIFIER) return INFRA_NODE_ID.NOTIFIER;
 
+  // MCP Servers
+  if (lowerProfile === 'git') return INFRA_NODE_ID.MCP_GIT;
+  if (lowerProfile === 'filesystem') return INFRA_NODE_ID.MCP_FILESYSTEM;
+  if (lowerProfile === 'google-search') return INFRA_NODE_ID.MCP_GOOGLE_SEARCH;
+  if (lowerProfile === 'puppeteer') return INFRA_NODE_ID.MCP_PUPPETEER;
+  if (lowerProfile === 'fetch') return INFRA_NODE_ID.MCP_FETCH;
+  if (lowerProfile === 'aws') return INFRA_NODE_ID.MCP_AWS;
+  if (lowerProfile === 'aws-s3') return INFRA_NODE_ID.MCP_AWS_S3;
+
   return null;
 }
 
@@ -63,8 +72,13 @@ export async function mapToolToResources(toolName: string): Promise<string[]> {
   if (!tool || !tool.connectionProfile) {
     if (toolName === 'sendMessage') return [INFRA_NODE_ID.NOTIFIER];
     // Agents use both S3 buckets depending on the task (Deployment vs Knowledge)
-    if (toolName.startsWith('aws-s3_'))
-      return [INFRA_NODE_ID.STAGING_BUCKET, INFRA_NODE_ID.KNOWLEDGE_BUCKET];
+    if (toolName.startsWith('git_')) return ['git'];
+    if (toolName.startsWith('filesystem_')) return ['filesystem'];
+    if (toolName.startsWith('google-search_')) return ['google-search'];
+    if (toolName.startsWith('puppeteer_')) return ['puppeteer'];
+    if (toolName.startsWith('fetch_')) return ['fetch'];
+    if (toolName.startsWith('aws_')) return ['aws'];
+    if (toolName.startsWith('aws-s3_')) return ['aws-s3'];
     return [];
   }
 

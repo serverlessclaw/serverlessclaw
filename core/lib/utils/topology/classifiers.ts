@@ -25,10 +25,38 @@ export const CLASSIFIERS: ResourceClassifier[] = [
     tier: NODE_TIER.APP,
   },
   {
+    match: (k) => k === 'memorytable' || k === 'memory',
+    type: NODE_TYPE.INFRA,
+    icon: NODE_ICON.DATABASE,
+    label: 'Memory (DynamoDB)',
+    tier: NODE_TIER.INFRA,
+  },
+  {
+    match: (k) => k === 'tracetable' || k === 'traces',
+    type: NODE_TYPE.INFRA,
+    icon: NODE_ICON.SEARCH,
+    label: 'Traces (DynamoDB)',
+    tier: NODE_TIER.INFRA,
+  },
+  {
+    match: (k) => k === 'configtable' || k === 'config',
+    type: NODE_TYPE.INFRA,
+    icon: NODE_ICON.GEAR,
+    label: 'Config (DynamoDB)',
+    tier: NODE_TIER.INFRA,
+  },
+  {
     match: (k) => k === 'knowledgebucket' || k === 'knowledge',
     type: NODE_TYPE.INFRA,
     icon: NODE_ICON.DATABASE,
     label: 'Knowledge Storage (S3)',
+    tier: NODE_TIER.INFRA,
+  },
+  {
+    match: (k) => k === 'stagingbucket' || k === 'staging',
+    type: NODE_TYPE.INFRA,
+    icon: NODE_ICON.HAMMER,
+    label: 'Staging Storage (S3)',
     tier: NODE_TIER.INFRA,
   },
   {
@@ -66,8 +94,58 @@ export const CLASSIFIERS: ResourceClassifier[] = [
     tier: NODE_TIER.COMM,
   },
   {
+    match: (k) => k === 'heartbeathandler' || k === 'heartbeat',
+    type: NODE_TYPE.INFRA,
+    icon: NODE_ICON.SIGNAL,
+    label: 'Heartbeat Handler',
+    tier: NODE_TIER.COMM,
+  },
+  {
+    match: (k) => k === 'concurrencymonitor',
+    type: NODE_TYPE.INFRA,
+    icon: NODE_ICON.STETHOSCOPE,
+    label: 'Concurrency Monitor',
+    tier: NODE_TIER.INFRA,
+  },
+  {
+    match: (k) => k === 'eventhandler' || k === 'events',
+    type: NODE_TYPE.INFRA,
+    icon: NODE_ICON.ZAP,
+    label: 'Event Handler',
+    tier: NODE_TIER.COMM,
+  },
+  {
+    match: (k) => k === 'deadmansswitch' || k === 'recovery',
+    type: NODE_TYPE.INFRA,
+    icon: NODE_ICON.SIGNAL,
+    label: "Dead Man's Switch",
+    tier: NODE_TIER.COMM,
+  },
+  {
+    match: (k) => k.startsWith('mcp') && k.endsWith('server'),
+    type: NODE_TYPE.INFRA,
+    icon: NODE_ICON.GEAR,
+    tier: NODE_TIER.INFRA,
+  },
+  {
+    match: (k) => k === 'mcpwarmuphandler',
+    type: NODE_TYPE.INFRA,
+    icon: NODE_ICON.SIGNAL,
+    label: 'MCP Warmup Handler',
+    tier: NODE_TIER.COMM,
+  },
+  {
     match: (k) =>
-      ['superclaw', 'coder', 'strategicplanner', 'reflector', 'qa'].includes(k) ||
+      [
+        'superclaw',
+        'coder',
+        'strategicplanner',
+        'reflector',
+        'qa',
+        'critic',
+        'optimizer',
+        'agentrunner',
+      ].includes(k) ||
       k.includes('agent') ||
       k.includes('worker'),
     type: NODE_TYPE.AGENT,

@@ -152,33 +152,58 @@ export async function checkToolHealth(): Promise<ProbeResult> {
   const details: Record<string, any> = {};
   let overallOk = true;
 
-  try {
-    // 1. DynamoDB Check
-    const dbStart = Date.now();
-    await getDynamoDbClient().send(
-      new GetItemCommand({
-        TableName: typedResource.MemoryTable.name,
-        Key: {
+  // 1. DynamoDB Checks
+  const ddbTables = [
+    { name: 'MemoryTable', resource: typedResource.MemoryTable },
+    { name: 'TraceTable', resource: typedResource.TraceTable },
+    { name: 'ConfigTable', resource: typedResource.ConfigTable },
+  ];
+
+  for (const table of ddbTables) {
+    try {
+      const dbStart = Date.now();
+      let key: Record<string, any>;
+
+      if (table.name === 'ConfigTable') {
+        key = { key: { S: 'HEALTH#PROBE' } };
+      } else if (table.name === 'TraceTable') {
+        key = {
+          traceId: { S: 'HEALTH#PROBE' },
+          nodeId: { S: 'HEALTH#PROBE' },
+        };
+      } else {
+        // MemoryTable
+        key = {
           userId: { S: 'HEALTH#PROBE' },
           timestamp: { N: '0' },
-        },
-      })
-    );
-    details.dynamodb = { ok: true, latencyMs: Date.now() - dbStart };
-  } catch (error) {
-    overallOk = false;
-    details.dynamodb = { ok: false, error: formatErrorMessage(error) };
+        };
+      }
+
+      await getDynamoDbClient().send(
+        new GetItemCommand({
+          TableName: table.resource.name,
+          Key: key,
+        })
+      );
+      details[table.name.toLowerCase()] = { ok: true, latencyMs: Date.now() - dbStart };
+    } catch (error) {
+      // MemoryTable is critical, others might be less so but still important
+      if (table.name === 'MemoryTable') overallOk = false;
+      details[table.name.toLowerCase()] = { ok: false, error: formatErrorMessage(error) };
+    }
   }
 
   try {
-    // 2. S3 Check (StagingBucket)
+    // 2. S3 Checks
     const s3Start = Date.now();
     await getS3Client().send(new ListBucketsCommand({}));
     details.s3 = { ok: true, latencyMs: Date.now() - s3Start };
+
+    // Check specific buckets if possible
+    details.stagingBucket = { ok: true, name: typedResource.StagingBucket.name };
+    details.knowledgeBucket = { ok: true, name: typedResource.KnowledgeBucket.name };
   } catch (error) {
-    // S3 might be restricted, but we check connectivity
     details.s3 = { ok: false, error: formatErrorMessage(error) };
-    // Don't necessarily fail overall if S3 is just restricted, but for cognitive health we care.
   }
 
   try {

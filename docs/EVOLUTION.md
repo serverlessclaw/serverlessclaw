@@ -251,3 +251,29 @@ Track assignments are stored as `TRACK#<gapId>` in DynamoDB:
   assignedAt: 1711668000000,
 }
 ```
+
+### Track Budget Allocation
+
+Budget is distributed across tracks based on priority weights and persisted via `ConfigManager` (DynamoDB ConfigTable, key: `track_evolution_budget`). State survives Lambda cold starts.
+
+```text
+    [ TrackBudgetAllocator ] (ConfigManager: track_evolution_budget)
+          |
+    +-----+-----+-----+-----+-----+
+    |         |         |         |
+  [Security] [Perf]  [Feature] [Infra]
+  $3.00      $2.50   $2.00     $1.50
+    |         |         |         |
+  [Spent]   [Spent]  [Spent]  [Spent]
+    |         |         |         |
+    v         v         v         v
+  [canSpend() gate before dispatch]
+```
+
+**Key APIs** (all async):
+
+- `TrackBudgetAllocator.canSpend(track, amountUsd)` — check before dispatch
+- `TrackBudgetAllocator.recordSpend(track, gapId, spendUsd, agentId)` — record after completion
+- `TrackBudgetAllocator.rebalanceBasedOnPerformance(perf)` — dynamic rebalancing
+
+**Cycle**: 7-day auto-reset. Budget never goes negative (bounded reduction during rebalancing).

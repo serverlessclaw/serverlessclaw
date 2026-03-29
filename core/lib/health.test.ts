@@ -17,7 +17,10 @@ vi.mock('sst', () => ({
   Resource: {
     AgentBus: { name: 'test-bus' },
     MemoryTable: { name: 'test-table' },
+    TraceTable: { name: 'test-trace-table' },
+    ConfigTable: { name: 'test-config-table' },
     StagingBucket: { name: 'test-bucket' },
+    KnowledgeBucket: { name: 'test-knowledge-bucket' },
     WebhookApi: { url: 'https://test-api' },
   },
 }));
@@ -72,32 +75,35 @@ describe('Cognitive Health Probes', () => {
   });
 
   it('checkToolHealth should verify DynamoDB, S3, and IoT', async () => {
-    (mockDB.send as any).mockResolvedValueOnce({});
+    (mockDB.send as any).mockResolvedValue({}); // Multiple calls for tables
     (mockS3.send as any).mockResolvedValueOnce({});
     (mockIot.send as any).mockResolvedValueOnce({});
 
     const result = await checkToolHealth();
     expect(result.ok).toBe(true);
     const details = result.details as any;
-    expect(details?.dynamodb.ok).toBe(true);
+    expect(details?.memorytable.ok).toBe(true);
+    expect(details?.tracetable.ok).toBe(true);
+    expect(details?.configtable.ok).toBe(true);
     expect(details?.s3.ok).toBe(true);
     expect(details?.iot.ok).toBe(true);
   });
 
-  it('checkToolHealth should return ok:false if DynamoDB fails', async () => {
-    (mockDB.send as any).mockRejectedValueOnce(new Error('DB Timeout'));
+  it('checkToolHealth should return ok:false if MemoryTable fails', async () => {
+    (mockDB.send as any).mockRejectedValueOnce(new Error('DB Timeout')); // MemoryTable fails
+    (mockDB.send as any).mockResolvedValue({}); // Others succeed
     (mockS3.send as any).mockResolvedValueOnce({});
     (mockIot.send as any).mockResolvedValueOnce({});
 
     const result = await checkToolHealth();
     expect(result.ok).toBe(false);
     const details = result.details as any;
-    expect(details?.dynamodb.ok).toBe(false);
+    expect(details?.memorytable.ok).toBe(false);
   });
 
   it('checkCognitiveHealth orchestrates all probes', async () => {
     (mockEB.send as any).mockResolvedValueOnce({});
-    (mockDB.send as any).mockResolvedValueOnce({});
+    (mockDB.send as any).mockResolvedValue({});
     (mockS3.send as any).mockResolvedValueOnce({});
     (mockIot.send as any).mockResolvedValueOnce({});
 

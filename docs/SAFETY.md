@@ -6,22 +6,22 @@
 
 ## Guardrail Overview
 
-| Guardrail                 | Where Implemented                         | Trigger                                 |
-| ------------------------- | ----------------------------------------- | --------------------------------------- |
-| **Resource Labeling**     | `core/tools/index.ts → fileWrite`         | Any write to a protected file           |
-| **Daily Limit**           | `core/lib/deploy-stats.ts`                | > N deployments/day (UTC)               |
-| **Circuit Breaker**       | `core/lib/circuit-breaker.ts`             | Failures in sliding window              |
-| **Self-Healing Loop**     | `core/handlers/monitor.ts`                | CodeBuild FAILED event + Enrichment     |
-| **Dead Man's Switch**     | `core/handlers/recovery.ts`               | 15-min health probe failure             |
-| **Pre-flight Validation** | `core/tools/index.ts → validateCode`      | Called by Coder Agent after writes      |
-| **Health Probe**          | `core/handlers/health.ts` → `GET /health` | API endpoint for external probes        |
-| **Self-Reporting (New)**  | `core/lib/health.ts → reportHealthIssue`  | Internal component violation detection  |
-| **Rollback Signal**       | `core/tools/index.ts → triggerRollback`   | Circuit breaker active or health failed |
-| **Human-in-the-Loop**     | SuperClaw system prompt                   | `MANUAL_APPROVAL_REQUIRED` returned     |
-| **Dashboard Auth**        | `dashboard/src/proxy.ts`                  | Unauthorized access to ClawCenter       |
-| **Recursion Guard**       | `core/handlers/events.ts`                 | Agent-to-agent hop depth > default (50) |
-| **Granular Safety Engine**| `core/lib/safety-engine.ts`               | Multi-dimensional policy enforcement    |
-| **Deep Cognitive Health** | `core/lib/cognitive-metrics.ts`           | Agent reasoning/memory degradation      |
+| Guardrail                  | Where Implemented                         | Trigger                                 |
+| -------------------------- | ----------------------------------------- | --------------------------------------- |
+| **Resource Labeling**      | `core/tools/index.ts → fileWrite`         | Any write to a protected file           |
+| **Daily Limit**            | `core/lib/deploy-stats.ts`                | > N deployments/day (UTC)               |
+| **Circuit Breaker**        | `core/lib/circuit-breaker.ts`             | Failures in sliding window              |
+| **Self-Healing Loop**      | `core/handlers/monitor.ts`                | CodeBuild FAILED event + Enrichment     |
+| **Dead Man's Switch**      | `core/handlers/recovery.ts`               | 15-min health probe failure             |
+| **Pre-flight Validation**  | `core/tools/index.ts → validateCode`      | Called by Coder Agent after writes      |
+| **Health Probe**           | `core/handlers/health.ts` → `GET /health` | API endpoint for external probes        |
+| **Self-Reporting (New)**   | `core/lib/health.ts → reportHealthIssue`  | Internal component violation detection  |
+| **Rollback Signal**        | `core/tools/index.ts → triggerRollback`   | Circuit breaker active or health failed |
+| **Human-in-the-Loop**      | SuperClaw system prompt                   | `MANUAL_APPROVAL_REQUIRED` returned     |
+| **Dashboard Auth**         | `dashboard/src/proxy.ts`                  | Unauthorized access to ClawCenter       |
+| **Recursion Guard**        | `core/handlers/events.ts`                 | Agent-to-agent hop depth > default (50) |
+| **Granular Safety Engine** | `core/lib/safety-engine.ts`               | Multi-dimensional policy enforcement    |
+| **Deep Cognitive Health**  | `core/lib/cognitive-metrics.ts`           | Agent reasoning/memory degradation      |
 
 ---
 
@@ -49,34 +49,34 @@ The system monitors agent cognitive health through the `CognitiveHealthMonitor` 
 
 ### Components
 
-| Component | Class | Purpose |
-|-----------|-------|---------|
-| **MetricsCollector** | `MetricsCollector` | Buffers and persists cognitive metrics |
-| **DegradationDetector** | `DegradationDetector` | Detects anomalies from aggregated metrics |
-| **HealthTrendAnalyzer** | `HealthTrendAnalyzer` | Analyzes trends and aggregates metrics |
-| **CognitiveHealthMonitor** | `CognitiveHealthMonitor` | Main orchestrator with health scoring |
+| Component                  | Class                    | Purpose                                   |
+| -------------------------- | ------------------------ | ----------------------------------------- |
+| **MetricsCollector**       | `MetricsCollector`       | Buffers and persists cognitive metrics    |
+| **DegradationDetector**    | `DegradationDetector`    | Detects anomalies from aggregated metrics |
+| **HealthTrendAnalyzer**    | `HealthTrendAnalyzer`    | Analyzes trends and aggregates metrics    |
+| **CognitiveHealthMonitor** | `CognitiveHealthMonitor` | Main orchestrator with health scoring     |
 
 ### Health Scoring
 
 The overall cognitive health score (0-100) is calculated using:
 
-| Factor | Weight | Description |
-|--------|--------|-------------|
-| Task Completion Rate | 40% | Percentage of successfully completed tasks |
-| Reasoning Coherence | 30% | Quality of agent reasoning (0-10 scale) |
-| Error Rate | 20% | Percentage of failed tasks |
-| Memory Fragmentation | 10% | Memory health (lower is better) |
+| Factor               | Weight | Description                                |
+| -------------------- | ------ | ------------------------------------------ |
+| Task Completion Rate | 40%    | Percentage of successfully completed tasks |
+| Reasoning Coherence  | 30%    | Quality of agent reasoning (0-10 scale)    |
+| Error Rate           | 20%    | Percentage of failed tasks                 |
+| Memory Fragmentation | 10%    | Memory health (lower is better)            |
 
 ### Anomaly Detection
 
 The system detects the following anomaly types:
 
-| Anomaly Type | Severity | Trigger |
-|--------------|----------|---------|
-| `TASK_FAILURE_SPIKE` | HIGH/CRITICAL | Completion rate drops below 70% |
-| `REASONING_DEGRADATION` | MEDIUM/CRITICAL | Coherence score drops below 5.0 |
-| `MEMORY_FRAGMENTATION` | MEDIUM/HIGH | Fragmentation exceeds 70% |
-| `TOKEN_OVERUSE` | MEDIUM | Token efficiency below 0.5 tasks/1000 tokens |
+| Anomaly Type            | Severity        | Trigger                                      |
+| ----------------------- | --------------- | -------------------------------------------- |
+| `TASK_FAILURE_SPIKE`    | HIGH/CRITICAL   | Completion rate drops below 70%              |
+| `REASONING_DEGRADATION` | MEDIUM/CRITICAL | Coherence score drops below 5.0              |
+| `MEMORY_FRAGMENTATION`  | MEDIUM/HIGH     | Fragmentation exceeds 70%                    |
+| `TOKEN_OVERUSE`         | MEDIUM          | Token efficiency below 0.5 tasks/1000 tokens |
 
 ### Usage
 
@@ -99,11 +99,11 @@ const result = await runCognitiveHealthCheck.execute({
 
 ### Health Status Indicators
 
-| Score Range | Status | Indicator |
-|-------------|--------|-----------|
-| 80-100 | Optimal | ✅ System cognitive health is optimal |
-| 60-79 | Minor Degradation | ⚠️ Minor degradation detected |
-| 0-59 | Significant Degradation | 🚨 Immediate attention required |
+| Score Range | Status                  | Indicator                             |
+| ----------- | ----------------------- | ------------------------------------- |
+| 80-100      | Optimal                 | ✅ System cognitive health is optimal |
+| 60-79       | Minor Degradation       | ⚠️ Minor degradation detected         |
+| 0-59        | Significant Degradation | 🚨 Immediate attention required       |
 
 ---
 
@@ -139,11 +139,11 @@ The system implements fine-grained safety controls through the `SafetyEngine` cl
 
 ### Safety Tiers (Enhanced)
 
-| Tier         | Code Changes | Deployments | Files | Shell | MCP Tools | Default Rate Limits           |
-| ------------ | :----------: | :---------: | :---: | :---: | :-------: | ----------------------------- |
-| `sandbox`    |   Approval   |   Approval  | Approval | Approval | Approval | 2 deploys/day, 10 shell/hour  |
-| `staged`     |    Auto      |   Approval  | Auto  | Auto  |    Auto   | 5 deploys/day, 50 shell/hour  |
-| `autonomous` |    Auto      |    Auto     | Auto  | Auto  |    Auto   | 10 deploys/day, 200 shell/hr  |
+| Tier         | Code Changes | Deployments |  Files   |  Shell   | MCP Tools | Default Rate Limits          |
+| ------------ | :----------: | :---------: | :------: | :------: | :-------: | ---------------------------- |
+| `sandbox`    |   Approval   |  Approval   | Approval | Approval | Approval  | 2 deploys/day, 10 shell/hour |
+| `staged`     |     Auto     |  Approval   |   Auto   |   Auto   |   Auto    | 5 deploys/day, 50 shell/hour |
+| `autonomous` |     Auto     |    Auto     |   Auto   |   Auto   |   Auto    | 10 deploys/day, 200 shell/hr |
 
 ### Policy Dimensions
 
@@ -152,8 +152,10 @@ The SafetyEngine evaluates multiple dimensions:
 1. **Tier-based approval**: Core approval requirements per tier
 2. **Resource-level controls**: File path and API endpoint restrictions
 3. **Tool-specific overrides**: Per-tool approval and rate limits
-4. **Time-based windows**: Business hours or weekend restrictions
-5. **Rate limiting**: Hourly and daily usage caps
+4. **Time-based windows**: Business hours or weekend restrictions (timezone-aware via `Intl.DateTimeFormat`)
+5. **Rate limiting**: Hourly and daily usage caps (DynamoDB atomic counters for cross-Lambda persistence)
+
+> **Note**: `SafetyEngine.evaluateAction()` is `async` because rate limit checks use DynamoDB atomic counters. When no `BaseMemoryProvider` is provided, falls back to in-memory counters. All rate limit checks fail-open on DynamoDB errors.
 
 ### Usage
 
@@ -161,12 +163,17 @@ The SafetyEngine evaluates multiple dimensions:
 import { SuperClaw } from './agents/superclaw';
 import { SafetyTier } from './types/agent';
 
-// Check if an action requires approval
-const needsApproval = SuperClaw.requiresApproval(
-  agentConfig,
-  'deployment',
-  { traceId: 'abc123', userId: 'user1' }
-);
+// Check if an action requires approval (async)
+const needsApproval = await SuperClaw.requiresApproval(agentConfig, 'deployment', {
+  traceId: 'abc123',
+  userId: 'user1',
+});
+
+// Get detailed evaluation result (async)
+const result = await SuperClaw.evaluateAction(agentConfig, 'file_operation', {
+  resource: 'src/app.ts',
+  toolName: 'fileWrite',
+});
 
 // Get detailed evaluation result
 const result = SuperClaw.evaluateAction(agentConfig, 'file_operation', {
@@ -212,6 +219,7 @@ The following resources are blocked by default across all tiers:
 ### Violation Logging
 
 All safety violations are logged with:
+
 - Unique violation ID
 - Timestamp
 - Agent ID and safety tier
@@ -221,6 +229,7 @@ All safety violations are logged with:
 - Trace and user ID for correlation
 
 Access violations via:
+
 ```typescript
 const violations = SuperClaw.getSafetyViolations();
 const stats = SuperClaw.getSafetyStats();

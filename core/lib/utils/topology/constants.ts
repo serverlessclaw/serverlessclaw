@@ -23,6 +23,13 @@ export const INFRA_NODE_ID = {
   SCHEDULER: 'scheduler',
   HEARTBEAT: 'heartbeat',
   DEPLOYER: 'deployer',
+  MCP_GIT: 'mcpgitserver',
+  MCP_FILESYSTEM: 'mcpfilesystemserver',
+  MCP_GOOGLE_SEARCH: 'mcpgooglesearchserver',
+  MCP_PUPPETEER: 'mcppuppeteerserver',
+  MCP_FETCH: 'mcpfetchserver',
+  MCP_AWS: 'mcpawsserver',
+  MCP_AWS_S3: 'mcpawss3server',
 } as const;
 
 /** Canonical icon keys for the topology graph. Mapped to UI icons in the dashboard. */

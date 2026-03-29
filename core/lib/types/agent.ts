@@ -360,6 +360,8 @@ export enum EventType {
   HANDOFF = 'handoff',
   /** Critical system-wide health alert (e.g., EventBus down). */
   HEALTH_ALERT = 'health_alert',
+  /** Periodic cognitive health check for agent reasoning quality. */
+  COGNITIVE_HEALTH_CHECK = 'cognitive_health_check',
 }
 
 /**

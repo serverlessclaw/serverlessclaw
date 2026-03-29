@@ -138,6 +138,12 @@ export async function handler(
         break;
       }
 
+      case EventType.COGNITIVE_HEALTH_CHECK: {
+        const { handleCognitiveHealthCheck } = await import('./events/cognitive-health-handler');
+        await handleCognitiveHealthCheck(eventDetail);
+        break;
+      }
+
       default:
         logger.warn(`Unhandled event type: ${detailType}`);
     }
