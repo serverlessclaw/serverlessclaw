@@ -29,7 +29,8 @@ export async function sendOutboundMessage(
     label: string;
     value: string;
     type?: 'primary' | 'secondary' | 'danger';
-  }[]
+  }[],
+  collaborationId?: string
 ): Promise<void> {
   // Normalize userId to base form for memory syncing and event routing
   const baseUserId = extractBaseUserId(userId);
@@ -46,6 +47,7 @@ export async function sendOutboundMessage(
       attachments,
       messageId,
       options,
+      collaborationId,
     },
     { priority: EventPriority.HIGH }
   );

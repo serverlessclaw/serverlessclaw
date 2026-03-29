@@ -22,6 +22,8 @@ interface NotifierEvent {
     }[];
     /** Optional workspace ID for multi-human notification fan-out. */
     workspaceId?: string;
+    /** Optional collaboration ID for multi-human notification fan-out. */
+    collaborationId?: string;
   };
 }
 
@@ -47,6 +49,7 @@ export const handler = async (event: NotifierEvent): Promise<void> => {
     attachments,
     options,
     workspaceId,
+    collaborationId,
   } = payload;
 
   const baseUserId = extractBaseUserId(userId);
@@ -76,13 +79,73 @@ export const handler = async (event: NotifierEvent): Promise<void> => {
   }
 
   // 2. Deliver to channels
-  if (workspaceId) {
+  if (collaborationId) {
+    await sendToCollaboration(collaborationId, message, attachments, options);
+  } else if (workspaceId) {
     await sendToWorkspace(workspaceId, message, attachments, options);
   } else {
     // Legacy single-user path (defaults to Telegram)
     await sendToSingleUser(baseUserId, message, attachments, options);
   }
 };
+
+/**
+ * Fans out a notification to all human participants of a collaboration.
+ */
+async function sendToCollaboration(
+  collaborationId: string,
+  message: string,
+  attachments?: Attachment[],
+  options?: { label: string; value: string }[]
+): Promise<void> {
+  try {
+    const { getCollaboration } = await import('../lib/memory/collaboration-operations');
+    const { getWorkspace, getHumanMembersWithChannels } =
+      await import('../lib/memory/workspace-operations');
+
+    const collaboration = await getCollaboration(memory, collaborationId);
+    if (!collaboration) {
+      logger.warn(`[NOTIFIER] Collaboration not found: ${collaborationId}`);
+      return;
+    }
+
+    const deliveryPromises: Promise<void>[] = [];
+
+    // 1. Get human participants explicitly listed in collaboration
+    const humanParticipants = collaboration.participants.filter((p) => p.type === 'human');
+
+    // 2. If collaboration is in a workspace, get channels from workspace metadata
+    if (collaboration.workspaceId) {
+      const workspace = await getWorkspace(collaboration.workspaceId);
+      if (workspace) {
+        const humanMembers = getHumanMembersWithChannels(workspace);
+        for (const hp of humanParticipants) {
+          const member = humanMembers.find((m) => m.memberId === hp.id);
+          if (member) {
+            for (const channel of member.channels) {
+              if (!channel.enabled) continue;
+              deliveryPromises.push(
+                sendToChannel(channel.platform, channel.identifier, message, attachments, options)
+              );
+            }
+          }
+        }
+      }
+    } else {
+      // 3. Fallback: If not in workspace, we assume human ID is a Telegram ID (legacy/simple)
+      for (const hp of humanParticipants) {
+        const isTelegramChatId = /^\d+$/.test(hp.id);
+        if (isTelegramChatId) {
+          deliveryPromises.push(sendToChannel('telegram', hp.id, message, attachments, options));
+        }
+      }
+    }
+
+    await Promise.allSettled(deliveryPromises);
+  } catch (err) {
+    logger.error(`[NOTIFIER] Collaboration fan-out failed for ${collaborationId}:`, err);
+  }
+}
 
 /**
  * Fans out a notification to all human members of a workspace.

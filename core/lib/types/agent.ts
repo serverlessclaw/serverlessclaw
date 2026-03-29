@@ -126,6 +126,8 @@ export interface OutboundMessageEvent extends BaseEvent {
     /** The visual style or type of the button. */
     type?: import('./llm').ButtonType;
   }[];
+  /** Optional collaboration ID for multi-human notification fan-out. */
+  collaborationId?: string;
 }
 
 /**

@@ -13,6 +13,7 @@
 | `provideClarification`    | Answers a request and resumes the target agent                              |     —      |        ✅        |
 | `triggerDeployment`       | Starts a CodeBuild deploy (circuit-breaker protected, supports Atomic Sync) |     ✅     |        ✅        |
 | `checkHealth`             | Deep cognitive probe of AgentBus, Core Tools, and LLM Providers             |     —      |        ✅        |
+| `runCognitiveHealthCheck` | Runs deep cognitive health check on agents (reasoning, memory, anomalies)   |     —      |        ✅        |
 | `triggerRollback`         | Emergency Git revert + redeploy                                             |     —      |        ✅        |
 | `reportGap`               | Records a capability gap or technical failure                               |     —      |        ✅        |
 | `manageGap`               | Updates gap status (QA Verification)                                        |     —      |        ✅        |

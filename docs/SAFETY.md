@@ -21,6 +21,89 @@
 | **Dashboard Auth**        | `dashboard/src/proxy.ts`                  | Unauthorized access to ClawCenter       |
 | **Recursion Guard**       | `core/handlers/events.ts`                 | Agent-to-agent hop depth > default (50) |
 | **Granular Safety Engine**| `core/lib/safety-engine.ts`               | Multi-dimensional policy enforcement    |
+| **Deep Cognitive Health** | `core/lib/cognitive-metrics.ts`           | Agent reasoning/memory degradation      |
+
+---
+
+## Deep Cognitive Health
+
+The system monitors agent cognitive health through the `CognitiveHealthMonitor` class, which analyzes reasoning quality, memory health, and detects anomalies.
+
+### Architecture
+
+```text
+    [ Dead Man's Switch ] (every 15 min)
+              |
+    +---------+---------+---------+
+    |         |         |         |
+  [API]    [AgentBus] [Tools]  [LLM Provider]
+  /health  ListBuses  ping    latency check
+    |         |         |         |
+    v         v         v         v
+  HEALTH#api  HEALTH#bus  HEALTH#tools  HEALTH#llm
+    |         |         |         |
+    +---------+---------+---------+
+              |
+    [ ALL OK? ] --NO--> [ ALERT + ROLLBACK ]
+```
+
+### Components
+
+| Component | Class | Purpose |
+|-----------|-------|---------|
+| **MetricsCollector** | `MetricsCollector` | Buffers and persists cognitive metrics |
+| **DegradationDetector** | `DegradationDetector` | Detects anomalies from aggregated metrics |
+| **HealthTrendAnalyzer** | `HealthTrendAnalyzer` | Analyzes trends and aggregates metrics |
+| **CognitiveHealthMonitor** | `CognitiveHealthMonitor` | Main orchestrator with health scoring |
+
+### Health Scoring
+
+The overall cognitive health score (0-100) is calculated using:
+
+| Factor | Weight | Description |
+|--------|--------|-------------|
+| Task Completion Rate | 40% | Percentage of successfully completed tasks |
+| Reasoning Coherence | 30% | Quality of agent reasoning (0-10 scale) |
+| Error Rate | 20% | Percentage of failed tasks |
+| Memory Fragmentation | 10% | Memory health (lower is better) |
+
+### Anomaly Detection
+
+The system detects the following anomaly types:
+
+| Anomaly Type | Severity | Trigger |
+|--------------|----------|---------|
+| `TASK_FAILURE_SPIKE` | HIGH/CRITICAL | Completion rate drops below 70% |
+| `REASONING_DEGRADATION` | MEDIUM/CRITICAL | Coherence score drops below 5.0 |
+| `MEMORY_FRAGMENTATION` | MEDIUM/HIGH | Fragmentation exceeds 70% |
+| `TOKEN_OVERUSE` | MEDIUM | Token efficiency below 0.5 tasks/1000 tokens |
+
+### Usage
+
+Run a cognitive health check via the `runCognitiveHealthCheck` tool:
+
+```typescript
+// Basic check
+const result = await runCognitiveHealthCheck.execute({});
+
+// Check specific agents
+const result = await runCognitiveHealthCheck.execute({
+  agentIds: ['coder', 'strategic-planner'],
+});
+
+// Verbose output with full metrics
+const result = await runCognitiveHealthCheck.execute({
+  verbose: true,
+});
+```
+
+### Health Status Indicators
+
+| Score Range | Status | Indicator |
+|-------------|--------|-----------|
+| 80-100 | Optimal | ✅ System cognitive health is optimal |
+| 60-79 | Minor Degradation | ⚠️ Minor degradation detected |
+| 0-59 | Significant Degradation | 🚨 Immediate attention required |
 
 ---
 

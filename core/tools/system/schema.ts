@@ -57,6 +57,27 @@ export const systemSchema: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
   },
+  runCognitiveHealthCheck: {
+    name: 'runCognitiveHealthCheck',
+    description:
+      'Runs a deep cognitive health check on agents, analyzing reasoning quality, memory health, and detecting anomalies.',
+    parameters: {
+      type: 'object',
+      properties: {
+        agentIds: {
+          type: 'array',
+          items: { type: 'string' },
+          description:
+            'Optional list of specific agent IDs to check. If not provided, checks all backbone agents.',
+        },
+        verbose: {
+          type: 'boolean',
+          description: 'Include detailed metrics and anomaly information.',
+        },
+      },
+      additionalProperties: false,
+    },
+  },
 
   // Debug (from debug.ts)
   debugAgent: {

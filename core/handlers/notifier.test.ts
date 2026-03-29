@@ -9,6 +9,10 @@ const { mockGetWorkspace, mockGetHumanMembersWithChannels } = vi.hoisted(() => (
   mockGetHumanMembersWithChannels: vi.fn(),
 }));
 
+const { mockGetCollaboration } = vi.hoisted(() => ({
+  mockGetCollaboration: vi.fn(),
+}));
+
 // Mock sst Resource BEFORE other imports
 vi.mock('sst', () => ({
   Resource: {
@@ -30,6 +34,10 @@ vi.mock('../lib/memory', () => ({
 vi.mock('../lib/memory/workspace-operations', () => ({
   getWorkspace: mockGetWorkspace,
   getHumanMembersWithChannels: mockGetHumanMembersWithChannels,
+}));
+
+vi.mock('../lib/memory/collaboration-operations', () => ({
+  getCollaboration: mockGetCollaboration,
 }));
 
 import { handler } from './notifier';
@@ -172,6 +180,45 @@ describe('Notifier Handler — Multi-Platform', () => {
       const calls = (global.fetch as any).mock.calls;
       expect(calls.some((c: any) => c[0].includes('telegram'))).toBe(true);
       expect(calls.some((c: any) => c[0].includes('discord'))).toBe(true);
+    });
+  });
+
+  describe('Collaboration Fan-out', () => {
+    it('should fan-out to human participants of a collaboration', async () => {
+      mockGetCollaboration.mockResolvedValue({
+        collaborationId: 'collab-123',
+        workspaceId: 'ws-1',
+        participants: [
+          { type: 'human', id: 'human-1', role: 'owner' },
+          { type: 'agent', id: 'coder', role: 'editor' },
+        ],
+      });
+
+      mockGetWorkspace.mockResolvedValue({ workspaceId: 'ws-1' });
+      mockGetHumanMembersWithChannels.mockReturnValue([
+        {
+          memberId: 'human-1',
+          channels: [{ platform: 'telegram', identifier: 'tg-999', enabled: true }],
+        },
+      ]);
+
+      const event = {
+        detail: {
+          userId: 'system',
+          message: 'Collab message',
+          collaborationId: 'collab-123',
+        },
+      } as any;
+
+      await handler(event);
+
+      expect(mockGetCollaboration).toHaveBeenCalled();
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('api.telegram.org/bottg-token/sendMessage'),
+        expect.objectContaining({
+          body: expect.stringContaining('"chat_id":"tg-999"'),
+        })
+      );
     });
   });
 });

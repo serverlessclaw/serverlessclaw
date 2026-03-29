@@ -13,6 +13,7 @@ import { TraceType } from '../../lib/types/constants';
 import { AgentType } from '../../lib/types/agent';
 import { emitTypedEvent } from '../../lib/utils/typed-emit';
 import { logger } from '../../lib/logger';
+import { sendOutboundMessage } from '../../lib/outbound';
 
 /**
  * Creates a new collaboration session.
@@ -111,13 +112,16 @@ export const createCollaboration: ITool = {
       console.warn('Failed to wake up Facilitator Agent:', e);
     }
 
+    const humanCount = collaboration.participants.filter((p) => p.type === 'human').length;
+    const agentCount = collaboration.participants.filter((p) => p.type === 'agent').length;
+
     return JSON.stringify({
       success: true,
       collaborationId: collaboration.collaborationId,
       sessionId: collaboration.sessionId,
       syntheticUserId: collaboration.syntheticUserId,
       participants: collaboration.participants,
-      message: `Collaboration "${collaboration.name}" created. Use collaborationId for shared context. Facilitator invited.`,
+      message: `Collaboration "${collaboration.name}" created with ${humanCount} humans and ${agentCount} agents. Use collaborationId for shared context. Facilitator invited.`,
     });
   },
 };
@@ -232,6 +236,24 @@ export const writeToCollaboration: ITool = {
       content,
       agentName: agentId,
     });
+
+    // Notify human participants via Notifier fan-out (Phase B2)
+    try {
+      await sendOutboundMessage(
+        'collaboration.tool',
+        userId, // Use original userId as context
+        content,
+        [collaboration.syntheticUserId],
+        collaboration.sessionId,
+        agentId,
+        undefined, // attachments
+        undefined, // messageId
+        undefined, // options
+        collaborationId
+      );
+    } catch (e) {
+      logger.warn('[Collaboration] Failed to send outbound notification:', e);
+    }
 
     if (traceId) {
       await addTraceStep(traceId, 'root', {
