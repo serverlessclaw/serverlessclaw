@@ -4,29 +4,44 @@
 
 ## 🛠️ Available Tools
 
-| Tool | Purpose | Protected? | Writes to Cloud? |
-|------|---------|:---:|:---:|
-| `dispatchTask` | Sends a task to EventBridge → Specialized Agent | — | ✅ |
-| `seekClarification` | Pauses current agent and requests directions from initiator | — | ✅ |
-| `provideClarification` | Answers a request and resumes the target agent | — | ✅ |
-| `triggerDeployment` | Starts a CodeBuild deploy (circuit-breaker protected, supports Atomic Sync) | ✅ | ✅ |
-| `checkHealth` | Hits `/health` and rewards successful evolution | — | ✅ |
-| `triggerRollback` | Emergency Git revert + redeploy | — | ✅ |
-| `reportGap` | Records a capability gap or technical failure | — | ✅ |
-| `manageGap` | Updates gap status (QA Verification) | — | ✅ |
-| `recallKnowledge` | JIT retrieval of distilled facts/lessons | — | — |
-| `listAgents` | Discovers available specialized agents | — | — |
-| `discoverSkills` | Searches MCP marketplace for new capabilities | — | — |
-| `registerMCPServer` | Dynamically connects a new MCP bridge | — | ✅ |
-| `unregisterMCPServer` | Removes an MCP connection | — | ✅ |
-| `installSkill` | Adds a tool to an agent's roster | — | ✅ |
-| `uninstallSkill` | Removes a tool from an agent's roster | — | ✅ |
-| `mcp-filesystem-*` | MCP-driven file operations (read/write/list/search) | ✅ | — |
-| `git-status` / `git-diff` | Version control awareness (MCP) | — | — |
-| `google-search` | Real-time global intelligence (MCP) | — | — |
-| `puppeteer-*` | Browser automation & UI vision (MCP) | ✅ | — |
-| `fetch` | Deep reading of docs/web pages (MCP) | — | — |
-| `aws-*` | Infrastructure auditing & logs (MCP) | ✅ | — |
+| Tool                      | Purpose                                                                     | Protected? | Writes to Cloud? |
+| ------------------------- | --------------------------------------------------------------------------- | :--------: | :--------------: |
+| `dispatchTask`            | Sends a task to EventBridge → Specialized Agent                             |     —      |        ✅        |
+| `seekClarification`       | Pauses current agent and requests directions from initiator                 |     —      |        ✅        |
+| `provideClarification`    | Answers a request and resumes the target agent                              |     —      |        ✅        |
+| `triggerDeployment`       | Starts a CodeBuild deploy (circuit-breaker protected, supports Atomic Sync) |     ✅     |        ✅        |
+| `checkHealth`             | Hits `/health` and rewards successful evolution                             |     —      |        ✅        |
+| `triggerRollback`         | Emergency Git revert + redeploy                                             |     —      |        ✅        |
+| `reportGap`               | Records a capability gap or technical failure                               |     —      |        ✅        |
+| `manageGap`               | Updates gap status (QA Verification)                                        |     —      |        ✅        |
+| `recallKnowledge`         | JIT retrieval of distilled facts/lessons                                    |     —      |        —         |
+| `listAgents`              | Discovers available specialized agents                                      |     —      |        —         |
+| `discoverSkills`          | Searches MCP marketplace for new capabilities                               |     —      |        —         |
+| `registerMCPServer`       | Dynamically connects a new MCP bridge                                       |     —      |        ✅        |
+| `unregisterMCPServer`     | Removes an MCP connection                                                   |     —      |        ✅        |
+| `installSkill`            | Adds a tool to an agent's roster                                            |     —      |        ✅        |
+| `uninstallSkill`          | Removes a tool from an agent's roster                                       |     —      |        ✅        |
+| `discoverPeers`           | Discovers peer agents in the swarm (filter by capability/category)          |     —      |        —         |
+| `registerPeer`            | Registers a bidirectional peer connection in swarm topology                 |     —      |        ✅        |
+| `requestConsensus`        | Requests swarm consensus (majority/unanimous/weighted modes)                |     —      |        ✅        |
+| `createWorkspace`         | Creates a new multi-human multi-agent workspace                             |     —      |        ✅        |
+| `inviteMember`            | Invites a human or agent to a workspace (admin/owner only)                  |     —      |        ✅        |
+| `updateMemberRole`        | Updates a member's role within a workspace                                  |     —      |        ✅        |
+| `removeMember`            | Removes a member from a workspace (cannot remove owner)                     |     —      |        ✅        |
+| `getWorkspace`            | Retrieves workspace details including all members                           |     —      |        —         |
+| `listWorkspaces`          | Lists all workspace IDs in the system                                       |     —      |        —         |
+| `createCollaboration`     | Creates a multi-party collaboration session (supports workspaceId)          |     —      |        ✅        |
+| `joinCollaboration`       | Joins an existing collaboration to access shared context                    |     —      |        ✅        |
+| `getCollaborationContext` | Gets shared session conversation history                                    |     —      |        —         |
+| `writeToCollaboration`    | Writes a message to the shared collaboration session                        |     —      |        ✅        |
+| `closeCollaboration`      | Closes a collaboration session                                              |     —      |        ✅        |
+| `listMyCollaborations`    | Lists all collaborations for the current agent                              |     —      |        —         |
+| `mcp-filesystem-*`        | MCP-driven file operations (read/write/list/search)                         |     ✅     |        —         |
+| `git-status` / `git-diff` | Version control awareness (MCP)                                             |     —      |        —         |
+| `google-search`           | Real-time global intelligence (MCP)                                         |     —      |        —         |
+| `puppeteer-*`             | Browser automation & UI vision (MCP)                                        |     ✅     |        —         |
+| `fetch`                   | Deep reading of docs/web pages (MCP)                                        |     —      |        —         |
+| `aws-*`                   | Infrastructure auditing & logs (MCP)                                        |     ✅     |        —         |
 
 ---
 
@@ -35,11 +50,13 @@
 We have evolved from a static tool registry to a **dynamic Skill-Based Architecture**. This solves the "Context Window Bloat" problem where agents were overwhelmed by too many tool definitions.
 
 ### How it works:
+
 1. **Minimal Default Toolset**: Agents start with a core set of "Essential Skills" (`recallKnowledge`, `discoverSkills`, `dispatchTask`).
 2. **Just-in-Time Discovery**: If an agent needs a capability they don't have, they use `discoverSkills` to search the marketplace.
 3. **Dynamic Installation**: They can then use `installSkill` to temporarily or permanently add that capability to their logic core.
 
 ### Adding a New Skill
+
 1. Implement the tool in `core/tools/`.
 2. Add the definition to `core/tools/definitions.ts`.
 3. It is now automatically discoverable by all agents via `discoverSkills`.
@@ -56,7 +73,9 @@ We have evolved from a static tool registry to a **dynamic Skill-Based Architect
 6. Update `src/lib/tools.test.ts` to include the new tool name.
 
 ### Dynamic Scoping (Evolution Sector)
+
 Agents no longer receive all tools by default. They call `getAgentTools(agentId)` which:
+
 1. Checks the `AgentRegistry` (Backbone + DynamoDB overrides).
 2. Returns a subset of tools assigned to that specific agent.
 3. Users can grant/revoke tools for any agent in the **ClawCenter** dashboard under the **Evolution** sector (`/capabilities`).
@@ -151,6 +170,7 @@ To prevent "Context Window Bloat" and maintain high reasoning performance, Serve
 7. **MCP Server Pruning**: The **ClawCenter Dashboard** provides usage analytics for MCP servers, allowing humans or the SuperClaw to `unregisterMCPServer` if it's no longer providing value to the system.
 
 ### Performance Impact
+
 - **Context Reduction**: Up to 70% reduction in system prompt size.
 - **Reasoning Accuracy**: Significant reduction in "Tool Confusion" (LLM picking the wrong tool) by limiting choices.
 - **Cost Efficiency**: Lower input token costs due to smaller tool definitions.
@@ -178,6 +198,7 @@ To ensure tools are always available even in unstable network conditions or Lamb
 ```
 
 ### Reliability Guardrails:
+
 1. **Physical Resource Headroom**: Agents running MCP tools require `LARGE` (2048MB) memory to avoid OOM crashes during `npx` installations.
 2. **Persistence Safeguards**: Any "Connection Interrupted" message is preserved in the UI even during background session refreshes.
 3. **Environment Hardening**: Writable cache paths in `/tmp` prevent `npm` from crashing when attempting to write to the read-only Lambda home directory.
