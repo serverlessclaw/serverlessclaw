@@ -4,6 +4,8 @@ import { emitEvent } from '../../lib/utils/bus';
 import { UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { getDocClient } from '../../lib/utils/ddb-client';
 import { Resource } from 'sst';
+import { getReputation, computeReputationScore } from '../../lib/memory/reputation-operations';
+import { BaseMemoryProvider } from '../../lib/memory/base';
 
 interface ConsensusRequestDetail {
   requestId: string;
@@ -67,13 +69,31 @@ export async function handleConsensus(
 
       logger.info(`[Consensus] Vote from ${voterId} for ${requestId}: ${vote ? 'YES' : 'NO'}`);
 
+      // Lookup reputation for weighted voting
+      let weight = 1.0;
+      try {
+        const memBase = new BaseMemoryProvider();
+        const reputation = await getReputation(memBase, voterId);
+        if (reputation) {
+          weight = computeReputationScore(reputation);
+          logger.info(`[Consensus] Computed weight for ${voterId}: ${weight.toFixed(3)}`);
+        } else {
+          logger.info(`[Consensus] No reputation for ${voterId}, using default weight 1.0`);
+        }
+      } catch (err) {
+        logger.warn(
+          `[Consensus] Failed to lookup reputation for ${voterId}, defaulting to 1.0`,
+          err
+        );
+      }
+
       const response = await docClient.send(
         new UpdateCommand({
           TableName: tableName,
           Key: { userId: `CONSENSUS#${requestId}`, timestamp: 0 },
           UpdateExpression: 'SET votes = list_append(if_not_exists(votes, :empty_list), :vote)',
           ExpressionAttributeValues: {
-            ':vote': [{ voterId, vote, reasoning, timestamp: Date.now() }],
+            ':vote': [{ voterId, vote, reasoning, timestamp: Date.now(), weight }],
             ':empty_list': [],
           },
           ReturnValues: 'ALL_NEW',

@@ -429,6 +429,18 @@ export const TOOLS = {
   getWorkspace: 'getWorkspace',
   /** Lists all workspace IDs. */
   listWorkspaces: 'listWorkspaces',
+  /** Creates a new collaboration session. */
+  createCollaboration: 'createCollaboration',
+  /** Joins an existing collaboration. */
+  joinCollaboration: 'joinCollaboration',
+  /** Gets the shared session context for a collaboration. */
+  getCollaborationContext: 'getCollaborationContext',
+  /** Writes a message to the shared collaboration session. */
+  writeToCollaboration: 'writeToCollaboration',
+  /** Closes a collaboration session. */
+  closeCollaboration: 'closeCollaboration',
+  /** Lists collaborations for the current agent. */
+  listMyCollaborations: 'listMyCollaborations',
 } as const;
 
 /**

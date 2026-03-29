@@ -109,7 +109,7 @@ describe('ReputationOperations', () => {
   });
 
   describe('computeReputationScore', () => {
-    it('should compute a score between 0 and 1', () => {
+    it('should compute a high score for perfect performance', () => {
       const reputation = {
         agentId: 'agent-1',
         tasksCompleted: 10,
@@ -122,8 +122,55 @@ describe('ReputationOperations', () => {
         expiresAt: 0,
       };
       const score = computeReputationScore(reputation);
-      expect(score).toBeGreaterThan(0.8);
-      expect(score).toBeLessThanOrEqual(1.0);
+      expect(score).toBeGreaterThan(0.9);
+    });
+
+    it('should penalize failed tasks heavily (60% weight)', () => {
+      const badRep = {
+        agentId: 'agent-bad',
+        tasksCompleted: 0,
+        tasksFailed: 10,
+        totalLatencyMs: 0,
+        successRate: 0.0,
+        avgLatencyMs: 0,
+        lastActive: Date.now(),
+        windowStart: Date.now() - 3600000,
+        expiresAt: 0,
+      };
+      const score = computeReputationScore(badRep);
+      expect(score).toBeLessThanOrEqual(0.4); // Latency and recency might still provide some score
+    });
+
+    it('should penalize high latency (25% weight)', () => {
+      const slowRep = {
+        agentId: 'agent-slow',
+        tasksCompleted: 10,
+        tasksFailed: 0,
+        totalLatencyMs: 200000, // 20s avg
+        successRate: 1.0,
+        avgLatencyMs: 20000,
+        lastActive: Date.now(),
+        windowStart: Date.now() - 3600000,
+        expiresAt: 0,
+      };
+      const score = computeReputationScore(slowRep);
+      expect(score).toBeLessThan(0.8); // Perfect success but very slow
+    });
+
+    it('should penalize inactivity (15% weight)', () => {
+      const oldRep = {
+        agentId: 'agent-old',
+        tasksCompleted: 10,
+        tasksFailed: 0,
+        totalLatencyMs: 10000,
+        successRate: 1.0,
+        avgLatencyMs: 1000,
+        lastActive: Date.now() - 48 * 3600000, // 2 days ago
+        windowStart: Date.now() - 3 * 86400000,
+        expiresAt: 0,
+      };
+      const score = computeReputationScore(oldRep);
+      expect(score).toBeLessThan(0.9); // Perfect but stale
     });
   });
 });

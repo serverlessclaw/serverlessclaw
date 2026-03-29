@@ -634,7 +634,7 @@ export class CognitiveHealthMonitor {
       (1 - avgErrorRate) * 20 + // 20% weight on low error rate
       (1 - memory.fragmentationScore) * 10; // 10% weight on memory health
 
-    return Math.round(score * 100);
+    return Math.round(score);
   }
 
   /**
