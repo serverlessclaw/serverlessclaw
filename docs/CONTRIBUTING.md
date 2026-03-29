@@ -8,6 +8,7 @@
 2. **Iterate on Main**: Adopt Trunk-Based Evolution. Use `dev` stage for iteration and `prod` for stable releases.
 3. **No broken state**: `validateCode` must pass before any `triggerDeployment`.
 4. **Protected files require human approval**: Do not attempt to bypass `PERMISSION_DENIED`.
+5. **Docs + Diagrams are NOT optional**: Every code change that affects system behavior MUST update the corresponding spoke document and ASCII diagram in the same commit.
 
 ---
 
@@ -35,6 +36,49 @@ Husky triggers `make pre-push` before every push. This runs full quality checks 
 
 ---
 
+## Mandatory Checklist (Human + Agent)
+
+Before committing ANY code change, verify:
+
+### Testing
+
+- [ ] New `*.test.ts` file created for new modules (co-located)
+- [ ] Existing `*.test.ts` updated for modified behavior
+- [ ] `core/tests/contract.test.ts` updated if new event types added
+- [ ] `make test` passes
+
+### Documentation
+
+- [ ] Relevant spoke updated (see table below)
+- [ ] ASCII diagram updated for system-level changes
+- [ ] Tool/Agent tables updated if applicable
+
+### Quality
+
+- [ ] `make check` passes (lint + format + typecheck)
+- [ ] No new `eslint-disable` or `@ts-ignore` without justification
+
+---
+
+## Self-Documentation Rule
+
+> If you change code in a source directory, you MUST update the corresponding spoke document.
+
+| Changed File               | Update This Spoke | Diagram Required? |
+| -------------------------- | ----------------- | :---------------: |
+| `core/agents/`             | `docs/AGENTS.md`  |        Yes        |
+| `core/tools/`              | `docs/TOOLS.md`   |        Yes        |
+| `core/handlers/events.ts`  | `ARCHITECTURE.md` |        Yes        |
+| `core/handlers/monitor.ts` | `ARCHITECTURE.md` |        Yes        |
+| `core/lib/types/`          | `ARCHITECTURE.md` |   If structural   |
+| `core/lib/memory/`         | `docs/MEMORY.md`  |        Yes        |
+| `core/lib/providers/`      | `docs/LLM.md`     |        No         |
+| `infra/`                   | `ARCHITECTURE.md` |        Yes        |
+| `makefiles/`               | `docs/DEVOPS.md`  |        No         |
+| `sst.config.ts`            | `ARCHITECTURE.md` |        Yes        |
+
+---
+
 ## Documentation Standard
 
 All docs follow this front-matter convention (for agent progressive loading):
@@ -44,22 +88,41 @@ All docs follow this front-matter convention (for agent progressive loading):
 ```
 
 Every spoke must:
+
 - Open with the above callout describing **when to load it**.
 - Use a table for structured reference data (the agent's first scan).
-- Use diagrams for flows.
+- Use diagrams for flows (always ` ```text ` fenced code blocks).
 - End with an **"Adding a new X"** section so the Coder Agent knows how to extend.
+
+---
+
+## ASCII Diagram Styles
+
+Use the correct style for each context:
+
+| Style                  | Use Case                  | Example                           |
+| ---------------------- | ------------------------- | --------------------------------- |
+| **Box-and-arrow**      | Architecture components   | `+---+` with `\|` and `+-->`      |
+| **Sequence/timing**    | Event flows, interactions | Columns with `\|` and `+---`      |
+| **Tree/hierarchy**     | Sequential steps          | `[Component]` with numbered steps |
+| **Circular lifecycle** | Feedback loops            | `[STAGE] <---+`                   |
+
+All diagrams must use ` ```text ` fenced code blocks.
 
 ---
 
 ## Commit Message Format
 
 ```
-type: short description
+feat(<scope>): <short description>
 
-- Detailed bullet (optional)
+- What changed
+- Tests added: <file list>
+- Docs updated: <file list>
 ```
 
 Types: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`
+Scopes: `swarm`, `collab`, `evolution`, `tools`, `agents`, `memory`, `infra`, `dashboard`
 
 ---
 
@@ -67,18 +130,27 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`
 
 ```
 serverlessclaw/
-├── INDEX.md          ← Hub (start here)
-├── README.md         ← Public-facing overview
-├── ARCHITECTURE.md   ← System topology
+├── INDEX.md          <- Hub (start here)
+├── AGENTS.md         <- Agent entry point + mandatory checklist
+├── README.md         <- Public-facing overview
+├── ARCHITECTURE.md   <- System topology + ASCII diagrams
 ├── docs/
-│   ├── AGENTS.md     ← Agent roster & orchestration
-│   ├── TOOLS.md      ← Tool registry & lifecycle
-│   ├── SAFETY.md     ← All guardrails
-│   ├── RESEARCH.md   ← Design decisions
-│   ├── ROADMAP.md    ← Future plans
-│   └── CONTRIBUTING.md ← This file
-├── core/             ← TypeScript logic & handlers
-├── infra/            ← SST infrastructure code
-├── makefiles/        ← Modular DevOps spokes
-└── sst.config.ts     ← Infrastructure definition
+│   ├── AGENTS.md     <- Agent roster & orchestration flows
+│   ├── TOOLS.md      <- Tool registry & lifecycle
+│   ├── SAFETY.md     <- All guardrails
+│   ├── MEMORY.md     <- Tiered memory system
+│   ├── LLM.md        <- Provider details
+│   ├── DEVOPS.md     <- Quality checks & deployment
+│   ├── CONTRIBUTING.md <- This file
+│   ├── ROADMAP.md    <- Future plans
+│   └── RESEARCH.md   <- Design decisions
+├── core/             <- TypeScript logic & handlers
+│   ├── agents/       <- Agent implementations
+│   ├── handlers/     <- Lambda handlers
+│   ├── lib/          <- Core libraries (types, memory, providers)
+│   ├── tools/        <- Tool implementations
+│   └── tests/        <- Integration + contract tests
+├── infra/            <- SST infrastructure code
+├── makefiles/        <- Modular DevOps spokes
+└── sst.config.ts     <- Infrastructure definition
 ```
