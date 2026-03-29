@@ -7,8 +7,9 @@ import {
   QueryCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { DynamoMemory } from '../memory';
-import { GapStatus } from '../types/agent';
+import { GapStatus, EvolutionTrack } from '../types/agent';
 import { InsightCategory } from '../types/memory';
+import { assignGapToTrack, getGapTrack, determineTrack } from './gap-operations';
 
 vi.mock('../registry', () => ({
   AgentRegistry: {
@@ -173,6 +174,90 @@ describe('Gap Operations', () => {
 
       const count = await memory.incrementGapAttemptCount('GAP#NONEXISTENT');
       expect(count).toBe(1);
+    });
+  });
+});
+
+describe('Gap-Track Assignment', () => {
+  let base: DynamoMemory;
+
+  beforeEach(() => {
+    ddbMock.reset();
+    vi.clearAllMocks();
+    base = new DynamoMemory();
+  });
+
+  describe('assignGapToTrack', () => {
+    it('should store track assignment in DynamoDB', async () => {
+      ddbMock.on(PutCommand).resolves({});
+
+      await assignGapToTrack(base, 'gap-42', EvolutionTrack.SECURITY);
+
+      const putCalls = ddbMock.commandCalls(PutCommand);
+      expect(putCalls).toHaveLength(1);
+      const item = putCalls[0].args[0].input.Item;
+      expect(item?.userId).toBe('TRACK#gap-42');
+      expect(item?.track).toBe('security');
+      expect(item?.type).toBe('TRACK_ASSIGNMENT');
+    });
+
+    it('should use custom priority when provided', async () => {
+      ddbMock.on(PutCommand).resolves({});
+
+      await assignGapToTrack(base, 'gap-1', EvolutionTrack.PERFORMANCE, 1);
+
+      const item = ddbMock.commandCalls(PutCommand)[0].args[0].input.Item;
+      expect(item?.priority).toBe(1);
+    });
+  });
+
+  describe('getGapTrack', () => {
+    it('should return track assignment', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [{ userId: 'TRACK#gap-42', timestamp: 0, track: 'security', priority: 1 }],
+      });
+
+      const result = await getGapTrack(base, 'gap-42');
+      expect(result?.track).toBe('security');
+      expect(result?.priority).toBe(1);
+    });
+
+    it('should return null when no assignment exists', async () => {
+      ddbMock.on(QueryCommand).resolves({ Items: [] });
+
+      const result = await getGapTrack(base, 'gap-missing');
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('determineTrack', () => {
+    it('should detect security track', () => {
+      expect(determineTrack('Fix auth vulnerability in login flow')).toBe(EvolutionTrack.SECURITY);
+      expect(determineTrack('Patch injection vulnerability')).toBe(EvolutionTrack.SECURITY);
+    });
+
+    it('should detect performance track', () => {
+      expect(determineTrack('Optimize latency of database queries')).toBe(
+        EvolutionTrack.PERFORMANCE
+      );
+      expect(determineTrack('Add caching layer for slow API')).toBe(EvolutionTrack.PERFORMANCE);
+    });
+
+    it('should detect infrastructure track', () => {
+      expect(determineTrack('Update Lambda deployment config')).toBe(EvolutionTrack.INFRASTRUCTURE);
+      expect(determineTrack('Fix SST build pipeline')).toBe(EvolutionTrack.INFRASTRUCTURE);
+    });
+
+    it('should detect refactoring track', () => {
+      expect(determineTrack('Refactor duplicate code in handlers')).toBe(
+        EvolutionTrack.REFACTORING
+      );
+      expect(determineTrack('Consolidate cleanup logic')).toBe(EvolutionTrack.REFACTORING);
+    });
+
+    it('should default to feature track', () => {
+      expect(determineTrack('Add new user dashboard widget')).toBe(EvolutionTrack.FEATURE);
+      expect(determineTrack('Implement chat export functionality')).toBe(EvolutionTrack.FEATURE);
     });
   });
 });

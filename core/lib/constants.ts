@@ -160,6 +160,8 @@ export const MEMORY_KEYS = {
   WORKSPACE_PREFIX: 'WORKSPACE#',
   /** Prefix for cognitive health records. */
   HEALTH_PREFIX: 'HEALTH#',
+  /** Prefix for gap-to-track assignments (multi-track evolution). */
+  TRACK_PREFIX: 'TRACK#',
 } as const;
 
 /**

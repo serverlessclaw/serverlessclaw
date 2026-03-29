@@ -6,7 +6,6 @@ Serverless Claw is a **self-evolving system** that identifies its own weaknesses
 
 ## The Evolution Loop
 
-
 ```text
 +--------------+       +------------------+       +-------------------+
 |  Coder Agent |------>|  Staging Bucket  |<------|   AWS CodeBuild   |
@@ -107,7 +106,6 @@ ARCHIVED (auto-archived after 30 days)
 
 **Retry Logic:** If a deployed change fails QA or the build fails, the gap is moved back to `OPEN` and the `Coder Agent` is immediately dispatched to fix it. If it fails 3 times, it escalates to `FAILED`.
 
-
 ## 🔄 Autonomous Expansion (The Discovery Loop)
 
 Serverless Claw agents are capable of self-provisioning new tools when they encounter a `strategic_gap` that requires external capabilities.
@@ -203,3 +201,53 @@ Serverless Claw is a **proactive self-evolving system** that identifies its own 
 7.  **Verified Satisfaction**: The **QA Auditor** verifies the fix. If successful, the Reflector marks it `DONE`.
 
 ---
+
+## Multi-Track Evolution
+
+Gaps are automatically assigned to evolution tracks based on keyword analysis of the plan content. Each track runs in parallel via `PARALLEL_TASK_DISPATCH`.
+
+### Tracks
+
+| Track            | Keywords                                            | Priority    | Use Case                            |
+| ---------------- | --------------------------------------------------- | ----------- | ----------------------------------- |
+| `security`       | auth, injection, vulnerability, permission, encrypt | 1 (highest) | Security patches, auth improvements |
+| `performance`    | latency, cache, memory, optimize, slow, timeout     | 2           | Optimization, caching, throughput   |
+| `feature`        | (default)                                           | 3           | New capabilities, UX improvements   |
+| `infrastructure` | deploy, lambda, sst, pipeline, ci/cd, buildspec     | 4           | DevOps, monitoring, scaling         |
+| `refactoring`    | refactor, cleanup, debt, rename, consolidate        | 5           | Tech debt, code organization        |
+
+### Track Assignment Flow
+
+```text
+    [ Strategic Planner ]
+              |
+    (1) determineTrack(plan) --> [ Keyword Matching ]
+              |
+    +---------+---------+
+    |                   |
+  [Track: Security]   [Track: Performance]
+  priority: 1         priority: 2
+    |                   |
+    +---- gaps ----+    +---- gaps ----+
+    |              |    |              |
+  [Gap#1]       [Gap#2] [Gap#3]    [Gap#4]
+    |              |    |              |
+    v              v    v              v
+  [PARALLEL_TASK_DISPATCH per track]
+```
+
+### Memory Schema
+
+Track assignments are stored as `TRACK#<gapId>` in DynamoDB:
+
+```typescript
+{
+  userId: 'TRACK#gap-123',
+  timestamp: 0,
+  type: 'TRACK_ASSIGNMENT',
+  gapId: 'gap-123',
+  track: 'security',
+  priority: 1,
+  assignedAt: 1711668000000,
+}
+```

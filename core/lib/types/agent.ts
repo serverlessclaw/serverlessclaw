@@ -371,6 +371,37 @@ export enum EvolutionMode {
 }
 
 /**
+ * Evolution tracks for parallel multi-track evolution.
+ * Each track focuses on a different aspect of system improvement.
+ */
+export enum EvolutionTrack {
+  SECURITY = 'security',
+  PERFORMANCE = 'performance',
+  FEATURE = 'feature',
+  INFRASTRUCTURE = 'infrastructure',
+  REFACTORING = 'refactoring',
+}
+
+/** Track configuration for parallel evolution. */
+export interface TrackConfig {
+  track: EvolutionTrack;
+  /** Maximum concurrent gaps in this track. */
+  maxConcurrentGaps: number;
+  /** Dispatch priority (lower = higher priority). */
+  priority: number;
+  /** Whether this track is active. */
+  enabled: boolean;
+}
+
+/** Gap-to-track assignment metadata. */
+export interface GapTrackAssignment {
+  gapId: string;
+  track: EvolutionTrack;
+  assignedAt: number;
+  priority: number;
+}
+
+/**
  * Lifecycle stages for identified capability gaps.
  */
 export enum GapStatus {

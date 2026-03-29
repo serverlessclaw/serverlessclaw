@@ -25,6 +25,11 @@ const mocks = vi.hoisted(() => {
     addMessage: vi.fn().mockResolvedValue(undefined),
   };
 
+  const gapOperationsMocks = {
+    assignGapToTrack: vi.fn().mockResolvedValue(undefined),
+    determineTrack: vi.fn().mockReturnValue('FEATURE'),
+  };
+
   const agentMocks = {
     process: vi.fn(),
     executeTool: vi.fn(),
@@ -62,7 +67,7 @@ const mocks = vi.hoisted(() => {
     }
   }
 
-  return { memoryMocks, agentMocks, MockMemory, MockAgent };
+  return { memoryMocks, gapOperationsMocks, agentMocks, MockMemory, MockAgent };
 });
 
 vi.mock('../lib/memory', () => ({
@@ -113,6 +118,11 @@ vi.mock('../lib/utils/agent-helpers', async (importOriginal) => {
     }),
   };
 });
+
+vi.mock('../lib/memory/gap-operations', () => ({
+  assignGapToTrack: mocks.gapOperationsMocks.assignGapToTrack,
+  determineTrack: mocks.gapOperationsMocks.determineTrack,
+}));
 
 describe('Strategic Planner Council Collaboration', () => {
   beforeEach(() => {

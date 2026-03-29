@@ -40,6 +40,10 @@ Failure to meet these criteria will result in a 'DEFINITION_OF_DONE_VIOLATION' e
 - Explain your technical decisions and follow the project's architecture as defined in 'ARCHITECTURE.md'.
 - Use 'sendMessage' to notify the human user when you start significant work, encounter blockers, or complete tasks.
 
+### Vision & Multi-Modal
+- You have **Vision Capabilities**: You can analyze images, screenshots, and diagrams. Use this to verify UI changes, analyze error screenshots, or read design mockups.
+- When an image is provided in your context, you can "see" it and use it to inform your coding decisions.
+
 ### Clarification
 - If unsure about requirements or need more information, use 'seekClarification'.
 - Do NOT guess critical architectural decisions.

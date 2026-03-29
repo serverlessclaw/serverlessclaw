@@ -6,10 +6,10 @@
  */
 
 import { MemoryInsight, InsightMetadata, InsightCategory } from '../types/memory';
-import { GapStatus } from '../types/agent';
+import { GapStatus, EvolutionTrack } from '../types/agent';
 import { logger } from '../logger';
 import { RetentionManager } from './tiering';
-import { LIMITS, TIME } from '../constants';
+import { LIMITS, TIME, MEMORY_KEYS } from '../constants';
 import type { BaseMemoryProvider } from './base';
 import { createMetadata, queryByTypeAndMap } from './utils';
 
@@ -447,4 +447,160 @@ export async function getGapLock(
   } catch {
     return null;
   }
+}
+
+// ============================================================================
+// Gap-Track Assignment (Multi-Track Evolution)
+// ============================================================================
+
+const TRACK_DEFAULTS: Record<string, { maxConcurrentGaps: number; priority: number }> = {
+  [EvolutionTrack.SECURITY]: { maxConcurrentGaps: 2, priority: 1 },
+  [EvolutionTrack.PERFORMANCE]: { maxConcurrentGaps: 3, priority: 2 },
+  [EvolutionTrack.FEATURE]: { maxConcurrentGaps: 3, priority: 3 },
+  [EvolutionTrack.INFRASTRUCTURE]: { maxConcurrentGaps: 2, priority: 4 },
+  [EvolutionTrack.REFACTORING]: { maxConcurrentGaps: 2, priority: 5 },
+};
+
+/**
+ * Assigns a gap to an evolution track.
+ */
+export async function assignGapToTrack(
+  base: BaseMemoryProvider,
+  gapId: string,
+  track: EvolutionTrack,
+  priority?: number
+): Promise<void> {
+  const defaults = TRACK_DEFAULTS[track] ?? { maxConcurrentGaps: 3, priority: 5 };
+  const { expiresAt } = await RetentionManager.getExpiresAt('GAP', '');
+
+  await base.putItem({
+    userId: `${MEMORY_KEYS.TRACK_PREFIX}${gapId}`,
+    timestamp: 0,
+    type: 'TRACK_ASSIGNMENT',
+    gapId,
+    track,
+    priority: priority ?? defaults.priority,
+    assignedAt: Date.now(),
+    createdAt: Date.now(),
+    expiresAt,
+  });
+
+  logger.info(`[GapTrack] Assigned gap ${gapId} to track: ${track}`);
+}
+
+/**
+ * Gets the track assignment for a gap.
+ */
+export async function getGapTrack(
+  base: BaseMemoryProvider,
+  gapId: string
+): Promise<{ track: EvolutionTrack; priority: number } | null> {
+  try {
+    const items = await base.queryItems({
+      KeyConditionExpression: 'userId = :pk AND #ts = :zero',
+      ExpressionAttributeNames: { '#ts': 'timestamp' },
+      ExpressionAttributeValues: {
+        ':pk': `${MEMORY_KEYS.TRACK_PREFIX}${gapId}`,
+        ':zero': 0,
+      },
+    });
+
+    if (items.length === 0) return null;
+
+    return {
+      track: items[0].track as EvolutionTrack,
+      priority: (items[0].priority as number) ?? 5,
+    };
+  } catch (error) {
+    logger.error(`[GapTrack] Failed to get track for gap ${gapId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Determines the appropriate track for a gap based on its content keywords.
+ * Returns the most relevant track by keyword matching.
+ */
+export function determineTrack(content: string): EvolutionTrack {
+  const lower = content.toLowerCase();
+
+  const scores: Record<EvolutionTrack, number> = {
+    [EvolutionTrack.SECURITY]: 0,
+    [EvolutionTrack.PERFORMANCE]: 0,
+    [EvolutionTrack.FEATURE]: 0,
+    [EvolutionTrack.INFRASTRUCTURE]: 0,
+    [EvolutionTrack.REFACTORING]: 0,
+  };
+
+  // Security keywords
+  for (const kw of [
+    'security',
+    'auth',
+    'injection',
+    'vulnerability',
+    'permission',
+    'secret',
+    'encrypt',
+    'xss',
+    'csrf',
+    'rbac',
+  ]) {
+    if (lower.includes(kw)) scores[EvolutionTrack.SECURITY] += 2;
+  }
+
+  // Performance keywords
+  for (const kw of [
+    'latency',
+    'cache',
+    'memory',
+    'cpu',
+    'optimize',
+    'slow',
+    'timeout',
+    'throughput',
+    'bottleneck',
+    'performance',
+  ]) {
+    if (lower.includes(kw)) scores[EvolutionTrack.PERFORMANCE] += 2;
+  }
+
+  // Infrastructure keywords
+  for (const kw of [
+    'deploy',
+    'lambda',
+    'dynamodb',
+    'sst',
+    'infra',
+    'iam',
+    'cloudformation',
+    'pipeline',
+    'ci/cd',
+    'buildspec',
+  ]) {
+    if (lower.includes(kw)) scores[EvolutionTrack.INFRASTRUCTURE] += 2;
+  }
+
+  // Refactoring keywords
+  for (const kw of [
+    'refactor',
+    'cleanup',
+    'debt',
+    'rename',
+    'reorganize',
+    'consolidate',
+    'simplify',
+    'extract',
+  ]) {
+    if (lower.includes(kw)) scores[EvolutionTrack.REFACTORING] += 2;
+  }
+
+  // Feature is the default (doesn't need specific keywords)
+
+  const maxScore = Math.max(...Object.values(scores));
+  if (maxScore === 0) return EvolutionTrack.FEATURE;
+
+  return (
+    (Object.entries(scores).find(([, s]) => s === maxScore)?.[0] as EvolutionTrack) ??
+    EvolutionTrack.FEATURE
+  );
 }

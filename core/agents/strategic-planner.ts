@@ -413,19 +413,24 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
     await recordCooldown(memory, gapId, baseUserId);
   }
 
-  // 5. Gap Sink: Mark covered gaps as PLANNED
+  // 5. Gap Sink: Mark covered gaps as PLANNED + assign to tracks
   const processedGapIds: string[] = [];
   if (!isFailure) {
     if (isScheduledReview || coveredGapIds.length > 0) {
       logger.info(`Marking ${coveredGapIds.length} gaps as PLANNED based on structured output.`);
+      const { assignGapToTrack, determineTrack } = await import('../lib/memory/gap-operations');
       for (const gId of coveredGapIds) {
         const numericId = gId.replace('GAP#', '');
         await memory.updateGapStatus(numericId, GapStatus.PLANNED);
+        // Assign to evolution track based on plan content
+        await assignGapToTrack(memory as never, numericId, determineTrack(plan));
         processedGapIds.push(numericId);
       }
     } else if (gapId) {
       logger.info(`Marking specific gap ${gapId} as PLANNED after design.`);
       await memory.updateGapStatus(gapId, GapStatus.PLANNED);
+      const { assignGapToTrack, determineTrack } = await import('../lib/memory/gap-operations');
+      await assignGapToTrack(memory as never, gapId, determineTrack(plan));
       processedGapIds.push(gapId);
     }
   }

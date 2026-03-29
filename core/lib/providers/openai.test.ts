@@ -171,6 +171,46 @@ describe('OpenAIProvider', () => {
     );
   });
 
+  it('should correctly format image attachments for the Responses API', async () => {
+    mockCreateResponse.mockResolvedValue({
+      output_text: 'I see an image',
+      output: [],
+    });
+
+    const messages = [
+      {
+        role: MessageRole.USER,
+        content: 'What is this?',
+        attachments: [
+          {
+            type: AttachmentType.IMAGE,
+            name: 'photo.jpg',
+            base64: 'base64-image-data',
+            mimeType: 'image/jpeg',
+          },
+        ],
+      },
+    ];
+
+    await provider.call(messages as Message[], []);
+
+    expect(mockCreateResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.arrayContaining([
+          expect.objectContaining({
+            role: 'user',
+            content: expect.arrayContaining([
+              expect.objectContaining({
+                type: 'image_url',
+                image_url: { url: 'data:image/jpeg;base64,base64-image-data' },
+              }),
+            ]),
+          }),
+        ]),
+      })
+    );
+  });
+
   it('should include responseFormat in the Responses API call', async () => {
     mockCreateResponse.mockResolvedValue({
       output_text: '{"status": "SUCCESS"}',

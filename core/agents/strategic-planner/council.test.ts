@@ -40,6 +40,11 @@ const memoryMocks = vi.hoisted(() => ({
   closeCollaboration: vi.fn().mockResolvedValue(undefined),
 }));
 
+const gapOperationsMocks = vi.hoisted(() => ({
+  assignGapToTrack: vi.fn().mockResolvedValue(undefined),
+  determineTrack: vi.fn().mockReturnValue('FEATURE'),
+}));
+
 const emitTypedEventMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const sendOutboundMessageMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const emitTaskEventMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
@@ -155,6 +160,7 @@ vi.mock('../../lib/registry', () => ({
     getRawConfig: vi.fn().mockResolvedValue(undefined),
     saveRawConfig: vi.fn().mockResolvedValue(undefined),
     recordToolUsage: vi.fn().mockResolvedValue(undefined),
+    getRetentionDays: vi.fn().mockResolvedValue(30),
   },
 }));
 
@@ -221,6 +227,11 @@ vi.mock('../strategic-planner/prompts', () => ({
   }),
   buildReactivePrompt: vi.fn().mockReturnValue('Test reactive prompt'),
   buildTelemetry: vi.fn().mockReturnValue('Test telemetry'),
+}));
+
+vi.mock('../../lib/memory/gap-operations', () => ({
+  assignGapToTrack: gapOperationsMocks.assignGapToTrack,
+  determineTrack: gapOperationsMocks.determineTrack,
 }));
 
 // ============================================================================

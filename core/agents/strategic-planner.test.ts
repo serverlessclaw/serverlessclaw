@@ -17,6 +17,11 @@ const memoryMocks = vi.hoisted(() => ({
   getFailedPlans: vi.fn().mockResolvedValue([]),
 }));
 
+const gapOperationsMocks = vi.hoisted(() => ({
+  assignGapToTrack: vi.fn().mockResolvedValue(undefined),
+  determineTrack: vi.fn().mockReturnValue('FEATURE'),
+}));
+
 const agentProcess = vi.hoisted(() => vi.fn());
 
 const registryMocks = vi.hoisted(() => ({
@@ -117,6 +122,11 @@ vi.mock('sst', () => ({
     MemoryTable: { name: 'test-memory' },
     ConfigTable: { name: 'test-config' },
   },
+}));
+
+vi.mock('../lib/memory/gap-operations', () => ({
+  assignGapToTrack: gapOperationsMocks.assignGapToTrack,
+  determineTrack: gapOperationsMocks.determineTrack,
 }));
 
 const OPEN_GAP_A = {

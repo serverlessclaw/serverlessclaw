@@ -138,4 +138,85 @@ describe('Webhook Handler', () => {
     expect(result).toEqual({ statusCode: 200, body: 'Message queued for processing' });
     expect(mockSessionStateManagerInstance.addPendingMessage).toHaveBeenCalled();
   });
+
+  it('should process photo messages and upload to S3', async () => {
+    // Mock fetch for getFile and file download
+    const mockFetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('getFile')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ ok: true, result: { file_path: 'photos/file_1.jpg' } }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(1024)),
+      });
+    });
+    global.fetch = mockFetch;
+
+    // Mock S3 PutObject
+    const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
+    const { mockClient } = await import('aws-sdk-client-mock');
+    const s3Mock = mockClient(S3Client);
+    s3Mock.on(PutObjectCommand).resolves({});
+
+    const event = createEvent({
+      update_id: 123,
+      message: {
+        message_id: 456,
+        chat: { id: 789 },
+        photo: [{ file_id: 'photo_123', width: 100, height: 100 }],
+        caption: 'look at this',
+        date: Date.now(),
+      },
+    });
+
+    const result = await handler(event, mockContext);
+    expect(result).toEqual({ statusCode: 200, body: 'OK' });
+    expect(s3Mock.calls()).toHaveLength(1);
+    expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('getFile?file_id=photo_123'));
+  });
+
+  it('should handle document messages', async () => {
+    // Mock fetch for getFile and file download
+    const mockFetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('getFile')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ ok: true, result: { file_path: 'docs/resume.pdf' } }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(2048)),
+      });
+    });
+    global.fetch = mockFetch;
+
+    // Mock S3 PutObject
+    const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
+    const { mockClient } = await import('aws-sdk-client-mock');
+    const s3Mock = mockClient(S3Client);
+    s3Mock.on(PutObjectCommand).resolves({});
+
+    const event = createEvent({
+      update_id: 123,
+      message: {
+        message_id: 457,
+        chat: { id: 789 },
+        document: {
+          file_id: 'doc_456',
+          file_name: 'resume.pdf',
+          mime_type: 'application/pdf',
+        },
+        date: Date.now(),
+      },
+    });
+
+    const result = await handler(event, mockContext);
+    expect(result).toEqual({ statusCode: 200, body: 'OK' });
+    expect(s3Mock.calls()).toHaveLength(1);
+    expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('getFile?file_id=doc_456'));
+  });
 });

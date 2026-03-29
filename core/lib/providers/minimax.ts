@@ -262,16 +262,48 @@ export class MiniMaxProvider implements IProvider {
       if (msg.role === MessageRole.SYSTEM) {
         systemMessage = msg.content ?? undefined;
       } else if (msg.role === MessageRole.USER) {
-        anthropicMessages.push({
-          role: 'user',
-          content: msg.content ?? '',
-        });
+        if (msg.attachments && msg.attachments.length > 0) {
+          const content: any[] = [];
+          if (msg.content) {
+            content.push({ type: 'text', text: msg.content });
+          }
+          for (const att of msg.attachments) {
+            if (att.type === 'image' && att.base64) {
+              content.push({
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: att.mimeType || 'image/png',
+                  data: att.base64,
+                },
+              });
+            } else if (att.type === 'file' && att.base64) {
+              content.push({
+                type: 'document',
+                source: {
+                  type: 'base64',
+                  media_type: att.mimeType || 'application/pdf',
+                  data: att.base64,
+                },
+              });
+            }
+          }
+          anthropicMessages.push({
+            role: 'user',
+            content: content as any,
+          });
+        } else {
+          anthropicMessages.push({
+            role: 'user',
+            content: msg.content ?? '',
+          });
+        }
       } else if (msg.role === MessageRole.ASSISTANT) {
         // For assistant messages with tool calls, we need to convert them
         if (msg.tool_calls && msg.tool_calls.length > 0) {
           // Convert tool calls to Anthropic format
-          const toolUseBlocks: Anthropic.ToolUseBlock[] = msg.tool_calls.map((tc) => ({
-            type: 'tool_use' as const,
+          const toolUseBlocks: any[] = msg.tool_calls.map((tc) => ({
+            type: 'tool_use',
             id: tc.id,
             name: tc.function.name,
             input: JSON.parse(tc.function.arguments || '{}'),
@@ -282,7 +314,7 @@ export class MiniMaxProvider implements IProvider {
             content: [
               ...(msg.content ? [{ type: 'text' as const, text: msg.content }] : []),
               ...toolUseBlocks,
-            ],
+            ] as any,
           });
         } else {
           anthropicMessages.push({
@@ -292,16 +324,45 @@ export class MiniMaxProvider implements IProvider {
         }
       } else if (msg.role === MessageRole.TOOL) {
         // Tool result messages
-        anthropicMessages.push({
-          role: 'user',
-          content: [
-            {
-              type: 'tool_result',
-              tool_use_id: msg.tool_call_id ?? '',
-              content: msg.content ?? '',
-            },
-          ],
-        });
+        if (msg.attachments && msg.attachments.length > 0) {
+          const content: any[] = [];
+          if (msg.content) {
+            content.push({ type: 'text', text: msg.content });
+          }
+          for (const att of msg.attachments) {
+            if (att.type === 'image' && att.base64) {
+              content.push({
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: att.mimeType || 'image/png',
+                  data: att.base64,
+                },
+              });
+            }
+          }
+          anthropicMessages.push({
+            role: 'user',
+            content: [
+              {
+                type: 'tool_result',
+                tool_use_id: msg.tool_call_id ?? '',
+                content: content as any,
+              },
+            ],
+          });
+        } else {
+          anthropicMessages.push({
+            role: 'user',
+            content: [
+              {
+                type: 'tool_result',
+                tool_use_id: msg.tool_call_id ?? '',
+                content: msg.content ?? '',
+              },
+            ],
+          });
+        }
       }
     }
 

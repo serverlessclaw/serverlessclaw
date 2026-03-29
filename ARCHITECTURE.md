@@ -90,6 +90,29 @@ User Event      Webhook         AgentBus         LLM Agent        Memory        
     |<-------------+  (HTTP 200)    |                |                |                 |               |
 Response
 
+### Multi-Modal Storage & Reasoning Flow
+
+Serverless Claw supports native vision and file analysis by staging media in S3 and providing JIT base64 or URL pointers to multi-modal LLMs.
+
+```text
+User (Media)      Webhook (Lambda)      S3 Staging       DynamoDB (Mem)      LLM Agent
+     |                 |                   |                 |                 |
+     +--- (Image) ---->|                   |                 |                 |
+     |                 +--- (1) Download ->|                 |                 |
+     |                 +--- (2) Upload --->|                 |                 |
+     |                 |                   |                 |                 |
+     |                 +--- (3) Record Metadata (URL/Type) ->|                 |
+     |                 |                   |                 |                 |
+     |                 |             [ LATER: Reasoning ]    |                 |
+     |                 |                   |                 +--- (4) Fetch -->|
+     |                 |                   |                 |      History    |
+     |                 |                   |                 |                 |
+     |                 |                   |<--- (5) JIT Data/Base64 ----------+
+     |                 |                   |                 |                 |
+     |                 |                   |                 +--- (6) Vision ->|
+     |                 |                   |                 |      Analysis   |
+```
+
 ---
 
 ## Distributed Concurrency

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { GapStatus } from '@claw/core/lib/types';
 import { GapItem } from '@claw/core/lib/types/memory';
+import GapRefinementPanel from './GapRefinementPanel';
 
 
 
@@ -39,6 +40,7 @@ export default function PipelineBoard({
   const [selectedGaps, setSelectedGaps] = useState<Set<string>>(new Set());
   const [expandedGaps, setExpandedGaps] = useState<Set<string>>(new Set());
   const [processing, setProcessing] = useState<string | null>(null);
+  const [refiningGapId, setRefiningGapId] = useState<string | null>(null);
 
   const toggleSelection = (gapId: string) => {
     const newSelection = new Set(selectedGaps);
@@ -122,6 +124,7 @@ export default function PipelineBoard({
   ];
 
   return (
+    <>
     <div className="grid grid-cols-5 gap-6 h-[calc(100vh-250px)]">
       {columns.map((col) => {
         const colGaps = initialGaps.filter(g => g.status === col.status);
@@ -235,6 +238,12 @@ export default function PipelineBoard({
                               Revert
                           </button>
                         )}
+                        <button
+                            onClick={() => setRefiningGapId(gap.userId)}
+                            className="cursor-pointer text-[8px] font-bold text-cyber-blue/60 hover:text-cyber-blue px-2 py-1 transition-colors uppercase tracking-tight"
+                        >
+                            Refine
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -251,5 +260,16 @@ export default function PipelineBoard({
         );
       })}
     </div>
+    {refiningGapId && (
+      <GapRefinementPanel
+        gapId={refiningGapId}
+        gapContent={initialGaps.find(g => g.userId === refiningGapId)?.content ?? ''}
+        currentImpact={initialGaps.find(g => g.userId === refiningGapId)?.metadata?.impact ?? 5}
+        currentPriority={initialGaps.find(g => g.userId === refiningGapId)?.metadata?.priority ?? 5}
+        onClose={() => setRefiningGapId(null)}
+        onSaved={() => { setRefiningGapId(null); window.location.reload(); }}
+      />
+    )}
+    </>
   );
 }
