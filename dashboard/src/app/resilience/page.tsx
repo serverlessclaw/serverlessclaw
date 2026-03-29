@@ -11,6 +11,7 @@ import {
 import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
 import { DynamoMemory } from '@claw/core/lib/memory';
+import ResilienceGauge from './ResilienceGauge';
 
 
 
@@ -105,6 +106,37 @@ export default async function ResilienceHub() {
           </Card>
         </div>
       </header>
+
+      {/* Resilience Gauges */}
+      <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto">
+        <div className="flex justify-center">
+          <div className="relative">
+            <ResilienceGauge
+              value={isHealthy ? 95 : 40}
+              label="System Health"
+              subtitle="API + DB + Bus"
+            />
+          </div>
+        </div>
+        <div className="flex justify-center">
+          <div className="relative">
+            <ResilienceGauge
+              value={Math.max(0, 100 - logs.length * 10)}
+              label="Error Rate"
+              subtitle="Last 24h failures"
+            />
+          </div>
+        </div>
+        <div className="flex justify-center">
+          <div className="relative">
+            <ResilienceGauge
+              value={isHealthy ? 100 : 60}
+              label="Recovery"
+              subtitle="Dead Man's Switch"
+            />
+          </div>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column: Health & DMS */}
