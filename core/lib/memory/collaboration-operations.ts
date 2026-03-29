@@ -64,6 +64,7 @@ export async function createCollaboration(
     expiresAt: input.ttlDays ? now + input.ttlDays * 24 * 60 * 60 * 1000 : undefined,
     status: 'active',
     tags: input.tags,
+    workspaceId: input.workspaceId,
   };
 
   // Store collaboration metadata

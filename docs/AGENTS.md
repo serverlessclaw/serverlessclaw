@@ -344,7 +344,7 @@ Initiator (Planner)     Collaboration Tool      AgentBus (EB)      Facilitator (
 
 When a `workspaceId` is provided to `createCollaboration`, the system automatically:
 
-1. Adds all workspace agent members as collaboration participants (editor/viewer based on role)
+1. Adds all active workspace members (agents and humans) as collaboration participants (editor/viewer based on role)
 2. Routes notifications to all human members via their configured channels
 
 ```text

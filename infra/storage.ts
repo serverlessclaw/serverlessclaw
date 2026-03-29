@@ -84,6 +84,8 @@ export function createStorage() {
     ActiveModel: new sst.Secret('ActiveModel'),
     GitHubToken: new sst.Secret('GitHubToken'),
     DashboardPassword: new sst.Secret('DashboardPassword'),
+    DiscordBotToken: new sst.Secret('DiscordBotToken'),
+    SlackBotToken: new sst.Secret('SlackBotToken'),
   };
 
   return { memoryTable, traceTable, stagingBucket, knowledgeBucket, secrets, configTable };

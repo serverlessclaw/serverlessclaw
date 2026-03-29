@@ -35,6 +35,7 @@ export interface Collaboration {
 
   // Metadata
   tags?: string[];
+  workspaceId?: string;
 }
 
 export interface CreateCollaborationInput {
@@ -48,6 +49,7 @@ export interface CreateCollaborationInput {
     id: string;
     role: CollaborationRole;
   }>;
+  workspaceId?: string;
 }
 
 /**

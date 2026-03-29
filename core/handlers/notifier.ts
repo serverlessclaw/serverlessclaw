@@ -26,16 +26,12 @@ interface NotifierEvent {
 }
 
 /**
- * Handles outbound messages by syncing context with memory and sending via Telegram.
- * If workspaceId is provided, fans out to all human members with enabled channels.
- *
- * @param event - The Notifier event containing userId, message, and memoryContexts.
- * @returns A promise that resolves when the notification has been processed.
+ * Handles outbound messages by syncing context with memory and sending via configured channels.
+ * Supports multi-platform fan-out (Telegram, Discord, Slack) via Workspaces.
  */
 export const handler = async (event: NotifierEvent): Promise<void> => {
   logger.info('[NOTIFIER] Received event:', JSON.stringify(event, null, 2));
 
-  // The event is wrapped by EventBridge, the actual payload is in event.detail
   const payload = event.detail;
   if (!payload || !payload.userId || !payload.message) {
     logger.error('[NOTIFIER] Missing userId or message in OUTBOUND_MESSAGE event');
@@ -53,20 +49,19 @@ export const handler = async (event: NotifierEvent): Promise<void> => {
     workspaceId,
   } = payload;
 
-  // Defensive Normalization: Ensure we have the base user ID for syncing and Telegram
   const baseUserId = extractBaseUserId(userId);
   logger.info(
-    `[NOTIFIER] Normalized User: ${baseUserId} | Session: ${sessionId} | Contexts: ${memoryContexts?.length ?? 0} | Workspace: ${workspaceId ?? 'none'}`
+    `[NOTIFIER] Normalized User: ${baseUserId} | Session: ${sessionId} | Workspace: ${workspaceId ?? 'none'}`
   );
 
+  // 1. Sync context to memory
   const contextsToSync = new Set<string>(memoryContexts ?? []);
-  contextsToSync.add(baseUserId); // Always sync to the base user history
+  contextsToSync.add(baseUserId);
   if (sessionId) {
     contextsToSync.add(`CONV#${baseUserId}#${sessionId}`);
   }
 
   for (const contextId of contextsToSync) {
-    // 1. Sync context
     try {
       await memory.addMessage(contextId, {
         role: MessageRole.ASSISTANT,
@@ -80,14 +75,13 @@ export const handler = async (event: NotifierEvent): Promise<void> => {
     }
   }
 
-  // 2. Workspace fan-out: send to ALL human members with enabled channels
+  // 2. Deliver to channels
   if (workspaceId) {
     await sendToWorkspace(workspaceId, message, attachments, options);
-    return;
+  } else {
+    // Legacy single-user path (defaults to Telegram)
+    await sendToSingleUser(baseUserId, message, attachments, options);
   }
-
-  // 3. Single-user Telegram adapter (legacy path)
-  await sendToSingleUser(baseUserId, message, attachments, options);
 };
 
 /**
@@ -109,40 +103,25 @@ async function sendToWorkspace(
     }
 
     const humans = getHumanMembersWithChannels(workspace);
-    logger.info(`[NOTIFIER] Fan-out to ${humans.length} human members in workspace ${workspaceId}`);
+    const deliveryPromises: Promise<void>[] = [];
 
     for (const human of humans) {
       for (const channel of human.channels) {
         if (!channel.enabled) continue;
-
-        try {
-          if (channel.platform === 'telegram') {
-            if (attachments && attachments.length > 0) {
-              for (const attachment of attachments) {
-                if (attachment.url) {
-                  await sendTelegramMedia(channel.identifier, attachment, message, options);
-                }
-              }
-            } else {
-              await sendTelegramMessage(channel.identifier, message, options);
-            }
-          }
-          // Future adapters: discord, slack, email, dashboard
-        } catch (err) {
-          logger.error(
-            `[NOTIFIER] Failed to send to ${human.memberId} via ${channel.platform}:`,
-            err
-          );
-        }
+        deliveryPromises.push(
+          sendToChannel(channel.platform, channel.identifier, message, attachments, options)
+        );
       }
     }
+
+    await Promise.allSettled(deliveryPromises);
   } catch (err) {
     logger.error(`[NOTIFIER] Workspace fan-out failed for ${workspaceId}:`, err);
   }
 }
 
 /**
- * Sends to a single user via Telegram (legacy non-workspace path).
+ * Sends to a single user via Telegram (legacy path).
  */
 async function sendToSingleUser(
   baseUserId: string,
@@ -151,116 +130,200 @@ async function sendToSingleUser(
   options?: { label: string; value: string }[]
 ): Promise<void> {
   const isTelegramChatId = /^\d+$/.test(baseUserId);
-  if (!isTelegramChatId) {
-    logger.info(`[NOTIFIER] Skipping Telegram for non-numeric userId: ${baseUserId}`);
-    return;
+  if (!isTelegramChatId) return;
+
+  await sendToChannel('telegram', baseUserId, message, attachments, options);
+}
+
+/**
+ * Routes a message to a specific platform channel.
+ */
+async function sendToChannel(
+  platform: string,
+  identifier: string,
+  message: string,
+  attachments?: Attachment[],
+  options?: { label: string; value: string }[]
+): Promise<void> {
+  try {
+    switch (platform.toLowerCase()) {
+      case 'telegram':
+        await deliverTelegram(identifier, message, attachments, options);
+        break;
+      case 'discord':
+        await deliverDiscord(identifier, message, attachments, options);
+        break;
+      case 'slack':
+        await deliverSlack(identifier, message, attachments, options);
+        break;
+      default:
+        logger.warn(`[NOTIFIER] Unsupported platform: ${platform}`);
+    }
+  } catch (err) {
+    logger.error(`[NOTIFIER] Delivery failed for ${platform} (${identifier}):`, err);
   }
+}
+
+/**
+ * Telegram Adapter
+ */
+async function deliverTelegram(
+  chatId: string,
+  message: string,
+  attachments?: Attachment[],
+  options?: { label: string; value: string }[]
+): Promise<void> {
+  const token = (Resource as any).TelegramBotToken?.value;
+  if (!token) throw new Error('TelegramBotToken not configured');
 
   if (attachments && attachments.length > 0) {
     for (const attachment of attachments) {
-      if (attachment.url) {
-        await sendTelegramMedia(baseUserId, attachment, message, options);
-      } else {
-        logger.warn('Skipping attachment without URL for Telegram:', attachment.name);
-      }
+      if (!attachment.url) continue;
+      const method = attachment.type === AttachmentType.IMAGE ? 'sendPhoto' : 'sendDocument';
+      const bodyKey = attachment.type === AttachmentType.IMAGE ? 'photo' : 'document';
+
+      await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          [bodyKey]: attachment.url,
+          caption: escapeHtml(message),
+          parse_mode: 'HTML',
+          reply_markup: options?.length
+            ? {
+                inline_keyboard: [options.map((o) => ({ text: o.label, callback_data: o.value }))],
+              }
+            : undefined,
+        }),
+      });
     }
   } else {
-    await sendTelegramMessage(baseUserId, message, options);
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: escapeHtml(message),
+        parse_mode: 'HTML',
+        reply_markup: options?.length
+          ? {
+              inline_keyboard: [options.map((o) => ({ text: o.label, callback_data: o.value }))],
+            }
+          : undefined,
+      }),
+    });
   }
 }
 
 /**
- * Sends a message via the Telegram Bot API.
- *
- * @param chatId - The Telegram chat ID to send the message to.
- * @param text - The text of the message to send.
- * @returns A promise that resolves when the message has been sent.
+ * Discord Adapter (Bot API)
  */
-async function sendTelegramMessage(
-  chatId: string,
-  text: string,
+async function deliverDiscord(
+  channelId: string,
+  message: string,
+  attachments?: Attachment[],
   options?: { label: string; value: string }[]
 ): Promise<void> {
-  try {
-    const token = (Resource as unknown as { TelegramBotToken: { value: string } }).TelegramBotToken
-      .value;
-    const url = `https://api.telegram.org/bot${token}/sendMessage`;
+  const token = (Resource as any).DiscordBotToken?.value;
+  if (!token) throw new Error('DiscordBotToken not configured');
 
-    const body: Record<string, unknown> = {
-      chat_id: chatId,
-      text: escapeHtml(text),
-      parse_mode: 'HTML',
-    };
+  const embeds = attachments
+    ?.filter((a) => a.url)
+    .map((a) => ({
+      image: a.type === AttachmentType.IMAGE ? { url: a.url } : undefined,
+      url: a.type !== AttachmentType.IMAGE ? a.url : undefined,
+      title: a.name || (a.type !== AttachmentType.IMAGE ? 'Attachment' : undefined),
+    }));
 
-    if (options && options.length > 0) {
-      body.reply_markup = {
-        inline_keyboard: [options.map((opt) => ({ text: opt.label, callback_data: opt.value }))],
-      };
-    }
+  // Discord components for buttons
+  const components = options?.length
+    ? [
+        {
+          type: 1, // Action Row
+          components: options.map((o) => ({
+            type: 2, // Button
+            style: 1, // Primary
+            label: o.label,
+            custom_id: o.value,
+          })),
+        },
+      ]
+    : undefined;
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      logger.error('Telegram API error:', errorText);
-    }
-  } catch (e) {
-    logger.error('Failed to send Telegram message:', e);
-  }
+  await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bot ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      content: message,
+      embeds: embeds?.length ? embeds : undefined,
+      components,
+    }),
+  });
 }
 
 /**
- * Sends media via the Telegram Bot API.
+ * Slack Adapter
  */
-async function sendTelegramMedia(
-  chatId: string,
-  attachment: Attachment,
-  caption?: string,
+async function deliverSlack(
+  channelId: string,
+  message: string,
+  attachments?: Attachment[],
   options?: { label: string; value: string }[]
 ): Promise<void> {
-  try {
-    const token = (Resource as unknown as { TelegramBotToken: { value: string } }).TelegramBotToken
-      .value;
+  const token = (Resource as any).SlackBotToken?.value;
+  if (!token) throw new Error('SlackBotToken not configured');
 
-    let method = 'sendDocument';
-    let bodyKey = 'document';
+  const blocks: any[] = [
+    {
+      type: 'section',
+      text: { type: 'mrkdwn', text: message },
+    },
+  ];
 
-    if (attachment.type === AttachmentType.IMAGE) {
-      method = 'sendPhoto';
-      bodyKey = 'photo';
+  if (attachments?.length) {
+    for (const a of attachments) {
+      if (a.type === AttachmentType.IMAGE && a.url) {
+        blocks.push({
+          type: 'image',
+          image_url: a.url,
+          alt_text: a.name || 'image',
+        });
+      } else if (a.url) {
+        blocks.push({
+          type: 'section',
+          text: { type: 'mrkdwn', text: `*Attachment:* <${a.url}|${a.name || 'Link'}>` },
+        });
+      }
     }
-
-    const url = `https://api.telegram.org/bot${token}/${method}`;
-    const body: Record<string, unknown> = {
-      chat_id: chatId,
-      [bodyKey]: attachment.url,
-      caption: caption ? escapeHtml(caption) : undefined,
-      parse_mode: 'HTML',
-    };
-
-    if (options && options.length > 0) {
-      body.reply_markup = {
-        inline_keyboard: [options.map((opt) => ({ text: opt.label, callback_data: opt.value }))],
-      };
-    }
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      logger.error(`Telegram API error (${method}):`, errorText);
-    }
-  } catch (e) {
-    logger.error('Failed to send Telegram media:', e);
   }
+
+  if (options?.length) {
+    blocks.push({
+      type: 'actions',
+      elements: options.map((o) => ({
+        type: 'button',
+        text: { type: 'plain_text', text: o.label },
+        value: o.value,
+        action_id: `act_${Math.random().toString(36).substring(7)}`,
+      })),
+    });
+  }
+
+  await fetch('https://slack.com/api/chat.postMessage', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      channel: channelId,
+      blocks,
+    }),
+  });
 }
 
 /**

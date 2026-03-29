@@ -5,7 +5,7 @@
 ## Agent Entry Files
 
 - [`.github/copilot-instructions.md`](./.github/copilot-instructions.md): Copilot-specific startup instructions that route to this index and devops docs.
-- [`AGENTS.md`](./AGENTS.md): Generic root agent entrypoint used by non-Copilot agents.
+- [`AGENT_RULES.md`](./AGENT_RULES.md): Generic root agent entrypoint used by non-Copilot agents.
 
 ## Hub-and-Spoke Map
 
@@ -14,7 +14,7 @@
 | [ARCHITECTURE.md](./ARCHITECTURE.md)      | Understand system structure, data flow, or self-aware AWS topology        |
 | [docs/LLM.md](./docs/LLM.md)              | Deep dive into 2026 reasoning profiles and the OpenAI Response API bridge |
 | [docs/DEVOPS.md](./docs/DEVOPS.md)        | Run quality checks, tests, deployments, or releases                       |
-| [AGENTS.md](./docs/AGENTS.md)             | Work on agent logic, prompts, orchestration, or backbone registry         |
+| [docs/AGENTS.md](./docs/AGENTS.md)        | Work on agent logic, prompts, orchestration, or backbone registry         |
 | [TOOLS.md](./docs/TOOLS.md)               | Add, modify, or understand any agent tool                                 |
 | [docs/MEMORY.md](./docs/MEMORY.md)        | Understand the tiered memory system and recall mechanism                  |
 | [SAFETY.md](./docs/SAFETY.md)             | Understand guardrails, circuit breakers, rollback, or HITL                |

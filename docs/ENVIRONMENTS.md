@@ -36,6 +36,35 @@ Makefile targets automatically load environment files in the following order of 
 
 ---
 
+## 🔐 Secrets & Integrations
+
+Serverless Claw supports multi-platform notifications. To enable these, you must configure the following SST Secrets:
+
+| Secret Key | Platform | Description |
+| :--- | :--- | :--- |
+| `TelegramBotToken` | Telegram | Bot token from @BotFather |
+| `DiscordBotToken` | Discord | Bot token from Discord Developer Portal |
+| `SlackBotToken` | Slack | Bot User OAuth Token (starts with `xoxb-`) |
+
+### Setting Secrets
+**Local Development:**
+Add to your `.env.local`:
+```bash
+SST_SECRET_TelegramBotToken=your_token
+SST_SECRET_DiscordBotToken=your_token
+SST_SECRET_SlackBotToken=your_token
+```
+
+**Production:**
+Use the SST CLI to set secrets in AWS:
+```bash
+npx sst secret set TelegramBotToken your_token
+npx sst secret set DiscordBotToken your_token
+npx sst secret set SlackBotToken your_token
+```
+
+---
+
 > [!IMPORTANT]
 > **No CI/CD**: Automatic deployments via GitHub Actions have been disabled. All infrastructure changes and deployments must be performed via the local `make deploy` recipe to ensure intentionality and local verification.
 

@@ -44,24 +44,33 @@ export const CREATE_COLLABORATION: ITool = {
       });
     }
 
-    // If workspaceId provided, auto-add all workspace agent members
+    // If workspaceId provided, auto-add all active workspace members (agents + humans)
     if (workspaceId) {
       try {
-        const { getWorkspace, getAgentMembers } =
-          await import('../lib/memory/workspace-operations');
+        const { getWorkspace } = await import('../lib/memory/workspace-operations');
         const workspace = await getWorkspace(workspaceId);
         if (workspace) {
-          const agents = getAgentMembers(workspace);
-          for (const agent of agents) {
-            if (!initialParticipants.some((p) => p.id === agent.memberId)) {
-              initialParticipants.push({
-                type: 'agent',
-                id: agent.memberId,
-                role: agent.role === 'observer' ? 'viewer' : 'editor',
-              });
+          for (const member of workspace.members) {
+            if (!member.active) continue;
+
+            // Skip if already in participants list
+            if (initialParticipants.some((p) => p.id === member.memberId)) continue;
+
+            // Map WorkspaceRole to CollaborationRole
+            let collabRole: 'editor' | 'viewer' = 'editor';
+            if (member.role === 'observer') {
+              collabRole = 'viewer';
             }
+
+            initialParticipants.push({
+              type: member.type,
+              id: member.memberId,
+              role: collabRole,
+            });
           }
-          logger.info(`[Collaboration] Added ${agents.length} workspace agents to collaboration`);
+          logger.info(
+            `[Collaboration] Auto-added ${workspace.members.length} workspace members to collaboration`
+          );
         }
       } catch (err) {
         logger.warn('[Collaboration] Failed to load workspace members:', err);
@@ -75,6 +84,7 @@ export const CREATE_COLLABORATION: ITool = {
       ttlDays: args.ttlDays as number | undefined,
       tags: args.tags as string[] | undefined,
       initialParticipants,
+      workspaceId,
     });
 
     if (traceId) {

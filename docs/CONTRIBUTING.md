@@ -131,7 +131,7 @@ Scopes: `swarm`, `collab`, `evolution`, `tools`, `agents`, `memory`, `infra`, `d
 ```
 serverlessclaw/
 ├── INDEX.md          <- Hub (start here)
-├── AGENTS.md         <- Agent entry point + mandatory checklist
+├── AGENT_RULES.md    <- Agent entry point + mandatory checklist
 ├── README.md         <- Public-facing overview
 ├── ARCHITECTURE.md   <- System topology + ASCII diagrams
 ├── docs/

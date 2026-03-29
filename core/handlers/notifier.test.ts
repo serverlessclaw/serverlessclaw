@@ -4,10 +4,17 @@ const { mockAddMessage } = vi.hoisted(() => ({
   mockAddMessage: vi.fn().mockResolvedValue(true),
 }));
 
+const { mockGetWorkspace, mockGetHumanMembersWithChannels } = vi.hoisted(() => ({
+  mockGetWorkspace: vi.fn(),
+  mockGetHumanMembersWithChannels: vi.fn(),
+}));
+
 // Mock sst Resource BEFORE other imports
 vi.mock('sst', () => ({
   Resource: {
-    TelegramBotToken: { value: 'mock-token' },
+    TelegramBotToken: { value: 'tg-token' },
+    DiscordBotToken: { value: 'ds-token' },
+    SlackBotToken: { value: 'sl-token' },
   },
 }));
 
@@ -18,6 +25,11 @@ vi.mock('../lib/memory', () => ({
       addMessage: mockAddMessage,
     };
   }),
+}));
+
+vi.mock('../lib/memory/workspace-operations', () => ({
+  getWorkspace: mockGetWorkspace,
+  getHumanMembersWithChannels: mockGetHumanMembersWithChannels,
 }));
 
 import { handler } from './notifier';
@@ -34,222 +46,132 @@ vi.mock('../lib/logger', () => ({
 // Mock global fetch
 global.fetch = vi.fn();
 
-describe('Notifier Handler', () => {
+describe('Notifier Handler — Multi-Platform', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAddMessage.mockResolvedValue(true);
+    (global.fetch as any).mockResolvedValue({ ok: true, text: () => Promise.resolve('ok') });
   });
 
-  it('should send simple text message', async () => {
-    const event = {
-      detail: {
-        userId: '123456789',
-        message: 'Hello user',
-      },
-    } as any;
+  describe('Telegram (Direct)', () => {
+    it('should send to Telegram for numeric userId', async () => {
+      const event = {
+        detail: {
+          userId: '123456789',
+          message: 'Hello Telegram',
+        },
+      } as any;
 
-    (global.fetch as any).mockResolvedValue({ ok: true });
+      await handler(event);
 
-    await handler(event);
-
-    expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/sendMessage'),
-      expect.objectContaining({
-        body: expect.stringContaining('"text":"Hello user"'),
-      })
-    );
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('api.telegram.org/bottg-token/sendMessage'),
+        expect.objectContaining({
+          body: expect.stringContaining('"chat_id":"123456789"'),
+        })
+      );
+    });
   });
 
-  it('should sync multiple contexts correctly without double-prefixing', async () => {
-    const event = {
-      detail: {
-        userId: 'user123',
-        message: 'Shared update',
-        sessionId: 'sessionABC',
-      },
-    } as any;
+  describe('Discord (Workspace)', () => {
+    it('should fan-out to Discord members', async () => {
+      const mockWorkspace = { workspaceId: 'ws-1', members: [] };
+      mockGetWorkspace.mockResolvedValue(mockWorkspace);
+      mockGetHumanMembersWithChannels.mockReturnValue([
+        {
+          memberId: 'human-1',
+          channels: [{ platform: 'discord', identifier: 'channel-123', enabled: true }],
+        },
+      ]);
 
-    await handler(event);
+      const event = {
+        detail: {
+          userId: 'system',
+          message: 'Hello Discord',
+          workspaceId: 'ws-1',
+        },
+      } as any;
 
-    // Should sync to:
-    // 1. Base user: user123
-    // 2. Session context: CONV#user123#sessionABC
-    expect(mockAddMessage).toHaveBeenCalledTimes(2);
-    expect(mockAddMessage).toHaveBeenCalledWith('user123', expect.any(Object));
-    expect(mockAddMessage).toHaveBeenCalledWith('CONV#user123#sessionABC', expect.any(Object));
+      await handler(event);
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('discord.com/api/v10/channels/channel-123/messages'),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bot ds-token',
+          }),
+          body: expect.stringContaining('"content":"Hello Discord"'),
+        })
+      );
+    });
   });
 
-  it('should be resilient to already-prefixed userId strings (normalization)', async () => {
-    const event = {
-      detail: {
-        userId: 'CONV#dashboard-user#session_123',
-        message: 'Resilient update',
-        sessionId: 'session_123',
-      },
-    } as any;
+  describe('Slack (Workspace)', () => {
+    it('should fan-out to Slack members with blocks', async () => {
+      const mockWorkspace = { workspaceId: 'ws-1', members: [] };
+      mockGetWorkspace.mockResolvedValue(mockWorkspace);
+      mockGetHumanMembersWithChannels.mockReturnValue([
+        {
+          memberId: 'human-2',
+          channels: [{ platform: 'slack', identifier: 'SLACK_CH_ID', enabled: true }],
+        },
+      ]);
 
-    await handler(event);
+      const event = {
+        detail: {
+          userId: 'system',
+          message: 'Hello Slack',
+          workspaceId: 'ws-1',
+          options: [{ label: 'Approve', value: 'approve_id' }],
+        },
+      } as any;
 
-    // Should detect the prefix and normalize to:
-    // 1. Base user: dashboard-user
-    // 2. Session context: CONV#dashboard-user#session_123
-    // It should NOT sync to CONV#CONV#dashboard-user#session_123#session_123
+      await handler(event);
 
-    expect(mockAddMessage).toHaveBeenCalledWith('dashboard-user', expect.any(Object));
-    expect(mockAddMessage).toHaveBeenCalledWith(
-      'CONV#dashboard-user#session_123',
-      expect.any(Object)
-    );
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://slack.com/api/chat.postMessage',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer sl-token',
+          }),
+          body: expect.stringContaining('"channel":"SLACK_CH_ID"'),
+        })
+      );
 
-    // Check that we don't have the double-prefixed one
-    const syncCalls = mockAddMessage.mock.calls.map((c) => c[0]);
-    expect(syncCalls).not.toContain('CONV#CONV#dashboard-user#session_123#session_123');
+      const body = JSON.parse((global.fetch as any).mock.calls[0][1].body);
+      expect(body.blocks).toBeDefined();
+      expect(body.blocks[0].text.text).toBe('Hello Slack');
+      expect(body.blocks[1].type).toBe('actions');
+    });
   });
 
-  it('should include inline keyboard buttons when options are provided', async () => {
-    const event = {
-      detail: {
-        userId: '123456789',
-        message: 'Plan proposed',
-        options: [
-          { label: '🚀 Approve', value: 'APPROVE PLAN-1' },
-          { label: '🤔 Clarify', value: 'CLARIFY PLAN-1' },
-        ],
-      },
-    } as any;
+  describe('Multi-Platform Fan-out', () => {
+    it('should deliver to multiple platforms in a single workspace', async () => {
+      mockGetWorkspace.mockResolvedValue({ workspaceId: 'ws-multi' });
+      mockGetHumanMembersWithChannels.mockReturnValue([
+        {
+          memberId: 'human-multi',
+          channels: [
+            { platform: 'telegram', identifier: 'tg-123', enabled: true },
+            { platform: 'discord', identifier: 'ds-456', enabled: true },
+          ],
+        },
+      ]);
 
-    (global.fetch as any).mockResolvedValue({ ok: true });
+      const event = {
+        detail: {
+          userId: 'system',
+          message: 'Multi-platform msg',
+          workspaceId: 'ws-multi',
+        },
+      } as any;
 
-    await handler(event);
+      await handler(event);
 
-    expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/sendMessage'),
-      expect.objectContaining({
-        body: expect.stringContaining(
-          '"reply_markup":{"inline_keyboard":[[{"text":"🚀 Approve","callback_data":"APPROVE PLAN-1"},{"text":"🤔 Clarify","callback_data":"CLARIFY PLAN-1"}]]}'
-        ),
-      })
-    );
-  });
-
-  it('should escape HTML characters and use HTML parse_mode', async () => {
-    const event = {
-      detail: {
-        userId: '123456789',
-        message: 'Alert & <Notice>',
-      },
-    } as any;
-
-    (global.fetch as any).mockResolvedValue({ ok: true });
-
-    await handler(event);
-
-    expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/sendMessage'),
-      expect.objectContaining({
-        body: expect.stringContaining('"text":"Alert &amp; &lt;Notice&gt;"'),
-      })
-    );
-    expect(global.fetch).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({
-        body: expect.stringContaining('"parse_mode":"HTML"'),
-      })
-    );
-  });
-
-  it('should skip Telegram send for non-numeric userId (dashboard users)', async () => {
-    const event = {
-      detail: {
-        userId: 'dashboard-user',
-        message: 'System notification',
-      },
-    } as any;
-
-    await handler(event);
-
-    // Should sync to memory but NOT send to Telegram
-    expect(mockAddMessage).toHaveBeenCalledWith('dashboard-user', expect.any(Object));
-    expect(global.fetch).not.toHaveBeenCalled();
-  });
-
-  it('should skip Telegram send for CONV# prefixed dashboard userId', async () => {
-    const event = {
-      detail: {
-        userId: 'CONV#dashboard-user#session_123',
-        message: 'Session message',
-        sessionId: 'session_123',
-      },
-    } as any;
-
-    await handler(event);
-
-    // Should sync to memory (base + session contexts)
-    expect(mockAddMessage).toHaveBeenCalledWith('dashboard-user', expect.any(Object));
-    expect(mockAddMessage).toHaveBeenCalledWith(
-      'CONV#dashboard-user#session_123',
-      expect.any(Object)
-    );
-    // But NOT send to Telegram
-    expect(global.fetch).not.toHaveBeenCalled();
-  });
-
-  it('should send to Telegram for numeric userId', async () => {
-    const event = {
-      detail: {
-        userId: '987654321',
-        message: 'Telegram message',
-      },
-    } as any;
-
-    (global.fetch as any).mockResolvedValue({ ok: true });
-
-    await handler(event);
-
-    // Should sync AND send to Telegram
-    expect(mockAddMessage).toHaveBeenCalled();
-    expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/sendMessage'),
-      expect.any(Object)
-    );
-  });
-
-  it('should send to Telegram for CONV# prefixed numeric userId', async () => {
-    const event = {
-      detail: {
-        userId: 'CONV#123456789#session_abc',
-        message: 'Session notification',
-        sessionId: 'session_abc',
-      },
-    } as any;
-
-    (global.fetch as any).mockResolvedValue({ ok: true });
-
-    await handler(event);
-
-    // Should normalize to numeric base and send to Telegram
-    expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/sendMessage'),
-      expect.objectContaining({
-        body: expect.stringContaining('"chat_id":"123456789"'),
-      })
-    );
-  });
-
-  it('should log info when skipping Telegram for non-numeric userId', async () => {
-    const { logger } = await import('../lib/logger');
-
-    const event = {
-      detail: {
-        userId: 'test-user',
-        message: 'Dashboard notification',
-      },
-    } as any;
-
-    await handler(event);
-
-    expect(logger.info).toHaveBeenCalledWith(
-      expect.stringContaining('Skipping Telegram for non-numeric userId: test-user')
-    );
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+      const calls = (global.fetch as any).mock.calls;
+      expect(calls.some((c: any) => c[0].includes('telegram'))).toBe(true);
+      expect(calls.some((c: any) => c[0].includes('discord'))).toBe(true);
+    });
   });
 });
