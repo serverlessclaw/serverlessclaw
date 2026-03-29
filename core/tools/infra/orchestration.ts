@@ -1,6 +1,6 @@
 import { infraSchema as schema } from './schema';
 import { logger } from '../../lib/logger';
-import { AgentStatus, AgentType } from '../../lib/types/agent';
+import { AgentStatus, AgentType, GapStatus } from '../../lib/types/agent';
 import { formatErrorMessage } from '../../lib/utils/error';
 
 /**
@@ -34,7 +34,7 @@ export const triggerBatchEvolution = {
               metadata: { gapIds: [fullGapId] },
               source: 'batch_evolution',
             });
-            await memory.updateGapStatus(fullGapId, 'PROGRESS' as never);
+            await memory.updateGapStatus(fullGapId, GapStatus.PROGRESS);
             results.push(`- ${fullGapId}: dispatched to Coder`);
           } else {
             results.push(`- ${fullGapId}: SKIPPED (no plan found)`);
@@ -96,22 +96,18 @@ export const requestConsensus = {
       const { emitTypedEvent } = await import('../../lib/utils/typed-emit');
       const { EventType } = await import('../../lib/types/agent');
 
-      await emitTypedEvent(
-        'tool.consensus',
-        EventType.CONSENSUS_REQUEST as never,
-        {
-          userId: 'SYSTEM',
-          traceId: `consensus-${Date.now()}`,
-          taskId: `consensus-req-${Date.now()}`,
-          initiatorId: 'tool-requestConsensus',
-          depth: 0,
-          proposal,
-          voterIds,
-          mode: mode ?? 'majority',
-          timeoutMs: timeoutMs ?? 60000,
-          metadata: {},
-        } as never
-      );
+      await emitTypedEvent('tool.consensus', EventType.CONSENSUS_REQUEST, {
+        userId: 'SYSTEM',
+        traceId: `consensus-${Date.now()}`,
+        taskId: `consensus-req-${Date.now()}`,
+        initiatorId: 'tool-requestConsensus',
+        depth: 0,
+        proposal,
+        voterIds,
+        mode: mode ?? 'majority',
+        timeoutMs: timeoutMs ?? 60000,
+        metadata: {},
+      });
 
       return (
         `CONSENSUS_REQUESTED: Proposal "${proposal.slice(0, 100)}..." dispatched to ` +
@@ -140,17 +136,13 @@ export const voteOnProposal = {
       const { emitTypedEvent } = await import('../../lib/utils/typed-emit');
       const { EventType } = await import('../../lib/types/agent');
 
-      await emitTypedEvent(
-        'tool.vote',
-        EventType.CONSENSUS_VOTE as never,
-        {
-          proposalId,
-          vote,
-          reason,
-          voterId: 'SYSTEM', // Context-aware identification
-          timestamp: Date.now(),
-        } as never
-      );
+      await emitTypedEvent('tool.vote', EventType.CONSENSUS_VOTE, {
+        proposalId,
+        vote,
+        reason,
+        voterId: 'SYSTEM',
+        timestamp: Date.now(),
+      });
 
       return `VOTE_SUBMITTED: Recorded "${vote}" for proposal ${proposalId}. Reasoning: ${reason}`;
     } catch (error) {

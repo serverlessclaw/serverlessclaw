@@ -13,6 +13,12 @@ import { LIMITS, TIME, MEMORY_KEYS } from '../constants';
 import type { BaseMemoryProvider } from './base';
 import { createMetadata, queryByTypeAndMap } from './utils';
 
+/** Minimal interface for track operations — satisfied by BaseMemoryProvider and DynamoMemory. */
+interface TrackStore {
+  putItem(item: Record<string, unknown>): Promise<void>;
+  queryItems(params: Record<string, unknown>): Promise<Record<string, unknown>[]>;
+}
+
 /**
  * Default gap lock TTL in milliseconds (30 minutes).
  * Prevents race conditions when multiple planners/coders work on the same gap.
@@ -465,19 +471,20 @@ const TRACK_DEFAULTS: Record<string, { maxConcurrentGaps: number; priority: numb
  * Assigns a gap to an evolution track.
  */
 export async function assignGapToTrack(
-  base: BaseMemoryProvider,
+  base: TrackStore,
   gapId: string,
   track: EvolutionTrack,
   priority?: number
 ): Promise<void> {
   const defaults = TRACK_DEFAULTS[track] ?? { maxConcurrentGaps: 3, priority: 5 };
   const { expiresAt } = await RetentionManager.getExpiresAt('GAP', '');
+  const normalizedId = gapId.replace(/^(GAP#)+/, '').replace(/^(PROC#)+/, '');
 
   await base.putItem({
-    userId: `${MEMORY_KEYS.TRACK_PREFIX}${gapId}`,
+    userId: `${MEMORY_KEYS.TRACK_PREFIX}${normalizedId}`,
     timestamp: 0,
     type: 'TRACK_ASSIGNMENT',
-    gapId,
+    gapId: normalizedId,
     track,
     priority: priority ?? defaults.priority,
     assignedAt: Date.now(),
@@ -485,22 +492,23 @@ export async function assignGapToTrack(
     expiresAt,
   });
 
-  logger.info(`[GapTrack] Assigned gap ${gapId} to track: ${track}`);
+  logger.info(`[GapTrack] Assigned gap ${normalizedId} to track: ${track}`);
 }
 
 /**
  * Gets the track assignment for a gap.
  */
 export async function getGapTrack(
-  base: BaseMemoryProvider,
+  base: TrackStore,
   gapId: string
 ): Promise<{ track: EvolutionTrack; priority: number } | null> {
+  const normalizedId = gapId.replace(/^(GAP#)+/, '').replace(/^(PROC#)+/, '');
   try {
     const items = await base.queryItems({
       KeyConditionExpression: 'userId = :pk AND #ts = :zero',
       ExpressionAttributeNames: { '#ts': 'timestamp' },
       ExpressionAttributeValues: {
-        ':pk': `${MEMORY_KEYS.TRACK_PREFIX}${gapId}`,
+        ':pk': `${MEMORY_KEYS.TRACK_PREFIX}${normalizedId}`,
         ':zero': 0,
       },
     });
@@ -514,6 +522,86 @@ export async function getGapTrack(
   } catch (error) {
     logger.error(`[GapTrack] Failed to get track for gap ${gapId}:`, error);
     return null;
+  }
+}
+
+/**
+ * Updates gap metadata fields (impact, priority, confidence, etc.).
+ */
+export async function updateGapMetadata(
+  base: BaseMemoryProvider,
+  gapId: string,
+  metadata: Record<string, unknown>
+): Promise<void> {
+  const normalizedId = gapId.replace(/^(GAP#)+/, '').replace(/^(PROC#)+/, '');
+  const numericIdMatch = normalizedId.match(/(\d+)$/);
+  const numericId = numericIdMatch ? numericIdMatch[1] : normalizedId;
+  const parsedNumericId = Number.parseInt(numericId, 10);
+  const defaultTimestamp = Number.isNaN(parsedNumericId) ? 0 : parsedNumericId;
+
+  const userId = `GAP#${numericId}`;
+  const timestamp = defaultTimestamp;
+
+  const setClauses: string[] = ['updatedAt = :now'];
+  const exprValues: Record<string, unknown> = { ':now': Date.now() };
+
+  const metadataFields = [
+    'impact',
+    'priority',
+    'confidence',
+    'complexity',
+    'risk',
+    'urgency',
+  ] as const;
+
+  for (const field of metadataFields) {
+    if (metadata[field] !== undefined) {
+      setClauses.push(`metadata.${field} = :${field}`);
+      exprValues[`:${field}`] = metadata[field];
+    }
+  }
+
+  if (setClauses.length === 1) return;
+
+  try {
+    await base.updateItem({
+      Key: { userId, timestamp },
+      UpdateExpression: `SET ${setClauses.join(', ')}`,
+      ConditionExpression: 'attribute_exists(userId)',
+      ExpressionAttributeValues: exprValues,
+    });
+  } catch (error) {
+    const err = error as { name?: string };
+    if (err.name === 'ConditionalCheckFailedException') {
+      logger.warn(
+        `[GapMetadata] Primary key lookup failed for gap ${gapId}, searching all statuses...`
+      );
+      const allStatuses = Object.values(GapStatus);
+      for (const s of allStatuses) {
+        const gaps = await getAllGaps(base, s);
+        const target = gaps.find((g) => {
+          const gIdNorm = g.id.replace(/^(GAP#)+/, '').replace(/^(PROC#)+/, '');
+          const gIdMatch = gIdNorm.match(/(\d+)$/);
+          const gIdFinal = gIdMatch ? gIdMatch[1] : gIdNorm;
+          return gIdFinal === numericId;
+        });
+        if (target) {
+          try {
+            await base.updateItem({
+              Key: { userId: target.id, timestamp: target.timestamp },
+              UpdateExpression: `SET ${setClauses.join(', ')}`,
+              ExpressionAttributeValues: exprValues,
+            });
+            return;
+          } catch (e) {
+            logger.error(`[GapMetadata] Fallback update also failed for gap ${gapId}:`, e);
+          }
+        }
+      }
+      logger.error(`[GapMetadata] Gap ${gapId} not found in any status`);
+    } else {
+      logger.error(`[GapMetadata] Error updating gap ${gapId} metadata:`, error);
+    }
   }
 }
 

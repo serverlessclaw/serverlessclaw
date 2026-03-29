@@ -9,7 +9,7 @@ import {
 import { DynamoMemory } from '../memory';
 import { GapStatus, EvolutionTrack } from '../types/agent';
 import { InsightCategory } from '../types/memory';
-import { assignGapToTrack, getGapTrack, determineTrack } from './gap-operations';
+import { assignGapToTrack, getGapTrack, determineTrack, updateGapMetadata } from './gap-operations';
 
 vi.mock('../registry', () => ({
   AgentRegistry: {
@@ -106,6 +106,72 @@ describe('Gap Operations', () => {
       expect(item?.metadata?.impact).toBe(8);
       expect(item?.metadata?.urgency).toBe(7);
       expect(item?.status).toBe(GapStatus.OPEN);
+    });
+  });
+
+  describe('updateGapMetadata', () => {
+    it('should update impact and priority metadata on a gap', async () => {
+      ddbMock.on(UpdateCommand).resolves({});
+
+      await updateGapMetadata(memory, 'GAP#42', { impact: 9, priority: 7 });
+
+      const calls = ddbMock.commandCalls(UpdateCommand);
+      expect(calls).toHaveLength(1);
+
+      const input = calls[0].args[0].input;
+      expect(input.Key).toEqual({ userId: 'GAP#42', timestamp: 42 });
+      expect(input.UpdateExpression).toContain('metadata.impact = :impact');
+      expect(input.UpdateExpression).toContain('metadata.priority = :priority');
+      expect(input.ExpressionAttributeValues?.[':impact']).toBe(9);
+      expect(input.ExpressionAttributeValues?.[':priority']).toBe(7);
+    });
+
+    it('should normalize compound gap IDs using same logic as other gap operations', async () => {
+      ddbMock.on(UpdateCommand).resolves({});
+
+      await updateGapMetadata(memory, 'GAP#TOOLOPT-1710240000000-42', { impact: 5 });
+
+      const calls = ddbMock.commandCalls(UpdateCommand);
+      expect(calls[0].args[0].input.Key).toEqual({
+        userId: 'GAP#42',
+        timestamp: 42,
+      });
+    });
+
+    it('should return early when no metadata fields are provided', async () => {
+      await updateGapMetadata(memory, 'GAP#42', {});
+
+      const calls = ddbMock.commandCalls(UpdateCommand);
+      expect(calls).toHaveLength(0);
+    });
+
+    it('should fall back to searching all gap statuses when primary lookup fails', async () => {
+      const conditionalError = Object.assign(new Error('ConditionalCheckFailed'), {
+        name: 'ConditionalCheckFailedException',
+      });
+      ddbMock.on(UpdateCommand).rejectsOnce(conditionalError).resolves({});
+
+      ddbMock.on(QueryCommand).resolves({
+        Items: [
+          {
+            userId: 'GAP#42',
+            timestamp: 1710240000000,
+            content: 'test gap',
+            type: 'GAP',
+            status: GapStatus.OPEN,
+          },
+        ],
+      });
+
+      await updateGapMetadata(memory, 'GAP#42', { impact: 8 });
+
+      const updateCalls = ddbMock.commandCalls(UpdateCommand);
+      expect(updateCalls.length).toBeGreaterThanOrEqual(2);
+      // Second call should use the found item's actual timestamp
+      expect(updateCalls[1].args[0].input.Key).toEqual({
+        userId: 'GAP#42',
+        timestamp: 1710240000000,
+      });
     });
   });
 

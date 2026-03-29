@@ -106,6 +106,7 @@ The system records various trace types to capture the full lifecycle of agent-to
 | `parallel_completed` | Parallel aggregation done | `{ result: '...', completedTasks: 3 }` |
 | `council_review` | Council of Agents review | `{ decision: 'APPROVED', reviews: [...] }` |
 | `continuation` | Task result routing | `{ taskResult: '...', targetAgent: 'superclaw' }` |
+| `plan_generated` | Strategic plan generated | `{ planId: '...', coveredGaps: [...], planSnippet: '...' }` |
 
 ### System Event Trace Types
 
@@ -239,6 +240,102 @@ When a task is dispatched to multiple agents in parallel:
   ]
 }
 ```
+
+## Plan Decomposition Trace Flow
+
+When the Strategic Planner decomposes a complex plan into sub-tasks, each sub-task is tracked as a child node in the trace DAG:
+
+```text
+(root)
+Strategic Planner
+     |
+ [PLAN_GENERATED] ───────────→ Plan decomposed into 3 sub-tasks
+     |
+     +─── PARALLEL_TASK_DISPATCH ────+
+     |                                |
+     +─── (child-1) ──── Coder Agent
+     |        [sub-task 1: Update User model]
+     |        [llm_call] → [llm_response] → [tool_call]
+     |
+     +─── (child-2) ──── Coder Agent
+     |        [sub-task 2: Create verification endpoint]
+     |        [llm_call] → [llm_response] → [tool_call]
+     |
+     +─── (child-3) ──── Coder Agent
+              [sub-task 3: Update login flow]
+              [llm_call] → [llm_response] → [tool_call]
+     |
+ [PARALLEL_BARRIER] ──────────────→ Waiting for all sub-tasks
+     |
+ [PARALLEL_COMPLETED] ─────────────→ All sub-tasks complete
+     |
+ [CONTINUATION] ───────────────────→ Aggregated results
+```
+
+### DAG-Based Dependencies
+
+Sub-tasks can have explicit dependencies via `dependsOn` edges:
+
+```text
+(root)
+Strategic Planner
+     |
+ [PLAN_GENERATED] ───────────→ Plan with dependencies
+     |
+     +─── PARALLEL_TASK_DISPATCH ────+
+     |                                |
+     +─── (child-1) ──── Coder Agent
+     |        [dependsOn: []]
+     |        [sub-task 1: Update User model]
+     |
+     +─── (child-2) ──── Coder Agent ⏸️ WAITING
+     |        [dependsOn: [child-1]]
+     |        [sub-task 2: Create endpoint]
+     |
+     +─── (child-3) ──── Coder Agent ⏸️ WAITING
+              [dependsOn: [child-2]]
+              [sub-task 3: Update login flow]
+     |
+ [child-1 COMPLETED] ──────────────→ Triggers child-2
+     |
+ [child-2 COMPLETED] ──────────────→ Triggers child-3
+     |
+ [child-3 COMPLETED] ──────────────→ All done
+     |
+ [PARALLEL_COMPLETED] ─────────────→ Aggregated results
+```
+
+### Trace Data Structure
+
+```json
+{
+  "traceId": "plan-abc123",
+  "nodeId": "root",
+  "steps": [
+    {
+      "type": "plan_generated",
+      "content": {
+        "planId": "plan-abc123",
+        "coveredGaps": ["gap-1", "gap-2", "gap-3"],
+        "planSnippet": "1. Update User model..."
+      }
+    },
+    {
+      "type": "parallel_dispatch",
+      "content": {
+        "tasks": [
+          { "taskId": "plan-abc123-sub-0", "agentId": "coder", "dependsOn": [] },
+          { "taskId": "plan-abc123-sub-1", "agentId": "coder", "dependsOn": [0] },
+          { "taskId": "plan-abc123-sub-2", "agentId": "coder", "dependsOn": [1] }
+        ],
+        "hasDependencies": true
+      }
+    }
+  ]
+}
+```
+
+---
 
 ## Circuit Breaker Trace Flow
 

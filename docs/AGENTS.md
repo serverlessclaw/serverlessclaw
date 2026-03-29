@@ -95,6 +95,77 @@ To ensure coordination doesn't break as we add more agents, follow a **Contract-
 npx vitest core/tests/contract.test.ts
 ```
 
+## 📋 Plan Decomposition
+
+The **Strategic Planner** automatically decomposes complex plans into hierarchical sub-tasks to prevent Coder Agent logic overload from monolithic plans that exceed context windows.
+
+### How It Works
+
+1. **Complexity Detection**: Plans exceeding 500 characters are candidates for decomposition
+2. **Heuristic Splitting**: The system identifies step markers (numbered lists, dashes, "First/Then/Next/Finally") to split plans
+3. **Sub-Task Generation**: Each sub-task receives:
+   - Unique ID linked to parent plan (`{planId}-sub-{n}`)
+   - Full plan context (truncated to 200 chars for reference)
+   - Specific task instructions
+   - Gap IDs it addresses
+   - Execution order and dependencies
+   - Complexity estimate (1-10)
+
+### Execution Flow
+
+```text
+Strategic Planner          AgentBus (EB)          Coder Agent (xN)         Trace DAG (DDB)
+       |                      |                      |                      |
+       +-- decomposePlan ---->|                      |                      |
+       |   (3 sub-tasks)      |                      |                      |
+       |                      +-- CODER_TASK (1) --->|                      |--> [root-trace]
+       |                      +-- CODER_TASK (2) --->|                      |   [child-1]
+       |                      +-- CODER_TASK (3) --->|                      |   [child-2]
+       |                 [TERMINATE]                 |                      |   [child-3]
+       |                      |                      |                      |
+       |                      |    [ALL COMPLETE]    |                      |
+       |<-- CONTINUATION_TASK-+                      |                      |
+       | (aggregated results) |                      |                      |
+```
+
+### DAG-Based Dependencies
+
+Sub-tasks can declare dependencies using `dependsOn` edges, enabling sequential execution when needed:
+
+```typescript
+interface PlanSubTask {
+  subTaskId: string;      // Unique identifier
+  planId: string;         // Parent plan ID
+  task: string;           // Specific instruction for Coder Agent
+  gapIds: string[];       // Gap IDs addressed
+  order: number;          // Execution order (0-based)
+  dependencies: number[]; // Sub-tasks that must complete first
+  complexity: number;     // Estimated complexity 1-10
+}
+```
+
+### Configuration
+
+- **Minimum Plan Length**: 500 characters (plans shorter are dispatched as-is)
+- **Maximum Sub-Tasks**: 5 (remaining segments are appended to last sub-task)
+- **Default Dependencies**: Sequential (each sub-task depends on the previous one)
+
+### Example
+
+A complex plan like:
+
+```
+1. Update the User model to add emailVerified field
+2. Create verification endpoint at /api/verify-email
+3. Update login flow to check emailVerified
+4. Write comprehensive tests
+5. Deploy and verify health endpoint
+```
+
+Gets decomposed into 5 sub-tasks, each dispatched independently to Coder Agent(s) via `PARALLEL_TASK_DISPATCH`.
+
+---
+
 ## 🛠️ Engineering Standards (Agent & Human)
 
 To maintain the high technical integrity of the swarm, all contributors (both human and autonomous agents) MUST adhere to these standards when adding or modifying features:

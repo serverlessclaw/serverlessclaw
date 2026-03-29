@@ -47,9 +47,15 @@ export const POST = withApiHandler(async (body) => {
     await memory.addLesson(
       `GAP_REFINEMENT#${normalizedId}`,
       `User rejected gap plan. Reason: ${rejectionReason}`,
-      InsightCategory.TACTICAL_LESSON,
-      0.9,
-      8
+      {
+        category: InsightCategory.TACTICAL_LESSON,
+        confidence: 0.9,
+        impact: 8,
+        complexity: 0,
+        risk: 0,
+        urgency: 5,
+        priority: 8,
+      }
     );
   }
 

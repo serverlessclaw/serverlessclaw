@@ -339,6 +339,13 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   }
 
   /**
+   * Updates metadata fields (impact, priority, etc.) on a specific gap.
+   */
+  async updateGapMetadata(gapId: string, metadata: Partial<InsightMetadata>): Promise<void> {
+    return GapOps.updateGapMetadata(this, gapId, metadata);
+  }
+
+  /**
    * Records a failed strategic plan so the swarm learns anti-patterns.
    */
   async recordFailedPlan(

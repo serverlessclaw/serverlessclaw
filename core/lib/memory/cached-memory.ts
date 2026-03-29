@@ -529,6 +529,12 @@ export class CachedMemory implements IMemory {
     return this.underlying.getGapLock(gapId);
   }
 
+  async updateGapMetadata(gapId: string, metadata: Partial<InsightMetadata>): Promise<void> {
+    await this.underlying.updateGapMetadata(gapId, metadata);
+    // Invalidate gaps cache since metadata changed
+    MemoryCaches.global.invalidatePattern(/^gaps:/);
+  }
+
   async recordFailedPlan(
     planHash: string,
     planContent: string,

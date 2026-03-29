@@ -175,6 +175,8 @@ export interface IGapManager {
   releaseGapLock(gapId: string, agentId: string): Promise<void>;
   /** Checks if a gap is currently locked and returns the lock holder info. */
   getGapLock(gapId: string): Promise<{ content: string; expiresAt: number } | null>;
+  /** Updates metadata fields (impact, priority, etc.) on a specific gap. */
+  updateGapMetadata(gapId: string, metadata: Partial<InsightMetadata>): Promise<void>;
   /** Records a failed strategic plan so the swarm learns anti-patterns. */
   recordFailedPlan(
     planHash: string,

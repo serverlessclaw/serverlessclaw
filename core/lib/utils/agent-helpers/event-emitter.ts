@@ -7,7 +7,6 @@
  */
 
 import { Attachment, AgentType, EventType } from '../../types/index';
-import { SchemaEventType } from '../../schema/events';
 import { emitTypedEvent } from '../typed-emit';
 
 /**
@@ -49,5 +48,5 @@ export async function emitTaskEvent(params: {
   };
 
   // Delegate to typed emitter for validation and emission
-  await emitTypedEvent(params.source, eventType as unknown as SchemaEventType, detail);
+  await emitTypedEvent(params.source, eventType, detail);
 }

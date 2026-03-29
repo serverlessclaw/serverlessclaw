@@ -1,11 +1,7 @@
 import { EventType, AgentType } from '../../lib/types/index';
 import { DAGExecutionState } from '../../lib/types/dag';
 import type { ParallelTaskDefinition } from '../../lib/agent/schema';
-import {
-  COMPLETION_EVENT_SCHEMA,
-  FAILURE_EVENT_SCHEMA,
-  SchemaEventType,
-} from '../../lib/schema/events';
+import { COMPLETION_EVENT_SCHEMA, FAILURE_EVENT_SCHEMA } from '../../lib/schema/events';
 import { getRecursionLimit, handleRecursionLimitExceeded, wakeupInitiator } from './shared';
 
 /**
@@ -253,11 +249,11 @@ export async function handleTaskResult(
               );
 
               let detailType: string = `${task.agentId}_task`;
-              if (!EVENT_SCHEMA_MAP[detailType as SchemaEventType]) {
+              if (!EVENT_SCHEMA_MAP[detailType as EventType]) {
                 detailType = EventType.CODER_TASK;
               }
 
-              await emitTypedEvent('agent.dag', detailType as SchemaEventType, {
+              await emitTypedEvent('agent.dag', detailType as EventType, {
                 userId,
                 taskId: task.taskId,
                 task: enrichedTask,
@@ -285,7 +281,7 @@ export async function handleTaskResult(
                 const finalState = await aggregator.getState(userId, traceId);
                 await emitTypedEvent(
                   'events.handler',
-                  EventType.PARALLEL_TASK_COMPLETED as unknown as SchemaEventType,
+                  EventType.PARALLEL_TASK_COMPLETED as unknown as EventType,
                   {
                     userId,
                     sessionId: currentState.sessionId,
@@ -345,7 +341,7 @@ export async function handleTaskResult(
         const { emitTypedEvent } = await import('../../lib/utils/typed-emit');
         await emitTypedEvent(
           'events.handler',
-          EventType.PARALLEL_TASK_COMPLETED as unknown as SchemaEventType,
+          EventType.PARALLEL_TASK_COMPLETED as unknown as EventType,
           {
             userId,
             sessionId: aggregateState.sessionId,

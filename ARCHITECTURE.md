@@ -165,6 +165,32 @@ Agents communicate asynchronously using **AWS EventBridge (The AgentBus)**. This
 - **Discovery**: The `AgentRegistry` and `topology.ts` utility perform post-deployment discovery, merging backbone logic with user-defined personas.
 - **Visualization**: The **System Pulse** map in ClawCenter renders a unified, resilient graph of these interactions, covering the full stack from API Gateway to individual agent tools.
 
+### Plan Decomposition Flow
+
+When the Strategic Planner generates a complex plan, it automatically decomposes it into sub-tasks for parallel execution:
+
+```text
+Strategic Planner          AgentBus (EB)          Coder Agent (xN)         Trace DAG (DDB)
+       |                      |                      |                      |
+       +-- decomposePlan ---->|                      |                      |
+       |   (3 sub-tasks)      |                      |                      |
+       |                      +-- CODER_TASK (1) --->|                      |--> [root-trace]
+       |                      +-- CODER_TASK (2) --->|                      |   [child-1]
+       |                      +-- CODER_TASK (3) --->|                      |   [child-2]
+       |                 [TERMINATE]                 |                      |   [child-3]
+       |                      |                      |                      |
+       |                      |    [ALL COMPLETE]    |                      |
+       |<-- CONTINUATION_TASK-+                      |                      |
+       | (aggregated results) |                      |                      |
+```
+
+**Key Features:**
+- **Automatic Decomposition**: Plans >500 chars are split into max 5 sub-tasks
+- **DAG-Based Dependencies**: Sub-tasks can declare `dependsOn` edges for sequential execution
+- **Complexity Estimation**: Each sub-task gets a complexity score (1-10) for resource allocation
+- **Parallel Dispatch**: Sub-tasks dispatched via `PARALLEL_TASK_DISPATCH` event
+- **Trace Linking**: Parent-child relationships tracked via `traceId` DAG
+
 ---
 
 ## Multi-Party Collaboration (Facilitator-Moderated Sessions)

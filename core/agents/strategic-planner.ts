@@ -423,7 +423,11 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
         const numericId = gId.replace('GAP#', '');
         await memory.updateGapStatus(numericId, GapStatus.PLANNED);
         // Assign to evolution track based on plan content
-        await assignGapToTrack(memory as never, numericId, determineTrack(plan));
+        await assignGapToTrack(
+          memory as unknown as Parameters<typeof assignGapToTrack>[0],
+          numericId,
+          determineTrack(plan)
+        );
         processedGapIds.push(numericId);
       }
     } else if (gapId) {
@@ -583,7 +587,7 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
         initiatorId: AgentType.STRATEGIC_PLANNER,
         depth: (depth ?? 0) + 1,
         sessionId,
-      } as never);
+      });
     } else {
       // Single task dispatch (existing behavior)
       const { dispatchTask: dispatcher } = await import('../tools/knowledge/agent');

@@ -5,7 +5,7 @@ import { ParallelDispatchParams, ParallelTaskDefinition } from '../../lib/agent/
 import { DynamicScheduler } from '../../lib/scheduler';
 import { ConfigManager } from '../../lib/registry/config';
 import { TIME, TRACE_TYPES } from '../../lib/constants';
-import { EVENT_SCHEMA_MAP, SchemaEventType } from '../../lib/schema/events';
+import { EVENT_SCHEMA_MAP } from '../../lib/schema/events';
 import { addTraceStep } from '../../lib/utils/trace-helper';
 import {
   buildDependencyGraph,
@@ -121,25 +121,21 @@ export async function handleParallelDispatch(
 
       // Emit a completion event to notify orchestrator of failure
       const { emitTypedEvent } = await import('../../lib/utils/typed-emit');
-      await emitTypedEvent(
-        'events.handler',
-        EventType.PARALLEL_TASK_COMPLETED as unknown as SchemaEventType,
-        {
-          userId,
-          sessionId,
-          traceId: safeTraceId,
-          taskId: safeTraceId,
-          initiatorId: initiatorId ?? 'parallel-dispatcher',
-          depth,
-          overallStatus: 'failed',
-          results: [],
-          taskCount: tasks.length,
-          completedCount: 0,
-          elapsedMs: 0,
-          aggregationType,
-          aggregationPrompt,
-        }
-      );
+      await emitTypedEvent('events.handler', EventType.PARALLEL_TASK_COMPLETED, {
+        userId,
+        sessionId,
+        traceId: safeTraceId,
+        taskId: safeTraceId,
+        initiatorId: initiatorId ?? 'parallel-dispatcher',
+        depth,
+        overallStatus: 'failed',
+        results: [],
+        taskCount: tasks.length,
+        completedCount: 0,
+        elapsedMs: 0,
+        aggregationType,
+        aggregationPrompt,
+      });
       return;
     }
 
@@ -196,25 +192,21 @@ export async function handleParallelDispatch(
 
     // Emit a completion event to notify orchestrator of failure
     const { emitTypedEvent } = await import('../../lib/utils/typed-emit');
-    await emitTypedEvent(
-      'events.handler',
-      EventType.PARALLEL_TASK_COMPLETED as unknown as SchemaEventType,
-      {
-        userId,
-        sessionId,
-        traceId: safeTraceId,
-        taskId: safeTraceId,
-        initiatorId: initiatorId ?? 'parallel-dispatcher',
-        depth,
-        overallStatus: 'failed',
-        results: [],
-        taskCount: tasks.length,
-        completedCount: 0,
-        elapsedMs: 0,
-        aggregationType,
-        aggregationPrompt,
-      }
-    );
+    await emitTypedEvent('events.handler', EventType.PARALLEL_TASK_COMPLETED, {
+      userId,
+      sessionId,
+      traceId: safeTraceId,
+      taskId: safeTraceId,
+      initiatorId: initiatorId ?? 'parallel-dispatcher',
+      depth,
+      overallStatus: 'failed',
+      results: [],
+      taskCount: tasks.length,
+      completedCount: 0,
+      elapsedMs: 0,
+      aggregationType,
+      aggregationPrompt,
+    });
     return;
   }
 
@@ -252,11 +244,11 @@ async function dispatchTask(
   let detailType: string = `${task.agentId}_task`;
 
   // Generic fallback for unknown agents to use TASK_EVENT_SCHEMA via CODER_TASK key
-  if (!EVENT_SCHEMA_MAP[detailType as SchemaEventType]) {
+  if (!EVENT_SCHEMA_MAP[detailType as EventType]) {
     detailType = EventType.CODER_TASK;
   }
 
-  await emitTypedEvent('agent.parallel', detailType as SchemaEventType, {
+  await emitTypedEvent('agent.parallel', detailType as EventType, {
     userId,
     taskId: task.taskId,
     task: task.task,
