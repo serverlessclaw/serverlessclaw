@@ -142,13 +142,14 @@ Initiator (Planner)     AgentBus (EB)       Sub-Agents (xN)      Aggregator (DDB
 The Swarm Consensus Protocol provides a mechanism for agents to make collective decisions on high-impact changes. It prevents a single "hallucinating" or compromised agent from making unilateral system alterations.
 
 It supports three voting modes:
+
 - **Majority**: Requires > 50% of participants to vote YES.
 - **Unanimous**: Requires 100% of participants to vote YES.
 - **Weighted**: Votes are weighted by the agent's current **Reputation Score** (Phase A1).
 
 #### Event Flow
 
-```text
+````text
 Initiator (Planner)     AgentBus (EB)       Participants (xN)     Consensus Handler (DDB)
       |                      |                      |                    |
       +-- requestConsensus ->|                      |                    |
@@ -262,7 +263,7 @@ Planner (impact >= 8)
     |         |                       |
     |         v                       v
     |   [dispatch to Coder]      [revise plan or escalate to HITL]
-```
+````
 
 #### Aggregation
 
@@ -338,6 +339,40 @@ Initiator (Planner)     Collaboration Tool      AgentBus (EB)      Facilitator (
 - **Council of Agents**: Shared discussion between Security, Performance, and Architect critics (Facilitator moderates).
 - **Human-in-the-loop Debugging**: Real-time collaboration between a human and multiple specialized agents.
 - **Ambiguity Resolution**: When a task is too complex for a single transactional exchange.
+
+### Workspace-Aware Multi-Human Collaboration
+
+When a `workspaceId` is provided to `createCollaboration`, the system automatically:
+
+1. Adds all workspace agent members as collaboration participants (editor/viewer based on role)
+2. Routes notifications to all human members via their configured channels
+
+```text
+SuperClaw (Lambda)    Workspace (DDB)     Collab Tool       Notifier (Lambda)     Human Channels
+       |                    |                  |                    |                    |
+       +-- createCollab --->|                  |                    |                    |
+       |   (workspaceId:X)  |                  |                    |                    |
+       |                    |                  |                    |                    |
+       |             [LOAD MEMBERS]            |                    |                    |
+       |                    |                  |                    |                    |
+       |             +------v------+           |                    |                    |
+       |             | Agents (xN) |           |                    |                    |
+       |             | Humans (xM) |           |                    |                    |
+       |             +------+------+           |                    |                    |
+       |                    |                  |                    |                    |
+       |                    +-- auto-add ----->|                    |                    |
+       |                    |   agents as      |                    |                    |
+       |                    |   participants   |                    |                    |
+       |                    |                  |                    |                    |
+       |                    |             [SESSION EVENTS]          |                    |
+       |                    |                  +-- OUTBOUND ------->|                    |
+       |                    |                  |   (workspaceId)    |                    |
+       |                    |                  |                    |                    |
+       |                    |                  |             [FAN-OUT per member]        |
+       |                    |                  |                    +-- Telegram ------->|
+       |                    |                  |                    +-- Discord -------->|
+       |                    |                  |                    +-- Dashboard ------>|
+```
 
 ### Granular HITL Tool Approval (Tool-level Gates)
 
