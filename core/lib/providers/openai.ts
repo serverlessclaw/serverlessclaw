@@ -4,6 +4,7 @@ import {
   Message,
   ITool,
   ReasoningProfile,
+  AttachmentType,
   MessageRole,
   OpenAIModel,
 } from '../types/index';
@@ -408,6 +409,7 @@ export class OpenAIProvider implements IProvider {
       maxReasoningEffort,
       supportsStructuredOutput: true,
       contextWindow: 128000,
+      supportedAttachmentTypes: [AttachmentType.IMAGE, AttachmentType.FILE],
     };
   }
 }

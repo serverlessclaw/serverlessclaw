@@ -3,6 +3,7 @@ import {
   Message,
   ITool,
   ReasoningProfile,
+  AttachmentType,
   MessageRole,
   OpenRouterModel,
   Attachment,
@@ -527,6 +528,7 @@ export class OpenRouterProvider implements IProvider {
         : activeModel.includes(OPENROUTER_CONSTANTS.MODELS.GLM)
           ? CONTEXT_WINDOWS['glm']
           : CONTEXT_WINDOWS['default'],
+      supportedAttachmentTypes: [AttachmentType.IMAGE, AttachmentType.FILE],
     };
   }
 }

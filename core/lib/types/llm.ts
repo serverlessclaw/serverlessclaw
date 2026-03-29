@@ -182,6 +182,8 @@ export interface ICapabilities {
   supportsStructuredOutput?: boolean;
   /** The maximum context window size (tokens) for this model. */
   contextWindow?: number;
+  /** Which attachment types this provider/model can process. */
+  supportedAttachmentTypes?: AttachmentType[];
 }
 
 /**

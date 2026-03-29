@@ -8,6 +8,7 @@ import {
   IAgentConfig,
   TraceSource,
   Attachment,
+  AttachmentType,
   InsightCategory,
   ToolCall,
 } from './types/index';
@@ -270,7 +271,17 @@ export class Agent {
           ? `\n\n[COLLECTIVE_SWARM_INTELLIGENCE]:\nThese are system-wide lessons learned across ALL sessions. Apply them universally:\n${globalLessons.map((l) => `- ${l}`).join('\n')}\n`
           : '';
 
+      // Fetch capabilities early for conditional prompt injection
+      const capabilities = await this.provider.getCapabilities(activeModel);
+
       let contextPrompt = this.systemPrompt;
+
+      // Conditionally inject vision block if provider supports image attachments
+      if (capabilities.supportedAttachmentTypes?.includes(AttachmentType.IMAGE)) {
+        const { VISION_PROMPT_BLOCK } = await import('./prompts/vision');
+        contextPrompt += VISION_PROMPT_BLOCK;
+      }
+
       if (recoveryContext) contextPrompt += recoveryContext;
       contextPrompt += `\n\n${AgentContext.getMemoryIndexBlock(distilled, lessons.length, preferences.items.length)}`;
       contextPrompt += `\n\n[INTELLIGENCE]\n${facts.length > 0 ? facts : 'No persistent knowledge available for this user yet.'}\n\n`;
@@ -299,7 +310,6 @@ export class Agent {
       const fullHistory = [...history, currentMessage];
       const summary = await this.memory.getSummary(storageId);
 
-      const capabilities = await this.provider.getCapabilities(activeModel);
       const contextLimit = capabilities.contextWindow ?? LIMITS.MAX_CONTEXT_LENGTH;
 
       const managed = await ContextManager.getManagedContext(

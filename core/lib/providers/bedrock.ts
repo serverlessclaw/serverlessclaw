@@ -14,6 +14,7 @@ import {
   Message,
   ITool,
   ReasoningProfile,
+  AttachmentType,
   MessageRole,
   BedrockModel,
   Attachment,
@@ -547,6 +548,7 @@ export class BedrockProvider implements IProvider {
         : [ReasoningProfile.FAST, ReasoningProfile.STANDARD],
       supportsStructuredOutput: isClaude46,
       contextWindow: DEFAULT_CONTEXT_WINDOW,
+      supportedAttachmentTypes: [AttachmentType.IMAGE, AttachmentType.FILE],
     };
   }
 }

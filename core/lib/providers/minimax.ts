@@ -4,6 +4,7 @@ import {
   Message,
   ITool,
   ReasoningProfile,
+  AttachmentType,
   MessageRole,
   MiniMaxModel,
   ToolCall,
@@ -411,6 +412,7 @@ export class MiniMaxProvider implements IProvider {
       maxReasoningEffort: 'high',
       supportsStructuredOutput: true,
       contextWindow,
+      supportedAttachmentTypes: [AttachmentType.IMAGE, AttachmentType.FILE],
     };
   }
 }
