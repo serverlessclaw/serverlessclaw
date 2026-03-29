@@ -370,23 +370,23 @@ To ensure the system remains efficient, a continuous optimization loop runs in t
           |                                                   (5) getMetrics()
     +-----v-----+          (7) updateReputation()               +-------+-------+
     |  Token    | <----------- (4) fetchToolUsage() ---+        |  Reputation   |
-    |  Tracker  |                                       |        |  (7-day roll) |
-    +-----+-----+                                       |        +-------+-------+
-          |                                              |                ^
-    (2) recordFailurePattern()                           |      (8) getReputation()
-          |                                              |                |
-    +-----v-----+                                       |        +-------+-------+
-    |  Memory   | <-------------------------------------+        | Reputation    |
-    |  (Insights)|                                               | Handler       |
-    +-----------+                                               +-------+-------+
-                                                                        ^
-                                                                        |
-                                                               (7) REPUTATION_UPDATE
-                                                                        |
-                                                                +-------+-------+
-                                                                | EventHandler  |
-                                                                | (on result)   |
-                                                                +---------------+
+    |  Tracker  | <---+                                 |        |  (7-day roll) |
+    +-----+-----+     |                                 |        +-------+-------+
+          |           |                                 |                ^
+    (2) recordFailure |         (9) audit               |      (8) getReputation()
+          |           +--- [ Swarm Optimizer ]          |                |
+    +-----v-----+     |         (Economist)             |        +-------+-------+
+    |  Memory   | <---+              |                  +        | Reputation    |
+    |  (Insights)| <-----------------+---------------------------| Handler       |
+    +-----------+         (10) emit improvements                 +-------+-------+
+          ^                          |                                   ^
+          |                          v                                   |
+          +------------------ [ Strategic Planner ] <----------- (7) REPUTATION_UPDATE
+                                (Design Phase)                           |
+                                                                 +-------+-------+
+                                                                 | EventHandler  |
+                                                                 | (on result)   |
+                                                                 +---------------+
 ```
 
 1. **Telemetry**: The `Executor` captures token usage, duration, and success for every tool call.
@@ -397,6 +397,8 @@ To ensure the system remains efficient, a continuous optimization loop runs in t
 6. **Routing**: The `AgentRouter` uses performance rollups AND reputation scores (success rate, latency, recency) to select the best agent. Formula: `(0.6 * performanceScore) + (0.4 * reputationScore)`.
 7. **Reputation Tracking**: The `EventHandler` updates agent reputation on every `TASK_COMPLETED` and `TASK_FAILED` event (via `REPUTATION_UPDATE`).
 8. **Reputation Retrieval**: The `AgentRouter` fetches reputation data for composite routing decisions.
+9. **Efficiency Audit**: The **Swarm Optimizer** periodically audits `TokenTracker` rollups and `FAILED_PLAN#` memory to identify cost-saving model swaps or redundant tools.
+10. **Autonomous Improvement**: The Optimizer emits `SYSTEM_IMPROVEMENT` gaps that the **Strategic Planner** consumes to refine the swarm's architecture.
 
 ### Evolution Safeguards
 

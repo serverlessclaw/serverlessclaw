@@ -19,6 +19,7 @@ We distinguish between **Autonomous Agents** (LLM-powered decision-makers) and *
 | **QA Auditor**          | `core/agents/qa.ts`                  | `AgentRegistry` (Backbone) | Verifies satisfaction of deployed changes                                       |
 | **Critic Agent**        | `core/agents/critic.ts`              | `AgentRegistry` (Backbone) | Peer review for Council of Agents (security/performance/architect)              |
 | **Facilitator**         | `core/agents/prompts/facilitator.md` | `AgentRegistry` (Backbone) | Moderates multi-party collaboration sessions, drives consensus, closes sessions |
+| **Swarm Optimizer**     | `core/agents/optimizer.ts`           | `AgentRegistry` (Backbone) | Swarm economist. Audits telemetry and memory to suggest model swaps and pruning |
 
 ### 2. System Handlers (Logic-Powered)
 
@@ -135,6 +136,46 @@ Initiator (Planner)     AgentBus (EB)       Sub-Agents (xN)      Aggregator (DDB
       |<-- CONTINUATION_TASK-+                      |                    |
       | (PARALLEL_COMPLETED) |                      |                    |
 ```
+
+### Swarm Consensus Protocol (Voting & Governance)
+
+The Swarm Consensus Protocol provides a mechanism for agents to make collective decisions on high-impact changes. It prevents a single "hallucinating" or compromised agent from making unilateral system alterations.
+
+It supports three voting modes:
+- **Majority**: Requires > 50% of participants to vote YES.
+- **Unanimous**: Requires 100% of participants to vote YES.
+- **Weighted**: Votes are weighted by the agent's current **Reputation Score** (Phase A1).
+
+#### Event Flow
+
+```text
+Initiator (Planner)     AgentBus (EB)       Participants (xN)     Consensus Handler (DDB)
+      |                      |                      |                    |
+      +-- requestConsensus ->|                      |                    |
+      |   (proposal, mode)   +-- CONSENSUS_REQUEST -+------------------->|
+      |                      |                      |             [INIT State: PENDING]
+      |                      |                      |                    |
+      |             [ AS AGENTS VOTE ]              |                    |
+      |                      |<--- CONSENSUS_VOTE --+                    |
+      |                      +----------------------+------------------->|
+      |                      |                      |             [RECORD Vote]
+      |                      |                      |             [CHECK Threshold]
+      |                      |<-- CONSENSUS_REACHED +<-------------------+
+      |                      |   (approved: T/F)    |             [STATE: COMPLETED]
+      |                      |                      |                    |
+      |<-- CONTINUATION_TASK-+                      |                    |
+      | (CONSENSUS_REACHED)  |                      |                    |
+```
+
+### Evolution Budgeting (Cost Guardrails)
+
+To ensure the autonomous swarm does not exceed financial limits, the `EvolutionBudgetManager` enforces per-cycle cost caps.
+
+- **Check**: Agents call `canDispatchTask(estimatedCost)` before initiating expensive loops.
+- **Record**: Agents call `recordSpend(amount)` upon task completion to decrement the cycle budget.
+- **Auto-Reset**: Budgets automatically reset when the cycle (default: 7 days) expires.
+
+---
 
 ### Council of Agents (Peer Review Gate)
 
@@ -506,8 +547,27 @@ To ensure coordination doesn't break as we add more agents, follow a **Contract-
 3. **Add Contract Test**: Add a test case to `core/tests/contract.test.ts` to verify your new event pattern.
 4. **Verify Handler**: Ensure your agent's handler uses `.parse()` and the correct schema to validate incoming `eventDetail`.
 
-Run the contract tests:
-
 ```bash
 npx vitest core/tests/contract.test.ts
 ```
+
+## 🛠️ Engineering Standards (Agent & Human)
+
+To maintain the high technical integrity of the swarm, all contributors (both human and autonomous agents) MUST adhere to these standards when adding or modifying features:
+
+1. **Test-First Development**:
+   - **New Features**: Must include at least one unit test file (`.test.ts`) and, if applicable, an integration/contract test.
+   - **Bug Fixes**: Must include a regression test that demonstrates the fix.
+   - **Coverage**: Maintain or improve existing test coverage.
+
+2. **Documentation Parity**:
+   - **Update MDs**: Any change to agent roles, event types, or memory tiers must be immediately reflected in `docs/AGENTS.md`, `docs/MEMORY.md`, or `ARCHITECTURE.md`.
+   - **ASCII Diagrams**: Complex flows (especially those involving new event patterns) must be documented with an updated ASCII sequence diagram.
+
+3. **Schema Integrity**:
+   - Always update `core/lib/schema/` and `core/lib/types/` before implementing logic.
+   - Use strict typing and avoid `any` wherever possible.
+
+4. **Telemetry & Audit**:
+   - Ensure all new tools and handlers emit appropriate telemetry (TokenUsage, Reputation signals).
+   - Failed autonomous operations must be recorded in the **Negative Memory** tier (`FAILED_PLAN#`).

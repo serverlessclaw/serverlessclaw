@@ -24,8 +24,9 @@ Serverless Claw uses a tiered, evolutionary memory system designed to provide co
 |                                                                     |
 |  [ TIER 1: CORE INTELLIGENCE ] --------> Retain: 730 Days (2 Years)   |
 |  - Key: DISTILLED# / LESSON# / GAP# / MEMORY: / REPUTATION#:        |
+|    / FAILED_PLAN#:                                                  |
 |  - Purpose: Permanent identity, tactical lessons, strategic roadmaps,|
-|    agent reputation for swarm routing.                               |
+|    agent reputation for swarm routing, and anti-pattern learning.    |
 |                                                                     |
 |  [ TIER 2: HUMAN CONVERSATION ] -------> Retain: 30 Days            |
 |  - Key: CONV# / SESSIONS#                                           |
@@ -65,7 +66,21 @@ A backlog of missing capabilities identified by the Reflector. These gaps are th
 - **Tracking**: Includes ROI, Complexity, and Risk signals.
 - **Evolution**: The **Strategic Planner** reviews these during its deterministic **48-hour review** cycle to design the next system upgrade.
 
-### 4. Agent Operational Traces (`COGNITION-REFLECTOR#`, `CODER#`, etc.)
+### 4. Negative Memory (`FAILED_PLAN#`)
+
+Records of structurally failed strategic plans. This tier prevents the swarm from "looping" on expensive mistakes by providing a historical record of what has already been tried and failed.
+
+- **Data Model**: JSON containing the plan hash, failure reason, and impacted gap IDs.
+- **Feedback Loop**:
+  ```text
+  [ Coder Agent ] --(1) record failure--> [ FAILED_PLAN# ]
+                                              |
+                                              v
+  [ Strategic Planner ] <--(3) avoid <--- [ Swarm Optimizer ]
+      (Design Phase)      anti-patterns    (Audit Phase)
+  ```
+
+### 5. Agent Operational Traces (`COGNITION-REFLECTOR#`, `CODER#`, etc.)
 
 The raw execution logs of background agent loops. These are trace-specific and isolated to prevent cross-contamination.
 
