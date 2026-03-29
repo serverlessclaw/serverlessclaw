@@ -1,135 +1,110 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { mockClient } from 'aws-sdk-client-mock';
-import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
-  DynamoDBClient,
-  PutItemCommand,
-  GetItemCommand,
-  DeleteItemCommand,
-} from '@aws-sdk/client-dynamodb';
-import { ListEventBusesCommand } from '@aws-sdk/client-eventbridge';
+  checkAgentBus,
+  checkToolHealth,
+  checkCognitiveHealth,
+  setEventBridgeClient,
+  setDynamoDbClient,
+  setS3Client,
+  setIotClient,
+} from './health';
+import { EventBridgeClient } from '@aws-sdk/client-eventbridge';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { S3Client } from '@aws-sdk/client-s3';
+import { IoTClient } from '@aws-sdk/client-iot';
 
-// 1. Mock 'sst'
 vi.mock('sst', () => ({
   Resource: {
-    AgentBus: { name: 'test-agent-bus' },
-    MemoryTable: { name: 'test-memory-table' },
-    ConfigTable: { name: 'test-config-table' },
-    TraceTable: { name: 'test-trace-table' },
+    AgentBus: { name: 'test-bus' },
+    MemoryTable: { name: 'test-table' },
+    StagingBucket: { name: 'test-bucket' },
+    WebhookApi: { url: 'https://test-api' },
   },
 }));
 
-// 2. Mock EventBridge and DynamoDB
-const ebMock = mockClient(EventBridgeClient);
-const ddbMock = mockClient(DynamoDBClient);
+vi.mock('./providers', () => {
+  return {
+    ProviderManager: class {
+      getCapabilities = vi.fn().mockResolvedValue({ supportsStructuredOutput: true });
+      getActiveProviderName = vi.fn().mockResolvedValue('test-provider');
+      getActiveModelName = vi.fn().mockResolvedValue('test-model');
+    },
+  };
+});
 
-// 3. Import subject AFTER the mock
-import { reportHealthIssue, runDeepHealthCheck } from './health';
-import { EventType } from './types/index';
+describe('Cognitive Health Probes', () => {
+  const mockEB = {
+    send: vi.fn(),
+  } as unknown as EventBridgeClient;
 
-describe('health reporting utility', () => {
-  const FIXED_NOW = 1000;
+  const mockDB = {
+    send: vi.fn(),
+  } as unknown as DynamoDBClient;
+
+  const mockS3 = {
+    send: vi.fn(),
+  } as unknown as S3Client;
+
+  const mockIot = {
+    send: vi.fn(),
+  } as unknown as IoTClient;
 
   beforeEach(() => {
-    ebMock.reset();
-    ddbMock.reset();
-    vi.spyOn(Date, 'now').mockReturnValue(FIXED_NOW);
-    vi.resetModules();
+    vi.clearAllMocks();
+    setEventBridgeClient(mockEB);
+    setDynamoDbClient(mockDB);
+    setS3Client(mockS3);
+    setIotClient(mockIot);
   });
 
-  describe('runDeepHealthCheck', () => {
-    it('should return ok: true when all circuits pass', async () => {
-      ddbMock.on(PutItemCommand).resolves({});
-      ddbMock.on(GetItemCommand).resolves({
-        Item: { content: { S: `PULSE#${FIXED_NOW}` } },
-      });
-      ddbMock.on(DeleteItemCommand).resolves({});
-      ebMock.on(ListEventBusesCommand).resolves({});
-
-      const result = await runDeepHealthCheck();
-      expect(result.ok).toBe(true);
-      expect(ddbMock.calls()).toHaveLength(3); // Put, Get, Delete
-      expect(ebMock.commandCalls(ListEventBusesCommand)).toHaveLength(1);
-    });
-
-    it('should return ok: false if DynamoDB write fails', async () => {
-      ddbMock.on(PutItemCommand).rejects(new Error('DynamoDB Write Error'));
-
-      const result = await runDeepHealthCheck();
-      expect(result.ok).toBe(false);
-      expect(result.details).toContain('DynamoDB Write Error');
-    });
-
-    it('should return ok: false if pulse content mismatches', async () => {
-      ddbMock.on(PutItemCommand).resolves({});
-      ddbMock.on(GetItemCommand).resolves({
-        Item: { content: { S: 'WRONG_PULSE' } },
-      });
-
-      const result = await runDeepHealthCheck();
-      expect(result.ok).toBe(false);
-      expect(result.details).toContain('content mismatch');
-    });
-
-    it('should return ok: false if EventBridge fails', async () => {
-      ddbMock.on(PutItemCommand).resolves({});
-      ddbMock.on(GetItemCommand).resolves({
-        Item: { content: { S: `PULSE#${FIXED_NOW}` } },
-      });
-      ddbMock.on(DeleteItemCommand).resolves({});
-      ebMock.on(ListEventBusesCommand).rejects(new Error('EventBridge Error'));
-
-      const result = await runDeepHealthCheck();
-      expect(result.ok).toBe(false);
-      expect(result.details).toContain('EventBridge Error');
-    });
+  it('checkAgentBus should return ok when ListEventBuses succeeds', async () => {
+    (mockEB.send as any).mockResolvedValueOnce({});
+    const result = await checkAgentBus();
+    expect(result.ok).toBe(true);
+    expect(result.latencyMs).toBeGreaterThanOrEqual(0);
   });
 
-  describe('reportHealthIssue', () => {
-    it('should send SYSTEM_HEALTH_REPORT event to EventBridge', async () => {
-      ebMock.on(PutEventsCommand).resolves({});
+  it('checkAgentBus should return fail when ListEventBuses fails', async () => {
+    (mockEB.send as any).mockRejectedValueOnce(new Error('EB Connection Failed'));
+    const result = await checkAgentBus();
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain('EB Connection Failed');
+  });
 
-      const report = {
-        component: 'TestComponent',
-        issue: 'Test issue description',
-        severity: 'high' as const,
-        userId: 'test-user-123',
-        context: { detail: 'extra info' },
-      };
+  it('checkToolHealth should verify DynamoDB, S3, and IoT', async () => {
+    (mockDB.send as any).mockResolvedValueOnce({});
+    (mockS3.send as any).mockResolvedValueOnce({});
+    (mockIot.send as any).mockResolvedValueOnce({});
 
-      await reportHealthIssue(report);
+    const result = await checkToolHealth();
+    expect(result.ok).toBe(true);
+    const details = result.details as any;
+    expect(details?.dynamodb.ok).toBe(true);
+    expect(details?.s3.ok).toBe(true);
+    expect(details?.iot.ok).toBe(true);
+  });
 
-      expect(ebMock.calls()).toHaveLength(1);
-      const call = ebMock.call(0);
-      const input = call.args[0].input as {
-        Entries: Array<{
-          Source: string;
-          DetailType: string;
-          Detail: string;
-          EventBusName: string;
-        }>;
-      };
+  it('checkToolHealth should return ok:false if DynamoDB fails', async () => {
+    (mockDB.send as any).mockRejectedValueOnce(new Error('DB Timeout'));
+    (mockS3.send as any).mockResolvedValueOnce({});
+    (mockIot.send as any).mockResolvedValueOnce({});
 
-      expect(input.Entries[0].Source).toBe('system.health');
-      expect(input.Entries[0].DetailType).toBe(EventType.SYSTEM_HEALTH_REPORT);
+    const result = await checkToolHealth();
+    expect(result.ok).toBe(false);
+    const details = result.details as any;
+    expect(details?.dynamodb.ok).toBe(false);
+  });
 
-      const detail = JSON.parse(input.Entries[0].Detail);
-      expect(detail).toMatchObject(report);
-    });
+  it('checkCognitiveHealth orchestrates all probes', async () => {
+    (mockEB.send as any).mockResolvedValueOnce({});
+    (mockDB.send as any).mockResolvedValueOnce({});
+    (mockS3.send as any).mockResolvedValueOnce({});
+    (mockIot.send as any).mockResolvedValueOnce({});
 
-    it('should log error but not throw if EventBridge fails', async () => {
-      ebMock.on(PutEventsCommand).rejects(new Error('EventBridge failure'));
-
-      const report = {
-        component: 'TestComponent',
-        issue: 'Test issue description',
-        severity: 'low' as const,
-        userId: 'test-user-123',
-      };
-
-      // Should not throw - retry logic will attempt multiple times (max 3)
-      await expect(reportHealthIssue(report)).resolves.not.toThrow();
-      expect(ebMock.calls().length).toBeGreaterThanOrEqual(1);
-    });
+    const result = await checkCognitiveHealth();
+    expect(result.ok).toBe(true);
+    expect(result.results.bus.ok).toBe(true);
+    expect(result.results.tools.ok).toBe(true);
+    expect(result.results.providers.ok).toBe(true);
   });
 });

@@ -3,7 +3,8 @@ import { logger } from '../lib/logger';
 
 /**
  * Registry-less tool resolution logic.
- * This file avoids importing the heavy TOOLS object to keep context budget low.
+ * This file avoids importing the heavy TOOLS object directly to keep context budget low,
+ * or provides utilities for dynamic tool discovery.
  */
 
 /**

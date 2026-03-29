@@ -202,13 +202,14 @@ Serverless Claw has evolved from static tools to a **Dynamic Skill Architecture*
     +--------+--------+--------+
     |                 |        |
  [ Custom ]        [ MCP ]  [ Built-in ]
- Internal       External Hub Model Native
- (Lambda)         (SSE)     (Provider)
+ Domains          External Hub Model Native
+ (Lambda)           (SSE)     (Provider)
     |          +------+------+ |
     |          |             | |
- - TRIGGER_DEPLOYMENT v             v - python
- - RECALL_KNOWLEDGE  [ Hub ] ----> [ Local ] - search
- - CHECK_HEALTH      (Prim)  (Fallback) - files
+ - infra/      v             v - python
+ - knowledge/ [ Hub ] ----> [ Local ] - search
+ - system/    (Prim)  (Fallback) - files
+ - collaboration/
 ```
 
 ### 1. Custom Skills (Internal)
@@ -345,9 +346,8 @@ To ensure the system remains efficient, a continuous optimization loop runs in t
 ```text
  [ Scheduler ] --rate(15m)--> [ DeadMansSwitch ]
                      |
-                     +--> GET /health + ListEventBuses
-                     |        |
-                     |        +--> PASS: reset counters (exit)
+                     +--> checkCognitiveHealth()
+                     |    (Bus + Tools + Providers)
                      |
                      +--> FAIL: acquire recovery lock (20m TTL)
                         |

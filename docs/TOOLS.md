@@ -12,7 +12,7 @@
 | `seekClarification`       | Pauses current agent and requests directions from initiator                 |     —      |        ✅        |
 | `provideClarification`    | Answers a request and resumes the target agent                              |     —      |        ✅        |
 | `triggerDeployment`       | Starts a CodeBuild deploy (circuit-breaker protected, supports Atomic Sync) |     ✅     |        ✅        |
-| `checkHealth`             | Hits `/health` and rewards successful evolution                             |     —      |        ✅        |
+| `checkHealth`             | Deep cognitive probe of AgentBus, Core Tools, and LLM Providers             |     —      |        ✅        |
 | `triggerRollback`         | Emergency Git revert + redeploy                                             |     —      |        ✅        |
 | `reportGap`               | Records a capability gap or technical failure                               |     —      |        ✅        |
 | `manageGap`               | Updates gap status (QA Verification)                                        |     —      |        ✅        |
@@ -65,14 +65,25 @@ We have evolved from a static tool registry to a **dynamic Skill-Based Architect
 
 ---
 
+## 🦾 Domain-Driven Architecture (Refactored April 2026)
+
+The tool registry has been reorganized into four primary **Action Domains** to improve maintainability and token efficiency:
+
+1. **Knowledge Domain** (`core/tools/knowledge/`): Registry, memory, context, and MCP/Skill management.
+2. **Collaboration Domain** (`core/tools/collaboration/`): Workspace management, sessions, and agent-to-human messaging.
+3. **Infra Domain** (`core/tools/infra/`): Deployment, scheduling, rollbacks, and system topology.
+4. **System Domain** (`core/tools/system/`): Shell execution, git sync, health probes, and runtime configuration.
+
+---
+
 ## 🏗️ Adding a New Tool
 
-1. Open `core/tools/index.ts`.
-2. Add an entry to the `TOOLS` record following the `ITool` interface, using `SCREAMING_SNAKE_CASE` for the key.
-3. If this should be available to a backbone agent by default, add it to their `tools` array in `core/lib/backbone.ts`.
-4. Run `validateCode` to check for regressions.
-5. Update the table above.
-6. Update `src/lib/tools.test.ts` to include the new tool name.
+1. **Identify the Domain**: Choose the appropriate subdirectory in `core/tools/`.
+2. **Define the Schema**: Add the tool's `JsonSchema` to the domain's `schema.ts`. Ensure `additionalProperties: false` is set.
+3. **Implement the Logic**: Create a new `.ts` file or add to an existing one in that domain.
+4. **Register in Domain Index**: Export the new tool from the domain's `index.ts`.
+5. **Update Main Registry**: The main `core/tools/index.ts` will automatically pick up the new tool if the domain index is updated.
+6. **Verify**: Run `make check` and `make test`.
 
 ### Dynamic Scoping (Evolution Sector)
 

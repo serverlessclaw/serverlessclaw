@@ -24,7 +24,7 @@ const TOOL_INSTALL_SKILL = TOOLS.installSkill;
 const TOOL_SAVE_MEMORY = TOOLS.saveMemory;
 const TOOL_SEEK_CLARIFICATION = TOOLS.seekClarification;
 const TOOL_PROVIDE_CLARIFICATION = TOOLS.provideClarification;
-const TOOL_RECALL_KNOWLEDGE = TOOLS.recallKnowledge;
+const TOOL_recallKnowledge = TOOLS.recallKnowledge;
 const TOOL_SEND_MESSAGE = TOOLS.sendMessage;
 const TOOL_MANAGE_GAP = TOOLS.manageGap;
 const TOOL_REPORT_GAP = TOOLS.reportGap;
@@ -55,7 +55,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       'signalOrchestration',
 
       TOOL_LIST_AGENTS,
-      TOOL_RECALL_KNOWLEDGE,
+      TOOL_recallKnowledge,
 
       TOOLS.checkConfig,
       TOOL_DISCOVER_SKILLS,
@@ -170,7 +170,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     defaultCommunicationMode: 'json',
     tools: [
       'signalOrchestration',
-      TOOL_RECALL_KNOWLEDGE,
+      TOOL_recallKnowledge,
       TOOLS.dispatchTask,
       TOOL_MANAGE_GAP,
       TOOL_REPORT_GAP,
@@ -212,7 +212,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     reasoningProfile: ReasoningProfile.STANDARD,
     defaultCommunicationMode: 'json',
     tools: [
-      TOOL_RECALL_KNOWLEDGE,
+      TOOL_recallKnowledge,
       TOOL_MANAGE_GAP,
       TOOL_REPORT_GAP,
       TOOL_SEND_MESSAGE,
@@ -243,7 +243,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     reasoningProfile: ReasoningProfile.STANDARD,
     defaultCommunicationMode: 'json',
     tools: [
-      TOOL_RECALL_KNOWLEDGE,
+      TOOL_recallKnowledge,
       TOOL_CHECK_HEALTH,
       TOOL_SEND_MESSAGE,
       TOOL_DISCOVER_SKILLS,
@@ -275,7 +275,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     reasoningProfile: ReasoningProfile.THINKING,
     defaultCommunicationMode: 'json',
     tools: [
-      TOOL_RECALL_KNOWLEDGE,
+      TOOL_recallKnowledge,
       TOOL_SEND_MESSAGE,
       TOOL_DISCOVER_SKILLS,
       TOOL_INSTALL_SKILL,
@@ -318,7 +318,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       'writeToCollaboration',
       'closeCollaboration',
       'listMyCollaborations',
-      TOOL_RECALL_KNOWLEDGE,
+      TOOL_recallKnowledge,
     ],
     connectionProfile: [
       ConnectionProfile.BUS,
@@ -342,7 +342,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     reasoningProfile: ReasoningProfile.STANDARD,
     defaultCommunicationMode: 'json',
     tools: [
-      TOOL_RECALL_KNOWLEDGE,
+      TOOL_recallKnowledge,
       TOOLS.dispatchTask,
       TOOL_MANAGE_GAP,
       TOOL_REPORT_GAP,

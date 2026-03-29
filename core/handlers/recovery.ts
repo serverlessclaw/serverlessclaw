@@ -1,20 +1,20 @@
 import { CodeBuildClient, StartBuildCommand } from '@aws-sdk/client-codebuild';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
-import { EventBridgeClient } from '@aws-sdk/client-eventbridge';
 import { Resource } from 'sst';
 import { logger } from '../lib/logger';
 import { SSTResource } from '../lib/types/system';
 import { EventType, OutboundMessageEvent } from '../lib/types/agent';
 import { DynamoLockManager } from '../lib/lock';
 import { DynamoMemory } from '../lib/memory';
+import { checkCognitiveHealth } from '../lib/health';
+import { MEMORY_KEYS, RETENTION } from '../lib/constants';
 import { emitEvent } from '../lib/utils/bus';
 import { formatErrorMessage } from '../lib/utils/error';
 import { getCircuitBreaker } from '../lib/circuit-breaker';
 
 const codebuild = new CodeBuildClient({});
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
-const eventbridge = new EventBridgeClient({});
 const typedResource = Resource as unknown as SSTResource;
 const lockManager = new DynamoLockManager();
 const memory = new DynamoMemory();
@@ -35,18 +35,28 @@ export const handler = async (_event?: { detail: Record<string, unknown> }): Pro
   logger.info(`Dead Man's Switch checking health at: ${healthUrl}`);
 
   try {
-    const response = await fetch(healthUrl);
-    if (!response.ok) {
-      throw new Error(`Health endpoint returned ${response.status}`);
+    const healthResult = await checkCognitiveHealth();
+
+    // Persist health result for historical tracking
+    await db.send(
+      new PutCommand({
+        TableName: typedResource.MemoryTable.name,
+        Item: {
+          userId: `${MEMORY_KEYS.HEALTH_PREFIX}${Date.now()}`,
+          timestamp: Date.now(),
+          ok: healthResult.ok,
+          summary: healthResult.summary,
+          details: healthResult.results,
+          expiresAt: Math.floor((Date.now() + RETENTION.HEALTH_DAYS * 86400000) / 1000),
+        },
+      })
+    );
+
+    if (!healthResult.ok) {
+      throw new Error(healthResult.summary);
     }
 
-    // DEEP HEALTH: Verify EventBridge accessibility
-    const { ListEventBusesCommand } = await import('@aws-sdk/client-eventbridge');
-    await eventbridge.send(new ListEventBusesCommand({ NamePrefix: typedResource.AgentBus.name }));
-
-    logger.info('System is healthy (Deep Check PASSED). No action needed.');
-    const { emitMetrics, METRICS } = await import('../lib/metrics');
-    emitMetrics([METRICS.mcpHubPing({ success: true, latencyMs: 0 })]).catch(() => {});
+    logger.info('System is healthy (Cognitive Check PASSED). No action needed.');
     return;
   } catch (error) {
     logger.error(`System health check FAILED: ${formatErrorMessage(error)}`);

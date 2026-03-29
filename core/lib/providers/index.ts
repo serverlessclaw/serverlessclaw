@@ -114,4 +114,30 @@ export class ProviderManager implements IProvider {
     const provider = await ProviderManager.getActiveProvider(undefined, model);
     return provider.getCapabilities(model);
   }
+
+  /**
+   * Returns the name of the active provider.
+   */
+  async getActiveProviderName(): Promise<string> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const resource = Resource as any;
+    return (await ConfigManager.getTypedConfig(
+      CONFIG_KEYS.ACTIVE_PROVIDER,
+      ('ActiveProvider' in resource ? resource.ActiveProvider.value : undefined) ??
+        SYSTEM.DEFAULT_PROVIDER
+    )) as string;
+  }
+
+  /**
+   * Returns the name of the active model.
+   */
+  async getActiveModelName(): Promise<string> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const resource = Resource as any;
+    return (
+      ((await ConfigManager.getRawConfig(CONFIG_KEYS.ACTIVE_MODEL)) as string) ??
+      ('ActiveModel' in resource ? resource.ActiveModel.value : undefined) ??
+      SYSTEM.DEFAULT_MINIMAX_MODEL
+    );
+  }
 }

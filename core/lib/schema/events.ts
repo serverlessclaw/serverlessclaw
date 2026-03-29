@@ -342,6 +342,7 @@ export const EVENT_SCHEMA_MAP = {
   [EventType.CONSENSUS_REQUEST as string]: CONSENSUS_REQUEST_SCHEMA,
   [EventType.CONSENSUS_VOTE as string]: CONSENSUS_VOTE_SCHEMA,
   [EventType.CONSENSUS_REACHED as string]: CONSENSUS_REACHED_SCHEMA,
+  [EventType.HEALTH_ALERT as string]: HEALTH_REPORT_EVENT_SCHEMA,
 } as const;
 
 /** Keys of the EVENT_SCHEMA_MAP (for type-safe event type lookups). */

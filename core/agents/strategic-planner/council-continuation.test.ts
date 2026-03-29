@@ -67,8 +67,8 @@ vi.mock('../../lib/utils/typed-emit', () => ({
   emitTypedEvent: emitTypedEventMock,
 }));
 
-vi.mock('../../tools/knowledge-agent', () => ({
-  DISPATCH_TASK: { execute: dispatchTaskMock },
+vi.mock('../../tools/knowledge/agent', () => ({
+  dispatchTask: { execute: dispatchTaskMock },
 }));
 
 vi.mock('../../tools/registry-utils', () => ({

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { CREATE_COLLABORATION } from '../tools/collaboration';
+import { collaborationTools } from '../tools/collaboration';
+const { createCollaboration } = collaborationTools;
 import { getAgentContext } from '../lib/utils/agent-helpers';
 
 // Mock agent-helpers
@@ -86,7 +87,7 @@ describe('Workspace-Collaboration Integration', () => {
     };
     mockGetWorkspace.mockResolvedValue(mockWorkspace);
 
-    const result = await CREATE_COLLABORATION.execute({
+    const result = await createCollaboration.execute({
       name: 'Test Collab',
       workspaceId: 'ws-123',
       agentId: 'test-agent',
@@ -120,7 +121,7 @@ describe('Workspace-Collaboration Integration', () => {
   it('should still create collaboration if workspace not found (graceful degradation)', async () => {
     mockGetWorkspace.mockResolvedValue(null);
 
-    const result = await CREATE_COLLABORATION.execute({
+    const result = await createCollaboration.execute({
       name: 'Test Collab',
       workspaceId: 'ws-not-found',
       agentId: 'test-agent',

@@ -179,8 +179,8 @@ vi.mock('../../tools/registry-utils', () => ({
   getAgentTools: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock('../../tools/knowledge-agent', () => ({
-  DISPATCH_TASK: { execute: dispatchTaskMock },
+vi.mock('../../tools/knowledge/agent', () => ({
+  dispatchTask: { execute: dispatchTaskMock },
 }));
 
 vi.mock('../../lib/providers/index', () => ({

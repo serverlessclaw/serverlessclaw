@@ -138,7 +138,7 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
             config.name
           );
 
-          const { DISPATCH_TASK: dispatcher } = await import('../tools/knowledge-agent');
+          const { dispatchTask: dispatcher } = await import('../tools/knowledge/agent');
           await dispatcher.execute({
             agentId: AgentType.CODER,
             userId: baseUserId,
@@ -581,7 +581,7 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
       } as never);
     } else {
       // Single task dispatch (existing behavior)
-      const { DISPATCH_TASK: dispatcher } = await import('../tools/knowledge-agent');
+      const { dispatchTask: dispatcher } = await import('../tools/knowledge/agent');
       await dispatcher.execute({
         agentId: AgentType.CODER,
         userId: baseUserId,

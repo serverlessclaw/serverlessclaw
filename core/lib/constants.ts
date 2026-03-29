@@ -158,6 +158,8 @@ export const MEMORY_KEYS = {
   REPUTATION_PREFIX: 'REPUTATION#',
   /** Prefix for workspace data (multi-human collaboration). */
   WORKSPACE_PREFIX: 'WORKSPACE#',
+  /** Prefix for cognitive health records. */
+  HEALTH_PREFIX: 'HEALTH#',
 } as const;
 
 /**
@@ -278,6 +280,7 @@ export const RETENTION = {
   REPUTATION_DAYS: 365,
   SESSION_METADATA_DAYS: 90,
   EPHEMERAL_DAYS: 1,
+  HEALTH_DAYS: 7,
 } as const;
 
 /**
@@ -318,6 +321,10 @@ export const TIME = {
   MS_PER_HOUR: 3600000,
   SECONDS_IN_DAY: 86400,
   MS_PER_DAY: 86400000,
+  /** Default cadence for system-wide health checks. */
+  HEALTH_CHECK_CADENCE_MS: 900000, // 15 minutes
+  /** Timeout for individual health probe execution. */
+  HEALTH_PROBE_TIMEOUT_MS: 10000,
 } as const;
 
 /**

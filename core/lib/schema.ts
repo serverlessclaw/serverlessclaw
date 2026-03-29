@@ -1,6 +1,6 @@
 import { IToolDefinition } from './types/tool';
 import { logger } from './logger';
-import { toolDefinitions } from '../tools/definitions/index';
+import { TOOLS } from '../tools/index';
 
 /**
  * Validates a tool definition against strict LLM provider requirements.
@@ -53,7 +53,7 @@ export function validateToolSchema(tool: IToolDefinition): string[] {
  */
 export function validateAllTools(): boolean {
   let allValid = true;
-  for (const [id, tool] of Object.entries(toolDefinitions)) {
+  for (const [id, tool] of Object.entries(TOOLS)) {
     const errors = validateToolSchema(tool);
     if (errors.length > 0) {
       allValid = false;
