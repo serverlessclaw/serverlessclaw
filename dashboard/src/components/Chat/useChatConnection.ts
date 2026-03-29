@@ -1,16 +1,15 @@
-import { useState, useEffect, useRef } from 'react';
-import mqtt from 'mqtt';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { ChatMessage } from './types';
 import type { ConversationMeta } from '@claw/core/lib/types/memory';
 import { shouldProcessChunk, applyChunkToMessages, mergeHistoryWithMessages } from './message-handler';
+import { useRealtime, RealtimeMessage } from '@/hooks/useRealtime';
 
 export function useChatConnection(activeSessionId: string, setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>, setIsLoading: React.Dispatch<React.SetStateAction<boolean>>, isPostInFlight: React.MutableRefObject<boolean>) {
-  const [isRealtimeActive, setIsRealtimeActive] = useState(false);
   const [sessions, setSessions] = useState<ConversationMeta[]>([]);
-  const mqttClientRef = useRef<mqtt.MqttClient | null>(null);
   const activeSessionRef = useRef<string>(activeSessionId);
   const skipNextHistoryFetch = useRef<boolean>(false);
   const seenMessageIds = useRef<Set<string>>(new Set());
+  const userId = 'dashboard-user';
 
   useEffect(() => {
     activeSessionRef.current = activeSessionId;
@@ -28,7 +27,7 @@ export function useChatConnection(activeSessionId: string, setMessages: React.Di
     }
   };
 
-  const fetchHistorySilently = async (sessionId: string) => {
+  const fetchHistorySilently = useCallback(async (sessionId: string) => {
     if (isPostInFlight.current) return;
     try {
       const response = await fetch(`/api/chat?sessionId=${sessionId}`);
@@ -43,86 +42,33 @@ export function useChatConnection(activeSessionId: string, setMessages: React.Di
     } catch (e) {
       console.warn('Silent History fetch failed:', e);
     }
-  };
+  }, [isPostInFlight, setMessages]);
+
+  const handleMessage = useCallback((_topic: string, data: RealtimeMessage) => {
+    const currentActiveId = activeSessionRef.current;
+    
+    if (shouldProcessChunk(data, currentActiveId, userId)) {
+      setMessages(prev => applyChunkToMessages(prev, data, seenMessageIds.current));
+    } else {
+      // If we got a signal for the active session but it's not a chunk (e.g., status update),
+      // refresh history to get the latest state.
+      if (currentActiveId && !isPostInFlight.current) {
+        fetchHistorySilently(currentActiveId);
+      }
+    }
+  }, [fetchHistorySilently, isPostInFlight, setMessages]);
+
+  const { isConnected: isRealtimeActive } = useRealtime({
+    topics: ['collaborations/+/signal', 'workspaces/+/signal'],
+    onMessage: handleMessage,
+    userId
+  });
 
   useEffect(() => {
-    fetchSessions();
-  }, []);
-
-  useEffect(() => {
-    const userId = 'dashboard-user';
-    const connect = async () => {
-      try {
-        const res = await fetch('/api/config');
-        const config = await res.json();
-        if (!config.realtime?.url) return;
-
-        // AWS IoT WebSockets require the /mqtt path
-        const baseUrl = config.realtime.url.endsWith('/mqtt') 
-          ? config.realtime.url 
-          : `${config.realtime.url}/mqtt`;
-
-        // Append authorizer name to the URL if provided
-        const mqttUrl = config.realtime.authorizer 
-          ? `${baseUrl}?x-amz-customauthorizer-name=${config.realtime.authorizer}`
-          : baseUrl;
-
-        const client = mqtt.connect(mqttUrl, {
-          protocol: 'wss',
-          clientId: `dashboard-${Math.random().toString(16).slice(2, 10)}`,
-          username: 'dashboardUser',
-          password: 'auth-token',
-          clean: true,
-          connectTimeout: 30000,
-          reconnectPeriod: 5000,
-        });
-
-        client.on('connect', () => {
-          setIsRealtimeActive(true);
-          // Subscribe to ALL signals for this user using a wildcard
-          // This covers both generic user signals and session-specific signals
-          const userTopicWildcard = `users/${userId}/#`;
-          client.subscribe(userTopicWildcard);
-        });
-
-        client.on('message', (t: string, payload: unknown) => {
-          try {
-            const data = JSON.parse(String(payload));
-            const currentActiveId = activeSessionRef.current;
-            
-            if (shouldProcessChunk(data, currentActiveId, userId)) {
-              setMessages(prev => applyChunkToMessages(prev, data, seenMessageIds.current));
-            } else {
-              if (currentActiveId && !isPostInFlight.current) {
-                fetchHistorySilently(currentActiveId);
-              }
-            }
-          } catch (e) {
-            console.error('[Realtime] Failed to parse message:', e);
-          }
-        });
-
-        client.on('error', (err: unknown) => {
-          console.error('[Realtime] MQTT Error:', err);
-          setIsRealtimeActive(false);
-        });
-
-        client.on('close', () => {
-          setIsRealtimeActive(false);
-        });
-        mqttClientRef.current = client;
-      } catch (e) {
-        console.error('[Realtime] Setup failed:', e);
-      }
+    const init = async () => {
+      await fetchSessions();
     };
-
-    connect();
-    return () => {
-      if (mqttClientRef.current) {
-        mqttClientRef.current.end();
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    init();
   }, []);
 
   useEffect(() => {
@@ -134,8 +80,7 @@ export function useChatConnection(activeSessionId: string, setMessages: React.Di
       }
     }, isRealtimeActive ? 60000 : 10000);
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSessionId, isRealtimeActive]);
+  }, [activeSessionId, isRealtimeActive, isPostInFlight, fetchHistorySilently]);
 
   return { isRealtimeActive, sessions, fetchSessions, skipNextHistoryFetch, seenMessageIds };
 }

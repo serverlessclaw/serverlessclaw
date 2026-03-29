@@ -210,10 +210,23 @@ export class MetricsCollector {
   constructor(base: BaseMemoryProvider, config?: Partial<CognitiveMetricsConfig>) {
     this.base = base;
     this.config = { ...DEFAULT_CONFIG, ...config };
+  }
 
-    // Auto-flush buffer every 60 seconds
-    if (this.config.enabled) {
+  /**
+   * Start the auto-flush interval. Must be called explicitly
+   * to avoid setInterval leaks in Lambda containers.
+   */
+  start(): void {
+    if (this.config.enabled && !this.flushInterval) {
       this.flushInterval = setInterval(() => this.flush(), 60000);
+      // Unref so it doesn't prevent Lambda from freezing
+      if (
+        this.flushInterval &&
+        typeof this.flushInterval === 'object' &&
+        'unref' in this.flushInterval
+      ) {
+        (this.flushInterval as NodeJS.Timeout).unref();
+      }
     }
   }
 
@@ -503,19 +516,65 @@ export class HealthTrendAnalyzer {
   }
 
   /**
-   * Analyze memory health.
+   * Analyze memory health by scanning memory tiers.
    */
   async analyzeMemoryHealth(): Promise<MemoryHealthAnalysis> {
-    // This would query memory table for statistics
-    // For now, return a placeholder with default values
+    const now = Date.now();
+    const prefixes = [
+      MEMORY_KEYS.CONVERSATION_PREFIX,
+      MEMORY_KEYS.LESSON_PREFIX,
+      MEMORY_KEYS.FACT_PREFIX,
+      MEMORY_KEYS.SUMMARY_PREFIX,
+    ];
+
+    const allItems: Record<string, unknown>[] = [];
+    for (const prefix of prefixes) {
+      try {
+        const items = await this.base.scanByPrefix(prefix);
+        allItems.push(...items);
+      } catch {
+        // Skip prefixes that fail
+      }
+    }
+
+    const totalItems = allItems.length;
+    const itemsByTier: Record<string, number> = {};
+    let totalAgeDays = 0;
+
+    for (const item of allItems) {
+      const userId = (item.userId as string) ?? '';
+      const match = userId.match(/^([A-Z_]+#)/);
+      const prefix = match?.[1] ?? 'UNKNOWN#';
+      itemsByTier[prefix] = (itemsByTier[prefix] || 0) + 1;
+      const ts = (item.timestamp as number) ?? 0;
+      if (ts > 0) {
+        totalAgeDays += (now - ts) / TIME.MS_PER_DAY;
+      }
+    }
+
+    const avgAgeDays = totalItems > 0 ? totalAgeDays / totalItems : 0;
+    const uniqueTiers = Object.keys(itemsByTier).length;
+    const stalenessScore = Math.min(1, avgAgeDays / 90);
+    const fragmentationScore = totalItems > 100 ? Math.min(1, uniqueTiers / 10) : 0;
+    const lessonCount = itemsByTier[MEMORY_KEYS.LESSON_PREFIX] ?? 0;
+    const coverageScore = totalItems > 0 ? Math.min(1, lessonCount / 10) : 0;
+
+    const recommendations: string[] = [];
+    if (totalItems > 0 && stalenessScore > 0.7)
+      recommendations.push('Run memory pruning — many items are older than 60 days');
+    if (totalItems > 100 && fragmentationScore > 0.8)
+      recommendations.push('Memory is fragmented across many tiers — consider consolidation');
+    if (totalItems > 5 && coverageScore < 0.3)
+      recommendations.push('Low lesson coverage — agents may be repeating mistakes');
+
     return {
-      totalItems: 0,
-      itemsByTier: {},
-      avgAgeDays: 0,
-      stalenessScore: 0,
-      fragmentationScore: 0,
-      coverageScore: 1,
-      recommendations: [],
+      totalItems,
+      itemsByTier,
+      avgAgeDays,
+      stalenessScore,
+      fragmentationScore,
+      coverageScore,
+      recommendations,
     };
   }
 }
@@ -533,6 +592,7 @@ export class CognitiveHealthMonitor {
   constructor(base: BaseMemoryProvider, config?: Partial<CognitiveMetricsConfig>) {
     this.base = base;
     this.collector = new MetricsCollector(base, config);
+    this.collector.start();
     this.detector = new DegradationDetector(config);
     this.analyzer = new HealthTrendAnalyzer(base);
   }

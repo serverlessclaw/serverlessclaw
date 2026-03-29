@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -16,12 +16,14 @@ import '@xyflow/react/dist/style.css';
 import {
   Zap, RefreshCw, Plus, Minus, Maximize, Lock,
   Bot, Code, Brain, Search, FlaskConical, Settings2, Clock,
-  CheckCircle, XCircle, AlertCircle, Loader
+  CheckCircle, XCircle, AlertCircle, Loader, User
 } from 'lucide-react';
 import { useReactFlow, ReactFlowProvider } from '@xyflow/react';
 import Button from '@/components/ui/Button';
 import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
+import Badge from '@/components/ui/Badge';
+import { useRealtime, RealtimeMessage } from '@/hooks/useRealtime';
 
 interface TaskNodeData {
   label: string;
@@ -177,7 +179,9 @@ export function CollaborationCanvasContent() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [loading, setLoading] = useState(true);
+  const [isHumanActive, setIsHumanActive] = useState(false);
   const { zoomIn, zoomOut, fitView } = useReactFlow();
+  const handoffTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchActiveTasks = useCallback(async () => {
     try {
@@ -288,13 +292,40 @@ export function CollaborationCanvasContent() {
     }
   }, [setNodes, setEdges]);
 
+  // Real-time message handler
+  const handleRealtimeMessage = useCallback((_topic: string, message: RealtimeMessage) => {
+    const type = message['detail-type'];
+    
+    // Refresh task state on any relevant completion/update
+    if (
+      type === 'parallel_task_completed' || 
+      type === 'task_completed' || 
+      type === 'task_failed' ||
+      type === 'handoff'
+    ) {
+      console.log(`[Realtime] Triggering refresh due to: ${type}`);
+      fetchActiveTasks();
+    }
+
+    // Handle handoff visual state
+    if (type === 'handoff') {
+      setIsHumanActive(true);
+      if (handoffTimeoutRef.current) clearTimeout(handoffTimeoutRef.current);
+      handoffTimeoutRef.current = setTimeout(() => {
+        setIsHumanActive(false);
+      }, 120000); // Match core handoff TTL
+    }
+  }, [fetchActiveTasks]);
+
+  // Use Realtime Hook
+  const { isConnected } = useRealtime({
+    topics: ['collaborations/+/signal', 'workspaces/+/signal'],
+    onMessage: handleRealtimeMessage
+  });
+
   useEffect(() => { 
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchActiveTasks();
-    
-    // Poll for updates every 5 seconds
-    const interval = setInterval(fetchActiveTasks, 5000);
-    return () => clearInterval(interval);
   }, [fetchActiveTasks]);
 
   const handleReset = useCallback(async () => {
@@ -362,6 +393,23 @@ export function CollaborationCanvasContent() {
         </div>
       </div>
       
+      {/* Status Bar */}
+      <div className="absolute top-4 left-4 z-10 flex gap-2">
+        <div className={`flex items-center gap-2 px-3 py-1 bg-black/80 border ${isConnected ? 'border-cyber-green/30' : 'border-red-500/30'} rounded-full backdrop-blur-md`}>
+          <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-cyber-green animate-pulse' : 'bg-red-500'}`} />
+          <Typography variant="caption" weight="bold" className={`${isConnected ? 'text-cyber-green' : 'text-red-500'} uppercase text-[9px]`}>
+            {isConnected ? 'Realtime Link Active' : 'Realtime Offline'}
+          </Typography>
+        </div>
+
+        {isHumanActive && (
+          <Badge variant="warning" glow className="flex items-center gap-1.5 px-3">
+            <User size={10} />
+            HUMAN_CONTROL_ACTIVE
+          </Badge>
+        )}
+      </div>
+
       <div className="absolute top-4 right-4 z-10 space-y-2 pointer-events-none">
         <div className="flex items-center gap-2 px-3 py-1 bg-black/80 border border-purple-500/30 rounded-full">
           <Zap size={12} className="text-purple-400 animate-pulse" />

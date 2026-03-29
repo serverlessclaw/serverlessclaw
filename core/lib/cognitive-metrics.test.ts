@@ -24,6 +24,10 @@ vi.mock('./logger', () => ({
 vi.mock('./constants', () => ({
   MEMORY_KEYS: {
     HEALTH_PREFIX: 'HEALTH#',
+    CONVERSATION_PREFIX: 'CONV#',
+    LESSON_PREFIX: 'LESSON#',
+    FACT_PREFIX: 'FACT#',
+    SUMMARY_PREFIX: 'SUMMARY#',
   },
   RETENTION: {
     HEALTH_DAYS: 30,
@@ -425,7 +429,7 @@ describe('HealthTrendAnalyzer', () => {
     expect(result.totalItems).toBe(0);
     expect(result.stalenessScore).toBe(0);
     expect(result.fragmentationScore).toBe(0);
-    expect(result.coverageScore).toBe(1);
+    expect(result.coverageScore).toBe(0);
     expect(result.recommendations).toEqual([]);
   });
 });

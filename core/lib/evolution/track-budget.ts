@@ -3,42 +3,23 @@
  * @description Track-aware budget allocation for multi-track evolution.
  * Distributes evolution budget across tracks based on priority and weights,
  * with dynamic rebalancing based on track performance.
+ * Persists state via ConfigManager (DynamoDB ConfigTable).
  */
 
 import { EvolutionTrack } from '../types/agent';
 import { logger } from '../logger';
-import { TIME } from '../constants';
+import { ConfigManager } from '../registry/config';
 
 /**
- * Budget allocation for a single track.
+ * Per-track allocation state.
  */
-export interface TrackBudgetAllocation {
-  track: EvolutionTrack;
+export interface TrackAllocation {
   allocatedUsd: number;
   spentUsd: number;
-  remainingUsd: number;
-  utilizationRate: number;
-  priority: number;
 }
 
 /**
- * Budget cycle configuration.
- */
-export interface BudgetCycleConfig {
-  /** Total budget per cycle in USD. */
-  totalBudgetUsd: number;
-  /** Cycle duration in days. */
-  cycleDays: number;
-  /** Enable dynamic rebalancing based on performance. */
-  enableDynamicRebalancing: boolean;
-  /** Minimum budget allocation per track (floor). */
-  minAllocationUsd: number;
-  /** Maximum budget allocation per track (ceiling). */
-  maxAllocationUsd: number;
-}
-
-/**
- * Budget spend record.
+ * Budget spend record for audit trail.
  */
 export interface BudgetSpendRecord {
   track: EvolutionTrack;
@@ -48,121 +29,67 @@ export interface BudgetSpendRecord {
   agentId: string;
 }
 
-const DEFAULT_CYCLE_CONFIG: BudgetCycleConfig = {
-  totalBudgetUsd: 10.0,
-  cycleDays: 7,
-  enableDynamicRebalancing: true,
-  minAllocationUsd: 0.5,
-  maxAllocationUsd: 5.0,
-};
+/**
+ * Full persisted budget state.
+ */
+export interface TrackBudgetState {
+  cycleId: string;
+  totalBudgetUsd: number;
+  expiresAt: number;
+  allocations: Record<string, TrackAllocation>;
+  spendHistory: BudgetSpendRecord[];
+}
 
 /**
  * Default budget weights by track priority.
  */
 const DEFAULT_BUDGET_WEIGHTS: Record<EvolutionTrack, number> = {
-  [EvolutionTrack.SECURITY]: 0.3, // Highest priority
+  [EvolutionTrack.SECURITY]: 0.3,
   [EvolutionTrack.PERFORMANCE]: 0.25,
   [EvolutionTrack.FEATURE]: 0.2,
   [EvolutionTrack.INFRASTRUCTURE]: 0.15,
-  [EvolutionTrack.REFACTORING]: 0.1, // Lowest priority
+  [EvolutionTrack.REFACTORING]: 0.1,
 };
 
 /**
  * Allocates and tracks budget across evolution tracks.
+ * Uses ConfigManager for DynamoDB-backed persistence.
  */
 export class TrackBudgetAllocator {
-  private config: BudgetCycleConfig;
-  private allocations: Map<EvolutionTrack, TrackBudgetAllocation> = new Map();
-  private spendHistory: BudgetSpendRecord[] = [];
-  private cycleStartTime: number;
-  private weights: Record<EvolutionTrack, number>;
-
-  constructor(
-    config?: Partial<BudgetCycleConfig>,
-    weights?: Partial<Record<EvolutionTrack, number>>
-  ) {
-    this.config = { ...DEFAULT_CYCLE_CONFIG, ...config };
-    this.weights = { ...DEFAULT_BUDGET_WEIGHTS, ...weights };
-    this.cycleStartTime = Date.now();
-
-    // Initialize allocations
-    this.initializeAllocations();
-
-    logger.info('TrackBudgetAllocator initialized', {
-      totalBudget: this.config.totalBudgetUsd,
-      cycleDays: this.config.cycleDays,
-      dynamicRebalancing: this.config.enableDynamicRebalancing,
-    });
-  }
-
-  /**
-   * Initialize budget allocations based on weights.
-   */
-  private initializeAllocations(): void {
-    const tracks = Object.values(EvolutionTrack);
-    const totalWeight = tracks.reduce((sum, t) => sum + (this.weights[t] ?? 0), 0);
-
-    for (const track of tracks) {
-      const weight = this.weights[track] ?? 0;
-      const rawAllocation = (weight / totalWeight) * this.config.totalBudgetUsd;
-
-      // Apply floor and ceiling
-      const allocation = Math.max(
-        this.config.minAllocationUsd,
-        Math.min(this.config.maxAllocationUsd, rawAllocation)
-      );
-
-      this.allocations.set(track, {
-        track,
-        allocatedUsd: allocation,
-        spentUsd: 0,
-        remainingUsd: allocation,
-        utilizationRate: 0,
-        priority: this.getTrackPriority(track),
-      });
-    }
-  }
-
-  /**
-   * Get numeric priority for a track (lower = higher priority).
-   */
-  private getTrackPriority(track: EvolutionTrack): number {
-    const priorities: Record<EvolutionTrack, number> = {
-      [EvolutionTrack.SECURITY]: 1,
-      [EvolutionTrack.PERFORMANCE]: 2,
-      [EvolutionTrack.FEATURE]: 3,
-      [EvolutionTrack.INFRASTRUCTURE]: 4,
-      [EvolutionTrack.REFACTORING]: 5,
-    };
-    return priorities[track] ?? 5;
-  }
+  private static readonly BUDGET_KEY = 'track_evolution_budget';
+  private static readonly DEFAULT_TOTAL_BUDGET = 10.0;
+  private static readonly DEFAULT_CYCLE_DAYS = 7;
+  private static readonly MAX_HISTORY = 1000;
 
   /**
    * Check if a spend is allowed for a track.
    */
-  canSpend(track: EvolutionTrack, amountUsd: number): boolean {
-    const allocation = this.allocations.get(track);
+  static async canSpend(track: EvolutionTrack, amountUsd: number): Promise<boolean> {
+    const state = await this.getOrCreateState();
+    const allocation = state.allocations[track];
     if (!allocation) return false;
-
-    return allocation.remainingUsd >= amountUsd;
+    return allocation.allocatedUsd - allocation.spentUsd >= amountUsd;
   }
 
   /**
    * Record a spend against a track's budget.
+   * @returns true if the spend was recorded, false if budget exceeded.
    */
-  recordSpend(track: EvolutionTrack, gapId: string, spendUsd: number, agentId: string): boolean {
-    if (!this.canSpend(track, spendUsd)) {
-      logger.warn(`Budget exceeded for track ${track}: ${spendUsd} USD requested`);
+  static async recordSpend(
+    track: EvolutionTrack,
+    gapId: string,
+    spendUsd: number,
+    agentId: string
+  ): Promise<boolean> {
+    const state = await this.getOrCreateState();
+    const allocation = state.allocations[track];
+    if (!allocation || allocation.allocatedUsd - allocation.spentUsd < spendUsd) {
+      logger.warn(`[TrackBudget] Budget exceeded for track ${track}: $${spendUsd} requested`);
       return false;
     }
 
-    const allocation = this.allocations.get(track)!;
     allocation.spentUsd += spendUsd;
-    allocation.remainingUsd -= spendUsd;
-    allocation.utilizationRate = allocation.spentUsd / allocation.allocatedUsd;
-
-    // Record spend history
-    this.spendHistory.push({
+    state.spendHistory.push({
       track,
       gapId,
       spendUsd,
@@ -170,169 +97,175 @@ export class TrackBudgetAllocator {
       agentId,
     });
 
-    // Trim history to last 1000 records
-    if (this.spendHistory.length > 1000) {
-      this.spendHistory = this.spendHistory.slice(-1000);
+    if (state.spendHistory.length > this.MAX_HISTORY) {
+      state.spendHistory = state.spendHistory.slice(-this.MAX_HISTORY);
     }
 
-    logger.debug(`Budget spend recorded: ${track} - $${spendUsd.toFixed(4)} for gap ${gapId}`);
+    await ConfigManager.saveRawConfig(this.BUDGET_KEY, state);
+    logger.debug(`[TrackBudget] Spend recorded: ${track} $${spendUsd.toFixed(4)} for gap ${gapId}`);
     return true;
   }
 
   /**
    * Get allocation for a specific track.
    */
-  getAllocation(track: EvolutionTrack): TrackBudgetAllocation | undefined {
-    return this.allocations.get(track);
+  static async getAllocation(
+    track: EvolutionTrack
+  ): Promise<{ allocatedUsd: number; spentUsd: number; remainingUsd: number } | null> {
+    const state = await this.getOrCreateState();
+    const a = state.allocations[track];
+    if (!a) return null;
+    return {
+      allocatedUsd: a.allocatedUsd,
+      spentUsd: a.spentUsd,
+      remainingUsd: a.allocatedUsd - a.spentUsd,
+    };
   }
 
   /**
-   * Get all allocations.
+   * Get total remaining budget across all tracks.
    */
-  getAllAllocations(): TrackBudgetAllocation[] {
-    return Array.from(this.allocations.values());
-  }
-
-  /**
-   * Get total budget remaining across all tracks.
-   */
-  getTotalRemaining(): number {
+  static async getTotalRemaining(): Promise<number> {
+    const state = await this.getOrCreateState();
     let total = 0;
-    for (const allocation of this.allocations.values()) {
-      total += allocation.remainingUsd;
+    for (const a of Object.values(state.allocations)) {
+      total += a.allocatedUsd - a.spentUsd;
     }
     return total;
   }
 
   /**
-   * Get total budget spent across all tracks.
+   * Get total spent across all tracks.
    */
-  getTotalSpent(): number {
+  static async getTotalSpent(): Promise<number> {
+    const state = await this.getOrCreateState();
     let total = 0;
-    for (const allocation of this.allocations.values()) {
-      total += allocation.spentUsd;
+    for (const a of Object.values(state.allocations)) {
+      total += a.spentUsd;
     }
     return total;
   }
 
   /**
-   * Get budget utilization across all tracks.
+   * Get overall utilization (0-1).
    */
-  getOverallUtilization(): number {
-    const totalAllocated = this.config.totalBudgetUsd;
-    const totalSpent = this.getTotalSpent();
-    return totalAllocated > 0 ? totalSpent / totalAllocated : 0;
+  static async getOverallUtilization(): Promise<number> {
+    const state = await this.getOrCreateState();
+    const totalSpent = Object.values(state.allocations).reduce((s, a) => s + a.spentUsd, 0);
+    return state.totalBudgetUsd > 0 ? totalSpent / state.totalBudgetUsd : 0;
   }
 
   /**
    * Rebalance budgets based on track performance.
    * Takes budget from underperforming tracks and gives to high-performing ones.
+   * Never produces negative remaining budget.
    */
-  rebalanceBasedOnPerformance(
+  static async rebalanceBasedOnPerformance(
     trackPerformance: Map<EvolutionTrack, { successRate: number; utilizationRate: number }>
-  ): void {
-    if (!this.config.enableDynamicRebalancing) return;
+  ): Promise<void> {
+    const state = await this.getOrCreateState();
 
-    const tracks = Array.from(this.allocations.values());
-    const underperforming: TrackBudgetAllocation[] = [];
-    const highPerforming: TrackBudgetAllocation[] = [];
+    const underperforming: { track: EvolutionTrack; allocation: TrackAllocation }[] = [];
+    const highPerforming: { track: EvolutionTrack; allocation: TrackAllocation }[] = [];
 
-    // Categorize tracks
-    for (const allocation of tracks) {
-      const perf = trackPerformance.get(allocation.track);
+    for (const [trackStr, alloc] of Object.entries(state.allocations)) {
+      const track = trackStr as EvolutionTrack;
+      const perf = trackPerformance.get(track);
       if (!perf) continue;
 
-      if (perf.successRate < 0.5 && allocation.utilizationRate > 0.8) {
-        // Underperforming and using budget inefficiently
-        underperforming.push(allocation);
-      } else if (perf.successRate > 0.8 && allocation.utilizationRate > 0.5) {
-        // High performing and actively using budget
-        highPerforming.push(allocation);
+      if (perf.successRate < 0.5 && perf.utilizationRate > 0.8) {
+        underperforming.push({ track, allocation: alloc });
+      } else if (perf.successRate > 0.8 && perf.utilizationRate > 0.5) {
+        highPerforming.push({ track, allocation: alloc });
       }
     }
 
-    // Redistribute budget
     if (underperforming.length > 0 && highPerforming.length > 0) {
       let freedBudget = 0;
-
-      for (const allocation of underperforming) {
-        // Take 20% of remaining budget from underperforming tracks
-        const reduction = allocation.remainingUsd * 0.2;
+      for (const { allocation } of underperforming) {
+        const remaining = allocation.allocatedUsd - allocation.spentUsd;
+        const reduction = Math.min(remaining * 0.2, remaining);
         allocation.allocatedUsd -= reduction;
-        allocation.remainingUsd -= reduction;
         freedBudget += reduction;
-        logger.info(`Reduced budget for track ${allocation.track} by $${reduction.toFixed(4)}`);
       }
 
-      // Distribute freed budget to high-performing tracks
       const perTrackIncrease = freedBudget / highPerforming.length;
-      for (const allocation of highPerforming) {
-        const increase = Math.min(
-          perTrackIncrease,
-          this.config.maxAllocationUsd - allocation.allocatedUsd
-        );
-        allocation.allocatedUsd += increase;
-        allocation.remainingUsd += increase;
-        logger.info(`Increased budget for track ${allocation.track} by $${increase.toFixed(4)}`);
+      for (const { allocation } of highPerforming) {
+        allocation.allocatedUsd += perTrackIncrease;
       }
+
+      await ConfigManager.saveRawConfig(this.BUDGET_KEY, state);
+      logger.info(`[TrackBudget] Rebalanced: freed $${freedBudget.toFixed(4)}`);
     }
   }
 
   /**
-   * Reset the budget cycle.
+   * Get full budget state including all allocations.
    */
-  resetCycle(): void {
-    this.cycleStartTime = Date.now();
-    this.spendHistory = [];
-    this.initializeAllocations();
-    logger.info('Budget cycle reset');
+  static async getSummary(): Promise<TrackBudgetState> {
+    return this.getOrCreateState();
   }
 
   /**
-   * Get cycle progress (0-1).
+   * Reset the budget cycle (creates fresh allocations).
    */
-  getCycleProgress(): number {
-    const elapsed = Date.now() - this.cycleStartTime;
-    const totalCycleMs = this.config.cycleDays * TIME.MS_PER_DAY;
-    return Math.min(1, elapsed / totalCycleMs);
-  }
-
-  /**
-   * Get time remaining in current cycle (ms).
-   */
-  getCycleTimeRemainingMs(): number {
-    const elapsed = Date.now() - this.cycleStartTime;
-    const totalCycleMs = this.config.cycleDays * TIME.MS_PER_DAY;
-    return Math.max(0, totalCycleMs - elapsed);
+  static async resetCycle(): Promise<void> {
+    const state = this.createFreshState();
+    await ConfigManager.saveRawConfig(this.BUDGET_KEY, state);
+    logger.info('[TrackBudget] Budget cycle reset');
   }
 
   /**
    * Get spend history for a track.
    */
-  getSpendHistory(track: EvolutionTrack, limit: number = 100): BudgetSpendRecord[] {
-    return this.spendHistory.filter((record) => record.track === track).slice(-limit);
+  static async getSpendHistory(track: EvolutionTrack, limit = 100): Promise<BudgetSpendRecord[]> {
+    const state = await this.getOrCreateState();
+    return state.spendHistory.filter((r) => r.track === track).slice(-limit);
   }
 
   /**
-   * Get budget summary.
+   * Load or create persisted budget state.
    */
-  getSummary(): {
-    totalBudget: number;
-    totalSpent: number;
-    totalRemaining: number;
-    utilization: number;
-    cycleProgress: number;
-    cycleDaysRemaining: number;
-    allocations: TrackBudgetAllocation[];
-  } {
+  private static async getOrCreateState(): Promise<TrackBudgetState> {
+    const now = Date.now();
+    let state = (await ConfigManager.getRawConfig(this.BUDGET_KEY)) as TrackBudgetState | undefined;
+
+    if (!state || now > state.expiresAt) {
+      state = this.createFreshState();
+      await ConfigManager.saveRawConfig(this.BUDGET_KEY, state);
+      logger.info(`[TrackBudget] New budget cycle started: ${state.cycleId}`);
+    }
+
+    return state;
+  }
+
+  /**
+   * Create a fresh budget state for a new cycle.
+   */
+  private static createFreshState(): TrackBudgetState {
+    const now = Date.now();
+    const cycleId = new Date().toISOString().slice(0, 10);
+    const totalBudgetUsd = this.DEFAULT_TOTAL_BUDGET;
+    const allocations: Record<string, TrackAllocation> = {};
+
+    const tracks = Object.values(EvolutionTrack);
+    const totalWeight = tracks.reduce((sum, t) => sum + (DEFAULT_BUDGET_WEIGHTS[t] ?? 0), 0);
+
+    for (const track of tracks) {
+      const weight = DEFAULT_BUDGET_WEIGHTS[track] ?? 0;
+      const rawAllocation = (weight / totalWeight) * totalBudgetUsd;
+      allocations[track] = {
+        allocatedUsd: Math.round(rawAllocation * 10000) / 10000,
+        spentUsd: 0,
+      };
+    }
+
     return {
-      totalBudget: this.config.totalBudgetUsd,
-      totalSpent: this.getTotalSpent(),
-      totalRemaining: this.getTotalRemaining(),
-      utilization: this.getOverallUtilization(),
-      cycleProgress: this.getCycleProgress(),
-      cycleDaysRemaining: Math.ceil(this.getCycleTimeRemainingMs() / TIME.MS_PER_DAY),
-      allocations: this.getAllAllocations(),
+      cycleId,
+      totalBudgetUsd,
+      expiresAt: now + this.DEFAULT_CYCLE_DAYS * 24 * 60 * 60 * 1000,
+      allocations,
+      spendHistory: [],
     };
   }
 }

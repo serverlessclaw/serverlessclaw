@@ -287,11 +287,11 @@ describe('IdentityManager', () => {
       expect(manager.hasResourceAccess('user-1', 'workspace', 'ws-2')).toBe(false);
     });
 
-    it('should fall back to AGENT_VIEW permission for non-workspace resources', async () => {
+    it('should deny access to non-workspace resources without explicit ACL', async () => {
       await manager.authenticate('member-1', 'telegram');
 
-      // MEMBER has AGENT_VIEW permission
-      expect(manager.hasResourceAccess('member-1', 'agent', 'agent-unknown')).toBe(true);
+      // MEMBER does NOT get access to unknown agent resources (deny by default)
+      expect(manager.hasResourceAccess('member-1', 'agent', 'agent-unknown')).toBe(false);
     });
   });
 

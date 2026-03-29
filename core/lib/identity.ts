@@ -202,6 +202,15 @@ export class IdentityManager {
         user = await this.loadOrCreateUser(userId, authProvider);
       }
 
+      // Validate workspace membership if workspaceId provided
+      const workspaceId = metadata?.workspaceId as string | undefined;
+      if (workspaceId && !user.workspaceIds.includes(workspaceId)) {
+        return {
+          success: false,
+          error: `User ${userId} is not a member of workspace ${workspaceId}`,
+        };
+      }
+
       // Update last active time
       user.lastActiveAt = Date.now();
       this.users.set(userId, user);
@@ -293,8 +302,8 @@ export class IdentityManager {
       return user.workspaceIds.includes(resourceId);
     }
 
-    // For other resources, allow if user has view permission
-    return this.hasPermission(userId, Permission.AGENT_VIEW);
+    // For other resources, deny by default unless explicitly granted via ACL
+    return false;
   }
 
   /**
@@ -414,8 +423,8 @@ export class IdentityManager {
       if (items.length > 0) {
         const item = items[0];
         return {
-          userId: item.userId as string,
-          displayName: item.displayName as string,
+          userId,
+          displayName: (item.displayName as string) ?? userId,
           email: item.email as string | undefined,
           role: item.role as UserRole,
           workspaceIds: (item.workspaceIds as string[]) ?? [],
