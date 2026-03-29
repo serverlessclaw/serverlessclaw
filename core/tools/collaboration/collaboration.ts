@@ -241,7 +241,7 @@ export const writeToCollaboration: ITool = {
     try {
       await sendOutboundMessage(
         'collaboration.tool',
-        userId, // Use original userId as context
+        collaboration.owner.id, // Use owner ID as context
         content,
         [collaboration.syntheticUserId],
         collaboration.sessionId,
