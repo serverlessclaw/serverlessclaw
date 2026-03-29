@@ -156,6 +156,8 @@ export const MEMORY_KEYS = {
   STRATEGIC_REVIEW: 'SYSTEM#STRATEGIC_REVIEW',
   /** Prefix for agent reputation data. */
   REPUTATION_PREFIX: 'REPUTATION#',
+  /** Prefix for workspace data (multi-human collaboration). */
+  WORKSPACE_PREFIX: 'WORKSPACE#',
 } as const;
 
 /**
@@ -406,6 +408,12 @@ export const TOOLS = {
   registerPeer: 'registerPeer',
   /** Requests swarm consensus from multiple agents on a proposal. */
   requestConsensus: 'requestConsensus',
+  /** Creates a new workspace for multi-human multi-agent collaboration. */
+  createWorkspace: 'createWorkspace',
+  /** Invites a member to a workspace. */
+  inviteMember: 'inviteMember',
+  /** Updates a member's role within a workspace. */
+  updateMemberRole: 'updateMemberRole',
 } as const;
 
 /**

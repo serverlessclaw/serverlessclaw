@@ -6,3 +6,5 @@ export * from './tool';
 export * from './mcp';
 export * from './session';
 export * from './reputation';
+export * from './collaboration';
+export * from './workspace';

@@ -86,4 +86,67 @@ export const systemTools: Record<string, IToolDefinition> = {
     requiresApproval: true,
     connectionProfile: ['memory'],
   },
+  createWorkspace: {
+    name: 'createWorkspace',
+    description:
+      'Creates a new workspace for multi-human multi-agent collaboration. A workspace is a shared context with role-based access control.',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Human-readable workspace name.' },
+        description: { type: 'string', description: 'Optional workspace description.' },
+        ownerId: {
+          type: 'string',
+          description: 'The human member ID who will own the workspace.',
+        },
+        ownerDisplayName: { type: 'string', description: 'Display name for the owner.' },
+      },
+      required: ['name', 'ownerId', 'ownerDisplayName'],
+      additionalProperties: false,
+    },
+    connectionProfile: ['config'],
+  },
+  inviteMember: {
+    name: 'inviteMember',
+    description:
+      'Invites a human or agent member to an existing workspace. Requires admin or owner role.',
+    parameters: {
+      type: 'object',
+      properties: {
+        workspaceId: { type: 'string', description: 'The workspace to invite to.' },
+        inviterId: { type: 'string', description: 'The member ID performing the invite.' },
+        memberId: { type: 'string', description: 'The new member ID.' },
+        type: { type: 'string', enum: ['human', 'agent'], description: 'Member type.' },
+        displayName: { type: 'string', description: 'Display name for the new member.' },
+        role: {
+          type: 'string',
+          enum: ['admin', 'collaborator', 'observer'],
+          description: 'Initial role for the new member.',
+        },
+      },
+      required: ['workspaceId', 'inviterId', 'memberId', 'type', 'displayName', 'role'],
+      additionalProperties: false,
+    },
+    connectionProfile: ['config'],
+  },
+  updateMemberRole: {
+    name: 'updateMemberRole',
+    description: "Updates a member's role within a workspace. Requires admin or owner role.",
+    parameters: {
+      type: 'object',
+      properties: {
+        workspaceId: { type: 'string', description: 'The workspace ID.' },
+        updaterId: { type: 'string', description: 'The member performing the update.' },
+        targetMemberId: { type: 'string', description: 'The member whose role to change.' },
+        newRole: {
+          type: 'string',
+          enum: ['admin', 'collaborator', 'observer'],
+          description: 'The new role to assign.',
+        },
+      },
+      required: ['workspaceId', 'updaterId', 'targetMemberId', 'newRole'],
+      additionalProperties: false,
+    },
+    connectionProfile: ['config'],
+  },
 };

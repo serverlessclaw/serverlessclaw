@@ -16,6 +16,7 @@ import {
   QA_SYSTEM_PROMPT,
   CRITIC_SYSTEM_PROMPT,
   FACILITATOR_SYSTEM_PROMPT,
+  OPTIMIZER_SYSTEM_PROMPT,
 } from '../agents/prompts/index';
 
 const TOOL_DISCOVER_SKILLS = TOOLS.discoverSkills;
@@ -318,6 +319,36 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       'closeCollaboration',
       'listMyCollaborations',
       TOOL_RECALL_KNOWLEDGE,
+    ],
+    connectionProfile: [
+      ConnectionProfile.BUS,
+      ConnectionProfile.MEMORY,
+      ConnectionProfile.CONFIG,
+      ConnectionProfile.TRACE,
+      ConnectionProfile.KNOWLEDGE,
+    ],
+  },
+  [AgentType.OPTIMIZER]: {
+    id: AgentType.OPTIMIZER,
+    name: 'Swarm Optimizer',
+    systemPrompt: OPTIMIZER_SYSTEM_PROMPT,
+    description: 'Efficiency node. Audits telemetry, prunes tools, and suggests model swaps.',
+    category: AgentCategory.SYSTEM,
+    icon: 'Zap',
+    enabled: true,
+    isBackbone: true,
+    provider: LLMProvider.MINIMAX,
+    model: MiniMaxModel.M2_7,
+    reasoningProfile: ReasoningProfile.STANDARD,
+    defaultCommunicationMode: 'json',
+    tools: [
+      TOOL_RECALL_KNOWLEDGE,
+      TOOLS.dispatchTask,
+      TOOL_MANAGE_GAP,
+      TOOL_REPORT_GAP,
+      TOOL_SEND_MESSAGE,
+      TOOL_SAVE_MEMORY,
+      TOOL_SEEK_CLARIFICATION,
     ],
     connectionProfile: [
       ConnectionProfile.BUS,

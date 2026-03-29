@@ -21,6 +21,7 @@ import * as validationTools from './validation';
 import * as gitTools from './git';
 import * as orchestrationTools from './orchestration';
 import * as collaborationTools from './collaboration';
+import * as workspaceTools from './workspace';
 
 // Consolidate knowledge tools
 const knowledgeTools = {
@@ -74,6 +75,14 @@ export const TOOLS: Record<string, ITool> = {
   ),
   ...Object.fromEntries(
     Object.entries(collaborationTools).map(([k, v]) => [
+      k.includes('_') ? k.toLowerCase().replace(/_([a-z])/g, (_, p1) => p1.toUpperCase()) : k,
+      v,
+    ])
+  ),
+
+  // Workspace Tools (Multi-Human Collaboration)
+  ...Object.fromEntries(
+    Object.entries(workspaceTools).map(([k, v]) => [
       k.includes('_') ? k.toLowerCase().replace(/_([a-z])/g, (_, p1) => p1.toUpperCase()) : k,
       v,
     ])
