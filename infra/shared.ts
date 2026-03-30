@@ -60,18 +60,19 @@ export function getDomainConfig(
   const envVar = envVarMap[component];
   const domain = process.env[envVar];
 
-  // Skip custom domains for local development to avoid resolution/connectivity issues
-  if (!domain || $app.stage === 'local') return undefined;
+  // Use custom domains if provided in .env
+  if (!domain) return undefined;
+  const finalDomain = domain;
 
   const zoneId = process.env.CLOUDFLARE_ZONE_ID;
   if (zoneId) {
     return {
-      name: domain,
+      name: finalDomain,
       dns: sst.cloudflare.dns({
         zone: zoneId,
       }),
     };
   }
 
-  return { name: domain };
+  return { name: finalDomain };
 }

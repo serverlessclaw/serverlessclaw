@@ -34,3 +34,6 @@ dashboard/.sst/
 sst-env.d.ts
 **/sst-env.d.ts
 reports/
+test-results/
+tier2.log
+core/tests/tier2.log

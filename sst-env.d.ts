@@ -59,6 +59,10 @@ declare module "sst" {
       "name": string
       "type": "sst.aws.Function"
     }
+    "DiscordBotToken": {
+      "type": "sst.sst.Secret"
+      "value": string
+    }
     "EventHandler": {
       "name": string
       "type": "sst.aws.Function"
@@ -154,6 +158,10 @@ declare module "sst" {
     "ReflectorAgent": {
       "name": string
       "type": "sst.aws.Function"
+    }
+    "SlackBotToken": {
+      "type": "sst.sst.Secret"
+      "value": string
     }
     "StagingBucket": {
       "name": string

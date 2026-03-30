@@ -157,9 +157,9 @@ endef
 # Entries separated by ||, each entry is NAME~COMMAND where ~ separates display name from command.
 # Example: $(call run_parallel_gate,lint~make lint||format~make format-check)
 define run_parallel_gate
-       @gate_tmp=$$(mktemp -d); \
-       trap 'rm -rf "$$gate_tmp"' EXIT; \
-       IFS=$$'\n' gate_checks=($$(echo "$(1)" | sed 's/||/\n/g')); \
+	gate_tmp=$$(mktemp -d); \
+	trap 'rm -rf "$$gate_tmp"' EXIT; \
+	IFS=$$'\n' gate_checks=($$(echo "$(1)" | sed 's/||/\n/g')); \
        for entry in "$${gate_checks[@]}"; do \
                [ -z "$$entry" ] && continue; \
                name=$$(echo "$$entry" | cut -d'~' -f1); \

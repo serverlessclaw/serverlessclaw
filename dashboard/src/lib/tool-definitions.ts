@@ -1,3 +1,3 @@
-import { toolDefinitions } from '@claw/core/tools/definitions';
+import { TOOLS } from '@claw/core/tools';
 
-export const tools = toolDefinitions;
+export const tools = TOOLS;

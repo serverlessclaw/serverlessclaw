@@ -78,64 +78,6 @@ export function createDashboard(ctx: SharedContext): { dashboard: sst.aws.Nextjs
         resources: ['*'],
       },
     ],
-    transform: {
-      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-      cdn: (args: any) => {
-        // 1. Ensure the server origin uses https-only (fixes 502/origin issues)
-        if (args.origins) {
-          args.origins = $util.output(args.origins).apply(
-            (
-              /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-              origins: any[]
-            ) =>
-              /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-              origins.map((origin: any) => {
-                if (origin.customOriginConfig) {
-                  return {
-                    ...origin,
-                    customOriginConfig: {
-                      ...origin.customOriginConfig,
-                      originProtocolPolicy: 'https-only',
-                    },
-                  };
-                }
-                return origin;
-              })
-          );
-        }
-
-        // 2. Add Viewer Request Function for enhanced routing
-        // This ensures URIs are correctly mapped to S3/Image Optimizer
-        const routingFunction = new aws.cloudfront.Function('ClawCenterRouter', {
-          runtime: 'cloudfront-js-2.0',
-          code: `
-function handler(event) {
-  var request = event.request;
-  var uri = request.uri;
-
-  // Next.js requirement: Forward host header for proper routing
-  request.headers["x-forwarded-host"] = { value: request.headers.host.value };
-
-  return request;
-}
-`,
-        });
-
-        // Associate the function with the default cache behavior
-        if (args.defaultCacheBehavior) {
-          args.defaultCacheBehavior = $util.output(args.defaultCacheBehavior).apply((behavior) => ({
-            ...behavior,
-            functionAssociations: [
-              ...(behavior.functionAssociations || []),
-              {
-                eventType: 'viewer-request',
-                functionArn: routingFunction.arn,
-              },
-            ],
-          }));
-        }
-      },
-    },
   });
 
   return { dashboard };
