@@ -4,6 +4,7 @@ import { InsightCategory } from '../../lib/types/memory';
 import { GapStatus, EventType } from '../../lib/types/agent';
 import { emitEvent } from '../../lib/utils/bus';
 import { formatErrorMessage } from '../../lib/utils/error';
+import { normalizeTags } from '../../lib/memory/utils';
 import { SkillRegistry } from '../../lib/skills';
 
 /**
@@ -82,26 +83,25 @@ export const uninstallSkill = {
 export const recallKnowledge = {
   ...schema.recallKnowledge,
   execute: async (args: Record<string, unknown>): Promise<string> => {
-    const { userId, query, category } = args as {
+    const { userId, query, category, tags, orgId } = args as {
       userId: string;
       query: string;
       category: InsightCategory;
+      tags?: string[];
+      orgId?: string;
     };
     const memory = getMemory();
     const baseUserId = userId.startsWith('CONV#') ? userId.split('#')[1] : userId;
 
-    let searchResponse;
-    if (category === 'user_preference') {
-      const [prefPrefixed, prefRaw] = await Promise.all([
-        memory.searchInsights(`USER#${baseUserId}`, query, category),
-        memory.searchInsights(baseUserId, query, category),
-      ]);
-      searchResponse = {
-        items: [...(prefPrefixed.items ?? []), ...(prefRaw.items ?? [])],
-      };
-    } else {
-      searchResponse = await memory.searchInsights(baseUserId, query, category);
-    }
+    const searchResponse = await memory.searchInsights(
+      baseUserId,
+      query,
+      category,
+      50,
+      undefined,
+      tags,
+      orgId
+    );
 
     const results = searchResponse.items;
 
@@ -193,49 +193,24 @@ export const reportGap = {
 export const saveMemory = {
   ...schema.saveMemory,
   execute: async (args: Record<string, unknown>): Promise<string> => {
-    const { content, category, userId } = args as {
+    const { content, category, userId, tags, orgId } = args as {
       content: string;
       category: InsightCategory;
       userId: string;
+      tags?: string[];
+      orgId?: string;
     };
 
     const memory = getMemory();
     const baseUserId = userId.startsWith('CONV#') ? userId.split('#')[1] : userId;
     const scopeId = category === 'user_preference' ? `USER#${baseUserId}` : 'SYSTEM#GLOBAL';
 
-    // --- Start Semantic Deduplication ---
-    try {
-      const [searchPrefixed, searchRaw] = await Promise.all([
-        memory.searchInsights(`USER#${baseUserId}`, '*', category),
-        memory.searchInsights(baseUserId, '*', category),
-      ]);
-      const existing = [...(searchPrefixed.items ?? []), ...(searchRaw.items ?? [])];
-      const relevantExisting = existing.filter((e) => e.id === scopeId || e.id === baseUserId);
-
-      if (relevantExisting.length > 0) {
-        const newKeywords = content
-          .toLowerCase()
-          .split(/\W+/)
-          .filter((w) => w.length > 3);
-        for (const oldMem of relevantExisting) {
-          const oldKeywords = oldMem.content
-            .toLowerCase()
-            .split(/\W+/)
-            .filter((w) => w.length > 3);
-          const intersection = newKeywords.filter((w) => oldKeywords.includes(w));
-          const similarity = intersection.length / Math.max(newKeywords.length, oldKeywords.length);
-          if (similarity > 0.6) {
-            console.log(
-              `[Deduplication] Pruning similar memory: "${oldMem.content}" (Similarity: ${Math.round(similarity * 100)}%)`
-            );
-            await memory.deleteItem({ userId: scopeId, timestamp: oldMem.timestamp });
-          }
-        }
-      }
-    } catch (error) {
-      console.warn('Deduplication check failed, proceeding with standard save:', error);
-    }
-    // --- End Semantic Deduplication ---
+    // Autonomous Perspective Generation (Lightweight keyword extraction)
+    const perspectiveKeywords = content
+      .toLowerCase()
+      .split(/\W+/)
+      .filter((w) => w.length > 4)
+      .slice(0, 5);
 
     const metadata = {
       category,
@@ -247,8 +222,14 @@ export const saveMemory = {
       priority: 5,
     };
 
-    await memory.addMemory(scopeId, category, content, metadata);
-    return `Successfully saved knowledge as MEMORY:${category.toUpperCase()}: ${content}`;
+    const finalTags = normalizeTags([...(tags ?? []), ...perspectiveKeywords]);
+
+    await memory.addMemory(scopeId, category, content, {
+      ...metadata,
+      orgId,
+      tags: finalTags,
+    });
+    return `Successfully saved knowledge as MEMORY:${category.toUpperCase()}${finalTags.length > 0 ? ` (Tags: ${finalTags.join(', ')})` : ''}: ${content}`;
   },
 };
 
@@ -396,6 +377,35 @@ export const forceReleaseLock = {
       return `Successfully force-released lock: ${lockId}`;
     } catch (error) {
       return `Failed to release lock: ${formatErrorMessage(error)}`;
+    }
+  },
+};
+
+/**
+ * Updates or corrects an existing memory item.
+ */
+export const refineMemory = {
+  ...schema.refineMemory,
+  execute: async (args: Record<string, unknown>): Promise<string> => {
+    const { userId, timestamp, content, tags, priority } = args as {
+      userId: string;
+      timestamp: number;
+      content?: string;
+      tags?: string[];
+      priority?: number;
+    };
+
+    if (!userId || !timestamp) return 'FAILED: userId and timestamp are required.';
+
+    try {
+      const memory = getMemory();
+      await memory.refineMemory(userId, timestamp, content, {
+        tags,
+        priority,
+      });
+      return `Successfully refined memory item: ${userId}@${timestamp}`;
+    } catch (error) {
+      return `Failed to refine memory: ${formatErrorMessage(error)}`;
     }
   },
 };

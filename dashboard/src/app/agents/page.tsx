@@ -58,6 +58,7 @@ export default function AgentsPage() {
   const [selectedAgentIdForTools, setSelectedAgentIdForTools] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isUpdatingTools, setIsUpdatingTools] = useState(false);
+  const [reputation, setReputation] = useState<Record<string, { successRate: number; avgLatencyMs: number; tasksCompleted: number; tasksFailed: number }>>({});
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -124,6 +125,19 @@ export default function AgentsPage() {
       loadTools();
     }
   }, [selectedAgentIdForTools, allTools.length, loadingTools]);
+
+  useEffect(() => {
+    const loadReputation = async () => {
+      try {
+        const res = await fetch('/api/reputation');
+        const data = await res.json();
+        setReputation(data);
+      } catch (err) {
+        console.error('Failed to load reputation:', err);
+      }
+    };
+    loadReputation();
+  }, []);
 
   const handleSave = async (force: boolean = false) => {
     // Detect backbone changes
@@ -317,6 +331,7 @@ export default function AgentsPage() {
       <div className="max-w-6xl space-y-8 pb-20">
         <AgentTable
           agents={agents}
+          reputation={reputation}
           updateAgent={updateAgent}
           deleteAgent={deleteAgent}
           setSelectedAgentIdForTools={setSelectedAgentIdForTools}

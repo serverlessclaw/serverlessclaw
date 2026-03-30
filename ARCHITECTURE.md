@@ -369,6 +369,22 @@ While the default uses DynamoDB, the system can be adapted to use:
 - **PostgreSQL (Drizzle/Prisma)** for complex relational memory.
 - **S3** for long-term archival.
 
+### 5. Searchable Memory Model (Flattened)
+To support sub-50ms context retrieval across millions of records, the system uses a **Flattened DynamoDB Model**. Searchable fields are projected at the root level to maximize GSI efficiency.
+
+```text
+[ Record Root ]
+ ├── userId (PK)         <-- Scoped partition
+ ├── timestamp (SK)      <-- Unique ID
+ ├── type (GSI-PK)       <-- Category
+ ├── tags (GSI-Filter)   <-- Consolidated keywords
+ ├── orgId               <-- Multi-tenant isolation
+ ├── createdAt           <-- Immutable source
+ └── [ metadata ]        <-- Strategic scores (confidence, priority)
+```
+
+This architecture ensures that agents can perform complex keyword and category searches without expensive table scans or deep-nested attribute filtering.
+
 ## 🔄 Self-Evolution & Stability
 
 The system's evolution is a co-managed process between the **Strategic Planner** and the **Human Admin**. Resilience is ensured via **Structured Signaling** (JSON-based status) and **Atomic Deployment Mapping** (direct gap-to-build syncing).

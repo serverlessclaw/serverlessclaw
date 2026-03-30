@@ -187,22 +187,20 @@ export class CachedMemory implements IMemory {
     return result;
   }
 
-  /**
-   * Searches insights with caching for repeated queries.
-   */
   async searchInsights(
     userId?: string,
     query: string = '',
     category?: InsightCategory,
     limit: number = 50,
-    lastEvaluatedKey?: Record<string, unknown>
+    lastEvaluatedKey?: Record<string, unknown>,
+    tags?: string[]
   ): Promise<{ items: MemoryInsight[]; lastEvaluatedKey?: Record<string, unknown> }> {
     // Don't cache paginated results
     if (lastEvaluatedKey) {
-      return this.underlying.searchInsights(userId, query, category, limit, lastEvaluatedKey);
+      return this.underlying.searchInsights(userId, query, category, limit, lastEvaluatedKey, tags);
     }
 
-    const cacheKey = CacheKeys.insightsSearch(userId ?? 'global', query, category);
+    const cacheKey = CacheKeys.insightsSearch(userId ?? 'global', query, category, tags);
     const cached = MemoryCaches.search.get(cacheKey) as
       | {
           items: MemoryInsight[];
@@ -216,7 +214,14 @@ export class CachedMemory implements IMemory {
     }
 
     logger.debug(`Cache miss for insights search: ${cacheKey}`);
-    const result = await this.underlying.searchInsights(userId, query, category, limit);
+    const result = await this.underlying.searchInsights(
+      userId,
+      query,
+      category,
+      limit,
+      undefined,
+      tags
+    );
 
     // Cache search results with 3 minute TTL
     MemoryCaches.search.set(cacheKey, result, 3 * 60 * 1000);
@@ -345,6 +350,21 @@ export class CachedMemory implements IMemory {
   ): Promise<void> {
     await this.underlying.updateInsightMetadata(userId, timestamp, metadata);
     MemoryCaches.search.invalidatePattern(new RegExp(`^insights:${userId}:`));
+  }
+
+  async refineMemory(
+    userId: string,
+    timestamp: number,
+    content?: string,
+    metadata?: Partial<InsightMetadata>
+  ): Promise<void> {
+    await this.underlying.refineMemory(userId, timestamp, content, metadata);
+    // Invalidate search caches for this user
+    MemoryCaches.search.invalidatePattern(new RegExp(`^insights:${userId}:`));
+    // Also invalidate specific category if known
+    if (metadata?.category) {
+      MemoryCaches.search.invalidatePattern(new RegExp(`:${metadata.category}`));
+    }
   }
 
   async saveConversationMeta(

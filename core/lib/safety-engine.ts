@@ -15,8 +15,9 @@ import {
 } from './types/agent';
 import { logger } from './logger';
 import type { BaseMemoryProvider } from './memory/base';
-import { DEFAULT_POLICIES } from './safety-config';
 import { SafetyRateLimiter, ToolSafetyOverride } from './safety-limiter';
+import { SafetyConfigManager } from './safety-config-manager';
+import { DEFAULT_POLICIES } from './safety-config';
 
 /**
  * Safety Engine for evaluating actions against granular policies.
@@ -78,7 +79,10 @@ export class SafetyEngine {
     }
   ): Promise<SafetyEvaluationResult> {
     const tier = agentConfig?.safetyTier ?? SafetyTier.SANDBOX;
-    const policy = this.policies.get(tier);
+
+    // 1. Fetch current policies (DDB with fallback)
+    const policies = await SafetyConfigManager.getPolicies();
+    const policy = policies[tier];
 
     if (!policy) {
       return {

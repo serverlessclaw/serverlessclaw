@@ -82,6 +82,9 @@ export const UI_STRINGS = {
   SECURITY_MANIFEST: 'Security Manifest',
   SELF_HEALING: 'Self Healing',
   SCHEDULING: 'Goal Scheduling',
+  COGNITIVE_HEALTH: 'Cognitive Health',
+  WORKSPACES: 'Workspaces',
+  CONSENSUS: 'Consensus',
   NODE_STATUS: 'CORE_SYNC',
   SYSTEM_ONLINE: 'LINK_ESTABLISHED',
 } as const;
@@ -100,4 +103,7 @@ export const ROUTES = {
   SECURITY: '/security',
   RESILIENCE: '/resilience',
   SCHEDULING: '/scheduling',
+  COGNITIVE_HEALTH: '/cognitive-health',
+  WORKSPACES: '/workspaces',
+  COLLABORATION: '/collaboration',
 } as const;

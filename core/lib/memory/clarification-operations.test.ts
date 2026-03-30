@@ -147,7 +147,7 @@ describe('clarification-operations', () => {
       expect(mockBase.queryItems).toHaveBeenCalledWith(
         expect.objectContaining({
           IndexName: 'TypeTimestampIndex',
-          KeyConditionExpression: '#type = :type',
+          KeyConditionExpression: '#tp = :type',
           FilterExpression: expect.stringContaining('expiresAt'),
         })
       );

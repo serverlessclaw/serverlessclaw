@@ -228,6 +228,10 @@ describe('Agent Trace Propagation', () => {
       expect.anything(),
       SYSTEM.DEFAULT_MODEL,
       SYSTEM.DEFAULT_PROVIDER,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
       undefined
     );
   });
@@ -271,6 +275,10 @@ describe('Agent Trace Propagation', () => {
       expect.anything(),
       SYSTEM.DEFAULT_MODEL,
       SYSTEM.DEFAULT_PROVIDER,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
       undefined
     );
   });
@@ -299,7 +307,11 @@ describe('Agent Trace Propagation', () => {
         expect.anything(),
         SYSTEM.DEFAULT_MODEL,
         SYSTEM.DEFAULT_PROVIDER,
-        undefined // No responseFormat in text mode
+        undefined, // No responseFormat in text mode
+        undefined,
+        undefined,
+        undefined,
+        undefined
       );
     });
 
@@ -340,7 +352,11 @@ describe('Agent Trace Propagation', () => {
         expect.objectContaining({
           type: 'json_schema',
           json_schema: expect.objectContaining({ name: 'agent_signal' }),
-        })
+        }),
+        undefined,
+        undefined,
+        undefined,
+        undefined
       );
 
       // Verify intelligent extraction of the "message" field for the chat history

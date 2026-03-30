@@ -258,7 +258,11 @@ export interface IProvider {
     profile?: ReasoningProfile,
     model?: string,
     provider?: string,
-    responseFormat?: ResponseFormat
+    responseFormat?: ResponseFormat,
+    temperature?: number,
+    maxTokens?: number,
+    topP?: number,
+    stopSequences?: string[]
   ): Promise<Message>;
 
   /**
@@ -278,7 +282,11 @@ export interface IProvider {
     profile?: ReasoningProfile,
     model?: string,
     provider?: string,
-    responseFormat?: ResponseFormat
+    responseFormat?: ResponseFormat,
+    temperature?: number,
+    maxTokens?: number,
+    topP?: number,
+    stopSequences?: string[]
   ): AsyncIterable<MessageChunk>;
 
   /**

@@ -72,6 +72,14 @@ export interface ExecutorFeatureOptions {
   communicationMode?: 'text' | 'json';
   /** Emitter for real-time streaming to dashboard. */
   emitter?: import('./emitter').AgentEmitter;
+  /** Sampling temperature (0.0 to 1.0). */
+  temperature?: number;
+  /** Maximum tokens for completion. */
+  maxTokens?: number;
+  /** Nucleus sampling probability. */
+  topP?: number;
+  /** Stop sequences for generation. */
+  stopSequences?: string[];
 }
 
 /** Combined executor options: core (required) + features (optional). */
@@ -325,7 +333,11 @@ export class AgentExecutor {
         normalizedProfile,
         options.activeModel,
         options.activeProvider,
-        capabilities.supportsStructuredOutput ? options.responseFormat : undefined
+        capabilities.supportsStructuredOutput ? options.responseFormat : undefined,
+        options.temperature,
+        options.maxTokens,
+        options.topP,
+        options.stopSequences
       );
 
       logger.info(
@@ -590,7 +602,11 @@ export class AgentExecutor {
       normalizedProfile,
       options.activeModel,
       options.activeProvider,
-      capabilities.supportsStructuredOutput ? options.responseFormat : undefined
+      capabilities.supportsStructuredOutput ? options.responseFormat : undefined,
+      options.temperature,
+      options.maxTokens,
+      options.topP,
+      options.stopSequences
     );
   }
 

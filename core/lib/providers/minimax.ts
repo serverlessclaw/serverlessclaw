@@ -8,6 +8,8 @@ import {
   MessageRole,
   MiniMaxModel,
   ToolCall,
+  MessageChunk,
+  ResponseFormat,
 } from '../types/index';
 import { Resource } from 'sst';
 import { logger } from '../logger';
@@ -45,7 +47,11 @@ export class MiniMaxProvider implements IProvider {
     profile: ReasoningProfile = ReasoningProfile.STANDARD,
     model?: string,
     _provider?: string,
-    responseFormat?: import('../types/index').ResponseFormat
+    responseFormat?: ResponseFormat,
+    temperature?: number,
+    maxTokens?: number,
+    topP?: number,
+    stopSequences?: string[]
   ): Promise<Message> {
     const typedResource = Resource as unknown as import('../types/system').SSTResource;
     const apiKey = typedResource.MiniMaxApiKey?.value ?? '';
@@ -65,9 +71,12 @@ export class MiniMaxProvider implements IProvider {
     // Build request parameters
     const requestParams: Record<string, unknown> = {
       model: activeModel,
-      max_tokens: 4096,
+      max_tokens: maxTokens ?? 4096,
       messages: anthropicMessages,
       ...(systemMessage ? { system: systemMessage } : {}),
+      ...(temperature !== undefined ? { temperature } : {}),
+      ...(topP !== undefined ? { top_p: topP } : {}),
+      ...(stopSequences && stopSequences.length > 0 ? { stop_sequences: stopSequences } : {}),
       ...(reasoningConfig.enabled && responseFormat?.type !== 'json_schema'
         ? {
             thinking: {
@@ -146,8 +155,12 @@ export class MiniMaxProvider implements IProvider {
     profile: ReasoningProfile = ReasoningProfile.STANDARD,
     model?: string,
     _provider?: string,
-    responseFormat?: import('../types/index').ResponseFormat
-  ): AsyncIterable<import('../types/index').MessageChunk> {
+    responseFormat?: ResponseFormat,
+    temperature?: number,
+    maxTokens?: number,
+    topP?: number,
+    stopSequences?: string[]
+  ): AsyncIterable<MessageChunk> {
     const typedResource = Resource as unknown as import('../types/system').SSTResource;
     const apiKey = typedResource.MiniMaxApiKey?.value ?? '';
     const activeModel = model ?? this.model;
@@ -166,10 +179,13 @@ export class MiniMaxProvider implements IProvider {
     // Build request parameters
     const requestParams: Record<string, unknown> = {
       model: activeModel,
-      max_tokens: 4096,
+      max_tokens: maxTokens ?? 4096,
       messages: anthropicMessages,
       stream: true,
       ...(systemMessage ? { system: systemMessage } : {}),
+      ...(temperature !== undefined ? { temperature } : {}),
+      ...(topP !== undefined ? { top_p: topP } : {}),
+      ...(stopSequences && stopSequences.length > 0 ? { stop_sequences: stopSequences } : {}),
       ...(reasoningConfig.enabled && responseFormat?.type !== 'json_schema'
         ? {
             thinking: {
@@ -379,21 +395,6 @@ export class MiniMaxProvider implements IProvider {
         description: t.description,
         input_schema: t.parameters,
       }));
-  }
-
-  /**
-   * Get thinking budget tokens based on effort level.
-   */
-  private getThinkingBudget(effort: string): number {
-    switch (effort) {
-      case 'high':
-        return 16000;
-      case 'medium':
-        return 8000;
-      case 'low':
-      default:
-        return 4000;
-    }
   }
 
   async getCapabilities(_model?: string) {

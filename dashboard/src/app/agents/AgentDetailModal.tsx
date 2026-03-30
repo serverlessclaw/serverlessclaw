@@ -26,6 +26,7 @@ const REASONING_PROFILES = [
 
 interface AgentDetailModalProps {
   agent: Agent | null;
+  reputation?: Record<string, { successRate: number; avgLatencyMs: number; tasksCompleted: number; tasksFailed: number }>;
   onClose: () => void;
   updateAgent: (id: string, updates: Partial<Agent>) => void;
   onDelete: (id: string) => void;
@@ -37,6 +38,7 @@ interface AgentDetailModalProps {
 
 export default function AgentDetailModal({
   agent,
+  reputation,
   onClose,
   updateAgent,
   onDelete,
@@ -163,6 +165,40 @@ export default function AgentDetailModal({
                   {isLogicOnly ? ' Core resilience logic.' : ' Authorized to interact with global bus and session memory.'}
                 </Typography>
               </Card>
+
+              {reputation && reputation[agent.id] && (
+                <Card variant="solid" padding="sm" className="border-white/10">
+                  <Typography variant="caption" weight="bold" color="white" uppercase className="flex items-center gap-2 mb-3">
+                    <ChevronRight size={12} className="text-green-400" /> Reputation
+                  </Typography>
+                  <div className="space-y-2 font-mono text-[10px]">
+                    <div className="flex justify-between">
+                      <span className="text-white/40 uppercase">Tasks Completed</span>
+                      <span className="text-white/80">{reputation[agent.id].tasksCompleted}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/40 uppercase">Tasks Failed</span>
+                      <span className="text-white/80">{reputation[agent.id].tasksFailed}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/40 uppercase">Success Rate</span>
+                      <span className={`font-bold ${
+                        reputation[agent.id].successRate >= 0.8
+                          ? 'text-green-400'
+                          : reputation[agent.id].successRate >= 0.5
+                          ? 'text-amber-400'
+                          : 'text-red-400'
+                      }`}>
+                        {(reputation[agent.id].successRate * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/40 uppercase">Avg Latency</span>
+                      <span className="text-white/80">{reputation[agent.id].avgLatencyMs.toFixed(0)}ms</span>
+                    </div>
+                  </div>
+                </Card>
+              )}
             </div>
           </div>
         </div>

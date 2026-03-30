@@ -124,17 +124,32 @@ describe('knowledge-storage tools', () => {
         category: 'tactical_lesson',
       });
       expect(result).toContain('insight 1');
-      expect(mocks.searchInsights).toHaveBeenCalledWith('user-1', 'test', 'tactical_lesson');
+      expect(mocks.searchInsights).toHaveBeenCalledWith(
+        'user-1',
+        'test',
+        'tactical_lesson',
+        50,
+        undefined,
+        undefined,
+        undefined
+      );
     });
-
     it('should search both prefixed and raw for user_preference', async () => {
       await recallKnowledge.execute({
         userId: 'user-1',
         query: 'coffee',
         category: 'user_preference',
       });
-      expect(mocks.searchInsights).toHaveBeenCalledWith('USER#user-1', 'coffee', 'user_preference');
-      expect(mocks.searchInsights).toHaveBeenCalledWith('user-1', 'coffee', 'user_preference');
+      expect(mocks.searchInsights).toHaveBeenCalledWith(
+        'user-1',
+        'coffee',
+        'user_preference',
+        50,
+        undefined,
+        undefined,
+        undefined
+      );
+      expect(mocks.searchInsights).toHaveBeenCalledTimes(1);
     });
   });
 

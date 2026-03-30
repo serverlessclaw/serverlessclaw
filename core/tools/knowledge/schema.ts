@@ -139,6 +139,15 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
           enum: ['user_preference', 'tactical_lesson', 'strategic_gap', 'system_knowledge'],
           description: 'Optional category filter.',
         },
+        tags: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional tags to filter the search.',
+        },
+        orgId: {
+          type: 'string',
+          description: 'Optional organization ID to scope the search.',
+        },
       },
       required: ['query', 'category'],
       additionalProperties: false,
@@ -146,7 +155,9 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     argSchema: z.object({
       query: z.string(),
       category: z.enum(['user_preference', 'tactical_lesson', 'strategic_gap', 'system_knowledge']),
+      tags: z.array(z.string()).optional(),
       userId: z.string(),
+      orgId: z.string().optional(),
     }),
     connectionProfile: ['memory'],
   },
@@ -163,6 +174,15 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
           enum: ['user_preference', 'system_knowledge', 'tactical_lesson'],
           description: 'The category of the knowledge.',
         },
+        tags: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional tags for the memory.',
+        },
+        orgId: {
+          type: 'string',
+          description: 'Optional organization ID to scope the knowledge.',
+        },
       },
       required: ['content', 'category'],
       additionalProperties: false,
@@ -170,7 +190,9 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     argSchema: z.object({
       content: z.string(),
       category: z.enum(['user_preference', 'system_knowledge', 'tactical_lesson']),
+      tags: z.array(z.string()).optional(),
       userId: z.string(),
+      orgId: z.string().optional(),
     }),
     connectionProfile: ['memory'],
   },
@@ -332,6 +354,43 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
     connectionProfile: ['trace'],
+  },
+  refineMemory: {
+    name: 'refineMemory',
+    description:
+      'Updates or corrects an existing memory item. Use this when you have new information that refines a previous conclusion or lesson.',
+    parameters: {
+      type: 'object',
+      properties: {
+        timestamp: {
+          type: 'number',
+          description: 'The exact timestamp (sort key) of the memory item to refine.',
+        },
+        content: {
+          type: 'string',
+          description: 'The new or updated content for the memory.',
+        },
+        tags: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Updated tags for the memory.',
+        },
+        priority: {
+          type: 'number',
+          description: 'New priority score (0-10).',
+        },
+      },
+      required: ['timestamp'],
+      additionalProperties: false,
+    },
+    argSchema: z.object({
+      userId: z.string(),
+      timestamp: z.number(),
+      content: z.string().optional(),
+      tags: z.array(z.string()).optional(),
+      priority: z.number().min(0).max(10).optional(),
+    }),
+    connectionProfile: ['memory'],
   },
   forceReleaseLock: {
     name: 'forceReleaseLock',

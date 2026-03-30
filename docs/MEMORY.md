@@ -170,14 +170,49 @@ FinalScore = (0.6 * performanceScore) + (0.4 * reputationScore)
 
 This ensures agents with proven track records (high success, low latency, recent activity) are preferred over untested or degraded agents.
 
-## High-Performance Indexing (TypeTimestampIndex)
+## High-Performance Indexing (Hybrid Strategy)
 
-The `MemoryTable` utilizes a Global Secondary Index (GSI) named `TypeTimestampIndex` to enable instantaneous querying. This allows the system to bypass expensive full-table scans when fetching context.
+The `MemoryTable` utilizes a dual Global Secondary Index (GSI) strategy to balance system-wide observability with high-performance, user-scoped retrieval.
 
-- **Partition Key**: `type` (e.g., 'GAP', 'LESSON', 'DISTILLED', 'MESSAGE', 'SESSION')
+### 1. TypeTimestampIndex (Global Observability)
+Used for cross-user strategic monitoring, global lessons, and system-wide evolution tracking.
+
+- **Partition Key**: `type` (e.g., 'GAP', 'LESSON', 'DISTILLED')
 - **Sort Key**: `timestamp`
-- **Fields**: `content`, `metadata`, `createdAt`
-- **Result**: Reduced dashboard load times from ~10s to **<100ms**.
+- **Purpose**: Powering the global Evolution dashboard and system-wide audits.
+
+### 2. UserInsightIndex (User-Scoped Performance)
+A specialized index optimized for real-time agent context retrieval and multi-tenant isolation. It eliminates cross-tenant scanning bottlenecks.
+
+- **Scoping**: All `searchInsights` calls with a `userId` automatically leverage this index for O(1) partition targeting.
+- **Flattened Schema**: To maximize retrieval speed, searchable metadata (`tags`, `orgId`, `createdAt`) are stored at the top level of the record, rather than nested in metadata.
+
+### 3. Record Structure (Flattened)
+The `MemoryTable` uses a flattened record model to ensure that searchable fields are directly accessible to GSIs and retrieval logic.
+
+```text
++-----------------------------------------------------------+
+|                   FLATTENED MEMORY RECORD                 |
++-----------------------------------------------------------+
+| userId: string (PK)    - Owner or Organization Scope      |
+| timestamp: number (SK) - Unique entry ID                  |
+| type: string (GSI-PK)  - MEMORY:CATEGORY                  |
+| content: string        - The actual insight/lesson        |
+| orgId: string?         - Team-wide isolation ID           |
+| tags: string[]         - Consolidated search labels       |
+| createdAt: number      - Immutable creation source        |
+| expiresAt: number      - TTL (Retention Policy)           |
++-----------------------------------------------------------+
+| metadata: {                                               |
+|   category: string,                                       |
+|   hitCount: number,                                       |
+|   lastAccessed: number,                                   |
+|   confidence: number,                                     |
+|   impact: number,                                         |
+|   priority: number                                        |
+| }                                                         |
++-----------------------------------------------------------+
+```
 
 ## Neural Pruning & Hit Tracking (The Self-Cleaning Loop)
 

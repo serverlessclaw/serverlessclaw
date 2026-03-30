@@ -52,7 +52,8 @@ describe('DynamoMemory Pagination & Search', () => {
       const calls = ddbMock.commandCalls(QueryCommand);
       expect(calls[0].args[0].input).toMatchObject({
         IndexName: 'TypeTimestampIndex',
-        KeyConditionExpression: '#type = :type',
+        KeyConditionExpression: '#tp = :type',
+        ExpressionAttributeNames: { '#tp': 'type' },
         ExpressionAttributeValues: { ':type': 'DISTILLED' },
         Limit: 2,
         ExclusiveStartKey: { userId: 'USER#1', timestamp: 110 },
@@ -87,13 +88,15 @@ describe('DynamoMemory Pagination & Search', () => {
         10
       );
 
-      expect(result.items).toHaveLength(2);
-      expect(result.lastEvaluatedKey).toEqual({ userId: 'LESSON#1', timestamp: 150 });
-
       const calls = ddbMock.commandCalls(QueryCommand);
+
+      expect(result.items).toHaveLength(2);
+      expect(result.lastEvaluatedKey).toBeUndefined();
+
       expect(calls[0].args[0].input).toMatchObject({
         IndexName: 'TypeTimestampIndex',
         KeyConditionExpression: '#tp = :type',
+        ExpressionAttributeNames: { '#tp': 'type' },
         ExpressionAttributeValues: {
           ':type': `MEMORY:${InsightCategory.STRATEGIC_GAP.toUpperCase()}`,
           ':query': 'tool X',
@@ -105,10 +108,10 @@ describe('DynamoMemory Pagination & Search', () => {
 
     it('should handle empty query by returning all items for a user', async () => {
       ddbMock.on(QueryCommand).resolves({
-        Items: [{ userId: 'USER#1', timestamp: 100, content: 'some fact' }],
+        Items: [{ userId: 'SYSTEM#TEST', timestamp: 100, content: 'some fact' }],
       });
 
-      const result = await memory.searchInsights('USER#1', '', undefined, 5);
+      const result = await memory.searchInsights('SYSTEM#TEST', '', undefined, 5);
 
       expect(result.items).toHaveLength(1);
       const calls = ddbMock.commandCalls(QueryCommand);

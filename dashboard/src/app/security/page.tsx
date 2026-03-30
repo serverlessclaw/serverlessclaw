@@ -3,6 +3,7 @@ import { Lock, Eye, FileWarning, Globe, Server, Database } from 'lucide-react';
 import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
+import SafetyTierEditor from '@/components/SafetyTierEditor';
 import { THEME } from '@/lib/theme';
 
 const AGENT_POLICIES = [
@@ -70,6 +71,16 @@ export default function SecurityManifestPage() {
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Safety Tier */}
+        <div className="lg:col-span-12">
+          <section className="mb-8">
+            <Typography variant="caption" weight="bold" className="tracking-[0.2em] flex items-center gap-2 mb-6">
+              <Lock size={14} className={`text-[${THEME.COLORS.PRIMARY}]`} /> Safety Tier
+            </Typography>
+            <SafetyTierEditor currentTier="sandbox" onTierChange={() => {}} />
+          </section>
+        </div>
+
         {/* Left: Agent Capabilities */}
         <div className="lg:col-span-12 space-y-8">
           <section>

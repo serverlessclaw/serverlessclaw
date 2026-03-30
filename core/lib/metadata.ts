@@ -178,4 +178,25 @@ export const SYSTEM_CONFIG_METADATA: Record<string, ConfigOptionMetadata> = {
     safeguard: 'Only triggers after a failed JSON parse or provider error.',
     default: 'true',
   },
+  router_success_weight: {
+    label: 'Router Success Weight',
+    description: 'Multiplier for agent success rate in routing decisions.',
+    implication:
+      'Higher values favor agents with a high historical success rate, even if they are more expensive.',
+    default: '1.0',
+  },
+  router_token_penalty_weight: {
+    label: 'Router Token Penalty',
+    description: 'Weight of the token usage penalty in routing decisions.',
+    implication:
+      'Higher values favor cheaper, more token-efficient agents. Lower values prioritize quality over cost.',
+    default: '0.0001',
+  },
+  safety_policies: {
+    label: 'Global Safety Policies',
+    description: 'Dynamic override for all safety tiers (Sandbox/Autonomous).',
+    implication: 'Allows changing blocked paths and approval requirements without redeploy.',
+    risk: 'Malformed JSON here can block all agent actions. Use with caution.',
+    default: '{}',
+  },
 };

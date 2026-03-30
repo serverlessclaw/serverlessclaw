@@ -18,6 +18,8 @@ import {
   MessageRole,
   BedrockModel,
   Attachment,
+  MessageChunk,
+  ResponseFormat,
 } from '../types/index';
 import { Resource } from 'sst';
 import { logger } from '../logger';
@@ -255,6 +257,10 @@ export class BedrockProvider implements IProvider {
    * @param model Override for the model ID.
    * @param _provider Ignored provider identifier.
    * @param responseFormat Preferred format for the response.
+   * @param temperature Optional sampling temperature.
+   * @param maxTokens Optional maximum tokens to generate.
+   * @param topP Optional nucleus sampling probability.
+   * @param stopSequences Optional list of stop sequences.
    * @returns A promise resolving to the assistant's message.
    */
   async call(
@@ -263,7 +269,11 @@ export class BedrockProvider implements IProvider {
     profile: ReasoningProfile = ReasoningProfile.STANDARD,
     model?: string,
     _provider?: string,
-    responseFormat?: import('../types/index').ResponseFormat
+    responseFormat?: ResponseFormat,
+    temperature?: number,
+    maxTokens?: number,
+    topP?: number,
+    stopSequences?: string[]
   ): Promise<Message> {
     const sstResource = Resource as unknown as ClawSstResource;
     const client = new BedrockRuntimeClient({
@@ -318,9 +328,10 @@ export class BedrockProvider implements IProvider {
       system,
       toolConfig: bedrockTools ? { tools: bedrockTools } : undefined,
       inferenceConfig: {
-        maxTokens: config.maxTokens,
-        temperature: config.temperature,
-        topP: DEFAULT_TOP_P,
+        maxTokens: maxTokens ?? config.maxTokens,
+        temperature: temperature ?? config.temperature,
+        topP: topP ?? DEFAULT_TOP_P,
+        stopSequences: stopSequences && stopSequences.length > 0 ? stopSequences : undefined,
       },
       additionalModelRequestFields: {
         ...(config.thinkingEnabled
@@ -389,8 +400,12 @@ export class BedrockProvider implements IProvider {
     profile: ReasoningProfile = ReasoningProfile.STANDARD,
     model?: string,
     _provider?: string,
-    responseFormat?: import('../types/index').ResponseFormat
-  ): AsyncIterable<import('../types/index').MessageChunk> {
+    responseFormat?: ResponseFormat,
+    temperature?: number,
+    maxTokens?: number,
+    topP?: number,
+    stopSequences?: string[]
+  ): AsyncIterable<MessageChunk> {
     const sstResource = Resource as unknown as ClawSstResource;
     const client = new BedrockRuntimeClient({
       region: sstResource.AwsRegion?.value ?? DEFAULT_REGION,
@@ -445,9 +460,10 @@ export class BedrockProvider implements IProvider {
         system,
         toolConfig: bedrockTools ? { tools: bedrockTools } : undefined,
         inferenceConfig: {
-          maxTokens: config.maxTokens,
-          temperature: config.temperature,
-          topP: DEFAULT_TOP_P,
+          maxTokens: maxTokens ?? config.maxTokens,
+          temperature: temperature ?? config.temperature,
+          topP: topP ?? DEFAULT_TOP_P,
+          stopSequences: stopSequences && stopSequences.length > 0 ? stopSequences : undefined,
         },
         additionalModelRequestFields: {
           ...(config.thinkingEnabled
@@ -547,6 +563,7 @@ export class BedrockProvider implements IProvider {
           ]
         : [ReasoningProfile.FAST, ReasoningProfile.STANDARD],
       supportsStructuredOutput: isClaude46,
+      maxReasoningEffort: 'high',
       contextWindow: DEFAULT_CONTEXT_WINDOW,
       supportedAttachmentTypes: [AttachmentType.IMAGE, AttachmentType.FILE],
     };

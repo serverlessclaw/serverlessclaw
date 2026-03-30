@@ -16,6 +16,9 @@ import {
   Wrench,
   Server,
   Calendar,
+  BrainCircuit,
+  Building2,
+  Vote,
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -51,11 +54,15 @@ export default function Sidebar() {
     { href: ROUTES.PIPELINE, label: UI_STRINGS.EVOLUTION_PIPELINE, icon: Server },
     { href: ROUTES.CAPABILITIES, label: UI_STRINGS.CAPABILITIES, icon: Wrench },
     { href: ROUTES.SCHEDULING, label: UI_STRINGS.SCHEDULING, icon: Calendar },
+    { href: ROUTES.WORKSPACES, label: UI_STRINGS.WORKSPACES, icon: Building2 },
+    { href: ROUTES.COLLABORATION, label: UI_STRINGS.CONSENSUS, icon: Vote },
     
     { label: UI_STRINGS.INFRA_HEADER, type: 'header' },
     { href: ROUTES.SYSTEM_PULSE, label: UI_STRINGS.SYSTEM_PULSE, icon: Share2 },
     { href: ROUTES.LOCKS, label: UI_STRINGS.SESSION_TRAFFIC, icon: Lock },
     { href: ROUTES.RESILIENCE, label: UI_STRINGS.SELF_HEALING, icon: Zap },
+    { href: ROUTES.COGNITIVE_HEALTH, label: UI_STRINGS.COGNITIVE_HEALTH, icon: BrainCircuit },
+    { href: ROUTES.SECURITY, label: UI_STRINGS.SECURITY_MANIFEST, icon: Settings },
     { href: ROUTES.SETTINGS, label: UI_STRINGS.CONFIG, icon: Settings },
   ];
 

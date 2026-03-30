@@ -1,4 +1,3 @@
-import { EventType } from '../lib/types/agent';
 import { logger } from '../lib/logger';
 import { reportHealthIssue } from '../lib/health';
 import { Context } from 'aws-lambda';
@@ -38,114 +37,54 @@ export async function handler(
   const traceId = (eventDetail.traceId as string) ?? 'unknown';
 
   try {
-    switch (detailType) {
-      case EventType.SYSTEM_BUILD_FAILED: {
-        const { handleBuildFailure } = await import('./events/build-handler');
-        await handleBuildFailure(eventDetail, context);
-        break;
+    const { ConfigManager } = await import('../lib/registry/config');
+    const { DEFAULT_EVENT_ROUTING } = await import('../lib/event-routing');
+
+    // Fetch routing table from DDB with hardcoded fallback
+    const routingTable = await ConfigManager.getTypedConfig(
+      'event_routing_table',
+      DEFAULT_EVENT_ROUTING
+    );
+
+    const routing = routingTable[detailType];
+
+    if (routing) {
+      // Dynamic import of the specified module
+      // NOTE: We use template literal to satisfy dynamic import requirements
+      // with a base path to guide the bundler/runtime.
+      let handlerModule;
+      try {
+        // Remove leading './' if present in DDB to avoid path confusion
+        const cleanModulePath = routing.module.startsWith('./')
+          ? routing.module.substring(2)
+          : routing.module;
+
+        handlerModule = await import(`./${cleanModulePath}`);
+      } catch (importError) {
+        logger.error(`Failed to import dynamic handler module ${routing.module}:`, importError);
+        // Fallback to hardcoded routing if DDB import failed
+        if (routingTable !== DEFAULT_EVENT_ROUTING) {
+          const fallback = DEFAULT_EVENT_ROUTING[detailType];
+          if (fallback) {
+            const cleanFallbackPath = fallback.module.startsWith('./')
+              ? fallback.module.substring(2)
+              : fallback.module;
+            handlerModule = await import(`./${cleanFallbackPath}`);
+          }
+        }
       }
 
-      case EventType.SYSTEM_BUILD_SUCCESS: {
-        const { handleBuildSuccess } = await import('./events/build-handler');
-        await handleBuildSuccess(eventDetail);
-        break;
+      if (handlerModule && handlerModule[routing.function]) {
+        if (routing.passContext) {
+          await handlerModule[routing.function](eventDetail, context, detailType);
+        } else {
+          await handlerModule[routing.function](eventDetail, detailType);
+        }
+      } else {
+        logger.warn(`Handler function ${routing.function} not found in ${routing.module}`);
       }
-
-      case EventType.CONTINUATION_TASK: {
-        const { handleContinuationTask } = await import('./events/continuation-handler');
-        await handleContinuationTask(eventDetail, context);
-        break;
-      }
-
-      case EventType.SYSTEM_HEALTH_REPORT: {
-        const { handleHealthReport } = await import('./events/health-handler');
-        await handleHealthReport(eventDetail, context);
-        break;
-      }
-
-      case EventType.TASK_COMPLETED:
-      case EventType.TASK_FAILED: {
-        const { handleTaskResult } = await import('./events/task-result-handler');
-        await handleTaskResult(eventDetail, detailType);
-        break;
-      }
-
-      case EventType.CLARIFICATION_REQUEST: {
-        const { handleClarificationRequest } = await import('./events/clarification-handler');
-        await handleClarificationRequest(eventDetail);
-        break;
-      }
-
-      case EventType.CLARIFICATION_TIMEOUT: {
-        const { handleClarificationTimeout } =
-          await import('./events/clarification-timeout-handler');
-        await handleClarificationTimeout(eventDetail);
-        break;
-      }
-
-      case EventType.PARALLEL_TASK_DISPATCH: {
-        const { handleParallelDispatch } = await import('./events/parallel-handler');
-        await handleParallelDispatch(
-          event as unknown as import('aws-lambda').EventBridgeEvent<
-            string,
-            import('./events/parallel-handler').ParallelTaskEvent
-          >
-        );
-        break;
-      }
-
-      case EventType.PARALLEL_BARRIER_TIMEOUT: {
-        const { handleParallelBarrierTimeout } =
-          await import('./events/parallel-barrier-timeout-handler');
-        await handleParallelBarrierTimeout(eventDetail);
-        break;
-      }
-
-      case EventType.PARALLEL_TASK_COMPLETED: {
-        const { handleParallelTaskCompleted } =
-          await import('./events/parallel-task-completed-handler');
-        await handleParallelTaskCompleted(eventDetail);
-        break;
-      }
-
-      case EventType.TASK_CANCELLED: {
-        const { handleTaskCancellation } = await import('./events/cancellation-handler');
-        await handleTaskCancellation(
-          event as unknown as import('aws-lambda').EventBridgeEvent<
-            string,
-            import('../lib/agent/schema').TaskCancellation
-          >
-        );
-        break;
-      }
-
-      case EventType.HEARTBEAT_PROACTIVE: {
-        const { handleProactiveHeartbeat } = await import('./events/proactive-handler');
-        await handleProactiveHeartbeat(eventDetail, context);
-        break;
-      }
-
-      case EventType.ESCALATION_LEVEL_TIMEOUT: {
-        const { handleEscalationLevelTimeout } = await import('./events/escalation-handler');
-        await handleEscalationLevelTimeout(eventDetail);
-        break;
-      }
-
-      case EventType.CONSENSUS_REQUEST:
-      case EventType.CONSENSUS_VOTE: {
-        const { handleConsensus } = await import('./events/consensus-handler');
-        await handleConsensus({ detail: eventDetail as any }, detailType);
-        break;
-      }
-
-      case EventType.COGNITIVE_HEALTH_CHECK: {
-        const { handleCognitiveHealthCheck } = await import('./events/cognitive-health-handler');
-        await handleCognitiveHealthCheck(eventDetail);
-        break;
-      }
-
-      default:
-        logger.warn(`Unhandled event type: ${detailType}`);
+    } else {
+      logger.warn(`Unhandled event type: ${detailType}`);
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

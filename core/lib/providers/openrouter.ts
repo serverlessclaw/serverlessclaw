@@ -7,6 +7,8 @@ import {
   MessageRole,
   OpenRouterModel,
   Attachment,
+  MessageChunk,
+  ResponseFormat,
 } from '../types/index';
 import { Resource } from 'sst';
 import { logger } from '../logger';
@@ -186,6 +188,10 @@ export class OpenRouterProvider implements IProvider {
    * @param model Override for the model ID.
    * @param _provider Ignored provider identifier.
    * @param responseFormat Preferred format for the response.
+   * @param temperature Optional sampling temperature.
+   * @param maxTokens Optional maximum tokens to generate.
+   * @param topP Optional nucleus sampling probability.
+   * @param stopSequences Optional list of stop sequences.
    * @returns A promise resolving to the assistant's message.
    */
   async call(
@@ -194,7 +200,11 @@ export class OpenRouterProvider implements IProvider {
     profile: ReasoningProfile = ReasoningProfile.STANDARD,
     model?: string,
     _provider?: string,
-    responseFormat?: import('../types/index').ResponseFormat
+    responseFormat?: ResponseFormat,
+    temperature?: number,
+    maxTokens?: number,
+    topP?: number,
+    stopSequences?: string[]
   ): Promise<Message> {
     const sstResource = Resource as unknown as ClawSstResource;
     const apiKey = sstResource.OpenRouterApiKey?.value ?? '';
@@ -227,6 +237,10 @@ export class OpenRouterProvider implements IProvider {
       ...(activeModel.includes(OPENROUTER_CONSTANTS.MODELS.GEMINI_3)
         ? { safety_settings: 'off' }
         : {}),
+      ...(temperature !== undefined ? { temperature } : {}),
+      ...(maxTokens !== undefined ? { max_tokens: maxTokens } : {}),
+      ...(topP !== undefined ? { top_p: topP } : {}),
+      ...(stopSequences && stopSequences.length > 0 ? { stop: stopSequences } : {}),
     };
 
     if (tools && tools.length > 0) {
@@ -315,8 +329,12 @@ export class OpenRouterProvider implements IProvider {
     profile: ReasoningProfile = ReasoningProfile.STANDARD,
     model?: string,
     _provider?: string,
-    responseFormat?: import('../types/index').ResponseFormat
-  ): AsyncIterable<import('../types/index').MessageChunk> {
+    responseFormat?: ResponseFormat,
+    temperature?: number,
+    maxTokens?: number,
+    topP?: number,
+    stopSequences?: string[]
+  ): AsyncIterable<MessageChunk> {
     const sstResource = Resource as unknown as ClawSstResource;
     const apiKey = sstResource.OpenRouterApiKey?.value ?? '';
     const baseUrl = OPENROUTER_BASE_URL;
@@ -349,6 +367,10 @@ export class OpenRouterProvider implements IProvider {
       ...(activeModel.includes(OPENROUTER_CONSTANTS.MODELS.GEMINI_3)
         ? { safety_settings: 'off' }
         : {}),
+      ...(temperature !== undefined ? { temperature } : {}),
+      ...(maxTokens !== undefined ? { max_tokens: maxTokens } : {}),
+      ...(topP !== undefined ? { top_p: topP } : {}),
+      ...(stopSequences && stopSequences.length > 0 ? { stop: stopSequences } : {}),
     };
 
     if (tools && tools.length > 0) {

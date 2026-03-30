@@ -3,7 +3,7 @@
 ###############################################################################
 include makefiles/Makefile.shared.mk
 
-.PHONY: test test-watch test-ui test-coverage test-component test-e2e test-e2e-deployed verify test-tier-1 test-tier-2 test-tier-3
+.PHONY: test test-watch test-ui test-coverage test-component test-e2e test-e2e-deployed verify test-tier-1 test-tier-2 test-tier-3 test-affected security-scan docs-check
 
 test-tier-1: test-silent ## Run Tier 1: Unit tests (silent)
 

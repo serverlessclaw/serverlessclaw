@@ -1,4 +1,12 @@
-import { IProvider, Message, ITool, ReasoningProfile, LLMProvider } from '../types/index';
+import {
+  IProvider,
+  Message,
+  ITool,
+  ReasoningProfile,
+  LLMProvider,
+  MessageChunk,
+  ResponseFormat,
+} from '../types/index';
 import { Resource } from 'sst';
 
 import { OpenAIProvider } from './openai';
@@ -67,6 +75,10 @@ export class ProviderManager implements IProvider {
    * @param model - Optional model override.
    * @param provider - Optional provider override.
    * @param responseFormat - Optional structured output format.
+   * @param temperature - Optional sampling temperature.
+   * @param maxTokens - Optional maximum tokens.
+   * @param topP - Optional nucleus sampling probability.
+   * @param stopSequences - Optional stop sequences.
    * @returns A promise resolving to the AI response message.
    */
   async call(
@@ -75,10 +87,25 @@ export class ProviderManager implements IProvider {
     profile: ReasoningProfile = ReasoningProfile.STANDARD,
     model?: string,
     provider?: string,
-    responseFormat?: import('../types/index').ResponseFormat
+    responseFormat?: ResponseFormat,
+    temperature?: number,
+    maxTokens?: number,
+    topP?: number,
+    stopSequences?: string[]
   ): Promise<Message> {
     const activeProvider = await ProviderManager.getActiveProvider(provider, model);
-    return activeProvider.call(messages, tools, profile, model, undefined, responseFormat);
+    return activeProvider.call(
+      messages,
+      tools,
+      profile,
+      model,
+      undefined,
+      responseFormat,
+      temperature,
+      maxTokens,
+      topP,
+      stopSequences
+    );
   }
 
   /**
@@ -90,6 +117,10 @@ export class ProviderManager implements IProvider {
    * @param model - Optional model override.
    * @param provider - Optional provider override.
    * @param responseFormat - Optional structured output format.
+   * @param temperature - Optional sampling temperature.
+   * @param maxTokens - Optional maximum tokens.
+   * @param topP - Optional nucleus sampling probability.
+   * @param stopSequences - Optional stop sequences.
    * @returns An AsyncIterable yielding message chunks.
    */
   async *stream(
@@ -98,10 +129,25 @@ export class ProviderManager implements IProvider {
     profile: ReasoningProfile = ReasoningProfile.STANDARD,
     model?: string,
     provider?: string,
-    responseFormat?: import('../types/index').ResponseFormat
-  ): AsyncIterable<import('../types/index').MessageChunk> {
+    responseFormat?: ResponseFormat,
+    temperature?: number,
+    maxTokens?: number,
+    topP?: number,
+    stopSequences?: string[]
+  ): AsyncIterable<MessageChunk> {
     const activeProvider = await ProviderManager.getActiveProvider(provider, model);
-    yield* activeProvider.stream(messages, tools, profile, model, undefined, responseFormat);
+    yield* activeProvider.stream(
+      messages,
+      tools,
+      profile,
+      model,
+      undefined,
+      responseFormat,
+      temperature,
+      maxTokens,
+      topP,
+      stopSequences
+    );
   }
 
   /**

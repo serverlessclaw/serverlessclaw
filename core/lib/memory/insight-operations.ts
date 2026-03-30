@@ -11,21 +11,59 @@ import type { BaseMemoryProvider } from './base';
 import { filterPII } from '../utils/pii';
 import {
   createMetadata,
+  normalizeTags,
   queryLatestContentByUserId,
   queryByTypeAndGetContent,
   queryByTypeAndMap,
+  getMemoryByType,
+  getRegisteredMemoryTypes,
 } from './utils';
 
 /**
+ * Finds a similar memory item to prevent duplication.
+ * Uses a simple Jaccard similarity based on keywords.
+ */
+async function findSimilarMemory(
+  base: BaseMemoryProvider,
+  scopeId: string,
+  category: InsightCategory | string,
+  content: string
+): Promise<MemoryInsight | null> {
+  try {
+    const fullType = `MEMORY:${category.toString().toUpperCase()}`;
+    const items = await queryByTypeAndMap(
+      base,
+      fullType,
+      category as InsightCategory,
+      50,
+      undefined,
+      undefined,
+      scopeId
+    );
+
+    if (items.length === 0) return null;
+
+    const newKeywords = content
+      .toLowerCase()
+      .split(/\W+/)
+      .filter((w) => w.length > 3);
+    for (const item of items) {
+      const oldKeywords = item.content
+        .toLowerCase()
+        .split(/\W+/)
+        .filter((w) => w.length > 3);
+      const intersection = newKeywords.filter((w) => oldKeywords.includes(w));
+      const similarity = intersection.length / Math.max(newKeywords.length, oldKeywords.length);
+      if (similarity > 0.6) return item;
+    }
+  } catch (error) {
+    console.warn('Similarity check failed:', error);
+  }
+  return null;
+}
+
+/**
  * Shared implementation for adding granular records (Insights/Memories).
- *
- * @param base - The base memory provider instance.
- * @param baseCategory - The primary category (e.g., 'MEMORY').
- * @param scopeId - The scope identifier (user or system).
- * @param category - The specific insight category.
- * @param content - The textual content of the memory.
- * @param metadata - Optional additional metadata.
- * @returns A promise resolving to the timestamp of the record.
  */
 async function addRecord(
   base: BaseMemoryProvider,
@@ -33,57 +71,56 @@ async function addRecord(
   scopeId: string,
   category: InsightCategory | string,
   content: string,
-  metadata?: Partial<InsightMetadata>
+  metadata?: Partial<InsightMetadata> & { orgId?: string; tags?: string[] }
 ): Promise<number> {
   const { expiresAt } = await RetentionManager.getExpiresAt(baseCategory, scopeId);
-  const timestamp = Date.now();
   const scrubbedContent = filterPII(content);
-  // Unify all flexible memory under the MEMORY: prefix for 2026 simplicity
-  const fullType = `MEMORY:${category.toUpperCase()}`;
+  const fullType = `MEMORY:${category.toString().toUpperCase()}`;
 
-  // 1. Register the type atomically so it can be dynamically discovered by the dashboard
-  try {
-    await base.updateItem({
-      Key: {
-        userId: 'SYSTEM#REGISTRY',
-        timestamp: 0,
-      },
-      UpdateExpression: 'ADD activeTypes :type',
-      ExpressionAttributeValues: {
-        ':type': new Set([fullType]),
-      },
-    });
-  } catch {
-    // Silent fail if registry update fails to not break memory insertion
+  // 1. Semantic Deduplication / Upsert
+  const existing = await findSimilarMemory(base, scopeId, category, scrubbedContent);
+  if (existing) {
+    await recordMemoryHit(base, existing.userId || scopeId, existing.timestamp);
+    if (metadata?.tags || metadata?.priority) {
+      await refineMemory(base, existing.userId || scopeId, existing.timestamp, undefined, {
+        priority: metadata?.priority,
+        // Tags are merged at the root level in refineMemory if we update it, but for now we update metadata
+      });
+    }
+    return existing.timestamp;
   }
 
-  // 2. Insert the actual memory record
+  const timestamp = Date.now();
+
+  // 2. Register usage type
+  try {
+    await base.updateItem({
+      Key: { userId: 'SYSTEM#REGISTRY', timestamp: 0 },
+      UpdateExpression: 'ADD activeTypes :type',
+      ExpressionAttributeValues: { ':type': new Set([fullType]) },
+    });
+  } catch (error) {
+    // Registry update failure is non-fatal for memory persistence
+    console.warn('Memory registry update failed:', error);
+  }
+
+  // 3. Insert flattened record
   await base.putItem({
     userId: scopeId,
     timestamp,
     createdAt: timestamp,
     type: fullType,
+    orgId: metadata?.orgId,
+    tags: normalizeTags(metadata?.tags),
     expiresAt,
     content: scrubbedContent,
-    metadata: createMetadata(
-      {
-        category,
-        createdAt: timestamp,
-        ...(metadata ?? {}),
-      },
-      timestamp
-    ),
+    metadata: createMetadata(metadata, timestamp),
   });
   return timestamp;
 }
 
 /**
- * Atomically increments the hit count and updates the lastAccessed timestamp for a memory item.
- *
- * @param base - The base memory provider instance.
- * @param userId - The user identifier or scope.
- * @param timestamp - The unique timestamp of the memory item.
- * @returns A promise resolving when the hit is recorded.
+ * Atomically increments the hit count and updates the lastAccessed timestamp.
  */
 export async function recordMemoryHit(
   base: BaseMemoryProvider,
@@ -95,159 +132,90 @@ export async function recordMemoryHit(
       Key: { userId, timestamp },
       UpdateExpression:
         'SET metadata.hitCount = if_not_exists(metadata.hitCount, :zero) + :inc, metadata.lastAccessed = :now',
-      ExpressionAttributeValues: {
-        ':zero': 0,
-        ':inc': 1,
-        ':now': Date.now(),
-      },
+      ExpressionAttributeValues: { ':zero': 0, ':inc': 1, ':now': Date.now() },
       ConditionExpression: 'attribute_exists(userId)',
     });
-  } catch (e: unknown) {
-    // Silent failure so it doesn't interrupt tool execution if the memory item was just deleted or schema is legacy
+  } catch (e) {
     console.warn(`Failed to record memory hit for ${userId}@${timestamp}`, e);
   }
 }
 
 /**
  * Adds a tactical lesson.
- *
- * @param base - The base memory provider instance.
- * @param userId - The user identifier.
- * @param lesson - The lesson content.
- * @param metadata - Optional insight metadata.
- * @returns A promise resolving when the lesson is added.
- * @since 2026-03-19
  */
 export async function addLesson(
   base: BaseMemoryProvider,
   userId: string,
   lesson: string,
-  metadata?: InsightMetadata
+  metadata?: Partial<InsightMetadata> & { tags?: string[] }
 ): Promise<void> {
-  const { expiresAt, type } = await RetentionManager.getExpiresAt('LESSON', userId);
+  const { expiresAt } = await RetentionManager.getExpiresAt('MEMORY', userId);
   const timestamp = Date.now();
-  const normalizedUserId = userId.replace(/^(LESSON#)+/, '');
   await base.putItem({
-    userId: `LESSON#${normalizedUserId}`,
+    userId,
     timestamp,
-    createdAt: timestamp,
-    type,
-    expiresAt,
+    type: 'MEMORY:TACTICAL_LESSON',
+    tags: normalizeTags(metadata?.tags),
     content: filterPII(lesson),
-    metadata: createMetadata(
-      metadata ?? { category: InsightCategory.TACTICAL_LESSON, createdAt: timestamp },
-      timestamp
-    ),
+    createdAt: timestamp,
+    expiresAt,
+    metadata: createMetadata(metadata, timestamp),
   });
 }
 
 /**
  * Retrieves recent tactical lessons.
- *
- * @param base - The base memory provider instance.
- * @param userId - The user identifier.
- * @returns A promise resolving to an array of lesson content strings.
  */
 export async function getLessons(base: BaseMemoryProvider, userId: string): Promise<string[]> {
-  const normalizedUserId = userId.replace(/^(LESSON#)+/, '');
-  return queryLatestContentByUserId(base, `LESSON#${normalizedUserId}`, 10);
+  return queryLatestContentByUserId(base, userId, 10);
 }
 
-// =============================================================================
-// GAP #5 FIX: Cross-Session Knowledge — Global Lessons Namespace
-// =============================================================================
-
-const GLOBAL_LESSON_PREFIX = 'SYSTEM_LESSON#';
-
 /**
- * Adds a system-wide lesson that benefits ALL users and sessions.
- * These are discovered during cross-session analysis and represent
- * universal truths the swarm has learned.
- *
- * @param base - The base memory provider instance.
- * @param lesson - The lesson content (should not contain PII).
- * @param metadata - Optional insight metadata.
- * @returns The timestamp of the recorded global lesson.
+ * Adds a system-wide lesson.
  */
 export async function addGlobalLesson(
   base: BaseMemoryProvider,
   lesson: string,
-  metadata?: Partial<InsightMetadata>
+  metadata?: Partial<InsightMetadata> & { tags?: string[] }
 ): Promise<number> {
-  const { expiresAt } = await RetentionManager.getExpiresAt('LESSON', '');
   const timestamp = Date.now();
   await base.putItem({
-    userId: `${GLOBAL_LESSON_PREFIX}${timestamp}`,
+    userId: 'SYSTEM#GLOBAL',
     timestamp,
-    createdAt: timestamp,
-    type: 'SYSTEM_LESSON',
-    expiresAt,
+    type: 'MEMORY:SYSTEM_LESSON',
+    tags: normalizeTags(metadata?.tags),
     content: filterPII(lesson),
-    metadata: createMetadata(
-      {
-        category: InsightCategory.SYSTEM_KNOWLEDGE,
-        confidence: metadata?.confidence ?? 8,
-        impact: metadata?.impact ?? 7,
-        complexity: metadata?.complexity ?? 3,
-        risk: metadata?.risk ?? 2,
-        urgency: metadata?.urgency ?? 5,
-        priority: metadata?.priority ?? 6,
-        createdAt: timestamp,
-      },
-      timestamp
-    ),
+    createdAt: timestamp,
+    metadata: createMetadata(metadata, timestamp),
   });
   return timestamp;
 }
 
 /**
- * Retrieves system-wide lessons for injection into agent prompts.
- * These lessons apply to ALL users and represent the swarm's collective intelligence.
- *
- * @param base - The base memory provider instance.
- * @param limit - Maximum number of global lessons to return.
- * @returns An array of global lesson content strings.
+ * Retrieves system-wide lessons.
  */
 export async function getGlobalLessons(
   base: BaseMemoryProvider,
   limit: number = 10
 ): Promise<string[]> {
-  return queryByTypeAndGetContent(base, 'SYSTEM_LESSON', limit);
+  return queryByTypeAndGetContent(base, 'MEMORY:SYSTEM_LESSON', limit);
 }
 
 /**
- * Adds a new granular memory item into the user or global scope.
- *
- * @param base - The base memory provider instance.
- * @param scopeId - The scope identifier (e.g., USER#id or SYSTEM#GLOBAL).
- * @param category - The memory category.
- * @param content - The memory content.
- * @param metadata - Optional insight metadata.
- * @returns A promise resolving to the timestamp of the new memory item.
+ * Adds a new granular memory item.
  */
 export async function addMemory(
   base: BaseMemoryProvider,
   scopeId: string,
   category: InsightCategory | string,
   content: string,
-  metadata?: Partial<InsightMetadata>
+  metadata?: Partial<InsightMetadata> & { orgId?: string; tags?: string[] }
 ): Promise<number> {
   return addRecord(base, 'MEMORY', scopeId, category, content, metadata);
 }
 
-import { getRegisteredMemoryTypes, getMemoryByType } from './utils';
-
 /**
- * Searches for insights across all categories.
- *
- * @param base - The base memory provider instance.
- * @param userId - Optional user identifier to scope user-specific insights.
- * @param query - The search query string (supports '*' for all).
- * @param category - Optional category to filter results.
- * @param limit - Pagination limit.
- * @param lastEvaluatedKey - Pagination token.
- * @returns A promise resolving to an array of matching MemoryInsight objects and a pagination token.
- * @since 2026-03-19
+ * Searches for insights across personal, organizational, and global scopes.
  */
 export async function searchInsights(
   base: BaseMemoryProvider,
@@ -255,109 +223,120 @@ export async function searchInsights(
   query: string = '',
   category?: InsightCategory,
   limit: number = 50,
-  lastEvaluatedKey?: Record<string, unknown>
+  lastEvaluatedKey?: Record<string, unknown>,
+  tags?: string[],
+  orgId?: string
 ): Promise<{ items: MemoryInsight[]; lastEvaluatedKey?: Record<string, unknown> }> {
-  /* eslint-disable @typescript-eslint/no-explicit-any */
-  const params: Record<string, any> = {
-    Limit: limit,
-    ExclusiveStartKey: lastEvaluatedKey,
-  };
+  const items: MemoryInsight[] = [];
+  const normalizedTags = normalizeTags(tags ?? []);
+  const scopes: string[] = [];
 
-  // If we have a category, prefer the TypeTimestampIndex GSI as it's highly reliable
-  if (category) {
-    params.IndexName = 'TypeTimestampIndex';
-    params.KeyConditionExpression = '#tp = :type';
-    params.ExpressionAttributeNames = { '#tp': 'type' };
-    params.ExpressionAttributeValues = { ':type': `MEMORY:${category.toUpperCase()}` };
-    params.ScanIndexForward = false;
+  if (userId) scopes.push(userId);
+  if (orgId) scopes.push(`ORG#${orgId}`);
+  if (userId && !userId.startsWith('SYSTEM#')) scopes.push('SYSTEM#GLOBAL');
 
-    const filters: string[] = [];
-    if (userId) {
-      filters.push('#uid = :userId');
-      params.ExpressionAttributeNames['#uid'] = 'userId';
-      params.ExpressionAttributeValues[':userId'] = userId;
+  const fullType = `MEMORY:${category?.toUpperCase()}`;
+
+  if (!category) {
+    if (scopes.length === 0) return { items: [] };
+    for (const scope of scopes) {
+      const { items: scopeItems } = await base.queryItemsPaginated({
+        KeyConditionExpression: 'userId = :scope',
+        ExpressionAttributeValues: { ':scope': scope },
+        Limit: limit,
+        ScanIndexForward: false,
+      });
+      items.push(...mapToInsights(scopeItems as Record<string, unknown>[]));
     }
-    if (query && query !== '*' && query !== '') {
-      filters.push('contains(content, :query)');
-      params.ExpressionAttributeValues[':query'] = query;
-    }
-
-    if (filters.length > 0) {
-      params.FilterExpression = filters.join(' AND ');
-    }
-
-    const result = await base.queryItemsPaginated(params);
-    return {
-      items: mapToInsights(result.items as Record<string, unknown>[]),
-      lastEvaluatedKey: result.lastEvaluatedKey,
-    };
+    return { items: items.slice(0, limit) };
   }
 
-  // Fallback for userId-only search (no category)
-  if (userId) {
-    params.KeyConditionExpression = '#uid = :userId';
-    params.ExpressionAttributeNames = { '#uid': 'userId' };
-    params.ExpressionAttributeValues = { ':userId': userId };
-    params.ScanIndexForward = false;
+  // If no userId but category is provided, use TypeTimestampIndex to search all items
+  if (scopes.length === 0) {
+    const params: any = {
+      IndexName: 'TypeTimestampIndex',
+      KeyConditionExpression: '#tp = :type',
+      ExpressionAttributeNames: { '#tp': 'type' },
+      ExpressionAttributeValues: { ':type': fullType },
+      Limit: limit,
+      ScanIndexForward: false,
+    };
 
     if (query && query !== '*' && query !== '') {
       params.FilterExpression = 'contains(content, :query)';
       params.ExpressionAttributeValues[':query'] = query;
     }
 
-    const result = await base.queryItemsPaginated(params);
-    return {
-      items: mapToInsights(result.items as Record<string, unknown>[]),
-      lastEvaluatedKey: result.lastEvaluatedKey,
-    };
+    const { items: allItems } = await base.queryItemsPaginated(params);
+    let mapped = mapToInsights(allItems as Record<string, unknown>[]);
+
+    if (normalizedTags.length > 0) {
+      mapped = mapped.filter((item) => normalizedTags.some((tag) => item.tags?.includes(tag)));
+    }
+
+    return { items: mapped.slice(0, limit) };
   }
 
-  // Require userId or category to avoid expensive full-table scans
-  return { items: [] };
+  for (const scope of scopes) {
+    const params: any = {
+      IndexName: 'UserInsightIndex',
+      KeyConditionExpression: '#uid = :userId AND #tp = :type',
+      ExpressionAttributeNames: { '#uid': 'userId', '#tp': 'type' },
+      ExpressionAttributeValues: { ':userId': scope, ':type': fullType },
+      Limit: limit,
+      ScanIndexForward: false,
+    };
+
+    if (query && query !== '*' && query !== '') {
+      params.FilterExpression = 'contains(content, :query)';
+      params.ExpressionAttributeValues[':query'] = query;
+    }
+
+    const { items: scopeItems } = await base.queryItemsPaginated(params);
+    let mapped = mapToInsights(scopeItems as Record<string, unknown>[]);
+
+    if (normalizedTags.length > 0) {
+      mapped = mapped.filter((item) => normalizedTags.some((tag) => item.tags?.includes(tag)));
+    }
+
+    items.push(...mapped);
+    if (items.length >= limit) break;
+  }
+
+  return { items: items.slice(0, limit) };
 }
 
 /**
- * Helper to map DB items to MemoryInsight objects.
+ * Helper to map DB items to MemoryInsight objects with backward compatibility.
  */
 function mapToInsights(items: Record<string, unknown>[]): MemoryInsight[] {
   return items.map((item) => {
-    const scope = item.userId as string;
-    const metadata = (item.metadata as InsightMetadata) ?? {
-      category: scope.startsWith('DISTILLED')
-        ? InsightCategory.USER_PREFERENCE
-        : scope.startsWith('LESSON')
-          ? InsightCategory.TACTICAL_LESSON
-          : InsightCategory.STRATEGIC_GAP,
-      confidence: 0,
-      impact: 0,
-      complexity: 0,
-      risk: 0,
-      urgency: 0,
-      priority: 0,
-    };
+    const timestamp = (item.timestamp as number) || Date.now();
+    const metadataRaw = (item.metadata as Partial<InsightMetadata>) || {};
+
+    const tags =
+      (item.tags as string[]) ||
+      (metadataRaw as any).tags ||
+      (metadataRaw as any).contextualKeywords;
+    const orgId = (item.orgId as string) || (metadataRaw as any).orgId;
+    const userId = (item.userId as string) || (metadataRaw as any).userId;
+    const createdAt = (item.createdAt as number) || (metadataRaw as any).createdAt || timestamp;
 
     return {
-      id: scope,
+      id: (item.id || item.userId) as string,
       content: item.content as string,
-      metadata,
-      timestamp: item.timestamp as number,
-      createdAt:
-        (item.createdAt as number) ??
-        (item.metadata as { createdAt?: number } | undefined)?.createdAt ??
-        (item.timestamp as number),
+      timestamp,
+      orgId,
+      userId,
+      tags: normalizeTags(tags),
+      createdAt,
+      metadata: createMetadata(metadataRaw, timestamp),
     };
   });
 }
 
 /**
  * Updates metadata for a specific insight.
- *
- * @param base - The base memory provider instance.
- * @param userId - The user identifier or scope.
- * @param timestamp - The unique timestamp of the insight.
- * @param metadata - Partial metadata to update.
- * @returns A promise resolving when the metadata is updated.
- * @since 2026-03-19
  */
 export async function updateInsightMetadata(
   base: BaseMemoryProvider,
@@ -367,97 +346,60 @@ export async function updateInsightMetadata(
 ): Promise<void> {
   const items = await base.queryItems({
     KeyConditionExpression: 'userId = :userId AND #ts = :timestamp',
-    ExpressionAttributeNames: {
-      '#ts': 'timestamp',
-    },
-    ExpressionAttributeValues: {
-      ':userId': userId,
-      ':timestamp': timestamp,
-    },
+    ExpressionAttributeNames: { '#ts': 'timestamp' },
+    ExpressionAttributeValues: { ':userId': userId, ':timestamp': timestamp },
   });
 
-  const item = items[0];
-  if (!item) return;
-
-  await base.putItem({
-    ...item,
-    metadata: { ...(item.metadata ?? {}), ...metadata },
-  });
+  if (items[0]) {
+    await base.putItem({
+      ...items[0],
+      metadata: { ...(items[0].metadata ?? {}), ...metadata },
+    });
+  }
 }
 
 /**
- * Retrieves memory items with low utilization (low hitCount and old lastAccessed).
- * Scans dynamically registered memory types.
- *
- * @param base - The base memory provider instance.
- * @param limit - The maximum number of stale items to retrieve.
- * @returns A promise resolving to an array of low-utilization memory items.
- * @since 2026-03-19
+ * Retrieves memory items with low utilization.
  */
 export async function getLowUtilizationMemory(
   base: BaseMemoryProvider,
   limit: number = 20
 ): Promise<Record<string, unknown>[]> {
   const registeredTypes = await getRegisteredMemoryTypes(base);
-  const STALE_THRESHOLD_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
   const now = Date.now();
+  const STALE_THRESHOLD = 14 * 24 * 60 * 60 * 1000;
 
-  const filteredTypes = registeredTypes.filter(
-    (type) => type.startsWith('MEMORY:') || type === 'LESSON'
-  );
-
+  const filteredTypes = registeredTypes.filter((type) => type.startsWith('MEMORY:'));
   const results = await Promise.all(filteredTypes.map((type) => getMemoryByType(base, type, 50)));
 
-  const staleItems = results.flat().filter((item: Record<string, unknown>) => {
-    const meta = item.metadata as InsightMetadata | undefined;
-    if (!meta) return false;
-
-    const isHitCountLow = meta.hitCount === undefined || meta.hitCount === 0;
-    const lastAccessed = meta.lastAccessed ?? (item.timestamp as number) ?? now;
-    const timeSinceAccess = now - lastAccessed;
-
-    return isHitCountLow && timeSinceAccess > STALE_THRESHOLD_MS;
+  const staleItems = results.flat().filter((item) => {
+    const meta = item.metadata as InsightMetadata;
+    return (
+      meta &&
+      (meta.hitCount || 0) === 0 &&
+      now - (meta.lastAccessed || (item.timestamp as number) || now) > STALE_THRESHOLD
+    );
   });
 
-  // Sort by oldest first and cap
   return staleItems
-    .sort((a, b) => {
-      const tA =
-        (a.metadata as Record<string, unknown>)?.lastAccessed ?? (a.timestamp as number) ?? 0;
-      const tB =
-        (b.metadata as Record<string, unknown>)?.lastAccessed ?? (b.timestamp as number) ?? 0;
-      return (tA as number) - (tB as number);
-    })
+    .sort((a, b) => (a.timestamp as number) - (b.timestamp as number))
     .slice(0, limit);
 }
 
 /**
- * Records a failure pattern (tool misuse, hallucination, timeout, etc.)
- * for future cross-referencing by the cognition reflector and strategic planner.
- *
- * @param base - The base memory provider instance.
- * @param scopeId - The user or agent scope identifier.
- * @param content - Description of the failure pattern.
- * @param metadata - Optional metadata (confidence, impact, etc.).
- * @returns The timestamp of the recorded pattern.
+ * Records a failure pattern.
  */
 export async function recordFailurePattern(
   base: BaseMemoryProvider,
   scopeId: string,
   content: string,
-  metadata?: Partial<InsightMetadata>
+  metadata?: Partial<InsightMetadata> & { orgId?: string; tags?: string[] }
 ): Promise<number> {
   return addMemory(base, scopeId, InsightCategory.FAILURE_PATTERN, content, metadata);
 }
 
 /**
- * Retrieves failure patterns relevant to the given context.
- *
- * @param base - The base memory provider instance.
- * @param scopeId - The user or agent scope identifier.
- * @param context - Search context (keyword match against content). Use '*' for all.
- * @param limit - Maximum number of patterns to return.
- * @returns An array of matching failure pattern insights.
+ * Retrieves failure patterns.
  */
 export async function getFailurePatterns(
   base: BaseMemoryProvider,
@@ -475,21 +417,8 @@ export async function getFailurePatterns(
   return items;
 }
 
-// =============================================================================
-// GAP #2 FIX: FAILED_PLANS# — Negative Memory Tier
-// =============================================================================
-
 /**
- * Records a failed strategic plan so the swarm learns what NOT to do.
- * Prevents the planner from retrying structurally identical failed approaches.
- *
- * @param base - The base memory provider instance.
- * @param planHash - A hash or summary of the failed plan for deduplication.
- * @param planContent - The full plan text that failed.
- * @param gapIds - The gap IDs this plan was meant to address.
- * @param failureReason - Why the plan failed (build error, QA rejection, etc.).
- * @param metadata - Optional insight metadata.
- * @returns The timestamp of the recorded failed plan.
+ * Records a failed strategic plan.
  */
 export async function recordFailedPlan(
   base: BaseMemoryProvider,
@@ -497,53 +426,69 @@ export async function recordFailedPlan(
   planContent: string,
   gapIds: string[],
   failureReason: string,
-  metadata?: Partial<InsightMetadata>
+  metadata?: Partial<InsightMetadata> & { orgId?: string; tags?: string[] }
 ): Promise<number> {
-  const { expiresAt } = await RetentionManager.getExpiresAt('MEMORY', '');
   const timestamp = Date.now();
-  const content = JSON.stringify({
-    planHash,
-    planSummary: planContent.substring(0, 500),
-    gapIds,
-    failureReason,
-    planLength: planContent.length,
-  });
+  const content = JSON.stringify({ planHash, planContent, gapIds, failureReason });
 
   await base.putItem({
-    userId: `FAILED_PLAN#${planHash}`,
+    userId: 'SYSTEM#GLOBAL',
     timestamp,
-    createdAt: timestamp,
-    type: 'FAILED_PLAN',
-    expiresAt,
+    type: 'MEMORY:FAILURE_PATTERN',
+    tags: normalizeTags(['failed_plan', ...(metadata?.tags ?? [])]),
     content,
-    metadata: createMetadata(
-      {
-        category: InsightCategory.FAILURE_PATTERN,
-        confidence: metadata?.confidence ?? 9,
-        impact: metadata?.impact ?? 8,
-        complexity: metadata?.complexity ?? 5,
-        risk: metadata?.risk ?? 6,
-        urgency: metadata?.urgency ?? 7,
-        priority: metadata?.priority ?? 7,
-        createdAt: timestamp,
-      },
-      timestamp
-    ),
+    createdAt: timestamp,
+    metadata: createMetadata(metadata, timestamp),
   });
-
   return timestamp;
 }
 
 /**
- * Retrieves previously failed plans to inform the planner about anti-patterns.
- *
- * @param base - The base memory provider instance.
- * @param limit - Maximum number of failed plans to return.
- * @returns An array of failed plan records.
+ * Retrieves previously failed plans.
  */
 export async function getFailedPlans(
   base: BaseMemoryProvider,
   limit: number = 10
 ): Promise<MemoryInsight[]> {
-  return queryByTypeAndMap(base, 'FAILED_PLAN', InsightCategory.FAILURE_PATTERN, limit);
+  return queryByTypeAndMap(
+    base,
+    'MEMORY:FAILURE_PATTERN',
+    InsightCategory.FAILURE_PATTERN,
+    limit,
+    'contains(tags, :failed)',
+    { ':failed': 'failed_plan' }
+  );
+}
+
+/**
+ * Refines or updates a memory item.
+ */
+export async function refineMemory(
+  base: BaseMemoryProvider,
+  userId: string,
+  timestamp: number,
+  content?: string,
+  metadata?: Partial<InsightMetadata> & { tags?: string[] }
+): Promise<void> {
+  const items = await base.queryItems({
+    KeyConditionExpression: 'userId = :userId AND #ts = :timestamp',
+    ExpressionAttributeNames: { '#ts': 'timestamp' },
+    ExpressionAttributeValues: { ':userId': userId, ':timestamp': timestamp },
+  });
+
+  const item = items[0];
+  if (!item) throw new Error(`Memory item not found: ${userId}@${timestamp}`);
+
+  await base.putItem({
+    ...item,
+    content: content ? filterPII(content) : item.content,
+    tags: metadata?.tags
+      ? normalizeTags([...((item.tags as string[]) || []), ...metadata.tags])
+      : item.tags,
+    metadata: {
+      ...(item.metadata ?? {}),
+      ...(metadata ?? {}),
+      lastAccessed: Date.now(),
+    },
+  });
 }

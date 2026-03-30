@@ -60,22 +60,6 @@ describe('memory/utils', () => {
       expect(metadata.lastAccessed).toBeGreaterThanOrEqual(before);
       expect(metadata.lastAccessed).toBeLessThanOrEqual(after);
     });
-
-    it('should set createdAt to provided timestamp', () => {
-      const timestamp = 1234567890;
-      const metadata = createMetadata({}, timestamp);
-
-      expect(metadata.createdAt).toBe(timestamp);
-    });
-
-    it('should allow overriding createdAt via overrides', () => {
-      const timestamp = 1000;
-      const createdAt = 500;
-      const metadata = createMetadata({ createdAt }, timestamp);
-
-      expect(metadata.createdAt).toBe(createdAt);
-      expect(metadata.lastAccessed).toBe(timestamp);
-    });
   });
 
   describe('getMemoryByTypePaginated', () => {
@@ -92,7 +76,8 @@ describe('memory/utils', () => {
       expect(mockBase.queryItemsPaginated).toHaveBeenCalledWith(
         expect.objectContaining({
           IndexName: 'TypeTimestampIndex',
-          KeyConditionExpression: '#type = :type',
+          KeyConditionExpression: '#tp = :type',
+          ExpressionAttributeNames: { '#tp': 'type' },
           ExpressionAttributeValues: { ':type': 'GAP' },
           Limit: 50,
           ScanIndexForward: false,

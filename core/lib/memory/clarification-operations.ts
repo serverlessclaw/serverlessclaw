@@ -173,12 +173,11 @@ export async function findExpiredClarifications(
 
   const items = await base.queryItems({
     IndexName: 'TypeTimestampIndex',
-    KeyConditionExpression: '#type = :type',
-    FilterExpression: '#status = :status AND #expiresAt < :now',
+    KeyConditionExpression: '#tp = :type',
+    FilterExpression: 'expiresAt < :now AND #status = :pending',
     ExpressionAttributeNames: {
-      '#type': 'type',
+      '#tp': 'type',
       '#status': 'status',
-      '#expiresAt': 'expiresAt',
     },
     ExpressionAttributeValues: {
       ':type': 'CLARIFICATION_PENDING',

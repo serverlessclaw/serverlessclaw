@@ -232,8 +232,8 @@ export const CacheKeys = {
   /**
    * Key for memory insights search results.
    */
-  insightsSearch: (userId: string, query: string, category?: string) =>
-    `insights:${userId}:${query}:${category ?? 'all'}`,
+  insightsSearch: (userId: string, query: string, category?: string, tags?: string[]) =>
+    `insights:${userId}:${query}:${category ?? 'all'}:${tags?.sort().join(',') ?? 'none'}`,
 
   /**
    * Key for gap information.

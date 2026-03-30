@@ -55,7 +55,6 @@ describe('Gap Operations', () => {
       expect(item?.timestamp).toBe(1710240000000);
       expect(item?.createdAt).toBe(1710240000000);
       expect(item?.metadata?.lastAccessed).toBe(1710240000000);
-      expect(item?.metadata?.createdAt).toBe(1710240000000);
     });
 
     it('should use Date.now() as timestamp when gapId is non-numeric', async () => {
@@ -70,7 +69,6 @@ describe('Gap Operations', () => {
       expect(item?.timestamp).toBe(now);
       expect(item?.createdAt).toBe(now);
       expect(item?.metadata?.lastAccessed).toBe(now);
-      expect(item?.metadata?.createdAt).toBe(now);
 
       vi.useRealTimers();
     });
@@ -231,6 +229,10 @@ describe('Gap Operations', () => {
       // Should have attempted QueryCommand for fallback search
       const queryCalls = ddbMock.commandCalls(QueryCommand);
       expect(queryCalls.length).toBeGreaterThanOrEqual(1);
+      // Verify standardized mapping
+      expect(queryCalls[0].args[0].input.ExpressionAttributeNames).toEqual(
+        expect.objectContaining({ '#tp': 'type' })
+      );
       expect(count).toBe(3);
     });
 

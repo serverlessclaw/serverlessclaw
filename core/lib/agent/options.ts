@@ -49,4 +49,12 @@ export interface AgentProcessOptions {
    * List of tool call IDs that have been explicitly approved by the user.
    */
   approvedToolCalls?: string[];
+  /** Sampling temperature (0.0 to 1.0). Controls randomness. */
+  temperature?: number;
+  /** Maximum tokens for the completion. */
+  maxTokens?: number;
+  /** Nucleus sampling probability (0.0 to 1.0). */
+  topP?: number;
+  /** Sequences where the LLM will stop generating. */
+  stopSequences?: string[];
 }

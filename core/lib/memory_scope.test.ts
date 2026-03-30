@@ -30,6 +30,8 @@ describe('Agent Memory Scoping', () => {
       getGlobalLessons: vi.fn().mockResolvedValue([]),
       addMessage: vi.fn().mockResolvedValue(undefined),
       updateDistilledMemory: vi.fn().mockResolvedValue(undefined),
+      searchInsights: vi.fn().mockResolvedValue({ items: [] }),
+      getSummary: vi.fn().mockResolvedValue(null),
     } as unknown as IMemory;
 
     mockProvider = {

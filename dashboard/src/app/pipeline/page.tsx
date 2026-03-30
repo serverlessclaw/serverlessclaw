@@ -4,7 +4,10 @@ import {
 } from 'lucide-react';
 import { GapStatus } from '@claw/core/lib/types';
 import { revalidatePath } from 'next/cache';
+import { EvolutionTrack } from '@claw/core/lib/types/agent';
 import PipelineBoard from './PipelineBoard';
+import BudgetAndKanban from './BudgetAndKanban';
+import PlanView from './PlanView';
 import { DynamoMemory } from '@claw/core/lib/memory';
 import { GapItem } from '@claw/core/lib/types/memory';
 import Typography from '@/components/ui/Typography';
@@ -111,12 +114,24 @@ export default async function EvolutionPipeline() {
         </div>
       </header>
 
+      <BudgetAndKanban
+        gaps={gaps.map((g) => ({
+          id: g.userId,
+          title: g.content,
+          status: g.status,
+          track: (g.metadata as Record<string, unknown>)?.track as EvolutionTrack ?? EvolutionTrack.FEATURE,
+          priority: (g.metadata as Record<string, unknown>)?.priority as number ?? 5,
+        }))}
+      />
+
       <PipelineBoard
         initialGaps={gaps}
         updateStatus={updateStatus}
         pruneGap={pruneGap}
         triggerBatchEvolution={triggerBatchEvolution}
       />
+
+      <PlanView />
     </main>
   );
 }

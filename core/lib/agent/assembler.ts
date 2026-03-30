@@ -10,6 +10,7 @@ import {
 import { SYSTEM, MEMORY_KEYS, LIMITS } from '../constants';
 import { AgentContext } from './context';
 import { ContextManager } from './context-manager';
+import { resolvePromptSnippets } from '../prompts/snippets';
 
 export interface ContextResult {
   contextPrompt: string;
@@ -81,7 +82,7 @@ export class AgentAssembler {
 
     const capabilities = await provider.getCapabilities(activeModel);
 
-    let contextPrompt = systemPrompt;
+    let contextPrompt = await resolvePromptSnippets(systemPrompt);
 
     if (capabilities.supportedAttachmentTypes?.includes(AttachmentType.IMAGE)) {
       const { VISION_PROMPT_BLOCK } = await import('../prompts/vision');
@@ -111,7 +112,7 @@ export class AgentAssembler {
     const currentMessage: Message = {
       role: MessageRole.USER,
       content: userText,
-      attachments: incomingAttachments as any,
+      attachments: incomingAttachments,
     };
 
     const fullHistory = [...history, currentMessage];

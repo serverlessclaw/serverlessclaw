@@ -17,6 +17,7 @@ export function createStorage() {
     primaryIndex: { hashKey: FIELDS.USER_ID, rangeKey: FIELDS.TIMESTAMP },
     globalIndexes: {
       TypeTimestampIndex: { hashKey: FIELDS.TYPE, rangeKey: FIELDS.TIMESTAMP },
+      UserInsightIndex: { hashKey: FIELDS.USER_ID, rangeKey: FIELDS.TYPE },
     },
     ttl: 'expiresAt',
   });

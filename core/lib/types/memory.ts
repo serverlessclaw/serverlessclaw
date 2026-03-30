@@ -38,18 +38,14 @@ export interface InsightMetadata {
   urgency: number;
   /** 0-10 global priority score calculated from other metrics. */
   priority: number;
-  /** Optional expiration timestamp (Unix epoch) for transient insights. */
-  expiration?: number;
   /** Number of times this memory has been successfully recalled by an agent. */
   hitCount?: number;
   /** Timestamp (Unix epoch) of the last time this memory was recalled. */
   lastAccessed?: number;
-  /** Number of times we have attempted to resolve this gap. */
+  /** Internal retry counter for operational tasks (e.g., deployments). */
   retryCount?: number;
-  /** Timestamp (Unix epoch) of the last retry attempt. */
+  /** Timestamp of the last operational attempt. */
   lastAttemptTime?: number;
-  /** Timestamp (Unix epoch) when the memory was first recorded. */
-  createdAt?: number;
 }
 
 /**
@@ -64,6 +60,12 @@ export interface MemoryInsight {
   metadata: InsightMetadata;
   /** Timestamp (Unix epoch) when the insight was first recorded or last updated. */
   timestamp: number;
+  /** Organizational scope for the insight. */
+  orgId?: string;
+  /** User-specific scope within the organization. */
+  userId?: string;
+  /** Optional tags for flexible categorization and retrieval. */
+  tags?: string[];
   /** Timestamp (Unix epoch) when the insight was first recorded. */
   createdAt?: number;
 }
@@ -153,6 +155,13 @@ export interface IKnowledgeStore {
   getGlobalLessons(limit?: number): Promise<string[]>;
   /** Retrieves low-utilization memory items for pruning or auditing. */
   getLowUtilizationMemory(limit?: number): Promise<Record<string, unknown>[]>;
+  /** Refines an existing memory item by updating its content or metadata. */
+  refineMemory(
+    userId: string,
+    timestamp: number,
+    content?: string,
+    metadata?: Partial<InsightMetadata>
+  ): Promise<void>;
 }
 
 /**
@@ -200,7 +209,9 @@ export interface IMemory extends IHistoryStore, IKnowledgeStore, IGapManager {
     query?: string,
     category?: InsightCategory,
     limit?: number,
-    lastEvaluatedKey?: Record<string, unknown>
+    lastEvaluatedKey?: Record<string, unknown>,
+    tags?: string[],
+    orgId?: string
   ): Promise<{ items: MemoryInsight[]; lastEvaluatedKey?: Record<string, unknown> }>;
 
   /** Adds a new granular memory item into the user or global scope. */
@@ -208,7 +219,7 @@ export interface IMemory extends IHistoryStore, IKnowledgeStore, IGapManager {
     scopeId: string,
     category: InsightCategory | string,
     content: string,
-    metadata?: Partial<InsightMetadata>
+    metadata?: Partial<InsightMetadata> & { orgId?: string }
   ): Promise<number>;
 
   /** Updates the metadata (priority, impact, etc.) for a specific recorded insight. */

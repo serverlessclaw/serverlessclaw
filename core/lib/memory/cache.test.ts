@@ -225,9 +225,9 @@ describe('CacheKeys', () => {
     expect(CacheKeys.summary('conv123')).toBe('summary:conv123');
     expect(CacheKeys.globalLessons(5)).toBe('global_lessons:5');
     expect(CacheKeys.insightsSearch('user123', 'query', 'category')).toBe(
-      'insights:user123:query:category'
+      'insights:user123:query:category:none'
     );
-    expect(CacheKeys.insightsSearch('user123', 'query')).toBe('insights:user123:query:all');
+    expect(CacheKeys.insightsSearch('user123', 'query')).toBe('insights:user123:query:all:none');
     expect(CacheKeys.gap('gap123')).toBe('gap:gap123');
     expect(CacheKeys.gapsByStatus('OPEN')).toBe('gaps:OPEN');
   });

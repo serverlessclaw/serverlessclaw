@@ -1,5 +1,6 @@
 import { TokenTracker } from './token-usage';
 import { logger } from './logger';
+import { ConfigManager } from './registry/config';
 
 export interface AgentPerformanceMetrics {
   agentId: string;
@@ -35,7 +36,11 @@ export class AgentRouter {
       logger.warn(`Failed to get metrics for agent ${agentId}:`, e);
     }
 
-    const compositeScore = capabilityScore * successRate - avgTokensPerInvocation / 10000;
+    const successWeight = await ConfigManager.getTypedConfig('router_success_weight', 1.0);
+    const tokenWeight = await ConfigManager.getTypedConfig('router_token_penalty_weight', 0.0001);
+
+    const compositeScore =
+      capabilityScore * successRate * successWeight - avgTokensPerInvocation * tokenWeight;
 
     return {
       agentId,

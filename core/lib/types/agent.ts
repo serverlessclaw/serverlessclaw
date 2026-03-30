@@ -16,6 +16,23 @@ export interface Attachment {
 }
 
 /**
+ * Event routing configuration for dynamic dispatch.
+ */
+export interface EventRoutingEntry {
+  /** The module path relative to 'core/handlers/'. */
+  module: string;
+  /** The exported function name to handle the event. */
+  function: string;
+  /** Whether to pass the AWS Lambda context to the handler. */
+  passContext?: boolean;
+}
+
+/**
+ * Map of EventType identifiers to routing entries.
+ */
+export type EventRoutingTable = Record<string, EventRoutingEntry>;
+
+/**
  * Common properties for all events on the AgentBus.
  */
 export interface BaseEvent {
@@ -244,6 +261,14 @@ export interface IAgentConfig {
   defaultCommunicationMode?: 'json' | 'text';
   /** MCP server ARN mappings for tool execution. */
   mcpServers?: Record<string, string>;
+  /** Sampling temperature (0.0 to 1.0). Controls randomness. */
+  temperature?: number;
+  /** Maximum tokens for the completion. */
+  maxTokens?: number;
+  /** Nucleus sampling probability (0.0 to 1.0). */
+  topP?: number;
+  /** Sequences where the LLM will stop generating. */
+  stopSequences?: string[];
   /** Explicit UI metadata overrides for topology visualization. */
   topologyOverride?: {
     label?: string;

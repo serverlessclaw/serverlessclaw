@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SafetyEngine } from './safety-engine';
 import { SafetyTier } from './types/agent';
+import { DEFAULT_POLICIES } from './safety-config';
 
 // Mock logger
 vi.mock('./logger', () => ({
@@ -16,6 +17,127 @@ vi.mock('./logger', () => ({
     debug: vi.fn(),
   },
 }));
+
+// Mock SafetyConfigManager to return local policies when set
+vi.mock('./safety-config-manager', () => {
+  let mockPolicies = null;
+
+  return {
+    SafetyConfigManager: {
+      getPolicies: vi.fn().mockImplementation(() => {
+        // Return mock policies if set, otherwise return DEFAULT_POLICIES
+        return Promise.resolve(mockPolicies || DEFAULT_POLICIES);
+      }),
+      // Helper to set mock policies for tests
+      __setMockPolicies: (policies) => {
+        mockPolicies = policies;
+      },
+      __resetMockPolicies: () => {
+        mockPolicies = null;
+      },
+    },
+  };
+});
+
+// Mock SafetyRateLimiter to use in-memory counters
+vi.mock('./safety-limiter', () => {
+  const rateLimitCounters = new Map<string, { count: number; resetTime: number }>();
+
+  const MockSafetyRateLimiter = function (this: any, _base?: any) {
+    rateLimitCounters.clear();
+
+    this.checkRateLimits = (policy: any, action: string) => {
+      const now = Date.now();
+      console.log('checkRateLimits called', {
+        action,
+        maxDeploymentsPerDay: policy.maxDeploymentsPerDay,
+        maxShellCommandsPerHour: policy.maxShellCommandsPerHour,
+        maxFileWritesPerHour: policy.maxFileWritesPerHour,
+      });
+
+      if (action === 'deployment' && policy.maxDeploymentsPerDay) {
+        const dayKey = `deployment_day_${Math.floor(now / 86400000)}`;
+        const counter = rateLimitCounters.get(dayKey);
+        const count = counter ? counter.count : 0;
+
+        if (count >= policy.maxDeploymentsPerDay) {
+          return Promise.resolve({
+            allowed: false,
+            requiresApproval: false,
+            reason: `Deployment rate limit exceeded (${policy.maxDeploymentsPerDay}/day)`,
+            appliedPolicy: 'rate_limit_daily',
+          });
+        }
+
+        rateLimitCounters.set(dayKey, { count: count + 1, resetTime: now + 86400000 });
+      }
+
+      if (action === 'shell_command' && policy.maxShellCommandsPerHour) {
+        const hourKey = `shell_command_hour_${Math.floor(now / 3600000)}`;
+        const counter = rateLimitCounters.get(hourKey);
+        const count = counter ? counter.count : 0;
+
+        if (count >= policy.maxShellCommandsPerHour) {
+          return Promise.resolve({
+            allowed: false,
+            requiresApproval: false,
+            reason: `Shell command rate limit exceeded (${policy.maxShellCommandsPerHour}/hour)`,
+            appliedPolicy: 'rate_limit_hourly',
+          });
+        }
+
+        rateLimitCounters.set(hourKey, { count: count + 1, resetTime: now + 3600000 });
+      }
+
+      if (action === 'file_operation' && policy.maxFileWritesPerHour) {
+        const hourKey = `file_operation_hour_${Math.floor(now / 3600000)}`;
+        const counter = rateLimitCounters.get(hourKey);
+        const count = counter ? counter.count : 0;
+
+        if (count >= policy.maxFileWritesPerHour) {
+          return Promise.resolve({
+            allowed: false,
+            requiresApproval: false,
+            reason: `File write rate limit exceeded (${policy.maxFileWritesPerHour}/hour)`,
+            appliedPolicy: 'rate_limit_hourly',
+          });
+        }
+
+        rateLimitCounters.set(hourKey, { count: count + 1, resetTime: now + 3600000 });
+      }
+
+      return Promise.resolve({ allowed: true, requiresApproval: false });
+    };
+
+    this.checkToolRateLimit = (override: any, toolName: string) => {
+      if (!override) return Promise.resolve({ allowed: true, requiresApproval: false });
+
+      const now = Date.now();
+      if (override.maxUsesPerHour) {
+        const hourKey = `tool_${toolName}_hour_${Math.floor(now / 3600000)}`;
+        const counter = rateLimitCounters.get(hourKey);
+        const count = counter ? counter.count : 0;
+
+        if (count >= override.maxUsesPerHour) {
+          return Promise.resolve({
+            allowed: false,
+            requiresApproval: false,
+            reason: `Tool '${toolName}' rate limit exceeded (${override.maxUsesPerHour}/hour)`,
+            appliedPolicy: 'tool_rate_limit_hourly',
+          });
+        }
+
+        rateLimitCounters.set(hourKey, { count: count + 1, resetTime: now + 3600000 });
+      }
+      return Promise.resolve({ allowed: true, requiresApproval: false });
+    };
+  };
+
+  return {
+    SafetyRateLimiter: MockSafetyRateLimiter,
+    ToolSafetyOverride: class {},
+  };
+});
 
 describe('SafetyEngine', () => {
   let engine: SafetyEngine;
@@ -249,7 +371,20 @@ describe('SafetyEngine', () => {
 
   describe('Rate limiting', () => {
     it('should enforce deployment daily limits', async () => {
-      engine.updatePolicy(SafetyTier.AUTONOMOUS, { maxDeploymentsPerDay: 2 });
+      // Create a new engine with custom policies for this test
+      const { SafetyConfigManager } = await import('./safety-config-manager');
+      const testPolicies = {
+        [SafetyTier.SANDBOX]: DEFAULT_POLICIES[SafetyTier.SANDBOX],
+        [SafetyTier.AUTONOMOUS]: {
+          ...DEFAULT_POLICIES[SafetyTier.AUTONOMOUS],
+          maxDeploymentsPerDay: 2,
+        },
+      };
+
+      // Mock the getPolicies to return our test policies
+      (SafetyConfigManager.getPolicies as any).mockResolvedValue(testPolicies);
+
+      const testEngine = new SafetyEngine(testPolicies);
       const config = {
         id: 'test',
         name: 'Test',
@@ -258,19 +393,30 @@ describe('SafetyEngine', () => {
         safetyTier: SafetyTier.AUTONOMOUS,
       };
 
-      const result1 = await engine.evaluateAction(config, 'deployment');
+      const result1 = await testEngine.evaluateAction(config, 'deployment');
       expect(result1.allowed).toBe(true);
 
-      const result2 = await engine.evaluateAction(config, 'deployment');
+      const result2 = await testEngine.evaluateAction(config, 'deployment');
       expect(result2.allowed).toBe(true);
 
-      const result3 = await engine.evaluateAction(config, 'deployment');
+      const result3 = await testEngine.evaluateAction(config, 'deployment');
       expect(result3.allowed).toBe(false);
       expect(result3.reason).toContain('rate limit');
     });
 
     it('should enforce shell command hourly limits', async () => {
-      engine.updatePolicy(SafetyTier.AUTONOMOUS, { maxShellCommandsPerHour: 2 });
+      const { SafetyConfigManager } = await import('./safety-config-manager');
+      const testPolicies = {
+        [SafetyTier.SANDBOX]: DEFAULT_POLICIES[SafetyTier.SANDBOX],
+        [SafetyTier.AUTONOMOUS]: {
+          ...DEFAULT_POLICIES[SafetyTier.AUTONOMOUS],
+          maxShellCommandsPerHour: 2,
+        },
+      };
+
+      (SafetyConfigManager.getPolicies as any).mockResolvedValue(testPolicies);
+
+      const testEngine = new SafetyEngine(testPolicies);
       const config = {
         id: 'test',
         name: 'Test',
@@ -279,16 +425,27 @@ describe('SafetyEngine', () => {
         safetyTier: SafetyTier.AUTONOMOUS,
       };
 
-      await engine.evaluateAction(config, 'shell_command');
-      await engine.evaluateAction(config, 'shell_command');
-      const result = await engine.evaluateAction(config, 'shell_command');
+      await testEngine.evaluateAction(config, 'shell_command');
+      await testEngine.evaluateAction(config, 'shell_command');
+      const result = await testEngine.evaluateAction(config, 'shell_command');
 
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain('Shell command rate limit');
     });
 
     it('should enforce file write hourly limits', async () => {
-      engine.updatePolicy(SafetyTier.AUTONOMOUS, { maxFileWritesPerHour: 1 });
+      const { SafetyConfigManager } = await import('./safety-config-manager');
+      const testPolicies = {
+        [SafetyTier.SANDBOX]: DEFAULT_POLICIES[SafetyTier.SANDBOX],
+        [SafetyTier.AUTONOMOUS]: {
+          ...DEFAULT_POLICIES[SafetyTier.AUTONOMOUS],
+          maxFileWritesPerHour: 1,
+        },
+      };
+
+      (SafetyConfigManager.getPolicies as any).mockResolvedValue(testPolicies);
+
+      const testEngine = new SafetyEngine(testPolicies);
       const config = {
         id: 'test',
         name: 'Test',
@@ -297,8 +454,8 @@ describe('SafetyEngine', () => {
         safetyTier: SafetyTier.AUTONOMOUS,
       };
 
-      await engine.evaluateAction(config, 'file_operation');
-      const result = await engine.evaluateAction(config, 'file_operation');
+      await testEngine.evaluateAction(config, 'file_operation');
+      const result = await testEngine.evaluateAction(config, 'file_operation');
 
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain('File write rate limit');
@@ -307,12 +464,18 @@ describe('SafetyEngine', () => {
 
   describe('Custom policies', () => {
     it('should apply custom policy overrides', async () => {
-      const customEngine = new SafetyEngine({
+      const { SafetyConfigManager } = await import('./safety-config-manager');
+      const testPolicies = {
+        [SafetyTier.SANDBOX]: DEFAULT_POLICIES[SafetyTier.SANDBOX],
         [SafetyTier.AUTONOMOUS]: {
+          ...DEFAULT_POLICIES[SafetyTier.AUTONOMOUS],
           requireDeployApproval: true,
         },
-      });
+      };
 
+      (SafetyConfigManager.getPolicies as any).mockResolvedValue(testPolicies);
+
+      const customEngine = new SafetyEngine(testPolicies);
       const config = {
         id: 'test',
         name: 'Test',

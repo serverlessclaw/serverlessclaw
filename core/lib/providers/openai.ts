@@ -7,6 +7,8 @@ import {
   AttachmentType,
   MessageRole,
   OpenAIModel,
+  MessageChunk,
+  ResponseFormat,
 } from '../types/index';
 import { Resource } from 'sst';
 import { OPENAI } from '../constants';
@@ -161,7 +163,11 @@ export class OpenAIProvider implements IProvider {
     profile: ReasoningProfile = ReasoningProfile.STANDARD,
     model?: string,
     _provider?: string,
-    responseFormat?: import('../types/index').ResponseFormat
+    responseFormat?: ResponseFormat,
+    temperature?: number,
+    maxTokens?: number,
+    topP?: number,
+    stopSequences?: string[]
   ): Promise<Message> {
     const resource = Resource as unknown as Record<string, { value?: string } | undefined>;
     const apiKey =
@@ -179,7 +185,7 @@ export class OpenAIProvider implements IProvider {
         [ReasoningProfile.THINKING]: OpenAIModel.GPT_5_4_MINI,
         [ReasoningProfile.DEEP]: OpenAIModel.GPT_5_4,
       };
-      activeModel = profileToModel[profile] ?? activeModel;
+      activeModel = (profileToModel[profile] ?? activeModel) as string;
     }
 
     // Fallback if profile not supported
@@ -226,14 +232,11 @@ export class OpenAIProvider implements IProvider {
               tools: OpenAIProvider.mapToolsToOpenAI(tools) as any,
             }
           : {}),
+        ...(temperature !== undefined ? { temperature } : {}),
+        ...(maxTokens !== undefined ? { max_tokens: maxTokens } : {}),
+        ...(topP !== undefined ? { top_p: topP } : {}),
+        ...(stopSequences && stopSequences.length > 0 ? { stop: stopSequences } : {}),
       })) as unknown as OpenAIResponse; // Isolate unsafe access
-
-      console.log(`[OPENAI] Raw Output Array Size: ${response.output?.length ?? 0}`);
-      if (response.output) {
-        response.output.forEach((item, i) => {
-          console.log(`[OPENAI] Output Item ${i}: Type=${item.type} | Name=${item.name ?? 'N/A'}`);
-        });
-      }
 
       // Extract output
       const content = response.output_text ?? '';
@@ -270,16 +273,6 @@ export class OpenAIProvider implements IProvider {
       };
     } catch (err) {
       logger.error('OpenAI Responses API failed:', err);
-      if (err instanceof Error) {
-        logger.error('Error details:', {
-          message: err.message,
-          stack: err.stack,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          cause: (err as any).cause,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          body: (err as any).body,
-        });
-      }
       return createEmptyResponse('OpenAI');
     }
   }
@@ -290,8 +283,12 @@ export class OpenAIProvider implements IProvider {
     profile: ReasoningProfile = ReasoningProfile.STANDARD,
     model?: string,
     _provider?: string,
-    responseFormat?: import('../types/index').ResponseFormat
-  ): AsyncIterable<import('../types/index').MessageChunk> {
+    responseFormat?: ResponseFormat,
+    temperature?: number,
+    maxTokens?: number,
+    topP?: number,
+    stopSequences?: string[]
+  ): AsyncIterable<MessageChunk> {
     const resource = Resource as unknown as Record<string, { value?: string } | undefined>;
     const apiKey =
       ('OpenAIApiKey' in resource ? resource.OpenAIApiKey?.value : undefined) ||
@@ -307,7 +304,7 @@ export class OpenAIProvider implements IProvider {
         [ReasoningProfile.THINKING]: OpenAIModel.GPT_5_4_MINI,
         [ReasoningProfile.DEEP]: OpenAIModel.GPT_5_4,
       };
-      activeModel = profileToModel[profile] ?? activeModel;
+      activeModel = (profileToModel[profile] ?? activeModel) as string;
     }
 
     const capabilities = await this.getCapabilities(activeModel);
@@ -348,11 +345,14 @@ export class OpenAIProvider implements IProvider {
               tools: OpenAIProvider.mapToolsToOpenAI(tools) as any,
             }
           : {}),
+        ...(temperature !== undefined ? { temperature } : {}),
+        ...(maxTokens !== undefined ? { max_tokens: maxTokens } : {}),
+        ...(topP !== undefined ? { top_p: topP } : {}),
+        ...(stopSequences && stopSequences.length > 0 ? { stop: stopSequences } : {}),
       });
 
       for await (const chunk of stream) {
         // Handle 2026 Responses API stream events
-        // Based on typical OpenAI stream patterns for the new API
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const rawChunk = chunk as any;
 
@@ -377,7 +377,6 @@ export class OpenAIProvider implements IProvider {
             },
           };
         }
-        // Tool call streaming would be handled here as well if needed
       }
     } catch (err) {
       logger.error('OpenAI streaming failed:', err);
@@ -387,14 +386,12 @@ export class OpenAIProvider implements IProvider {
 
   async getCapabilities(model?: string) {
     const activeModel = model ?? this.model;
-    // 2026: Generalized reasoning model check to include all gpt-5 family
     const isReasoningModel = activeModel.includes('gpt-5');
     const isMiniModel = activeModel.includes('mini');
     const isNanoModel = activeModel.includes('nano');
 
     let maxReasoningEffort = 'xhigh';
-    if (isMiniModel)
-      maxReasoningEffort = 'xhigh'; // Upgraded to support xhigh per user request
+    if (isMiniModel) maxReasoningEffort = 'xhigh';
     else if (isNanoModel) maxReasoningEffort = 'medium';
 
     return {

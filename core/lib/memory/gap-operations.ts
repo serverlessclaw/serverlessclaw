@@ -59,10 +59,10 @@ export async function archiveStaleGaps(
   // Get all OPEN and PLANNED gaps
   const items = await base.queryItems({
     IndexName: 'TypeTimestampIndex',
-    KeyConditionExpression: '#type = :type',
+    KeyConditionExpression: '#tp = :type',
     FilterExpression: '#status IN (:open, :planned)',
     ExpressionAttributeNames: {
-      '#type': 'type',
+      '#tp': 'type',
       '#status': 'status',
     },
     ExpressionAttributeValues: {
@@ -137,10 +137,7 @@ export async function setGap(
     expiresAt,
     content: details,
     status: GapStatus.OPEN,
-    metadata: createMetadata(
-      metadata ?? { category: InsightCategory.STRATEGIC_GAP, createdAt: gapTimestamp },
-      gapTimestamp
-    ),
+    metadata: createMetadata(metadata ?? { category: InsightCategory.STRATEGIC_GAP }, gapTimestamp),
   });
 }
 

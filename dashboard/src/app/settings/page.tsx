@@ -5,6 +5,7 @@ import { AlertTriangle } from 'lucide-react';
 import { revalidatePath } from 'next/cache';
 import { CodeBuildClient, StartBuildCommand } from '@aws-sdk/client-codebuild';
 import SettingsForm from './SettingsForm';
+import DeploySyncStatus from '@/components/DeploySyncStatus';
 import Typography from '@/components/ui/Typography';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -377,6 +378,8 @@ export default async function SettingsPage() {
             </form>
           </div>
         </Card>
+
+        <DeploySyncStatus />
       </div>
     </main>
   );

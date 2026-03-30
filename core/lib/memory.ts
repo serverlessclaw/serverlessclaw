@@ -106,7 +106,7 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
     scopeId: string,
     category: InsightCategory | string,
     content: string,
-    metadata?: Partial<InsightMetadata>
+    metadata?: Partial<InsightMetadata> & { orgId?: string; tags?: string[] }
   ): Promise<number> {
     return InsightOps.addMemory(this, scopeId, category, content, metadata);
   }
@@ -119,9 +119,20 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
     query: string = '',
     category?: InsightCategory,
     limit: number = 50,
-    lastEvaluatedKey?: Record<string, unknown>
+    lastEvaluatedKey?: Record<string, unknown>,
+    tags?: string[],
+    orgId?: string
   ): Promise<{ items: MemoryInsight[]; lastEvaluatedKey?: Record<string, unknown> }> {
-    return InsightOps.searchInsights(this, userId, query, category, limit, lastEvaluatedKey);
+    return InsightOps.searchInsights(
+      this,
+      userId,
+      query,
+      category,
+      limit,
+      lastEvaluatedKey,
+      tags,
+      orgId
+    );
   }
 
   /**
@@ -133,6 +144,18 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
     metadata: Partial<InsightMetadata>
   ): Promise<void> {
     return InsightOps.updateInsightMetadata(this, userId, timestamp, metadata);
+  }
+
+  /**
+   * Refines an existing memory item by updating its content or metadata.
+   */
+  async refineMemory(
+    userId: string,
+    timestamp: number,
+    content?: string,
+    metadata?: Partial<InsightMetadata> & { tags?: string[] }
+  ): Promise<void> {
+    return InsightOps.refineMemory(this, userId, timestamp, content, metadata);
   }
 
   /**

@@ -10,6 +10,7 @@ import AgentDetailModal from './AgentDetailModal';
 
 interface AgentTableProps {
   agents: Record<string, Agent>;
+  reputation?: Record<string, { successRate: number; avgLatencyMs: number; tasksCompleted: number; tasksFailed: number }>;
   updateAgent: (id: string, updates: Partial<Agent>) => void;
   deleteAgent: (id: string) => void;
   setSelectedAgentIdForTools: (id: string | null) => void;
@@ -20,6 +21,7 @@ interface AgentTableProps {
 
 export default function AgentTable({
   agents,
+  reputation,
   updateAgent,
   deleteAgent,
   setSelectedAgentIdForTools,
@@ -45,6 +47,7 @@ export default function AgentTable({
                 <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40">Provider</th>
                 <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40">Model</th>
                 <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40 text-center">Tools</th>
+                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40 text-center">Reputation</th>
                 <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40 text-right">Action</th>
               </tr>
             </thead>
@@ -124,6 +127,24 @@ export default function AgentTable({
                         {agent.tools?.length ?? 0}
                       </button>
                     </td>
+                    <td className="px-5 py-3 text-center">
+                      {reputation && reputation[agent.id] ? (
+                        <Typography
+                          variant="mono"
+                          className={`text-[11px] font-bold ${
+                            reputation[agent.id].successRate >= 0.8
+                              ? 'text-green-400'
+                              : reputation[agent.id].successRate >= 0.5
+                              ? 'text-amber-400'
+                              : 'text-red-400'
+                          }`}
+                        >
+                          {(reputation[agent.id].successRate * 100).toFixed(0)}%
+                        </Typography>
+                      ) : (
+                        <Typography variant="mono" className="text-[11px] text-white/30">-</Typography>
+                      )}
+                    </td>
                     <td className="px-5 py-3 text-right">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button
@@ -162,6 +183,7 @@ export default function AgentTable({
 
       <AgentDetailModal
         agent={selectedAgent}
+        reputation={reputation}
         onClose={() => setSelectedAgentId(null)}
         updateAgent={updateAgent}
         onDelete={(id) => {

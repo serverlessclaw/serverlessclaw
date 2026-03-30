@@ -14,8 +14,24 @@ export const DEFAULT_INSIGHT_METADATA: InsightMetadata = {
   priority: 5,
   hitCount: 0,
   lastAccessed: Date.now(),
-  createdAt: Date.now(),
 };
+
+/**
+ * Normalizes an array of tags by trimming, lowercasing, and removing duplicates.
+ *
+ * @param tags - Array of raw tag strings.
+ * @returns Normalized array of tag strings.
+ */
+export function normalizeTags(tags?: string[]): string[] {
+  if (!tags || !Array.isArray(tags)) return [];
+  return Array.from(
+    new Set(
+      tags
+        .filter((t) => typeof t === 'string' && t.trim().length > 0)
+        .map((t) => t.trim().toLowerCase())
+    )
+  ).sort();
+}
 
 /**
  * Creates a complete metadata object with defaults.
@@ -30,9 +46,8 @@ export function createMetadata(
 ): InsightMetadata {
   return {
     ...DEFAULT_INSIGHT_METADATA,
-    hitCount: 0,
-    lastAccessed: timestamp,
-    createdAt: overrides?.createdAt ?? timestamp,
+    hitCount: overrides?.hitCount ?? 0,
+    lastAccessed: overrides?.lastAccessed ?? timestamp,
     ...(overrides ?? {}),
   } as InsightMetadata;
 }
@@ -54,9 +69,9 @@ export async function getMemoryByTypePaginated(
 ): Promise<{ items: Record<string, unknown>[]; lastEvaluatedKey?: Record<string, unknown> }> {
   const result = await base.queryItemsPaginated({
     IndexName: 'TypeTimestampIndex',
-    KeyConditionExpression: '#type = :type',
+    KeyConditionExpression: '#tp = :type',
     ExpressionAttributeNames: {
-      '#type': 'type',
+      '#tp': 'type',
     },
     ExpressionAttributeValues: {
       ':type': type,
@@ -150,21 +165,27 @@ export async function queryLatestContentByUserId(
 export async function queryByTypeAndGetContent(
   base: BaseMemoryProvider,
   type: string,
-  limit: number = 10
+  limit: number = 10,
+  userId?: string
 ): Promise<string[]> {
-  const items = await base.queryItems({
-    IndexName: 'TypeTimestampIndex',
-    KeyConditionExpression: '#type = :type',
-    ExpressionAttributeNames: {
-      '#type': 'type',
-    },
-    ExpressionAttributeValues: {
-      ':type': type,
-    },
-    ScanIndexForward: false,
+  const params: Record<string, any> = {
     Limit: limit,
-  });
+    ScanIndexForward: false,
+  };
 
+  if (userId) {
+    params.IndexName = 'UserInsightIndex';
+    params.KeyConditionExpression = 'userId = :userId AND #tp = :type';
+    params.ExpressionAttributeNames = { '#tp': 'type' };
+    params.ExpressionAttributeValues = { ':userId': userId, ':type': type };
+  } else {
+    params.IndexName = 'TypeTimestampIndex';
+    params.KeyConditionExpression = '#tp = :type';
+    params.ExpressionAttributeNames = { '#tp': 'type' };
+    params.ExpressionAttributeValues = { ':type': type };
+  }
+
+  const items = await base.queryItems(params);
   return items.map((item) => item.content as string).filter(Boolean);
 }
 
@@ -186,21 +207,29 @@ export async function queryByTypeAndMap(
   defaultCategory: InsightCategory,
   limit: number = 100,
   filterExpression?: string,
-  expressionAttributeValues?: Record<string, unknown>
+  expressionAttributeValues?: Record<string, unknown>,
+  userId?: string
 ): Promise<MemoryInsight[]> {
-  const params: Record<string, unknown> = {
-    IndexName: 'TypeTimestampIndex',
-    KeyConditionExpression: '#type = :type',
-    ExpressionAttributeNames: {
-      '#type': 'type',
-    },
+  const params: Record<string, any> = {
+    Limit: limit,
+    ScanIndexForward: false,
     ExpressionAttributeValues: {
-      ':type': type,
       ...expressionAttributeValues,
     },
-    ScanIndexForward: false,
-    Limit: limit,
   };
+
+  if (userId) {
+    params.IndexName = 'UserInsightIndex';
+    params.KeyConditionExpression = 'userId = :userId AND #tp = :type';
+    params.ExpressionAttributeNames = { '#tp': 'type' };
+    params.ExpressionAttributeValues[':userId'] = userId;
+    params.ExpressionAttributeValues[':type'] = type;
+  } else {
+    params.IndexName = 'TypeTimestampIndex';
+    params.KeyConditionExpression = '#tp = :type';
+    params.ExpressionAttributeNames = { '#tp': 'type' };
+    params.ExpressionAttributeValues[':type'] = type;
+  }
 
   if (filterExpression) {
     params.FilterExpression = filterExpression;
