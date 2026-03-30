@@ -37,3 +37,4 @@ reports/
 test-results/
 tier2.log
 core/tests/tier2.log
+release-tier2.log
