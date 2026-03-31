@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { scheduleGoal, cancelGoal, listSchedules } from './scheduler';
-import { DynamicScheduler } from '../../lib/scheduler';
+import { DynamicScheduler } from '../../lib/lifecycle/scheduler';
 
-vi.mock('../../lib/scheduler', () => ({
+vi.mock('../../lib/lifecycle/scheduler', () => ({
   DynamicScheduler: {
     upsertSchedule: vi.fn().mockResolvedValue(undefined),
     removeSchedule: vi.fn().mockResolvedValue(undefined),

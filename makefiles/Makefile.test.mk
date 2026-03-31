@@ -63,12 +63,12 @@ test-e2e-deployed: ## Run E2E tests against deployed URL. Usage: make test-e2e-d
 
 test-affected: ## Run only tests affected by recent changes (smart test selection)
 	@$(call log_step,Running affected tests...)
-	@$(PNPM) exec tsx scripts/test-affected.ts $(if $(BASE),--base $(BASE),)
+	@$(PNPM) exec tsx scripts/dev/test-affected.ts $(if $(BASE),--base $(BASE),)
 
 security-scan: ## Scan dependencies for security vulnerabilities
 	@$(call log_step,Running security scan...)
-	@$(PNPM) exec tsx scripts/security-scan.ts $(if $(SEVERITY),--severity $(SEVERITY),) $(if $(FIX),--fix,)
+	@$(PNPM) exec tsx scripts/quality/security-scan.ts $(if $(SEVERITY),--severity $(SEVERITY),) $(if $(FIX),--fix,)
 
 docs-check: ## Validate documentation is in sync with code changes
 	@$(call log_step,Checking documentation...)
-	@$(PNPM) exec tsx scripts/docs-check.ts $(if $(BASE),--base $(BASE),) $(if $(STRICT),--strict,)
+	@$(PNPM) exec tsx scripts/quality/docs-check.ts $(if $(BASE),--base $(BASE),) $(if $(STRICT),--strict,)

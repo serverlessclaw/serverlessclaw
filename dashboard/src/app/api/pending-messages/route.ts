@@ -16,7 +16,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Missing sessionId' }, { status: 400 });
     }
 
-    const { SessionStateManager } = await import('@claw/core/lib/session-state');
+    const { SessionStateManager } = await import('@claw/core/lib/session/session-state');
     const sessionStateManager = new SessionStateManager();
 
     const pendingMessages = await sessionStateManager.getPendingMessages(sessionId);
@@ -39,7 +39,7 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Missing sessionId or messageId' }, { status: 400 });
     }
 
-    const { SessionStateManager } = await import('@claw/core/lib/session-state');
+    const { SessionStateManager } = await import('@claw/core/lib/session/session-state');
     const sessionStateManager = new SessionStateManager();
 
     const success = await sessionStateManager.removePendingMessage(sessionId, messageId);
@@ -70,7 +70,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Content must be a non-empty string' }, { status: 400 });
     }
 
-    const { SessionStateManager } = await import('@claw/core/lib/session-state');
+    const { SessionStateManager } = await import('@claw/core/lib/session/session-state');
     const sessionStateManager = new SessionStateManager();
 
     const success = await sessionStateManager.updatePendingMessage(sessionId, messageId, content.trim());

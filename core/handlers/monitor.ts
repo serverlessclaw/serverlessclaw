@@ -7,9 +7,9 @@ import { logger } from '../lib/logger';
 import { EventType, GapStatus } from '../lib/types/agent';
 import { BuildStatus } from '../lib/types/constants';
 import { SSTResource, TopologyNode } from '../lib/types/system';
-import { reportHealthIssue } from '../lib/health';
+import { reportHealthIssue } from '../lib/lifecycle/health';
 import { emitEvent, EventPriority } from '../lib/utils/bus';
-import { getCircuitBreaker } from '../lib/circuit-breaker';
+import { getCircuitBreaker } from '../lib/safety/circuit-breaker';
 
 const codebuild = new CodeBuildClient({});
 const logs = new CloudWatchLogsClient({});

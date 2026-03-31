@@ -120,24 +120,24 @@ endef
 
 telegram-setup: ## Set Telegram webhook to current API_URL (local or prod)
 	@$(call log_step,Setting Telegram webhook for $(ENV)...)
-	@chmod +x ./scripts/telegram-webhook.sh
+	@chmod +x ./scripts/ci/telegram-webhook.sh
 	@ENV_UPPER=$$(echo $(ENV) | tr '[:lower:]' '[:upper:]'); \
 	URL=$$(grep "^$${ENV_UPPER}_API_URL=" .env | cut -d '=' -f2)/webhook; \
 	if [ -z "$$URL" ] || [ "$$URL" = "/webhook" ]; then \
 		$(call log_error,Could not find $${ENV_UPPER}_API_URL in .env (ENV=$(ENV)). Check that it's defined.); \
 		exit 1; \
 	fi; \
-	./scripts/telegram-webhook.sh set "$$URL"
+	./scripts/ci/telegram-webhook.sh set "$$URL"
 
 telegram-info: ## Get current Telegram webhook status
 	@$(call log_info,Fetching Telegram webhook status...)
-	@chmod +x ./scripts/telegram-webhook.sh
-	@./scripts/telegram-webhook.sh get
+	@chmod +x ./scripts/ci/telegram-webhook.sh
+	@./scripts/ci/telegram-webhook.sh get
 
 telegram-delete: ## Delete current Telegram webhook
 	@$(call log_warning,Deleting Telegram webhook!)
-	@chmod +x ./scripts/telegram-webhook.sh
-	@./scripts/telegram-webhook.sh delete
+	@chmod +x ./scripts/ci/telegram-webhook.sh
+	@./scripts/ci/telegram-webhook.sh delete
 
 # Usage: $(call verify_clean)
 # Fails if there are uncommitted or untracked changes

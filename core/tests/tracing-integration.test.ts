@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handler as strategicPlannerHandler } from '../agents/strategic-planner';
 import { handler as coderHandler } from '../agents/coder';
-import { getCircuitBreaker, resetCircuitBreakerInstance } from '../lib/circuit-breaker';
+import { getCircuitBreaker, resetCircuitBreakerInstance } from '../lib/safety/circuit-breaker';
 import { TRACE_TYPES } from '../lib/constants';
 
 // Mock AWS SDK first - Variables used in vi.mock MUST start with 'vi_'

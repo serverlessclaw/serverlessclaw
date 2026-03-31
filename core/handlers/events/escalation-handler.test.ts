@@ -15,7 +15,7 @@ const { mockGetEscalationState, mockHandleLevelTimeout } = vi.hoisted(() => ({
   mockHandleLevelTimeout: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../lib/escalation-manager', () => ({
+vi.mock('../../lib/lifecycle/escalation-manager', () => ({
   escalationManager: {
     getEscalationState: mockGetEscalationState,
     handleLevelTimeout: mockHandleLevelTimeout,

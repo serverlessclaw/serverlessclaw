@@ -63,7 +63,7 @@ export interface ExecutorFeatureOptions {
   /** Behavior when timeout is reached. */
   timeoutBehavior?: 'pause' | 'fail' | 'continue';
   /** Session state manager for concurrent message handling. */
-  sessionStateManager?: import('../session-state').SessionStateManager;
+  sessionStateManager?: import('../session/session-state').SessionStateManager;
   /** List of approved tool call IDs (for HITL). */
   approvedToolCalls?: string[];
   /** Whether this is a continuation of a previously paused task. */

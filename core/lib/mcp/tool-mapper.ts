@@ -44,7 +44,7 @@ export class MCPToolMapper {
           }
 
           try {
-            const { withMCPResilience } = await import('../error-recovery');
+            const { withMCPResilience } = await import('../lifecycle/error-recovery');
             return await withMCPResilience(toolName, async () => {
               const result = await client.callTool({
                 name: mcpTool.name,

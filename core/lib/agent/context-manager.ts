@@ -1,6 +1,6 @@
 import { IMemory, Message, MessageRole, IProvider, ReasoningProfile } from '../types/index';
 import { LIMITS } from '../constants';
-import { CONFIG_DEFAULTS } from '../config-defaults';
+import { CONFIG_DEFAULTS } from '../config/config-defaults';
 import { logger } from '../logger';
 import { getContextStrategy, ProviderContextStrategy } from './context-strategies';
 
@@ -361,7 +361,7 @@ export class ContextManager {
       // Persist summarization token usage
       if (response.usage && response.usage.total_tokens > 0) {
         try {
-          const { TokenTracker } = await import('../token-usage');
+          const { TokenTracker } = await import('../metrics/token-usage');
           await TokenTracker.recordInvocation({
             timestamp: Date.now(),
             traceId: '',

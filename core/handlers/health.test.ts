@@ -15,7 +15,7 @@ const memoryMocks = vi.hoisted(() => ({
   resetRecoveryAttemptCount: vi.fn(),
 }));
 
-vi.mock('../lib/health', () => ({
+vi.mock('../lib/lifecycle/health', () => ({
   runDeepHealthCheck: healthMocks.runDeepHealthCheck,
 }));
 

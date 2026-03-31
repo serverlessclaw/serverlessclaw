@@ -153,7 +153,7 @@ export class ToolExecutor {
           const { emitMetrics, METRICS } = await import('../metrics');
           emitMetrics([METRICS.toolExecuted(tool.name, toolSuccess)]).catch(() => {});
 
-          const { TokenTracker } = await import('../token-usage');
+          const { TokenTracker } = await import('../metrics/token-usage');
           TokenTracker.updateToolRollup(
             tool.name,
             toolSuccess,

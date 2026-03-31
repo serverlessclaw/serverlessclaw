@@ -58,7 +58,7 @@ vi.mock('../lib/providers/index', () => ({
   },
 }));
 
-vi.mock('../lib/session-state', () => ({
+vi.mock('../lib/session/session-state', () => ({
   SessionStateManager: class {
     acquireProcessing = mockSessionStateManagerInstance.acquireProcessing;
     releaseProcessing = mockSessionStateManagerInstance.releaseProcessing;

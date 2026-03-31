@@ -280,7 +280,7 @@ export class Agent {
             METRICS.agentInvoked(this.config?.id ?? 'unknown'),
           ]).catch(() => {});
 
-          const { TokenTracker } = await import('./token-usage');
+          const { TokenTracker } = await import('./metrics/token-usage');
           const agentId = this.config?.id ?? 'unknown';
           await TokenTracker.recordInvocation({
             timestamp: Date.now(),

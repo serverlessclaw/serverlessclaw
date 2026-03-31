@@ -5,7 +5,7 @@
  * resource naming, and status codes.
  */
 
-import { CONFIG_DEFAULTS } from './config-defaults';
+import { CONFIG_DEFAULTS } from './config/config-defaults';
 import { LLMProvider, OpenAIModel, BedrockModel, OpenRouterModel, MiniMaxModel } from './types/llm';
 import { TraceType, TraceStatus, OptimizationPolicy } from './types/constants';
 export { NODE_ICON } from './utils/topology/constants';

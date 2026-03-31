@@ -80,7 +80,7 @@ const { mockScheduleOneShotTimeout } = vi.hoisted(() => ({
   mockScheduleOneShotTimeout: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../lib/scheduler', () => ({
+vi.mock('../../lib/lifecycle/scheduler', () => ({
   DynamicScheduler: {
     scheduleOneShotTimeout: mockScheduleOneShotTimeout,
   },

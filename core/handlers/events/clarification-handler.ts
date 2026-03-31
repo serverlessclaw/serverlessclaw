@@ -1,5 +1,5 @@
 import { getRecursionLimit, handleRecursionLimitExceeded, wakeupInitiator } from './shared';
-import { DynamicScheduler } from '../../lib/scheduler';
+import { DynamicScheduler } from '../../lib/lifecycle/scheduler';
 import { ConfigManager } from '../../lib/registry/config';
 import { EventType } from '../../lib/types/agent';
 import { ClarificationStatus } from '../../lib/types/memory';

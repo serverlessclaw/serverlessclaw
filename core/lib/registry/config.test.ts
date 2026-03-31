@@ -5,14 +5,14 @@ vi.mock('sst', () => ({
   Resource: {},
 }));
 
-vi.mock('../config-versioning', () => ({
+vi.mock('../config/config-versioning', () => ({
   ConfigVersioning: {
     snapshot: vi.fn(),
   },
 }));
 
 import { Resource } from 'sst';
-import { ConfigVersioning } from '../config-versioning';
+import { ConfigVersioning } from '../config/config-versioning';
 
 describe('ConfigManager', () => {
   beforeEach(() => {

@@ -1,5 +1,5 @@
 import { ReasoningProfile, TraceSource, AttachmentType } from '../types/index';
-import { SessionStateManager } from '../session-state';
+import { SessionStateManager } from '../session/session-state';
 
 /**
  * Timeout behavior when agent reaches its time limit.

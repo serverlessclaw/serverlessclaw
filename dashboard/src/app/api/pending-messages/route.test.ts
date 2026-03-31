@@ -8,7 +8,7 @@ const mockSessionStateManagerInstance = {
   updatePendingMessage: vi.fn(),
 };
 
-vi.mock('@claw/core/lib/session-state', () => ({
+vi.mock('@claw/core/lib/session/session-state', () => ({
   SessionStateManager: class {
     getPendingMessages = mockSessionStateManagerInstance.getPendingMessages;
     removePendingMessage = mockSessionStateManagerInstance.removePendingMessage;

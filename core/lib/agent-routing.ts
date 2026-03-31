@@ -1,4 +1,4 @@
-import { TokenTracker } from './token-usage';
+import { TokenTracker } from './metrics/token-usage';
 import { logger } from './logger';
 import { ConfigManager } from './registry/config';
 

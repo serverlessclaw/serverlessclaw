@@ -1,0 +1,656 @@
+/**
+ * @module SafetyEngine
+ * @description Granular safety tier enforcement engine for Serverless Claw.
+ * Evaluates actions against fine-grained policies including per-tool overrides,
+ * resource-level controls, time-based windows, and comprehensive violation logging.
+ */
+
+import {
+  SafetyTier,
+  IAgentConfig,
+  SafetyPolicy,
+  TimeRestriction,
+  SafetyEvaluationResult,
+  SafetyViolation,
+} from '../types/agent';
+import { logger } from '../logger';
+import type { BaseMemoryProvider } from '../memory/base';
+import { SafetyRateLimiter, ToolSafetyOverride } from './safety-limiter';
+import { SafetyConfigManager } from './safety-config-manager';
+import { DEFAULT_POLICIES } from './safety-config';
+
+/**
+ * Safety Engine for evaluating actions against granular policies.
+ */
+export class SafetyEngine {
+  private policies: Map<SafetyTier, SafetyPolicy>;
+  private toolOverrides: Map<string, ToolSafetyOverride>;
+  private violations: SafetyViolation[] = [];
+  private limiter: SafetyRateLimiter;
+
+  constructor(
+    customPolicies?: Partial<Record<SafetyTier, Partial<SafetyPolicy>>>,
+    toolOverrides?: ToolSafetyOverride[],
+    base?: BaseMemoryProvider
+  ) {
+    this.policies = new Map();
+    this.toolOverrides = new Map();
+    this.limiter = new SafetyRateLimiter(base);
+
+    // Initialize with default policies
+    for (const [tier, policy] of Object.entries(DEFAULT_POLICIES)) {
+      this.policies.set(tier as SafetyTier, { ...policy });
+    }
+
+    // Apply custom policy overrides
+    if (customPolicies) {
+      for (const [tier, overrides] of Object.entries(customPolicies)) {
+        const existing = this.policies.get(tier as SafetyTier);
+        if (existing && overrides) {
+          this.policies.set(tier as SafetyTier, { ...existing, ...overrides });
+        }
+      }
+    }
+
+    // Initialize tool overrides
+    if (toolOverrides) {
+      for (const override of toolOverrides) {
+        this.toolOverrides.set(override.toolName, override);
+      }
+    }
+
+    logger.info('SafetyEngine initialized', {
+      tiers: Array.from(this.policies.keys()),
+      toolOverrides: this.toolOverrides.size,
+    });
+  }
+
+  /**
+   * Evaluate whether an action is allowed based on the agent's safety tier.
+   */
+  async evaluateAction(
+    agentConfig: IAgentConfig | undefined,
+    action: string,
+    context?: {
+      toolName?: string;
+      resource?: string;
+      traceId?: string;
+      userId?: string;
+    }
+  ): Promise<SafetyEvaluationResult> {
+    const tier = agentConfig?.safetyTier ?? SafetyTier.SANDBOX;
+
+    // 1. Fetch current policies (DDB with fallback)
+    const policies = await SafetyConfigManager.getPolicies();
+    const policy = policies[tier];
+
+    if (!policy) {
+      return {
+        allowed: false,
+        requiresApproval: true,
+        reason: `Unknown safety tier: ${tier}`,
+        appliedPolicy: 'unknown_tier',
+      };
+    }
+
+    // Check tool-specific overrides first
+    if (context?.toolName) {
+      const toolOverride = this.toolOverrides.get(context.toolName);
+      if (toolOverride?.requireApproval) {
+        const violation = this.createViolation(
+          agentConfig?.id ?? 'unknown',
+          tier,
+          action,
+          context.toolName,
+          context.resource,
+          'Tool requires approval',
+          'approval_required',
+          context.traceId,
+          context.userId
+        );
+        this.logViolation(violation);
+
+        return {
+          allowed: true,
+          requiresApproval: true,
+          reason: `Tool '${context.toolName}' requires manual approval`,
+          appliedPolicy: 'tool_override',
+        };
+      }
+
+      // Check tool rate limits
+      const rateLimitResult = await this.limiter.checkToolRateLimit(toolOverride, context.toolName);
+      if (!rateLimitResult.allowed) {
+        return rateLimitResult;
+      }
+    }
+
+    // Check resource-level controls
+    if (context?.resource) {
+      const resourceResult = this.checkResourceAccess(policy, context.resource, action, tier, {
+        ...context,
+        agentId: agentConfig?.id,
+      });
+      if (!resourceResult.allowed || resourceResult.requiresApproval) {
+        return resourceResult;
+      }
+    }
+
+    // Check time-based restrictions
+    const timeResult = this.checkTimeRestrictions(policy, action, tier, {
+      ...context,
+      agentId: agentConfig?.id,
+    });
+    if (!timeResult.allowed || timeResult.requiresApproval) {
+      return timeResult;
+    }
+
+    // Check action-specific approval requirements
+    const approvalResult = this.checkApprovalRequirements(policy, action, tier, {
+      ...context,
+      agentId: agentConfig?.id,
+    });
+    if (!approvalResult.allowed || approvalResult.requiresApproval) {
+      return approvalResult;
+    }
+
+    // Check rate limits
+    const rateLimitResult = await this.limiter.checkRateLimits(policy, action);
+    if (!rateLimitResult.allowed) {
+      return rateLimitResult;
+    }
+
+    return {
+      allowed: true,
+      requiresApproval: false,
+      appliedPolicy: `${tier}_default`,
+    };
+  }
+
+  /**
+   * Check if a file path is allowed for the given policy.
+   */
+  private checkResourceAccess(
+    policy: SafetyPolicy,
+    resource: string,
+    action: string,
+    tier: SafetyTier,
+    context?: { traceId?: string; userId?: string; toolName?: string; agentId?: string }
+  ): SafetyEvaluationResult {
+    // Check blocked paths first
+    if (policy.blockedFilePaths) {
+      for (const pattern of policy.blockedFilePaths) {
+        if (this.matchesGlob(resource, pattern)) {
+          const violation = this.createViolation(
+            context?.agentId ?? 'unknown',
+            tier,
+            action,
+            context?.toolName,
+            resource,
+            `Resource '${resource}' matches blocked pattern '${pattern}'`,
+            'blocked',
+            context?.traceId,
+            context?.userId
+          );
+          this.logViolation(violation);
+
+          return {
+            allowed: false,
+            requiresApproval: false,
+            reason: `Access to '${resource}' is blocked`,
+            appliedPolicy: 'blocked_resource',
+            suggestion: 'Choose a different file path that is not protected',
+          };
+        }
+      }
+    }
+
+    // Check allowed paths (if specified, resource must match at least one)
+    if (policy.allowedFilePaths && policy.allowedFilePaths.length > 0) {
+      const isAllowed = policy.allowedFilePaths.some((pattern) =>
+        this.matchesGlob(resource, pattern)
+      );
+
+      if (!isAllowed) {
+        const violation = this.createViolation(
+          context?.agentId ?? 'unknown',
+          tier,
+          action,
+          context?.toolName,
+          resource,
+          `Resource '${resource}' not in allowed paths`,
+          'blocked',
+          context?.traceId,
+          context?.userId
+        );
+        this.logViolation(violation);
+
+        return {
+          allowed: false,
+          requiresApproval: false,
+          reason: `Resource '${resource}' is not in the allowed list`,
+          appliedPolicy: 'resource_not_allowed',
+        };
+      }
+    }
+
+    return { allowed: true, requiresApproval: false };
+  }
+
+  /**
+   * Check time-based restrictions.
+   */
+  private checkTimeRestrictions(
+    policy: SafetyPolicy,
+    action: string,
+    tier: SafetyTier,
+    context?: { traceId?: string; userId?: string; toolName?: string; agentId?: string }
+  ): SafetyEvaluationResult {
+    if (!policy.timeRestrictions || policy.timeRestrictions.length === 0) {
+      return { allowed: true, requiresApproval: false };
+    }
+
+    const now = new Date();
+
+    for (const restriction of policy.timeRestrictions) {
+      if (!restriction.restrictedActions.includes(action)) {
+        continue;
+      }
+
+      // Check if current time falls within restriction window
+      const isRestricted = this.isTimeInWindow(now, restriction);
+
+      if (isRestricted) {
+        if (restriction.restrictionType === 'block') {
+          const violation = this.createViolation(
+            context?.agentId ?? 'unknown',
+            tier,
+            action,
+            context?.toolName,
+            undefined,
+            `Action '${action}' blocked during restricted time window`,
+            'blocked',
+            context?.traceId,
+            context?.userId
+          );
+          this.logViolation(violation);
+
+          return {
+            allowed: false,
+            requiresApproval: false,
+            reason: `Action '${action}' is not allowed during this time window`,
+            appliedPolicy: 'time_restriction',
+          };
+        } else {
+          // require_approval
+          const violation = this.createViolation(
+            context?.agentId ?? 'unknown',
+            tier,
+            action,
+            context?.toolName,
+            undefined,
+            `Action '${action}' requires approval during restricted time window`,
+            'approval_required',
+            context?.traceId,
+            context?.userId
+          );
+          this.logViolation(violation);
+
+          return {
+            allowed: true,
+            requiresApproval: true,
+            reason: `Action '${action}' requires approval during business hours`,
+            appliedPolicy: 'time_restriction_approval',
+          };
+        }
+      }
+    }
+
+    return { allowed: true, requiresApproval: false };
+  }
+
+  /**
+   * Check approval requirements based on action type and policy.
+   */
+  private checkApprovalRequirements(
+    policy: SafetyPolicy,
+    action: string,
+    tier: SafetyTier,
+    _context?: { traceId?: string; userId?: string; toolName?: string; agentId?: string }
+  ): SafetyEvaluationResult {
+    switch (action) {
+      case 'code_change':
+        if (policy.requireCodeApproval) {
+          const violation = this.createViolation(
+            _context?.agentId ?? 'unknown',
+            tier,
+            action,
+            _context?.toolName,
+            undefined,
+            'Code changes require approval in this safety tier',
+            'approval_required',
+            _context?.traceId,
+            _context?.userId
+          );
+          this.logViolation(violation);
+          return {
+            allowed: true,
+            requiresApproval: true,
+            reason: 'Code changes require approval in this safety tier',
+            appliedPolicy: `${tier}_${action}_approval`,
+          };
+        }
+        break;
+      case 'deployment':
+        if (policy.requireDeployApproval) {
+          const violation = this.createViolation(
+            _context?.agentId ?? 'unknown',
+            tier,
+            action,
+            _context?.toolName,
+            undefined,
+            'Deployments require approval in this safety tier',
+            'approval_required',
+            _context?.traceId,
+            _context?.userId
+          );
+          this.logViolation(violation);
+          return {
+            allowed: true,
+            requiresApproval: true,
+            reason: 'Deployments require approval in this safety tier',
+            appliedPolicy: `${tier}_${action}_approval`,
+          };
+        }
+        break;
+      case 'file_operation':
+        if (policy.requireFileApproval) {
+          const violation = this.createViolation(
+            _context?.agentId ?? 'unknown',
+            tier,
+            action,
+            _context?.toolName,
+            undefined,
+            'File operations require approval in this safety tier',
+            'approval_required',
+            _context?.traceId,
+            _context?.userId
+          );
+          this.logViolation(violation);
+          return {
+            allowed: true,
+            requiresApproval: true,
+            reason: 'File operations require approval in this safety tier',
+            appliedPolicy: `${tier}_${action}_approval`,
+          };
+        }
+        break;
+      case 'shell_command':
+        if (policy.requireShellApproval) {
+          const violation = this.createViolation(
+            _context?.agentId ?? 'unknown',
+            tier,
+            action,
+            _context?.toolName,
+            undefined,
+            'Shell commands require approval in this safety tier',
+            'approval_required',
+            _context?.traceId,
+            _context?.userId
+          );
+          this.logViolation(violation);
+          return {
+            allowed: true,
+            requiresApproval: true,
+            reason: 'Shell commands require approval in this safety tier',
+            appliedPolicy: `${tier}_${action}_approval`,
+          };
+        }
+        break;
+      case 'mcp_tool':
+        if (policy.requireMcpApproval) {
+          const violation = this.createViolation(
+            _context?.agentId ?? 'unknown',
+            tier,
+            action,
+            _context?.toolName,
+            undefined,
+            'MCP tool calls require approval in this safety tier',
+            'approval_required',
+            _context?.traceId,
+            _context?.userId
+          );
+          this.logViolation(violation);
+          return {
+            allowed: true,
+            requiresApproval: true,
+            reason: 'MCP tool calls require approval in this safety tier',
+            appliedPolicy: `${tier}_${action}_approval`,
+          };
+        }
+        break;
+      default: {
+        // Unknown actions require approval by default
+        const violation = this.createViolation(
+          _context?.agentId ?? 'unknown',
+          tier,
+          action,
+          _context?.toolName,
+          undefined,
+          `Unknown action '${action}' requires approval`,
+          'approval_required',
+          _context?.traceId,
+          _context?.userId
+        );
+        this.logViolation(violation);
+        return {
+          allowed: true,
+          requiresApproval: true,
+          reason: `Unknown action '${action}' requires approval`,
+          appliedPolicy: `${tier}_${action}_approval`,
+        };
+      }
+    }
+
+    return { allowed: true, requiresApproval: false };
+  }
+
+  /**
+   * Check if current time falls within a time restriction window.
+   */
+  private isTimeInWindow(date: Date, restriction: TimeRestriction): boolean {
+    // Get day/hour in the restriction's timezone using Intl.DateTimeFormat
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: restriction.timezone,
+      hour: 'numeric',
+      weekday: 'short',
+      hour12: false,
+    });
+    const parts = formatter.formatToParts(date);
+    const hour = parseInt(parts.find((p) => p.type === 'hour')?.value ?? '0', 10);
+    const weekdayStr = parts.find((p) => p.type === 'weekday')?.value ?? 'Sun';
+    const dayMap: Record<string, number> = {
+      Sun: 0,
+      Mon: 1,
+      Tue: 2,
+      Wed: 3,
+      Thu: 4,
+      Fri: 5,
+      Sat: 6,
+    };
+    const dayOfWeek = dayMap[weekdayStr] ?? 0;
+
+    // Check if today is a restricted day
+    if (!restriction.daysOfWeek.includes(dayOfWeek)) {
+      return false;
+    }
+
+    // Check if current hour is within restriction window
+    if (restriction.startHour <= restriction.endHour) {
+      return hour >= restriction.startHour && hour < restriction.endHour;
+    } else {
+      return hour >= restriction.startHour || hour < restriction.endHour;
+    }
+  }
+
+  /**
+   * Simple glob pattern matching.
+   * Handles ** (match any path including /), * (match except /), and ? (single char).
+   */
+  private matchesGlob(path: string, pattern: string): boolean {
+    // Step 1: Escape all regex special chars EXCEPT * and ? (glob wildcards)
+    let regexPattern = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+    // Step 2: Replace ** with a placeholder to avoid conflicts with single *
+    regexPattern = regexPattern.replace(/\*\*/g, '__DOUBLESTAR__');
+    // Step 3: Replace single * with [^/]* (matches anything except /)
+    regexPattern = regexPattern.replace(/\*/g, '[^/]*');
+    // Step 4: Replace placeholder with .* (matches everything including /)
+    regexPattern = regexPattern.replace(/__DOUBLESTAR__/g, '.*');
+    // Step 5: Replace ? with . (single char wildcard)
+    regexPattern = regexPattern.replace(/\?/g, '.');
+    const regex = new RegExp(`^${regexPattern}$`);
+    return regex.test(path);
+  }
+
+  /**
+   * Create a safety violation record.
+   */
+  private createViolation(
+    agentId: string,
+    safetyTier: SafetyTier,
+    action: string,
+    toolName: string | undefined,
+    resource: string | undefined,
+    reason: string,
+    outcome: 'blocked' | 'approval_required' | 'allowed',
+    traceId?: string,
+    userId?: string
+  ): SafetyViolation {
+    return {
+      id: `violation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: new Date(),
+      agentId,
+      safetyTier,
+      action,
+      toolName,
+      resource,
+      reason,
+      outcome,
+      traceId,
+      userId,
+    };
+  }
+
+  /**
+   * Log a safety violation.
+   */
+  private logViolation(violation: SafetyViolation): void {
+    this.violations.push(violation);
+
+    // Keep only last 1000 violations in memory
+    if (this.violations.length > 1000) {
+      this.violations = this.violations.slice(-1000);
+    }
+
+    logger.warn('Safety violation detected', {
+      violationId: violation.id,
+      agentId: violation.agentId,
+      action: violation.action,
+      toolName: violation.toolName,
+      resource: violation.resource,
+      reason: violation.reason,
+      outcome: violation.outcome,
+      traceId: violation.traceId,
+    });
+  }
+
+  /**
+   * Get recent safety violations.
+   */
+  getViolations(limit: number = 100): SafetyViolation[] {
+    return this.violations.slice(-limit);
+  }
+
+  /**
+   * Get violations for a specific agent.
+   */
+  getViolationsByAgent(agentId: string, limit: number = 100): SafetyViolation[] {
+    return this.violations.filter((v) => v.agentId === agentId).slice(-limit);
+  }
+
+  /**
+   * Get violations for a specific action type.
+   */
+  getViolationsByAction(action: string, limit: number = 100): SafetyViolation[] {
+    return this.violations.filter((v) => v.action === action).slice(-limit);
+  }
+
+  /**
+   * Clear all violations (useful for testing).
+   */
+  clearViolations(): void {
+    this.violations = [];
+  }
+
+  /**
+   * Get safety statistics.
+   */
+  getStats(): {
+    totalViolations: number;
+    blockedActions: number;
+    approvalRequired: number;
+    byTier: Record<SafetyTier, number>;
+    byAction: Record<string, number>;
+  } {
+    const stats = {
+      totalViolations: this.violations.length,
+      blockedActions: 0,
+      approvalRequired: 0,
+      byTier: {
+        [SafetyTier.SANDBOX]: 0,
+        [SafetyTier.AUTONOMOUS]: 0,
+      },
+      byAction: {} as Record<string, number>,
+    };
+
+    for (const violation of this.violations) {
+      if (violation.outcome === 'blocked') {
+        stats.blockedActions++;
+      } else if (violation.outcome === 'approval_required') {
+        stats.approvalRequired++;
+      }
+
+      stats.byTier[violation.safetyTier]++;
+      stats.byAction[violation.action] = (stats.byAction[violation.action] || 0) + 1;
+    }
+
+    return stats;
+  }
+
+  /**
+   * Update policy for a specific tier.
+   */
+  updatePolicy(tier: SafetyTier, updates: Partial<SafetyPolicy>): void {
+    const existing = this.policies.get(tier);
+    if (existing) {
+      this.policies.set(tier, { ...existing, ...updates });
+      logger.info('Safety policy updated', { tier, updates });
+    }
+  }
+
+  /**
+   * Add or update a tool override.
+   */
+  setToolOverride(override: ToolSafetyOverride): void {
+    this.toolOverrides.set(override.toolName, override);
+    logger.info('Tool safety override set', { toolName: override.toolName });
+  }
+
+  /**
+   * Remove a tool override.
+   */
+  removeToolOverride(toolName: string): void {
+    this.toolOverrides.delete(toolName);
+    logger.info('Tool safety override removed', { toolName });
+  }
+}

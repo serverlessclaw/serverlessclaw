@@ -100,7 +100,7 @@ const { mockGetEscalationState, mockStartEscalation } = vi.hoisted(() => ({
   mockStartEscalation: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../lib/escalation-manager', () => ({
+vi.mock('../../lib/lifecycle/escalation-manager', () => ({
   escalationManager: {
     getEscalationState: mockGetEscalationState,
     startEscalation: mockStartEscalation,

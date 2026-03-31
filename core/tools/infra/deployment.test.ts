@@ -15,20 +15,20 @@ vi.mock('sst', () => ({
   },
 }));
 
-vi.mock('../../lib/deploy-stats', () => ({
+vi.mock('../../lib/metrics/deploy-stats', () => ({
   getDeployCountToday: vi.fn(),
   incrementDeployCount: vi.fn(),
 }));
 
-vi.mock('../../lib/circuit-breaker', () => ({
+vi.mock('../../lib/safety/circuit-breaker', () => ({
   getCircuitBreaker: vi.fn(() => ({
     canProceed: vi.fn(),
     recordFailure: vi.fn(),
   })),
 }));
 
-import { getDeployCountToday, incrementDeployCount } from '../../lib/deploy-stats';
-import { getCircuitBreaker } from '../../lib/circuit-breaker';
+import { getDeployCountToday, incrementDeployCount } from '../../lib/metrics/deploy-stats';
+import { getCircuitBreaker } from '../../lib/safety/circuit-breaker';
 
 describe('Deployment Tools', () => {
   beforeEach(() => {

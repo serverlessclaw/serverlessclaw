@@ -31,7 +31,7 @@ export class ExecutorHelper {
     sessionId: string,
     agentId: string,
     lastInjectedMessageTimestamp: number,
-    sessionStateManager: import('../session-state').SessionStateManager
+    sessionStateManager: import('../session/session-state').SessionStateManager
   ): Promise<number> {
     const pendingMessages = await sessionStateManager.getPendingMessages(sessionId);
     const newMessages = pendingMessages.filter((m) => m.timestamp > lastInjectedMessageTimestamp);

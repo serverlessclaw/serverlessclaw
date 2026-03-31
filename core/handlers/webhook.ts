@@ -87,7 +87,7 @@ export const handler = async (
   ] = await Promise.all([
     import('../lib/memory'),
     import('../lib/providers/index'),
-    import('../lib/session-state'),
+    import('../lib/session/session-state'),
     import('../tools/index'),
     import('../agents/superclaw'),
     import('../lib/registry'),

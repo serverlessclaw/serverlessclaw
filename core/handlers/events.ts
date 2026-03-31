@@ -1,5 +1,5 @@
 import { logger } from '../lib/logger';
-import { reportHealthIssue } from '../lib/health';
+import { reportHealthIssue } from '../lib/lifecycle/health';
 import { Context } from 'aws-lambda';
 
 /**

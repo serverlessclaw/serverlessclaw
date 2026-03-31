@@ -1,0 +1,552 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import {
+  MetricsCollector,
+  DegradationDetector,
+  HealthTrendAnalyzer,
+  CognitiveHealthMonitor,
+  MetricsWindow,
+  AnomalySeverity,
+  AnomalyType,
+} from './cognitive-metrics';
+import type { AggregatedMetrics } from './cognitive-metrics';
+
+// Mock logger
+vi.mock('../logger', () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+// Mock constants
+vi.mock('./constants', () => ({
+  MEMORY_KEYS: {
+    HEALTH_PREFIX: 'HEALTH#',
+    CONVERSATION_PREFIX: 'CONV#',
+    LESSON_PREFIX: 'LESSON#',
+    FACT_PREFIX: 'FACT#',
+    SUMMARY_PREFIX: 'SUMMARY#',
+  },
+  RETENTION: {
+    HEALTH_DAYS: 30,
+  },
+  TIME: {
+    MS_PER_DAY: 86400000,
+    MS_PER_HOUR: 3600000,
+  },
+}));
+
+// Mock BaseMemoryProvider
+const createMockBase = () => ({
+  putItem: vi.fn().mockResolvedValue(undefined),
+  queryItems: vi.fn().mockResolvedValue([]),
+  queryItemsPaginated: vi.fn().mockResolvedValue({ items: [] }),
+  deleteItem: vi.fn().mockResolvedValue(undefined),
+  updateItem: vi.fn().mockResolvedValue(undefined),
+  scanByPrefix: vi.fn().mockResolvedValue([]),
+  getHistory: vi.fn().mockResolvedValue([]),
+  clearHistory: vi.fn().mockResolvedValue(undefined),
+  getDistilledMemory: vi.fn().mockResolvedValue(''),
+  listConversations: vi.fn().mockResolvedValue([]),
+});
+
+describe('MetricsCollector', () => {
+  let mockBase: ReturnType<typeof createMockBase>;
+  let collector: MetricsCollector;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    mockBase = createMockBase();
+    collector = new MetricsCollector(mockBase as any);
+  });
+
+  afterEach(() => {
+    collector.destroy();
+    vi.useRealTimers();
+  });
+
+  it('should record task completion metrics', async () => {
+    await collector.recordTaskCompletion('agent-1', true, 150, 500, { taskId: 'task-1' });
+
+    // Trigger flush to persist
+    await collector.flush();
+
+    expect(mockBase.putItem).toHaveBeenCalledTimes(3);
+    expect(mockBase.putItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'HEALTH#METRIC#agent-1',
+        type: 'COGNITIVE_METRIC',
+        metricName: 'task_completed',
+        value: 1,
+      })
+    );
+    expect(mockBase.putItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metricName: 'task_latency_ms',
+        value: 150,
+      })
+    );
+    expect(mockBase.putItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metricName: 'tokens_used',
+        value: 500,
+      })
+    );
+  });
+
+  it('should record failed task completion with value 0', async () => {
+    await collector.recordTaskCompletion('agent-1', false, 200, 300);
+    await collector.flush();
+
+    expect(mockBase.putItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metricName: 'task_completed',
+        value: 0,
+      })
+    );
+  });
+
+  it('should record reasoning quality metrics', async () => {
+    await collector.recordReasoningQuality('agent-1', 8.5, 5, false, true);
+    await collector.flush();
+
+    expect(mockBase.putItem).toHaveBeenCalledTimes(4);
+    expect(mockBase.putItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metricName: 'reasoning_coherence',
+        value: 8.5,
+      })
+    );
+    expect(mockBase.putItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metricName: 'reasoning_steps',
+        value: 5,
+      })
+    );
+    expect(mockBase.putItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metricName: 'pivot',
+        value: 0,
+      })
+    );
+    expect(mockBase.putItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metricName: 'clarification_request',
+        value: 1,
+      })
+    );
+  });
+
+  it('should record memory operation metrics', async () => {
+    await collector.recordMemoryOperation('agent-1', 'hit', 10);
+    await collector.flush();
+
+    expect(mockBase.putItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metricName: 'memory_hit',
+        value: 1,
+      })
+    );
+    expect(mockBase.putItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metricName: 'memory_latency_ms',
+        value: 10,
+      })
+    );
+  });
+
+  it('should not record metrics when disabled', async () => {
+    const disabledCollector = new MetricsCollector(mockBase as any, { enabled: false });
+
+    await disabledCollector.recordTaskCompletion('agent-1', true, 100, 200);
+    await disabledCollector.recordReasoningQuality('agent-1', 7, 3, false, false);
+    await disabledCollector.recordMemoryOperation('agent-1', 'read', 5);
+    await disabledCollector.flush();
+
+    expect(mockBase.putItem).not.toHaveBeenCalled();
+    disabledCollector.destroy();
+  });
+
+  it('should auto-flush when buffer exceeds 100 metrics', async () => {
+    // Record 51 completions (each adds 3 metrics = 153 total)
+    const promises = [];
+    for (let i = 0; i < 51; i++) {
+      promises.push(collector.recordTaskCompletion('agent-1', true, 100, 200));
+    }
+    await Promise.all(promises);
+
+    // Should have auto-flushed
+    expect(mockBase.putItem).toHaveBeenCalled();
+  });
+
+  it('should handle flush errors gracefully', async () => {
+    mockBase.putItem.mockRejectedValueOnce(new Error('DynamoDB error'));
+
+    await collector.recordTaskCompletion('agent-1', true, 100, 200);
+    await collector.flush();
+
+    // Should not throw, error is logged
+    const { logger } = await import('../logger');
+    expect(logger.error).toHaveBeenCalledWith(
+      'Failed to persist cognitive metric',
+      expect.objectContaining({ error: expect.any(Error) })
+    );
+  });
+});
+
+describe('DegradationDetector', () => {
+  let detector: DegradationDetector;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    detector = new DegradationDetector();
+  });
+
+  const createMetrics = (overrides: Partial<AggregatedMetrics> = {}): AggregatedMetrics => ({
+    agentId: 'agent-1',
+    window: MetricsWindow.HOURLY,
+    windowStart: Date.now() - 3600000,
+    windowEnd: Date.now(),
+    taskCompletionRate: 0.95,
+    avgTaskLatencyMs: 150,
+    reasoningCoherence: 8.5,
+    memoryHitRate: 0.9,
+    memoryFragmentation: 0.2,
+    tokenEfficiency: 2.5,
+    errorRate: 0.05,
+    totalTasks: 100,
+    totalTokens: 40000,
+    ...overrides,
+  });
+
+  it('should return no anomalies for healthy metrics', () => {
+    const metrics = createMetrics();
+    const anomalies = detector.detectAnomalies('agent-1', metrics);
+
+    expect(anomalies).toHaveLength(0);
+  });
+
+  it('should detect task failure spike when completion rate drops below threshold', () => {
+    const metrics = createMetrics({ taskCompletionRate: 0.6 });
+    const anomalies = detector.detectAnomalies('agent-1', metrics);
+
+    expect(anomalies).toHaveLength(1);
+    expect(anomalies[0].type).toBe(AnomalyType.TASK_FAILURE_SPIKE);
+    expect(anomalies[0].severity).toBe(AnomalySeverity.HIGH);
+    expect(anomalies[0].description).toContain('60.0%');
+  });
+
+  it('should escalate task failure to CRITICAL when completion rate below 50%', () => {
+    const metrics = createMetrics({ taskCompletionRate: 0.4 });
+    const anomalies = detector.detectAnomalies('agent-1', metrics);
+
+    expect(anomalies[0].severity).toBe(AnomalySeverity.CRITICAL);
+  });
+
+  it('should detect elevated error rate', () => {
+    const metrics = createMetrics({ errorRate: 0.35 });
+    const anomalies = detector.detectAnomalies('agent-1', metrics);
+
+    const errorAnomaly = anomalies.find((a) => a.type === AnomalyType.TASK_FAILURE_SPIKE);
+    expect(errorAnomaly).toBeDefined();
+    expect(errorAnomaly!.severity).toBe(AnomalySeverity.HIGH);
+    expect(errorAnomaly!.description).toContain('35.0%');
+  });
+
+  it('should escalate error rate to CRITICAL when above 50%', () => {
+    const metrics = createMetrics({ errorRate: 0.55 });
+    const anomalies = detector.detectAnomalies('agent-1', metrics);
+
+    const errorAnomaly = anomalies.find((a) => a.description.includes('Error rate'));
+    expect(errorAnomaly?.severity).toBe(AnomalySeverity.CRITICAL);
+  });
+
+  it('should detect reasoning degradation', () => {
+    const metrics = createMetrics({ reasoningCoherence: 4.5 });
+    const anomalies = detector.detectAnomalies('agent-1', metrics);
+
+    const reasoningAnomaly = anomalies.find((a) => a.type === AnomalyType.REASONING_DEGRADATION);
+    expect(reasoningAnomaly).toBeDefined();
+    expect(reasoningAnomaly!.severity).toBe(AnomalySeverity.MEDIUM);
+    expect(reasoningAnomaly!.description).toContain('4.5/10');
+  });
+
+  it('should escalate reasoning degradation to CRITICAL when coherence below 3', () => {
+    const metrics = createMetrics({ reasoningCoherence: 2.5 });
+    const anomalies = detector.detectAnomalies('agent-1', metrics);
+
+    const reasoningAnomaly = anomalies.find((a) => a.type === AnomalyType.REASONING_DEGRADATION);
+    expect(reasoningAnomaly?.severity).toBe(AnomalySeverity.CRITICAL);
+  });
+
+  it('should detect memory fragmentation', () => {
+    const metrics = createMetrics({ memoryFragmentation: 0.75 });
+    const anomalies = detector.detectAnomalies('agent-1', metrics);
+
+    const memoryAnomaly = anomalies.find((a) => a.type === AnomalyType.MEMORY_FRAGMENTATION);
+    expect(memoryAnomaly).toBeDefined();
+    expect(memoryAnomaly!.severity).toBe(AnomalySeverity.MEDIUM);
+  });
+
+  it('should escalate memory fragmentation to HIGH when above 90%', () => {
+    const metrics = createMetrics({ memoryFragmentation: 0.95 });
+    const anomalies = detector.detectAnomalies('agent-1', metrics);
+
+    const memoryAnomaly = anomalies.find((a) => a.type === AnomalyType.MEMORY_FRAGMENTATION);
+    expect(memoryAnomaly?.severity).toBe(AnomalySeverity.HIGH);
+  });
+
+  it('should detect token overuse when efficiency is low', () => {
+    const metrics = createMetrics({ tokenEfficiency: 0.3, totalTasks: 50 });
+    const anomalies = detector.detectAnomalies('agent-1', metrics);
+
+    const tokenAnomaly = anomalies.find((a) => a.type === AnomalyType.TOKEN_OVERUSE);
+    expect(tokenAnomaly).toBeDefined();
+    expect(tokenAnomaly!.severity).toBe(AnomalySeverity.MEDIUM);
+  });
+
+  it('should not detect token overuse when totalTasks is 10 or less', () => {
+    const metrics = createMetrics({ tokenEfficiency: 0.3, totalTasks: 5 });
+    const anomalies = detector.detectAnomalies('agent-1', metrics);
+
+    const tokenAnomaly = anomalies.find((a) => a.type === AnomalyType.TOKEN_OVERUSE);
+    expect(tokenAnomaly).toBeUndefined();
+  });
+
+  it('should detect multiple anomalies simultaneously', () => {
+    const metrics = createMetrics({
+      taskCompletionRate: 0.4,
+      errorRate: 0.6,
+      reasoningCoherence: 2.0,
+      memoryFragmentation: 0.95,
+    });
+    const anomalies = detector.detectAnomalies('agent-1', metrics);
+
+    expect(anomalies.length).toBeGreaterThanOrEqual(4);
+    const types = new Set(anomalies.map((a) => a.type));
+    expect(types.has(AnomalyType.TASK_FAILURE_SPIKE)).toBe(true);
+    expect(types.has(AnomalyType.REASONING_DEGRADATION)).toBe(true);
+    expect(types.has(AnomalyType.MEMORY_FRAGMENTATION)).toBe(true);
+  });
+
+  it('should include trigger metrics and suggestions in anomalies', () => {
+    const metrics = createMetrics({ taskCompletionRate: 0.6 });
+    const anomalies = detector.detectAnomalies('agent-1', metrics);
+
+    expect(anomalies[0].triggerMetrics).toHaveProperty('taskCompletionRate', 0.6);
+    expect(anomalies[0].suggestion).toBeDefined();
+    expect(anomalies[0].id).toMatch(/^anomaly_\d+_[a-z0-9]+$/);
+  });
+});
+
+describe('HealthTrendAnalyzer', () => {
+  let mockBase: ReturnType<typeof createMockBase>;
+  let analyzer: HealthTrendAnalyzer;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockBase = createMockBase();
+    analyzer = new HealthTrendAnalyzer(mockBase as any);
+  });
+
+  it('should aggregate metrics from query results', async () => {
+    const now = Date.now();
+    mockBase.queryItems.mockResolvedValue([
+      { metricName: 'task_completed', value: 1, timestamp: now - 1000 },
+      { metricName: 'task_completed', value: 1, timestamp: now - 2000 },
+      { metricName: 'task_completed', value: 0, timestamp: now - 3000 },
+      { metricName: 'task_latency_ms', value: 100, timestamp: now - 1000 },
+      { metricName: 'task_latency_ms', value: 200, timestamp: now - 2000 },
+      { metricName: 'task_latency_ms', value: 150, timestamp: now - 3000 },
+      { metricName: 'tokens_used', value: 5000, timestamp: now - 1000 },
+      { metricName: 'tokens_used', value: 3000, timestamp: now - 2000 },
+      { metricName: 'reasoning_coherence', value: 8, timestamp: now - 1000 },
+      { metricName: 'reasoning_coherence', value: 9, timestamp: now - 2000 },
+      { metricName: 'memory_hit', value: 1, timestamp: now - 1000 },
+      { metricName: 'memory_hit', value: 1, timestamp: now - 2000 },
+      { metricName: 'memory_miss', value: 1, timestamp: now - 3000 },
+    ]);
+
+    const result = await analyzer.getAggregatedMetrics(
+      'agent-1',
+      MetricsWindow.HOURLY,
+      now - 3600000,
+      now
+    );
+
+    expect(result.agentId).toBe('agent-1');
+    expect(result.totalTasks).toBe(3);
+    expect(result.taskCompletionRate).toBeCloseTo(2 / 3);
+    expect(result.avgTaskLatencyMs).toBeCloseTo(150);
+    expect(result.totalTokens).toBe(8000);
+    expect(result.reasoningCoherence).toBeCloseTo(8.5);
+    expect(result.memoryHitRate).toBeCloseTo(2 / 3);
+    expect(result.errorRate).toBeCloseTo(1 / 3);
+  });
+
+  it('should return default values for empty metrics', async () => {
+    mockBase.queryItems.mockResolvedValue([]);
+
+    const result = await analyzer.getAggregatedMetrics(
+      'agent-1',
+      MetricsWindow.HOURLY,
+      Date.now() - 3600000,
+      Date.now()
+    );
+
+    expect(result.taskCompletionRate).toBe(1);
+    expect(result.avgTaskLatencyMs).toBe(0);
+    expect(result.reasoningCoherence).toBe(10);
+    expect(result.memoryHitRate).toBe(1);
+    expect(result.errorRate).toBe(0);
+    expect(result.totalTasks).toBe(0);
+    expect(result.totalTokens).toBe(0);
+  });
+
+  it('should query with correct parameters', async () => {
+    const windowStart = 1000000;
+    const windowEnd = 2000000;
+
+    await analyzer.getAggregatedMetrics('agent-1', MetricsWindow.DAILY, windowStart, windowEnd);
+
+    expect(mockBase.queryItems).toHaveBeenCalledWith({
+      KeyConditionExpression: 'userId = :pk AND #ts BETWEEN :start AND :end',
+      ExpressionAttributeNames: { '#ts': 'timestamp' },
+      ExpressionAttributeValues: {
+        ':pk': 'HEALTH#METRIC#agent-1',
+        ':start': windowStart,
+        ':end': windowEnd,
+      },
+    });
+  });
+
+  it('should analyze memory health', async () => {
+    const result = await analyzer.analyzeMemoryHealth();
+
+    expect(result.totalItems).toBe(0);
+    expect(result.stalenessScore).toBe(0);
+    expect(result.fragmentationScore).toBe(0);
+    expect(result.coverageScore).toBe(0);
+    expect(result.recommendations).toEqual([]);
+  });
+});
+
+describe('CognitiveHealthMonitor', () => {
+  let mockBase: ReturnType<typeof createMockBase>;
+  let monitor: CognitiveHealthMonitor;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    mockBase = createMockBase();
+    monitor = new CognitiveHealthMonitor(mockBase as any);
+  });
+
+  afterEach(() => {
+    monitor.destroy();
+    vi.useRealTimers();
+  });
+
+  it('should return a metrics collector', () => {
+    const collector = monitor.getCollector();
+    expect(collector).toBeInstanceOf(MetricsCollector);
+  });
+
+  it('should take a cognitive health snapshot', async () => {
+    mockBase.queryItems.mockResolvedValue([]);
+
+    const snapshot = await monitor.takeSnapshot(['agent-1']);
+
+    expect(snapshot.timestamp).toBeDefined();
+    expect(snapshot.overallScore).toBeGreaterThanOrEqual(0);
+    expect(snapshot.overallScore).toBeLessThanOrEqual(100);
+    expect(snapshot.reasoning).toBeDefined();
+    expect(snapshot.memory).toBeDefined();
+    expect(snapshot.anomalies).toBeInstanceOf(Array);
+    expect(snapshot.agentMetrics).toHaveLength(1);
+  });
+
+  it('should calculate overall score based on metrics', async () => {
+    mockBase.queryItems.mockResolvedValue([
+      { metricName: 'task_completed', value: 1 },
+      { metricName: 'task_completed', value: 1 },
+      { metricName: 'reasoning_coherence', value: 9 },
+      { metricName: 'reasoning_coherence', value: 8 },
+    ]);
+
+    const snapshot = await monitor.takeSnapshot(['agent-1']);
+
+    // High completion (100%) + high coherence (85%) + low error (0%) + low fragmentation (100%)
+    // = 0.4*40 + 0.85*30 + 1.0*20 + 1.0*10 = 16 + 25.5 + 20 + 10 = 71.5 -> 72
+    expect(snapshot.overallScore).toBeGreaterThan(50);
+  });
+
+  it('should get recent anomalies with limit', async () => {
+    // Simulate some anomalies by running detection
+    mockBase.queryItems.mockResolvedValue([
+      { metricName: 'task_completed', value: 0 },
+      { metricName: 'task_completed', value: 0 },
+    ]);
+
+    await monitor.takeSnapshot(['agent-1']);
+    const anomalies = monitor.getRecentAnomalies(10);
+
+    expect(anomalies).toBeInstanceOf(Array);
+    expect(anomalies.length).toBeLessThanOrEqual(10);
+  });
+
+  it('should use default agent IDs when none provided', async () => {
+    mockBase.queryItems.mockResolvedValue([]);
+
+    const snapshot = await monitor.takeSnapshot();
+
+    // Default agents: superclaw, coder, strategic-planner, cognition-reflector
+    expect(snapshot.agentMetrics).toHaveLength(4);
+    const agentIds = snapshot.agentMetrics.map((m) => m.agentId);
+    expect(agentIds).toContain('superclaw');
+    expect(agentIds).toContain('coder');
+    expect(agentIds).toContain('strategic-planner');
+    expect(agentIds).toContain('cognition-reflector');
+  });
+
+  it('should cap anomalies at 100', async () => {
+    // Generate many snapshots to accumulate anomalies
+    mockBase.queryItems.mockResolvedValue([{ metricName: 'task_completed', value: 0 }]);
+
+    for (let i = 0; i < 60; i++) {
+      await monitor.takeSnapshot(['agent-1']);
+    }
+
+    const anomalies = monitor.getRecentAnomalies(200);
+    expect(anomalies.length).toBeLessThanOrEqual(100);
+  });
+});
+
+describe('AnomalySeverity and AnomalyType enums', () => {
+  it('should have correct severity levels', () => {
+    expect(AnomalySeverity.LOW).toBe('low');
+    expect(AnomalySeverity.MEDIUM).toBe('medium');
+    expect(AnomalySeverity.HIGH).toBe('high');
+    expect(AnomalySeverity.CRITICAL).toBe('critical');
+  });
+
+  it('should have all expected anomaly types', () => {
+    expect(AnomalyType.REASONING_DEGRADATION).toBe('reasoning_degradation');
+    expect(AnomalyType.MEMORY_FRAGMENTATION).toBe('memory_fragmentation');
+    expect(AnomalyType.TASK_FAILURE_SPIKE).toBe('task_failure_spike');
+    expect(AnomalyType.LATENCY_ANOMALY).toBe('latency_anomaly');
+    expect(AnomalyType.TOKEN_OVERUSE).toBe('token_overuse');
+    expect(AnomalyType.COGNITIVE_LOOP).toBe('cognitive_loop');
+  });
+});
+
+describe('MetricsWindow enum', () => {
+  it('should have correct window values', () => {
+    expect(MetricsWindow.HOURLY).toBe('hourly');
+    expect(MetricsWindow.DAILY).toBe('daily');
+    expect(MetricsWindow.WEEKLY).toBe('weekly');
+  });
+});

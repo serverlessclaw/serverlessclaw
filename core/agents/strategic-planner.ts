@@ -196,7 +196,7 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
   // ensure the NEXT proactive review is scheduled if not already present.
   if (isProactive) {
     try {
-      const { DynamicScheduler } = await import('../lib/scheduler');
+      const { DynamicScheduler } = await import('../lib/lifecycle/scheduler');
       const { AgentRegistry } = await import('../lib/registry');
 
       const GOAL_ID = `PLANNER#STRATEGIC_REVIEW#${baseUserId}`;

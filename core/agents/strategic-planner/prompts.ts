@@ -81,7 +81,7 @@ export async function shouldRunProactiveReview(
 export async function fetchToolUsageContext(): Promise<string> {
   try {
     const { TOOLS } = await import('../../tools/index');
-    const { TokenTracker } = await import('../../lib/token-usage');
+    const { TokenTracker } = await import('../../lib/metrics/token-usage');
 
     const toolNames = Object.keys(TOOLS);
     const anomalies: Array<{ toolName: string; stats: Record<string, unknown> }> = [];

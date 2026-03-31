@@ -1,6 +1,6 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-vi.mock('./token-usage', () => ({
+vi.mock('./metrics/token-usage', () => ({
   TokenTracker: {
     getRollupRange: vi.fn().mockResolvedValue([]),
   },
@@ -11,7 +11,7 @@ vi.mock('./logger', () => ({
 }));
 
 import { AgentRouter } from './agent-routing';
-import { TokenTracker } from './token-usage';
+import { TokenTracker } from './metrics/token-usage';
 
 describe('AgentRouter', () => {
   beforeEach(() => {

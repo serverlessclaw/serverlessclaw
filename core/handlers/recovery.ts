@@ -7,11 +7,11 @@ import { SSTResource } from '../lib/types/system';
 import { EventType, OutboundMessageEvent } from '../lib/types/agent';
 import { DynamoLockManager } from '../lib/lock';
 import { DynamoMemory } from '../lib/memory';
-import { checkCognitiveHealth } from '../lib/health';
+import { checkCognitiveHealth } from '../lib/lifecycle/health';
 import { MEMORY_KEYS, RETENTION } from '../lib/constants';
 import { emitEvent } from '../lib/utils/bus';
 import { formatErrorMessage } from '../lib/utils/error';
-import { getCircuitBreaker } from '../lib/circuit-breaker';
+import { getCircuitBreaker } from '../lib/safety/circuit-breaker';
 
 const codebuild = new CodeBuildClient({});
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));

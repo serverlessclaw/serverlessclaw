@@ -1,6 +1,6 @@
 import { systemSchema as schema } from './schema';
-import { checkCognitiveHealth } from '../../lib/health';
-import { CognitiveHealthMonitor } from '../../lib/cognitive-metrics';
+import { checkCognitiveHealth } from '../../lib/lifecycle/health';
+import { CognitiveHealthMonitor } from '../../lib/metrics/cognitive-metrics';
 import { DynamoMemory } from '../../lib/memory';
 import { logger } from '../../lib/logger';
 import { formatErrorMessage } from '../../lib/utils/error';

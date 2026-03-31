@@ -1,6 +1,6 @@
 import { logger } from '../logger';
 import { RETENTION, TIME, MEMORY_KEYS } from '../constants';
-import { getCircuitBreaker } from '../circuit-breaker';
+import { getCircuitBreaker } from '../safety/circuit-breaker';
 
 /**
  * Retention IDs for different system logs based on 2026 usage patterns.

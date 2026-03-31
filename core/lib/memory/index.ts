@@ -7,3 +7,4 @@ export * from './reputation-operations';
 export * from './base';
 export * from './cache';
 export * from './cached-memory';
+export { DynamoMemory } from './dynamo-memory';

@@ -20,7 +20,7 @@ vi.mock('../registry', () => ({
   },
 }));
 
-vi.mock('../circuit-breaker', () => ({
+vi.mock('../safety/circuit-breaker', () => ({
   getCircuitBreaker: vi.fn().mockReturnValue({
     reset: vi.fn().mockResolvedValue(undefined),
   }),
@@ -162,7 +162,7 @@ describe('RetentionManager', () => {
 
   describe('performSystemCleanup', () => {
     it('should reset circuit breaker', async () => {
-      const { getCircuitBreaker } = await import('../circuit-breaker');
+      const { getCircuitBreaker } = await import('../safety/circuit-breaker');
       const mockReset = vi.fn().mockResolvedValue(undefined);
       (getCircuitBreaker as ReturnType<typeof vi.fn>).mockReturnValue({ reset: mockReset });
 

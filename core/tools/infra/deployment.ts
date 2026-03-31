@@ -117,8 +117,9 @@ export const triggerDeployment = {
       deployType?: 'autonomous' | 'emergency';
     };
 
-    const { getCircuitBreaker } = await import('../../lib/circuit-breaker');
-    const { getDeployCountToday, incrementDeployCount } = await import('../../lib/deploy-stats');
+    const { getCircuitBreaker } = await import('../../lib/safety/circuit-breaker');
+    const { getDeployCountToday, incrementDeployCount } =
+      await import('../../lib/metrics/deploy-stats');
     const { SYSTEM, DYNAMO_KEYS } = await import('../../lib/constants');
     const { DynamoDBClient } = await import('@aws-sdk/client-dynamodb');
     const { DynamoDBDocumentClient, GetCommand, PutCommand } =

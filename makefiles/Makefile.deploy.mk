@@ -21,12 +21,12 @@ deploy: ## Deploy SST to the environment (default: prod)
 	@$(call log_step,Preparing deployment for environment: $(ENV)...)
 	@if [ ! -f "$(SST)" ]; then $(call log_error,SST binary not found. Run pnpm install first.); exit 1; fi
 	@$(call load_env); \
-	chmod +x ./scripts/check-aws-account.sh; \
-	./scripts/check-aws-account.sh "$(ENV)" "$$EXPECTED_ACCOUNT" && \
+	chmod +x ./scripts/ci/check-aws-account.sh; \
+	./scripts/ci/check-aws-account.sh "$(ENV)" "$$EXPECTED_ACCOUNT" && \
 	$(call log_info,Starting SST deployment...) && \
 	$(SST) deploy --stage $(ENV) --yes && \
 	$(call log_info,Running post-deploy CloudFront fix...) && \
-	$(PNPM) exec tsx scripts/fix-cloudfront-deploy.ts $(ENV)
+	$(PNPM) exec tsx scripts/quality/fix-cloudfront-deploy.ts $(ENV)
 	@$(call log_success,SST deploy to $(ENV) completed successfully)
 
 diff: ## Show SST infrastructure changes

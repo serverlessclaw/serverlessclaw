@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AgentExecutor } from './executor';
 import { ReasoningProfile, MessageRole } from '../types/index';
-import { SessionStateManager } from '../session-state';
+import { SessionStateManager } from '../session/session-state';
 import { ClawTracer } from '../tracer';
 
 vi.mock('../registry', () => ({

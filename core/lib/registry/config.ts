@@ -118,7 +118,7 @@ export class ConfigManager {
       try {
         const oldValue = await this.getRawConfig(key);
         if (JSON.stringify(oldValue) !== JSON.stringify(value)) {
-          const { ConfigVersioning } = await import('../config-versioning');
+          const { ConfigVersioning } = await import('../config/config-versioning');
           await ConfigVersioning.snapshot(
             key,
             oldValue,

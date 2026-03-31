@@ -16,7 +16,7 @@ vi.mock('sst', () => ({
 }));
 
 // Mock health lib
-vi.mock('../../lib/health', () => ({
+vi.mock('../../lib/lifecycle/health', () => ({
   checkCognitiveHealth: vi.fn(),
 }));
 
@@ -66,7 +66,7 @@ vi.mock('../../lib/memory', () => ({
 }));
 
 import { checkHealth, runCognitiveHealthCheck } from './health';
-import { checkCognitiveHealth } from '../../lib/health';
+import { checkCognitiveHealth } from '../../lib/lifecycle/health';
 
 // Mock exec
 vi.mock('child_process', () => ({

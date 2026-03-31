@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handler as recoveryHandler } from '../handlers/recovery';
-import { SelfVerifier } from '../lib/self-verify';
+import { SelfVerifier } from '../lib/lifecycle/self-verify';
 
 // Mock dependencies
 const mockFetch = vi.fn();

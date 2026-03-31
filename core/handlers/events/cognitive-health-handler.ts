@@ -9,7 +9,7 @@ import type { BaseMemoryProvider } from '../../lib/memory/base';
 export async function handleCognitiveHealthCheck(
   eventDetail: Record<string, unknown>
 ): Promise<void> {
-  const { CognitiveHealthMonitor } = await import('../../lib/cognitive-metrics');
+  const { CognitiveHealthMonitor } = await import('../../lib/metrics/cognitive-metrics');
   const { DynamoMemory } = await import('../../lib/memory');
   const { emitEvent } = await import('../../lib/utils/bus');
 

@@ -4,7 +4,7 @@
  */
 
 import { logger } from '../../lib/logger';
-import { escalationManager } from '../../lib/escalation-manager';
+import { escalationManager } from '../../lib/lifecycle/escalation-manager';
 
 /**
  * Handles escalation level timeout events

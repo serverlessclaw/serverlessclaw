@@ -15,7 +15,7 @@ export const scheduleGoal = {
     };
 
     try {
-      const { DynamicScheduler } = await import('../../lib/scheduler');
+      const { DynamicScheduler } = await import('../../lib/lifecycle/scheduler');
       await DynamicScheduler.upsertSchedule(goalId, metadata, scheduleExpression, task);
 
       return `SUCCESS: Goal ${goalId} scheduled. ${scheduleExpression}`;
@@ -33,7 +33,7 @@ export const cancelGoal = {
   execute: async (args: Record<string, unknown>): Promise<string> => {
     const { goalId } = args as { goalId: string };
     try {
-      const { DynamicScheduler } = await import('../../lib/scheduler');
+      const { DynamicScheduler } = await import('../../lib/lifecycle/scheduler');
       await DynamicScheduler.removeSchedule(goalId);
       return `SUCCESS: Goal ${goalId} cancelled.`;
     } catch (error) {
@@ -50,7 +50,7 @@ export const listSchedules = {
   execute: async (args: Record<string, unknown>): Promise<string> => {
     const { namePrefix } = args as { namePrefix: string };
     try {
-      const { DynamicScheduler } = await import('../../lib/scheduler');
+      const { DynamicScheduler } = await import('../../lib/lifecycle/scheduler');
       const goals = (await DynamicScheduler.listSchedules(namePrefix)) as Record<string, unknown>[];
 
       if (goals.length === 0) return 'No active goals found.';

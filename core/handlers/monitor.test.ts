@@ -29,7 +29,7 @@ vi.mock('../lib/registry/config', () => ({
   },
 }));
 
-vi.mock('../lib/health', () => ({
+vi.mock('../lib/lifecycle/health', () => ({
   reportHealthIssue: vi.fn().mockResolvedValue(undefined),
 }));
 

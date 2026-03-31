@@ -5,7 +5,7 @@ import { emitEvent, EventPriority } from '../../lib/utils/bus';
 import { DynamoMemory } from '../../lib/memory';
 import { ConfigManager } from '../../lib/registry/config';
 import { sendOutboundMessage } from '../../lib/outbound';
-import { escalationManager } from '../../lib/escalation-manager';
+import { escalationManager } from '../../lib/lifecycle/escalation-manager';
 
 export async function handleClarificationTimeout(
   eventDetail: Record<string, unknown>

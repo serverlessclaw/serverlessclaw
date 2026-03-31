@@ -1,5 +1,5 @@
 import { ConfigManager } from './registry/config';
-import { CONFIG_DEFAULTS } from './config-defaults';
+import { CONFIG_DEFAULTS } from './config/config-defaults';
 import { logger } from './logger';
 import { TIME } from './constants';
 

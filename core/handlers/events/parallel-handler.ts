@@ -2,7 +2,7 @@ import { EventBridgeEvent } from 'aws-lambda';
 import { EventType } from '../../lib/types/agent';
 import { logger } from '../../lib/logger';
 import { ParallelDispatchParams, ParallelTaskDefinition } from '../../lib/agent/schema';
-import { DynamicScheduler } from '../../lib/scheduler';
+import { DynamicScheduler } from '../../lib/lifecycle/scheduler';
 import { ConfigManager } from '../../lib/registry/config';
 import { TIME, TRACE_TYPES } from '../../lib/constants';
 import { EVENT_SCHEMA_MAP } from '../../lib/schema/events';
