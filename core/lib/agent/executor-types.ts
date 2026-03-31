@@ -3,7 +3,7 @@ import { ToolCall, Message } from '../types/index';
 export const AGENT_DEFAULTS = {
   MAX_ITERATIONS: 25,
   REFLECTION_FREQUENCY: 25,
-  TIMEOUT_BUFFER_MS: 30000,
+  TIMEOUT_BUFFER_MS: 5000,
 } as const;
 
 export const AGENT_LOG_MESSAGES = {
