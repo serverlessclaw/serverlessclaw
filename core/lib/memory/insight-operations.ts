@@ -216,6 +216,15 @@ export async function addMemory(
 
 /**
  * Searches for insights across personal, organizational, and global scopes.
+ *
+ * @param base - The base memory provider.
+ * @param userId - Optional user ID to scope the search.
+ * @param query - Search query string.
+ * @param category - Optional category filter.
+ * @param limit - Maximum number of results to return.
+ * @param lastEvaluatedKey - Optional pagination key from a previous search.
+ * @param tags - Optional tags to filter by.
+ * @param orgId - Optional organization ID to include org-scoped insights.
  */
 export async function searchInsights(
   base: BaseMemoryProvider,
@@ -419,6 +428,13 @@ export async function getFailurePatterns(
 
 /**
  * Records a failed strategic plan.
+ *
+ * @param base - The base memory provider.
+ * @param planHash - Unique hash identifying the plan.
+ * @param planContent - The content of the failed plan.
+ * @param gapIds - IDs of gaps associated with the plan.
+ * @param failureReason - Description of why the plan failed.
+ * @param metadata - Optional metadata including org scope and tags.
  */
 export async function recordFailedPlan(
   base: BaseMemoryProvider,

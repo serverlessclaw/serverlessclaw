@@ -48,6 +48,8 @@ export async function GET(): Promise<NextResponse> {
 
 /**
  * DELETE: Force-releases a specific lock.
+ *
+ * @param req - The incoming DELETE request with lock details.
  */
 export async function DELETE(req: NextRequest): Promise<NextResponse> {
   try {

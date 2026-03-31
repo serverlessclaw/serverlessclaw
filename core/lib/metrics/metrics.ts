@@ -24,6 +24,7 @@ async function getCloudWatchClient(): Promise<CloudWatchClientType | null> {
     cloudwatch = new CloudWatchClient({}) as CloudWatchClientType;
     return cloudwatch;
   } catch {
+    // CloudWatch SDK unavailable in test/local environments
     return null;
   }
 }

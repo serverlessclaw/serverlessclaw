@@ -6,6 +6,8 @@ import { revalidatePath } from 'next/cache';
 
 /**
  * Handles chat messages from the dashboard UI using the Manager agent
+ *
+ * @param req - The incoming POST request with chat message body.
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {

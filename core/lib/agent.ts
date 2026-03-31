@@ -21,6 +21,10 @@ import { normalizeBaseUserId } from './utils/normalize';
 
 /**
  * Validates that an IAgentConfig has all required fields populated.
+ *
+ * @param config - The agent configuration to validate.
+ * @param agentType - The type identifier of the agent, used for error messages.
+ * @throws Error if config is undefined or missing required fields.
  */
 export function validateAgentConfig(config: IAgentConfig | undefined, agentType: string): void {
   if (!config) {

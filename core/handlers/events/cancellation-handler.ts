@@ -147,7 +147,8 @@ export async function isTaskCancelled(taskId: string): Promise<boolean> {
       })
     );
     return (result.Items?.length ?? 0) > 0;
-  } catch {
+  } catch (error) {
+    logger.warn('Failed to check task cancellation', { taskId, error });
     return false;
   }
 }

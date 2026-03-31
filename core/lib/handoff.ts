@@ -16,6 +16,9 @@ const HANDOFF_TTL_SECONDS = 120; // 2 minutes of silence before agent resumes
 /**
  * Marks a user as having "active control" of the session.
  * Emits a HANDOFF event to notify all listening agents.
+ *
+ * @param userId - The ID of the user requesting handoff control.
+ * @param sessionId - Optional session ID to scope the handoff to a specific session.
  */
 export async function requestHandoff(userId: string, sessionId?: string): Promise<void> {
   const docClient = getDocClient();

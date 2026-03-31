@@ -103,7 +103,13 @@
         "naming-consistency:const-uppercase-snake-case",
         "naming-consistency:function-camel-case"
       ],
-      "exclude": ["dashboard/src/components/ui/**"]
+      "exclude": [
+        "dashboard/src/components/ui/**",
+        "core/__mocks__/**",
+        "**/schema.ts",
+        "dashboard/src/app/layout.tsx",
+        "dashboard/src/app/memory/types.ts"
+      ]
     },
     "ai-signal-clarity": {
       "checkMagicLiterals": true,

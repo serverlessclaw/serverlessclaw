@@ -73,7 +73,8 @@ export class FeatureFlags {
       const rawFlags = await ConfigManager.getTypedConfig('feature_flags_list', [] as string[]);
       const flags = await Promise.all(rawFlags.map((name: string) => this.getFlag(name)));
       return flags.filter((f): f is FeatureFlag => f !== null);
-    } catch {
+    } catch (error) {
+      logger.warn('Failed to list feature flags:', error);
       return [];
     }
   }

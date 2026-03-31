@@ -4,6 +4,14 @@ import type { Message, MemoryInsight } from '../../lib/types/index';
 
 /**
  * Builds the reflection prompt with all context.
+ *
+ * @param memory - The memory interface for fetching existing facts.
+ * @param baseUserId - The base user ID for memory lookups.
+ * @param conversation - The conversation messages to analyze.
+ * @param traceContext - The execution trace context string.
+ * @param deployedGaps - Recently deployed gap changes to audit.
+ * @param activeGaps - Gaps already in progress to avoid duplicating.
+ * @param failurePatterns - Known failure patterns for cross-referencing.
  */
 export async function buildReflectionPrompt(
   memory: IMemory,

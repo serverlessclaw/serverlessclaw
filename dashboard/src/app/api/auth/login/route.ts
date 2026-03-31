@@ -9,6 +9,8 @@ import { HTTP_STATUS } from '@claw/core/lib/constants';
 
 /**
  * Handles dashboard login and sets the session cookie
+ *
+ * @param req - The incoming POST request with password in the body.
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {

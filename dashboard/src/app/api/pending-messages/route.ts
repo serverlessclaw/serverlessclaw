@@ -6,6 +6,8 @@ export const dynamic = 'force-dynamic';
  * GET: Fetch pending messages for a session
  * DELETE: Remove a specific pending message
  * PATCH: Update a specific pending message content
+ *
+ * @param req - The incoming GET request with sessionId query parameter.
  */
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {

@@ -95,7 +95,12 @@ export interface InviteMemberInput {
   channels?: ChannelProfile[];
 }
 
-/** Checks if a role has sufficient permissions for an action. */
+/**
+ * Checks if a role has sufficient permissions for an action.
+ *
+ * @param memberRole - The role of the member performing the action.
+ * @param requiredRole - The minimum role required for the action.
+ */
 export function hasPermission(memberRole: WorkspaceRole, requiredRole: WorkspaceRole): boolean {
   const hierarchy: Record<WorkspaceRole, number> = {
     owner: 4,

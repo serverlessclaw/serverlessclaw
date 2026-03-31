@@ -58,6 +58,7 @@ function isValidJsonResponse(content: string, expectedSchema?: ResponseFormat): 
 
     return true;
   } catch {
+    // Not valid JSON - return false to trigger text fallback
     return false;
   }
 }
@@ -88,6 +89,11 @@ function extractMessageFromMalformedJson(content: string): string | null {
 /**
  * Wraps provider.call with protocol fallback support
  * If JSON mode fails to parse, automatically retries in Text mode
+ *
+ * @param provider - The LLM provider to call.
+ * @param messages - The conversation messages to send.
+ * @param tools - The tools available for the agent to use.
+ * @param options - Fallback configuration options including retry count and format.
  */
 export async function callWithFallback(
   provider: IProvider,

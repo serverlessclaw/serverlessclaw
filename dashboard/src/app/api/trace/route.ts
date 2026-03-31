@@ -7,6 +7,8 @@ import { revalidatePath } from 'next/cache';
 
 /**
  * Handles trace deletion (single or all) with robust throttling management
+ *
+ * @param req - The incoming DELETE request with traceId query parameter.
  */
 export async function DELETE(req: NextRequest): Promise<NextResponse> {
   try {

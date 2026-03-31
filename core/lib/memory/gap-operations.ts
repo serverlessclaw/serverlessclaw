@@ -447,7 +447,8 @@ export async function getGapLock(
       content: lock.content as string,
       expiresAt: (lock.expiresAt as number) ?? 0,
     };
-  } catch {
+  } catch (error) {
+    logger.debug('Failed to acquire gap lock', { error });
     return null;
   }
 }

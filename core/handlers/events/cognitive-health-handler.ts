@@ -5,6 +5,8 @@ import type { BaseMemoryProvider } from '../../lib/memory/base';
 /**
  * Handles cognitive health check events.
  * Takes a cognitive health snapshot and alerts if the score is below threshold.
+ *
+ * @param eventDetail - The event detail payload containing optional agentIds to check.
  */
 export async function handleCognitiveHealthCheck(
   eventDetail: Record<string, unknown>

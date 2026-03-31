@@ -52,6 +52,8 @@ export async function GET() {
 
 /**
  * POST handler to "Trigger Now" or create a new schedule.
+ *
+ * @param request - The incoming POST request with schedule configuration in the body.
  */
 export async function POST(request: Request) {
   try {

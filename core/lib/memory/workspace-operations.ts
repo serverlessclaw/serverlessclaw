@@ -21,6 +21,8 @@ const WORKSPACE_INDEX = 'workspace_index';
 
 /**
  * Creates a new workspace with the specified owner.
+ *
+ * @param input - The workspace creation parameters including owner details.
  */
 export async function createWorkspace(input: CreateWorkspaceInput): Promise<Workspace> {
   const workspaceId = `ws-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -79,6 +81,10 @@ export async function listWorkspaceIds(): Promise<string[]> {
 
 /**
  * Invites a member to a workspace.
+ *
+ * @param workspaceId - The ID of the workspace to invite to.
+ * @param inviterId - The ID of the member issuing the invitation (must be admin or owner).
+ * @param input - The invitation details including new member info.
  */
 export async function inviteMember(
   workspaceId: string,
@@ -119,6 +125,11 @@ export async function inviteMember(
 
 /**
  * Updates a member's role within a workspace.
+ *
+ * @param workspaceId - The ID of the workspace.
+ * @param updaterId - The ID of the member making the change (must be admin or owner).
+ * @param targetMemberId - The ID of the member whose role is being updated.
+ * @param newRole - The new role to assign.
  */
 export async function updateMemberRole(
   workspaceId: string,
@@ -152,6 +163,10 @@ export async function updateMemberRole(
 
 /**
  * Removes a member from a workspace.
+ *
+ * @param workspaceId - The ID of the workspace.
+ * @param removerId - The ID of the member issuing the removal (must be admin or owner).
+ * @param targetMemberId - The ID of the member to remove.
  */
 export async function removeMember(
   workspaceId: string,

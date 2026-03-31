@@ -176,7 +176,8 @@ export class TokenTracker {
         })
       );
       return (Items?.[0] as TokenRollup) ?? null;
-    } catch {
+    } catch (error) {
+      logger.debug('Failed to query token rollup', { userId, error });
       return null;
     }
   }
@@ -198,7 +199,8 @@ export class TokenTracker {
         })
       );
       return (Items as TokenRollup[]) ?? [];
-    } catch {
+    } catch (error) {
+      logger.debug('Failed to query token rollup range', { agentId, days, error });
       return [];
     }
   }
@@ -259,7 +261,8 @@ export class TokenTracker {
         })
       );
       return (Items as ToolTokenRollup[]) ?? [];
-    } catch {
+    } catch (error) {
+      logger.debug('Failed to query tool token rollup', { toolName, error });
       return [];
     }
   }

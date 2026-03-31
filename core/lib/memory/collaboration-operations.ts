@@ -21,6 +21,11 @@ const COLLAB_INDEX_PREFIX = 'COLLAB_INDEX#';
 
 /**
  * Creates a new collaboration with a shared session
+ *
+ * @param base - The base memory provider.
+ * @param ownerId - The ID of the collaboration owner.
+ * @param ownerType - The type of the owner (human or agent).
+ * @param input - The collaboration creation parameters.
  */
 export async function createCollaboration(
   base: BaseMemoryProvider,
@@ -99,6 +104,12 @@ export async function createCollaboration(
 
 /**
  * Adds a participant to a collaboration
+ *
+ * @param base - The base memory provider.
+ * @param collaborationId - The ID of the collaboration.
+ * @param actorId - The ID of the member adding the participant (must be owner).
+ * @param actorType - The type of the actor.
+ * @param newParticipant - The new participant details including type, id, and role.
  */
 export async function addCollaborationParticipant(
   base: BaseMemoryProvider,
@@ -175,6 +186,10 @@ export async function getCollaboration(
 
 /**
  * Lists collaborations for a participant
+ *
+ * @param base - The base memory provider.
+ * @param participantId - The ID of the participant to list collaborations for.
+ * @param participantType - The type of the participant (human or agent).
  */
 export async function listCollaborationsForParticipant(
   base: BaseMemoryProvider,
@@ -197,6 +212,12 @@ export async function listCollaborationsForParticipant(
 
 /**
  * Checks if a participant has access to a collaboration
+ *
+ * @param base - The base memory provider.
+ * @param collaborationId - The ID of the collaboration.
+ * @param participantId - The ID of the participant.
+ * @param participantType - The type of the participant.
+ * @param requiredRole - Optional minimum role required for access.
  */
 export async function checkCollaborationAccess(
   base: BaseMemoryProvider,

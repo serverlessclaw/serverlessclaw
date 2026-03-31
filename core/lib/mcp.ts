@@ -19,23 +19,25 @@ export class MCPBridge {
    * @param serverName - Unique identifier for the MCP server.
    * @param connectionString - Connection URL or local shell command.
    * @param env - Optional environment variables for the connection.
-   * @param forceLocal - If true, skips hub-priority routing even if configured.
+   * @param options - Optional configuration flags (e.g., skipHubRouting).
    * @returns A promise that resolves to an array of discovered tools.
    */
   static async getToolsFromServer(
     serverName: string,
     connectionString: string,
     env?: Record<string, string>,
-    forceLocal: boolean = false
+    options?: { skipHubRouting?: boolean }
   ): Promise<ITool[]> {
     const hubUrl = process.env.MCP_HUB_URL;
     const isLocalCommand = !connectionString.startsWith('http');
 
-    if (hubUrl && isLocalCommand && !forceLocal) {
+    if (hubUrl && isLocalCommand && !options?.skipHubRouting) {
       try {
         const hubServerUrl = `${hubUrl.replace(/\/$/, '')}/${serverName}`;
         logger.info(`Attempting Hub connection for ${serverName}: ${hubServerUrl}`);
-        const tools = await this.getToolsFromServer(serverName, hubServerUrl, env, false);
+        const tools = await this.getToolsFromServer(serverName, hubServerUrl, env, {
+          skipHubRouting: true,
+        });
         if (tools.length > 0) return tools;
       } catch {
         logger.warn(`Hub connection failed for ${serverName}, switching to local.`);

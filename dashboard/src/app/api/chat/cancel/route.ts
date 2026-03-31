@@ -5,6 +5,8 @@ import { HTTP_STATUS } from '@claw/core/lib/constants';
 
 /**
  * Endpoint to cancel an active task/trace.
+ *
+ * @param req - The incoming POST request with traceId and optional reason.
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {

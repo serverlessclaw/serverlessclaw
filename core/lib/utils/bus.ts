@@ -96,6 +96,7 @@ async function getBusName(): Promise<string> {
       const resource = Resource as { AgentBus?: { name?: string } };
       _busName = resource.AgentBus?.name ?? 'AgentBus';
     } catch {
+      // SST resources unavailable (test/local), use fallback name
       _busName = 'AgentBus';
     }
   }
@@ -109,6 +110,7 @@ async function getMemoryTableName(): Promise<string> {
       const resource = Resource as { MemoryTable?: { name?: string } };
       _memoryTableName = resource.MemoryTable?.name ?? 'MemoryTable';
     } catch {
+      // SST resources unavailable (test/local), use fallback name
       _memoryTableName = 'MemoryTable';
     }
   }

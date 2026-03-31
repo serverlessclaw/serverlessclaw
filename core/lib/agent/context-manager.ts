@@ -390,6 +390,7 @@ export class ContextManager {
       const { ConfigManager } = await import('../registry/config');
       return await ConfigManager.getTypedConfig(key, fallback);
     } catch {
+      // Config unavailable, use strategy default
       return fallback;
     }
   }

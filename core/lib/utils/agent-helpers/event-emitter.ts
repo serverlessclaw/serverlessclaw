@@ -12,6 +12,8 @@ import { emitTypedEvent } from '../typed-emit';
 /**
  * Emit a task completion or failure event to EventBridge.
  * Used by all agents for universal coordination.
+ *
+ * @param params - The event parameters including source, agent, user, task, and optional metadata.
  */
 export async function emitTaskEvent(params: {
   source: string;

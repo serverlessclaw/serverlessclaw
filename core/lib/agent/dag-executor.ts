@@ -56,6 +56,8 @@ export function buildDependencyGraph(tasks: ParallelTaskDefinition[]): DAGExecut
 /**
  * Validates the dependency graph for cycles
  * Returns true if valid (no cycles), false otherwise
+ *
+ * @param state - The DAG execution state containing the task nodes to validate.
  */
 export function validateDependencyGraph(state: DAGExecutionState): boolean {
   const visited = new Set<string>();
@@ -257,6 +259,9 @@ export function getExecutionSummary(state: DAGExecutionState): {
 
 /**
  * Creates a task prompt with context from dependency outputs
+ *
+ * @param task - The parallel task definition with dependencies.
+ * @param dependencyOutputs - Map of completed dependency task outputs to inject as context.
  */
 export function createTaskWithDependencyContext(
   task: ParallelTaskDefinition,

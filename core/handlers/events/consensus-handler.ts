@@ -26,6 +26,9 @@ interface ConsensusVoteDetail {
 /**
  * Handles consensus requests and votes from the swarm.
  * Manages the state of active consensus cycles in DynamoDB.
+ *
+ * @param event - The event payload containing the consensus detail.
+ * @param detailType - The event type string indicating whether this is a request or vote.
  */
 export async function handleConsensus(
   event: { detail: ConsensusRequestDetail | ConsensusVoteDetail },

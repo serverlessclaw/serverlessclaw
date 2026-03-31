@@ -18,6 +18,10 @@ export interface IncomingChunk {
 
 /**
  * Determines if an incoming MQTT chunk should be processed based on session routing.
+ *
+ * @param data - The incoming chunk data with optional detail-type.
+ * @param currentActiveId - The currently active session ID.
+ * @param expectedUserId - The expected user ID for this client.
  */
 export function shouldProcessChunk(
   data: IncomingChunk & { 'detail-type'?: string },
@@ -51,6 +55,10 @@ export function shouldProcessChunk(
 /**
  * Applies an incoming MQTT chunk to the message list.
  * Returns a new messages array. Pure function, no side effects.
+ *
+ * @param prev - The current message list.
+ * @param data - The incoming chunk data to apply.
+ * @param seenIds - Optional set of already-seen message IDs for deduplication.
  */
 export function applyChunkToMessages(
   prev: ChatMessage[],
@@ -135,6 +143,9 @@ export function mapHistoryMessage(m: HistoryMessage): ChatMessage {
  * Merges fetched history with the current message list.
  * Preserves streaming placeholders and local-only messages not yet in history.
  * Returns the merged messages array and a set of seen message IDs.
+ *
+ * @param prev - The current local message list.
+ * @param rawHistory - The history messages fetched from the API.
  */
 export function mergeHistoryWithMessages(
   prev: ChatMessage[],
