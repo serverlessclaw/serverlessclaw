@@ -17,7 +17,7 @@
     "@aws-sdk/client-scheduler": "^3.1004.0",
     "@aws-sdk/lib-dynamodb": "^3.1004.0",
     "@claw/core": "workspace:*",
-    "@opennextjs/aws": "3.2.0",
+    "@opennextjs/aws": "3.12.0",
     "@xyflow/react": "^12.10.1",
     "lucide-react": "^0.577.0",
     "mqtt": "^5.15.0",

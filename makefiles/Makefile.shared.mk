@@ -72,6 +72,9 @@ ENV_FILES = $(if $(filter local,$(ENV)),.env.local,$(if $(filter prod,$(ENV)),.e
 # In CI (CodeBuild), AWS credentials come from the service role — AWS_PROFILE is unset.
 # In local dev, AWS_PROFILE must be set in .env.
 define load_env
+	@if [[ $$(node -v) != v24.* ]]; then \
+		$(call log_warning,Node.js 24 is recommended (detected $$(node -v)). If deployment fails, please switch to Node 24.); \
+	fi; \
 	for f in $(ENV_FILES); do \
 		if [ -f "$$f" ]; then \
 			$(call log_info,Loading env file: $$f); \

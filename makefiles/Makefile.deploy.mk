@@ -20,7 +20,7 @@ dev-mono: clear-port ## Start SST in development mode (mono mode)
 deploy: ## Deploy SST to the environment (default: prod)
 	@$(call log_step,Preparing deployment for environment: $(ENV)...)
 	@if [ ! -f "$(SST)" ]; then $(call log_error,SST binary not found. Run pnpm install first.); exit 1; fi
-	@$(call load_env); \
+	$(call load_env); \
 	chmod +x ./scripts/ci/check-aws-account.sh; \
 	./scripts/ci/check-aws-account.sh "$(ENV)" "$$EXPECTED_ACCOUNT" && \
 	$(call log_info,Starting SST deployment...) && \
@@ -41,7 +41,6 @@ synth: ## Synthesize SST resources
 remove: ## Remove SST resources for the specified environment
 	@$(call log_warning,WARNING: Removing SST resources for stage $(ENV)!)
 	@$(call load_env); $(SST) remove --stage $(ENV) --yes
-
 remove-local: ## Remove SST resources for the local development stage
 	@$(MAKE) remove ENV=$(LOCAL_STAGE)
 

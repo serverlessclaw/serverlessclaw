@@ -34,8 +34,11 @@
   "author": "Peng Cao",
   "license": "MIT",
   "type": "commonjs",
+  "engines": {
+    "node": ">=24 <25"
+  },
   "dependencies": {
-    "@opennextjs/aws": "3.2.0",
+    "@opennextjs/aws": "3.12.0",
     "dotenv": "^17.3.1",
     "sst": "4.5.12",
     "ts-node": "^10.9.2",

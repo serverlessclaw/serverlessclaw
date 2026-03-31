@@ -39,6 +39,15 @@ function err(msg: string): never {
   process.exit(1);
 }
 
+async function getNewestBucketName(): Promise<string> {
+  const buckets = await s3.send(new ListBucketsCommand({}));
+  const bucketName = buckets.Buckets?.filter(
+    (b) => b.Name?.includes('prod') && b.Name?.includes('clawcenterassetsbucket')
+  ).sort((a, b) => (b.CreationDate?.getTime() || 0) - (a.CreationDate?.getTime() || 0))?.[0]?.Name;
+  if (!bucketName) err('Could not find ClawCenter assets bucket');
+  return bucketName;
+}
+
 async function findDistribution(): Promise<string> {
   const { ListDistributionsCommand } = await import('@aws-sdk/client-cloudfront');
 
@@ -86,52 +95,55 @@ async function addS3Origin(distId: string) {
   const config = current.DistributionConfig!;
   const etag = current.ETag!;
 
+  const bucketName = await getNewestBucketName();
+  const s3Domain = `${bucketName}.s3.ap-southeast-2.amazonaws.com`;
+
   // Check if S3 origin already exists
-  const hasS3 = config.Origins?.Items?.some((o) => o.Id === 's3');
-  if (hasS3) {
-    log('S3 origin already exists, skipping');
-    return;
+  const existingS3 = config.Origins?.Items?.find((o) => o.Id === 's3');
+  if (existingS3) {
+    if (existingS3.DomainName === s3Domain) {
+      log(`S3 origin already points to the correct bucket (${bucketName}), skipping`);
+      return;
+    }
+    log(`Updating S3 origin from ${existingS3.DomainName} to ${s3Domain}...`);
+    existingS3.DomainName = s3Domain;
+  } else {
+    log(`Adding S3 origin for bucket ${bucketName}...`);
+    // Find or create OAC
+    const oacs = await cf.send(new ListOriginAccessControlsCommand({}));
+    let oacId = oacs.OriginAccessControlList?.Items?.find((o) =>
+      o.Name?.includes('ClawCenter')
+    )?.Id;
+
+    if (!oacId) {
+      log('Creating Origin Access Control...');
+      const oac = await cf.send(
+        new CreateOriginAccessControlCommand({
+          OriginAccessControlConfig: {
+            Name: `${APP}-${STAGE}-ClawCenterOAC`,
+            OriginAccessControlOriginType: 's3',
+            SigningBehavior: 'always',
+            SigningProtocol: 'sigv4',
+          },
+        })
+      );
+      oacId = oac.OriginAccessControl?.Id;
+    }
+
+    // Add S3 origin
+    config.Origins!.Items!.push({
+      Id: 's3',
+      DomainName: s3Domain,
+      OriginPath: '/_assets',
+      OriginAccessControlId: oacId,
+      S3OriginConfig: { OriginAccessIdentity: '' },
+      CustomHeaders: { Quantity: 0 },
+      ConnectionAttempts: 3,
+      ConnectionTimeout: 10,
+      OriginShield: { Enabled: false },
+    });
+    config.Origins!.Quantity = config.Origins!.Items!.length;
   }
-
-  // Find assets bucket
-  const buckets = await s3.send(new ListBucketsCommand({}));
-  const bucketName = buckets.Buckets?.find(
-    (b) => b.Name?.includes('prod') && b.Name?.includes('clawcenterassetsbucket')
-  )?.Name;
-  if (!bucketName) err('Could not find ClawCenter assets bucket');
-
-  // Find or create OAC
-  const oacs = await cf.send(new ListOriginAccessControlsCommand({}));
-  let oacId = oacs.OriginAccessControlList?.Items?.find((o) => o.Name?.includes('ClawCenter'))?.Id;
-
-  if (!oacId) {
-    log('Creating Origin Access Control...');
-    const oac = await cf.send(
-      new CreateOriginAccessControlCommand({
-        OriginAccessControlConfig: {
-          Name: `${APP}-${STAGE}-ClawCenterOAC`,
-          OriginAccessControlOriginType: 's3',
-          SigningBehavior: 'always',
-          SigningProtocol: 'sigv4',
-        },
-      })
-    );
-    oacId = oac.OriginAccessControl?.Id;
-  }
-
-  // Add S3 origin
-  config.Origins!.Items!.push({
-    Id: 's3',
-    DomainName: `${bucketName}.s3.ap-southeast-2.amazonaws.com`,
-    OriginPath: '/_assets',
-    OriginAccessControlId: oacId,
-    S3OriginConfig: { OriginAccessIdentity: '' },
-    CustomHeaders: { Quantity: 0 },
-    ConnectionAttempts: 3,
-    ConnectionTimeout: 10,
-    OriginShield: { Enabled: false },
-  });
-  config.Origins!.Quantity = config.Origins!.Items!.length;
 
   await cf.send(
     new UpdateDistributionCommand({
@@ -140,8 +152,8 @@ async function addS3Origin(distId: string) {
       DistributionConfig: config,
     })
   );
-  log('S3 origin added. Waiting 30s for propagation...');
-  await new Promise((r) => setTimeout(r, 30000));
+  log('S3 origin configured. Waiting 10s for propagation...');
+  await new Promise((r) => setTimeout(r, 10000));
 }
 
 async function fixCloudFrontFunction(distId: string) {
@@ -190,9 +202,9 @@ async function fixCloudFrontFunctionInner(distId: string, fnArn: string) {
   if (!lambdaUrl) err('Lambda function has no URL');
 
   const lambdaHost = new URL(lambdaUrl).host;
-  const bucketName = (await s3.send(new ListBucketsCommand({}))).Buckets?.find(
-    (b) => b.Name?.includes('prod') && b.Name?.includes('clawcenterassetsbucket')
-  )?.Name;
+  const bucketName = await getNewestBucketName();
+
+  log(`Updating CloudFront function to use bucket: ${bucketName}`);
 
   // Build routing function code - route static to S3, rest to Lambda
   const code = `import cf from "cloudfront";

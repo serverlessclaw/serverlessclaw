@@ -55,20 +55,36 @@ verify-deploy: ## Full post-deploy verification: API, dashboard, CSS, JS
 		\
 		if [ "$$STATUS" = "200" ]; then \
 			HTML=$$(curl -s --max-time 15 "$$DASHBOARD_URL") ; \
-			CSS_PATH=$$(echo "$$HTML" | grep -o 'href="/_next/[^"]*\.css"' | head -1 | sed 's/href="//;s/"//') ; \
-			JS_PATH=$$(echo "$$HTML" | grep -o 'src="/_next/[^"]*\.js"' | head -1 | sed 's/src="//;s/"//') ; \
+			CSS_PATHS=$$(echo "$$HTML" | grep -o 'href="/_next/static/css/[^"]*\.css"' | sed 's/href="//;s/"//' | sort -u) ; \
+			JS_PATHS=$$(echo "$$HTML" | grep -o 'src="/_next/static/[^"]*\.js"' | sed 's/src="//;s/"//' | sort -u) ; \
 			\
-			if [ -n "$$CSS_PATH" ]; then \
-				CSS_STATUS=$$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$$DASHBOARD_URL$$CSS_PATH") ; \
+			for CSS_PATH in $$CSS_PATHS; do \
+				CSS_INFO=$$(curl -s -o /dev/null -w "%{http_code} %{size_download}" --max-time 15 "$$DASHBOARD_URL$$CSS_PATH") ; \
+				CSS_STATUS=$$(echo $$CSS_INFO | cut -d' ' -f1) ; \
+				CSS_SIZE=$$(echo $$CSS_INFO | cut -d' ' -f2) ; \
 				CSS_NAME=$$(basename "$$CSS_PATH") ; \
-				if [ "$$CSS_STATUS" = "200" ]; then printf "  ✅ CSS %s: HTTP %s\n" "$$CSS_NAME" "$$CSS_STATUS"; else printf "  ❌ CSS %s: HTTP %s\n" "$$CSS_NAME" "$$CSS_STATUS"; FAIL=1; fi ; \
-			fi ; \
+				if [ "$$CSS_STATUS" = "200" ]; then \
+					if [ "$$CSS_SIZE" -lt 1000 ]; then \
+						printf "  ❌ CSS %-20s: HTTP %s (Suspiciously small: %s bytes)\n" "$$CSS_NAME" "$$CSS_STATUS" "$$CSS_SIZE"; FAIL=1; \
+					else \
+						printf "  ✅ CSS %-20s: HTTP %s (%s bytes)\n" "$$CSS_NAME" "$$CSS_STATUS" "$$CSS_SIZE"; \
+					fi ; \
+				else \
+					printf "  ❌ CSS %-20s: HTTP %s\n" "$$CSS_NAME" "$$CSS_STATUS"; FAIL=1; \
+				fi ; \
+			done ; \
 			\
-			if [ -n "$$JS_PATH" ]; then \
-				JS_STATUS=$$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$$DASHBOARD_URL$$JS_PATH") ; \
+			for JS_PATH in $$JS_PATHS; do \
+				JS_INFO=$$(curl -s -o /dev/null -w "%{http_code} %{size_download}" --max-time 15 "$$DASHBOARD_URL$$JS_PATH") ; \
+				JS_STATUS=$$(echo $$JS_INFO | cut -d' ' -f1) ; \
+				JS_SIZE=$$(echo $$JS_INFO | cut -d' ' -f2) ; \
 				JS_NAME=$$(basename "$$JS_PATH") ; \
-				if [ "$$JS_STATUS" = "200" ]; then printf "  ✅ JS %s: HTTP %s\n" "$$JS_NAME" "$$JS_STATUS"; else printf "  ❌ JS %s: HTTP %s\n" "$$JS_NAME" "$$JS_STATUS"; FAIL=1; fi ; \
-			fi ; \
+				if [ "$$JS_STATUS" = "200" ]; then \
+					printf "  ✅ JS  %-20s: HTTP %s (%s bytes)\n" "$$JS_NAME" "$$JS_STATUS" "$$JS_SIZE"; \
+				else \
+					printf "  ❌ JS  %-20s: HTTP %s\n" "$$JS_NAME" "$$JS_STATUS"; FAIL=1; \
+				fi ; \
+			done ; \
 		fi ; \
 	else \
 		printf "  ⚠️  Dashboard HTML:     no dashboardUrl in outputs\n" ; \

@@ -72,16 +72,17 @@ export default function Sidebar() {
     <>
       {/* Mobile Header - Visible only on small screens */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 border-b border-white/10 bg-black/80 backdrop-blur-md z-40 px-6 flex items-center justify-between">
-        <Link href={ROUTES.HOME} className="flex items-center gap-3 group">
-          <div className="relative w-8 h-8 rounded-sm overflow-hidden group-hover:scale-105 transition-transform">
+        <Link href={ROUTES.HOME} className="flex items-center gap-3 group shrink-0">
+          <div className="relative w-8 h-8 flex-shrink-0 rounded-sm overflow-hidden group-hover:scale-105 transition-transform">
             <Image
               src="/icon.png"
               alt="ClawCenter Logo"
-              fill
+              width={32}
+              height={32}
               className="object-contain"
             />
           </div>
-          <Typography variant="h3" weight="black" className="text-lg tracking-tighter">ClawCenter</Typography>
+          <Typography variant="h3" weight="black" className="text-lg tracking-tighter shrink-0">ClawCenter</Typography>
         </Link>
         <Button 
           variant="ghost"
@@ -107,16 +108,17 @@ export default function Sidebar() {
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex items-center justify-between lg:justify-start gap-3">
-          <Link href={ROUTES.HOME} className="flex items-center gap-3 group">
-            <div className="relative w-8 h-8 rounded-sm overflow-hidden group-hover:scale-105 transition-transform">
+          <Link href={ROUTES.HOME} className="flex items-center gap-3 group shrink-0">
+            <div className="relative w-8 h-8 flex-shrink-0 rounded-sm overflow-hidden group-hover:scale-105 transition-transform">
               <Image
                 src="/icon.png"
                 alt="ClawCenter Logo"
-                fill
+                width={32}
+                height={32}
                 className="object-contain"
               />
             </div>
-            <Typography variant="h2" weight="black" className="text-xl tracking-tighter">ClawCenter</Typography>
+            <Typography variant="h2" weight="black" className="text-xl tracking-tighter shrink-0">ClawCenter</Typography>
           </Link>
           <div className="lg:hidden flex items-center">
             <Button 
