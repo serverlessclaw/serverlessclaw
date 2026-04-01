@@ -502,7 +502,11 @@ export const STORAGE = {
   /** Temporary path for preparing deployment bundles. */
   TMP_STAGING_ZIP: '/tmp/staging.zip',
   /** Key for the deployment artifact in S3. */
-  STAGING_ZIP: 'staging.zip',
+  STAGING_ZIP: 'staged_changes.zip',
+  /** Base path for ephemeral agent workspaces. */
+  WORKSPACE_BASE: '/tmp/workspace',
+  /** Base path for ephemeral merger workspaces. */
+  MERGE_BASE: '/tmp/merge',
 } as const;
 
 /**

@@ -39,10 +39,17 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
 
   const baseUserId = extractBaseUserId(userId);
 
-  // 1. Initialize agent (config + context loaded in parallel)
+  // 1. Prepare writable /tmp workspace
+  const { createWorkspace, cleanupWorkspace } = await import('../lib/utils/workspace-manager');
+  const workspacePath = await createWorkspace(traceId);
+  const originalCwd = process.cwd();
+  process.chdir(workspacePath);
+  logger.info(`[Coder] Working in workspace: ${workspacePath}`);
+
+  // 2. Initialize agent (config + context loaded in parallel)
   const { config, memory, agent } = await initAgent(AgentType.CODER);
 
-  // 2. Transition gaps to PROGRESS
+  // 3. Transition gaps to PROGRESS
   if (gapIds && gapIds.length > 0) {
     logger.info(`Picking up task. Marking ${gapIds.length} gaps as PROGRESS.`);
     for (const gapId of gapIds) {
@@ -50,7 +57,7 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
     }
   }
 
-  // 3. Process the task
+  // 4. Process the task
   let status: string;
   let responseText: string;
   let buildId: string | undefined = undefined;
@@ -161,6 +168,9 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
     status = 'FAILED';
     responseText = `SYSTEM_ERROR: ${err instanceof Error ? err.message : String(err)}`;
   } finally {
+    process.chdir(originalCwd);
+    await cleanupWorkspace(workspacePath);
+
     // Reset gaps back to OPEN if the task failed or was not successful (A3 Fix)
     const isFailure = status === 'FAILED' || detectFailure(responseText);
     if (isFailure && gapIds && gapIds.length > 0) {

@@ -6,6 +6,7 @@ const mockUnlink = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockRm = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockWakeupInitiator = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockEmitTypedEvent = vi.hoisted(() => vi.fn().mockResolvedValue({ success: true }));
+const mockCreateMergeWorkspace = vi.hoisted(() => vi.fn().mockResolvedValue('/tmp/mock-merge-dir'));
 
 vi.mock('../../lib/logger', () => ({
   logger: {
@@ -21,6 +22,11 @@ vi.mock('./shared', () => ({
 
 vi.mock('../../lib/utils/typed-emit', () => ({
   emitTypedEvent: mockEmitTypedEvent,
+}));
+
+vi.mock('../../lib/utils/workspace-manager', () => ({
+  createMergeWorkspace: mockCreateMergeWorkspace,
+  cleanupWorkspace: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('child_process', () => ({
@@ -150,12 +156,6 @@ describe('Merger Handler', () => {
 
     await handlePatchMerge(eventDetail as any);
 
-    // Should clone repo
-    expect(mockExecSync).toHaveBeenCalledWith(
-      expect.stringContaining('git clone --depth=1'),
-      expect.any(Object)
-    );
-
     // Should write patch file
     expect(mockWriteFile).toHaveBeenCalledWith(
       expect.stringContaining('task-task-1.patch'),
@@ -260,10 +260,10 @@ describe('Merger Handler', () => {
     );
   });
 
-  it('should handle clone failure gracefully', async () => {
-    mockExecSync.mockImplementationOnce(() => {
-      throw new Error('git clone failed');
-    });
+  it('should handle workspace creation failure gracefully', async () => {
+    mockCreateMergeWorkspace.mockImplementationOnce(() =>
+      Promise.reject(new Error('workspace creation failed'))
+    );
 
     const eventDetail = {
       userId: 'user-123',

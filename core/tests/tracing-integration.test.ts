@@ -118,6 +118,12 @@ vi.mock('../lib/utils/typed-emit', () => ({
   emitTypedEvent: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('../lib/utils/workspace-manager', () => ({
+  createWorkspace: vi.fn().mockResolvedValue('/tmp/mock-workspace'),
+  createMergeWorkspace: vi.fn().mockResolvedValue('/tmp/mock-merge-dir'),
+  cleanupWorkspace: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('sst', () => ({
   Resource: {
     ConfigTable: { name: 'ConfigTable' },
@@ -128,6 +134,7 @@ vi.mock('sst', () => ({
 describe('Tracing Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(process, 'chdir').mockImplementation(() => {});
     resetCircuitBreakerInstance();
   });
 

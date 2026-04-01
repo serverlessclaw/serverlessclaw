@@ -18,6 +18,11 @@ vi.mock('../lib/utils/trace-helper', () => ({
   addTraceStep: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('../lib/utils/workspace-manager', () => ({
+  createWorkspace: vi.fn().mockResolvedValue('/tmp/mock-workspace'),
+  cleanupWorkspace: vi.fn().mockResolvedValue(undefined),
+}));
+
 const mockMemory = vi.hoisted(() => ({
   updateGapStatus: vi.fn().mockResolvedValue(undefined),
 }));
@@ -46,6 +51,7 @@ describe('Coder Agent', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(process, 'chdir').mockImplementation(() => {});
   });
 
   it('should process a valid task and emit events', async () => {

@@ -223,6 +223,7 @@ export function createAgents(
     environment: agentEnv,
     memory: AGENT_CONFIG.memory.LARGE,
     timeout: AGENT_CONFIG.timeout.MAX,
+    storage: '10 GB', // 10GB /tmp for workspaces
     logging: {
       retention: LOG_RETENTION_PERIOD,
     },
@@ -354,6 +355,7 @@ export function createAgents(
     nodejs: { loader: NODEJS_LOADERS },
     memory: AGENT_CONFIG.memory.MEDIUM,
     timeout: AGENT_CONFIG.timeout.LONG,
+    storage: '10 GB', // 10GB /tmp for workspaces (merger logic)
     logging: {
       retention: LOG_RETENTION_PERIOD,
     },
@@ -571,6 +573,7 @@ export function createAgents(
     environment: agentEnv,
     memory: AGENT_CONFIG.memory.LARGE,
     timeout: AGENT_CONFIG.timeout.MAX,
+    storage: '10 GB', // 10GB /tmp for workspaces
     logging: {
       retention: LOG_RETENTION_PERIOD,
     },
