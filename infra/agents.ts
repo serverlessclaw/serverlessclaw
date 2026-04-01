@@ -103,6 +103,7 @@ export function createAgents(
   concurrencyMonitor: sst.aws.Function;
   mergerAgent: sst.aws.Function;
   schedulerRole: aws.iam.Role;
+  dlqHandler?: sst.aws.Function;
 } {
   const {
     memoryTable,
@@ -113,6 +114,7 @@ export function createAgents(
     secrets,
     bus,
     deployer,
+    dlq,
   } = ctx;
 
   const validSecrets = getValidSecrets(secrets);
@@ -576,6 +578,27 @@ export function createAgents(
     pattern: { detailType: [EventType.PARALLEL_TASK_COMPLETED] },
   });
 
+  // B3: DLQ Handler for failed EventBridge events
+  let dlqHandler: sst.aws.Function | undefined;
+  if (dlq) {
+    dlqHandler = new sst.aws.Function('DLQHandler', {
+      handler: 'core/handlers/dlq-handler.handler',
+      dev: liveInLocalOnly,
+      link: [...baseLink, dlq],
+      architecture: LAMBDA_ARCHITECTURE,
+      nodejs: { loader: NODEJS_LOADERS },
+      permissions: basePermissions,
+      memory: AGENT_CONFIG.memory.SMALL,
+      timeout: AGENT_CONFIG.timeout.MEDIUM,
+      logging: {
+        retention: LOG_RETENTION_PERIOD,
+      },
+    });
+
+    // Subscribe DLQ handler to process failed events
+    dlq.subscribe(dlqHandler.arn);
+  }
+
   return {
     coderAgent,
     buildMonitor,
@@ -591,5 +614,6 @@ export function createAgents(
     concurrencyMonitor,
     mergerAgent,
     schedulerRole,
+    dlqHandler,
   };
 }

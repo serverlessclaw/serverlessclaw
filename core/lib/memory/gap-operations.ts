@@ -11,7 +11,13 @@ import { logger } from '../logger';
 import { RetentionManager } from './tiering';
 import { LIMITS, TIME, MEMORY_KEYS } from '../constants';
 import type { BaseMemoryProvider } from './base';
-import { createMetadata, queryByTypeAndMap } from './utils';
+import {
+  createMetadata,
+  queryByTypeAndMap,
+  normalizeGapId,
+  getGapIdPK,
+  getGapTimestamp,
+} from './utils';
 
 /** Minimal interface for track operations — satisfied by BaseMemoryProvider and DynamoMemory. */
 interface TrackStore {
@@ -124,13 +130,10 @@ export async function setGap(
   metadata?: InsightMetadata
 ): Promise<void> {
   const { expiresAt, type } = await RetentionManager.getExpiresAt('GAP', '');
-  const nId = gapId.replace(/^(GAP#)+/, '').replace(/^(PROC#)+/, '');
-  const numericIdMatch = nId.match(/(\d+)$/);
-  const normalizedId = numericIdMatch ? numericIdMatch[1] : nId;
-  const parsedGapId = Number.parseInt(normalizedId, 10);
-  const gapTimestamp = Number.isNaN(parsedGapId) ? Date.now() : parsedGapId;
+  const normalizedGapId = normalizeGapId(gapId);
+  const gapTimestamp = getGapTimestamp(normalizedGapId) || Date.now();
   await base.putItem({
-    userId: `GAP#${normalizedId}`,
+    userId: getGapIdPK(normalizedGapId),
     timestamp: gapTimestamp,
     createdAt: gapTimestamp,
     type,
@@ -154,18 +157,14 @@ export async function incrementGapAttemptCount(
   base: BaseMemoryProvider,
   gapId: string
 ): Promise<number> {
-  // Normalize ID using same logic as setGap()
-  const nId = gapId.replace(/^(GAP#)+/, '').replace(/^(PROC#)+/, '');
-  const numericIdMatch = nId.match(/(\d+)$/);
-  const normalizedId = numericIdMatch ? numericIdMatch[1] : nId;
-  const parsedNumericId = Number.parseInt(normalizedId, 10);
-  const gapTimestamp = Number.isNaN(parsedNumericId) ? 0 : parsedNumericId;
+  const normalizedId = normalizeGapId(gapId);
+  const gapTimestamp = getGapTimestamp(normalizedId);
 
   try {
     const now = Date.now();
     const result = await base.updateItem({
       Key: {
-        userId: `GAP#${normalizedId}`,
+        userId: getGapIdPK(normalizedId),
         timestamp: gapTimestamp,
       },
       UpdateExpression:
@@ -177,8 +176,7 @@ export async function incrementGapAttemptCount(
       },
       ReturnValues: 'ALL_NEW',
     });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return ((result as any).Attributes?.attemptCount as number) ?? 1;
+    return (result.Attributes?.attemptCount as number) ?? 1;
   } catch {
     // Fallback: search across all gap statuses to find the item (same as updateGapStatus)
     logger.warn(`Primary key lookup failed for gap ${gapId}, searching all statuses...`);
@@ -186,10 +184,10 @@ export async function incrementGapAttemptCount(
     for (const s of allStatuses) {
       const gaps = await getAllGaps(base, s);
       const target = gaps.find((g) => {
-        const gIdNorm = g.id.replace(/^(GAP#)+/, '').replace(/^(PROC#)+/, '');
-        const gIdMatch = gIdNorm.match(/(\d+)$/);
-        const gIdFinal = gIdMatch ? gIdMatch[1] : gIdNorm;
-        return gIdFinal === normalizedId;
+        const gIdNorm = normalizeGapId(g.id);
+        const gIdFinal = gIdNorm.match(/(\d+)$/)?.[1] ?? gIdNorm;
+        const targetIdFinal = normalizedId.match(/(\d+)$/)?.[1] ?? normalizedId;
+        return gIdFinal === targetIdFinal;
       });
       if (target) {
         try {
@@ -205,8 +203,7 @@ export async function incrementGapAttemptCount(
             },
             ReturnValues: 'ALL_NEW',
           });
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          return ((result as any).Attributes?.attemptCount as number) ?? 1;
+          return (result.Attributes?.attemptCount as number) ?? 1;
         } catch (e) {
           logger.error(`Fallback update also failed for gap ${gapId}:`, e);
         }
@@ -231,17 +228,13 @@ export async function updateGapStatus(
   gapId: string,
   status: GapStatus
 ): Promise<void> {
-  // Normalize ID: remove any leading GAP# prefixes and intermediate garbage before the final ID
-  // e.g., GAP#GAP#PROC#123 -> 123, GAP#GAP#MY_GAP -> MY_GAP
-  const normalizedId = gapId.replace(/^(GAP#)+/, '').replace(/^(PROC#)+/, '');
-  const numericIdMatch = normalizedId.match(/(\d+)$/);
-  const numericId = numericIdMatch ? numericIdMatch[1] : normalizedId;
-  const parsedNumericId = Number.parseInt(numericId, 10);
-  const defaultTimestamp = Number.isNaN(parsedNumericId) ? 0 : parsedNumericId;
+  const normalizedId = normalizeGapId(gapId);
+  const gapTimestamp = getGapTimestamp(normalizedId);
+
   const params: Record<string, unknown> = {
     Key: {
-      userId: `GAP#${numericId}`,
-      timestamp: defaultTimestamp,
+      userId: getGapIdPK(normalizedId),
+      timestamp: gapTimestamp,
     },
     UpdateExpression: 'SET #status = :status, updatedAt = :now',
     ConditionExpression: 'attribute_exists(userId)',
@@ -254,23 +247,32 @@ export async function updateGapStatus(
     },
   };
 
-  if (status === GapStatus.DONE) {
-    params.ConditionExpression = 'attribute_exists(userId) AND #status = :deployedStatus';
-    (params.ExpressionAttributeValues as Record<string, unknown>)[':deployedStatus'] =
-      GapStatus.DEPLOYED;
+  // A4: Atomic status transitions — require current status to match expected predecessor
+  const TRANSITION_GUARDS: Partial<
+    Record<GapStatus, { expectedStatus: GapStatus; valueKey: string }>
+  > = {
+    [GapStatus.PLANNED]: { expectedStatus: GapStatus.OPEN, valueKey: ':expectedStatus' },
+    [GapStatus.PROGRESS]: { expectedStatus: GapStatus.PLANNED, valueKey: ':expectedStatus' },
+    [GapStatus.DEPLOYED]: { expectedStatus: GapStatus.PROGRESS, valueKey: ':expectedStatus' },
+    [GapStatus.DONE]: { expectedStatus: GapStatus.DEPLOYED, valueKey: ':expectedStatus' },
+  };
+
+  const guard = TRANSITION_GUARDS[status];
+  if (guard) {
+    params.ConditionExpression = 'attribute_exists(userId) AND #status = :expectedStatus';
+    (params.ExpressionAttributeValues as Record<string, unknown>)[guard.valueKey] =
+      guard.expectedStatus;
   }
 
   // Strategy 2: If primary key fails, search and retry exactly ONCE with specific timestamp
-  if (Number.isNaN(parsedNumericId) || (params.Key as Record<string, unknown>)?.timestamp === 0) {
+  if (gapTimestamp === 0) {
     const allStatuses = Object.values(GapStatus);
     let found = false;
     for (const s of allStatuses) {
       const gaps = await getAllGaps(base, s);
       const target = gaps.find((g) => {
-        const gIdNorm = g.id.replace(/^(GAP#)+/, '').replace(/^(PROC#)+/, '');
-        const gIdMatch = gIdNorm.match(/(\d+)$/);
-        const gIdFinal = gIdMatch ? gIdMatch[1] : gIdNorm;
-        return gIdFinal === numericId;
+        const gIdNorm = normalizeGapId(g.id);
+        return gIdNorm === normalizedId;
       });
       if (target) {
         params.Key = { userId: target.id, timestamp: target.timestamp };
@@ -280,9 +282,7 @@ export async function updateGapStatus(
       }
     }
     if (!found) {
-      logger.error(
-        `Gap update aborted: ID ${gapId} not found in any status (searched for ${numericId}).`
-      );
+      logger.error(`Gap update aborted: ID ${gapId} not found in any status.`);
       return;
     }
   }
@@ -292,9 +292,10 @@ export async function updateGapStatus(
   } catch (error) {
     const err = error as { name?: string };
     if (err.name === 'ConditionalCheckFailedException') {
-      if (status === GapStatus.DONE) {
+      // A4: Handle all guarded transitions, not just DONE
+      if (guard) {
         logger.warn(
-          `Gap update aborted: Cannot transition gap ${gapId} to DONE because it is not in DEPLOYED state.`
+          `Gap transition failed: Cannot transition gap ${gapId} to ${status} because it is not in ${guard.expectedStatus} state.`
         );
         return;
       }
@@ -303,9 +304,9 @@ export async function updateGapStatus(
       );
       // Final desperate attempted lookup to see if timestamp shifted
       const all = await getAllGaps(base);
-      const retryTarget = all.find((g) => g.id === `GAP#${numericId}`);
+      const retryTarget = all.find((g) => normalizeGapId(g.id) === normalizedId);
       if (retryTarget) {
-        params.Key = { userId: `GAP#${numericId}`, timestamp: retryTarget.timestamp };
+        params.Key = { userId: getGapIdPK(normalizedId), timestamp: retryTarget.timestamp };
         try {
           await base.updateItem(params);
         } catch (e) {
@@ -338,7 +339,8 @@ export async function acquireGapLock(
   agentId: string,
   ttlMs: number = GAP_LOCK_TTL_MS
 ): Promise<boolean> {
-  const lockKey = `GAP_LOCK#${gapId.replace(/^(GAP#)+/, '')}`;
+  const normalizedGapId = normalizeGapId(gapId);
+  const lockKey = `${MEMORY_KEYS.GAP_LOCK_PREFIX}${normalizedGapId}`;
   const now = Date.now();
   const expiresAt = Math.floor((now + ttlMs) / 1000); // DynamoDB TTL uses seconds
 
@@ -355,7 +357,7 @@ export async function acquireGapLock(
       ConditionExpression: 'attribute_not_exists(userId) OR expiresAt < :nowSec',
       ExpressionAttributeNames: {
         '#tp': 'type',
-        '#content': 'content',
+        '#content': 'agentId',
         '#status': 'status',
       },
       ExpressionAttributeValues: {
@@ -391,7 +393,8 @@ export async function releaseGapLock(
   gapId: string,
   agentId: string
 ): Promise<void> {
-  const lockKey = `GAP_LOCK#${gapId.replace(/^(GAP#)+/, '')}`;
+  const normalizedGapId = normalizeGapId(gapId);
+  const lockKey = `${MEMORY_KEYS.GAP_LOCK_PREFIX}${normalizedGapId}`;
   try {
     // Only delete if we are the owner
     await base.deleteItem({
@@ -399,7 +402,7 @@ export async function releaseGapLock(
       timestamp: 0,
       ConditionExpression: '#content = :agentId',
       ExpressionAttributeNames: {
-        '#content': 'content',
+        '#content': 'agentId',
       },
       ExpressionAttributeValues: {
         ':agentId': agentId,
@@ -426,7 +429,8 @@ export async function getGapLock(
   base: BaseMemoryProvider,
   gapId: string
 ): Promise<{ content: string; expiresAt: number } | null> {
-  const lockKey = `GAP_LOCK#${gapId.replace(/^(GAP#)+/, '')}`;
+  const normalizedGapId = normalizeGapId(gapId);
+  const lockKey = `${MEMORY_KEYS.GAP_LOCK_PREFIX}${normalizedGapId}`;
   try {
     const items = await base.queryItems({
       KeyConditionExpression: 'userId = :lockKey AND #ts = :zero',
@@ -444,12 +448,14 @@ export async function getGapLock(
     if ((lock.expiresAt as number) < nowSec) return null;
 
     return {
-      content: lock.content as string,
+      content: lock.agentId as string,
       expiresAt: (lock.expiresAt as number) ?? 0,
     };
   } catch (error) {
-    logger.debug('Failed to acquire gap lock', { error });
-    return null;
+    logger.error('Failed to check gap lock (fail-closed):', error);
+    // Fail-closed: return a sentinel indicating we could not verify the lock state.
+    // Callers should treat this as "possibly locked" to prevent race conditions.
+    return { content: '__LOCK_CHECK_FAILED__', expiresAt: Infinity };
   }
 }
 
@@ -476,7 +482,9 @@ export async function assignGapToTrack(
 ): Promise<void> {
   const defaults = TRACK_DEFAULTS[track] ?? { maxConcurrentGaps: 3, priority: 5 };
   const { expiresAt } = await RetentionManager.getExpiresAt('GAP', '');
-  const normalizedId = gapId.replace(/^(GAP#)+/, '').replace(/^(PROC#)+/, '');
+  const normalizedId = normalizeGapId(gapId);
+
+  await updateGapStatus(base as never, gapId, GapStatus.PLANNED);
 
   await base.putItem({
     userId: `${MEMORY_KEYS.TRACK_PREFIX}${normalizedId}`,
@@ -500,7 +508,7 @@ export async function getGapTrack(
   base: TrackStore,
   gapId: string
 ): Promise<{ track: EvolutionTrack; priority: number } | null> {
-  const normalizedId = gapId.replace(/^(GAP#)+/, '').replace(/^(PROC#)+/, '');
+  const normalizedId = normalizeGapId(gapId);
   try {
     const items = await base.queryItems({
       KeyConditionExpression: 'userId = :pk AND #ts = :zero',
@@ -531,14 +539,12 @@ export async function updateGapMetadata(
   gapId: string,
   metadata: Record<string, unknown>
 ): Promise<void> {
-  const normalizedId = gapId.replace(/^(GAP#)+/, '').replace(/^(PROC#)+/, '');
-  const numericIdMatch = normalizedId.match(/(\d+)$/);
-  const numericId = numericIdMatch ? numericIdMatch[1] : normalizedId;
-  const parsedNumericId = Number.parseInt(numericId, 10);
-  const defaultTimestamp = Number.isNaN(parsedNumericId) ? 0 : parsedNumericId;
+  const normalizedId = normalizeGapId(gapId);
+  const numericId = normalizedId.match(/(\d+)$/)?.[1] ?? normalizedId;
+  const gapTimestamp = getGapTimestamp(normalizedId);
 
-  const userId = `GAP#${numericId}`;
-  const timestamp = defaultTimestamp;
+  const userId = getGapIdPK(normalizedId);
+  const timestamp = gapTimestamp;
 
   const setClauses: string[] = ['updatedAt = :now'];
   const exprValues: Record<string, unknown> = { ':now': Date.now() };
@@ -578,9 +584,8 @@ export async function updateGapMetadata(
       for (const s of allStatuses) {
         const gaps = await getAllGaps(base, s);
         const target = gaps.find((g) => {
-          const gIdNorm = g.id.replace(/^(GAP#)+/, '').replace(/^(PROC#)+/, '');
-          const gIdMatch = gIdNorm.match(/(\d+)$/);
-          const gIdFinal = gIdMatch ? gIdMatch[1] : gIdNorm;
+          const gIdNorm = normalizeGapId(g.id);
+          const gIdFinal = gIdNorm.match(/(\d+)$/)?.[1] ?? gIdNorm;
           return gIdFinal === numericId;
         });
         if (target) {
@@ -589,6 +594,7 @@ export async function updateGapMetadata(
               Key: { userId: target.id, timestamp: target.timestamp },
               UpdateExpression: `SET ${setClauses.join(', ')}`,
               ExpressionAttributeValues: exprValues,
+              ConditionExpression: 'attribute_exists(userId)',
             });
             return;
           } catch (e) {

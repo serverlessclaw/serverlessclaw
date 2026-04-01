@@ -173,37 +173,7 @@ To ensure coordination doesn't break as we add more agents, follow a **Contract-
 npx vitest core/tests/contract.test.ts
 ```
 
-## 📋 Plan Decomposition
-
-The **Strategic Planner** automatically decomposes complex plans into hierarchical sub-tasks to prevent Coder Agent logic overload from monolithic plans that exceed context windows.
-
-### How It Works
-
-1. **Complexity Detection**: Plans exceeding 500 characters are candidates for decomposition
-2. **Heuristic Splitting**: The system identifies step markers (numbered lists, dashes, "First/Then/Next/Finally") to split plans
-3. **Sub-Task Generation**: Each sub-task receives:
-   - Unique ID linked to parent plan (`{planId}-sub-{n}`)
-   - Full plan context (truncated to 200 chars for reference)
-   - Specific task instructions
-   - Gap IDs it addresses
-   - Execution order and dependencies
-   - Complexity estimate (1-10)
-
-### Execution Flow
-
-```text
-Strategic Planner          AgentBus (EB)          Coder Agent (xN)         Trace DAG (DDB)
-       |                      |                      |                      |
-       +-- decomposePlan ---->|                      |                      |
-       |   (3 sub-tasks)      |                      |                      |
-       |                      +-- CODER_TASK (1) --->|                      |--> [root-trace]
-       |                      +-- CODER_TASK (2) --->|                      |   [child-1]
-       |                      +-- CODER_TASK (3) --->|                      |   [child-2]
-       |                 [TERMINATE]                 |                      |   [child-3]
-       |                      |                      |                      |
-       |                      |    [ALL COMPLETE]    |                      |
-       |<-- CONTINUATION_TASK-+                      |                      |
-       | (aggregated results) |                      |                      |
+    (aggregated results) |                      |                      |
 ```
 
 ### DAG-Based Dependencies
@@ -241,6 +211,24 @@ A complex plan like:
 ```
 
 Gets decomposed into 5 sub-tasks, each dispatched independently to Coder Agent(s) via `PARALLEL_TASK_DISPATCH`.
+
+---
+
+## 🛡️ Reliability & Resilience (2026 Remediations)
+
+To achieve production-grade stability, the system implements several critical reliability patterns:
+
+### 1. Atomic Status Transitions
+Gaps now enforce strict state guards in `updateGapStatus`. A gap can only transition to a destination state (e.g., `PROGRESS`) if it is in the correct predecessor state (e.g., `PLANNED`). Failures throw explicit errors, preventing race conditions from leaving the system in an inconsistent state.
+
+### 2. Robust Lock Management
+All agents performing evolution tasks (Planner, Coder) utilize a `try/finally` pattern for gap locks. This ensures that even if a Lambda times out or crashes, the lock is released or at least not orphaned by standard logic paths.
+
+### 3. Failure Recovery (Self-Healing)
+The **Coder Agent** implements a "Reset-on-Failure" policy. If a coding task fails (either via LLM signal or system error), any associated gaps are automatically moved back to `OPEN` status, making them eligible for re-planning or retry instead of getting stuck in `PROGRESS`.
+
+### 4. Parallel Dispatch Error Boundaries
+The **Parallel Handler** now traps dispatch errors (e.g., EventBridge throughput limits or schema mismatches) and immediately notifies the **Aggregator**. This prevents the system from hanging at a barrier while waiting for sub-tasks that were never actually started.
 
 ---
 

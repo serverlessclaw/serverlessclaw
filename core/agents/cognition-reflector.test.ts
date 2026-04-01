@@ -154,7 +154,7 @@ describe('Cognition Reflector Handler', () => {
     expect(mocks.updateGapStatus).toHaveBeenCalledWith('gap-123', GapStatus.DONE);
   });
 
-  it('should generate gap IDs as pure timestamps (no compound IDs)', async () => {
+  it('should generate gap IDs as UUIDs (no compound IDs)', async () => {
     const mockReflectionResponse = JSON.stringify({
       facts: 'facts',
       lessons: [],
@@ -179,11 +179,10 @@ describe('Cognition Reflector Handler', () => {
     // Both gaps should have been created
     expect(mocks.setGap).toHaveBeenCalledTimes(2);
 
-    // Each gap ID should be a pure numeric timestamp string (no prefix, no random suffix)
+    // Each gap ID should be a UUID string (contains hyphens, not numeric)
     const gapIds = mocks.setGap.mock.calls.map((call: unknown[]) => call[0]);
     for (const gapId of gapIds) {
-      expect(gapId).toMatch(/^\d+$/);
-      expect(gapId).not.toContain('-');
+      expect(gapId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     }
   });
 

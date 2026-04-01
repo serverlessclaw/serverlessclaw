@@ -13,7 +13,7 @@ import {
 import { Resource } from 'sst';
 import { OPENAI } from '../constants';
 import { logger } from '../logger';
-import { normalizeProfile, capEffort, createEmptyResponse } from './utils';
+import { normalizeProfile, capEffort } from './utils';
 
 interface OpenAIResponse {
   output_text?: string;
@@ -273,7 +273,9 @@ export class OpenAIProvider implements IProvider {
       };
     } catch (err) {
       logger.error('OpenAI Responses API failed:', err);
-      return createEmptyResponse('OpenAI');
+      throw new Error(
+        `OpenAI provider call failed: ${err instanceof Error ? err.message : String(err)}`
+      );
     }
   }
 

@@ -15,11 +15,22 @@ interface PatchResult {
 
 /**
  * Extracts a patch string from a coder result using PATCH_START/END delimiters.
+ * Automatically strips markdown code block fences if the LLM included them.
  */
 function extractPatch(result: string | null | undefined): string | null {
   if (!result) return null;
   const match = result.match(/PATCH_START\n([\s\S]*?)\nPATCH_END/);
-  return match ? match[1] : null;
+  if (!match) return null;
+
+  let patch = match[1].trim();
+  // Strip markdown fences (e.g., ```diff ... ```)
+  if (patch.startsWith('```')) {
+    patch = patch.replace(/^```[a-z]*\n/, '');
+    if (patch.endsWith('```')) {
+      patch = patch.slice(0, -3).trim();
+    }
+  }
+  return patch;
 }
 
 /**
@@ -174,11 +185,26 @@ export async function handlePatchMerge(eventDetail: Record<string, unknown>): Pr
   // 4. If patches applied successfully, stage and deploy
   if (appliedPatches.length > 0) {
     try {
-      // Zip the merged result
+      // Zip the merged result using archiver (Lambda compatible)
       const zipPath = path.join('/tmp', `merged-${traceId ?? 'unknown'}-${Date.now()}.zip`);
-      execSync(`cd "${mergeDir}" && zip -r "${zipPath}" . -x '.git/*' 'node_modules/*'`, {
-        encoding: 'utf-8',
-        timeout: 60000,
+      const { createWriteStream } = await import('fs');
+      const archiver = (await import('archiver')).default;
+
+      await new Promise<void>((resolve, reject) => {
+        const output = createWriteStream(zipPath);
+        const archive = archiver('zip', { zlib: { level: 9 } });
+
+        output.on('close', () => resolve());
+        archive.on('error', (err) => reject(err));
+
+        archive.pipe(output);
+        // Zip the directory, ignoring .git and node_modules
+        archive.glob('**/*', {
+          cwd: mergeDir,
+          ignore: ['.git/**', 'node_modules/**'],
+          dot: true,
+        });
+        archive.finalize();
       });
 
       // Upload to S3

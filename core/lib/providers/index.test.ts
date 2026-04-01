@@ -13,6 +13,59 @@ vi.mock('../registry/config', () => ({
   },
 }));
 
+// Mock the provider implementations to avoid real API calls
+vi.mock('./openai', () => ({
+  OpenAIProvider: class {
+    async getCapabilities() {
+      return {
+        supportedReasoningProfiles: ['fast', 'standard', 'thinking', 'deep'],
+        supportsStructuredOutput: true,
+        contextWindow: 128000,
+        supportedAttachmentTypes: ['image', 'file'],
+      };
+    }
+  },
+}));
+
+vi.mock('./bedrock', () => ({
+  BedrockProvider: class {
+    async getCapabilities() {
+      return {
+        supportedReasoningProfiles: ['fast', 'standard', 'thinking', 'deep'],
+        supportsStructuredOutput: true,
+        contextWindow: 200000,
+        supportedAttachmentTypes: ['image', 'file'],
+      };
+    }
+  },
+}));
+
+vi.mock('./openrouter', () => ({
+  OpenRouterProvider: class {
+    async getCapabilities() {
+      return {
+        supportedReasoningProfiles: ['fast', 'standard', 'thinking', 'deep'],
+        supportsStructuredOutput: true,
+        contextWindow: 128000,
+        supportedAttachmentTypes: ['image', 'file'],
+      };
+    }
+  },
+}));
+
+vi.mock('./minimax', () => ({
+  MiniMaxProvider: class {
+    async getCapabilities() {
+      return {
+        supportedReasoningProfiles: ['fast', 'standard', 'thinking', 'deep'],
+        supportsStructuredOutput: true,
+        contextWindow: 204800,
+        supportedAttachmentTypes: ['image', 'file'],
+      };
+    }
+  },
+}));
+
 describe('ProviderManager', () => {
   beforeEach(() => {
     vi.resetModules();

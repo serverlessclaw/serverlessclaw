@@ -253,7 +253,7 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   /**
    * Retrieves a configuration item from the system config registry.
    */
-  async getConfig(key: string): Promise<any> {
+  async getConfig(key: string): Promise<unknown> {
     const { AgentRegistry } = await import('../registry');
     return AgentRegistry.getRawConfig(key);
   }

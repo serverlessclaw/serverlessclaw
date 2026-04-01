@@ -40,8 +40,8 @@ export async function handleTaskCancellation(
     return;
   }
 
-  // Trace: Task cancellation event
-  await addTraceStep(undefined, undefined, {
+  // Trace: Task cancellation event (A7: pass actual traceId)
+  await addTraceStep(initiatorId ?? 'cancellation', undefined, {
     type: TRACE_TYPES.CANCELLATION,
     content: {
       taskId,

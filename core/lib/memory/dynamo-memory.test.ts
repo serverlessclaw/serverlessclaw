@@ -86,19 +86,20 @@ describe('DynamoMemory Retention', () => {
           timestamp: timestamp,
         },
         UpdateExpression: 'SET #status = :status, updatedAt = :now',
-        ConditionExpression: 'attribute_exists(userId)',
+        ConditionExpression: 'attribute_exists(userId) AND #status = :expectedStatus',
         ExpressionAttributeNames: {
           '#status': 'status',
         },
         ExpressionAttributeValues: {
           ':status': GapStatus.PLANNED,
           ':now': now,
+          ':expectedStatus': GapStatus.OPEN,
         },
       });
       vi.useRealTimers();
     });
 
-    it('should retry with fresh lookup on ConditionalCheckFailedException', async () => {
+    it('should return early on ConditionalCheckFailedException for atomic transitions', async () => {
       const timestamp = 1710240000000;
       const gapId = `GAP#${timestamp}`;
 
@@ -107,25 +108,14 @@ describe('DynamoMemory Retention', () => {
       error.name = 'ConditionalCheckFailedException';
       ddbMock.on(UpdateCommand).rejectsOnce(error).resolves({});
 
-      // Mock the getItems call within getAllGaps that updateGapStatus uses
-      // Note: we need to mock the correct command based on what getAllGaps calls
-      // Assuming it's QueryCommand based on DynamoMemory implementation
-      const { QueryCommand } = await import('@aws-sdk/lib-dynamodb');
-      ddbMock.on(QueryCommand).resolves({
-        Items: [
-          { userId: `GAP#${timestamp}`, timestamp: timestamp + 1, content: 'test', type: 'GAP' },
-        ],
-      });
+      // With atomic transitions (A4), ConditionalCheckFailedException means the
+      // status transition is invalid (e.g., trying to OPEN→PROGRESS but
+      // gap is already in PROGRESS). The function returns early instead of throwing.
+      await expect(memory.updateGapStatus(gapId, GapStatus.PROGRESS)).resolves.toBeUndefined();
 
-      await memory.updateGapStatus(gapId, GapStatus.PROGRESS);
-
-      // Should have 2 UpdateCommand calls (initial + retry)
+      // Should have only 1 UpdateCommand call (no retry)
       const updateCalls = ddbMock.commandCalls(UpdateCommand);
-      expect(updateCalls).toHaveLength(2);
-
-      // The second call should use the updated timestamp from the lookup
-      const secondCallInput = updateCalls[1].args[0].input;
-      expect(secondCallInput.Key?.timestamp).toBe(timestamp + 1);
+      expect(updateCalls).toHaveLength(1);
     });
 
     it('should handle gapId that is not a numeric timestamp by searching all gaps', async () => {

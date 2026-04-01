@@ -13,6 +13,7 @@ import { OpenAIProvider } from './openai';
 import { OpenRouterProvider } from './openrouter';
 import { BedrockProvider } from './bedrock';
 import { MiniMaxProvider } from './minimax';
+import { FallbackProvider } from './fallback';
 import { SYSTEM, CONFIG_KEYS } from '../constants';
 import { ConfigManager } from '../registry/config';
 
@@ -53,6 +54,20 @@ export class ProviderManager implements IProvider {
       ((await ConfigManager.getRawConfig(CONFIG_KEYS.ACTIVE_MODEL)) as string) ??
       ('ActiveModel' in resource ? resource.ActiveModel.value : undefined);
 
+    // B1: When no specific provider override is requested, use fallback chain
+    // This wraps the primary provider with automatic failover to secondary providers
+    if (!overrideProvider) {
+      return this.createFallbackProvider(providerType);
+    }
+
+    // Specific provider requested — return it directly
+    return this.createSingleProvider(providerType, model);
+  }
+
+  /**
+   * Creates a single provider instance without fallback wrapping.
+   */
+  private static createSingleProvider(providerType: LLMProvider, model?: string): IProvider {
     switch (providerType) {
       case LLMProvider.BEDROCK:
         return new BedrockProvider(model ?? SYSTEM.DEFAULT_BEDROCK_MODEL);
@@ -185,5 +200,48 @@ export class ProviderManager implements IProvider {
       ('ActiveModel' in resource ? resource.ActiveModel.value : undefined) ??
       SYSTEM.DEFAULT_MINIMAX_MODEL
     );
+  }
+
+  /**
+   * Creates a FallbackProvider with automatic failover chain.
+   * Uses the configured primary provider with intelligent fallbacks.
+   *
+   * @param primary - The primary provider type (defaults to configured active provider).
+   * @param fallbacks - Ordered list of fallback providers (defaults to sensible chain).
+   * @returns A FallbackProvider instance with circuit breaker protection.
+   */
+  static async createFallbackProvider(
+    primary?: LLMProvider,
+    fallbacks?: LLMProvider[]
+  ): Promise<FallbackProvider> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const resource = Resource as any;
+
+    // Resolve primary provider, defaulting to MINIMAX if not configured
+    let primaryProvider = primary;
+    if (!primaryProvider) {
+      const configValue = await ConfigManager.getTypedConfig(
+        CONFIG_KEYS.ACTIVE_PROVIDER,
+        undefined
+      );
+      // Use SST Resource value if available, otherwise default to MINIMAX
+      const sstProvider =
+        'ActiveProvider' in resource ? (resource.ActiveProvider.value as LLMProvider) : undefined;
+      primaryProvider =
+        (configValue as unknown as LLMProvider) ?? sstProvider ?? LLMProvider.MINIMAX;
+    }
+
+    // Default fallback chain: OpenAI → Bedrock → OpenRouter → MiniMax
+    const defaultFallbacks: LLMProvider[] = [
+      LLMProvider.OPENAI,
+      LLMProvider.BEDROCK,
+      LLMProvider.OPENROUTER,
+      LLMProvider.MINIMAX,
+    ].filter((p) => p !== primaryProvider);
+
+    return new FallbackProvider({
+      primary: primaryProvider,
+      fallbacks: fallbacks ?? defaultFallbacks,
+    });
   }
 }

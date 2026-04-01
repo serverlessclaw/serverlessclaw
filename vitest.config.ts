@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
+import react from '@vitejs/plugin-react-swc';
 
 /**
  * Vitest configuration for the project, providing unified test execution
@@ -8,6 +8,9 @@ import react from '@vitejs/plugin-react';
  */
 export default defineConfig({
   assetsInclude: ['**/*.md'],
+  resolve: {
+    tsconfigPaths: true,
+  },
   test: {
     globals: true,
     include: ['**/*.test.{ts,tsx}'],
@@ -47,9 +50,5 @@ export default defineConfig({
       },
     },
   },
-  plugins: [
-    react({
-      jsxRuntime: 'automatic',
-    }),
-  ],
+  plugins: [react()],
 });

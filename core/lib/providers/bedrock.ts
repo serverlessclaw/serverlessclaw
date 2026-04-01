@@ -23,7 +23,7 @@ import {
 } from '../types/index';
 import { Resource } from 'sst';
 import { logger } from '../logger';
-import { normalizeProfile, createEmptyResponse, SUPPORTED_IMAGE_FORMATS } from './utils';
+import { normalizeProfile, SUPPORTED_IMAGE_FORMATS } from './utils';
 
 // --- Constants and Configuration ---
 const DEFAULT_REGION = 'ap-southeast-2';
@@ -388,7 +388,7 @@ export class BedrockProvider implements IProvider {
       } as Message;
     }
 
-    return createEmptyResponse('Bedrock');
+    throw new Error('Bedrock provider call failed: No output message in response');
   }
 
   /**

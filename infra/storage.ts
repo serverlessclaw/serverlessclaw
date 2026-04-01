@@ -88,11 +88,11 @@ export function createStorage() {
     DiscordBotToken:
       $app.stage === 'prod' || process.env.SST_SECRET_DiscordBotToken
         ? new sst.Secret('DiscordBotToken')
-        : (undefined as any),
+        : (undefined as unknown as sst.Secret),
     SlackBotToken:
       $app.stage === 'prod' || process.env.SST_SECRET_SlackBotToken
         ? new sst.Secret('SlackBotToken')
-        : (undefined as any),
+        : (undefined as unknown as sst.Secret),
   };
 
   return { memoryTable, traceTable, stagingBucket, knowledgeBucket, secrets, configTable };

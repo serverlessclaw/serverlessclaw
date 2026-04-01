@@ -1,9 +1,10 @@
 import { ReasoningProfile, ResponseFormat } from '../lib/types/llm';
 import { EventType, GapStatus, AgentType, TraceSource } from '../lib/types/agent';
-import { InsightCategory } from '../lib/types/memory';
+import { InsightCategory, MemoryInsight } from '../lib/types/memory';
 import { LIMITS } from '../lib/constants';
 import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
+import { randomUUID } from 'node:crypto';
 import {
   extractPayload,
   detectFailure,
@@ -14,6 +15,7 @@ import {
 } from '../lib/utils/agent-helpers';
 import { emitTaskEvent } from '../lib/utils/agent-helpers/event-emitter';
 import { parseStructuredResponse } from '../lib/utils/agent-helpers/llm-utils';
+import { normalizeGapId, getGapIdPK, getGapTimestamp } from '../lib/memory/utils';
 import { emitEvent } from '../lib/utils/bus';
 import { buildReflectionPrompt, getGapContext } from './cognition-reflector/prompts';
 import type { ReflectorEvent } from './cognition-reflector/types';
@@ -168,7 +170,7 @@ export const handler = async (
       if (Array.isArray(parsed.gaps)) {
         for (const gap of parsed.gaps) {
           if (gap.content && gap.content !== 'NONE') {
-            const gapId = Date.now().toString();
+            const gapId = randomUUID();
             const metadata = {
               category: InsightCategory.STRATEGIC_GAP,
               confidence: gap.confidence || 5,
@@ -201,21 +203,54 @@ export const handler = async (
       if (Array.isArray(parsed.updatedGaps)) {
         for (const uGap of parsed.updatedGaps) {
           if (uGap.id) {
-            const cleanId = uGap.id.replace('GAP#', '');
-            // Retrieve existing to update metadata
-            const allGaps = [
-              ...(await memory.getAllGaps(GapStatus.OPEN)),
-              ...(await memory.getAllGaps(GapStatus.PLANNED)),
-            ];
-            const existing = allGaps.find((g) => g.id === `GAP#${cleanId}`);
+            const normalizedId = normalizeGapId(uGap.id);
+            const pk = getGapIdPK(normalizedId);
+            const sk = getGapTimestamp(normalizedId);
+
+            // Targeted lookup instead of scanning all gaps (P1-7 Optimization)
+            let existing: MemoryInsight | undefined = undefined;
+            if (sk > 0) {
+              try {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const items = await (memory as any).base.queryItems({
+                  KeyConditionExpression: 'userId = :pk AND #ts = :ts',
+                  ExpressionAttributeNames: { '#ts': 'timestamp' },
+                  ExpressionAttributeValues: { ':pk': pk, ':ts': sk },
+                });
+                if (items.length > 0) {
+                  existing = {
+                    id: items[0].userId,
+                    timestamp: items[0].timestamp,
+                    content: items[0].content,
+                    metadata: items[0].metadata || {},
+                  };
+                }
+              } catch (e) {
+                logger.warn(
+                  `Direct gap lookup failed for ${normalizedId}, falling back to scan:`,
+                  e
+                );
+              }
+            }
+
+            // Fallback to broader search if direct lookup failed or ID was non-numeric
+            if (!existing) {
+              const allGaps = [
+                ...(await memory.getAllGaps(GapStatus.OPEN)),
+                ...(await memory.getAllGaps(GapStatus.PLANNED)),
+              ];
+              existing = allGaps.find((g) => normalizeGapId(g.id) === normalizedId);
+            }
+
             if (existing) {
               const updatedMeta = {
                 ...existing.metadata,
                 impact: Math.max(existing.metadata.impact || 0, uGap.impact || 0),
                 urgency: Math.max(existing.metadata.urgency || 0, uGap.urgency || 0),
               };
-              await memory.setGap(cleanId, existing.content, updatedMeta);
-              logger.info(`Updated existing gap ${cleanId} via semantic deduplication.`);
+              // Set gap with normalized ID to ensure consistency
+              await memory.setGap(normalizedId, existing.content, updatedMeta);
+              logger.info(`Updated existing gap ${normalizedId} via semantic deduplication.`);
             }
           }
         }

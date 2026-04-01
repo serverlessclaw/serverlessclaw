@@ -1,5 +1,5 @@
 import { AgentType, GapStatus, AgentEvent, AgentPayload } from '../lib/types/agent';
-import { ReasoningProfile } from '../lib/types/llm';
+import { ReasoningProfile, Message } from '../lib/types/llm';
 import { sendOutboundMessage } from '../lib/outbound';
 import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
@@ -51,102 +51,132 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
   }
 
   // 3. Process the task
-  const { responseText: rawResponse, attachments: resultAttachments } = await agent.process(
-    userId,
-    task || '',
-    buildProcessOptions({
-      profile: ReasoningProfile.THINKING,
-      isIsolated: true,
-      context,
-      isContinuation,
-      initiatorId,
-      depth,
-      traceId,
-      sessionId,
-      communicationMode: 'json',
-      responseFormat: {
-        type: 'json_schema',
-        json_schema: {
-          name: 'coder_result',
-          strict: true,
-          schema: {
-            type: 'object',
-            properties: {
-              failing_test_written: { type: 'boolean' },
-              test_file_path: { type: 'string' },
-              test_execution_result: { type: 'string' },
-              implementation_code: { type: 'string' },
-              status: { type: 'string', enum: ['SUCCESS', 'FAILED'] },
-              response: { type: 'string' },
-              buildId: { type: 'string' },
-              patch: { type: 'string' },
-              sessionId: { type: 'string' },
-              documentation_updated_path: { type: 'string' },
-              tests_added_path: { type: 'string' },
-            },
-            required: [
-              'failing_test_written',
-              'test_file_path',
-              'test_execution_result',
-              'implementation_code',
-              'status',
-              'response',
-              'documentation_updated_path',
-              'tests_added_path',
-            ],
-
-            additionalProperties: false,
-          },
-        },
-      },
-    })
-  );
-
-  logger.info('Coder Agent Raw Response:', rawResponse);
-
-  let status = 'SUCCESS';
-  let responseText = rawResponse;
+  let status: string;
+  let responseText: string;
   let buildId: string | undefined = undefined;
   let patchContent: string | undefined = undefined;
+  const resultAttachments: NonNullable<Message['attachments']> = [];
+
+  // Initialize defaults for safety in catch/finally before heavy lifting
+  status = 'FAILED';
+  responseText = 'SYSTEM_ERROR: Processing failed before response generation.';
+  logger.info(`[Coder] Starting process. Fallback: ${status}, Response: ${responseText}`);
 
   try {
-    const parsed = parseStructuredResponse<{
-      status: string;
-      response: string;
-      buildId?: string;
-      patch?: string;
-      failing_test_written?: boolean;
-      test_file_path?: string;
-      test_execution_result?: string;
-    }>(rawResponse);
-    status = parsed.status || 'SUCCESS';
-    responseText = parsed.response || rawResponse;
-    buildId = parsed.buildId;
-    patchContent = parsed.patch;
+    const { responseText: rawResponse, attachments } = await agent.process(
+      userId,
+      task || '',
+      buildProcessOptions({
+        profile: ReasoningProfile.THINKING,
+        isIsolated: true,
+        context,
+        isContinuation,
+        initiatorId,
+        depth,
+        traceId,
+        sessionId,
+        communicationMode: 'json',
+        responseFormat: {
+          type: 'json_schema',
+          json_schema: {
+            name: 'coder_result',
+            strict: true,
+            schema: {
+              type: 'object',
+              properties: {
+                failing_test_written: { type: 'boolean' },
+                test_file_path: { type: 'string' },
+                test_execution_result: { type: 'string' },
+                implementation_code: { type: 'string' },
+                status: { type: 'string', enum: ['SUCCESS', 'FAILED'] },
+                response: { type: 'string' },
+                buildId: { type: 'string' },
+                patch: { type: 'string' },
+                sessionId: { type: 'string' },
+                documentation_updated_path: { type: 'string' },
+                tests_added_path: { type: 'string' },
+              },
+              required: [
+                'failing_test_written',
+                'test_file_path',
+                'test_execution_result',
+                'implementation_code',
+                'status',
+                'response',
+                'documentation_updated_path',
+                'tests_added_path',
+              ],
 
-    // --- PATCH ENFORCEMENT (Risk Fix 2) ---
-    const isEvolutionTask = !!(gapIds && gapIds.length > 0);
-    if (isEvolutionTask && status === 'SUCCESS' && !patchContent) {
-      logger.warn('[PATCH_ENFORCEMENT] Evolution task missing patch. Marking as FAILED.');
-      status = 'FAILED';
-      responseText =
-        'FAILED: Evolution task requires a technical patch for the merger, but none was provided by the model. Please retry with explicit patch generation.';
-    }
-
-    // Enrich response with TDD evidence if provided
-    if (parsed.failing_test_written && parsed.test_file_path) {
-      responseText += `\n\n**TDD Verification:**\n- Test File: \`${parsed.test_file_path}\`\n- Execution Result: \`${parsed.test_execution_result || 'Unknown'}\``;
-    }
-
-    logger.info(
-      `Parsed Coder Result. Status: ${status}, BuildId: ${buildId}, TDD: ${parsed.failing_test_written}`
+              additionalProperties: false,
+            },
+          },
+        },
+      })
     );
-  } catch (e) {
-    logger.warn('Failed to parse Coder structured response, falling back to raw text.', e);
+
+    if (attachments) resultAttachments.push(...attachments);
+    logger.info('Coder Agent Raw Response:', rawResponse);
+    const rawResponseText = rawResponse;
+    status = 'SUCCESS';
+    responseText = rawResponseText;
+
+    try {
+      const parsed = parseStructuredResponse<{
+        status: string;
+        response: string;
+        buildId?: string;
+        patch?: string;
+        failing_test_written?: boolean;
+        test_file_path?: string;
+        test_execution_result?: string;
+      }>(rawResponseText);
+      status = parsed.status || 'SUCCESS';
+      responseText = parsed.response || rawResponseText;
+      buildId = parsed.buildId;
+      patchContent = parsed.patch;
+
+      // --- PATCH ENFORCEMENT (Risk Fix 2) ---
+      const isEvolutionTask = !!(gapIds && gapIds.length > 0);
+      if (isEvolutionTask && status === 'SUCCESS' && !patchContent) {
+        logger.warn('[PATCH_ENFORCEMENT] Evolution task missing patch. Marking as FAILED.');
+        status = 'FAILED';
+        responseText =
+          'FAILED: Evolution task requires a technical patch for the merger, but none was provided by the model. Please retry with explicit patch generation.';
+      }
+
+      // Enrich response with TDD evidence if provided
+      if (parsed.failing_test_written && parsed.test_file_path) {
+        responseText += `\n\n**TDD Verification:**\n- Test File: \`${parsed.test_file_path}\`\n- Execution Result: \`${parsed.test_execution_result || 'Unknown'}\``;
+      }
+
+      logger.info(
+        `Parsed Coder Result. Status: ${status}, BuildId: ${buildId}, TDD: ${parsed.failing_test_written}`
+      );
+    } catch (e) {
+      logger.warn('Failed to parse Coder structured response, falling back to raw text.', e);
+      // Fallback is already handled by assignments before the try block
+    }
+  } catch (err) {
+    logger.error('Unexpected error in Coder Agent processing:', err);
+    status = 'FAILED';
+    responseText = `SYSTEM_ERROR: ${err instanceof Error ? err.message : String(err)}`;
+  } finally {
+    // Reset gaps back to OPEN if the task failed or was not successful (A3 Fix)
+    const isFailure = status === 'FAILED' || detectFailure(responseText);
+    if (isFailure && gapIds && gapIds.length > 0) {
+      for (const gapId of gapIds) {
+        try {
+          await memory.updateGapStatus(gapId, GapStatus.OPEN);
+          logger.info(`[Gaps] Reset gap ${gapId} to OPEN due to coder failure.`);
+        } catch (e) {
+          logger.warn(`[Gaps] Failed to reset gap ${gapId} to OPEN:`, e);
+        }
+      }
+    }
   }
 
   // 3. Notify user directly if not a silent internal task
-  if (!isTaskPaused(rawResponse)) {
+  if (!isTaskPaused(responseText)) {
     await sendOutboundMessage(
       AgentType.CODER,
       userId,
@@ -182,7 +212,7 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
   }
 
   // 5. Notify Resumption Loop (Universal Coordination)
-  if (!isTaskPaused(rawResponse)) {
+  if (!isTaskPaused(responseText)) {
     await emitTaskEvent({
       source: AgentType.CODER,
       agentId: AgentType.CODER,

@@ -133,12 +133,14 @@ const OPEN_GAP_A = {
   id: 'GAP#1001',
   content: 'the system cannot search Slack messages',
   timestamp: 1001,
+  status: GapStatus.OPEN,
   metadata: { impact: 8, urgency: 5, risk: 3, priority: 8, confidence: 7, complexity: 4 },
 };
 const OPEN_GAP_B = {
   id: 'GAP#1002',
   content: 'the system has no image recognition capability',
   timestamp: 1002,
+  status: GapStatus.OPEN,
   metadata: { impact: 6, urgency: 3, risk: 2, priority: 6, confidence: 7, complexity: 5 },
 };
 
@@ -167,7 +169,7 @@ describe('Strategic Planner — selective PLANNED marking', () => {
     // Structured response explicitly covering Gap A
     const planResponse = JSON.stringify({
       status: 'SUCCESS',
-      plan: 'Add Slack search integration.',
+      plan: 'Add Slack search integration to enable users to query the knowledge base directly from Slack channels.',
       coveredGapIds: ['GAP#1001'],
       reasoning: 'Missing tools',
     });
@@ -294,9 +296,9 @@ describe('Strategic Planner — selective PLANNED marking', () => {
 
     await handler(event as any, {} as any);
 
-    // Should call setGap for the optimization recommendation
+    // Should call setGap for the optimization recommendation (UUID format)
     expect(memoryMocks.setGap).toHaveBeenCalledWith(
-      expect.stringMatching(/^\d+$/),
+      expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/),
       expect.stringContaining('[TOOL_OPTIMIZATION] Action: PRUNE, Tool: oldSearchTool'),
       expect.any(Object)
     );

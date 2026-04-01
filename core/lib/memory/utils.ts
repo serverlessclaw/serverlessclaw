@@ -168,7 +168,14 @@ export async function queryByTypeAndGetContent(
   limit: number = 10,
   userId?: string
 ): Promise<string[]> {
-  const params: Record<string, any> = {
+  const params: {
+    Limit: number;
+    ScanIndexForward: boolean;
+    IndexName?: string;
+    KeyConditionExpression?: string;
+    ExpressionAttributeNames?: Record<string, string>;
+    ExpressionAttributeValues?: Record<string, unknown>;
+  } = {
     Limit: limit,
     ScanIndexForward: false,
   };
@@ -210,7 +217,15 @@ export async function queryByTypeAndMap(
   expressionAttributeValues?: Record<string, unknown>,
   userId?: string
 ): Promise<MemoryInsight[]> {
-  const params: Record<string, any> = {
+  const params: {
+    Limit: number;
+    ScanIndexForward: boolean;
+    IndexName?: string;
+    KeyConditionExpression?: string;
+    ExpressionAttributeNames?: Record<string, string>;
+    ExpressionAttributeValues: Record<string, unknown>;
+    FilterExpression?: string;
+  } = {
     Limit: limit,
     ScanIndexForward: false,
     ExpressionAttributeValues: {
@@ -250,4 +265,44 @@ export async function queryByTypeAndMap(
       item.timestamp as number
     ),
   }));
+}
+
+/**
+ * Strips all common prefixes (GAP#, PROC#) from a gap ID to get the raw identifier.
+ * Consolidates duplicate logic seen across the codebase.
+ *
+ * @param gapId - The raw gap ID (e.g., "GAP#123", "PROC#GAP#456").
+ * @returns The normalized identifier.
+ */
+export function normalizeGapId(gapId: string): string {
+  if (!gapId) return '';
+  return gapId.replace(/^(GAP#)+/, '').replace(/^(PROC#)+/, '');
+}
+
+/**
+ * Derives the Partition Key (userId) for a gap item in DynamoDB based on its numeric ID.
+ *
+ * @param gapId - The gap ID.
+ * @returns The normalized PK string (e.g., "GAP#123").
+ */
+export function getGapIdPK(gapId: string): string {
+  const normalized = normalizeGapId(gapId);
+  const numericMatch = normalized.match(/(\d+)$/);
+  const finalId = numericMatch ? numericMatch[1] : normalized;
+  return `GAP#${finalId}`;
+}
+
+/**
+ * Derives the Sort Key (timestamp) for a gap item in DynamoDB based on its numeric ID.
+ * Fallback to 0 if the ID is not numeric.
+ *
+ * @param gapId - The gap ID.
+ * @returns The numeric timestamp or 0.
+ */
+export function getGapTimestamp(gapId: string): number {
+  const normalized = normalizeGapId(gapId);
+  const numericMatch = normalized.match(/(\d+)$/);
+  if (!numericMatch) return 0;
+  const parsed = parseInt(numericMatch[1], 10);
+  return isNaN(parsed) ? 0 : parsed;
 }

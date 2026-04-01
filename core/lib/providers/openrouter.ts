@@ -12,7 +12,7 @@ import {
 } from '../types/index';
 import { Resource } from 'sst';
 import { logger } from '../logger';
-import { normalizeProfile, capEffort, createEmptyResponse } from './utils';
+import { normalizeProfile, capEffort } from './utils';
 
 // --- Constants and Configuration ---
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
@@ -290,7 +290,7 @@ export class OpenRouterProvider implements IProvider {
     const data = (await response.json()) as OpenRouterResponse;
     const msg = data.choices?.[0]?.message;
 
-    if (!msg) return createEmptyResponse('OpenRouter');
+    if (!msg) throw new Error('OpenRouter provider call failed: No message in response');
 
     if (msg.reasoning_details) {
       logger.debug(

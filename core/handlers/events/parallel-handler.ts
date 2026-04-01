@@ -147,9 +147,33 @@ export async function handleParallelDispatch(
       return;
     }
 
-    // Dispatch ready tasks
+    // Dispatch ready tasks (A6: with error boundary)
+    const dagDispatchErrors: Array<{ taskId: string; error: string }> = [];
     for (const task of readyTasks) {
-      await dispatchTask(task, safeTraceId, initiatorId, depth, sessionId, userId);
+      try {
+        await dispatchTask(task, safeTraceId, initiatorId, depth, sessionId, userId);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        logger.error(`Failed to dispatch DAG task ${task.taskId}:`, error);
+        dagDispatchErrors.push({ taskId: task.taskId, error: errorMsg });
+      }
+    }
+
+    if (dagDispatchErrors.length > 0) {
+      logger.warn(
+        `DAG dispatch had ${dagDispatchErrors.length}/${readyTasks.length} failures: ` +
+          dagDispatchErrors.map((e) => e.taskId).join(', ')
+      );
+      // Notify aggregator of dispatch failures (A6 Fix)
+      for (const err of dagDispatchErrors) {
+        await aggregator.addResult(userId, safeTraceId, {
+          taskId: err.taskId,
+          agentId: tasks.find((t) => t.taskId === err.taskId)?.agentId || 'unknown',
+          status: 'failed',
+          error: `Dispatch failed: ${err.error}`,
+          durationMs: 0,
+        });
+      }
     }
 
     logger.info(
@@ -160,8 +184,33 @@ export async function handleParallelDispatch(
   }
 
   // Standard parallel execution (no dependencies)
+  // A6: Wrap each dispatch in try/catch to prevent partial failures
+  const dispatchErrors: Array<{ taskId: string; error: string }> = [];
   for (const task of tasks) {
-    await dispatchTask(task, safeTraceId, initiatorId, depth, sessionId, userId);
+    try {
+      await dispatchTask(task, safeTraceId, initiatorId, depth, sessionId, userId);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error(`Failed to dispatch parallel task ${task.taskId}:`, error);
+      dispatchErrors.push({ taskId: task.taskId, error: errorMsg });
+    }
+  }
+
+  if (dispatchErrors.length > 0) {
+    logger.warn(
+      `Parallel dispatch had ${dispatchErrors.length}/${tasks.length} dispatch failures: ` +
+        dispatchErrors.map((e) => e.taskId).join(', ')
+    );
+    // Notify aggregator of dispatch failures (A6 Fix)
+    for (const err of dispatchErrors) {
+      await aggregator.addResult(userId, safeTraceId, {
+        taskId: err.taskId,
+        agentId: tasks.find((t) => t.taskId === err.taskId)?.agentId || 'unknown',
+        status: 'failed',
+        error: `Dispatch failed: ${err.error}`,
+        durationMs: 0,
+      });
+    }
   }
 
   const targetTime = Date.now() + timeoutMs;

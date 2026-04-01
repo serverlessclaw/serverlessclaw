@@ -13,7 +13,7 @@ import {
 } from '../types/index';
 import { Resource } from 'sst';
 import { logger } from '../logger';
-import { createEmptyResponse } from './utils';
+// createEmptyResponse removed - providers now throw on failure
 
 const MINIMAX_REASONING_MAP: Record<ReasoningProfile, { budget_tokens: number; enabled: boolean }> =
   {
@@ -108,7 +108,7 @@ export class MiniMaxProvider implements IProvider {
     // Handle response with thinking blocks
     const content = response.content;
     if (!content || content.length === 0) {
-      return createEmptyResponse('MiniMax');
+      throw new Error('MiniMax provider call failed: No content in response');
     }
 
     // Extract text content and log thinking content
@@ -146,7 +146,7 @@ export class MiniMaxProvider implements IProvider {
             total_tokens: response.usage.input_tokens + response.usage.output_tokens,
           }
         : undefined,
-    } as Message;
+    } as unknown as Message;
   }
 
   async *stream(
@@ -278,7 +278,7 @@ export class MiniMaxProvider implements IProvider {
         systemMessage = msg.content ?? undefined;
       } else if (msg.role === MessageRole.USER) {
         if (msg.attachments && msg.attachments.length > 0) {
-          const content: any[] = [];
+          const content: unknown[] = [];
           if (msg.content) {
             content.push({ type: 'text', text: msg.content });
           }
@@ -305,7 +305,7 @@ export class MiniMaxProvider implements IProvider {
           }
           anthropicMessages.push({
             role: 'user',
-            content: content as any,
+            content: content as Anthropic.MessageParam['content'],
           });
         } else {
           anthropicMessages.push({
@@ -317,7 +317,7 @@ export class MiniMaxProvider implements IProvider {
         // For assistant messages with tool calls, we need to convert them
         if (msg.tool_calls && msg.tool_calls.length > 0) {
           // Convert tool calls to Anthropic format
-          const toolUseBlocks: any[] = msg.tool_calls.map((tc) => ({
+          const toolUseBlocks: unknown[] = msg.tool_calls.map((tc) => ({
             type: 'tool_use',
             id: tc.id,
             name: tc.function.name,
@@ -329,7 +329,7 @@ export class MiniMaxProvider implements IProvider {
             content: [
               ...(msg.content ? [{ type: 'text' as const, text: msg.content }] : []),
               ...toolUseBlocks,
-            ] as any,
+            ] as Anthropic.MessageParam['content'],
           });
         } else {
           anthropicMessages.push({
@@ -340,7 +340,7 @@ export class MiniMaxProvider implements IProvider {
       } else if (msg.role === MessageRole.TOOL) {
         // Tool result messages
         if (msg.attachments && msg.attachments.length > 0) {
-          const content: any[] = [];
+          const content: unknown[] = [];
           if (msg.content) {
             content.push({ type: 'text', text: msg.content });
           }
@@ -362,7 +362,10 @@ export class MiniMaxProvider implements IProvider {
               {
                 type: 'tool_result',
                 tool_use_id: msg.tool_call_id ?? '',
-                content: content as any,
+                content: content as unknown as (
+                  | Anthropic.TextBlockParam
+                  | Anthropic.ImageBlockParam
+                )[],
               },
             ],
           });

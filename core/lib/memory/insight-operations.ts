@@ -262,7 +262,15 @@ export async function searchInsights(
 
   // If no userId but category is provided, use TypeTimestampIndex to search all items
   if (scopes.length === 0) {
-    const params: any = {
+    const params: {
+      IndexName: string;
+      KeyConditionExpression: string;
+      ExpressionAttributeNames: Record<string, string>;
+      ExpressionAttributeValues: Record<string, unknown>;
+      Limit: number;
+      ScanIndexForward: boolean;
+      FilterExpression?: string;
+    } = {
       IndexName: 'TypeTimestampIndex',
       KeyConditionExpression: '#tp = :type',
       ExpressionAttributeNames: { '#tp': 'type' },
@@ -287,7 +295,15 @@ export async function searchInsights(
   }
 
   for (const scope of scopes) {
-    const params: any = {
+    const params: {
+      IndexName: string;
+      KeyConditionExpression: string;
+      ExpressionAttributeNames: Record<string, string>;
+      ExpressionAttributeValues: Record<string, unknown>;
+      Limit: number;
+      ScanIndexForward: boolean;
+      FilterExpression?: string;
+    } = {
       IndexName: 'UserInsightIndex',
       KeyConditionExpression: '#uid = :userId AND #tp = :type',
       ExpressionAttributeNames: { '#uid': 'userId', '#tp': 'type' },
@@ -325,11 +341,17 @@ function mapToInsights(items: Record<string, unknown>[]): MemoryInsight[] {
 
     const tags =
       (item.tags as string[]) ||
-      (metadataRaw as any).tags ||
-      (metadataRaw as any).contextualKeywords;
-    const orgId = (item.orgId as string) || (metadataRaw as any).orgId;
-    const userId = (item.userId as string) || (metadataRaw as any).userId;
-    const createdAt = (item.createdAt as number) || (metadataRaw as any).createdAt || timestamp;
+      (metadataRaw as Record<string, unknown>).tags ||
+      (metadataRaw as Record<string, unknown>).contextualKeywords;
+    const orgId = ((item.orgId as string) || (metadataRaw as Record<string, unknown>).orgId) as
+      | string
+      | undefined;
+    const userId = ((item.userId as string) || (metadataRaw as Record<string, unknown>).userId) as
+      | string
+      | undefined;
+    const createdAt = ((item.createdAt as number) ||
+      (metadataRaw as Record<string, unknown>).createdAt ||
+      timestamp) as number;
 
     return {
       id: (item.id || item.userId) as string,

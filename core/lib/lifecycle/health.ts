@@ -149,7 +149,7 @@ export async function checkAgentBus(): Promise<ProbeResult> {
 export async function checkToolHealth(): Promise<ProbeResult> {
   const typedResource = Resource as unknown as SSTResource;
   const start = Date.now();
-  const details: Record<string, any> = {};
+  const details: Record<string, unknown> = {};
   let overallOk = true;
 
   // 1. DynamoDB Checks
@@ -162,7 +162,7 @@ export async function checkToolHealth(): Promise<ProbeResult> {
   for (const table of ddbTables) {
     try {
       const dbStart = Date.now();
-      let key: Record<string, any>;
+      let key: Record<string, import('@aws-sdk/client-dynamodb').AttributeValue>;
 
       if (table.name === 'ConfigTable') {
         key = { key: { S: 'HEALTH#PROBE' } };

@@ -44,7 +44,7 @@ format: ## Run Prettier to format code
 
 format-check: ## Check if code is formatted with Prettier
 	@$(call log_info,Checking formatting...)
-	@$(PNPM) exec prettier --check "core/**/*.ts" "infra/**/*.ts"
+	@$(PNPM) exec prettier --check "core/**/*.ts" "infra/**/*.ts" "scripts/**/*.ts" "dashboard/src/**/*.ts*"
 
 type-check: ## Run TypeScript type checking
 	@$(call log_info,Type checking with tsc...)
@@ -56,4 +56,4 @@ aiready: ## Run AIReady scan to evaluate agent-friendliness
 
 lint-staged: ## Run lint-staged for partial checks
 	@$(call log_info,Running lint-staged...)
-	@npx lint-staged
+	@$(PNPM) exec lint-staged

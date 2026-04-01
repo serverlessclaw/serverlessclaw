@@ -78,10 +78,11 @@ export class SecurityScanner {
       });
 
       return this.parseAuditOutput(output);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // pnpm audit returns non-zero exit code when vulnerabilities are found
-      if (error.stdout) {
-        return this.parseAuditOutput(error.stdout);
+      const err = error as { stdout?: string };
+      if (err.stdout) {
+        return this.parseAuditOutput(err.stdout);
       }
       throw error;
     }
@@ -97,13 +98,16 @@ export class SecurityScanner {
 
       // Parse advisories (pnpm audit format)
       if (data.advisories) {
-        for (const [_id, advisory] of Object.entries(data.advisories) as [string, any][]) {
+        for (const [_id, advisory] of Object.entries(data.advisories) as [
+          string,
+          Record<string, unknown>,
+        ][]) {
           vulnerabilities.push({
-            name: advisory.module_name,
-            severity: advisory.severity,
-            title: advisory.title,
-            url: advisory.url,
-            range: advisory.vulnerable_versions,
+            name: advisory.module_name as string,
+            severity: advisory.severity as Vulnerability['severity'],
+            title: advisory.title as string,
+            url: advisory.url as string,
+            range: advisory.vulnerable_versions as string,
             fixAvailable: advisory.patched_versions ? true : false,
           });
         }
@@ -111,14 +115,17 @@ export class SecurityScanner {
 
       // Parse vulnerabilities (newer pnpm audit format)
       if (data.vulnerabilities) {
-        for (const [name, vuln] of Object.entries(data.vulnerabilities) as [string, any][]) {
+        for (const [name, vuln] of Object.entries(data.vulnerabilities) as [
+          string,
+          Record<string, unknown>,
+        ][]) {
           vulnerabilities.push({
             name,
-            severity: vuln.severity,
-            title: vuln.title || 'No title available',
-            url: vuln.url || '',
-            range: vuln.range || '',
-            fixAvailable: vuln.fixAvailable || false,
+            severity: vuln.severity as Vulnerability['severity'],
+            title: (vuln.title as string) || 'No title available',
+            url: (vuln.url as string) || '',
+            range: (vuln.range as string) || '',
+            fixAvailable: (vuln.fixAvailable as boolean) || false,
           });
         }
       }

@@ -43,13 +43,14 @@ export function createApi(ctx: SharedContext): { api: sst.aws.ApiGatewayV2 } {
   ];
 
   // Main Webhook
-  const criticalAgents = ctx.agents
+  const agents = ctx.agents as Record<string, sst.aws.Function> | undefined;
+  const criticalAgents = agents
     ? [
-        ctx.agents.plannerAgent,
-        ctx.agents.coderAgent,
-        ctx.agents.reflectorAgent,
-        ctx.agents.qaAgent,
-        ctx.agents.mergerAgent,
+        agents.plannerAgent,
+        agents.coderAgent,
+        agents.reflectorAgent,
+        agents.qaAgent,
+        agents.mergerAgent,
       ].filter(Boolean)
     : [];
 

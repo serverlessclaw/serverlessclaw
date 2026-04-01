@@ -144,8 +144,9 @@ export class BaseMemoryProvider {
    * @param params - The DynamoDB UpdateCommand parameters.
    * @returns A promise resolving to the update result.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public async updateItem(params: Record<string, any>): Promise<any> {
+  public async updateItem(
+    params: Record<string, unknown>
+  ): Promise<import('@aws-sdk/lib-dynamodb').UpdateCommandOutput> {
     const command = new UpdateCommand({
       TableName: this.tableName,
       ...params,
@@ -196,8 +197,7 @@ export class BaseMemoryProvider {
       role: item.role as MessageRole,
       content: item.content as string | undefined,
       thought: item.thought as string | undefined,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      tool_calls: item.tool_calls as any,
+      tool_calls: item.tool_calls as import('./../types/llm').ToolCall[] | undefined,
       tool_call_id: item.tool_call_id as string | undefined,
       name: item.name as string | undefined,
       agentName: item.agentName as string | undefined,

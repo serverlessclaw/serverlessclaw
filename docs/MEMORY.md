@@ -26,9 +26,9 @@ Serverless Claw uses a tiered, evolutionary memory system designed to provide co
 |                                                                     |
 |  [ TIER 1: CORE INTELLIGENCE ] --------> Retain: 90-730 Days        |
 |  - Key: DISTILLED# / LESSON# (90d) / FACT# (365d) / GAP# (730d) /  |
-|    MEMORY: / REPUTATION# (365d) / FAILED_PLAN#:                     |
+|    GAP_LOCK#: (30m) / REPUTATION# (365d) / FAILED_PLAN#:           |
 |  - Purpose: Permanent identity, tactical lessons, strategic roadmaps,|
-|    agent reputation for swarm routing, and anti-pattern learning.    |
+|    concurrency control for evolution, and anti-pattern learning.     |
 |                                                                     |
 |  [ TIER 2: HUMAN CONVERSATION ] -------> Retain: 7 Days             |
 |  - Key: CONV# / SESSIONS# (90d) / SUMMARY# (30d)                    |
@@ -67,7 +67,9 @@ Short-term heuristics distilled by the **Cognition Reflector**. If the agent mak
 A backlog of missing capabilities identified by the Reflector. These gaps are the primary driver for the system's **Self-Evolution**.
 
 - **Tracking**: Includes ROI, Complexity, and Risk signals.
-- **Evolution**: The **Strategic Planner** reviews these during its deterministic **48-hour review** cycle to design the next system upgrade.
+- **Normalization**: Gap IDs are normalized (numeric extraction) to ensure stable trace linkage across providers and prevent accidental duplication from text-prefixed IDs (e.g., `GAP-123` becomes `123`).
+- **Evolution**: The **Strategic Planner** reviews these during its deterministic **48-hour review** cycle.
+- **Concurrency**: Agents use `GAP_LOCK#<id>` items with a 30-minute TTL to coordinate work on high-value gaps, preventing duplicate efforts and race conditions.
 
 ### 4. Negative Memory (`FAILED_PLAN#`)
 

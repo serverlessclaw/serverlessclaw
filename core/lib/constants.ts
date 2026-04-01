@@ -162,6 +162,8 @@ export const MEMORY_KEYS = {
   HEALTH_PREFIX: 'HEALTH#',
   /** Prefix for gap-to-track assignments (multi-track evolution). */
   TRACK_PREFIX: 'TRACK#',
+  /** Prefix for gap-level concurrency locks. */
+  GAP_LOCK_PREFIX: 'GAP_LOCK#',
 } as const;
 
 /**
@@ -512,3 +514,4 @@ export const AGENT_ERRORS = {
   CONNECTION_FAILURE:
     'SYSTEM_ERROR: Connection interrupted or internal failure. Technical details logged as strategic gap.',
 } as const;
+// dummy change
