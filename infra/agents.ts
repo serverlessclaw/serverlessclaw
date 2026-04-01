@@ -102,6 +102,7 @@ export function createAgents(
   heartbeatHandler: sst.aws.Function;
   concurrencyMonitor: sst.aws.Function;
   mergerAgent: sst.aws.Function;
+  qaAgent: sst.aws.Function;
   schedulerRole: aws.iam.Role;
   dlqHandler?: sst.aws.Function;
 } {
@@ -613,6 +614,7 @@ export function createAgents(
     heartbeatHandler,
     concurrencyMonitor,
     mergerAgent,
+    qaAgent,
     schedulerRole,
     dlqHandler,
   };

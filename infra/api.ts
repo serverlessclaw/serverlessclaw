@@ -10,12 +10,28 @@ const NODEJS_LOADERS = { '.md': 'text' } as const;
 const LOG_RETENTION_PERIOD = '1 month';
 
 /**
- * Initializes the main API Gateway and its routes.
+ * Initializes the main API Gateway.
  *
- * @param ctx - The shared context containing system resources.
+ * @param ctx - The shared context (without agents).
  * @returns An object containing the created API resource.
  */
-export function createApi(ctx: SharedContext): { api: sst.aws.ApiGatewayV2 } {
+export function createApi(_ctx: SharedContext): { api: sst.aws.ApiGatewayV2 } {
+  const apiDomain = getDomainConfig('api');
+  const api = new sst.aws.ApiGatewayV2('WebhookApiV2', {
+    domain: apiDomain,
+  });
+
+  return { api };
+}
+
+/**
+ * Configures the routes for the API Gateway.
+ * This is called after the agents have been created to allow linking.
+ *
+ * @param api - The API Gateway instance.
+ * @param ctx - The shared context containing agents and other resources.
+ */
+export function configureApiRoutes(api: sst.aws.ApiGatewayV2, ctx: SharedContext): void {
   const {
     memoryTable,
     traceTable,
@@ -26,11 +42,6 @@ export function createApi(ctx: SharedContext): { api: sst.aws.ApiGatewayV2 } {
     bus,
     deployer,
   } = ctx;
-
-  const apiDomain = getDomainConfig('api');
-  const api = new sst.aws.ApiGatewayV2('WebhookApiV2', {
-    domain: apiDomain,
-  });
 
   const validSecrets = getValidSecrets(secrets);
 
@@ -106,6 +117,4 @@ export function createApi(ctx: SharedContext): { api: sst.aws.ApiGatewayV2 } {
       retention: LOG_RETENTION_PERIOD,
     },
   });
-
-  return { api };
 }

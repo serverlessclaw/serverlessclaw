@@ -75,7 +75,8 @@ export function createStorage() {
     },
   });
 
-  const secrets = {
+  // Base secrets (always required)
+  const secrets: Record<string, sst.Secret> = {
     TelegramBotToken: new sst.Secret('TelegramBotToken'),
     MiniMaxApiKey: new sst.Secret('MiniMaxApiKey'),
     OpenAIApiKey: new sst.Secret('OpenAIApiKey'),
@@ -85,15 +86,16 @@ export function createStorage() {
     ActiveModel: new sst.Secret('ActiveModel'),
     GitHubToken: new sst.Secret('GitHubToken'),
     DashboardPassword: new sst.Secret('DashboardPassword'),
-    DiscordBotToken:
-      $app.stage === 'prod' || process.env.SST_SECRET_DiscordBotToken
-        ? new sst.Secret('DiscordBotToken')
-        : (undefined as unknown as sst.Secret),
-    SlackBotToken:
-      $app.stage === 'prod' || process.env.SST_SECRET_SlackBotToken
-        ? new sst.Secret('SlackBotToken')
-        : (undefined as unknown as sst.Secret),
   };
+
+  // Conditionally add optional secrets to avoid undefined values in link arrays
+  if ($app.stage === 'prod' || process.env.SST_SECRET_DiscordBotToken) {
+    secrets.DiscordBotToken = new sst.Secret('DiscordBotToken');
+  }
+
+  if ($app.stage === 'prod' || process.env.SST_SECRET_SlackBotToken) {
+    secrets.SlackBotToken = new sst.Secret('SlackBotToken');
+  }
 
   return { memoryTable, traceTable, stagingBucket, knowledgeBucket, secrets, configTable };
 }

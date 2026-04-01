@@ -63,7 +63,7 @@ export default $config({
     const { createStorage } = await import('./infra/storage.js');
     const { createBus } = await import('./infra/bus.js');
     const { createDeployer } = await import('./infra/deployer.js');
-    const { createApi } = await import('./infra/api.js');
+    const { createApi, configureApiRoutes } = await import('./infra/api.js');
     const { createMCPServers } = await import('./infra/mcp-servers.js');
     const { createAgents } = await import('./infra/agents.js');
     const { createDashboard } = await import('./infra/dashboard.js');
@@ -81,8 +81,8 @@ export default $config({
       githubToken: secrets.GitHubToken,
     });
 
-    // 3.5 MCP Servers
-    const mcpServers = createMCPServers({
+    // 4. API Instance (Created early for linking, routes added later)
+    const { api } = createApi({
       memoryTable,
       traceTable,
       configTable,
@@ -93,7 +93,20 @@ export default $config({
       deployer,
     });
 
-    // 4. Sub-Agents (Handlers & Logic)
+    // 5. MCP Servers
+    const mcpServers = createMCPServers({
+      memoryTable,
+      traceTable,
+      configTable,
+      stagingBucket,
+      knowledgeBucket,
+      secrets,
+      bus,
+      deployer,
+      api, // Now available for linking if needed
+    });
+
+    // 6. Sub-Agents (Handlers & Logic)
     const agentResources = createAgents(
       {
         memoryTable,
@@ -105,12 +118,13 @@ export default $config({
         bus,
         deployer,
         realtime,
+        api, // Linkable API instance
       },
       mcpServers
     );
 
-    // 5. API & Realtime
-    const { api } = createApi({
+    // 7. API Routes (Configured after agents exist)
+    configureApiRoutes(api, {
       memoryTable,
       traceTable,
       configTable,
@@ -119,10 +133,10 @@ export default $config({
       secrets,
       bus,
       deployer,
-      agents: agentResources, // Pass agents for warm-up linking
+      agents: agentResources,
     });
 
-    // 6. ClawCenter (Next.js 16)
+    // 8. ClawCenter (Next.js 16)
     const { dashboard } = createDashboard({
       memoryTable,
       traceTable,
