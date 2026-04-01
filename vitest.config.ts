@@ -13,11 +13,6 @@ export default defineConfig({
     include: ['**/*.test.{ts,tsx}'],
     exclude: ['**/node_modules/**', '**/.next/**', '**/.open-next/**', 'e2e/**'],
     setupFiles: ['./dashboard/src/test-setup.ts'],
-    environmentMatchGlobs: [
-      ['dashboard/**', 'jsdom'],
-      ['core/**', 'node'],
-      ['infra/**', 'node'],
-    ],
     alias: {
       '@': path.resolve(__dirname, './dashboard/src'),
       '@claw/core': path.resolve(__dirname, './core'),
@@ -51,16 +46,6 @@ export default defineConfig({
         statements: 55,
       },
     },
-  },
-  esbuild: {
-    jsx: 'automatic',
-    jsxDev: true,
-    jsxImportSource: 'react',
-    tsconfigRaw: JSON.stringify({
-      compilerOptions: {
-        jsx: 'react-jsx',
-      },
-    }),
   },
   plugins: [
     react({

@@ -6,7 +6,7 @@ const lambda = new LambdaClient({});
 /**
  * Warms up critical agents to reduce cold start latency during active sessions.
  * Sends a non-blocking 'WARMUP' signal to the specified Lambda functions.
- * 
+ *
  * @param functionArns - Array of Lambda function ARNs or names to warm up.
  */
 export async function warmUpAgents(functionArns: string[]): Promise<void> {
@@ -33,6 +33,8 @@ export async function warmUpAgents(functionArns: string[]): Promise<void> {
   // We don't await the individual results here to keep the webhook fast
   Promise.allSettled(warmupPromises).then((results) => {
     const successCount = results.filter((r) => r.status === 'fulfilled').length;
-    logger.info(`[WARMUP] Warm-up signals emitted. Success: ${successCount}/${functionArns.length}`);
+    logger.info(
+      `[WARMUP] Warm-up signals emitted. Success: ${successCount}/${functionArns.length}`
+    );
   });
 }

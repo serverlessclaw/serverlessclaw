@@ -43,14 +43,15 @@ export function createApi(ctx: SharedContext): { api: sst.aws.ApiGatewayV2 } {
   ];
 
   // Main Webhook
-  const criticalAgents = ctx.agents ? [
-    ctx.agents.plannerAgent,
-    ctx.agents.coderAgent,
-    ctx.agents.reflectorAgent,
-    ctx.agents.qaAgent,
-    ctx.agents.mergerAgent
-  ].filter(Boolean) : [];
-
+  const criticalAgents = ctx.agents
+    ? [
+        ctx.agents.plannerAgent,
+        ctx.agents.coderAgent,
+        ctx.agents.reflectorAgent,
+        ctx.agents.qaAgent,
+        ctx.agents.mergerAgent,
+      ].filter(Boolean)
+    : [];
 
   api.route('ANY /webhook', {
     handler: 'core/handlers/webhook.handler',
@@ -68,14 +69,14 @@ export function createApi(ctx: SharedContext): { api: sst.aws.ApiGatewayV2 } {
     ],
     environment: {
       // Pass the function names for the warm-up utility
-      WARM_UP_FUNCTIONS: JSON.stringify(criticalAgents.map(a => a.name)),
+      WARM_UP_FUNCTIONS: JSON.stringify(criticalAgents.map((a) => a.name)),
     },
     permissions: [
       ...apiPermissions,
       {
         actions: ['lambda:InvokeFunction'],
-        resources: criticalAgents.map(a => a.arn),
-      }
+        resources: criticalAgents.map((a) => a.arn),
+      },
     ],
     architecture: LAMBDA_ARCHITECTURE,
     timeout: AGENT_CONFIG.timeout.SHORT,
@@ -83,7 +84,6 @@ export function createApi(ctx: SharedContext): { api: sst.aws.ApiGatewayV2 } {
       retention: LOG_RETENTION_PERIOD,
     },
   });
-
 
   // Health Probe
   api.route('GET /health', {

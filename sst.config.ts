@@ -142,6 +142,5 @@ export default $config({
       apiUrl: api.url,
       dashboardUrl: dashboard.url,
     };
-
   },
 });

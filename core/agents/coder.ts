@@ -129,12 +129,12 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
     if (isEvolutionTask && status === 'SUCCESS' && !patchContent) {
       logger.warn('[PATCH_ENFORCEMENT] Evolution task missing patch. Marking as FAILED.');
       status = 'FAILED';
-      responseText = 'FAILED: Evolution task requires a technical patch for the merger, but none was provided by the model. Please retry with explicit patch generation.';
+      responseText =
+        'FAILED: Evolution task requires a technical patch for the merger, but none was provided by the model. Please retry with explicit patch generation.';
     }
 
     // Enrich response with TDD evidence if provided
     if (parsed.failing_test_written && parsed.test_file_path) {
-
       responseText += `\n\n**TDD Verification:**\n- Test File: \`${parsed.test_file_path}\`\n- Execution Result: \`${parsed.test_execution_result || 'Unknown'}\``;
     }
 

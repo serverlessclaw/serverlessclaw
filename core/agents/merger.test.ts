@@ -36,7 +36,11 @@ describe('Merger Agent Handler', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (initAgent as any).mockResolvedValue({ agent: mockAgent, memory: mockMemory, config: mockConfig });
+    (initAgent as any).mockResolvedValue({
+      agent: mockAgent,
+      memory: mockMemory,
+      config: mockConfig,
+    });
   });
 
   it('should process parallel patches and emit a completion event', async () => {
@@ -70,11 +74,13 @@ describe('Merger Agent Handler', () => {
       })
     );
 
-    expect(emitTaskEvent).toHaveBeenCalledWith(expect.objectContaining({
-      source: AgentType.MERGER,
-      agentId: AgentType.MERGER,
-      response: expect.stringContaining('Merged successfully'),
-    }));
+    expect(emitTaskEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: AgentType.MERGER,
+        agentId: AgentType.MERGER,
+        response: expect.stringContaining('Merged successfully'),
+      })
+    );
 
     expect(result).toContain('Merged successfully');
   });

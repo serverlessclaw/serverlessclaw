@@ -57,8 +57,11 @@ export async function handler(
           : routing.module;
         handlerModule = await import(`./${cleanModulePath}`);
       } catch (importError) {
-        logger.error(`[SAFE_MODE] Import failed for ${routing.module}. Attempting recovery...`, importError);
-        
+        logger.error(
+          `[SAFE_MODE] Import failed for ${routing.module}. Attempting recovery...`,
+          importError
+        );
+
         // 2. Recovery: Fallback to hardcoded DEFAULT_EVENT_ROUTING if not already using it
         if (routingTable !== DEFAULT_EVENT_ROUTING) {
           const fallback = DEFAULT_EVENT_ROUTING[detailType];
@@ -70,7 +73,10 @@ export async function handler(
             try {
               handlerModule = await import(`./${cleanFallbackPath}`);
             } catch (fallbackError) {
-              logger.error(`[SAFE_MODE] Critical fallback import failed for ${cleanFallbackPath}:`, fallbackError);
+              logger.error(
+                `[SAFE_MODE] Critical fallback import failed for ${cleanFallbackPath}:`,
+                fallbackError
+              );
             }
           }
         }
@@ -90,7 +96,6 @@ export async function handler(
     } else {
       logger.warn(`Unhandled event type: ${detailType}`);
     }
-
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error(`EventHandler failed for ${detailType}: ${errorMessage}`, error);

@@ -332,7 +332,8 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
   [AgentType.MERGER]: {
     id: AgentType.MERGER,
     name: 'Structural Merger',
-    systemPrompt: 'You are a Structural Merger specialized in AST-aware code reconciliation. Use tools to verify patch compatibility.',
+    systemPrompt:
+      'You are a Structural Merger specialized in AST-aware code reconciliation. Use tools to verify patch compatibility.',
     description: 'Reconciliation node. Resolves semantic conflicts between parallel code changes.',
     category: AgentCategory.SYSTEM,
     icon: 'GitMerge',
@@ -350,7 +351,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       'git_diff',
       'grep_search',
       'code-index-mcp', // Structural tool
-      'mcp-ripgrep',    // Regex tool
+      'mcp-ripgrep', // Regex tool
       TOOL_SEND_MESSAGE,
       TOOL_SAVE_MEMORY,
     ],
@@ -364,7 +365,6 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
   },
   // Handlers (Logic-only, but registered for topology awareness)
   [AgentType.BUILD_MONITOR]: {
-
     id: AgentType.BUILD_MONITOR,
     name: 'Build Monitor',
     systemPrompt: 'LOGIC_ONLY',

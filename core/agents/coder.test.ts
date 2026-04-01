@@ -149,7 +149,6 @@ describe('Coder Agent', () => {
     });
 
     const event = {
-
       detail: {
         userId: 'user123',
         task: 'implement feature',
@@ -177,7 +176,6 @@ describe('Coder Agent', () => {
     });
 
     const event = {
-
       detail: {
         userId: 'user123',
         task: 'implement feature',
@@ -259,4 +257,3 @@ describe('Coder Agent', () => {
     expect(mockMemory.updateGapStatus).not.toHaveBeenCalledWith('gap1', GapStatus.DEPLOYED);
   });
 });
-

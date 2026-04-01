@@ -55,8 +55,6 @@ vi.mock('../lib/registry/config', () => ({
   },
 }));
 
-
-
 // Mock tools and outbound
 vi.mock('../tools', () => ({
   getAgentTools: vi.fn().mockResolvedValue([]),
@@ -362,43 +360,42 @@ describe('EventHandler', () => {
         undefined
       );
     });
-  describe('Safe Mode Fallback', () => {
-    it('should fall back to DEFAULT_EVENT_ROUTING if primary module import fails', async () => {
-      const { ConfigManager } = await import('../lib/registry/config');
-      const { DEFAULT_EVENT_ROUTING } = await import('../lib/event-routing');
+    describe('Safe Mode Fallback', () => {
+      it('should fall back to DEFAULT_EVENT_ROUTING if primary module import fails', async () => {
+        const { ConfigManager } = await import('../lib/registry/config');
 
-      // 1. Mock ConfigManager to return a "broken" custom routing
-      (ConfigManager.getTypedConfig as any).mockResolvedValue({
-        [EventType.SYSTEM_HEALTH_REPORT]: {
-          module: 'non-existent-module',
-          function: 'handler',
-        },
+        // 1. Mock ConfigManager to return a "broken" custom routing
+        (ConfigManager.getTypedConfig as any).mockResolvedValue({
+          [EventType.SYSTEM_HEALTH_REPORT]: {
+            module: 'non-existent-module',
+            function: 'handler',
+          },
+        });
+
+        const event = {
+          'detail-type': EventType.SYSTEM_HEALTH_REPORT,
+          detail: {
+            component: 'TestComp',
+            issue: 'Safe Mode Test',
+            severity: 'low',
+            userId: 'user-safe',
+          },
+        };
+
+        // 2. The handler should catch the import error and fall back to the default handler
+        // We need to ensure the default handler module (health.ts) is моcked/available.
+        await handler(event as any, {} as any);
+
+        // 3. Verify logger recorded the fallback attempt
+        const { logger } = await import('../lib/logger');
+        expect(logger.error).toHaveBeenCalledWith(
+          expect.stringContaining('[SAFE_MODE] Import failed for non-existent-module'),
+          expect.anything()
+        );
+        expect(logger.info).toHaveBeenCalledWith(
+          expect.stringContaining('[SAFE_MODE] Recovering via default routing')
+        );
       });
-
-      const event = {
-        'detail-type': EventType.SYSTEM_HEALTH_REPORT,
-        detail: {
-          component: 'TestComp',
-          issue: 'Safe Mode Test',
-          severity: 'low',
-          userId: 'user-safe',
-        },
-      };
-
-      // 2. The handler should catch the import error and fall back to the default handler
-      // We need to ensure the default handler module (health.ts) is моcked/available.
-      await handler(event as any, {} as any);
-
-      // 3. Verify logger recorded the fallback attempt
-      const { logger } = await import('../lib/logger');
-      expect(logger.error).toHaveBeenCalledWith(
-        expect.stringContaining('[SAFE_MODE] Import failed for non-existent-module'),
-        expect.anything()
-      );
-      expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('[SAFE_MODE] Recovering via default routing')
-      );
     });
   });
-});
 });

@@ -307,7 +307,6 @@ export enum AgentType {
   MERGER = 'merger',
 }
 
-
 /**
  * Origin of a request or task.
  */

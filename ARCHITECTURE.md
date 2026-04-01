@@ -161,8 +161,11 @@ Agents communicate asynchronously using **AWS EventBridge (The AgentBus)**. This
           |         |               (5) [ STRATEGIC PLANNER ]      |
           |         |                (Consulted via signalOrch)    |
           |         |                                              |
+          |  (6) [ MERGER_AGENT ]                                  |
+          |      (Semantic Reconcile)                              |
+          |         |                                              |
           +---------+-----> [ EVENT_HANDLER_ROUTER ] --------------+
-                    (build/continuation/task-result)
+                    (build/continuation/task-result/parallel)
                     (signalOrchestration routes)
                     (Recursion Guard + Trace Propagation)
 ````

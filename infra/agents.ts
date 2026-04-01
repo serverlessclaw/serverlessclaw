@@ -104,7 +104,6 @@ export function createAgents(
   mergerAgent: sst.aws.Function;
   schedulerRole: aws.iam.Role;
 } {
-
   const {
     memoryTable,
     traceTable,
@@ -593,5 +592,4 @@ export function createAgents(
     mergerAgent,
     schedulerRole,
   };
-
 }

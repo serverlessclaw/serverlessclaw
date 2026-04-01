@@ -28,7 +28,7 @@ describe('warm-up Utility', () => {
     // Wait for the fire-and-forget promises to resolve (if possible in test?)
     // Actually our utility uses Promise.allSettled and returns void, but we can check the calls.
     expect(lambdaMock.calls()).toHaveLength(2);
-    
+
     const calls = lambdaMock.calls();
     expect(calls[0].args[0].input).toMatchObject({
       FunctionName: 'arn:1',
@@ -45,10 +45,9 @@ describe('warm-up Utility', () => {
     expect(lambdaMock.calls()).toHaveLength(0);
   });
 
-
   it('should handle invocation errors without crashing the main flow', async () => {
     lambdaMock.on(InvokeCommand).rejects(new Error('Lambda Error'));
-    
+
     // This should not throw because the utility catches errors internally
     await expect(warmUpAgents(['arn:fail'])).resolves.not.toThrow();
   });
