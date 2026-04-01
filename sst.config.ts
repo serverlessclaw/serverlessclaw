@@ -93,20 +93,8 @@ export default $config({
       deployer,
     });
 
-    // 4. API & Realtime
-    const { api } = createApi({
-      memoryTable,
-      traceTable,
-      configTable,
-      stagingBucket,
-      knowledgeBucket,
-      secrets,
-      bus,
-      deployer,
-    });
-
-    // 5. Sub-Agents (Handlers & Logic)
-    const { heartbeatHandler, schedulerRole } = createAgents(
+    // 4. Sub-Agents (Handlers & Logic)
+    const agentResources = createAgents(
       {
         memoryTable,
         traceTable,
@@ -116,11 +104,23 @@ export default $config({
         secrets,
         bus,
         deployer,
-        api,
         realtime,
       },
       mcpServers
     );
+
+    // 5. API & Realtime
+    const { api } = createApi({
+      memoryTable,
+      traceTable,
+      configTable,
+      stagingBucket,
+      knowledgeBucket,
+      secrets,
+      bus,
+      deployer,
+      agents: agentResources, // Pass agents for warm-up linking
+    });
 
     // 6. ClawCenter (Next.js 16)
     const { dashboard } = createDashboard({
@@ -134,13 +134,14 @@ export default $config({
       deployer,
       api,
       realtime,
-      heartbeatHandler,
-      schedulerRole,
+      heartbeatHandler: agentResources.heartbeatHandler,
+      schedulerRole: agentResources.schedulerRole,
     });
 
     return {
       apiUrl: api.url,
       dashboardUrl: dashboard.url,
     };
+
   },
 });

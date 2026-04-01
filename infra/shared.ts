@@ -14,7 +14,9 @@ export interface SharedContext {
   realtime?: sst.aws.Realtime;
   heartbeatHandler?: sst.aws.Function;
   schedulerRole?: aws.iam.Role;
+  agents?: any; // Generic for now to avoid circular deps with createAgents return type
 }
+
 
 /**
  * Filter out any undefined secrets before linking to resources.

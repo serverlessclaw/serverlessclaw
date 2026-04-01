@@ -303,7 +303,10 @@ export enum AgentType {
   CRITIC = 'critic',
   /** Dedicated moderator for multi-party collaborations. */
   FACILITATOR = 'facilitator',
+  /** Specialized agent for semantic multi-track code merging. */
+  MERGER = 'merger',
 }
+
 
 /**
  * Origin of a request or task.

@@ -101,8 +101,10 @@ export function createAgents(
   bridge: sst.aws.Function;
   heartbeatHandler: sst.aws.Function;
   concurrencyMonitor: sst.aws.Function;
+  mergerAgent: sst.aws.Function;
   schedulerRole: aws.iam.Role;
 } {
+
   const {
     memoryTable,
     traceTable,
@@ -556,6 +558,25 @@ export function createAgents(
     'Monitors Lambda concurrent execution usage — alerts at 80% utilization'
   );
 
+  // 11. Merger Agent (AST-aware reconciliation)
+  const mergerAgent = new sst.aws.Function('MergerAgent', {
+    handler: 'core/agents/merger.handler',
+    dev: liveInLocalOnly,
+    link: [...baseLink, stagingBucket],
+    architecture: LAMBDA_ARCHITECTURE,
+    nodejs: { loader: NODEJS_LOADERS },
+    permissions: [...basePermissions, ...schedulerPermissions],
+    environment: agentEnv,
+    memory: AGENT_CONFIG.memory.LARGE,
+    timeout: AGENT_CONFIG.timeout.MAX,
+    logging: {
+      retention: LOG_RETENTION_PERIOD,
+    },
+  });
+  bus.subscribe('MergerTaskSubscriber', mergerAgent.arn, {
+    pattern: { detailType: [EventType.PARALLEL_TASK_COMPLETED] },
+  });
+
   return {
     coderAgent,
     buildMonitor,
@@ -569,6 +590,8 @@ export function createAgents(
     bridge,
     heartbeatHandler,
     concurrencyMonitor,
+    mergerAgent,
     schedulerRole,
   };
+
 }

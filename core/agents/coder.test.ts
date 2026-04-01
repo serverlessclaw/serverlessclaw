@@ -139,7 +139,17 @@ describe('Coder Agent', () => {
   });
 
   it('should transition gaps to PROGRESS and DEPLOYED if no buildId', async () => {
+    mockAgent.process.mockResolvedValueOnce({
+      responseText: JSON.stringify({
+        status: 'SUCCESS',
+        response: 'Completed',
+        patch: 'diff-1', // Required for evolution tasks now
+      }),
+      attachments: [],
+    });
+
     const event = {
+
       detail: {
         userId: 'user123',
         task: 'implement feature',
@@ -161,11 +171,13 @@ describe('Coder Agent', () => {
         status: 'SUCCESS',
         response: 'Building',
         buildId: 'build456',
+        patch: 'diff-2', // Required for evolution tasks now
       }),
       attachments: [],
     });
 
     const event = {
+
       detail: {
         userId: 'user123',
         task: 'implement feature',
@@ -221,4 +233,30 @@ describe('Coder Agent', () => {
     expect(result).toBeUndefined();
     expect(initAgent).not.toHaveBeenCalled();
   });
+
+  it('should mark as FAILED if evolution task (gapIds present) does not provide a patch', async () => {
+    mockAgent.process.mockResolvedValueOnce({
+      responseText: JSON.stringify({
+        status: 'SUCCESS',
+        response: 'Implemented without patch',
+        // patch is missing
+      }),
+      attachments: [],
+    });
+
+    const event = {
+      detail: {
+        userId: 'user123',
+        task: 'implement feature',
+        metadata: { gapIds: ['gap1'] },
+      },
+    } as any;
+
+    const result = await handler(event, mockContext);
+
+    expect(result).toContain('FAILED: Evolution task requires a technical patch');
+    // Ensure it doesn't mark as DEPLOYED
+    expect(mockMemory.updateGapStatus).not.toHaveBeenCalledWith('gap1', GapStatus.DEPLOYED);
+  });
 });
+

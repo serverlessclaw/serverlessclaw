@@ -329,8 +329,42 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       ConnectionProfile.KNOWLEDGE,
     ],
   },
+  [AgentType.MERGER]: {
+    id: AgentType.MERGER,
+    name: 'Structural Merger',
+    systemPrompt: 'You are a Structural Merger specialized in AST-aware code reconciliation. Use tools to verify patch compatibility.',
+    description: 'Reconciliation node. Resolves semantic conflicts between parallel code changes.',
+    category: AgentCategory.SYSTEM,
+    icon: 'GitMerge',
+    enabled: true,
+    isBackbone: true,
+    provider: LLMProvider.MINIMAX,
+    model: MiniMaxModel.M2_7,
+    reasoningProfile: ReasoningProfile.THINKING,
+    defaultCommunicationMode: 'json',
+    tools: [
+      TOOL_recallKnowledge,
+      'filesystem_read_file',
+      'filesystem_list_directory',
+      'git_status',
+      'git_diff',
+      'grep_search',
+      'code-index-mcp', // Structural tool
+      'mcp-ripgrep',    // Regex tool
+      TOOL_SEND_MESSAGE,
+      TOOL_SAVE_MEMORY,
+    ],
+    connectionProfile: [
+      ConnectionProfile.BUS,
+      ConnectionProfile.MEMORY,
+      ConnectionProfile.CONFIG,
+      ConnectionProfile.TRACE,
+      ConnectionProfile.STORAGE,
+    ],
+  },
   // Handlers (Logic-only, but registered for topology awareness)
   [AgentType.BUILD_MONITOR]: {
+
     id: AgentType.BUILD_MONITOR,
     name: 'Build Monitor',
     systemPrompt: 'LOGIC_ONLY',

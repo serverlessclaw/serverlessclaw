@@ -21,6 +21,8 @@ We distinguish between **Autonomous Agents** (LLM-powered decision-makers) and *
 | **QA Auditor**          | `core/agents/qa.ts`                  | `AgentRegistry` (Backbone) | Verifies satisfaction of deployed changes                                       |
 | **Critic Agent**        | `core/agents/critic.ts`              | `AgentRegistry` (Backbone) | Peer review for Council of Agents (security/performance/architect)              |
 | **Facilitator**         | `core/agents/prompts/facilitator.md` | `AgentRegistry` (Backbone) | Moderates multi-party collaboration sessions, drives consensus, closes sessions |
+| **Merger Agent**       | `core/agents/merger.ts`              | `AgentRegistry` (Backbone) | Structural code reconciliation for parallel evolution tasks                     |
+
 
 ### 2. System Handlers (Logic-Powered)
 

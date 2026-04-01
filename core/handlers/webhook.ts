@@ -39,7 +39,21 @@ export const handler = async (
 ): Promise<APIGatewayProxyResultV2> => {
   logger.info('[WEBHOOK] Start | Event:', event.body?.substring(0, 100));
 
+  // --- WARM-UP (Efficiency) ---
+  const warmUpFunctions = process.env.WARM_UP_FUNCTIONS;
+  if (warmUpFunctions) {
+    try {
+      const { warmUpAgents } = await import('../lib/utils/warm-up');
+      const functionArns = JSON.parse(warmUpFunctions);
+      // Fire-and-forget warm-up to avoid blocking the user request
+      warmUpAgents(functionArns).catch((err) => logger.warn('[WEBHOOK] Warm-up error:', err));
+    } catch (err) {
+      logger.warn('[WEBHOOK] Failed to initiate warm-up process:', err);
+    }
+  }
+
   let parsedUpdate: z.infer<typeof TELEGRAM_UPDATE_SCHEMA>;
+
   try {
     if (!event.body) {
       throw new Error('Missing event body');

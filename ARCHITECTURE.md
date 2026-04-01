@@ -12,10 +12,21 @@ This document covers the AWS topology and data flow. For agent logic and orchest
 2.  **Extensible**: Every major component (Memory, Messaging, Tools) is designed as a pluggable adapter.
 3.  **Low Latency**: Optimized for fast startup times to minimize "time-to-first-token". Implements **Real-time Streaming** via IoT Core (MQTT) to provide instantaneous feedback to human users during long-running reasoning tasks.
 4.  **Safety-First**: Implements nested guardrails including Circuit Breakers, Recursion Limits, and Protected Scopes.
-5.  **Proactive**: Agents can self-schedule future tasks and "wake-up" calls, moving beyond reactive event processing to autonomous goal achievement.
+5.  **Proactive & Efficient**: Agents can self-schedule future tasks, but the system prioritizes a **Trigger-on-Message** warm-up strategy to achieve near-zero idling costs while maintaining low-latency responsiveness.
 6.  **AI-Native**: Optimized for agent-human pair programming by prioritizing semantic transparency, strict neural typing, and direct schema definitions over traditional boilerplate indirection.
 
 ---
+
+## ⚡ Efficiency: Trigger-on-Message Warm-up
+
+To minimize AWS operational costs, Serverless Claw uses a dynamic warm-up strategy instead of persistent heartbeats:
+
+1. **Passive Idling**: High-memory agents (Coder, Planner) remain idle and cost-free when no user interaction is occurring.
+2. **Webhook Trigger**: Upon receiving a message (e.g., from Telegram), the [Webhook Handler](file:///Users/pengcao/projects/serverlessclaw/core/handlers/webhook.ts) immediately invokes a non-blocking `WARMUP` signal to critical agents.
+3. **Just-in-Time Readiness**: By the time the `SuperClaw` orchestrator has finished parsing the intent and retrieved initial memory, the sub-agents have finished their cold-starts and are ready for high-speed execution.
+
+---
+
 
 ## High-Level System Diagram
 

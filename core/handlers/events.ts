@@ -46,30 +46,32 @@ export async function handler(
       DEFAULT_EVENT_ROUTING
     );
 
-    const routing = routingTable[detailType];
+    const routing = routingTable[detailType] || DEFAULT_EVENT_ROUTING[detailType];
 
     if (routing) {
-      // Dynamic import of the specified module
-      // NOTE: We use template literal to satisfy dynamic import requirements
-      // with a base path to guide the bundler/runtime.
       let handlerModule;
       try {
-        // Remove leading './' if present in DDB to avoid path confusion
+        // 1. Try to import from configured module (DDB or Fallback)
         const cleanModulePath = routing.module.startsWith('./')
           ? routing.module.substring(2)
           : routing.module;
-
         handlerModule = await import(`./${cleanModulePath}`);
       } catch (importError) {
-        logger.error(`Failed to import dynamic handler module ${routing.module}:`, importError);
-        // Fallback to hardcoded routing if DDB import failed
+        logger.error(`[SAFE_MODE] Import failed for ${routing.module}. Attempting recovery...`, importError);
+        
+        // 2. Recovery: Fallback to hardcoded DEFAULT_EVENT_ROUTING if not already using it
         if (routingTable !== DEFAULT_EVENT_ROUTING) {
           const fallback = DEFAULT_EVENT_ROUTING[detailType];
           if (fallback) {
+            logger.info(`[SAFE_MODE] Recovering via default routing for ${detailType}`);
             const cleanFallbackPath = fallback.module.startsWith('./')
               ? fallback.module.substring(2)
               : fallback.module;
-            handlerModule = await import(`./${cleanFallbackPath}`);
+            try {
+              handlerModule = await import(`./${cleanFallbackPath}`);
+            } catch (fallbackError) {
+              logger.error(`[SAFE_MODE] Critical fallback import failed for ${cleanFallbackPath}:`, fallbackError);
+            }
           }
         }
       }
@@ -81,11 +83,14 @@ export async function handler(
           await handlerModule[routing.function](eventDetail, detailType);
         }
       } else {
-        logger.warn(`Handler function ${routing.function} not found in ${routing.module}`);
+        const errorMsg = `Handler function ${routing.function} missing in module ${routing.module}`;
+        logger.error(`[SAFE_MODE] ${errorMsg}`);
+        throw new Error(errorMsg);
       }
     } else {
       logger.warn(`Unhandled event type: ${detailType}`);
     }
+
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error(`EventHandler failed for ${detailType}: ${errorMessage}`, error);
