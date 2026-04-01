@@ -72,12 +72,23 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
           schema: {
             type: 'object',
             properties: {
+              failing_test_written: { type: 'boolean' },
+              test_file_path: { type: 'string' },
+              test_execution_result: { type: 'string' },
+              implementation_code: { type: 'string' },
               status: { type: 'string', enum: ['SUCCESS', 'FAILED'] },
               response: { type: 'string' },
               buildId: { type: 'string' },
               sessionId: { type: 'string' },
             },
-            required: ['status', 'response'],
+            required: [
+              'failing_test_written',
+              'test_file_path',
+              'test_execution_result',
+              'implementation_code',
+              'status',
+              'response',
+            ],
             additionalProperties: false,
           },
         },
@@ -96,11 +107,22 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
       status: string;
       response: string;
       buildId?: string;
+      failing_test_written?: boolean;
+      test_file_path?: string;
+      test_execution_result?: string;
     }>(rawResponse);
     status = parsed.status || 'SUCCESS';
     responseText = parsed.response || rawResponse;
     buildId = parsed.buildId;
-    logger.info(`Parsed Coder Result. Status: ${status}, BuildId: ${buildId}`);
+
+    // Enrich response with TDD evidence if provided
+    if (parsed.failing_test_written && parsed.test_file_path) {
+      responseText += `\n\n**TDD Verification:**\n- Test File: \`${parsed.test_file_path}\`\n- Execution Result: \`${parsed.test_execution_result || 'Unknown'}\``;
+    }
+
+    logger.info(
+      `Parsed Coder Result. Status: ${status}, BuildId: ${buildId}, TDD: ${parsed.failing_test_written}`
+    );
   } catch (e) {
     logger.warn('Failed to parse Coder structured response, falling back to raw text.', e);
   }

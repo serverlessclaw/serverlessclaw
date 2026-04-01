@@ -194,7 +194,7 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
       await wakeupInitiator(
         baseUserId,
         initiatorId,
-        `QA_VERIFICATION_FAILED: The changes for gaps ${retryGaps.join(', ')} failed verification.\n\nAudit Report:\n${auditReport}`,
+        `QA_VERIFICATION_FAILED: The changes for gaps ${retryGaps.join(', ')} failed verification.\n\nAudit Report:\n${auditReport}\n\n⚠️ TDD MANDATE: Before attempting another fix, you MUST first write a failing regression test that reproduces this specific QA failure. Then, fix the code to make the test pass.`,
         traceId,
         sessionId,
         depth
@@ -206,7 +206,7 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
       await dispatcher.execute({
         agentId: AgentType.CODER,
         userId: baseUserId,
-        task: `QA verification failed for gaps: ${retryGaps.join(', ')}.\n\nAudit Report:\n${auditReport}\n\nPlease fix the issues and redeploy.`,
+        task: `QA verification failed for gaps: ${retryGaps.join(', ')}.\n\nAudit Report:\n${auditReport}\n\n⚠️ TDD MANDATE: Before attempting another fix, you MUST first write a failing regression test that reproduces this specific QA failure. Only after the test fails should you implement the fix and redeploy.`,
         metadata: { gapIds: retryGaps },
         traceId,
         sessionId,
