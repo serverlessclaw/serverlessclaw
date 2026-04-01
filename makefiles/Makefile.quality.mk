@@ -21,7 +21,9 @@ gate-fast: ## Fast local gate: lint, format, typecheck, test-affected
 	@$(call log_step,Running fast local gate...)
 	$(call run_parallel_gate,lint~$(MAKE) lint||format~$(MAKE) format-check||typecheck~$(MAKE) type-check||test~$(MAKE) test-affected)
 
-gate-deploy: gate-tier-1 ## Pre-deploy gate (Tier 1)
+gate-deploy: ## Pre-deploy gate (Tier 1 + aiready)
+	@$(call log_step,Running deploy gate...)
+	$(call run_parallel_gate,lint~$(MAKE) lint||format~$(MAKE) format-check||typecheck~$(MAKE) type-check||test~$(MAKE) test-silent||aiready~$(MAKE) aiready)
 
 check: ## Run all quality checks sequentially (lint, format, type-check)
 	@$(call log_step,Running all quality checks...)
