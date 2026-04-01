@@ -1,90 +1,117 @@
-# Aiready Tool Bug Reports
+# AIReady Bug Reports & False Positive Analysis
 
-## Bugs to Report to Aiready Developers
+## Summary
 
-Use `aiready bug` command or file at https://github.com/aiready/aiready/issues
+After running AIReady scan on 2026-04-01, we identified several false positives that should be addressed to improve scan accuracy.
 
----
+## False Positives Identified
 
-### BUG 1: `aiready consistency` crashes with TypeError
+### 1. Enum Similarity Detection (HIGH PRIORITY)
 
-**Command**: `aiready consistency .`
-**Version**: `@aiready/consistency@0.21.5`
-**Error**: `TypeError: issues.filter is not a function`
+**Issue**: AIReady flags `EscalationPriority`, `HealthSeverity`, `AnomalySeverity`, and `EventPriority` as duplicate patterns with 60-78% similarity.
 
-```
-at calculateConsistencyScore (chunk-ZG3KFSD3.mjs:756:33)
-at executeToolAction (cli.js:403:19)
-```
+**Why This Is a False Positive**:
+- These enums represent **semantically different domain concepts**:
+  - `EscalationPriority`: Used for escalation levels in incident management
+  - `HealthSeverity`: Used for health status severity levels
+  - `AnomalySeverity`: Used for anomaly detection severity
+  - `EventPriority`: Used for event bus priority levels
+- While they share similar value names (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`), they serve different purposes in different contexts
+- Merging them would violate separation of concerns and create inappropriate coupling
 
-The `issues` variable is not an array when `calculateConsistencyScore` is called. Likely a data structure mismatch between the analyzer output and the scoring function input.
+**Recommendation**: AIReady should recognize that enums with different semantic meanings should not be flagged as duplicates, even if they share similar value names. Consider adding a rule that:
+- Ignores enum similarity when enum names are different
+- Requires higher similarity threshold (>85%) for enum comparisons
+- Excludes enum comparisons from pattern-detect by default
 
----
+### 2. DynamoDB Query Pattern Detection (MEDIUM PRIORITY)
 
-### BUG 2: `aiready patterns` crashes with TypeError
+**Issue**: Multiple API routes are flagged for having similar DynamoDB query patterns.
 
-**Command**: `aiready patterns .`
-**Version**: `@aiready/pattern-detect@0.17.5`
-**Error**: `TypeError: results.flatMap is not a function`
+**Why This Is a False Positive**:
+- The codebase uses a legitimate architectural pattern where different API endpoints query DynamoDB with different key prefixes (`WORKSPACE#`, `CONSENSUS#`, `BUILD#`, `REPUTATION#`, `HEALTH#`, `LOCK#`, etc.)
+- This is a **standard DynamoDB single-table design pattern**, not code duplication
+- The similarity is in the query structure, not in the business logic
 
-```
-at generateSummary (chunk-K7BO57OO.mjs:330:29)
-at executeToolAction (cli.js:397:21)
-```
+**Recommendation**: AIReady should:
+- Recognize DynamoDB single-table design patterns as legitimate
+- Exclude DynamoDB query patterns from duplicate detection when the key prefixes differ
+- Add a configuration option to whitelist specific patterns (e.g., DynamoDB queries)
 
-The `results` variable is not an array when `generateSummary` is called. Same class of issue as BUG 1 — output type mismatch.
+### 3. Singleton Getter Functions (LOW PRIORITY)
 
----
+**Issue**: Functions like `getSemanticLoopDetector()`, `getCircuitBreaker()`, `getTokenBudgetEnforcer()` are flagged as duplicates.
 
-### BUG 3: `contract-enforcement` results structure broken
+**Why This Is a False Positive**:
+- These are standard singleton pattern implementations
+- The similarity is intentional and expected
+- Each function returns a different type of singleton instance
 
-**Version**: `contract-enforcement@0.1.0`
+**Recommendation**: AIReady should:
+- Recognize singleton getter patterns as intentional
+- Exclude singleton getters from duplicate detection
+- Add a pattern whitelist for common design patterns
 
-All 148 issues have `"severity": "unknown"`, `"type": "unknown"`, and no file location data. The rawData counts (as-any: 21, as-unknown: 55, nullish-literal-default: 447, swallowed-error: 58) are accurate, but the individual issue records lack proper classification.
+### 4. Type Definitions in Different Modules (LOW PRIORITY)
 
-Expected: Each issue should have a valid severity (critical/major/minor), type, and file location.
+**Issue**: `ToolCall` interface in `core/lib/types/llm.ts` and `ChatMessageList.tsx` are flagged as duplicates.
 
----
+**Why This Is a False Positive**:
+- These are in different packages (`core` vs `dashboard`)
+- They serve different purposes in different contexts
+- The dashboard version may intentionally have a simplified version for UI purposes
 
-### BUG 4: `naming-consistency` false positives on PascalCase const names
+**Recommendation**: AIReady should:
+- Consider module boundaries when detecting duplicates
+- Increase similarity threshold for cross-module type comparisons
+- Allow different modules to have similar types without flagging
 
-**Version**: `@aiready/naming-consistency@0.16.5`
+### 5. CLI Argument Parsing Patterns (LOW PRIORITY)
 
-The rule `/^[A-Z][A-Z0-9_]*$/` (SCREAMING_SNAKE_CASE) flags PascalCase names as violations. In TypeScript, these are all correct:
+**Issue**: `main()` functions in CLI scripts are flagged as duplicates.
 
-- **Mock exports** mirroring AWS SDK classes: `DynamoDBClient`, `BedrockRuntimeClient`, `PutEventsCommand`
-- **Zod schema objects**: `OrchestrationSignalSchema`, `CriticVerdictSchema`, `ReflectionReportSchema`
-- **Namespace objects**: `CacheKeys`
-- **TypeScript class constructors**: `EventBridgeClient`
+**Why This Is a False Positive**:
+- CLI argument parsing follows a standard pattern
+- The similarity is in the boilerplate, not in the actual logic
+- Each script has different arguments and different functionality
 
-The rule should accept `/^[A-Z][a-zA-Z0-9]*$/` (PascalCase) for these categories, or provide a way to exclude const declarations that are class constructors/schema objects/namespace objects.
+**Recommendation**: AIReady should:
+- Recognize CLI argument parsing as a standard pattern
+- Exclude CLI boilerplate from duplicate detection
+- Focus on the actual business logic differences
 
-Workaround applied: Added `core/__mocks__/**`, `**/schema.ts` to `naming-consistency.exclude` in `aiready.json`.
+## Real Issues Fixed
 
----
+### 1. TrackBudget Interface Duplication ✅ FIXED
 
-### BUG 5: `ai-signal-clarity` false positives on pure functions
+**Files**:
+- `dashboard/src/components/EvolutionBudgetView.tsx`
+- `dashboard/src/app/pipeline/EvolutionBudgetSection.tsx`
 
-The tool flags these functions as "mutates external state but name doesn't reflect it":
+**Solution**: Created shared type in `dashboard/src/lib/types/dashboard.ts`
 
-1. `getDomainConfig` in `infra/shared.ts` — reads `process.env` (read-only), returns local object. No mutation.
-2. `getAgentTools` in `core/tools/registry-utils.ts` — uses dynamic `import()` (idempotent), returns array. No mutation.
-3. `validateAllTools` in `core/lib/schema.ts` — pure validator, only calls `logger.error`. No mutation.
+### 2. Anomaly Interface Duplication ✅ FIXED
 
-The tool conflates `process.env` reads, `console.log` calls, and dynamic `import()` with state mutation. These are all safe side effects that don't mutate external state.
+**Files**:
+- `dashboard/src/components/CognitiveHealthCard.tsx`
+- `dashboard/src/app/cognitive-health/page.tsx`
 
----
+**Solution**: Created shared type in `dashboard/src/lib/types/dashboard.ts`
 
-### BUG 6: `change-amplification` false positives on shared infrastructure
+## Recommendations for AIReady Team
 
-The tool reports `core/lib/logger.ts` (fan-in ~95, factor 48.5) and `core/lib/constants.ts` (fan-in 43, factor 24.5) as "explosive" coupling. This is by design:
+1. **Add Semantic Analysis**: Improve duplicate detection to consider semantic meaning, not just structural similarity
+2. **Pattern Whitelisting**: Allow users to whitelist common patterns (DynamoDB queries, singleton getters, CLI parsing)
+3. **Module Boundary Awareness**: Consider module boundaries when comparing types
+4. **Enum Handling**: Special handling for enums with different semantic meanings
+5. **Configuration Options**: Add more granular control over what gets flagged
 
-- A logging utility should be imported everywhere
-- A constants barrel should be widely used
-- A types barrel (`types/index.ts`) is expected to have high fan-in
+## Impact
 
-The tool should either:
+These false positives contribute to:
+- Inflated issue count (3613 total issues)
+- Reduced developer trust in the tool
+- Time spent investigating non-issues
+- Lower overall score due to noise
 
-- Exclude modules below a certain line count threshold (logger.ts is 242 lines)
-- Weight by semantic role (infrastructure vs business logic)
-- Provide a way to mark modules as "shared infrastructure" that's expected to have high fan-in
+Fixing these false positives would likely improve the AIReady score significantly.

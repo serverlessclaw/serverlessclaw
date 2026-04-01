@@ -5,12 +5,7 @@ import Card from '@/components/ui/Card';
 import Typography from '@/components/ui/Typography';
 import Badge from '@/components/ui/Badge';
 import { AlertTriangle } from 'lucide-react';
-
-interface Anomaly {
-  type: string;
-  severity: string;
-  message: string;
-}
+import { Anomaly } from '@/lib/types/dashboard';
 
 interface CognitiveHealthCardProps {
   agentId: string;

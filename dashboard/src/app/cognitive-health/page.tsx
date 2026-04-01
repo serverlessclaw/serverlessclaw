@@ -5,12 +5,7 @@ import { Loader2, Brain } from 'lucide-react';
 import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
 import CognitiveHealthCard from '@/components/CognitiveHealthCard';
-
-interface Anomaly {
-  type: string;
-  severity: string;
-  message: string;
-}
+import { Anomaly } from '@/lib/types/dashboard';
 
 interface AgentHealth {
   agentId: string;

@@ -3,12 +3,7 @@
 import React from 'react';
 import Typography from '@/components/ui/Typography';
 import { DollarSign, TrendingUp, AlertTriangle, PieChart } from 'lucide-react';
-
-interface TrackBudget {
-  track: string;
-  allocated: number;
-  spent: number;
-}
+import { TrackBudget } from '@/lib/types/dashboard';
 
 export default function EvolutionBudgetView({ budgets }: { budgets: TrackBudget[] }) {
   const totalAllocated = budgets.reduce((acc, b) => acc + b.allocated, 0);

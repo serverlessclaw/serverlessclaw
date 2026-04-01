@@ -3,12 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Typography from '@/components/ui/Typography';
 import EvolutionBudgetView from '@/components/EvolutionBudgetView';
-
-interface TrackBudget {
-  track: string;
-  allocated: number;
-  spent: number;
-}
+import { TrackBudget } from '@/lib/types/dashboard';
 
 export default function EvolutionBudgetSection() {
   const [budgets, setBudgets] = useState<TrackBudget[]>([]);
