@@ -24,7 +24,20 @@ vi.mock('./mcp/client-manager', () => ({
   MCPClientManager: {
     connect: vi.fn(),
     deleteClient: vi.fn(),
-    closeAll: vi.fn(),
+    closeAll: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
+vi.mock('./mcp/tool-mapper', () => ({
+  MCPToolMapper: {
+    mapTools: vi.fn((serverName: string, _client: any, rawTools: any[]) =>
+      rawTools.map((t: any) => ({
+        name: `${serverName}_${t.name}`,
+        description: t.description ?? `Tool from ${serverName} server.`,
+        parameters: t.inputSchema,
+        execute: vi.fn(),
+      }))
+    ),
   },
 }));
 
@@ -122,5 +135,368 @@ describe('MCPBridge', () => {
     // Execution should be a placeholder
     const result = await tools[0].execute({});
     expect(result).toContain('Managed');
+  });
+
+  describe('getToolsFromServer', () => {
+    it('connects to server and returns mapped tools', async () => {
+      const mockClient = {
+        listTools: vi.fn().mockResolvedValue({
+          tools: [{ name: 'search', description: 'Search tool', inputSchema: {} }],
+        }),
+      };
+      vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
+
+      const tools = await MCPBridge.getToolsFromServer('srv', 'npx srv');
+
+      expect(MCPClientManager.connect).toHaveBeenCalledWith('srv', 'npx srv', undefined);
+      expect(tools).toHaveLength(1);
+      expect(tools[0].name).toBe('srv_search');
+    });
+
+    it('returns empty array on connection failure', async () => {
+      vi.mocked(MCPClientManager.connect).mockRejectedValue(new Error('Connection failed'));
+
+      const tools = await MCPBridge.getToolsFromServer('srv', 'npx srv');
+
+      expect(tools).toEqual([]);
+      expect(MCPClientManager.deleteClient).toHaveBeenCalledWith('srv');
+    });
+
+    it('returns empty array on listTools failure', async () => {
+      const mockClient = {
+        listTools: vi.fn().mockRejectedValue(new Error('List failed')),
+      };
+      vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
+
+      const tools = await MCPBridge.getToolsFromServer('srv', 'npx srv');
+      expect(tools).toEqual([]);
+    });
+
+    it('passes env to MCPClientManager.connect', async () => {
+      const mockClient = {
+        listTools: vi.fn().mockResolvedValue({ tools: [] }),
+      };
+      vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
+
+      await MCPBridge.getToolsFromServer('srv', 'npx srv', { KEY: 'val' });
+
+      expect(MCPClientManager.connect).toHaveBeenCalledWith('srv', 'npx srv', { KEY: 'val' });
+    });
+
+    it('attempts hub connection when MCP_HUB_URL is set for local commands', async () => {
+      process.env.MCP_HUB_URL = 'http://hub:3000';
+      const mockClient = {
+        listTools: vi.fn().mockResolvedValue({
+          tools: [{ name: 't', description: 'd', inputSchema: {} }],
+        }),
+      };
+      vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
+
+      await MCPBridge.getToolsFromServer('mysrv', 'npx mysrv');
+
+      expect(MCPClientManager.connect).toHaveBeenCalledWith(
+        'mysrv',
+        'http://hub:3000/mysrv',
+        undefined
+      );
+      delete process.env.MCP_HUB_URL;
+    });
+
+    it('falls back to local when hub returns no tools', async () => {
+      process.env.MCP_HUB_URL = 'http://hub:3000';
+      const hubClient = {
+        listTools: vi.fn().mockResolvedValue({ tools: [] }),
+      };
+      const localClient = {
+        listTools: vi.fn().mockResolvedValue({
+          tools: [{ name: 'local_tool', description: 'Local', inputSchema: {} }],
+        }),
+      };
+      vi.mocked(MCPClientManager.connect)
+        .mockResolvedValueOnce(hubClient as any)
+        .mockResolvedValueOnce(localClient as any);
+
+      const tools = await MCPBridge.getToolsFromServer('mysrv', 'npx mysrv');
+
+      expect(tools).toHaveLength(1);
+      expect(tools[0].name).toBe('mysrv_local_tool');
+      delete process.env.MCP_HUB_URL;
+    });
+
+    it('falls back to local when hub connection throws', async () => {
+      process.env.MCP_HUB_URL = 'http://hub:3000';
+      vi.mocked(MCPClientManager.connect)
+        .mockRejectedValueOnce(new Error('Hub failed'))
+        .mockResolvedValueOnce({
+          listTools: vi.fn().mockResolvedValue({
+            tools: [{ name: 't', description: 'd', inputSchema: {} }],
+          }),
+        } as any);
+
+      const tools = await MCPBridge.getToolsFromServer('mysrv', 'npx mysrv');
+
+      expect(MCPClientManager.connect).toHaveBeenCalledTimes(2);
+      expect(tools).toHaveLength(1);
+      delete process.env.MCP_HUB_URL;
+    });
+
+    it('skips hub when skipHubRouting is true', async () => {
+      process.env.MCP_HUB_URL = 'http://hub:3000';
+      const mockClient = {
+        listTools: vi.fn().mockResolvedValue({ tools: [] }),
+      };
+      vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
+
+      await MCPBridge.getToolsFromServer('srv', 'npx srv', undefined, { skipHubRouting: true });
+
+      expect(MCPClientManager.connect).toHaveBeenCalledWith('srv', 'npx srv', undefined);
+      delete process.env.MCP_HUB_URL;
+    });
+
+    it('skips hub for http connection strings', async () => {
+      process.env.MCP_HUB_URL = 'http://hub:3000';
+      const mockClient = {
+        listTools: vi.fn().mockResolvedValue({ tools: [] }),
+      };
+      vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
+
+      await MCPBridge.getToolsFromServer('srv', 'http://remote:8080');
+
+      expect(MCPClientManager.connect).toHaveBeenCalledWith('srv', 'http://remote:8080', undefined);
+      delete process.env.MCP_HUB_URL;
+    });
+  });
+
+  describe('getExternalTools advanced', () => {
+    it('handles string config', async () => {
+      (AgentRegistry.getRawConfig as any).mockResolvedValue({
+        srv1: 'npx srv1',
+      });
+
+      const mockClient = {
+        listTools: vi.fn().mockResolvedValue({ tools: [] }),
+      };
+      vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
+
+      await MCPBridge.getExternalTools(['srv1']);
+
+      expect(MCPClientManager.connect).toHaveBeenCalledWith('srv1', 'npx srv1', undefined);
+    });
+
+    it('handles remote config type', async () => {
+      (AgentRegistry.getRawConfig as any).mockResolvedValue({
+        srv1: { type: 'remote', url: 'http://remote:8080' },
+      });
+
+      const mockClient = {
+        listTools: vi.fn().mockResolvedValue({ tools: [] }),
+      };
+      vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
+
+      await MCPBridge.getExternalTools(['srv1']);
+
+      expect(MCPClientManager.connect).toHaveBeenCalledWith(
+        'srv1',
+        'http://remote:8080',
+        undefined
+      );
+    });
+
+    it('handles local config type with env', async () => {
+      (AgentRegistry.getRawConfig as any).mockResolvedValue({
+        srv1: { type: 'local', command: 'npx srv1', env: { KEY: 'val' } },
+      });
+
+      const mockClient = {
+        listTools: vi.fn().mockResolvedValue({ tools: [] }),
+      };
+      vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
+
+      await MCPBridge.getExternalTools(['srv1']);
+
+      expect(MCPClientManager.connect).toHaveBeenCalledWith('srv1', 'npx srv1', { KEY: 'val' });
+    });
+
+    it('returns skipConnection placeholders when skipConnection is true', async () => {
+      (AgentRegistry.getRawConfig as any).mockResolvedValue({
+        srv1: { command: 'npx srv1' },
+      });
+
+      const tools = await MCPBridge.getExternalTools(undefined, true);
+
+      // srv1 + 7 default servers = 8 placeholders
+      expect(tools.length).toBeGreaterThan(0);
+      expect(tools.every((t) => t.description.includes('Connect to see tools'))).toBe(true);
+      expect(MCPClientManager.connect).not.toHaveBeenCalled();
+    });
+
+    it('saves default servers when config is null', async () => {
+      (AgentRegistry.getRawConfig as any).mockResolvedValue(null);
+
+      const mockClient = {
+        listTools: vi.fn().mockResolvedValue({ tools: [] }),
+      };
+      vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
+
+      await MCPBridge.getExternalTools();
+
+      expect(AgentRegistry.saveRawConfig).toHaveBeenCalled();
+    });
+
+    it('merges default servers with existing config', async () => {
+      (AgentRegistry.getRawConfig as any).mockResolvedValue({
+        custom: { command: 'npx custom' },
+      });
+
+      const mockClient = {
+        listTools: vi.fn().mockResolvedValue({ tools: [] }),
+      };
+      vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
+
+      await MCPBridge.getExternalTools();
+
+      expect(AgentRegistry.saveRawConfig).toHaveBeenCalledWith(
+        'mcp_servers',
+        expect.objectContaining({
+          custom: { command: 'npx custom' },
+          filesystem: expect.any(Object),
+          git: expect.any(Object),
+        })
+      );
+    });
+
+    it('does not save config when all defaults already exist', async () => {
+      (AgentRegistry.getRawConfig as any).mockResolvedValue({
+        filesystem: { command: 'npx filesystem' },
+        git: { command: 'npx git' },
+        'google-search': { command: 'npx gs' },
+        puppeteer: { command: 'npx puppeteer' },
+        fetch: { command: 'npx fetch' },
+        aws: { command: 'npx aws' },
+        'aws-s3': { command: 'npx s3' },
+      });
+
+      const mockClient = {
+        listTools: vi.fn().mockResolvedValue({ tools: [] }),
+      };
+      vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
+
+      await MCPBridge.getExternalTools();
+
+      expect(AgentRegistry.saveRawConfig).not.toHaveBeenCalled();
+    });
+
+    it('handles discovery failure gracefully per server', async () => {
+      (AgentRegistry.getRawConfig as any).mockResolvedValue({
+        good: { command: 'npx good' },
+        bad: { command: 'npx bad' },
+      });
+
+      vi.mocked(MCPClientManager.connect).mockImplementation(async (name) => {
+        if (name === 'bad') throw new Error('Connection refused');
+        return {
+          listTools: vi.fn().mockResolvedValue({
+            tools: [{ name: 't', description: 'd', inputSchema: {} }],
+          }),
+        } as any;
+      });
+
+      const tools = await MCPBridge.getExternalTools();
+      expect(tools.length).toBeGreaterThan(0);
+    });
+
+    it('returns tools from multiple servers', async () => {
+      (AgentRegistry.getRawConfig as any).mockResolvedValue({
+        srv1: { command: 'npx srv1' },
+        srv2: { command: 'npx srv2' },
+      });
+
+      vi.mocked(MCPClientManager.connect).mockImplementation(
+        async (name) =>
+          ({
+            listTools: vi.fn().mockResolvedValue({
+              tools: [{ name: `${name}_tool`, description: 'd', inputSchema: {} }],
+            }),
+          }) as any
+      );
+
+      const tools = await MCPBridge.getExternalTools();
+      expect(tools.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('handles managed tool type with defaults', async () => {
+      (AgentRegistry.getRawConfig as any).mockResolvedValue({
+        managed_srv: {
+          type: 'managed',
+          connector_id: 'connector_abc',
+        },
+      });
+
+      const tools = await MCPBridge.getExternalTools();
+
+      const managedTool = tools.find((t) => t.connector_id === 'connector_abc');
+      expect(managedTool).toBeDefined();
+      expect(managedTool!.name).toBe('managed_srv');
+      expect(managedTool!.description).toBe('Managed tool for managed_srv');
+    });
+
+    it('filters servers with prefix matching on requestedTools', async () => {
+      (AgentRegistry.getRawConfig as any).mockResolvedValue({
+        srv1: { command: 'npx srv1' },
+        srv2: { command: 'npx srv2' },
+        srv3: { command: 'npx srv3' },
+      });
+
+      const mockClient = {
+        listTools: vi.fn().mockResolvedValue({ tools: [] }),
+      };
+      vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
+
+      await MCPBridge.getExternalTools(['srv1_tool', 'srv2_other']);
+
+      // Should connect to srv1 and srv2, but not srv3
+      expect(MCPClientManager.connect).toHaveBeenCalledWith('srv1', expect.any(String), undefined);
+      expect(MCPClientManager.connect).toHaveBeenCalledWith('srv2', expect.any(String), undefined);
+    });
+
+    it('returns empty for unknown config type', async () => {
+      (AgentRegistry.getRawConfig as any).mockResolvedValue({
+        srv1: { type: 'unknown_type', command: 'npx srv1' },
+      });
+
+      const tools = await MCPBridge.getExternalTools(['srv1']);
+      expect(tools).toEqual([]);
+    });
+  });
+
+  describe('getCachedTools', () => {
+    it('returns cached tools from registry', async () => {
+      const cached = [{ name: 'tool1' }, { name: 'tool2' }];
+      (AgentRegistry.getRawConfig as any).mockResolvedValue(cached);
+
+      const tools = await MCPBridge.getCachedTools();
+      expect(tools).toEqual(cached);
+    });
+
+    it('returns empty array when no cache exists', async () => {
+      (AgentRegistry.getRawConfig as any).mockResolvedValue(null);
+
+      const tools = await MCPBridge.getCachedTools();
+      expect(tools).toEqual([]);
+    });
+
+    it('returns empty array when cache is not an array', async () => {
+      (AgentRegistry.getRawConfig as any).mockResolvedValue({ some: 'object' });
+
+      const tools = await MCPBridge.getCachedTools();
+      expect(tools).toEqual([]);
+    });
+  });
+
+  describe('closeAll', () => {
+    it('delegates to MCPClientManager.closeAll', async () => {
+      await MCPBridge.closeAll();
+      expect(MCPClientManager.closeAll).toHaveBeenCalled();
+    });
   });
 });

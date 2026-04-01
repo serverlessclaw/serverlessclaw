@@ -22,6 +22,7 @@ dist
 *.zip
 coverage
 *.tsbuildinfo
+lint_report.json
 
 # Next.js Dashboard
 dashboard/.next/

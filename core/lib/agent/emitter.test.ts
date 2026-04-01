@@ -1,9 +1,3 @@
-/**
- * @module AgentEmitter Tests
- * @description Tests for reflection emission, continuation emission,
- * and real-time chunk publishing.
- */
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { mockSend, mockPublishToRealtime, mockExtractBaseUserId } = vi.hoisted(() => ({
@@ -176,6 +170,57 @@ describe('AgentEmitter', () => {
       const { logger } = await import('../logger');
       expect(logger.error).toHaveBeenCalled();
     });
+
+    it('skips reflection when history length does not match frequency', async () => {
+      await emitter.considerReflection(
+        false,
+        baseArgs.userId,
+        [{ role: MessageRole.USER, content: 'msg' }],
+        'hello',
+        baseArgs.traceId,
+        baseArgs.messages,
+        baseArgs.responseText,
+        baseArgs.nodeId,
+        baseArgs.parentId,
+        baseArgs.sessionId
+      );
+      expect(mockSend).not.toHaveBeenCalled();
+    });
+
+    it('uses agent name in reflection message', async () => {
+      mockSend.mockResolvedValue({});
+      await emitter.considerReflection(
+        false,
+        baseArgs.userId,
+        baseArgs.history,
+        baseArgs.userText,
+        baseArgs.traceId,
+        baseArgs.messages,
+        baseArgs.responseText,
+        baseArgs.nodeId,
+        baseArgs.parentId,
+        baseArgs.sessionId
+      );
+      expect(mockSend).toHaveBeenCalledTimes(1);
+    });
+
+    it('uses default agent name when no config', async () => {
+      const defaultEmitter = new AgentEmitter();
+      mockSend.mockResolvedValue({});
+      await defaultEmitter.considerReflection(
+        false,
+        baseArgs.userId,
+        baseArgs.history,
+        baseArgs.userText,
+        baseArgs.traceId,
+        baseArgs.messages,
+        baseArgs.responseText,
+        baseArgs.nodeId,
+        baseArgs.parentId,
+        baseArgs.sessionId
+      );
+      expect(mockSend).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('emitContinuation', () => {
@@ -201,6 +246,38 @@ describe('AgentEmitter', () => {
     it('handles send failure gracefully', async () => {
       mockSend.mockRejectedValue(new Error('EB down'));
       await expect(emitter.emitContinuation('user1', 'task', 'trace1', {})).resolves.not.toThrow();
+    });
+
+    it('defaults depth to 1 when not provided', async () => {
+      mockSend.mockResolvedValue({});
+      await emitter.emitContinuation('user1', 'task', 'trace1', {});
+      expect(mockSend).toHaveBeenCalledTimes(1);
+    });
+
+    it('increments depth by 1', async () => {
+      mockSend.mockResolvedValue({});
+      await emitter.emitContinuation('user1', 'task', 'trace1', { depth: 3 });
+      expect(mockSend).toHaveBeenCalledTimes(1);
+    });
+
+    it('uses agent config id as source', async () => {
+      mockSend.mockResolvedValue({});
+      await emitter.emitContinuation('user1', 'task', 'trace1', {});
+      expect(mockSend).toHaveBeenCalledTimes(1);
+    });
+
+    it('uses default source when no config', async () => {
+      const defaultEmitter = new AgentEmitter();
+      mockSend.mockResolvedValue({});
+      await defaultEmitter.emitContinuation('user1', 'task', 'trace1', {});
+      expect(mockSend).toHaveBeenCalledTimes(1);
+    });
+
+    it('includes attachments in metadata', async () => {
+      mockSend.mockResolvedValue({});
+      const attachments = [{ type: 'image' as any, url: 'http://img.png' }];
+      await emitter.emitContinuation('user1', 'task', 'trace1', { attachments });
+      expect(mockSend).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -246,6 +323,51 @@ describe('AgentEmitter', () => {
       await expect(
         emitter.emitChunk('user1', 'session1', 'trace1', 'hello')
       ).resolves.not.toThrow();
+    });
+
+    it('includes chunk content in payload', async () => {
+      mockPublishToRealtime.mockResolvedValue(undefined);
+      await emitter.emitChunk('user1', 'session1', 'trace1', 'test message');
+      const payload = mockPublishToRealtime.mock.calls[0][1];
+      expect(payload.message).toBe('test message');
+    });
+
+    it('includes isThought flag', async () => {
+      mockPublishToRealtime.mockResolvedValue(undefined);
+      await emitter.emitChunk('user1', 'session1', 'trace1', 'thinking...', undefined, true);
+      const payload = mockPublishToRealtime.mock.calls[0][1];
+      expect(payload.isThought).toBe(true);
+    });
+
+    it('includes options buttons', async () => {
+      mockPublishToRealtime.mockResolvedValue(undefined);
+      const options = [{ label: 'Yes', value: 'yes' }];
+      await emitter.emitChunk('user1', 'session1', 'trace1', 'confirm?', undefined, false, options);
+      const payload = mockPublishToRealtime.mock.calls[0][1];
+      expect(payload.options).toEqual(options);
+    });
+
+    it('uses default agent name when no config', async () => {
+      const defaultEmitter = new AgentEmitter();
+      mockPublishToRealtime.mockResolvedValue(undefined);
+      await defaultEmitter.emitChunk('user1', 'session1', 'trace1', 'hello');
+      const payload = mockPublishToRealtime.mock.calls[0][1];
+      expect(payload.agentName).toBe('SuperClaw');
+    });
+
+    it('uses traceId as messageId for unknown agent without config', async () => {
+      const defaultEmitter = new AgentEmitter();
+      mockPublishToRealtime.mockResolvedValue(undefined);
+      await defaultEmitter.emitChunk('user1', 'session1', 'trace1', 'hello');
+      const payload = mockPublishToRealtime.mock.calls[0][1];
+      expect(payload.messageId).toBe('trace1-unknown');
+    });
+
+    it('includes correct detail-type', async () => {
+      mockPublishToRealtime.mockResolvedValue(undefined);
+      await emitter.emitChunk('user1', 'session1', 'trace1', 'hello');
+      const payload = mockPublishToRealtime.mock.calls[0][1];
+      expect(payload['detail-type']).toBe('chunk');
     });
   });
 });

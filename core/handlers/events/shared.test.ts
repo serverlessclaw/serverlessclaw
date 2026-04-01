@@ -40,6 +40,26 @@ vi.mock('../../lib/constants', () => ({
   DYNAMO_KEYS: { RECURSION_LIMIT: 'recursion_limit' },
 }));
 
+vi.mock('../../lib/types/llm', () => ({
+  LLMProvider: {
+    OPENAI: 'openai',
+    BEDROCK: 'bedrock',
+    OPENROUTER: 'openrouter',
+    MINIMAX: 'minimax',
+  },
+  MessageRole: { USER: 'user', ASSISTANT: 'assistant' },
+  AttachmentType: {},
+}));
+
+vi.mock('../../lib/types/agent', () => ({
+  AgentType: { FACILITATOR: 'facilitator', SUPERCLAW: 'superclaw' },
+  Attachment: {},
+}));
+
+vi.mock('../../lib/types/tool', () => ({
+  ITool: {},
+}));
+
 import { wakeupInitiator, getRecursionLimit, handleRecursionLimitExceeded } from './shared';
 import { emitEvent } from '../../lib/utils/bus';
 import { sendOutboundMessage } from '../../lib/outbound';
@@ -119,6 +139,28 @@ describe('shared event utilities', () => {
         'events.handler',
         expect.anything(),
         expect.objectContaining({ depth: 6 })
+      );
+    });
+
+    it('should detect dashboard-user as human initiator', async () => {
+      await wakeupInitiator('user1', 'dashboard-user', 'task', undefined, undefined, 0);
+      expect(sendOutboundMessage).toHaveBeenCalled();
+      expect(emitEvent).not.toHaveBeenCalled();
+    });
+
+    it('should detect numeric string as human initiator', async () => {
+      await wakeupInitiator('12345', '12345', 'task', undefined, undefined, 0);
+      expect(sendOutboundMessage).toHaveBeenCalled();
+      expect(emitEvent).not.toHaveBeenCalled();
+    });
+
+    it('should pass options to emitEvent', async () => {
+      const opts = [{ label: 'Accept', value: 'accept', type: 'primary' as const }];
+      await wakeupInitiator('user1', 'coder', 'task', 'trace-1', 'sess-1', 0, false, opts);
+      expect(emitEvent).toHaveBeenCalledWith(
+        'events.handler',
+        expect.anything(),
+        expect.objectContaining({ options: opts })
       );
     });
   });

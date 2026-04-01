@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+const { mockDdbSend, mockEmitEvent } = vi.hoisted(() => ({
+  mockDdbSend: vi.fn().mockResolvedValue({}),
+  mockEmitEvent: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('@aws-sdk/client-dynamodb', () => ({
   DynamoDBClient: vi.fn().mockImplementation(function () {
     return {};
@@ -7,8 +12,8 @@ vi.mock('@aws-sdk/client-dynamodb', () => ({
 }));
 
 vi.mock('@aws-sdk/lib-dynamodb', () => ({
-  DynamoDBDocumentClient: { from: vi.fn(() => ({ send: vi.fn() })) },
-  PutCommand: vi.fn(),
+  DynamoDBDocumentClient: { from: vi.fn(() => ({ send: mockDdbSend })) },
+  PutCommand: vi.fn((args: any) => ({ input: args })),
 }));
 
 vi.mock('sst', () => ({
@@ -20,21 +25,50 @@ vi.mock('../lib/logger', () => ({
 }));
 
 vi.mock('../lib/utils/bus', () => ({
-  emitEvent: vi.fn(),
+  emitEvent: mockEmitEvent,
 }));
 
 import { handler } from './concurrency-monitor';
+import { logger } from '../lib/logger';
 
 describe('concurrency-monitor', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockDdbSend.mockResolvedValue({});
+    mockEmitEvent.mockResolvedValue(undefined);
   });
 
   it('should export a handler function', () => {
     expect(typeof handler).toBe('function');
   });
 
-  it('should handle Lambda SDK unavailability gracefully', async () => {
+  it('should handle Lambda SDK errors gracefully', async () => {
     await expect(handler()).resolves.not.toThrow();
+  });
+
+  it('should log checking message on invocation', async () => {
+    await handler();
+
+    expect(logger.info).toHaveBeenCalledWith(
+      'Lambda Concurrency Monitor: Checking account settings'
+    );
+  });
+
+  it('should not throw on invocation', async () => {
+    await expect(handler()).resolves.toBeUndefined();
+  });
+
+  it('should complete without errors on multiple invocations', async () => {
+    await handler();
+    await handler();
+    await handler();
+
+    expect(logger.info).toHaveBeenCalled();
+  });
+
+  it('should not throw when called repeatedly', async () => {
+    for (let i = 0; i < 5; i++) {
+      await expect(handler()).resolves.not.toThrow();
+    }
   });
 });
