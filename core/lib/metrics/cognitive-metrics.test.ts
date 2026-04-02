@@ -140,6 +140,19 @@ describe('MetricsCollector', () => {
     );
   });
 
+  it('should record self-correction metrics', async () => {
+    await collector.recordSelfCorrection('agent-1');
+    await collector.flush();
+
+    expect(mockBase.putItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'HEALTH#METRIC#agent-1',
+        metricName: 'self_correction',
+        value: 1,
+      })
+    );
+  });
+
   it('should record memory operation metrics', async () => {
     await collector.recordMemoryOperation('agent-1', 'hit', 10);
     await collector.flush();
@@ -214,7 +227,7 @@ describe('DegradationDetector', () => {
     avgTaskLatencyMs: 150,
     reasoningCoherence: 8.5,
     memoryHitRate: 0.9,
-    memoryFragmentation: 0.2,
+    memoryMissRate: 0.2,
     tokenEfficiency: 2.5,
     errorRate: 0.05,
     totalTasks: 100,
@@ -286,17 +299,18 @@ describe('DegradationDetector', () => {
     expect(reasoningAnomaly?.severity).toBe(AnomalySeverity.CRITICAL);
   });
 
-  it('should detect memory fragmentation', () => {
-    const metrics = createMetrics({ memoryFragmentation: 0.75 });
+  it('should detect memory miss rate anomaly', () => {
+    const metrics = createMetrics({ memoryMissRate: 0.6 });
     const anomalies = detector.detectAnomalies('agent-1', metrics);
 
     const memoryAnomaly = anomalies.find((a) => a.type === AnomalyType.MEMORY_FRAGMENTATION);
     expect(memoryAnomaly).toBeDefined();
     expect(memoryAnomaly!.severity).toBe(AnomalySeverity.MEDIUM);
+    expect(memoryAnomaly!.description).toContain('Memory miss rate');
   });
 
-  it('should escalate memory fragmentation to HIGH when above 90%', () => {
-    const metrics = createMetrics({ memoryFragmentation: 0.95 });
+  it('should escalate memory miss rate anomaly to HIGH when above 80%', () => {
+    const metrics = createMetrics({ memoryMissRate: 0.85 });
     const anomalies = detector.detectAnomalies('agent-1', metrics);
 
     const memoryAnomaly = anomalies.find((a) => a.type === AnomalyType.MEMORY_FRAGMENTATION);
@@ -312,7 +326,7 @@ describe('DegradationDetector', () => {
     expect(tokenAnomaly!.severity).toBe(AnomalySeverity.MEDIUM);
   });
 
-  it('should not detect token overuse when totalTasks is 10 or less', () => {
+  it('should not detect token overuse when totalTasks is less than minSampleTasks', () => {
     const metrics = createMetrics({ tokenEfficiency: 0.3, totalTasks: 5 });
     const anomalies = detector.detectAnomalies('agent-1', metrics);
 
@@ -321,24 +335,24 @@ describe('DegradationDetector', () => {
   });
 
   it('should detect latency anomaly when avgTaskLatencyMs exceeds threshold', () => {
-    const metrics = createMetrics({ avgTaskLatencyMs: 35000, totalTasks: 20 });
+    const metrics = createMetrics({ avgTaskLatencyMs: 20000, totalTasks: 20 });
     const anomalies = detector.detectAnomalies('agent-1', metrics);
 
     const latencyAnomaly = anomalies.find((a) => a.type === AnomalyType.LATENCY_ANOMALY);
     expect(latencyAnomaly).toBeDefined();
     expect(latencyAnomaly!.severity).toBe(AnomalySeverity.MEDIUM);
-    expect(latencyAnomaly!.description).toContain('35000ms');
+    expect(latencyAnomaly!.description).toContain('20000ms');
   });
 
   it('should escalate latency anomaly to HIGH when above 2x threshold', () => {
-    const metrics = createMetrics({ avgTaskLatencyMs: 70000, totalTasks: 20 });
+    const metrics = createMetrics({ avgTaskLatencyMs: 40000, totalTasks: 20 });
     const anomalies = detector.detectAnomalies('agent-1', metrics);
 
     const latencyAnomaly = anomalies.find((a) => a.type === AnomalyType.LATENCY_ANOMALY);
     expect(latencyAnomaly?.severity).toBe(AnomalySeverity.HIGH);
   });
 
-  it('should not detect latency anomaly when totalTasks is 5 or less', () => {
+  it('should not detect latency anomaly when totalTasks is less than minSampleTasks', () => {
     const metrics = createMetrics({ avgTaskLatencyMs: 50000, totalTasks: 3 });
     const anomalies = detector.detectAnomalies('agent-1', metrics);
 
@@ -347,24 +361,24 @@ describe('DegradationDetector', () => {
   });
 
   it('should detect cognitive loop when pivot rate exceeds threshold', () => {
-    const metrics = createMetrics({ totalPivots: 6, totalTasks: 10 });
+    const metrics = createMetrics({ totalPivots: 6, totalTasks: 20 }); // pivot rate 0.3 > 0.2
     const anomalies = detector.detectAnomalies('agent-1', metrics);
 
     const loopAnomaly = anomalies.find((a) => a.type === AnomalyType.COGNITIVE_LOOP);
     expect(loopAnomaly).toBeDefined();
     expect(loopAnomaly!.severity).toBe(AnomalySeverity.HIGH);
-    expect(loopAnomaly!.description).toContain('60.0%');
+    expect(loopAnomaly!.description).toContain('30.0%');
   });
 
   it('should escalate cognitive loop to CRITICAL when pivot rate above 1.5x threshold', () => {
-    const metrics = createMetrics({ totalPivots: 8, totalTasks: 10 });
+    const metrics = createMetrics({ totalPivots: 8, totalTasks: 20 }); // pivot rate 0.4 > 0.3 (1.5 * 0.2)
     const anomalies = detector.detectAnomalies('agent-1', metrics);
 
     const loopAnomaly = anomalies.find((a) => a.type === AnomalyType.COGNITIVE_LOOP);
     expect(loopAnomaly?.severity).toBe(AnomalySeverity.CRITICAL);
   });
 
-  it('should not detect cognitive loop when totalTasks is 5 or less', () => {
+  it('should not detect cognitive loop when totalTasks is less than minSampleTasks', () => {
     const metrics = createMetrics({ totalPivots: 5, totalTasks: 5 });
     const anomalies = detector.detectAnomalies('agent-1', metrics);
 
@@ -377,7 +391,7 @@ describe('DegradationDetector', () => {
       taskCompletionRate: 0.4,
       errorRate: 0.6,
       reasoningCoherence: 2.0,
-      memoryFragmentation: 0.95,
+      memoryMissRate: 0.85,
     });
     const anomalies = detector.detectAnomalies('agent-1', metrics);
 

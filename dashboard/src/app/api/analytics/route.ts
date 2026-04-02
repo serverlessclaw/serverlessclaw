@@ -13,19 +13,21 @@ export async function GET(request: Request) {
     const agents = ['superclaw', 'coder', 'strategic-planner', 'cognition-reflector', 'qa'];
     const targetAgents = agentId ? [agentId] : agents;
 
-    // Fetch token rollups per agent
+    // Fetch token rollups per agent in parallel
     const tokenData: Record<string, unknown[]> = {};
-    for (const agent of targetAgents) {
-      const rollups = await TokenTracker.getRollupRange(agent, days);
-      tokenData[agent] = rollups.map((r) => ({
-        date: new Date(r.timestamp).toISOString().slice(0, 10),
-        totalInputTokens: r.totalInputTokens,
-        totalOutputTokens: r.totalOutputTokens,
-        invocationCount: r.invocationCount,
-        avgTokensPerInvocation: r.avgTokensPerInvocation,
-        successCount: r.successCount,
-      }));
-    }
+    await Promise.all(
+      targetAgents.map(async (agent) => {
+        const rollups = await TokenTracker.getRollupRange(agent, days);
+        tokenData[agent] = rollups.map((r) => ({
+          date: new Date(r.timestamp).toISOString().slice(0, 10),
+          totalInputTokens: r.totalInputTokens,
+          totalOutputTokens: r.totalOutputTokens,
+          invocationCount: r.invocationCount,
+          avgTokensPerInvocation: r.avgTokensPerInvocation,
+          successCount: r.successCount,
+        }));
+      })
+    );
 
     // Fetch tool usage from registry
     const toolUsageItem = await memory.getConfig('tool_usage_global');
@@ -61,11 +63,9 @@ export async function GET(request: Request) {
     });
   } catch (e) {
     console.error('Error fetching analytics:', e);
-    return Response.json({
-      tokenUsage: {},
-      toolUsage: [],
-      cognitiveMetrics: [],
-      meta: { error: 'Failed to fetch analytics data' },
-    });
+    return Response.json(
+      { error: 'Failed to fetch analytics data', details: e instanceof Error ? e.message : String(e) },
+      { status: 500 }
+    );
   }
 }

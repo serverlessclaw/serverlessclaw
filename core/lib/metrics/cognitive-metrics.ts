@@ -76,8 +76,8 @@ export interface AggregatedMetrics {
   reasoningCoherence: number;
   /** Memory hit rate (0-1). */
   memoryHitRate: number;
-  /** Memory fragmentation score (0-1, lower is better). */
-  memoryFragmentation: number;
+  /** Memory miss rate (0-1, lower is better). */
+  memoryMissRate: number;
   /** Token efficiency (tasks per 1000 tokens). */
   tokenEfficiency: number;
   /** Error rate (0-1). */
@@ -190,12 +190,14 @@ export interface CognitiveMetricsConfig {
     maxErrorRate: number;
     /** Minimum reasoning coherence before alerting. */
     minCoherence: number;
-    /** Maximum memory fragmentation before alerting. */
-    maxFragmentation: number;
+    /** Maximum memory miss rate before alerting. */
+    maxMissRate: number;
     /** Maximum average task latency (ms) before alerting. */
     maxAvgLatencyMs: number;
     /** Maximum pivot rate (pivots/task) before flagging cognitive loop. */
     maxPivotRate: number;
+    /** Minimum number of tasks before anomaly detection is reliable. */
+    minSampleTasks: number;
   };
 }
 
@@ -206,9 +208,10 @@ const DEFAULT_CONFIG: CognitiveMetricsConfig = {
     minCompletionRate: 0.7,
     maxErrorRate: 0.3,
     minCoherence: 5.0,
-    maxFragmentation: 0.7,
-    maxAvgLatencyMs: 30000,
-    maxPivotRate: 0.5,
+    maxMissRate: 0.5,
+    maxAvgLatencyMs: 15000,
+    maxPivotRate: 0.2,
+    minSampleTasks: 10,
   },
 };
 
@@ -419,22 +422,25 @@ export class DegradationDetector {
       });
     }
 
-    // Check memory fragmentation
-    if (metrics.memoryFragmentation > this.config.thresholds.maxFragmentation) {
+    // Check memory miss rate
+    if (metrics.memoryMissRate > this.config.thresholds.maxMissRate) {
       anomalies.push({
         id: `anomaly_${now}_${Math.random().toString(36).substr(2, 9)}`,
-        type: AnomalyType.MEMORY_FRAGMENTATION,
-        severity: metrics.memoryFragmentation > 0.9 ? AnomalySeverity.HIGH : AnomalySeverity.MEDIUM,
+        type: AnomalyType.MEMORY_FRAGMENTATION, // Keep type for now to avoid breaking enum consumers
+        severity: metrics.memoryMissRate > 0.8 ? AnomalySeverity.HIGH : AnomalySeverity.MEDIUM,
         agentId,
         detectedAt: now,
-        description: `Memory fragmentation at ${(metrics.memoryFragmentation * 100).toFixed(1)}%`,
-        triggerMetrics: { memoryFragmentation: metrics.memoryFragmentation },
-        suggestion: 'Run memory defragmentation or review retention policies',
+        description: `Memory miss rate at ${(metrics.memoryMissRate * 100).toFixed(1)}%`,
+        triggerMetrics: { memoryMissRate: metrics.memoryMissRate },
+        suggestion: 'Review memory retention policies or recall strategy',
       });
     }
 
     // Check token efficiency
-    if (metrics.totalTasks > 10 && metrics.tokenEfficiency < 0.5) {
+    if (
+      metrics.totalTasks >= this.config.thresholds.minSampleTasks &&
+      metrics.tokenEfficiency < 0.5
+    ) {
       anomalies.push({
         id: `anomaly_${now}_${Math.random().toString(36).substr(2, 9)}`,
         type: AnomalyType.TOKEN_OVERUSE,
@@ -449,7 +455,7 @@ export class DegradationDetector {
 
     // Check latency anomaly
     if (
-      metrics.totalTasks > 5 &&
+      metrics.totalTasks >= this.config.thresholds.minSampleTasks &&
       metrics.avgTaskLatencyMs > this.config.thresholds.maxAvgLatencyMs
     ) {
       anomalies.push({
@@ -469,7 +475,10 @@ export class DegradationDetector {
 
     // Check cognitive loop (excessive pivoting without progress)
     const pivotRate = metrics.totalTasks > 0 ? metrics.totalPivots / metrics.totalTasks : 0;
-    if (metrics.totalTasks > 5 && pivotRate > this.config.thresholds.maxPivotRate) {
+    if (
+      metrics.totalTasks >= this.config.thresholds.minSampleTasks &&
+      pivotRate > this.config.thresholds.maxPivotRate
+    ) {
       anomalies.push({
         id: `anomaly_${now}_${Math.random().toString(36).substr(2, 9)}`,
         type: AnomalyType.COGNITIVE_LOOP,
@@ -589,7 +598,7 @@ export class HealthTrendAnalyzer {
       avgTaskLatencyMs: totalTasks > 0 ? totalLatency / totalTasks : 0,
       reasoningCoherence: coherenceCount > 0 ? coherenceSum / coherenceCount : 10,
       memoryHitRate: memoryTotal > 0 ? memoryHits / memoryTotal : 1,
-      memoryFragmentation: memoryTotal > 0 ? memoryMisses / memoryTotal : 0,
+      memoryMissRate: memoryTotal > 0 ? memoryMisses / memoryTotal : 0,
       tokenEfficiency: totalTokens > 0 ? (totalTasks / totalTokens) * 1000 : 0,
       errorRate: totalTasks > 0 ? errors / totalTasks : 0,
       totalTasks,

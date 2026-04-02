@@ -41,3 +41,6 @@ core/tests/tier2.log
 release-tier2.log
 vitest_output.txt
 .turbo/
+
+# Playwright auth state
+e2e/.auth/
