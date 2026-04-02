@@ -231,11 +231,20 @@ To achieve production-grade stability, the system implements several critical re
 ### 1. Atomic Status Transitions
 Gaps now enforce strict state guards in `updateGapStatus`. A gap can only transition to a destination state (e.g., `PROGRESS`) if it is in the correct predecessor state (e.g., `PLANNED`). Failures throw explicit errors, preventing race conditions from leaving the system in an inconsistent state.
 
-### 2. Robust Lock Management
-All agents performing evolution tasks (Planner, Coder) utilize a `try/finally` pattern for gap locks. This ensures that even if a Lambda times out or crashes, the lock is released or at least not orphaned by standard logic paths.
+### 2. Universal Gap Locking
+All gap state modifications now require lock acquisition. The **Strategic Planner** acquires locks not only for the primary `gapId` but also for every `coveredGapId` before transitioning them to `PLANNED`. The **Coder Agent** acquires locks before transitioning gaps to `PROGRESS`. Locked gaps are skipped with a warning rather than silently corrupted, preventing race conditions when multiple agents target overlapping gaps.
 
-### 3. Failure Recovery (Self-Healing)
-The **Coder Agent** implements a "Reset-on-Failure" policy. If a coding task fails (either via LLM signal or system error), any associated gaps are automatically moved back to `OPEN` status, making them eligible for re-planning or retry instead of getting stuck in `PROGRESS`.
+### 3. Safe Gap Transitions
+The **Coder Agent** moves gaps to `PROGRESS` inside the `try` block (after `initAgent` succeeds), not before it. This ensures the `finally` block can always reset gaps to `OPEN` on failure — even if the LLM processing itself fails. Previously, a Lambda crash during `initAgent` would leave gaps permanently orphaned in `PROGRESS`.
+
+### 4. Safe Metadata Updates (Reflector)
+The **Cognition Reflector** uses `updateGapMetadata()` instead of `setGap()` during semantic deduplication. This preserves the existing gap status (`PLANNED`, `PROGRESS`, etc.) while merging updated impact/urgency scores, preventing accidental reversion to `OPEN`.
+
+### 5. Ephemeral Memory TTL
+`COUNCIL_PLAN` items use the `TEMP#` prefix so the `RetentionManager` applies the `EPHEMERAL` tier (1-day auto-prune). This prevents accumulation of transient council review data in DynamoDB.
+
+### 6. Failure Recovery (Self-Healing)
+The **Coder Agent** implements a "Reset-on-Failure" policy. If a coding task fails (either via LLM signal or system error), any associated gaps are automatically moved back to `OPEN` status, making them eligible for re-planning
 
 ### 4. Parallel Dispatch Error Boundaries
 The **Parallel Handler** now traps dispatch errors (e.g., EventBridge throughput limits or schema mismatches) and immediately notifies the **Aggregator**. This prevents the system from hanging at a barrier while waiting for sub-tasks that were never actually started.

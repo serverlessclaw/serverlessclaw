@@ -248,8 +248,8 @@ export const handler = async (
                 impact: Math.max(existing.metadata.impact || 0, uGap.impact || 0),
                 urgency: Math.max(existing.metadata.urgency || 0, uGap.urgency || 0),
               };
-              // Set gap with normalized ID to ensure consistency
-              await memory.setGap(normalizedId, existing.content, updatedMeta);
+              // Use updateGapMetadata to preserve existing status (avoids resetting to OPEN)
+              await memory.updateGapMetadata(normalizedId, updatedMeta);
               logger.info(`Updated existing gap ${normalizedId} via semantic deduplication.`);
             }
           }

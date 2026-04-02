@@ -149,7 +149,7 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
     });
 
     // The traceId here will be the unique councilTraceId we used during dispatch
-    const councilDataStr = await memory.getDistilledMemory(`COUNCIL_PLAN#${traceId}`);
+    const councilDataStr = await memory.getDistilledMemory(`TEMP#COUNCIL_PLAN#${traceId}`);
     if (councilDataStr) {
       const {
         plan: originalPlan,
@@ -324,6 +324,9 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
       return { status: 'GAP_LOCKED', lockedBy: lockInfo?.content };
     }
   }
+
+  // Track covered gap locks for cleanup in finally block
+  const lockedCoveredGapIds: string[] = [];
 
   // 3. Process with High Reasoning
   let rawResponse = '';
@@ -508,20 +511,42 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
 
       if (isScheduledReview || coveredGapIds.length > 0) {
         logger.info(`Marking ${coveredGapIds.length} gaps as PLANNED based on structured output.`);
-        const results = await Promise.all(
+
+        // Acquire locks for all covered gaps before updating (race condition fix)
+        const lockResults = await Promise.all(
           coveredGapIds.map(async (gId) => {
             const numericId = normalizeGapId(gId);
-            await Promise.all([
-              memory.updateGapStatus(numericId, GapStatus.PLANNED),
-              assignGapToTrack(
-                memory as unknown as Parameters<typeof assignGapToTrack>[0],
-                numericId,
-                track
-              ),
-            ]);
-            return numericId;
+            const acquired = await memory.acquireGapLock(numericId, AgentType.STRATEGIC_PLANNER);
+            if (acquired) {
+              lockedCoveredGapIds.push(numericId);
+            }
+            return { numericId, acquired };
           })
         );
+
+        const results = await Promise.all(
+          lockResults
+            .filter(({ acquired }) => acquired)
+            .map(async ({ numericId }) => {
+              await Promise.all([
+                memory.updateGapStatus(numericId, GapStatus.PLANNED),
+                assignGapToTrack(
+                  memory as unknown as Parameters<typeof assignGapToTrack>[0],
+                  numericId,
+                  track
+                ),
+              ]);
+              return numericId;
+            })
+        );
+
+        const skipped = lockResults.filter(({ acquired }) => !acquired);
+        if (skipped.length > 0) {
+          logger.warn(
+            `Skipped ${skipped.length} covered gaps (locked by another agent): ${skipped.map((s) => s.numericId).join(', ')}`
+          );
+        }
+
         processedGapIds.push(...results);
       } else if (gapId) {
         logger.info(`Marking specific gap ${gapId} as PLANNED after design.`);
@@ -633,9 +658,9 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
         sessionId,
       });
 
-      // B6: Save plan for Council aggregation callback with short TTL (7 days)
-      // COUNCIL_PLAN is ephemeral and should not persist for 2 years
-      const councilPlanKey = `COUNCIL_PLAN#${councilTraceId}`;
+      // B6: Save plan for Council aggregation callback with ephemeral TTL
+      // Use TEMP# prefix so RetentionManager applies EPHEMERAL tier (1-day auto-prune)
+      const councilPlanKey = `TEMP#COUNCIL_PLAN#${councilTraceId}`;
       const councilPlanValue = JSON.stringify({
         plan,
         gapIds: processedGapIds,
@@ -645,12 +670,8 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
         planId,
         collaborationId,
       });
-      // Use setGap with a temporary gap to leverage TTL, or store with explicit expiry
-      // For now, store in distilled memory but with a note to implement TTL in gap-operations
       await memory.updateDistilledMemory(councilPlanKey, councilPlanValue);
-      logger.info(
-        `[PLANNER] Saved COUNCIL_PLAN with key ${councilPlanKey} (TODO: implement 7-day TTL)`
-      );
+      logger.info(`[PLANNER] Saved COUNCIL_PLAN with ephemeral TTL: ${councilPlanKey}`);
     } else if (evolutionMode === EvolutionMode.AUTO && !isFailure && processedGapIds.length > 0) {
       // B2: Validate plan before dispatching to Coder Agent
       const validation = validatePlan(plan, processedGapIds);
@@ -742,6 +763,15 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
         await memory.releaseGapLock(gapId, AgentType.STRATEGIC_PLANNER);
       } catch (e) {
         logger.warn(`Failed to release gap lock for ${gapId}:`, e);
+      }
+    }
+
+    // Release locks for covered gaps
+    for (const coveredId of lockedCoveredGapIds) {
+      try {
+        await memory.releaseGapLock(coveredId, AgentType.STRATEGIC_PLANNER);
+      } catch (e) {
+        logger.warn(`Failed to release covered gap lock for ${coveredId}:`, e);
       }
     }
   }

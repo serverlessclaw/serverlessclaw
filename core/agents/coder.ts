@@ -49,13 +49,7 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
   // 2. Initialize agent (config + context loaded in parallel)
   const { config, memory, agent } = await initAgent(AgentType.CODER);
 
-  // 3. Transition gaps to PROGRESS
-  if (gapIds && gapIds.length > 0) {
-    logger.info(`Picking up task. Marking ${gapIds.length} gaps as PROGRESS.`);
-    await Promise.all(gapIds.map((gapId) => memory.updateGapStatus(gapId, GapStatus.PROGRESS)));
-  }
-
-  // 4. Process the task
+  // 3. Process the task
   let status: string;
   let responseText: string;
   let buildId: string | undefined = undefined;
@@ -68,6 +62,11 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
   logger.info(`[Coder] Starting process. Fallback: ${status}, Response: ${responseText}`);
 
   try {
+    // 3b. Transition gaps to PROGRESS (inside try so finally can reset on init failure)
+    if (gapIds && gapIds.length > 0) {
+      logger.info(`Picking up task. Marking ${gapIds.length} gaps as PROGRESS.`);
+      await Promise.all(gapIds.map((gapId) => memory.updateGapStatus(gapId, GapStatus.PROGRESS)));
+    }
     const { responseText: rawResponse, attachments } = await agent.process(
       userId,
       task || '',

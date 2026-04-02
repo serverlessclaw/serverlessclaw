@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   addLesson: vi.fn().mockResolvedValue(undefined),
   setGap: vi.fn().mockResolvedValue(undefined),
   updateGapStatus: vi.fn().mockResolvedValue(undefined),
+  updateGapMetadata: vi.fn().mockResolvedValue(undefined),
   agentProcess: vi.fn(),
 }));
 
@@ -106,6 +107,7 @@ vi.mock('../lib/utils/agent-helpers', () => ({
       addLesson: mocks.addLesson,
       setGap: mocks.setGap,
       updateGapStatus: mocks.updateGapStatus,
+      updateGapMetadata: mocks.updateGapMetadata,
       getFailurePatterns: vi.fn().mockResolvedValue([]),
       getSummary: vi.fn().mockResolvedValue(null),
       updateSummary: vi.fn().mockResolvedValue(undefined),
@@ -230,5 +232,58 @@ describe('Cognition Reflector Handler', () => {
 
     expect(capturedOptions.profile).toBe('standard');
     expect(capturedOptions.profile).not.toBe('fast');
+  });
+
+  it('should use updateGapMetadata (not setGap) for deduplication to preserve existing status (Bug 3 regression)', async () => {
+    // Simulate an existing gap in PLANNED state
+    const existingGap = {
+      id: 'GAP#1234567890',
+      timestamp: 1234567890,
+      content: 'Existing gap',
+      metadata: { impact: 5, urgency: 3 },
+    };
+
+    // Mock getAgentContext to return memory with the existing gap
+    vi.mocked((await import('../lib/utils/agent-helpers')).getAgentContext).mockResolvedValueOnce({
+      memory: {
+        getDistilledMemory: vi.fn().mockResolvedValue('Old facts'),
+        getAllGaps: vi.fn().mockResolvedValue([existingGap]),
+        updateDistilledMemory: mocks.updateDistilledMemory,
+        addLesson: mocks.addLesson,
+        setGap: mocks.setGap,
+        updateGapStatus: mocks.updateGapStatus,
+        updateGapMetadata: mocks.updateGapMetadata,
+        getFailurePatterns: vi.fn().mockResolvedValue([]),
+        getSummary: vi.fn().mockResolvedValue(null),
+        updateSummary: vi.fn().mockResolvedValue(undefined),
+      } as any,
+      provider: { call: vi.fn() } as any,
+    });
+
+    const mockReflectionResponse = JSON.stringify({
+      facts: 'facts',
+      lessons: [],
+      gaps: [],
+      updatedGaps: [{ id: '1234567890', impact: 8, urgency: 7 }],
+      resolvedGapIds: [],
+    });
+
+    mocks.agentProcess.mockResolvedValue({ responseText: mockReflectionResponse });
+
+    const event = {
+      detail: {
+        userId: 'user-123',
+        conversation: [{ role: MessageRole.USER, content: 'test' }],
+      },
+    };
+
+    await handler(event as any, {} as any);
+
+    // Should use updateGapMetadata (preserves status) NOT setGap (resets to OPEN)
+    expect(mocks.updateGapMetadata).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ impact: 8, urgency: 7 })
+    );
+    expect(mocks.setGap).not.toHaveBeenCalled();
   });
 });

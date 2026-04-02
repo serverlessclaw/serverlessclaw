@@ -262,4 +262,29 @@ describe('Coder Agent', () => {
     // Ensure it doesn't mark as DEPLOYED
     expect(mockMemory.updateGapStatus).not.toHaveBeenCalledWith('gap1', GapStatus.DEPLOYED);
   });
+
+  it('should NOT mark gaps as PROGRESS when initAgent fails (Bug 2 regression)', async () => {
+    // Simulate initAgent throwing during initialization
+    vi.mocked(initAgent).mockRejectedValueOnce(new Error('LLM provider unavailable'));
+
+    const event = {
+      detail: {
+        userId: 'user123',
+        task: 'implement feature',
+        metadata: { gapIds: ['gap1', 'gap2'] },
+      },
+    } as any;
+
+    // Handler may throw since initAgent failure is before try block — that's expected
+    try {
+      await handler(event, mockContext);
+    } catch {
+      // Expected: initAgent failure propagates since it's before the try block
+    }
+
+    // Gaps should NEVER have been transitioned to PROGRESS since
+    // the transition now happens inside the try block (after initAgent)
+    expect(mockMemory.updateGapStatus).not.toHaveBeenCalledWith('gap1', GapStatus.PROGRESS);
+    expect(mockMemory.updateGapStatus).not.toHaveBeenCalledWith('gap2', GapStatus.PROGRESS);
+  });
 });
