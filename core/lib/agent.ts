@@ -11,13 +11,14 @@ import {
   ToolCall,
 } from './types/index';
 import { logger } from './logger';
-import { SYSTEM, AGENT_ERRORS, CONFIG_KEYS, OPTIMIZATION_POLICIES } from './constants';
+import { AGENT_ERRORS, CONFIG_KEYS } from './constants';
 import { ConfigManager } from './registry/config';
 import { AgentProcessOptions } from './agent/options';
 import { AgentEmitter } from './agent/emitter';
 import { parseConfigInt } from './providers/utils';
 import { DEFAULT_SIGNAL_SCHEMA } from './agent/schema';
-import { normalizeBaseUserId } from './utils/normalize';
+import { initializeTracer } from './agent/tracer-init';
+import { resolveAgentConfig } from './agent/config-resolver';
 
 /**
  * Validates that an IAgentConfig has all required fields populated.
@@ -106,31 +107,23 @@ export class Agent {
         ? initialResponseFormat || DEFAULT_SIGNAL_SCHEMA
         : initialResponseFormat;
 
-    const baseUserId = normalizeBaseUserId(userId);
-    const { ClawTracer } = await import('./tracer');
-
-    const tracer = new ClawTracer(
-      baseUserId,
+    const { tracer, traceId, baseUserId } = await initializeTracer(
+      userId,
       source,
       incomingTraceId,
       incomingNodeId,
       incomingParentId,
-      this.config?.id
+      this.config?.id,
+      isContinuation,
+      userText,
+      sessionId,
+      !!incomingAttachments
     );
-    const traceId = tracer.getTraceId();
+
     const effectiveTaskId = taskId ?? traceId;
     const nodeId = tracer.getNodeId();
     const parentId = tracer.getParentId();
     const currentInitiator = initiatorId ?? this.config?.id ?? 'orchestrator';
-
-    if (!isContinuation) {
-      await tracer.startTrace({
-        userText,
-        sessionId,
-        agentId: this.config?.id,
-        hasAttachments: !!incomingAttachments,
-      });
-    }
 
     const storageId = isIsolated
       ? `${(this.config?.id ?? 'unknown').toUpperCase()}#${userId}#${traceId}`
@@ -145,41 +138,15 @@ export class Agent {
     }
 
     try {
-      let activeModel = this.config?.model ?? SYSTEM.DEFAULT_MODEL;
-      let activeProvider = this.config?.provider ?? SYSTEM.DEFAULT_PROVIDER;
-      let activeProfile = profile;
+      const {
+        activeModel: resolvedModel,
+        activeProvider: resolvedProvider,
+        activeProfile: resolvedProfile,
+      } = await resolveAgentConfig(this.config, profile);
 
-      try {
-        const globalProvider = (await ConfigManager.getRawConfig(
-          CONFIG_KEYS.ACTIVE_PROVIDER
-        )) as string;
-        const globalModel = (await ConfigManager.getRawConfig(CONFIG_KEYS.ACTIVE_MODEL)) as string;
-        if (globalProvider) activeProvider = globalProvider;
-        if (globalModel) activeModel = globalModel;
-
-        if (!globalProvider && !globalModel && this.config) {
-          const { AgentRouter } = await import('./agent-router');
-          const routed = AgentRouter.selectModel(this.config, { profile: activeProfile });
-          activeProvider = routed.provider;
-          activeModel = routed.model;
-        }
-
-        if (!process.env.VITEST) {
-          const policy = await ConfigManager.getRawConfig(CONFIG_KEYS.OPTIMIZATION_POLICY);
-          if (policy === OPTIMIZATION_POLICIES.AGGRESSIVE) activeProfile = ReasoningProfile.DEEP;
-          else if (policy === OPTIMIZATION_POLICIES.CONSERVATIVE)
-            activeProfile = ReasoningProfile.FAST;
-
-          if (!globalModel && !activeModel) {
-            const profileMap = (await ConfigManager.getRawConfig(
-              CONFIG_KEYS.REASONING_PROFILES
-            )) as Record<string, string>;
-            if (profileMap?.[activeProfile]) activeModel = profileMap[activeProfile];
-          }
-        }
-      } catch {
-        logger.warn('Failed to fetch config from DDB, using defaults.');
-      }
+      let activeModel = resolvedModel;
+      let activeProvider = resolvedProvider;
+      const activeProfile = resolvedProfile;
 
       if (userText.includes('(USER_ALREADY_NOTIFIED: true)')) {
         logger.info(`Silent completion for agent ${this.config?.id} (Already Notified)`);
@@ -445,31 +412,23 @@ export class Agent {
         ? initialResponseFormat || DEFAULT_SIGNAL_SCHEMA
         : initialResponseFormat;
 
-    const baseUserId = normalizeBaseUserId(userId);
-    const { ClawTracer } = await import('./tracer');
-
-    const tracer = new ClawTracer(
-      baseUserId,
+    const { tracer, traceId, baseUserId } = await initializeTracer(
+      userId,
       source,
       incomingTraceId,
       incomingNodeId,
       incomingParentId,
-      this.config?.id
+      this.config?.id,
+      isContinuation,
+      userText,
+      sessionId,
+      !!incomingAttachments
     );
-    const traceId = tracer.getTraceId();
+
     const effectiveTaskId = taskId ?? traceId;
     const nodeId = tracer.getNodeId();
     const parentId = tracer.getParentId();
     const currentInitiator = initiatorId ?? this.config?.id ?? 'orchestrator';
-
-    if (!isContinuation) {
-      await tracer.startTrace({
-        userText,
-        sessionId,
-        agentId: this.config?.id,
-        hasAttachments: !!incomingAttachments,
-      });
-    }
 
     const storageId = isIsolated
       ? `${(this.config?.id ?? 'unknown').toUpperCase()}#${userId}#${traceId}`
@@ -490,9 +449,15 @@ export class Agent {
       return;
     }
 
-    const activeModel = this.config?.model ?? SYSTEM.DEFAULT_MODEL;
-    const activeProvider = this.config?.provider ?? SYSTEM.DEFAULT_PROVIDER;
-    const activeProfile = profile;
+    const {
+      activeModel: resolvedModel,
+      activeProvider: resolvedProvider,
+      activeProfile: resolvedProfile,
+    } = await resolveAgentConfig(this.config, profile);
+
+    const activeModel = resolvedModel;
+    const activeProvider = resolvedProvider;
+    const activeProfile = resolvedProfile;
 
     const { AgentAssembler } = await import('./agent/assembler');
     const {

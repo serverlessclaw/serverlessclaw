@@ -2,7 +2,7 @@ import { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-la
 import { sendOutboundMessage } from '../lib/outbound';
 import { logger } from '../lib/logger';
 import { TraceSource, AgentType } from '../lib/types/agent';
-import { MessageRole, AttachmentType } from '../lib/types/llm';
+import { AttachmentType } from '../lib/types/llm';
 import { SSTResource } from '../lib/types/system';
 import { Resource } from 'sst';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -113,19 +113,11 @@ export const handler = async (
   const sessionStateManager = new SessionStateManager();
   const lambdaRequestId = context.awsRequestId;
 
-  // 1. Always add message to conversation history first (no message loss)
-  logger.info('[WEBHOOK] Recording message to history...');
-  await memory.addMessage(chatId, {
-    role: MessageRole.USER,
-    content: userText,
-    attachments,
-  });
-
   // Request Handoff (Phase B3: Real-time Shared Awareness)
   // Ensures agents enter OBSERVE mode if human is actively typing/sending
   await requestHandoff(chatId);
 
-  // 2. Try to acquire processing flag
+  // 1. Try to acquire processing flag
   logger.info('[WEBHOOK] Checking processing status...');
   const canProcess = await sessionStateManager.acquireProcessing(chatId, lambdaRequestId);
 
@@ -245,11 +237,16 @@ async function handleTelegramFile(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any | null> {
   const s3 = getS3Client();
+  const FETCH_TIMEOUT_MS = 5000;
   try {
     // 1. Get file path from Telegram
+    const fileInfoController = new AbortController();
+    const fileInfoTimeout = setTimeout(() => fileInfoController.abort(), FETCH_TIMEOUT_MS);
     const fileInfoResponse = await fetch(
-      `https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`
+      `https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`,
+      { signal: fileInfoController.signal }
     );
+    clearTimeout(fileInfoTimeout);
     const fileInfo = await fileInfoResponse.json();
     if (!fileInfo.ok) {
       logger.error('Telegram getFile failed:', fileInfo.description);
@@ -260,7 +257,10 @@ async function handleTelegramFile(
     const downloadUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
 
     // 2. Download file buffer
-    const response = await fetch(downloadUrl);
+    const downloadController = new AbortController();
+    const downloadTimeout = setTimeout(() => downloadController.abort(), FETCH_TIMEOUT_MS);
+    const response = await fetch(downloadUrl, { signal: downloadController.signal });
+    clearTimeout(downloadTimeout);
     const buffer = Buffer.from(await response.arrayBuffer());
 
     // 3. Upload to S3 StagingBucket

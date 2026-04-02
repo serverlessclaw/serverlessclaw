@@ -19,7 +19,7 @@
 | **Rollback Signal**        | `core/tools/index.ts → triggerRollback`   | Circuit breaker active or health failed |
 | **Human-in-the-Loop**      | SuperClaw system prompt                   | `MANUAL_APPROVAL_REQUIRED` returned     |
 | **Dashboard Auth**         | `dashboard/src/proxy.ts`                  | Unauthorized access to ClawCenter       |
-| **Recursion Guard**        | `core/handlers/events.ts`                 | Agent-to-agent hop depth > default (50) |
+| **Recursion Guard**        | `core/handlers/events.ts`                 | Agent-to-agent hop depth > default (15) |
 | **Granular Safety Engine** | `core/lib/safety-engine.ts`               | Multi-dimensional policy enforcement    |
 | **Deep Cognitive Health**  | `core/lib/cognitive-metrics.ts`           | Agent reasoning/memory degradation      |
 
@@ -248,6 +248,69 @@ To prevent infinite loops during autonomous multi-agent coordination, Serverless
    - The `EventHandler` immediately logs a critical loop warning.
    - The task is terminated.
    - The `SuperClaw` is notified to inform the user of the "Infinite Loop Detected" and request manual intervention.
+
+---
+
+## Daily Deploy Limit (UTC-Safe Counter)
+
+`incrementDeployCount` now uses a two-step conditional write path to correctly handle UTC day boundaries and avoid carrying over yesterday's count.
+
+```text
+[incrementDeployCount(today, limit)]
+            |
+            v
+ [Step 1: same-day increment]
+ Condition: lastReset == today AND count < limit
+            |
+     +------+------+
+     |             |
+   pass          fail (CCE)
+     |             |
+     v             v
+ [allow]   [Step 2: new-day reset to 1]
+           Condition: lastReset missing OR lastReset != today
+                     |
+              +------+------+
+              |             |
+            pass          fail (race/limit)
+              |             |
+              v             v
+           [allow]   [retry same-day once]
+                             |
+                      +------+------+
+                      |             |
+                    pass          fail
+                      |             |
+                      v             v
+                   [allow]      [block]
+```
+
+---
+
+## Handoff TTL Safety Control
+
+Human handoff window is now runtime-configurable via `handoff_ttl_seconds` in ConfigTable.
+
+- If config exists and is positive, it is used.
+- Otherwise, the system falls back to 120 seconds.
+
+```text
+[requestHandoff(user)]
+          |
+          v
+[ConfigManager.getRawConfig('handoff_ttl_seconds')]
+          |
+    +-----+-----+
+    |           |
+ valid number   missing/invalid/error
+    |           |
+    v           v
+ [use config] [use 120s default]
+      \         /
+       \       /
+        v     v
+ [Write HANDOFF#user expiresAt]
+```
 
 ---
 

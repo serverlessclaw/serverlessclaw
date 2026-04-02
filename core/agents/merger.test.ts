@@ -84,4 +84,33 @@ describe('Merger Agent Handler', () => {
 
     expect(result).toContain('Merged successfully');
   });
+
+  it('should fail fast when patch payload is too large', async () => {
+    const hugePatch = 'x'.repeat(120 * 1024);
+    const event = {
+      'detail-type': EventType.PARALLEL_TASK_COMPLETED,
+      detail: {
+        userId: 'user-1',
+        task: 'Merge large patch set',
+        traceId: 'trace-large',
+        sessionId: 'session-large',
+        initiatorId: 'planner-1',
+        depth: 1,
+        metadata: {
+          patches: [{ coderId: 'coder-1', patch: hugePatch }],
+        },
+      },
+    };
+
+    const result = await handler(event as any, {} as any);
+
+    expect(mockAgent.process).not.toHaveBeenCalled();
+    expect(emitTaskEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentId: AgentType.MERGER,
+        response: expect.stringContaining('FAILED: Patch payload too large for inline merge'),
+      })
+    );
+    expect(result).toContain('FAILED: Patch payload too large for inline merge');
+  });
 });

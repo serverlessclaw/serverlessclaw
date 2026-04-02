@@ -107,9 +107,8 @@ export class ToolExecutor {
       }
 
       // 3. Execution
-      console.log(
-        `[EXECUTOR] Calling tool: ${tool.name} | Args:`,
-        JSON.stringify(args).substring(0, 100)
+      logger.info(
+        `[EXECUTOR] Calling tool: ${tool.name} | Args: ${JSON.stringify(args).substring(0, 100)}`
       );
       await tracer.addStep({
         type: TRACE_TYPES.TOOL_CALL,
@@ -125,7 +124,7 @@ export class ToolExecutor {
           ? rawResult
           : (rawResult as ToolResult).text || JSON.stringify(rawResult) || '';
 
-      console.log(
+      logger.info(
         `[EXECUTOR] Tool Result: ${tool.name} | Success: ${!resultText.startsWith('FAILED')}`
       );
 

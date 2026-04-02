@@ -1,6 +1,7 @@
 import { IoTDataPlaneClient, PublishCommand } from '@aws-sdk/client-iot-data-plane';
 import { Context } from 'aws-lambda';
 import { BRIDGE_EVENT_SCHEMA } from '../lib/schema/events';
+import { logger } from '../lib/logger';
 
 const iot = new IoTDataPlaneClient({});
 
@@ -14,12 +15,12 @@ const iot = new IoTDataPlaneClient({});
 export async function handler(event: Record<string, unknown>, _context: Context): Promise<void> {
   const parsedEventResult = BRIDGE_EVENT_SCHEMA.safeParse(event);
   if (!parsedEventResult.success) {
-    console.error('[RealtimeBridge] Invalid bridge event payload:', parsedEventResult.error);
+    logger.error('[RealtimeBridge] Invalid bridge event payload:', parsedEventResult.error);
     return;
   }
 
   const parsedEvent = parsedEventResult.data;
-  console.log('[RealtimeBridge] Received event:', parsedEvent['detail-type']);
+  logger.info('[RealtimeBridge] Received event:', parsedEvent['detail-type']);
 
   const { detail } = parsedEvent;
   const eventType = parsedEvent['detail-type'];
@@ -43,11 +44,11 @@ export async function handler(event: Record<string, unknown>, _context: Context)
       ? rawMessage.substring(0, 50).replace(/\n/g, ' ') + '...'
       : rawMessage.replace(/\n/g, ' ');
 
-  console.log(
+  logger.info(
     `[RealtimeBridge] Routing ${eventType}: User=${userId} | Session=${sessionId} | Collab=${collaborationId} | WS=${workspaceId}`
   );
   if (rawMessage) {
-    console.log(`[RealtimeBridge] Content: "${contentSnippet}"${isThought ? ' (thought)' : ''}`);
+    logger.debug(`[RealtimeBridge] Content: "${contentSnippet}"${isThought ? ' (thought)' : ''}`);
   }
 
   // Determine the primary broadcast topic
@@ -85,8 +86,8 @@ export async function handler(event: Record<string, unknown>, _context: Context)
     });
 
     await iot.send(command);
-    console.log(`[RealtimeBridge] Successfully published to ${topic}`);
+    logger.info(`[RealtimeBridge] Successfully published to ${topic}`);
   } catch (error) {
-    console.error(`[RealtimeBridge] Failed to publish to ${topic}:`, error);
+    logger.error(`[RealtimeBridge] Failed to publish to ${topic}:`, error);
   }
 }

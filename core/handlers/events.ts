@@ -21,8 +21,7 @@ export async function handler(
   const detailType = event['detail-type'];
   const eventDetail = event.detail;
 
-  console.log(`[EVENTS] Received: ${detailType} | Session: ${eventDetail.sessionId ?? 'N/A'}`);
-  logger.info('EventHandler received event:', JSON.stringify(event, null, 2));
+  logger.info(`[EVENTS] Received: ${detailType} | Session: ${eventDetail.sessionId ?? 'N/A'}`);
 
   try {
     const { emitMetrics, METRICS } = await import('../lib/metrics');
@@ -40,11 +39,32 @@ export async function handler(
     const { ConfigManager } = await import('../lib/registry/config');
     const { DEFAULT_EVENT_ROUTING } = await import('../lib/event-routing');
 
+    // Build an allowlist of permitted module paths from the hardcoded defaults.
+    // DDB-loaded routing entries must resolve to one of these known-good modules
+    // to prevent a misconfigured or tampered ConfigTable entry from redirecting
+    // event handling to an arbitrary Lambda module.
+    const ALLOWED_MODULES = new Set(Object.values(DEFAULT_EVENT_ROUTING).map((r) => r.module));
+
     // Fetch routing table from DDB with hardcoded fallback
-    const routingTable = await ConfigManager.getTypedConfig(
+    const rawRoutingTable = await ConfigManager.getTypedConfig(
       'event_routing_table',
       DEFAULT_EVENT_ROUTING
     );
+
+    // Security: validate each DDB-loaded entry against the allowlist.
+    // Any entry with an unrecognised module path is removed and the default is used instead.
+    const routingTable: typeof DEFAULT_EVENT_ROUTING = { ...DEFAULT_EVENT_ROUTING };
+    if (rawRoutingTable !== DEFAULT_EVENT_ROUTING) {
+      for (const [eventType, entry] of Object.entries(rawRoutingTable)) {
+        if (ALLOWED_MODULES.has(entry.module)) {
+          routingTable[eventType] = entry;
+        } else {
+          logger.warn(
+            `[SECURITY] Blocked unrecognised routing module '${entry.module}' for event type '${eventType}'. Using default.`
+          );
+        }
+      }
+    }
 
     const routing = routingTable[detailType] || DEFAULT_EVENT_ROUTING[detailType];
 

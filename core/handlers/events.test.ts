@@ -86,6 +86,7 @@ vi.mock('../lib/logger', () => ({
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
+    debug: vi.fn(),
   },
 }));
 
@@ -361,10 +362,10 @@ describe('EventHandler', () => {
       );
     });
     describe('Safe Mode Fallback', () => {
-      it('should fall back to DEFAULT_EVENT_ROUTING if primary module import fails', async () => {
+      it('should block unrecognised routing modules from DDB (security allowlist)', async () => {
         const { ConfigManager } = await import('../lib/registry/config');
 
-        // 1. Mock ConfigManager to return a "broken" custom routing
+        // 1. Mock ConfigManager to return routing with an unknown module path
         (ConfigManager.getTypedConfig as any).mockResolvedValue({
           [EventType.SYSTEM_HEALTH_REPORT]: {
             module: 'non-existent-module',
@@ -382,18 +383,13 @@ describe('EventHandler', () => {
           },
         };
 
-        // 2. The handler should catch the import error and fall back to the default handler
-        // We need to ensure the default handler module (health.ts) is моcked/available.
+        // 2. The handler should silently reject the unknown module and use the default
         await handler(event as any, {} as any);
 
-        // 3. Verify logger recorded the fallback attempt
+        // 3. Verify a security warning was logged and the default route was used instead
         const { logger } = await import('../lib/logger');
-        expect(logger.error).toHaveBeenCalledWith(
-          expect.stringContaining('[SAFE_MODE] Import failed for non-existent-module'),
-          expect.anything()
-        );
-        expect(logger.info).toHaveBeenCalledWith(
-          expect.stringContaining('[SAFE_MODE] Recovering via default routing')
+        expect(logger.warn).toHaveBeenCalledWith(
+          expect.stringContaining('[SECURITY] Blocked unrecognised routing module')
         );
       });
     });

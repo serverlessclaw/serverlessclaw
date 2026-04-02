@@ -4,6 +4,7 @@ import { getDocClient } from './utils/ddb-client';
 import { emitEvent } from './utils/bus';
 import { EventType } from './types/agent';
 import { logger } from './logger';
+import { ConfigManager } from './registry/config';
 
 /**
  * Handoff Protocol Module
@@ -11,7 +12,18 @@ import { logger } from './logger';
  * Manages transitions between autonomous agent control and active human intervention.
  */
 
-const HANDOFF_TTL_SECONDS = 120; // 2 minutes of silence before agent resumes
+const DEFAULT_HANDOFF_TTL_SECONDS = 120; // 2 minutes of silence before agent resumes
+
+/** Loads the handoff TTL from ConfigTable, falling back to the default. */
+async function getHandoffTtlSeconds(): Promise<number> {
+  try {
+    const val = await ConfigManager.getRawConfig('handoff_ttl_seconds');
+    if (typeof val === 'number' && val > 0) return val;
+  } catch {
+    // ignore, use default
+  }
+  return DEFAULT_HANDOFF_TTL_SECONDS;
+}
 
 /**
  * Marks a user as having "active control" of the session.
@@ -32,7 +44,7 @@ export async function requestHandoff(userId: string, sessionId?: string): Promis
   const tableName = resource.MemoryTable.name;
 
   const now = Math.floor(Date.now() / 1000);
-  const expiresAt = now + HANDOFF_TTL_SECONDS;
+  const expiresAt = now + (await getHandoffTtlSeconds());
 
   try {
     await docClient.send(

@@ -38,9 +38,9 @@ import { Agent } from '../lib/agent';
  * @returns An object with isValid flag and optional reason for rejection.
  */
 function validatePlan(plan: string, _gapIds: string[]): { isValid: boolean; reason?: string } {
-  // 1. Minimum length check (50 chars)
-  if (plan.length < 50) {
-    return { isValid: false, reason: `Plan too short (${plan.length} chars, minimum 50)` };
+  // 1. Minimum length check (500 chars) — matches decomposer threshold and documentation
+  if (plan.length < 500) {
+    return { isValid: false, reason: `Plan too short (${plan.length} chars, minimum 500)` };
   }
 
   // 2. Check for empty response markers

@@ -120,6 +120,7 @@ export const handler = async (_event?: { detail: Record<string, unknown> }): Pro
             userId: 'DISTILLED#RECOVERY',
             timestamp: Date.now(),
             content: `Recovery halted. Circuit-breaker triggered after ${attemptCount} failed attempts. Escalated via Notifier.`,
+            expiresAt: Math.floor((Date.now() + RETENTION.HEALTH_DAYS * 86400000) / 1000),
           },
         })
       );
@@ -152,6 +153,7 @@ export const handler = async (_event?: { detail: Record<string, unknown> }): Pro
           userId: 'DISTILLED#RECOVERY',
           timestamp: Date.now(),
           content: `Dead Man's Switch detected unhealthy system and triggered attempt #${attemptCount} for rollback to ${lkgHash ?? 'previous state'}.`,
+          expiresAt: Math.floor((Date.now() + RETENTION.HEALTH_DAYS * 86400000) / 1000),
         },
       })
     );

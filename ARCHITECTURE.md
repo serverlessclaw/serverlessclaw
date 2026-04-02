@@ -198,6 +198,28 @@ Agents communicate asynchronously using **AWS EventBridge (The AgentBus)**. This
 - **Relay Loop**: When a sub-agent emits `TASK_COMPLETED` or `TASK_FAILED`, the `EventHandler` routes it back to the `initiatorId` as a `CONTINUATION_TASK`.
 - **Metadata**: Every event carries a standardized `traceId` (for visual DAG tracing) and a `depth` counter (for loop protection).
 - **Recursion Control**: The `EventHandler` enforces a **Recursion Limit** (Default: 15), aborting flows that exceed it.
+
+### Secure Event Routing Allowlist
+
+To protect against misconfigured or tampered runtime routing, the `EventHandler` now validates all DDB-loaded `event_routing_table` entries against a hardcoded allowlist derived from `DEFAULT_EVENT_ROUTING`.
+
+```text
+[ConfigTable: event_routing_table]
+            |
+            v
+   [EventHandler Routing Load]
+            |
+            v
+ [Allowlist Check Against DEFAULT_EVENT_ROUTING Modules]
+       |                               |
+       | valid                         | unrecognized
+       v                               v
+ [Use DDB Entry]                 [Block + Warn + Use Default]
+       \_______________________________/
+                     |
+                     v
+               [Dynamic Handler Import]
+```
 - **Discovery**: The `AgentRegistry` and `topology.ts` utility perform post-deployment discovery, merging backbone logic with user-defined personas.
 - **Visualization**: The **System Pulse** map in ClawCenter renders a unified, resilient graph of these interactions, covering the full stack from API Gateway to individual agent tools.
 

@@ -15,6 +15,12 @@ vi.mock('./utils/bus', () => ({
   emitEvent: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('./registry/config', () => ({
+  ConfigManager: {
+    getRawConfig: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
 describe('Handoff Protocol', () => {
   beforeEach(() => {
     ddbMock.reset();
@@ -37,6 +43,19 @@ describe('Handoff Protocol', () => {
       'handoff',
       expect.objectContaining({ userId: 'user-1' })
     );
+  });
+
+  it('should honor handoff_ttl_seconds from ConfigTable', async () => {
+    ddbMock.on(PutCommand).resolves({});
+    const { ConfigManager } = await import('./registry/config');
+    (ConfigManager.getRawConfig as any).mockResolvedValueOnce(300);
+
+    await requestHandoff('user-ttl', 'session-ttl');
+
+    const input = ddbMock.call(0).args[0].input as any;
+    const now = Math.floor(Date.now() / 1000);
+    expect(input.Item.expiresAt).toBeGreaterThanOrEqual(now + 299);
+    expect(input.Item.expiresAt).toBeLessThanOrEqual(now + 301);
   });
 
   it('should return true if handoff is active', async () => {

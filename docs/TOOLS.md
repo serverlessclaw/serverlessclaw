@@ -231,3 +231,33 @@ dispatchTask (coder) → filesystem_write_file → [human approves if protected]
                                           ↓            ↓
                                       OK (–1 count)  FAILED → triggerRollback
 ```
+
+---
+
+## Reliability Updates (April 2026)
+
+### Merger Payload Safety Cap
+
+`core/agents/merger.ts` now rejects oversized inline patch payloads before sending to the LLM.
+
+- Limit: 100 KB total serialized patch payload.
+- Behavior on overflow: emits a failed task result immediately with remediation guidance.
+
+```text
+[Parallel patches]
+       |
+       v
+[Merger: JSON serialize]
+       |
+       v
+[Size <= 100KB ?]
+   |          |
+  yes         no
+   |          |
+   v          v
+[LLM merge] [Emit FAILED + stop]
+```
+
+### Tool Resolution Logging
+
+`getAgentTools` in `core/tools/registry-utils.ts` now uses the structured logger (`logger.info`) for tool resolution steps, replacing `console.log` and improving CloudWatch queryability.

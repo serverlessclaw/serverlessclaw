@@ -175,7 +175,10 @@ describe('Webhook Handler', () => {
     const result = await handler(event, mockContext);
     expect(result).toEqual({ statusCode: 200, body: 'OK' });
     expect(s3Mock.calls()).toHaveLength(1);
-    expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('getFile?file_id=photo_123'));
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining('getFile?file_id=photo_123'),
+      expect.anything()
+    );
   });
 
   it('should handle document messages', async () => {
@@ -217,6 +220,9 @@ describe('Webhook Handler', () => {
     const result = await handler(event, mockContext);
     expect(result).toEqual({ statusCode: 200, body: 'OK' });
     expect(s3Mock.calls()).toHaveLength(1);
-    expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('getFile?file_id=doc_456'));
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining('getFile?file_id=doc_456'),
+      expect.anything()
+    );
   });
 });
