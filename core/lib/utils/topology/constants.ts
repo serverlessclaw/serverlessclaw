@@ -23,6 +23,7 @@ export const INFRA_NODE_ID = {
   SCHEDULER: 'scheduler',
   HEARTBEAT: 'heartbeat',
   DEPLOYER: 'deployer',
+  MCP_AST: 'mcpastserver',
   MCP_GIT: 'mcpgitserver',
   MCP_FILESYSTEM: 'mcpfilesystemserver',
   MCP_GOOGLE_SEARCH: 'mcpgooglesearchserver',

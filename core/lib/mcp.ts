@@ -71,6 +71,7 @@ export class MCPBridge {
 
     const allTools: ITool[] = [];
     const defaultServers: Record<string, MCPServerConfig> = {
+      ast: { command: 'npx -y @aiready/ast-mcp-server@0.1.6' },
       filesystem: { command: 'npx -y @modelcontextprotocol/server-filesystem .' },
       git: { command: 'npx -y @cyanheads/git-mcp-server' },
       'google-search': { command: 'npx -y @mcp-server/google-search-mcp' },

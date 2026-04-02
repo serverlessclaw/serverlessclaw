@@ -33,6 +33,7 @@ export function mapProfileToResource(profile: string, busId: string): string | n
   if (lowerProfile === INFRA_NODE_ID.NOTIFIER) return INFRA_NODE_ID.NOTIFIER;
 
   // MCP Servers
+  if (lowerProfile === 'ast') return INFRA_NODE_ID.MCP_AST;
   if (lowerProfile === 'git') return INFRA_NODE_ID.MCP_GIT;
   if (lowerProfile === 'filesystem') return INFRA_NODE_ID.MCP_FILESYSTEM;
   if (lowerProfile === 'google-search') return INFRA_NODE_ID.MCP_GOOGLE_SEARCH;
@@ -72,6 +73,7 @@ export async function mapToolToResources(toolName: string): Promise<string[]> {
   if (!tool || !tool.connectionProfile) {
     if (toolName === 'sendMessage') return [INFRA_NODE_ID.NOTIFIER];
     // Agents use both S3 buckets depending on the task (Deployment vs Knowledge)
+    if (toolName.startsWith('ast_')) return ['ast'];
     if (toolName.startsWith('git_')) return ['git'];
     if (toolName.startsWith('filesystem_')) return ['filesystem'];
     if (toolName.startsWith('google-search_')) return ['google-search'];

@@ -107,10 +107,10 @@ describe('MCPBridge', () => {
 
     const tools = await MCPBridge.getExternalTools();
 
-    // Default servers (7) + our mock servers (2) = 9
-    expect(tools.length).toBe(9);
+    // Default servers (8) + our mock servers (2) = 10
+    expect(tools.length).toBe(10);
     // Verify MCPClientManager.connect was called for all servers
-    expect(MCPClientManager.connect).toHaveBeenCalledTimes(9);
+    expect(MCPClientManager.connect).toHaveBeenCalledTimes(10);
   });
 
   it('should correctly handle managed connectors without spawning local processes', async () => {
@@ -367,6 +367,7 @@ describe('MCPBridge', () => {
 
     it('does not save config when all defaults already exist', async () => {
       (AgentRegistry.getRawConfig as any).mockResolvedValue({
+        ast: { command: 'npx ast' },
         filesystem: { command: 'npx filesystem' },
         git: { command: 'npx git' },
         'google-search': { command: 'npx gs' },

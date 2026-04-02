@@ -350,8 +350,8 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       'git_status',
       'git_diff',
       'grep_search',
-      'code-index-mcp', // Structural tool
-      'mcp-ripgrep', // Regex tool
+      'ast_search_code', // Structural analysis
+      'ast_get_file_structure', // AST structure
       TOOL_SEND_MESSAGE,
       TOOL_SAVE_MEMORY,
     ],
