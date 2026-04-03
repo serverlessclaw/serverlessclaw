@@ -102,6 +102,8 @@ export async function handleParallelTaskCompleted(
         const { AgentType } = await import('../../lib/types/agent');
 
         // Dispatch to LLM MergerAgent
+        // NOTE: We cast to 'any' here because the target event type is dynamically constructed
+        // as `${AgentType.MERGER}_task`, which is valid in EventBridge but not a static EventType enum member.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await emitTypedEvent(AgentType.EVENT_HANDLER, `${AgentType.MERGER}_task` as any, {
           userId,

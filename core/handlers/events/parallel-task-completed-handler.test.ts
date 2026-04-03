@@ -60,7 +60,21 @@ vi.mock('./merger-handler', () => ({
   handlePatchMerge: mockHandlePatchMerge,
 }));
 
-// 6. Import code under test
+// 6. Mock typed-emit and outbound
+const { mockEmitTypedEvent, mockSendOutboundMessage } = vi.hoisted(() => ({
+  mockEmitTypedEvent: vi.fn().mockResolvedValue({}),
+  mockSendOutboundMessage: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock('../../lib/utils/typed-emit', () => ({
+  emitTypedEvent: mockEmitTypedEvent,
+}));
+
+vi.mock('../../lib/outbound', () => ({
+  sendOutboundMessage: mockSendOutboundMessage,
+}));
+
+// 7. Import code under test
 import { handleParallelTaskCompleted } from './parallel-task-completed-handler';
 
 describe('parallel-task-completed-handler', () => {
@@ -172,6 +186,81 @@ describe('parallel-task-completed-handler', () => {
         'session-xyz',
         1
       );
+    });
+
+    it('dispatches to MergerAgent when procedural merge fails (Tier 2 Fallback)', async () => {
+      mockHandlePatchMerge.mockResolvedValue({
+        success: false,
+        appliedCount: 1,
+        totalCount: 2,
+        appliedPatches: ['task-1'],
+        failedPatches: [{ agentId: 'coder-2', taskId: 'task-2', error: 'conflict', patch: 'diff' }],
+        deploymentTriggered: false,
+        summary: 'Merge Partial: 1/2 patches applied',
+      });
+
+      const detail = {
+        ...baseEventDetail,
+        aggregationType: 'merge_patches' as const,
+      };
+
+      await handleParallelTaskCompleted(detail);
+
+      // Should dispatch to MergerAgent
+      expect(mockEmitTypedEvent).toHaveBeenCalledWith(
+        'events',
+        'merger_task',
+        expect.objectContaining({
+          task: expect.stringContaining('Resolve the following semantic conflicts'),
+        })
+      );
+
+      // Should notify user
+      expect(mockSendOutboundMessage).toHaveBeenCalledWith(
+        'events',
+        'user-123',
+        expect.stringContaining('Merge Conflict Detected'),
+        ['user-123'],
+        'session-xyz',
+        'System'
+      );
+
+      // Should NOT wake up initiator yet (waiting for MergerAgent)
+      expect(mockWakeupInitiator).not.toHaveBeenCalled();
+    });
+
+    it('falls back to summary and notifies user when MergerAgent dispatch fails', async () => {
+      mockEmitTypedEvent.mockRejectedValueOnce(new Error('EventBus Error'));
+
+      mockHandlePatchMerge.mockResolvedValue({
+        success: false,
+        appliedCount: 1,
+        totalCount: 2,
+        appliedPatches: ['task-1'],
+        failedPatches: [{ agentId: 'coder-2', taskId: 'task-2', error: 'conflict', patch: 'diff' }],
+        deploymentTriggered: false,
+        summary: 'Merge Partial: 1/2 patches applied',
+      });
+
+      const detail = {
+        ...baseEventDetail,
+        aggregationType: 'merge_patches' as const,
+      };
+
+      await handleParallelTaskCompleted(detail);
+
+      // Should notify user of the dispatch failure
+      expect(mockSendOutboundMessage).toHaveBeenCalledWith(
+        'AgentBus',
+        'user-123',
+        expect.stringContaining('Reconciliation Failed'),
+        ['user-123'],
+        'session-xyz',
+        'System'
+      );
+
+      // Should fall back to waking up initiator with the partial summary
+      expect(mockWakeupInitiator).toHaveBeenCalled();
     });
   });
 });
