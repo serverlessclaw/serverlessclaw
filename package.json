@@ -38,6 +38,7 @@
     "node": ">=24 <25"
   },
   "dependencies": {
+    "@aiready/ast-mcp-server": "0.1.6",
     "@opennextjs/aws": "3.9.16",
     "dotenv": "^17.3.1",
     "sst": "4.5.12",

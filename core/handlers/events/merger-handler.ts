@@ -15,7 +15,7 @@ interface PatchResult {
  * Extracts a patch string from a coder result using PATCH_START/END delimiters.
  * Automatically strips markdown code block fences if the LLM included them.
  */
-function extractPatch(result: string | null | undefined): string | null {
+export function extractPatch(result: string | null | undefined): string | null {
   if (!result) return null;
   const match = result.match(/PATCH_START\n([\s\S]*?)\nPATCH_END/);
   if (!match) return null;

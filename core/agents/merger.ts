@@ -33,8 +33,9 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
 
   if (patches.length === 0 && results.length > 0) {
     logger.info(`Extracting patches from ${results.length} parallel results.`);
+    const { extractPatch } = await import('../handlers/events/merger-handler');
     for (const res of results) {
-      const patch = res.patch || (res.result?.includes('PATCH_START') ? res.result : null);
+      const patch = res.patch || extractPatch(res.result);
       if (patch) {
         patches.push({
           coderId: res.agentId,
