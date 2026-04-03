@@ -34,6 +34,7 @@ describe('generatePatch Tool', () => {
     mockMemory.getHistory.mockResolvedValue([
       { content: 'TYPE_CHECK_PASSED' },
       { content: 'UNIT_TESTS_PASSED' },
+      { tool_calls: [{ function: { name: 'recallKnowledge' } }] },
     ]);
     mockGetAgentContext.mockResolvedValue({ memory: mockMemory });
     mockExecSync.mockReturnValue('diff --git a/file.ts b/file.ts\n+new line');

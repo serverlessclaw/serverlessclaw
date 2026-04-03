@@ -169,6 +169,7 @@ To ensure coordination doesn't break as we add more agents, follow a **Contract-
 3. **Add Contract Test**: Add a test case to `core/tests/contract.test.ts` to verify your new event pattern.
 4. **Verify Handler**: Ensure your agent's handler uses `.parse()` and the correct schema to validate incoming `eventDetail`.
 
+// turbo
 ```bash
 npx vitest core/tests/contract.test.ts
 ```

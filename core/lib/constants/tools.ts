@@ -63,6 +63,7 @@ export const TOOLS = {
   signalOrchestration: 'signalOrchestration',
   voteOnProposal: 'voteOnProposal',
   rollbackDeployment: 'rollbackDeployment',
+  checkReputation: 'checkReputation',
 } as const;
 
 /**

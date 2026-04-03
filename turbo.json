@@ -1,5 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": ["NODE_ENV", "SST_STAGE"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -15,7 +16,8 @@
       "cache": true
     },
     "test": {
-      "cache": true
+      "cache": true,
+      "dependsOn": ["^build"]
     },
     "test:silent": {
       "cache": true
@@ -29,6 +31,12 @@
     },
     "security-scan": {
       "cache": true
+    },
+    "check": {
+      "dependsOn": ["lint", "type-check", "format-check"]
+    },
+    "gate": {
+      "dependsOn": ["check", "test", "aiready"]
     }
   }
 }

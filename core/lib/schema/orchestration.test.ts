@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { AgentStatus, AgentType } from '../types/agent';
-import { OrchestrationSignalSchema } from './orchestration';
+import { OrchestrationSignalSchema, QAFailureFeedbackSchema } from './orchestration';
 
 describe('OrchestrationSignalSchema', () => {
   const minimalValid = {
@@ -203,5 +203,227 @@ describe('OrchestrationSignalSchema', () => {
         expect(result.targetAgentId).toBe(agentType);
       }
     );
+  });
+});
+
+describe('QAFailureFeedbackSchema', () => {
+  const validFeedback = {
+    failureType: 'LOGIC_ERROR' as const,
+    issues: [
+      {
+        file: 'src/utils.ts',
+        line: 42,
+        description: 'Function returns undefined for null input',
+        expected: 'Should return empty array',
+        actual: 'Returns undefined',
+      },
+    ],
+  };
+
+  it('should validate valid feedback', () => {
+    const result = QAFailureFeedbackSchema.parse(validFeedback);
+    expect(result.failureType).toBe('LOGIC_ERROR');
+    expect(result.issues).toHaveLength(1);
+  });
+
+  it('should validate all failure types', () => {
+    const failureTypes = ['LOGIC_ERROR', 'MISSING_TEST', 'DOCS_DRIFT', 'SECURITY_RISK'] as const;
+    for (const ft of failureTypes) {
+      const result = QAFailureFeedbackSchema.parse({
+        failureType: ft,
+        issues: [{ file: 'test.ts', line: 1, description: 'd', expected: 'e', actual: 'a' }],
+      });
+      expect(result.failureType).toBe(ft);
+    }
+  });
+
+  it('should validate multiple issues', () => {
+    const result = QAFailureFeedbackSchema.parse({
+      failureType: 'MISSING_TEST',
+      issues: [
+        { file: 'a.ts', line: 1, description: 'd1', expected: 'e1', actual: 'a1' },
+        { file: 'b.ts', line: 2, description: 'd2', expected: 'e2', actual: 'a2' },
+      ],
+    });
+    expect(result.issues).toHaveLength(2);
+  });
+
+  it('should reject missing failureType', () => {
+    expect(() => QAFailureFeedbackSchema.parse({ issues: validFeedback.issues })).toThrow();
+  });
+
+  it('should reject invalid failureType', () => {
+    expect(() =>
+      QAFailureFeedbackSchema.parse({
+        failureType: 'UNKNOWN_TYPE',
+        issues: validFeedback.issues,
+      })
+    ).toThrow();
+  });
+
+  it('should reject missing issues', () => {
+    expect(() => QAFailureFeedbackSchema.parse({ failureType: 'LOGIC_ERROR' })).toThrow();
+  });
+
+  it('should reject empty issues array', () => {
+    expect(() =>
+      QAFailureFeedbackSchema.parse({ failureType: 'LOGIC_ERROR', issues: [] })
+    ).toThrow();
+  });
+
+  it('should reject issue with missing file', () => {
+    expect(() =>
+      QAFailureFeedbackSchema.parse({
+        failureType: 'LOGIC_ERROR',
+        issues: [{ line: 1, description: 'd', expected: 'e', actual: 'a' }],
+      })
+    ).toThrow();
+  });
+
+  it('should reject issue with non-positive line number', () => {
+    expect(() =>
+      QAFailureFeedbackSchema.parse({
+        failureType: 'LOGIC_ERROR',
+        issues: [{ file: 'test.ts', line: 0, description: 'd', expected: 'e', actual: 'a' }],
+      })
+    ).toThrow();
+  });
+
+  it('should reject issue with missing description', () => {
+    expect(() =>
+      QAFailureFeedbackSchema.parse({
+        failureType: 'LOGIC_ERROR',
+        issues: [{ file: 'test.ts', line: 1, expected: 'e', actual: 'a' }],
+      })
+    ).toThrow();
+  });
+
+  it('should reject issue with missing expected', () => {
+    expect(() =>
+      QAFailureFeedbackSchema.parse({
+        failureType: 'LOGIC_ERROR',
+        issues: [{ file: 'test.ts', line: 1, description: 'd', actual: 'a' }],
+      })
+    ).toThrow();
+  });
+
+  it('should reject issue with missing actual', () => {
+    expect(() =>
+      QAFailureFeedbackSchema.parse({
+        failureType: 'LOGIC_ERROR',
+        issues: [{ file: 'test.ts', line: 1, description: 'd', expected: 'e' }],
+      })
+    ).toThrow();
+  });
+});
+
+describe('QAFailureFeedbackSchema', () => {
+  const validFeedback = {
+    failureType: 'LOGIC_ERROR' as const,
+    issues: [
+      {
+        file: 'src/utils.ts',
+        line: 42,
+        description: 'Function returns undefined for null input',
+        expected: 'Should return empty array',
+        actual: 'Returns undefined',
+      },
+    ],
+  };
+
+  it('should validate valid feedback', () => {
+    const result = QAFailureFeedbackSchema.parse(validFeedback);
+    expect(result.failureType).toBe('LOGIC_ERROR');
+    expect(result.issues).toHaveLength(1);
+  });
+
+  it('should validate all failure types', () => {
+    const failureTypes = ['LOGIC_ERROR', 'MISSING_TEST', 'DOCS_DRIFT', 'SECURITY_RISK'] as const;
+    for (const ft of failureTypes) {
+      const result = QAFailureFeedbackSchema.parse({
+        failureType: ft,
+        issues: [{ file: 'test.ts', line: 1, description: 'd', expected: 'e', actual: 'a' }],
+      });
+      expect(result.failureType).toBe(ft);
+    }
+  });
+
+  it('should validate multiple issues', () => {
+    const result = QAFailureFeedbackSchema.parse({
+      failureType: 'MISSING_TEST',
+      issues: [
+        { file: 'a.ts', line: 1, description: 'd1', expected: 'e1', actual: 'a1' },
+        { file: 'b.ts', line: 2, description: 'd2', expected: 'e2', actual: 'a2' },
+      ],
+    });
+    expect(result.issues).toHaveLength(2);
+  });
+
+  it('should reject missing failureType', () => {
+    expect(() => QAFailureFeedbackSchema.parse({ issues: validFeedback.issues })).toThrow();
+  });
+
+  it('should reject invalid failureType', () => {
+    expect(() =>
+      QAFailureFeedbackSchema.parse({
+        failureType: 'UNKNOWN_TYPE',
+        issues: validFeedback.issues,
+      })
+    ).toThrow();
+  });
+
+  it('should reject missing issues', () => {
+    expect(() => QAFailureFeedbackSchema.parse({ failureType: 'LOGIC_ERROR' })).toThrow();
+  });
+
+  it('should reject empty issues array', () => {
+    expect(() =>
+      QAFailureFeedbackSchema.parse({ failureType: 'LOGIC_ERROR', issues: [] })
+    ).toThrow();
+  });
+
+  it('should reject issue with missing file', () => {
+    expect(() =>
+      QAFailureFeedbackSchema.parse({
+        failureType: 'LOGIC_ERROR',
+        issues: [{ line: 1, description: 'd', expected: 'e', actual: 'a' }],
+      })
+    ).toThrow();
+  });
+
+  it('should reject issue with non-positive line number', () => {
+    expect(() =>
+      QAFailureFeedbackSchema.parse({
+        failureType: 'LOGIC_ERROR',
+        issues: [{ file: 'test.ts', line: 0, description: 'd', expected: 'e', actual: 'a' }],
+      })
+    ).toThrow();
+  });
+
+  it('should reject issue with missing description', () => {
+    expect(() =>
+      QAFailureFeedbackSchema.parse({
+        failureType: 'LOGIC_ERROR',
+        issues: [{ file: 'test.ts', line: 1, expected: 'e', actual: 'a' }],
+      })
+    ).toThrow();
+  });
+
+  it('should reject issue with missing expected', () => {
+    expect(() =>
+      QAFailureFeedbackSchema.parse({
+        failureType: 'LOGIC_ERROR',
+        issues: [{ file: 'test.ts', line: 1, description: 'd', actual: 'a' }],
+      })
+    ).toThrow();
+  });
+
+  it('should reject issue with missing actual', () => {
+    expect(() =>
+      QAFailureFeedbackSchema.parse({
+        failureType: 'LOGIC_ERROR',
+        issues: [{ file: 'test.ts', line: 1, description: 'd', expected: 'e' }],
+      })
+    ).toThrow();
   });
 });

@@ -3,7 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "devDependencies": {
+    "eslint": "^10.0.3",
+    "prettier": "^3.8.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  },
   "scripts": {
+    "test": "vitest run",
+    "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "format-check": "prettier --check . --ignore-path ../../.prettierignore"
   }

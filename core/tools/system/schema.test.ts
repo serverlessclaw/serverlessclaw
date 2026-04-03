@@ -11,6 +11,7 @@ describe('System Domain Tool Schemas', () => {
     'debugAgent',
     'validateCode',
     'switchModel',
+    'checkReputation',
   ];
 
   it('should export all expected tool definitions', () => {
@@ -53,6 +54,7 @@ describe('System Domain Tool Schemas', () => {
       debugAgent: ['agentId', 'level'],
       validateCode: [],
       switchModel: ['provider', 'model'],
+      checkReputation: ['agentId'],
     };
 
     for (const [name, expected] of Object.entries(requiredByTool)) {

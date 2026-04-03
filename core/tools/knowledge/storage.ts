@@ -84,12 +84,14 @@ export const uninstallSkill = {
 export const recallKnowledge = {
   ...schema.recallKnowledge,
   execute: async (args: Record<string, unknown>): Promise<string> => {
-    const { userId, query, category, tags, orgId } = args as {
+    const { userId, query, category, tags, orgId, minImpact, minConfidence } = args as {
       userId: string;
       query: string;
       category: InsightCategory;
       tags?: string[];
       orgId?: string;
+      minImpact?: number;
+      minConfidence?: number;
     };
     const memory = getMemory();
     const baseUserId = userId.startsWith('CONV#') ? userId.split('#')[1] : userId;
@@ -104,7 +106,15 @@ export const recallKnowledge = {
       orgId
     );
 
-    const results = searchResponse.items;
+    let results = searchResponse.items;
+
+    // Apply filters post-discovery
+    if (minImpact !== undefined) {
+      results = results.filter((r) => (r.metadata.impact ?? 0) >= minImpact);
+    }
+    if (minConfidence !== undefined) {
+      results = results.filter((r) => (r.metadata.confidence ?? 0) >= minConfidence);
+    }
 
     if (results.length === 0) return 'No relevant knowledge found.';
 

@@ -9,7 +9,6 @@ export default tseslint.config(
       '.git/',
       'node_modules/',
       'dist/',
-      'dashboard/',
       'sst-env.d.ts',
       'scripts/sst-env.d.ts',
       '.aiready/',

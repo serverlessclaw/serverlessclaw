@@ -19,6 +19,10 @@ export enum InsightCategory {
   FAILURE_PATTERN = 'failure_pattern',
   /** Proactive suggestions for system optimization or refinement. */
   SYSTEM_IMPROVEMENT = 'system_improvement',
+  /** Architecture patterns, ADRs, and structural standards. */
+  ARCHITECTURE = 'architecture',
+  /** Security policies, boundaries, and threat models. */
+  SECURITY = 'security',
 }
 
 /**

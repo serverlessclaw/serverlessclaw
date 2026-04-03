@@ -105,31 +105,31 @@ verify-deploy: ## Full post-deploy verification: API, dashboard, CSS, JS
 	$(call log_success,All checks passed)
 
 
-test: ## Run unit tests with vitest
-	@$(call log_step,Running unit tests...)
+test: ## Run unit tests with vitest (via Turbo)
+	@$(call log_step,Running unit tests via Turbo...)
 	@$(PNPM) run test
 
-test-silent: ## Run unit tests in silent mode for hooks
-	@$(call log_step,Running unit tests (silent)...)
+test-silent: ## Run unit tests in silent mode (via Turbo)
+	@$(call log_step,Running unit tests (silent) via Turbo...)
 	@$(PNPM) run test:silent
 
-test-watch: ## Run unit tests in watch mode
-	@$(PNPM) run test:watch
+test-watch: ## Run unit tests in watch mode (Direct)
+	@$(PNPM) exec vitest
 
-test-ui: ## Run unit tests with Vitest UI
-	@$(PNPM) run test:ui
+test-ui: ## Run unit tests with Vitest UI (Direct)
+	@$(PNPM) exec vitest --ui
 
-test-coverage: ## Run unit tests with coverage reporting (enforces 50% thresholds)
-	@$(call log_info,Running tests with coverage (50% thresholds)...)
-	@$(PNPM) exec vitest run --coverage
+test-coverage: ## Run unit tests with coverage reporting (via Turbo)
+	@$(call log_info,Running tests with coverage via Turbo...)
+	@$(PNPM) exec turbo run test-coverage
 
-test-coverage-ci: ## Run unit tests with coverage enforcement for CI (enforces 70% thresholds)
-	@$(call log_info,Running tests with CI coverage enforcement (70% thresholds)...)
-	@$(PNPM) exec vitest run --coverage --reporter=verbose
+test-coverage-ci: ## Run unit tests with coverage enforcement for CI (via Turbo)
+	@$(call log_info,Running tests with CI coverage via Turbo...)
+	@$(PNPM) exec turbo run test-coverage -- --reporter=verbose
 
-test-component: ## Run component tests (jsdom, via inline env directive)
-	@$(call log_step,Running component tests...)
-	@$(PNPM) exec vitest run --reporter=verbose '**/*.test.tsx'
+test-component: ## Run component tests (via Turbo)
+	@$(call log_step,Running component tests via Turbo...)
+	@$(PNPM) exec turbo run test -- --reporter=verbose '**/*.test.tsx'
 
 test-e2e: ## Run E2E tests with Playwright (local dev server)
 	@$(call log_step,Running E2E tests...)
@@ -140,9 +140,9 @@ test-e2e-deployed: ## Run E2E tests against deployed URL. Usage: make test-e2e-d
 	@if [ -z "$(URL)" ]; then $(call log_error,URL is required); exit 1; fi
 	@BASE_URL=$(URL) $(PNPM) exec playwright test
 
-test-affected: ## Run only tests affected by recent changes (smart test selection)
-	@$(call log_step,Running affected tests...)
-	@$(PNPM) exec tsx scripts/dev/test-affected.ts $(if $(BASE),--base $(BASE),)
+test-affected: ## Run only tests in affected packages (via Turbo)
+	@$(call log_step,Running affected tests via Turbo...)
+	@$(PNPM) exec turbo run test --filter=[...origin/main]
 
 security-scan: ## Scan dependencies for security vulnerabilities
 	@$(call log_step,Running security scan...)

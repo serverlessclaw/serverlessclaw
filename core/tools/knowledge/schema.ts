@@ -136,13 +136,28 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
         },
         category: {
           type: 'string',
-          enum: ['user_preference', 'tactical_lesson', 'strategic_gap', 'system_knowledge'],
+          enum: [
+            'user_preference',
+            'tactical_lesson',
+            'strategic_gap',
+            'system_knowledge',
+            'architecture',
+            'security',
+          ],
           description: 'Optional category filter.',
         },
         tags: {
           type: 'array',
           items: { type: 'string' },
           description: 'Optional tags to filter the search.',
+        },
+        minImpact: {
+          type: 'number',
+          description: 'Minimum impact score (0-10) filter.',
+        },
+        minConfidence: {
+          type: 'number',
+          description: 'Minimum confidence score (0-10) filter.',
         },
         orgId: {
           type: 'string',
@@ -154,8 +169,17 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     },
     argSchema: z.object({
       query: z.string(),
-      category: z.enum(['user_preference', 'tactical_lesson', 'strategic_gap', 'system_knowledge']),
+      category: z.enum([
+        'user_preference',
+        'tactical_lesson',
+        'strategic_gap',
+        'system_knowledge',
+        'architecture',
+        'security',
+      ]),
       tags: z.array(z.string()).optional(),
+      minImpact: z.number().optional(),
+      minConfidence: z.number().optional(),
       userId: z.string(),
       orgId: z.string().optional(),
     }),
@@ -171,7 +195,13 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
         content: { type: 'string', description: 'The knowledge, fact, or preference to save.' },
         category: {
           type: 'string',
-          enum: ['user_preference', 'system_knowledge', 'tactical_lesson'],
+          enum: [
+            'user_preference',
+            'system_knowledge',
+            'tactical_lesson',
+            'architecture',
+            'security',
+          ],
           description: 'The category of the knowledge.',
         },
         tags: {
@@ -189,7 +219,13 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     },
     argSchema: z.object({
       content: z.string(),
-      category: z.enum(['user_preference', 'system_knowledge', 'tactical_lesson']),
+      category: z.enum([
+        'user_preference',
+        'system_knowledge',
+        'tactical_lesson',
+        'architecture',
+        'security',
+      ]),
       tags: z.array(z.string()).optional(),
       userId: z.string(),
       orgId: z.string().optional(),
@@ -216,7 +252,13 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
         },
         category: {
           type: 'string',
-          enum: ['strategic_gap', 'tactical_lesson', 'system_knowledge'],
+          enum: [
+            'strategic_gap',
+            'tactical_lesson',
+            'system_knowledge',
+            'architecture',
+            'security',
+          ],
           description: 'The category of the insight.',
         },
       },

@@ -100,6 +100,7 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
 
   let status = AgentStatus.REOPEN;
   let auditReport = rawResponse;
+  let validatedFeedback: import('../lib/schema/orchestration').QAFailureFeedback | null = null;
 
   try {
     const jsonContent = rawResponse.replace(/```json\n?|\n?```/g, '').trim();
@@ -107,6 +108,22 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
     status = parsed.status === AgentStatus.SUCCESS ? AgentStatus.SUCCESS : AgentStatus.REOPEN;
     auditReport = parsed.auditReport || rawResponse;
     logger.info(`Parsed QA Result. Status: ${status}`);
+
+    if (status === AgentStatus.REOPEN && parsed.failureType && parsed.issues) {
+      const { QAFailureFeedbackSchema } = await import('../lib/schema/orchestration');
+      const feedbackResult = QAFailureFeedbackSchema.safeParse({
+        failureType: parsed.failureType,
+        issues: parsed.issues,
+      });
+      if (feedbackResult.success) {
+        validatedFeedback = feedbackResult.data;
+        logger.info('QA structured feedback validated successfully.');
+      } else {
+        logger.warn('QA structured feedback failed validation:', feedbackResult.error.flatten());
+        auditReport +=
+          '\n\n⚠️ Structured feedback format was invalid. Issues may not be machine-parseable.';
+      }
+    }
   } catch (e) {
     logger.warn('Failed to parse QA structured response, falling back to raw text.', e);
   }
@@ -237,12 +254,15 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
     }
 
     // Notify Initiator about the failure so they can decide on the next course of action
+    const feedbackContext = validatedFeedback
+      ? `\n\nStructured Feedback (${validatedFeedback.failureType}):\n${validatedFeedback.issues.map((i) => `- ${i.file}:${i.line} - ${i.description}`).join('\n')}`
+      : '';
     if (initiatorId) {
       const { wakeupInitiator } = await import('../handlers/events/shared');
       await wakeupInitiator(
         baseUserId,
         initiatorId,
-        `QA_VERIFICATION_FAILED: The changes for gaps ${retryGaps.join(', ')} failed verification.\n\nAudit Report:\n${auditReport}\n\n⚠️ TDD MANDATE: Before attempting another fix, you MUST first write a failing regression test that reproduces this specific QA failure. Then, fix the code to make the test pass.`,
+        `QA_VERIFICATION_FAILED: The changes for gaps ${retryGaps.join(', ')} failed verification.\n\nAudit Report:\n${auditReport}${feedbackContext}\n\n⚠️ TDD MANDATE: Before attempting another fix, you MUST first write a failing regression test that reproduces this specific QA failure. Then, fix the code to make the test pass.`,
         traceId,
         sessionId,
         depth
@@ -254,7 +274,7 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
       await dispatcher.execute({
         agentId: AgentType.CODER,
         userId: baseUserId,
-        task: `QA verification failed for gaps: ${retryGaps.join(', ')}.\n\nAudit Report:\n${auditReport}\n\n⚠️ TDD MANDATE: Before attempting another fix, you MUST first write a failing regression test that reproduces this specific QA failure. Only after the test fails should you implement the fix and redeploy.`,
+        task: `QA verification failed for gaps: ${retryGaps.join(', ')}.\n\nAudit Report:\n${auditReport}${feedbackContext}\n\n⚠️ TDD MANDATE: Before attempting another fix, you MUST first write a failing regression test that reproduces this specific QA failure. Only after the test fails should you implement the fix and redeploy.`,
         metadata: { gapIds: retryGaps },
         traceId,
         sessionId,

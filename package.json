@@ -1,6 +1,7 @@
 {
   "name": "serverlessclaw",
   "version": "1.0.13",
+  "packageManager": "pnpm@10.32.1",
   "description": "A serverless implementation of OpenClaw AI agent using SST, AWS Lambda, and DynamoDB.",
   "repository": {
     "type": "git",
@@ -12,16 +13,18 @@
   },
   "main": "index.js",
   "scripts": {
-    "test": "vitest run",
-    "test:silent": "LOG_LEVEL=none vitest run --reporter=dot",
+    "test": "turbo run test",
+    "test:silent": "turbo run test:silent",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
-    "lint": "eslint . --max-warnings 0",
-    "lint:fix": "eslint . --fix",
-    "format": "prettier --write \"core/**/*.ts\" \"infra/**/*.ts\"",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint -- --fix",
+    "format": "prettier --write \"core/**/*.ts\" \"infra/**/*.ts\" \"dashboard/src/**/*.ts*\"",
     "prepare": "husky",
-    "type-check": "tsc --noEmit",
-    "format-check": "prettier --check . --ignore-path .prettierignore"
+    "type-check": "turbo run type-check",
+    "format-check": "turbo run format-check",
+    "check": "turbo run check",
+    "gate": "turbo run gate"
   },
   "keywords": [
     "openclaw",
@@ -84,7 +87,6 @@
     "@types/archiver": "^7.0.0",
     "@types/aws-lambda": "^8.10.161",
     "@types/node": "^25.3.5",
-    "@types/uuid": "^11.0.0",
     "@typescript-eslint/eslint-plugin": "^8.56.1",
     "@typescript-eslint/parser": "^8.56.1",
     "@vitejs/plugin-react": "^4.7.0",

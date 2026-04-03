@@ -6,52 +6,53 @@
 
 ## 🛠️ Available Tools
 
-| Tool                      | Purpose                                                                     | Protected? | Writes to Cloud? |
-| ------------------------- | --------------------------------------------------------------------------- | :--------: | :--------------: |
-| `dispatchTask`            | Sends a task to EventBridge → Specialized Agent                             |     —      |        ✅        |
-| `seekClarification`       | Pauses current agent and requests directions from initiator                 |     —      |        ✅        |
-| `provideClarification`    | Answers a request and resumes the target agent                              |     —      |        ✅        |
-| `triggerDeployment`       | Starts a CodeBuild deploy (circuit-breaker protected, supports Atomic Sync) |     ✅     |        ✅        |
-| `checkHealth`             | Deep cognitive probe of AgentBus, Core Tools, and LLM Providers             |     —      |        ✅        |
-| `runCognitiveHealthCheck` | Runs deep cognitive health check on agents (reasoning, memory, anomalies)   |     —      |        ✅        |
-| `rollbackDeployment`      | Emergency Git revert + redeploy                                             |     —      |        ✅        |
-| `reportGap`               | Records a capability gap or technical failure                               |     —      |        ✅        |
-| `manageGap`               | Updates gap status (QA Verification)                                        |     —      |        ✅        |
-| `recallKnowledge`         | JIT retrieval of distilled facts/lessons                                    |     —      |        —         |
-| `listAgents`              | Discovers available specialized agents                                      |     —      |        —         |
-| `discoverSkills`          | Searches MCP marketplace for new capabilities                               |     —      |        —         |
-| `registerMCPServer`       | Dynamically connects a new MCP bridge                                       |     —      |        ✅        |
-| `deleteMcpServer`         | Removes an MCP connection                                                   |     —      |        ✅        |
-| `installSkill`            | Adds a tool to an agent's roster                                            |     —      |        ✅        |
-| `uninstallSkill`          | Removes a tool from an agent's roster                                       |     —      |        ✅        |
-| `discoverPeers`           | Discovers peer agents in the swarm (filter by capability/category)          |     —      |        —         |
-| `registerPeer`            | Registers a bidirectional peer connection in swarm topology                 |     —      |        ✅        |
-| `requestConsensus`        | Requests swarm consensus (majority/unanimous/weighted modes)                |     —      |        ✅        |
-| `createWorkspace`         | Creates a new multi-human multi-agent workspace                             |     —      |        ✅        |
-| `inviteMember`            | Invites a human or agent to a workspace (admin/owner only)                  |     —      |        ✅        |
-| `updateMemberRole`        | Updates a member's role within a workspace                                  |     —      |        ✅        |
-| `removeMember`            | Removes a member from a workspace (cannot remove owner)                     |     —      |        ✅        |
-| `getWorkspace`            | Retrieves workspace details including all members                           |     —      |        —         |
-| `listWorkspaces`          | Lists all workspace IDs in the system                                       |     —      |        —         |
-| `createCollaboration`     | Creates a multi-party collaboration session (supports workspaceId)          |     —      |        ✅        |
-| `joinCollaboration`       | Joins an existing collaboration to access shared context                    |     —      |        ✅        |
-| `getCollaborationContext` | Gets shared session conversation history                                    |     —      |        —         |
-| `writeToCollaboration`    | Writes a message to the shared collaboration session                        |     —      |        ✅        |
-| `closeCollaboration`      | Closes a collaboration session                                              |     —      |        ✅        |
-| `listMyCollaborations`    | Lists all collaborations for the current agent                              |     —      |        —         |
-| `broadcastMessage`        | Broadcasts a message to all active participants in a session                |     —      |        ✅        |
-| `debugAgent`              | Sets debug level and captures detailed traces for a specific agent          |     —      |        ✅        |
-| `switchModel`             | Hot-swaps the LLM provider or model for the current agent                   |     —      |        ✅        |
-| `cancelGoal`              | Cancels a scheduled proactive goal or task                                  |     —      |        ✅        |
-| `listSchedules`           | Lists all active proactive goals and scheduled tasks                        |     —      |        —         |
-| `signalOrchestration`     | Deterministic signal to move a goal to the next state                       |     —      |        ✅        |
-| `voteOnProposal`          | Submits a vote for an active consensus proposal                             |     —      |        ✅        |
-| `mcp-filesystem-*`        | MCP-driven file operations (read/write/list/search)                         |     ✅     |        —         |
-| `git-status` / `git-diff` | Version control awareness (MCP)                                             |     —      |        —         |
-| `google-search`           | Real-time global intelligence (MCP)                                         |     —      |        —         |
-| `puppeteer-*`             | Browser automation & UI vision (MCP)                                        |     ✅     |        —         |
-| `fetch`                   | Deep reading of docs/web pages (MCP)                                        |     —      |        —         |
-| `aws-*`                   | Infrastructure auditing & logs (MCP)                                        |     ✅     |        —         |
+| Tool                      | Purpose                                                                               | Protected? | Writes to Cloud? |
+| ------------------------- | ------------------------------------------------------------------------------------- | :--------: | :--------------: |
+| `dispatchTask`            | Sends a task to EventBridge → Specialized Agent                                       |     —      |        ✅        |
+| `seekClarification`       | Pauses current agent and requests directions from initiator                           |     —      |        ✅        |
+| `provideClarification`    | Answers a request and resumes the target agent                                        |     —      |        ✅        |
+| `triggerDeployment`       | Starts a CodeBuild deploy (circuit-breaker protected, supports Atomic Sync)           |     ✅     |        ✅        |
+| `checkHealth`             | Deep cognitive probe of AgentBus, Core Tools, and LLM Providers                       |     —      |        ✅        |
+| `runCognitiveHealthCheck` | Runs deep cognitive health check on agents (reasoning, memory, anomalies)             |     —      |        ✅        |
+| `rollbackDeployment`      | Emergency Git revert + redeploy                                                       |     —      |        ✅        |
+| `reportGap`               | Records a capability gap or technical failure                                         |     —      |        ✅        |
+| `manageGap`               | Updates gap status (QA Verification)                                                  |     —      |        ✅        |
+| `recallKnowledge`         | JIT retrieval of distilled facts/lessons                                              |     —      |        —         |
+| `listAgents`              | Discovers available specialized agents                                                |     —      |        —         |
+| `discoverSkills`          | Searches MCP marketplace for new capabilities                                         |     —      |        —         |
+| `registerMCPServer`       | Dynamically connects a new MCP bridge                                                 |     —      |        ✅        |
+| `deleteMcpServer`         | Removes an MCP connection                                                             |     —      |        ✅        |
+| `installSkill`            | Adds a tool to an agent's roster                                                      |     —      |        ✅        |
+| `uninstallSkill`          | Removes a tool from an agent's roster                                                 |     —      |        ✅        |
+| `discoverPeers`           | Discovers peer agents in the swarm (filter by capability/category)                    |     —      |        —         |
+| `registerPeer`            | Registers a bidirectional peer connection in swarm topology                           |     —      |        ✅        |
+| `requestConsensus`        | Requests swarm consensus (majority/unanimous/weighted modes)                          |     —      |        ✅        |
+| `createWorkspace`         | Creates a new multi-human multi-agent workspace                                       |     —      |        ✅        |
+| `inviteMember`            | Invites a human or agent to a workspace (admin/owner only)                            |     —      |        ✅        |
+| `updateMemberRole`        | Updates a member's role within a workspace                                            |     —      |        ✅        |
+| `removeMember`            | Removes a member from a workspace (cannot remove owner)                               |     —      |        ✅        |
+| `getWorkspace`            | Retrieves workspace details including all members                                     |     —      |        —         |
+| `listWorkspaces`          | Lists all workspace IDs in the system                                                 |     —      |        —         |
+| `createCollaboration`     | Creates a multi-party collaboration session (supports workspaceId)                    |     —      |        ✅        |
+| `joinCollaboration`       | Joins an existing collaboration to access shared context                              |     —      |        ✅        |
+| `getCollaborationContext` | Gets shared session conversation history                                              |     —      |        —         |
+| `writeToCollaboration`    | Writes a message to the shared collaboration session                                  |     —      |        ✅        |
+| `closeCollaboration`      | Closes a collaboration session                                                        |     —      |        ✅        |
+| `listMyCollaborations`    | Lists all collaborations for the current agent                                        |     —      |        —         |
+| `broadcastMessage`        | Broadcasts a message to all active participants in a session                          |     —      |        ✅        |
+| `debugAgent`              | Sets debug level and captures detailed traces for a specific agent                    |     —      |        ✅        |
+| `switchModel`             | Hot-swaps the LLM provider or model for the current agent                             |     —      |        ✅        |
+| `cancelGoal`              | Cancels a scheduled proactive goal or task                                            |     —      |        ✅        |
+| `listSchedules`           | Lists all active proactive goals and scheduled tasks                                  |     —      |        —         |
+| `signalOrchestration`     | Deterministic signal to move a goal to the next state                                 |     —      |        ✅        |
+| `voteOnProposal`          | Submits a vote for an active consensus proposal                                       |     —      |        ✅        |
+| `checkReputation`         | Retrieves an agent's rolling 7-day performance metrics (success rate, latency, score) |     —      |        —         |
+| `mcp-filesystem-*`        | MCP-driven file operations (read/write/list/search)                                   |     ✅     |        —         |
+| `git-status` / `git-diff` | Version control awareness (MCP)                                                       |     —      |        —         |
+| `google-search`           | Real-time global intelligence (MCP)                                                   |     —      |        —         |
+| `puppeteer-*`             | Browser automation & UI vision (MCP)                                                  |     ✅     |        —         |
+| `fetch`                   | Deep reading of docs/web pages (MCP)                                                  |     —      |        —         |
+| `aws-*`                   | Infrastructure auditing & logs (MCP)                                                  |     ✅     |        —         |
 
 ---
 
@@ -267,3 +268,67 @@ dispatchTask (coder) → filesystem_write_file → [human approves if protected]
 ### Tool Resolution Logging
 
 `getAgentTools` in `core/tools/registry-utils.ts` now uses the structured logger (`logger.info`) for tool resolution steps, replacing `console.log` and improving CloudWatch queryability.
+
+---
+
+## 📊 Agent Reputation System (April 2026)
+
+The `checkReputation` tool provides visibility into agent reliability by surfacing rolling 7-day performance metrics.
+
+### Scoring Weights
+
+The composite score (0-1) is calculated as:
+
+```
+Score = (successRate × 0.6) + (latencyComponent × 0.25) + (recencyComponent × 0.15)
+```
+
+| Component    | Weight | Calculation                                               |
+| ------------ | ------ | --------------------------------------------------------- |
+| Success Rate | 60%    | `tasksCompleted / totalTasks`                             |
+| Latency      | 25%    | `max(0, 1 - avgLatencyMs / 15000)` (5s baseline, 15s cap) |
+| Recency      | 15%    | `max(0, 1 - hoursSinceActive / 24)` (decays over 24h)     |
+
+### Update Trigger
+
+Reputation is automatically updated on every `TASK_COMPLETED` or `TASK_FAILED` event via `core/handlers/events/task-result-handler.ts`. The rolling window resets after 7 days of inactivity.
+
+### Usage
+
+```
+checkReputation({ agentId: "coder" })
+```
+
+Returns: Composite score, success rate, tasks completed/failed, average latency, and last active timestamp.
+
+---
+
+## 📊 Agent Reputation System (April 2026)
+
+The `checkReputation` tool provides visibility into agent reliability by surfacing rolling 7-day performance metrics.
+
+### Scoring Weights
+
+The composite score (0-1) is calculated as:
+
+```
+Score = (successRate × 0.6) + (latencyComponent × 0.25) + (recencyComponent × 0.15)
+```
+
+| Component    | Weight | Calculation                                               |
+| ------------ | ------ | --------------------------------------------------------- |
+| Success Rate | 60%    | `tasksCompleted / totalTasks`                             |
+| Latency      | 25%    | `max(0, 1 - avgLatencyMs / 15000)` (5s baseline, 15s cap) |
+| Recency      | 15%    | `max(0, 1 - hoursSinceActive / 24)` (decays over 24h)     |
+
+### Update Trigger
+
+Reputation is automatically updated on every `TASK_COMPLETED` or `TASK_FAILED` event via `core/handlers/events/task-result-handler.ts`. The rolling window resets after 7 days of inactivity.
+
+### Usage
+
+```
+checkReputation({ agentId: "coder" })
+```
+
+Returns: Composite score, success rate, tasks completed/failed, average latency, and last active timestamp.

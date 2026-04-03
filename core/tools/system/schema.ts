@@ -127,5 +127,23 @@ export const systemSchema: Record<string, IToolDefinition> = {
       required: ['provider', 'model'],
       additionalProperties: false,
     },
+    connectionProfile: ['system'],
+  },
+  checkReputation: {
+    name: 'checkReputation',
+    description:
+      "Retrieves an agent's rolling 7-day performance reputation metrics (success rate, latency, score).",
+    parameters: {
+      type: 'object',
+      properties: {
+        agentId: {
+          type: 'string',
+          description: 'The unique ID of the agent to check (e.g., coder, planner).',
+        },
+      },
+      required: ['agentId'],
+      additionalProperties: false,
+    },
+    connectionProfile: ['memory'],
   },
 };
