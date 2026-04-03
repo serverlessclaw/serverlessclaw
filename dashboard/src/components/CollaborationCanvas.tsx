@@ -470,7 +470,7 @@ export function CollaborationCanvasContent() {
                 <div>
                   <Typography variant="mono" className="text-[9px] text-white/40 uppercase mb-1">Reason:</Typography>
                   <Typography variant="body" className="text-[11px] text-white/70 italic">
-                    "{handoffData.reason}"
+                    &quot;{handoffData.reason}&quot;
                   </Typography>
                 </div>
               </div>

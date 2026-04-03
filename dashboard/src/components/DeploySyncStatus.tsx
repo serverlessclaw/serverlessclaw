@@ -47,7 +47,7 @@ export default function DeploySyncStatus() {
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-6">
         <GitBranch size={18} className="text-cyber-blue" />
-        <Typography variant="h4" uppercase glow>Deployment Sync Tracker</Typography>
+        <Typography variant="h3" uppercase glow>Deployment Sync Tracker</Typography>
       </div>
 
       <div className="space-y-3">

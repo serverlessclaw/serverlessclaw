@@ -4,6 +4,7 @@
  */
 import { z } from 'zod';
 import { withApiHandler, validateBody } from '@/lib/api-handler';
+import { GapStatus } from '@claw/core/lib/types/agent';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +21,7 @@ export const POST = withApiHandler(async (body) => {
   const { gapId, status } = validateBody(body, UpdateGapStatusSchema);
 
   const memory = new DynamoMemory();
-  await memory.updateGapStatus(gapId, status);
+  await memory.updateGapStatus(gapId, status as GapStatus);
 
   return { success: true, gapId, status };
 });

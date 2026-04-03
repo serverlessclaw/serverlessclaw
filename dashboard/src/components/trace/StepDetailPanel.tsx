@@ -9,10 +9,10 @@ import { TRACE_TYPES } from '@/lib/constants';
 import Button from '@/components/ui/Button';
 import Typography from '@/components/ui/Typography';
 import { THEME } from '@/lib/theme';
-import { TraceStep } from '@/lib/types/ui';
+import { TraceStep, TraceStepContent } from '@/lib/types/ui';
 
 interface StepDetailPanelProps {
-  selectedStep: TraceStep | { type: string; content: Record<string, unknown> };
+  selectedStep: TraceStep | { type: string; content: TraceStepContent };
   onClose: () => void;
 }
 
@@ -153,7 +153,7 @@ export default function StepDetailPanel({ selectedStep, onClose }: StepDetailPan
                 <HelpCircle size={12} /> Clarification Question
               </div>
               <div className="p-3 bg-purple-500/5 border border-purple-500/20 rounded text-[11px] font-mono text-white/90 whitespace-pre-wrap leading-relaxed italic">
-                "{selectedStep.content?.question ?? 'No question provided'}"
+                &quot;{selectedStep.content?.question ?? 'No question provided'}&quot;
               </div>
             </div>
             <div className="space-y-2">
@@ -197,7 +197,7 @@ export default function StepDetailPanel({ selectedStep, onClose }: StepDetailPan
               <div className="space-y-2">
                 <div className="text-[10px] text-white/60 font-bold">Waiting For</div>
                 <div className="p-2 bg-white/[0.02] border border-white/10 rounded text-[10px] font-mono text-white/70 italic">
-                  "{selectedStep.content?.question}"
+                  &quot;{selectedStep.content?.question}&quot;
                 </div>
               </div>
             )}

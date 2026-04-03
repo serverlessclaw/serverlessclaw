@@ -131,7 +131,7 @@ export async function saveConversationMeta(
   let stableTimestamp = Number.parseInt(sessionId.split('_')[1] || sessionId, 10);
   if (Number.isNaN(stableTimestamp)) {
     // 1.6 Use FNV-1a 64-bit for Session Hash to minimize collisions
-    let h = 0xcbf29ce484222325n;
+    let h: bigint = 0xcbf29ce484222325n;
     for (let i = 0; i < sessionId.length; i++) {
       h ^= BigInt(sessionId.charCodeAt(i));
       h = (h * 0x100000001b3n) & 0xffffffffffffffffn;

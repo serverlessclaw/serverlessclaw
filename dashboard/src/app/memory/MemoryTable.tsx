@@ -56,7 +56,7 @@ export default function MemoryTable({ items, pruneAction }: MemoryTableProps) {
       if (isNaN(d.getTime())) return type === 'date' ? 'N/A' : '';
       return type === 'date' 
         ? d.toLocaleDateString() 
-        : d.toLocaleTimeString([], { hour: '2-numeric', minute: '2-numeric' });
+        : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     } catch {
       return type === 'date' ? 'N/A' : '';
     }

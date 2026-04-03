@@ -2,6 +2,7 @@
  * Chat-specific types for the dashboard
  */
 import type { ToolCall } from '@claw/core/lib/types/llm';
+export type { ToolCall };
 
 export interface ChatMessage {
   role: 'user' | 'assistant';

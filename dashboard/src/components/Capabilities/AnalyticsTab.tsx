@@ -12,9 +12,7 @@ import { AgentConfig, ConfirmModalState } from './types';
 
 interface AnalyticsTabProps {
   allTools: Tool[];
-  agents: AgentConfig[];
   optimisticAgents: AgentConfig[];
-  setOptimisticAgents: React.Dispatch<React.SetStateAction<AgentConfig[]>>;
   handleDetachTool: (agentId: string, toolName: string) => void;
   confirmModal: ConfirmModalState;
   setConfirmModal: React.Dispatch<React.SetStateAction<ConfirmModalState>>;

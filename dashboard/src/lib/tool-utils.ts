@@ -51,13 +51,13 @@ export async function getAllTools(
     // 2. MCP tools (use cache by default for dashboard speed)
     let externalToolsDefinitions: { name: string; description: string }[] = [];
     if (forceRefresh) {
-      externalToolsDefinitions = await MCPBridge.getExternalTools();
+      externalToolsDefinitions = (await MCPBridge.getExternalTools()) as { name: string; description: string }[];
     } else {
-      externalToolsDefinitions = await MCPBridge.getCachedTools();
+      externalToolsDefinitions = (await MCPBridge.getCachedTools()) as { name: string; description: string }[];
       // If cache is empty, use skipConnection mode to avoid timeout and ENOSPC
       // This shows server names without actually connecting to them (no npx execution)
       if (externalToolsDefinitions.length === 0) {
-        externalToolsDefinitions = await MCPBridge.getExternalTools(undefined, true);
+        externalToolsDefinitions = (await MCPBridge.getExternalTools(undefined, true)) as { name: string; description: string }[];
       }
     }
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChatMessage, AttachmentPreview, HistoryMessage } from './types';
+import { ChatMessage, AttachmentPreview, HistoryMessage, ToolCall } from './types';
 import { AGENT_ERRORS } from '@/lib/constants';
 
 interface ChatApiResponse {
@@ -7,7 +7,7 @@ interface ChatApiResponse {
   thought?: string;
   messageId?: string;
   agentName?: string;
-  tool_calls?: Record<string, unknown>[];
+  tool_calls?: ToolCall[];
   error?: string;
   details?: string;
 }
@@ -32,7 +32,7 @@ export function useChatMessages(
       const data = await response.json();
       if (data.history) {
         seenMessageIds.current.clear();
-        setMessages(prev => {
+        setMessages((prev: ChatMessage[]) => {
           const history = data.history.map((m: HistoryMessage) => ({
             role: m.role === 'assistant' || m.role === 'system' ? 'assistant' : 'user',
             content: m.content,
@@ -66,8 +66,8 @@ export function useChatMessages(
   const updateAssistantResponse = (data: ChatApiResponse, tempId: string) => {
     const targetId = data.messageId || tempId;
     seenMessageIds.current.add(targetId);
-    setMessages(prev => {
-      const existingIdx = prev.findIndex(m => m.messageId === targetId && m.role === 'assistant');
+    setMessages((prev: ChatMessage[]) => {
+      const existingIdx = prev.findIndex((m: ChatMessage) => m.messageId === targetId && m.role === 'assistant');
       if (existingIdx !== -1) {
         const existing = prev[existingIdx];
         const hasExistingContent = existing.content && existing.content.length > 0;
@@ -99,7 +99,7 @@ export function useChatMessages(
     if (sessionId === activeSessionRef.current) {
       const errorId = `error_${Date.now()}`;
       seenMessageIds.current.add(errorId);
-      setMessages(prev => [...prev, { 
+      setMessages((prev: ChatMessage[]) => [...prev, { 
         role: 'assistant', 
         content: errorMsg, 
         agentName: 'SystemGuard',
@@ -129,7 +129,7 @@ export function useChatMessages(
     const currentAttachments = [...attachments];
     const tempId = crypto.randomUUID();
     
-    setMessages(prev => [...prev, { 
+    setMessages((prev: ChatMessage[]) => [...prev, { 
       role: 'user', 
       content: userMsg,
       messageId: tempId,
@@ -180,7 +180,7 @@ export function useChatMessages(
         const errorContent = data.details || data.error || AGENT_ERRORS.PROCESS_FAILURE;
         console.error('Chat API error:', data);
         if (currentSessionId === activeSessionRef.current) {
-          setMessages(prev => [...prev, {
+          setMessages((prev: ChatMessage[]) => [...prev, {
             role: 'assistant',
             content: errorContent,
             agentName: 'SystemGuard',
@@ -224,7 +224,7 @@ export function useChatMessages(
       
       if (!response.ok) {
         const data = await response.json();
-        setMessages(prev => [...prev, { 
+        setMessages((prev: ChatMessage[]) => [...prev, { 
           role: 'assistant', 
           content: `Error during approval: ${data.error || 'Unknown error'}`, 
           agentName: 'SystemGuard',
@@ -261,7 +261,7 @@ export function useChatMessages(
       
       if (!response.ok) {
         const data = await response.json();
-        setMessages(prev => [...prev, { 
+        setMessages((prev: ChatMessage[]) => [...prev, { 
           role: 'assistant', 
           content: `Error during rejection: ${data.error || 'Unknown error'}`, 
           agentName: 'SystemGuard',
@@ -298,7 +298,7 @@ export function useChatMessages(
       
       if (!response.ok) {
         const data = await response.json();
-        setMessages(prev => [...prev, { 
+        setMessages((prev: ChatMessage[]) => [...prev, { 
           role: 'assistant', 
           content: `Error during clarification: ${data.error || 'Unknown error'}`, 
           agentName: 'SystemGuard',
@@ -335,7 +335,7 @@ export function useChatMessages(
       
       if (!response.ok) {
         const data = await response.json();
-        setMessages(prev => [...prev, { 
+        setMessages((prev: ChatMessage[]) => [...prev, { 
           role: 'assistant', 
           content: `Error during cancellation: ${data.error || 'Unknown error'}`, 
           agentName: 'SystemGuard',

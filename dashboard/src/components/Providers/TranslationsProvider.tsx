@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
 import en from '../../../messages/en.json';
 import cn from '../../../messages/cn.json';
 
@@ -24,15 +24,14 @@ export const TranslationsProvider: React.FC<{
   initialLocale?: Locale;
 }> = ({ children, initialLocale = 'en' }) => {
   const [locale, setLocale] = useState<Locale>(initialLocale);
-  const [messages, setMessages] = useState<Messages>(locale === 'cn' ? (cn as Messages) : en);
+  const messages = useMemo<Messages>(() => (locale === 'cn' ? (cn as Messages) : en), [locale]);
 
   useEffect(() => {
-    setMessages(locale === 'cn' ? (cn as Messages) : en);
     document.documentElement.lang = locale;
   }, [locale]);
 
   const t = (key: keyof Messages): string => {
-    return (messages as any)[key] || key;
+    return messages[key] ?? key;
   };
 
   return (

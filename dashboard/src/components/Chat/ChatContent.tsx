@@ -14,7 +14,7 @@ import { ChatMessageList } from './ChatMessageList';
 import { ChatInput } from './ChatInput';
 import { QueuedMessagesList } from './QueuedMessages';
 import { useChatMessages } from './useChatMessages';
-import { ChatMessage, AttachmentPreview, HistoryMessage } from './types';
+import { ChatMessage, AttachmentPreview, HistoryMessage, ToolCall } from './types';
 import type { PendingMessage } from '@claw/core/lib/types/session';
 
 /**
@@ -42,7 +42,7 @@ interface ChatApiResponse {
   thought?: string;
   messageId?: string;
   agentName?: string;
-  tool_calls?: any[];
+  tool_calls?: ToolCall[];
   error?: string;
   details?: string;
 }
@@ -108,6 +108,7 @@ export default function ChatContent() {
     sendMessage,
     updateAssistantResponse,
     handleConnectionError,
+    handleFiles,
     handleToolApproval,
     handleToolRejection,
     handleToolClarification,

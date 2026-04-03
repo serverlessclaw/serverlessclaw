@@ -8,7 +8,12 @@ import { getToolUsage, getAllTools } from '@/lib/tool-utils';
 async function getMCPServers() {
   try {
     const { AgentRegistry } = await import('@claw/core/lib/registry');
-    return (await AgentRegistry.getRawConfig('mcp_servers')) as Record<string, unknown> ?? {};
+    const mcpServers: Record<string, string | { command: string; env?: Record<string, string> }> =
+      ((await AgentRegistry.getRawConfig('mcp_servers')) as Record<
+        string,
+        string | { command: string; env?: Record<string, string> }
+      > | null) ?? {};
+    return mcpServers;
   } catch (e) {
     console.error('Error fetching MCP servers:', e);
     return {};

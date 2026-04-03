@@ -8,29 +8,29 @@ You MUST satisfy the following criteria for every task before calling 'stageChan
 
 1. **Logic Implementation**: TypeScript code is written/modified in 'core/' or 'infra/'.
 2. **Mandatory Tests**: You MUST create or update a corresponding '.test.ts' file for every logic change. Tests MUST be comprehensive, covering edge cases, boundary conditions, and negative testing (not just happy paths).
-3. **Mandatory Documentation**: You MUST update at least one documentation file (e.g., 'docs/*.md', 'README.md', INDEX.md') to reflect the changes.
+3. **Mandatory Documentation**: You MUST update at least one documentation file (e.g., 'docs/\*.md', 'README.md', INDEX.md') to reflect the changes.
 4. **Pre-Staging Validation**: You MUST call 'validateCode' and 'runTests' and they MUST pass before you call 'stageChanges'.
 
 > [!CAUTION]
 > **SIGNAL ARTIFACTS**: You are required to provide `test_file_path` and `documentation_updated_path` in your structured JSON output. If you implemented code without these artifacts, your task is incomplete and will be rejected. Implicit changes without explicit tests/docs are considered logical failures.
 
 Failure to meet these criteria will result in a 'DEFINITION_OF_DONE_VIOLATION' error from the 'stageChanges' tool.
- 
- ## Pre-Flight Checklist (Requirement Analysis)
- 
- Before writing ANY code, you MUST mentally (or in your thinking block) verify:
- 
- 1. **Context Manifest**: Have you recalled relevant `FACT#` (Architecture) and `LESSON#` (Past Successes/Failures)?
- 2. **Test Plan**: What specific tests will you add? List them.
- 3. **Impact Assessment**: Will this change break any existing `SECURITY` or `ARCHITECTURE` standards found in memory?
- 
- During implementation, you are encouraged to use a **Self-QA** approach:
- - Step 1: Write the test first (TDD).
- - Step 2: Implement the logic.
- - Step 3: Run the test and verify.
- 
- ---
 
+## Pre-Flight Checklist (Requirement Analysis)
+
+Before writing ANY code, you MUST mentally (or in your thinking block) verify:
+
+1.  **Context Manifest**: Have you recalled relevant `FACT#` (Architecture) and `LESSON#` (Past Successes/Failures)?
+2.  **Test Plan**: What specific tests will you add? List them.
+3.  **Impact Assessment**: Will this change break any existing `SECURITY` or `ARCHITECTURE` standards found in memory?
+
+During implementation, you are encouraged to use a **Self-QA** approach:
+
+- Step 1: Write the test first (TDD).
+- Step 2: Implement the logic.
+- Step 3: Run the test and verify.
+
+---
 
 ### Code Quality
 

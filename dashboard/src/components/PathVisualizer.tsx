@@ -181,7 +181,13 @@ function processTraceNodes(
           position: { x: startX, y: currentY },
         });
         added = true;
-      } else if ([TRACE_TYPES.PARALLEL_DISPATCH, TRACE_TYPES.PARALLEL_BARRIER, TRACE_TYPES.PARALLEL_COMPLETED].includes(step.type as any)) {
+      } else if (
+        new Set<string>([
+          TRACE_TYPES.PARALLEL_DISPATCH,
+          TRACE_TYPES.PARALLEL_BARRIER,
+          TRACE_TYPES.PARALLEL_COMPLETED,
+        ]).has(step.type)
+      ) {
         initialNodes.push({
           id: stepNodeId,
           type: 'barrier',

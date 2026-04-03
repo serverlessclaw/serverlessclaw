@@ -43,6 +43,6 @@
     "test": "vitest run",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
-    "format-check": "prettier --check . --ignore-path ../../.prettierignore"
+    "format-check": "prettier --check . --ignore-path ../.prettierignore"
   }
 }

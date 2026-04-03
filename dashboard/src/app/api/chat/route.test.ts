@@ -21,8 +21,8 @@ vi.mock('@claw/core/lib/memory', () => ({
     deleteConversation = mockDeleteConversation;
   },
   CachedMemory: class {
-    constructor(memory: unknown) {
-      return memory;
+    constructor(_memory: { underlying: unknown }) {
+      return _memory;
     }
   },
 }));

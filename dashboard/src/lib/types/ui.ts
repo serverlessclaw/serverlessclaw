@@ -48,6 +48,33 @@ export interface TraceStepContent {
   };
   args?: Record<string, unknown>;
   model?: string;
+  errorMessage?: string;
+  question?: string;
+  originalTask?: string;
+  retryCount?: number;
+  depth?: number;
+  taskCount?: number;
+  tasks?: { taskId: string; agentId: string; task: string }[];
+  aggregationType?: string;
+  barrierTimeoutMs?: number;
+  status?: string;
+  targetTime?: string;
+  reviewType?: string;
+  direction?: 'to_initiator' | 'to_agent';
+  initiatorId?: string;
+  requestingAgent?: string;
+  previousState?: string;
+  newState?: string;
+  failureType?: string;
+  failureCount?: number;
+  taskId?: string;
+  operation?: string;
+  key?: string;
+  scope?: string;
+  reflection?: string;
+  reason?: string;
+  stepId?: string;
+  timestamp?: number;
   [key: string]: unknown;
 }
 

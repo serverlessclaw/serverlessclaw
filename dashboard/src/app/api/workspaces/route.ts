@@ -1,4 +1,5 @@
-import { withApiHandler, requireFields } from '@/lib/api-handler';
+import { ApiError, requireEnum, requireFields, withApiHandler } from '@/lib/api-handler';
+import type { InviteMemberInput, MemberType, WorkspaceRole } from '@claw/core/lib/types/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,6 +9,16 @@ interface WorkspaceData {
   ownerId?: string;
   members?: Array<{ id: string; role: string; channel: string }>;
   createdAt?: number;
+}
+
+const WORKSPACE_ROLES: WorkspaceRole[] = ['owner', 'admin', 'collaborator', 'observer'];
+const MEMBER_TYPES: MemberType[] = ['human', 'agent'];
+
+function asNonEmptyString(value: unknown, fieldName: string): string {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new ApiError(`${fieldName} must be a non-empty string`, 400);
+  }
+  return value;
 }
 
 async function fetchWorkspacesFromConfig(): Promise<WorkspaceData[]> {
@@ -48,36 +59,64 @@ export async function GET() {
   }
 }
 
-export const POST = withApiHandler(async (body) => {
+export const POST = withApiHandler(async (body: Record<string, unknown>) => {
   // Handle member management actions
   if (body.action === 'invite') {
     requireFields(body, 'workspaceId', 'memberId', 'role');
+    const workspaceId = asNonEmptyString(body.workspaceId, 'workspaceId');
+    const memberId = asNonEmptyString(body.memberId, 'memberId');
+    const role = body.role;
+    requireEnum(role, WORKSPACE_ROLES, 'role');
+    const memberType = body.type ?? 'human';
+    requireEnum(memberType, MEMBER_TYPES, 'type');
+    const input: InviteMemberInput = {
+      workspaceId,
+      memberId,
+      type: memberType,
+      displayName:
+        typeof body.displayName === 'string' && body.displayName.trim().length > 0
+          ? body.displayName
+          : memberId,
+      role,
+    };
+
     const { inviteMember } = await import('@claw/core/lib/memory/workspace-operations');
-    await inviteMember(body.workspaceId, body.memberId, body.role, body.channel ?? 'dashboard');
+    await inviteMember(workspaceId, 'dashboard', input);
     return { success: true };
   }
   
   if (body.action === 'updateRole') {
     requireFields(body, 'workspaceId', 'memberId', 'role');
+    const workspaceId = asNonEmptyString(body.workspaceId, 'workspaceId');
+    const memberId = asNonEmptyString(body.memberId, 'memberId');
+    const role = body.role;
+    requireEnum(role, WORKSPACE_ROLES, 'role');
+
     const { updateMemberRole } = await import('@claw/core/lib/memory/workspace-operations');
-    await updateMemberRole(body.workspaceId, body.memberId, body.role);
+    await updateMemberRole(workspaceId, 'dashboard', memberId, role);
     return { success: true };
   }
   
   if (body.action === 'remove') {
     requireFields(body, 'workspaceId', 'memberId');
+    const workspaceId = asNonEmptyString(body.workspaceId, 'workspaceId');
+    const memberId = asNonEmptyString(body.memberId, 'memberId');
+
     const { removeMember } = await import('@claw/core/lib/memory/workspace-operations');
-    await removeMember(body.workspaceId, body.memberId);
+    await removeMember(workspaceId, 'dashboard', memberId);
     return { success: true };
   }
   
   // Default: create workspace
   requireFields(body, 'name', 'ownerId');
+  const name = asNonEmptyString(body.name, 'name');
+  const ownerId = asNonEmptyString(body.ownerId, 'ownerId');
+
   const { createWorkspace } = await import('@claw/core/lib/memory/workspace-operations');
   const workspace = await createWorkspace({
-    name: body.name,
-    ownerId: body.ownerId,
-    ownerDisplayName: body.ownerDisplayName ?? 'Unknown',
+    name,
+    ownerId,
+    ownerDisplayName: (body.ownerDisplayName as string) ?? 'Unknown',
   });
   return { success: true, id: workspace.workspaceId };
 });

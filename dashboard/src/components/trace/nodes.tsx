@@ -20,7 +20,7 @@ export const TriggerNode = ({ data }: { data: { label: string; onClick?: () => v
       <span className="text-[10px] font-bold tracking-widest text-cyber-green/80">Trigger</span>
     </div>
     <div className="text-[11px] font-mono line-clamp-2 text-white/70 italic">
-      "{data.label}"
+      &quot;{data.label}&quot;
     </div>
     <Handle type="source" position={Position.Bottom} className="w-2 h-2 !bg-cyber-green border-none" />
   </div>
@@ -124,7 +124,7 @@ export const ClarificationNode = ({ data }: { data: { agentId?: string; question
       </div>
     )}
     <div className="text-[11px] font-mono text-white/90 leading-tight line-clamp-2 italic">
-      "{data.question ?? 'Needs clarification'}"
+      &quot;{data.question ?? 'Needs clarification'}&quot;
     </div>
     <Handle type="source" position={Position.Bottom} className="w-2 h-2 !bg-purple-500 border-none" />
   </div>

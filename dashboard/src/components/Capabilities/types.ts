@@ -21,6 +21,6 @@ export interface ConfirmModalState {
 
 export interface CapabilitiesViewProps {
   allTools: Tool[];
-  mcpServers: Record<string, unknown>;
+  mcpServers: Record<string, string | { command: string; env?: Record<string, string> }>;
   agents: AgentConfig[];
 }

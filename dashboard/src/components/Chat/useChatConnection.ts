@@ -1,7 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ChatMessage } from './types';
 import type { ConversationMeta } from '@claw/core/lib/types/memory';
-import { shouldProcessChunk, applyChunkToMessages, mergeHistoryWithMessages } from './message-handler';
+import {
+  shouldProcessChunk,
+  applyChunkToMessages,
+  mergeHistoryWithMessages,
+  type IncomingChunk,
+} from './message-handler';
 import { useRealtime, RealtimeMessage } from '@/hooks/useRealtime';
 
 export function useChatConnection(activeSessionId: string, setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>, setIsLoading: React.Dispatch<React.SetStateAction<boolean>>, isPostInFlight: React.MutableRefObject<boolean>) {
@@ -46,9 +51,13 @@ export function useChatConnection(activeSessionId: string, setMessages: React.Di
 
   const handleMessage = useCallback((_topic: string, data: RealtimeMessage) => {
     const currentActiveId = activeSessionRef.current;
+    const normalized: IncomingChunk & { 'detail-type'?: string } = {
+      ...(typeof data.detail === 'object' && data.detail !== null ? data.detail : {}),
+      ...(data as Record<string, unknown>),
+    };
     
-    if (shouldProcessChunk(data, currentActiveId, userId)) {
-      setMessages(prev => applyChunkToMessages(prev, data, seenMessageIds.current));
+    if (shouldProcessChunk(normalized, currentActiveId, userId)) {
+      setMessages(prev => applyChunkToMessages(prev, normalized, seenMessageIds.current));
     } else {
       // If we got a signal for the active session but it's not a chunk (e.g., status update),
       // refresh history to get the latest state.

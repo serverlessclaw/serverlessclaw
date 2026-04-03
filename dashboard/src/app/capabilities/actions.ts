@@ -10,7 +10,7 @@ export async function updateAgentTools(formData: FormData) {
   const toolNames = formData.getAll('tools') as string[];
 
   try {
-    const tableName = (Resource as Record<string, { name?: string }>).ConfigTable?.name;
+    const tableName = (Resource as unknown as Record<string, { name?: string }>).ConfigTable?.name;
     if (!tableName) {
       return { error: 'ConfigTable name is missing from Resources' };
     }
@@ -35,7 +35,7 @@ export async function updateAgentTools(formData: FormData) {
 
 export async function registerMCPServer(name: string, command: string, env: string = '{}') {
   try {
-    const tableName = (Resource as Record<string, { name?: string }>).ConfigTable?.name;
+    const tableName = (Resource as unknown as Record<string, { name?: string }>).ConfigTable?.name;
     if (!tableName) return { error: 'ConfigTable name is missing' };
     
     const client = new DynamoDBClient({});
@@ -78,7 +78,7 @@ export async function registerMCPServer(name: string, command: string, env: stri
 
 export async function deleteMCPServer(serverName: string) {
   try {
-    const tableName = (Resource as Record<string, { name?: string }>).ConfigTable?.name;
+    const tableName = (Resource as unknown as Record<string, { name?: string }>).ConfigTable?.name;
     if (!tableName) return { error: 'ConfigTable name is missing' };
     
     const client = new DynamoDBClient({});

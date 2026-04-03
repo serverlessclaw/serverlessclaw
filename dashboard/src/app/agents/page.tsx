@@ -127,16 +127,17 @@ export default function AgentsPage() {
     }
   }, [selectedAgentIdForTools, allTools.length, loadingTools]);
 
+  const loadReputation = async () => {
+    try {
+      const res = await fetch('/api/reputation');
+      const data = await res.json();
+      setReputation(data);
+    } catch (err) {
+      console.error('Failed to load reputation:', err);
+    }
+  };
+
   useEffect(() => {
-    const loadReputation = async () => {
-      try {
-        const res = await fetch('/api/reputation');
-        const data = await res.json();
-        setReputation(data);
-      } catch (err) {
-        console.error('Failed to load reputation:', err);
-      }
-    };
     loadReputation();
   }, []);
 
@@ -225,7 +226,7 @@ export default function AgentsPage() {
       : [...agent.tools, toolName];
 
     // Optimistic Update
-    setAgents(prev => ({
+    setAgents((prev: Record<string, Agent>) => ({
       ...prev,
       [agentId]: { ...prev[agentId], tools: newTools }
     }));

@@ -1,6 +1,6 @@
 import React from 'react';
 
-interface CardProps {
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: 'glass' | 'solid' | 'outline';
   padding?: 'none' | 'sm' | 'md' | 'lg';
   children: React.ReactNode;
@@ -12,6 +12,7 @@ const Card: React.FC<CardProps> = ({
   padding = 'md',
   children,
   className = '',
+  ...props
 }) => {
   const variantStyles = {
     glass: 'glass-card backdrop-blur-md',
@@ -27,7 +28,7 @@ const Card: React.FC<CardProps> = ({
   }[padding];
 
   return (
-    <div className={`${variantStyles} ${paddingStyles} ${className}`}>
+    <div className={`${variantStyles} ${paddingStyles} ${className}`} {...props}>
       {children}
     </div>
   );

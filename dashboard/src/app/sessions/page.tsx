@@ -78,7 +78,7 @@ export default async function SessionsPage() {
               </div>
 
               <div>
-                <Typography variant="h4" className="line-clamp-1 group-hover:text-cyber-blue transition-colors">
+                <Typography variant="h3" className="line-clamp-1 group-hover:text-cyber-blue transition-colors">
                   {session.title || 'Untitled Conversation'}
                 </Typography>
                 <Typography variant="mono" color="muted" className="text-[10px] block mt-1 opacity-50">

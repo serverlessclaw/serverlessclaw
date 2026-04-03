@@ -149,7 +149,7 @@ const getNextRun = (schedule: Schedule) => {
   if (!schedule.CreationDate || !schedule.ScheduleExpression) return 'Unknown';
 
   const expression = schedule.ScheduleExpression;
-  const created = new Date(schedule.CreationDate).getTime();
+  const created = schedule.CreationDate ? new Date(schedule.CreationDate).getTime() : 0;
   const now = Date.now();
 
   if (expression.startsWith('rate(')) {
@@ -199,9 +199,11 @@ export default function ScheduleList() {
       const response = await fetch('/api/scheduling');
       if (!response.ok) throw new Error('Failed to fetch schedules');
       const data = await response.json();
-      setSchedules(data.sort((a: Schedule, b: Schedule) => 
-        new Date(b.CreationDate).getTime() - new Date(a.CreationDate).getTime()
-      ));
+      setSchedules(data.sort((a: Schedule, b: Schedule) => {
+        const timeA = a.CreationDate ? new Date(a.CreationDate).getTime() : 0;
+        const timeB = b.CreationDate ? new Date(b.CreationDate).getTime() : 0;
+        return timeB - timeA;
+      }));
     } catch (error) {
       console.error(error);
       setFetchError(true);
@@ -262,8 +264,9 @@ export default function ScheduleList() {
   };
 
   const handleDelete = async (name: string) => {
-    if (!confirm(`Are you sure you want to delete goal "${name}"?`)) return;
-    
+    // eslint-disable-next-line no-alert -- lightweight explicit confirmation before destructive delete.
+    if (!window.confirm(`Are you sure you want to delete goal "${name}"?`)) return;
+
     setActionInProgress(name + '-delete');
     try {
       const response = await fetch(`/api/scheduling?name=${encodeURIComponent(name)}`, {

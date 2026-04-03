@@ -3,9 +3,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mock the core memory module
 const mockListByPrefix = vi.fn();
 vi.mock('@claw/core/lib/memory', () => ({
-  DynamoMemory: vi.fn().mockImplementation(function() {
-    this.listByPrefix = mockListByPrefix;
-  }),
+  DynamoMemory: class {
+    listByPrefix = mockListByPrefix;
+  },
 }));
 
 describe('/api/cognitive-health', () => {

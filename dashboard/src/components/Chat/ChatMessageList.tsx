@@ -8,6 +8,11 @@ import { ChatMessage } from './types';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+type MarkdownComponents = NonNullable<React.ComponentProps<typeof ReactMarkdown>['components']>;
+type MarkdownNodeProps = {
+  children?: React.ReactNode;
+};
+
 const CodeBlock = ({ children }: { children: string }) => {
   const [copied, setCopied] = React.useState(false);
 
@@ -86,15 +91,15 @@ const ToolCallsDisplay = ({ toolCalls }: { toolCalls: ToolCall[] }) => {
 };
 
 // Static markdown component map — defined outside render to avoid recreation
-const markdownComponents = (role: string) => ({
-  p: ({ children }: { children: React.ReactNode }) => <Typography variant="body" color={role === 'assistant' ? 'inherit' : 'white'} className="block mb-2 last:mb-0 break-words">{children}</Typography>,
-  h1: ({ children }: { children: React.ReactNode }) => <Typography variant="h3" color={role === 'assistant' ? 'inherit' : 'white'} className="block mt-4 mb-2 text-cyber-green" glow>{children}</Typography>,
-  h2: ({ children }: { children: React.ReactNode }) => <Typography variant="h3" color={role === 'assistant' ? 'inherit' : 'white'} className="block mt-3 mb-1 text-cyber-green/90">{children}</Typography>,
-  h3: ({ children }: { children: React.ReactNode }) => <Typography variant="body" weight="bold" color={role === 'assistant' ? 'inherit' : 'white'} className="block mt-2 mb-1 text-cyber-green/80">{children}</Typography>,
-  ul: ({ children }: { children: React.ReactNode }) => <ul className="list-disc pl-5 mb-2 space-y-1">{children}</ul>,
-  ol: ({ children }: { children: React.ReactNode }) => <ol className="list-decimal pl-5 mb-2 space-y-1">{children}</ol>,
-  li: ({ children }: { children: React.ReactNode }) => <li><Typography variant="body" color={role === 'assistant' ? 'inherit' : 'white'} className="inline">{children}</Typography></li>,
-  code: ({ children, className }: { children: React.ReactNode; className?: string }) => {
+const markdownComponents = (role: string): MarkdownComponents => ({
+  p: ({ children }: MarkdownNodeProps) => <Typography variant="body" color={role === 'assistant' ? 'inherit' : 'white'} className="block mb-2 last:mb-0 break-words">{children}</Typography>,
+  h1: ({ children }: MarkdownNodeProps) => <Typography variant="h3" color={role === 'assistant' ? 'inherit' : 'white'} className="block mt-4 mb-2 text-cyber-green" glow>{children}</Typography>,
+  h2: ({ children }: MarkdownNodeProps) => <Typography variant="h3" color={role === 'assistant' ? 'inherit' : 'white'} className="block mt-3 mb-1 text-cyber-green/90">{children}</Typography>,
+  h3: ({ children }: MarkdownNodeProps) => <Typography variant="body" weight="bold" color={role === 'assistant' ? 'inherit' : 'white'} className="block mt-2 mb-1 text-cyber-green/80">{children}</Typography>,
+  ul: ({ children }: MarkdownNodeProps) => <ul className="list-disc pl-5 mb-2 space-y-1">{children}</ul>,
+  ol: ({ children }: MarkdownNodeProps) => <ol className="list-decimal pl-5 mb-2 space-y-1">{children}</ol>,
+  li: ({ children }: MarkdownNodeProps) => <li><Typography variant="body" color={role === 'assistant' ? 'inherit' : 'white'} className="inline">{children}</Typography></li>,
+  code: ({ children, className }: React.ComponentProps<'code'>) => {
     const inline = !className?.includes('language-');
     if (inline) {
       return (
@@ -103,8 +108,8 @@ const markdownComponents = (role: string) => ({
     }
     return <CodeBlock>{String(children).replace(/\n$/, '')}</CodeBlock>;
   },
-  strong: ({ children }: { children: React.ReactNode }) => <Typography variant="body" weight="bold" color={role === 'assistant' ? 'inherit' : 'white'} className="inline text-white">{children}</Typography>,
-  a: ({ children, href }: { children: React.ReactNode; href?: string }) => (
+  strong: ({ children }: { children?: React.ReactNode }) => <Typography variant="body" weight="bold" color={role === 'assistant' ? 'inherit' : 'white'} className="inline text-white">{children}</Typography>,
+  a: ({ children, href }: { children?: React.ReactNode, href?: string }) => (
     <a href={href} target="_blank" rel="noopener noreferrer" className="text-cyber-green hover:underline decoration-cyber-green/50 underline-offset-4">
       {children}
     </a>

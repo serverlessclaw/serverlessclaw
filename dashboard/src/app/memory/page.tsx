@@ -129,7 +129,9 @@ async function getMemoryData(activeTab: string, query: string, nextToken?: strin
             .map(i => i as unknown as MemoryItem)
             .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
             .slice(0, 20);
-          next = resNew.lastEvaluatedKey || resLegacy.lastEvaluatedKey || resStandard.lastEvaluatedKey;
+          next = ('lastEvaluatedKey' in resNew ? resNew.lastEvaluatedKey : undefined)
+            || ('lastEvaluatedKey' in resLegacy ? resLegacy.lastEvaluatedKey : undefined)
+            || ('lastEvaluatedKey' in resStandard ? resStandard.lastEvaluatedKey : undefined);
       } else if (activeTab === 'gaps') {
           const res = await memory.getMemoryByTypePaginated('GAP', 20, parsedNext);
           items = (res.items || []) as unknown as MemoryItem[];

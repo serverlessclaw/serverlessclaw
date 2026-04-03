@@ -75,11 +75,11 @@ export default function SwarmConsensusView({ requests }: { requests: ConsensusRe
                 </div>
                 <div className="flex justify-center gap-4 border-t border-white/5 pt-4">
                   <div className="text-center">
-                    <Typography variant="h4" className="text-cyber-green">{yesVotes}</Typography>
+                    <Typography variant="h3" className="text-cyber-green">{yesVotes}</Typography>
                     <Typography variant="mono" className="text-[9px] uppercase opacity-40 font-bold">YES</Typography>
                   </div>
                   <div className="text-center">
-                    <Typography variant="h4" className="text-red-500">{noVotes}</Typography>
+                    <Typography variant="h3" className="text-red-500">{noVotes}</Typography>
                     <Typography variant="mono" className="text-[9px] uppercase opacity-40 font-bold">NO</Typography>
                   </div>
                 </div>
@@ -107,7 +107,7 @@ export default function SwarmConsensusView({ requests }: { requests: ConsensusRe
                       }
                     </div>
                     <Typography variant="body" className="text-[11px] text-white/40 italic line-clamp-2 min-h-[32px]">
-                      "{vote.reason || 'No reasoning provided.'}"
+                      &quot;{vote.reason || 'No reasoning provided.'}&quot;
                     </Typography>
                     <div className="mt-3 flex items-center gap-2 border-t border-white/5 pt-3">
                       <ShieldCheck size={10} className="text-cyber-blue/40" />

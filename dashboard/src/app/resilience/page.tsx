@@ -227,7 +227,7 @@ export default async function ResilienceHub() {
             <div className="space-y-3">
               {logs.length > 0 ? (
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                logs.map((log: { timestamp?: number; key?: string; value?: string }, idx: number) => (
+                logs.map((log: { timestamp?: number; key?: string; value?: string; content?: string }, idx: number) => (
 
                   <div key={idx} className="glass-card p-4 border-white/5 hover:bg-white/[0.02] transition-all group">
                     <div className="flex justify-between items-start mb-2">
@@ -236,11 +236,11 @@ export default async function ResilienceHub() {
                         <Typography variant="body" weight="bold" className="tracking-tighter">Emergency Recovery Triggered</Typography>
                       </div>
                       <div className="flex items-center gap-2 text-[10px] text-white/90">
-                        <Clock size={10} /> {new Date(log.timestamp).toLocaleString()}
+                        <Clock size={10} /> {log.timestamp ? new Date(log.timestamp).toLocaleString() : 'N/A'}
                       </div>
                     </div>
                     <p className="text-xs text-white/100 font-mono leading-relaxed pl-5 italic">
-                      {log.content}
+                      {log.content || 'System autonomous recovery sequence initiated.'}
                     </p>
                   </div>
                 ))

@@ -1,16 +1,16 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
 }
 
-const Input: React.FC<InputProps> = ({
+const Input = forwardRef<HTMLInputElement, InputProps>(({
   label,
   error,
   className = '',
   ...props
-}) => {
+}, ref) => {
   return (
     <div className="space-y-1">
       {label && (
@@ -20,6 +20,7 @@ const Input: React.FC<InputProps> = ({
       )}
       <input
         {...props}
+        ref={ref}
         className={`
           w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5
           text-white text-sm placeholder:text-white/30
@@ -34,6 +35,8 @@ const Input: React.FC<InputProps> = ({
       )}
     </div>
   );
-};
+});
+
+Input.displayName = 'Input';
 
 export default Input;
