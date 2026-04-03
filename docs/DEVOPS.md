@@ -221,6 +221,38 @@ make docs-check
 make release
 ```
 
+### Coverage Enforcement (CI)
+
+The CI pipeline enforces code coverage thresholds to prevent regressions:
+
+| Metric      | Threshold | Description                    |
+|-------------|-----------|--------------------------------|
+| Lines       | 70%       | Statement coverage             |
+| Functions   | 70%       | Function/method coverage       |
+| Branches    | 70%       | Conditional branch coverage    |
+| Statements  | 70%       | Overall statement coverage     |
+
+**CI Commands:**
+
+```bash
+# Run coverage with CI enforcement (fails if thresholds not met)
+make test-coverage-ci
+
+# Track coverage trends and detect regressions
+make test-coverage-trend
+
+# Update coverage baseline after improvements
+make test-coverage-trend UPDATE_BASELINE=true
+```
+
+**Coverage Trend Tracking:**
+
+The `make test-coverage-trend` command:
+- Tracks coverage over time (last 100 entries)
+- Detects coverage regressions (default: 5% drop threshold)
+- Generates a markdown report (`coverage-trend-report.md`)
+- Maintains a baseline file (`.coverage-baseline.json`)
+
 ### Best Practices
 
 1. **Use `make test-affected` during development** for faster feedback

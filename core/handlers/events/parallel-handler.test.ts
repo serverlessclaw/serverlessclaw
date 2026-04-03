@@ -96,15 +96,19 @@ vi.mock('../../lib/utils/trace-helper', () => ({
 }));
 
 // 8. Mock parallel aggregator
-const { mockAggregatorInit, mockAggregatorMarkAsCompleted } = vi.hoisted(() => ({
-  mockAggregatorInit: vi.fn().mockResolvedValue(undefined),
-  mockAggregatorMarkAsCompleted: vi.fn().mockResolvedValue(true),
-}));
+const { mockAggregatorInit, mockAggregatorMarkAsCompleted, mockAggregatorAddResult } = vi.hoisted(
+  () => ({
+    mockAggregatorInit: vi.fn().mockResolvedValue(undefined),
+    mockAggregatorMarkAsCompleted: vi.fn().mockResolvedValue(true),
+    mockAggregatorAddResult: vi.fn().mockResolvedValue(undefined),
+  })
+);
 
 vi.mock('../../lib/agent/parallel-aggregator', () => ({
   aggregator: {
     init: mockAggregatorInit,
     markAsCompleted: mockAggregatorMarkAsCompleted,
+    addResult: mockAggregatorAddResult,
   },
 }));
 
@@ -355,6 +359,128 @@ describe('parallel-handler', () => {
           type: expect.any(String),
           content: expect.objectContaining({ taskCount: 2 }),
         })
+      );
+    });
+
+    it('notifies aggregator when DAG dispatch has partial failures', async () => {
+      const dagEvent = {
+        detail: {
+          userId: 'user-123',
+          tasks: [
+            { taskId: 'task-1', agentId: 'coder', task: 'Build', dependsOn: [] },
+            { taskId: 'task-2', agentId: 'critic', task: 'Review', dependsOn: ['task-1'] },
+          ],
+          traceId: 'trace-partial-fail',
+        },
+      };
+
+      const mockDagState = { nodes: {}, readyQueue: ['task-1'] };
+      mockBuildDependencyGraph.mockReturnValue(mockDagState);
+      mockGetReadyTasks.mockReturnValue([
+        { taskId: 'task-1', agentId: 'coder', task: 'Build', dependsOn: [] },
+      ]);
+
+      // Make emitTypedEvent throw for the first call (simulating dispatch failure)
+      mockEmitTypedEvent
+        .mockRejectedValueOnce(new Error('EventBridge throttled'))
+        .mockResolvedValue({ success: true });
+
+      await handleParallelDispatch(dagEvent as any);
+
+      // Aggregator should be notified of the dispatch failure
+      expect(mockAggregatorAddResult).toHaveBeenCalledWith(
+        'user-123',
+        'trace-partial-fail',
+        expect.objectContaining({
+          taskId: 'task-1',
+          status: 'failed',
+          error: expect.stringContaining('EventBridge throttled'),
+        })
+      );
+    });
+
+    it('notifies aggregator when standard parallel dispatch has partial failures', async () => {
+      // Make emitTypedEvent throw for one task
+      mockEmitTypedEvent
+        .mockRejectedValueOnce(new Error('Dispatch error'))
+        .mockResolvedValue({ success: true });
+
+      await handleParallelDispatch(baseEvent as any);
+
+      expect(mockAggregatorAddResult).toHaveBeenCalledWith(
+        'user-123',
+        'trace-abc',
+        expect.objectContaining({
+          status: 'failed',
+          error: expect.stringContaining('Dispatch failed'),
+        })
+      );
+    });
+
+    it('handles DAG mode with no ready tasks (all have unsatisfied dependencies)', async () => {
+      const dagEvent = {
+        detail: {
+          userId: 'user-123',
+          tasks: [
+            { taskId: 'task-1', agentId: 'coder', task: 'A', dependsOn: ['task-2'] },
+            { taskId: 'task-2', agentId: 'critic', task: 'B', dependsOn: ['task-3'] },
+            { taskId: 'task-3', agentId: 'qa', task: 'C', dependsOn: ['task-1'] },
+          ],
+          traceId: 'trace-no-ready',
+        },
+      };
+
+      const mockDagState = { nodes: {}, readyQueue: [] };
+      mockBuildDependencyGraph.mockReturnValue(mockDagState);
+      mockValidateDependencyGraph.mockReturnValue(true);
+      mockGetReadyTasks.mockReturnValue([]);
+
+      await handleParallelDispatch(dagEvent as any);
+
+      // Should mark aggregator as failed and emit terminal event
+      expect(mockAggregatorMarkAsCompleted).toHaveBeenCalledWith(
+        'user-123',
+        'trace-no-ready',
+        'failed'
+      );
+      expect(mockEmitTypedEvent).toHaveBeenCalledWith(
+        'events.handler',
+        expect.anything(),
+        expect.objectContaining({ overallStatus: 'failed' })
+      );
+    });
+
+    it('handles DAG barrier timeout scheduling failure', async () => {
+      const dagEvent = {
+        detail: {
+          userId: 'user-123',
+          tasks: [
+            { taskId: 'task-1', agentId: 'coder', task: 'Build', dependsOn: [] },
+            { taskId: 'task-2', agentId: 'critic', task: 'Review', dependsOn: ['task-1'] },
+          ],
+          traceId: 'trace-dag-timeout-fail',
+        },
+      };
+
+      const mockDagState = { nodes: {}, readyQueue: ['task-1'] };
+      mockBuildDependencyGraph.mockReturnValue(mockDagState);
+      mockGetReadyTasks.mockReturnValue([
+        { taskId: 'task-1', agentId: 'coder', task: 'Build', dependsOn: [] },
+      ]);
+      mockScheduleOneShotTimeout.mockRejectedValue(new Error('Scheduler down'));
+
+      await handleParallelDispatch(dagEvent as any);
+
+      // Should mark aggregator as failed
+      expect(mockAggregatorMarkAsCompleted).toHaveBeenCalledWith(
+        'user-123',
+        'trace-dag-timeout-fail',
+        'failed'
+      );
+      expect(mockEmitTypedEvent).toHaveBeenCalledWith(
+        'events.handler',
+        expect.anything(),
+        expect.objectContaining({ overallStatus: 'failed' })
       );
     });
   });

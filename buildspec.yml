@@ -81,6 +81,14 @@ phases:
           make docs-check || echo "WARNING: Docs check reported issues (non-blocking)"
         fi
       - |
+        if [ "$CODEBUILD_BUILD_SUCCEEDING" = "1" ] && [ "$SYNC_ONLY" != "true" ]; then
+          echo "Running coverage enforcement..."
+          make test-coverage-ci || {
+            echo "ERROR: Coverage thresholds not met. See coverage report above."
+            exit 1
+          }
+        fi
+      - |
         if [ "$CODEBUILD_BUILD_SUCCEEDING" = "1" ] && [ "$SYNC_ONLY" = "true" ] && [ -n "$GITHUB_TOKEN" ]; then
           echo "Finalizing trunk sync back to GitHub..."
           git config --global user.email "agent@serverlessclaw.local"

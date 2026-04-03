@@ -3,7 +3,7 @@
 ###############################################################################
 include makefiles/Makefile.shared.mk
 
-.PHONY: test test-watch test-ui test-coverage test-component test-e2e test-e2e-deployed verify verify-deploy test-tier-1 test-tier-2 test-tier-3 test-affected security-scan docs-check
+.PHONY: test test-watch test-ui test-coverage test-coverage-ci test-coverage-trend test-component test-e2e test-e2e-deployed verify verify-deploy test-tier-1 test-tier-2 test-tier-3 test-affected security-scan docs-check
 
 test-tier-1: test-silent ## Run Tier 1: Unit tests (silent)
 
@@ -123,6 +123,10 @@ test-coverage: ## Run unit tests with coverage reporting (enforces 50% threshold
 	@$(call log_info,Running tests with coverage (50% thresholds)...)
 	@$(PNPM) exec vitest run --coverage
 
+test-coverage-ci: ## Run unit tests with coverage enforcement for CI (enforces 70% thresholds)
+	@$(call log_info,Running tests with CI coverage enforcement (70% thresholds)...)
+	@$(PNPM) exec vitest run --coverage --reporter=verbose
+
 test-component: ## Run component tests (jsdom, via inline env directive)
 	@$(call log_step,Running component tests...)
 	@$(PNPM) exec vitest run --reporter=verbose '**/*.test.tsx'
@@ -147,3 +151,9 @@ security-scan: ## Scan dependencies for security vulnerabilities
 docs-check: ## Validate documentation is in sync with code changes
 	@$(call log_step,Checking documentation...)
 	@$(PNPM) exec tsx scripts/quality/docs-check.ts $(if $(BASE),--base $(BASE),) $(if $(STRICT),--strict,)
+
+test-coverage-trend: ## Track coverage trends and detect regressions. Usage: make test-coverage-trend [THRESHOLD=5] [UPDATE_BASELINE=true]
+	@$(call log_step,Running coverage trend analysis...)
+	@$(PNPM) exec tsx scripts/quality/coverage-trend.ts \
+		$(if $(THRESHOLD),--threshold $(THRESHOLD),) \
+		$(if $(UPDATE_BASELINE),--update-baseline,)

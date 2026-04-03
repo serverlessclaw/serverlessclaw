@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { EventType } from '../lib/types/agent';
+import { EventType, AgentType } from '../lib/types/agent';
 import {
   TASK_EVENT_SCHEMA,
   COMPLETION_EVENT_SCHEMA,
@@ -18,6 +18,11 @@ import {
   PLANNER_TASK_METADATA,
   BUILD_TASK_METADATA,
   CLARIFICATION_TASK_METADATA,
+  REPUTATION_UPDATE_SCHEMA,
+  PARALLEL_TASK_DISPATCH_SCHEMA,
+  CODER_TASK_COMPLETED_SCHEMA,
+  TASK_CANCELLED_SCHEMA,
+  HANDOFF_SCHEMA,
 } from '../lib/schema/events';
 
 describe('Event Contract Verification', () => {
@@ -472,6 +477,231 @@ describe('Event Contract Verification', () => {
     it('should default retryCount to 0', () => {
       const result = CLARIFICATION_TASK_METADATA.parse({});
       expect(result.retryCount).toBe(0);
+    });
+  });
+
+  // =========================================================================
+  // Missing Schema Contracts (Coverage Gap Fix)
+  // =========================================================================
+
+  describe('REPUTATION_UPDATE_SCHEMA', () => {
+    it('should validate a correct reputation update event', () => {
+      const payload = {
+        ...common,
+        agentId: 'coder',
+        success: true,
+        durationMs: 1500,
+      };
+      expect(() => REPUTATION_UPDATE_SCHEMA.parse(payload)).not.toThrow();
+    });
+
+    it('should validate a failed reputation update with error', () => {
+      const payload = {
+        ...common,
+        agentId: 'qa',
+        success: false,
+        durationMs: 5000,
+        error: 'Timeout exceeded',
+        taskComplexity: 7,
+      };
+      expect(() => REPUTATION_UPDATE_SCHEMA.parse(payload)).not.toThrow();
+    });
+
+    it('should fail if agentId is missing', () => {
+      const payload = { ...common, success: true, durationMs: 1000 };
+      expect(() => REPUTATION_UPDATE_SCHEMA.parse(payload)).toThrow();
+    });
+
+    it('should fail if success is missing', () => {
+      const payload = { ...common, agentId: 'coder', durationMs: 1000 };
+      expect(() => REPUTATION_UPDATE_SCHEMA.parse(payload)).toThrow();
+    });
+
+    it('should map REPUTATION_UPDATE in EVENT_SCHEMA_MAP', () => {
+      expect(EVENT_SCHEMA_MAP[EventType.REPUTATION_UPDATE as string]).toBe(
+        REPUTATION_UPDATE_SCHEMA
+      );
+    });
+  });
+
+  describe('PARALLEL_TASK_DISPATCH_SCHEMA', () => {
+    it('should validate a correct parallel dispatch event', () => {
+      const payload = {
+        ...common,
+        tasks: [
+          { taskId: 't1', agentId: 'coder', task: 'Build feature A' },
+          { taskId: 't2', agentId: 'critic', task: 'Review feature A' },
+        ],
+        barrierTimeoutMs: 300000,
+        aggregationType: 'summary',
+      };
+      expect(() => PARALLEL_TASK_DISPATCH_SCHEMA.parse(payload)).not.toThrow();
+    });
+
+    it('should validate parallel dispatch with dependencies', () => {
+      const payload = {
+        ...common,
+        tasks: [
+          { taskId: 't1', agentId: 'coder', task: 'Build', dependsOn: [] },
+          { taskId: 't2', agentId: 'qa', task: 'Test', dependsOn: ['t1'] },
+        ],
+      };
+      expect(() => PARALLEL_TASK_DISPATCH_SCHEMA.parse(payload)).not.toThrow();
+    });
+
+    it('should validate parallel dispatch with merge_patches aggregation', () => {
+      const payload = {
+        ...common,
+        tasks: [{ taskId: 't1', agentId: 'coder', task: 'Patch' }],
+        aggregationType: 'merge_patches',
+        aggregationPrompt: 'Merge the patches',
+      };
+      expect(() => PARALLEL_TASK_DISPATCH_SCHEMA.parse(payload)).not.toThrow();
+    });
+
+    it('should fail if tasks array is missing', () => {
+      const payload = { ...common };
+      expect(() => PARALLEL_TASK_DISPATCH_SCHEMA.parse(payload)).toThrow();
+    });
+
+    it('should accept empty tasks array (schema allows it)', () => {
+      const payload = { ...common, tasks: [] };
+      expect(() => PARALLEL_TASK_DISPATCH_SCHEMA.parse(payload)).not.toThrow();
+    });
+
+    it('should map PARALLEL_TASK_DISPATCH in EVENT_SCHEMA_MAP', () => {
+      expect(EVENT_SCHEMA_MAP[EventType.PARALLEL_TASK_DISPATCH as string]).toBe(
+        PARALLEL_TASK_DISPATCH_SCHEMA
+      );
+    });
+  });
+
+  describe('CODER_TASK_COMPLETED_SCHEMA', () => {
+    it('should validate a correct coder task completion event', () => {
+      const payload = {
+        ...common,
+        task: 'Implement feature X',
+        response: 'Feature implemented successfully',
+        patchApplied: true,
+        gapIds: ['gap-001'],
+      };
+      expect(() => CODER_TASK_COMPLETED_SCHEMA.parse(payload)).not.toThrow();
+    });
+
+    it('should validate coder completion without optional fields', () => {
+      const payload = {
+        ...common,
+        task: 'Fix bug',
+      };
+      expect(() => CODER_TASK_COMPLETED_SCHEMA.parse(payload)).not.toThrow();
+    });
+
+    it('should map CODER_TASK_COMPLETED in EVENT_SCHEMA_MAP', () => {
+      expect(EVENT_SCHEMA_MAP[EventType.CODER_TASK_COMPLETED as string]).toBe(
+        CODER_TASK_COMPLETED_SCHEMA
+      );
+    });
+  });
+
+  describe('TASK_CANCELLED_SCHEMA', () => {
+    it('should validate a correct task cancellation event', () => {
+      const payload = {
+        ...common,
+        taskId: 'task-123',
+        reason: 'User requested cancellation',
+      };
+      expect(() => TASK_CANCELLED_SCHEMA.parse(payload)).not.toThrow();
+    });
+
+    it('should validate cancellation with parallel dispatch ID', () => {
+      const payload = {
+        ...common,
+        reason: 'Cancel all parallel tasks',
+        parallelDispatchId: 'dispatch-456',
+      };
+      expect(() => TASK_CANCELLED_SCHEMA.parse(payload)).not.toThrow();
+    });
+
+    it('should validate cancellation without optional fields', () => {
+      const payload = { ...common };
+      expect(() => TASK_CANCELLED_SCHEMA.parse(payload)).not.toThrow();
+    });
+
+    it('should map TASK_CANCELLED in EVENT_SCHEMA_MAP', () => {
+      expect(EVENT_SCHEMA_MAP[EventType.TASK_CANCELLED as string]).toBe(TASK_CANCELLED_SCHEMA);
+    });
+  });
+
+  describe('HANDOFF_SCHEMA', () => {
+    it('should validate a correct handoff event', () => {
+      const payload = {
+        ...common,
+        handoffType: 'approval',
+        message: 'Please approve this deployment',
+        expiresAt: Date.now() + 3600000,
+      };
+      expect(() => HANDOFF_SCHEMA.parse(payload)).not.toThrow();
+    });
+
+    it('should validate handoff with clarification type', () => {
+      const payload = {
+        ...common,
+        handoffType: 'clarification',
+        message: 'What does this error mean?',
+      };
+      expect(() => HANDOFF_SCHEMA.parse(payload)).not.toThrow();
+    });
+
+    it('should fail if handoffType is invalid', () => {
+      const payload = { ...common, handoffType: 'invalid_type' };
+      expect(() => HANDOFF_SCHEMA.parse(payload)).toThrow();
+    });
+
+    it('should map HANDOFF in EVENT_SCHEMA_MAP', () => {
+      expect(EVENT_SCHEMA_MAP[EventType.HANDOFF as string]).toBe(HANDOFF_SCHEMA);
+    });
+  });
+
+  describe('EVENT_SCHEMA_MAP completeness', () => {
+    it('should have schemas for all critical event types', () => {
+      const criticalEventTypes = [
+        EventType.CODER_TASK,
+        EventType.CONTINUATION_TASK,
+        EventType.TASK_COMPLETED,
+        EventType.TASK_FAILED,
+        EventType.SYSTEM_BUILD_SUCCESS,
+        EventType.SYSTEM_BUILD_FAILED,
+        EventType.SYSTEM_HEALTH_REPORT,
+        EventType.OUTBOUND_MESSAGE,
+        EventType.PARALLEL_TASK_COMPLETED,
+        EventType.HEARTBEAT_PROACTIVE,
+        EventType.CONSENSUS_REQUEST,
+        EventType.CONSENSUS_VOTE,
+        EventType.CONSENSUS_REACHED,
+        EventType.REPUTATION_UPDATE,
+        EventType.PARALLEL_TASK_DISPATCH,
+        EventType.CODER_TASK_COMPLETED,
+        EventType.TASK_CANCELLED,
+        EventType.HANDOFF,
+      ];
+
+      for (const eventType of criticalEventTypes) {
+        expect(EVENT_SCHEMA_MAP[eventType as string]).toBeDefined();
+      }
+    });
+
+    it('should have a schema for every agent task type', () => {
+      const agentTaskTypes = [
+        `${AgentType.STRATEGIC_PLANNER}_task`,
+        `${AgentType.COGNITION_REFLECTOR}_task`,
+        `${AgentType.QA}_task`,
+        `${AgentType.CRITIC}_task`,
+        `${AgentType.FACILITATOR}_task`,
+      ];
+
+      for (const taskType of agentTaskTypes) {
+        expect(EVENT_SCHEMA_MAP[taskType]).toBeDefined();
+      }
     });
   });
 });

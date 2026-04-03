@@ -56,15 +56,13 @@ export function buildDependencyGraph(tasks: ParallelTaskDefinition[]): DAGExecut
 /**
  * Validates the dependency graph for cycles
  * Returns true if valid (no cycles), false otherwise
- *
- * @param state - The DAG execution state containing the task nodes to validate.
  */
 export function validateDependencyGraph(state: DAGExecutionState): boolean {
   const visited = new Set<string>();
   const visiting = new Set<string>();
 
   function hasCycle(taskId: string): boolean {
-    if (visiting.has(taskId)) return true; // Cycle detected
+    if (visiting.has(taskId)) return true;
     if (visited.has(taskId)) return false;
 
     visiting.add(taskId);
@@ -91,7 +89,6 @@ export function validateDependencyGraph(state: DAGExecutionState): boolean {
 
 /**
  * Gets the next batch of tasks that are ready to execute
- * Returns tasks that have all dependencies completed
  */
 export function getReadyTasks(state: DAGExecutionState): ParallelTaskDefinition[] {
   const ready: ParallelTaskDefinition[] = [];
@@ -180,7 +177,8 @@ export function failTask(state: DAGExecutionState, taskId: string, error: string
     if (n) {
       for (const dependentId of n.dependents) {
         const dependentNode = state.nodes[dependentId];
-        if (dependentNode && dependentNode.status !== 'completed') {
+        // Only cascade to pending tasks - ready/running/completed are protected
+        if (dependentNode && dependentNode.status === 'pending') {
           dependentNode.status = 'failed';
           dependentNode.error = `Dependency ${id} failed`;
           if (!state.failedTasks.includes(dependentId)) {
@@ -259,9 +257,6 @@ export function getExecutionSummary(state: DAGExecutionState): {
 
 /**
  * Creates a task prompt with context from dependency outputs
- *
- * @param task - The parallel task definition with dependencies.
- * @param dependencyOutputs - Map of completed dependency task outputs to inject as context.
  */
 export function createTaskWithDependencyContext(
   task: ParallelTaskDefinition,
