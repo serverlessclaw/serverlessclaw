@@ -53,7 +53,8 @@ export class MCPBridge {
     }
     const cached = (await AgentRegistry.getRawConfig(cacheKey)) as CachedTools | null;
 
-    if (cached && Date.now() - cached.timestamp < 3600000) {
+    const cacheTTL = parseInt(process.env.MCP_CACHE_TTL_MS ?? '900000');
+    if (cached && Date.now() - cached.timestamp < cacheTTL) {
       logger.info(`Using cached tool definitions for MCP server ${serverName}`);
       return MCPToolMapper.mapCachedTools(
         serverName,
@@ -120,11 +121,12 @@ export class MCPBridge {
       await AgentRegistry.saveRawConfig('mcp_servers', finalConfig);
     }
 
-    const serverPromises = Object.entries(finalConfig).map(async ([name, config]) => {
-      const needsThisServer =
-        !requestedTools || requestedTools.some((t) => t === name || t.startsWith(`${name}_`));
-      if (!needsThisServer) return [];
+    // Filter configuration to only servers we actually need before creating any promises
+    const neededConfigs = Object.entries(finalConfig).filter(([name]) => {
+      return !requestedTools || requestedTools.some((t) => t === name || t.startsWith(`${name}_`));
+    });
 
+    const serverPromises = neededConfigs.map(async ([name, config]) => {
       if (typeof config === 'object' && config.type === 'managed') {
         return [
           {

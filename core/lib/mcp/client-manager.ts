@@ -52,15 +52,20 @@ export class MCPClientManager {
       // Check circuit breaker (Gap 3/4)
       const failure = this.failureCounts.get(serverName);
       if (failure && failure.count >= this.MAX_FAILURES) {
+        const backoffFactor = Math.pow(2, Math.min(failure.count - this.MAX_FAILURES, 4));
+        const retryDelay = this.FAILURE_RESET_MS * backoffFactor;
         const timeSinceFailure = Date.now() - failure.lastFailure;
-        if (timeSinceFailure < this.FAILURE_RESET_MS) {
-          logger.warn(`Circuit breaker OPEN for ${serverName}. Skipping connection.`);
+
+        if (timeSinceFailure < retryDelay) {
+          logger.warn(
+            `Circuit breaker OPEN for ${serverName}. Retrying in ${Math.round((retryDelay - timeSinceFailure) / 1000)}s`
+          );
           throw new Error(
-            `Circuit breaker open for ${serverName} after ${failure.count} failures.`
+            `Circuit breaker open for ${serverName} after ${failure.count} failures. Retrying in ${Math.round((retryDelay - timeSinceFailure) / 1000)}s`
           );
         } else {
-          // Reset after timeout
-          this.failureCounts.delete(serverName);
+          // Reset after timeout or at least allow one probe
+          logger.info(`Circuit breaker HALF-OPEN for ${serverName}, attempting probe connection.`);
         }
       }
 

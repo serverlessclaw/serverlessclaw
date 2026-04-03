@@ -45,6 +45,35 @@ export async function getAgentTools(agentId: string): Promise<ITool[]> {
     logger.info(
       `[TOOLS] External MCP tools found: ${matchedExternal.map((t) => t.name).join(', ')}`
     );
+
+    // Smart Warmup: Trigger background warmup for these servers if in a Lambda environment
+    if (process.env.MCP_SERVER_ARNS) {
+      try {
+        const { WarmupManager } = await import('../lib/warmup');
+        const serverArns = JSON.parse(process.env.MCP_SERVER_ARNS);
+        const serversToWarm = Array.from(
+          new Set(matchedExternal.map((t) => t.name.split('_')[0]))
+        ).filter((name) => serverArns[name]);
+
+        if (serversToWarm.length > 0) {
+          const warmupManager = new WarmupManager({
+            servers: serverArns,
+            agents: {},
+            ttlSeconds: 900,
+          });
+          // Fire and forget
+          warmupManager
+            .smartWarmup({
+              servers: serversToWarm,
+              intent: `agent-needs-tools:${agentId}`,
+              warmedBy: 'webhook', // Reusing webhook category for manual/agent triggers
+            })
+            .catch((err) => logger.warn('[TOOLS] Smart warmup background error:', err));
+        }
+      } catch (warmupErr) {
+        logger.warn('[TOOLS] Failed to initiate smart warmup:', warmupErr);
+      }
+    }
   }
 
   return [...localTools, ...matchedExternal];
