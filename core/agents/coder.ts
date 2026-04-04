@@ -14,7 +14,7 @@ import {
 } from '../lib/utils/agent-helpers';
 import { emitTaskEvent } from '../lib/utils/agent-helpers/event-emitter';
 import { parseStructuredResponse } from '../lib/utils/agent-helpers/llm-utils';
-import { TRACE_TYPES } from '../lib/constants';
+import { TRACE_TYPES, SWARM } from '../lib/constants';
 
 /**
  * Coder Agent handler. Processes coding tasks, implements changes,
@@ -48,6 +48,65 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
 
   // 2. Initialize agent (config + context loaded in parallel)
   const { config, memory, agent } = await initAgent(AgentType.CODER);
+
+  const isAggregation = task?.includes('[AGGREGATED_RESULTS]');
+
+  // Swarm Self-Organization: Decompose high-level goals into parallel sub-tasks
+  if (!isAggregation && (depth ?? 0) < SWARM.MAX_RECURSIVE_DEPTH && task) {
+    const { decomposePlan } = await import('../lib/agent/decomposer');
+    const decomposed = decomposePlan(task, traceId || `plan-${Date.now()}`, gapIds || [], {
+      defaultAgentId: AgentType.CODER,
+      maxSubTasks: SWARM.DEFAULT_MAX_SUB_TASKS,
+      minLength: 400,
+    });
+
+    if (decomposed.wasDecomposed && decomposed.subTasks.length > 1) {
+      logger.info(
+        `[CODER] Development Goal detected. Decomposing into ${decomposed.subTasks.length} parallel sub-tasks.`
+      );
+
+      const { emitTypedEvent } = await import('../lib/utils/typed-emit');
+      const { EventType } = await import('../lib/types/agent');
+
+      const subTaskEvents = decomposed.subTasks.map((sub) => ({
+        taskId: sub.subTaskId,
+        agentId: sub.agentId,
+        task: sub.task,
+        metadata: {
+          ...metadata,
+          traceId: traceId ?? sub.planId,
+          gapIds: sub.gapIds,
+          subTaskId: sub.subTaskId,
+          planId: sub.planId,
+        },
+      }));
+
+      try {
+        await emitTypedEvent(AgentType.CODER, EventType.PARALLEL_TASK_DISPATCH, {
+          userId: baseUserId,
+          tasks: subTaskEvents,
+          barrierTimeoutMs: 30 * 60 * 1000, // 30 mins
+          aggregationType: 'merge_patches',
+          aggregationPrompt: `I have completed the parallel implementation for: "${task.substring(0, 200)}...". 
+                             Please merge the resulting patches and synthesize the final outcome.
+                             Prepend the response with [AGGREGATED_RESULTS].`,
+          traceId,
+          initiatorId: AgentType.CODER,
+          depth: (depth ?? 0) + 1,
+          sessionId,
+        });
+      } catch (dispatchError) {
+        logger.error(`[CODER] Failed to dispatch parallel tasks:`, dispatchError);
+        process.chdir(originalCwd);
+        await cleanupWorkspace(workspacePath);
+        return `[FAILED] Parallel dispatch failed: ${dispatchError instanceof Error ? dispatchError.message : String(dispatchError)}`;
+      }
+
+      process.chdir(originalCwd);
+      await cleanupWorkspace(workspacePath);
+      return `[DELEGATED] Task decomposed into ${decomposed.subTasks.length} parallel sub-tasks for execution.`;
+    }
+  }
 
   // 3. Process the task
   let status: string;

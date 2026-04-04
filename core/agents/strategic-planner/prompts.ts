@@ -229,11 +229,18 @@ export async function buildProactiveReviewPrompt(
   // Fetch Stale Memory Context
   const staleMemoryContext = await fetchStaleMemoryContext(memory);
 
-  // Deterministic Review of all Gaps
+  // Deterministic Review of Gaps
   const allGaps = await memory.getAllGaps(GapStatus.OPEN);
   if (allGaps.length === 0) {
     return { prompt: '', shouldRun: false, status: 'NO_GAPS' };
   }
+
+  // Sort gaps by impact descending and take Top 3
+  const sortedGaps = [...allGaps].sort(
+    (a, b) => (b.metadata.impact || 0) - (a.metadata.impact || 0)
+  );
+  const topGaps = sortedGaps.slice(0, 3);
+  const remainingCount = sortedGaps.length - topGaps.length;
 
   // Fetch Improvements
   const allImprovements = await memory.searchInsights(
@@ -255,22 +262,27 @@ export async function buildProactiveReviewPrompt(
 
   const prompt = `
     [PROACTIVE_STRATEGIC_REVIEW]
-    I have woken up for a scheduled self-audit. I have detected the following ${allGaps.length} capability gaps:
-    ${allGaps.map((g) => `- [Impact: ${g.metadata.impact}/10] ${g.content}`).join('\n')}
+    I have woken up for a scheduled self-audit. I have detected ${allGaps.length} total capability gaps.
+    
+    TOP_PRIORITY_GAPS (Top 3 by Impact):
+    ${topGaps.map((g) => `- [Impact: ${g.metadata.impact}/10] ${g.content}`).join('\n')}
+    
+    [BACKLOG_SUMMARY]:
+    - There are ${remainingCount} additional open gaps in the backlog.
+    - ACTION: Use 'manageGap(action: "list")' to retrieve the full backlog for comprehensive analysis if the top priority items are insufficient.
 
     [SYSTEM_IMPROVEMENTS_IDENTIFIED]:
-    ${improvementSummary || 'No specific improvements logged yet. Please identify some during this review.'}
+    ${improvementSummary || 'No specific improvements logged yet.'}
     ${telemetry}
-    ${toolUsageContext}
-    ${staleMemoryContext}
+    ${toolUsageContext ? `\n[ANOMALOUS_TOOL_USAGE_TELEMETRY]:\n${toolUsageContext}` : ''}
+    ${staleMemoryContext ? `\n[LOW_UTILIZATION_MEMORY]:\n${staleMemoryContext}` : ''}
     ${failureContext}
     ${failedPlansContext}
 
-    Please analyze these gaps, the tool usage telemetry, and the memory utilization audit. Prioritize the most critical needs based on ROI (Impact vs Complexity), and design a STRATEGIC_PLAN to either address the MOST IMPORTANT evolution or prune redundant/inefficient tools and stale memories.
+    Please analyze these gaps, the tool usage telemetry, and the memory utilization audit. Prioritize based on ROI (Impact vs Complexity), and design a STRATEGIC_PLAN.
     
-    If low-utilization memory is no longer relevant, recommend pruning it by suggesting the use of 'pruneMemory' tool or explaining why it should be archived.
-    
-    If you identify tools that are heavily failing or overlapping in the tool usage telemetry, provide 'toolOptimizations' recommendations (e.g. PRUNE, CONSOLIDATE, REPLACE) in your JSON output.
+    If low-utilization memory is no longer relevant, recommend pruning it via 'pruneMemory'.
+    If tools are failing or overlapping, provide 'toolOptimizations' recommendations in your JSON output.
   `;
 
   // Update last review timestamp
@@ -328,9 +340,11 @@ export function buildReactivePrompt(
     USER CONTEXT: Please analyze the request for user ${payload.userId}.
     
     INSTRUCTIONS:
-    1. If this is a capability gap (gapId present), design a STRATEGIC_PLAN to fix it. Ensure you do not repeat any KNOWN_FAILURE_PATTERNS. Always return your response in the specified JSON format.
+    1. If this is a capability gap (gapId present), design a STRATEGIC_PLAN as a Mission Commander. 
+       - For multi-step missions, you MUST use deterministic headers: ### Goal: [AgentType] - [Mission Summary].
+       - Ensure you do not repeat any KNOWN_FAILURE_PATTERNS.
     2. If this is an architectural inquiry or system question, use your tools (listAgents, inspectTopology) to provide a deep, accurate answer. You MAY use Rich Markdown (tables, diagrams) instead of the JSON format for these consultations to provide a better user experience.
     3. If you are just answering a question and no code changes are required, set 'coveredGapIds' to an empty array (if using JSON) or simply provide the markdown answer.
-    4. **CRITICAL**: Do NOT start your response with "The user wants...", "I will analyze...", or any other internal monologue. Speak DIRECTLY to the human user as a Senior Software Architect. Provide only the factual report or plan.
+    4. **CRITICAL**: Speak DIRECTLY to the human user as a Senior Software Architect. Provide only the factual report or plan.
   `;
 }

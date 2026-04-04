@@ -99,13 +99,10 @@ export async function handleParallelTaskCompleted(
 
       try {
         const { emitTypedEvent } = await import('../../lib/utils/typed-emit');
-        const { AgentType } = await import('../../lib/types/agent');
+        const { AgentType, EventType } = await import('../../lib/types/agent');
 
         // Dispatch to LLM MergerAgent
-        // NOTE: We cast to 'any' here because the target event type is dynamically constructed
-        // as `${AgentType.MERGER}_task`, which is valid in EventBridge but not a static EventType enum member.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await emitTypedEvent(AgentType.EVENT_HANDLER, `${AgentType.MERGER}_task` as any, {
+        await emitTypedEvent(AgentType.EVENT_HANDLER, EventType.MERGER_TASK, {
           userId,
           task: `Resolve the following semantic conflicts between parallel code changes:\n\n${mergeResult.failedPatches.map((f) => `Task ${f.taskId} (Agent: ${f.agentId}): ${f.error}`).join('\n')}`,
           metadata: {
@@ -194,5 +191,6 @@ export async function handleParallelTaskCompleted(
     }
   }
 
-  await wakeupInitiator(userId, initiatorId, summary, traceId, sessionId, 1);
+  const aggregatedSummary = `[AGGREGATED_RESULTS]\n${summary}`;
+  await wakeupInitiator(userId, initiatorId, aggregatedSummary, traceId, sessionId, 1);
 }

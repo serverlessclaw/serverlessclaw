@@ -12,6 +12,7 @@ vi.mock('./prompts/index', () => ({
   CRITIC_SYSTEM_PROMPT: 'CRITIC System Prompt Content',
   FACILITATOR_SYSTEM_PROMPT: 'FACILITATOR System Prompt Content',
   MERGER_SYSTEM_PROMPT: 'MERGER System Prompt Content',
+  RESEARCHER_SYSTEM_PROMPT: 'RESEARCHER System Prompt Content',
 }));
 
 // Mock SafetyConfigManager as it's used in evaluateAction

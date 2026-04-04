@@ -16,7 +16,7 @@
 | `runCognitiveHealthCheck` | Runs deep cognitive health check on agents (reasoning, memory, anomalies)             |     —      |        ✅        |
 | `rollbackDeployment`      | Emergency Git revert + redeploy                                                       |     —      |        ✅        |
 | `reportGap`               | Records a capability gap or technical failure                                         |     —      |        ✅        |
-| `manageGap`               | Updates gap status (QA Verification)                                                  |     —      |        ✅        |
+| `manageGap`               | Updates or lists capability gaps in the system                        |     —      |        ✅        |
 | `recallKnowledge`         | JIT retrieval of distilled facts/lessons                                              |     —      |        —         |
 | `listAgents`              | Discovers available specialized agents                                                |     —      |        —         |
 | `discoverSkills`          | Searches MCP marketplace for new capabilities                                         |     —      |        —         |

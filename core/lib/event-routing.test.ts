@@ -34,6 +34,7 @@ describe('event-routing', () => {
       EventType.COGNITIVE_HEALTH_CHECK,
       'facilitator_task',
       'critic_task',
+      EventType.RESEARCH_TASK,
     ];
 
     it.each(REQUIRED_EVENT_TYPES)('should have routing entry for %s', (eventType) => {
@@ -82,6 +83,7 @@ describe('event-routing', () => {
         'consensus-handler',
         'cognitive-health-handler',
         'facilitator-handler',
+        'research-handler',
       ];
 
       for (const [, routing] of Object.entries(DEFAULT_EVENT_ROUTING)) {

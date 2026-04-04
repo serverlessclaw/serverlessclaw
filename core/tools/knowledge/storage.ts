@@ -139,12 +139,42 @@ export const recallKnowledge = {
 export const manageGap = {
   ...schema.manageGap,
   execute: async (args: Record<string, unknown>): Promise<string> => {
-    const { gapId, status } = args as { gapId: string; status: GapStatus };
+    const {
+      gapId,
+      status,
+      action = 'update',
+    } = args as {
+      gapId?: string;
+      status?: GapStatus;
+      action?: 'update' | 'list';
+    };
+
     try {
-      await getMemory().updateGapStatus(gapId, status);
+      const memory = getMemory();
+
+      if (action === 'list') {
+        const gaps = await memory.getAllGaps(GapStatus.OPEN);
+        if (gaps.length === 0) return 'No open capability gaps found.';
+
+        return (
+          `Found ${gaps.length} open capability gaps:\n` +
+          gaps
+            .map(
+              (g) =>
+                `- [${g.id}] (Impact: ${g.metadata.impact}/10, Urgency: ${g.metadata.urgency}/10) ${g.content}`
+            )
+            .join('\n')
+        );
+      }
+
+      if (!gapId || !status) {
+        return 'FAILED: gapId and status are required for "update" action.';
+      }
+
+      await memory.updateGapStatus(gapId, status);
       return `Successfully updated gap ${gapId} to ${status}`;
     } catch (error) {
-      return `Failed to update gap ${gapId}: ${formatErrorMessage(error)}`;
+      return `Failed to ${action} gap: ${formatErrorMessage(error)}`;
     }
   },
 };

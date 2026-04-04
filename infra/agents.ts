@@ -101,6 +101,7 @@ export function createAgents(
   concurrencyMonitor: sst.aws.Function;
   mergerAgent: sst.aws.Function;
   qaAgent: sst.aws.Function;
+  researcherAgent: sst.aws.Function;
   schedulerRole: aws.iam.Role;
   dlqHandler?: sst.aws.Function;
 } {
@@ -636,6 +637,32 @@ export function createAgents(
     dlq.subscribe(dlqHandler.arn);
   }
 
+  // 12. Researcher Agent (Technical discovery and codebase research)
+  const researcherAgent = new sst.aws.Function('ResearcherAgent', {
+    handler: 'core/handlers/events/research-handler.handleResearchTask',
+    dev: liveInLocalOnly,
+    link: baseLink,
+    permissions: basePermissions,
+    architecture: LAMBDA_ARCHITECTURE,
+    nodejs: { loader: NODEJS_LOADERS },
+    environment: agentEnv,
+    memory: AGENT_CONFIG.memory.LARGE,
+    timeout: AGENT_CONFIG.timeout.MAX,
+    logging: {
+      retention: LOG_RETENTION_PERIOD,
+    },
+  });
+  bus.subscribe('ResearchTaskSubscriber', researcherAgent.arn, {
+    pattern: {
+      detailType: [EventType.RESEARCH_TASK, `${AgentType.RESEARCHER}_task`],
+    },
+    transform: {
+      target: {
+        deadLetterConfig: dlq ? { arn: dlq.arn } : undefined,
+      },
+    },
+  });
+
   return {
     coderAgent,
     buildMonitor,
@@ -651,6 +678,7 @@ export function createAgents(
     concurrencyMonitor,
     mergerAgent,
     qaAgent,
+    researcherAgent,
     schedulerRole,
     dlqHandler,
   };

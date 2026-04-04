@@ -377,19 +377,24 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
     let coveredGapIds: string[] = [];
     let toolOptimizations: Array<{ action: string; toolName: string; reason: string }> = [];
 
+    let structuredTasks: Array<{ agentId: string; task: string; gapIds: string[] }> | undefined;
     if (!isSystemFailure && isProactive) {
       try {
         const parsed = parseStructuredResponse<{
           status: string;
           plan: string;
           coveredGapIds: string[];
+          tasks?: Array<{ agentId: string; task: string; gapIds: string[] }>;
           toolOptimizations?: Array<{ action: string; toolName: string; reason: string }>;
         }>(rawResponse);
         status = parsed.status || 'SUCCESS';
         plan = parsed.plan || rawResponse;
         coveredGapIds = parsed.coveredGapIds ?? [];
+        structuredTasks = parsed.tasks;
         toolOptimizations = parsed.toolOptimizations ?? [];
-        logger.info(`Parsed Strategic Plan. Status: ${status}, Gaps: ${coveredGapIds.join(', ')}`);
+        logger.info(
+          `Parsed Strategic Plan. Status: ${status}, Gaps: ${coveredGapIds.join(', ')}, StructuredTasks: ${structuredTasks?.length ?? 0}`
+        );
       } catch (e) {
         logger.warn('Failed to parse Planner structured response, falling back to raw text.', e);
       }
@@ -696,9 +701,31 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
         undefined
       );
 
-      // Attempt plan decomposition for complex plans
-      const { decomposePlan } = await import('./strategic-planner/decomposition');
-      const decomposed = decomposePlan(plan, planId, processedGapIds);
+      // Prefer structured tasks from LLM if available, fallback to heuristic decomposition
+      let decomposed;
+      if (structuredTasks && structuredTasks.length > 0) {
+        logger.info(
+          `[PLANNER] Using ${structuredTasks.length} structured tasks from JSON response.`
+        );
+        decomposed = {
+          wasDecomposed: true,
+          subTasks: structuredTasks.map((st, i) => ({
+            subTaskId: `${planId}-sub-${i}`,
+            planId,
+            task: st.task,
+            gapIds: st.gapIds,
+            order: i,
+            dependencies: [] as number[],
+            complexity: 5, // Default for structured tasks
+            agentId: st.agentId,
+          })),
+        };
+      } else {
+        const { decomposePlan } = await import('../lib/agent/decomposer');
+        decomposed = decomposePlan(plan, planId, processedGapIds, {
+          maxSubTasks: 3, // Coarser goals for SP
+        });
+      }
 
       if (decomposed.wasDecomposed && decomposed.subTasks.length > 1) {
         logger.info(
@@ -709,7 +736,7 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
         const { emitTypedEvent: emitEvent } = await import('../lib/utils/typed-emit');
         const subTaskEvents = decomposed.subTasks.map((sub) => ({
           taskId: sub.subTaskId,
-          agentId: AgentType.CODER,
+          agentId: sub.agentId,
           task: sub.task,
           metadata: { gapIds: sub.gapIds, subTaskId: sub.subTaskId, planId: sub.planId },
           dependsOn: sub.dependencies.map((depIndex) => decomposed.subTasks[depIndex].subTaskId),
@@ -719,9 +746,16 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
           userId: baseUserId,
           tasks: subTaskEvents,
           barrierTimeoutMs: 30 * 60 * 1000, // 30 minutes
-          aggregationType: subTaskEvents.every((t) => t.agentId === AgentType.CODER)
-            ? ('merge_patches' as const)
-            : ('summary' as const),
+          aggregationType: subTaskEvents.some((t) => t.agentId === AgentType.RESEARCHER)
+            ? ('agent_guided' as const) // Use research synthesis for any research tasks
+            : subTaskEvents.every((t) => t.agentId === AgentType.CODER)
+              ? ('merge_patches' as const)
+              : ('summary' as const),
+          aggregationPrompt: subTaskEvents.some((t) => t.agentId === AgentType.RESEARCHER)
+            ? `I have received findings from parallel research tasks. Please synthesize these into a comprehensive technical report. 
+               Identify overarching patterns, cross-repo dependencies, and specific implementation gaps. 
+               The goal is to inform the next phase of development for: "${plan.substring(0, 500)}..."`
+            : undefined,
           traceId,
           initiatorId: AgentType.STRATEGIC_PLANNER,
           depth: (depth ?? 0) + 1,
@@ -730,8 +764,10 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
       } else {
         // Single task dispatch (existing behavior)
         const { dispatchTask: dispatcher } = await import('../tools/knowledge/agent');
+        const targetAgent = decomposed.subTasks[0]?.agentId || AgentType.CODER;
+
         await dispatcher.execute({
-          agentId: AgentType.CODER,
+          agentId: targetAgent,
           userId: baseUserId,
           task: plan,
           metadata: {

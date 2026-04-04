@@ -269,18 +269,23 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
   },
   manageGap: {
     name: 'manageGap',
-    description: 'Updates the status of a capability gap.',
+    description: 'Updates or lists capability gaps in the system.',
     parameters: {
       type: 'object',
       properties: {
-        gapId: { type: 'string', description: 'The ID of the gap (timestamp part).' },
+        action: {
+          type: 'string',
+          enum: ['update', 'list'],
+          description: 'The action to perform: "update" (default) or "list".',
+        },
+        gapId: { type: 'string', description: 'The ID of the gap (required for "update").' },
         status: {
           type: 'string',
           enum: ['OPEN', 'PLANNED', 'PROGRESS', 'DEPLOYED', 'DONE', 'FAILED', 'ARCHIVED'],
-          description: 'The new status for the gap.',
+          description: 'The new status for the gap (required for "update").',
         },
       },
-      required: ['gapId', 'status'],
+      required: [],
       additionalProperties: false,
     },
     connectionProfile: ['config'],

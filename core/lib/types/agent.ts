@@ -172,6 +172,8 @@ export enum AgentType {
   FACILITATOR = 'facilitator',
   /** Specialized agent for semantic multi-track code merging. */
   MERGER = 'merger',
+  /** Specialized agent for technical research and pattern discovery. */
+  RESEARCHER = 'researcher',
 }
 
 /**
@@ -252,6 +254,10 @@ export enum EventType {
   HEALTH_ALERT = 'health_alert',
   /** Periodic cognitive health check for agent reasoning quality. */
   COGNITIVE_HEALTH_CHECK = 'cognitive_health_check',
+  /** Request for technical research and pattern discovery. */
+  RESEARCH_TASK = 'research_task',
+  /** Request for AST-aware patch reconciliation by Merger Agent. */
+  MERGER_TASK = 'merger_task',
 }
 
 /**

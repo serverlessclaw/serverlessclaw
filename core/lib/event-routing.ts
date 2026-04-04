@@ -76,6 +76,10 @@ export const DEFAULT_EVENT_ROUTING: EventRoutingTable = {
     module: './events/cognitive-health-handler',
     function: 'handleCognitiveHealthCheck',
   },
+  [EventType.RESEARCH_TASK]: {
+    module: './events/research-handler',
+    function: 'handleResearchTask',
+  },
   facilitator_task: {
     module: './events/facilitator-handler',
     function: 'handleFacilitatorTask',

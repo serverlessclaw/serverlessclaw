@@ -221,6 +221,16 @@ export const CLARIFICATION_TASK_METADATA = z
     retryCount: z.number().default(0),
   })
   .default({ retryCount: 0 });
+/** Metadata schema for research tasks. */
+export const RESEARCH_TASK_METADATA = z
+  .object({
+    researchMode: z.enum(['evolution', 'domain']).default('domain'),
+    depth: z.number().default(2),
+    tokenBudget: z.number().optional(),
+    timeBudgetMs: z.number().optional(),
+    parallel: z.boolean().default(false),
+  })
+  .default({ researchMode: 'domain', depth: 2, parallel: false });
 
 // ============================================================================
 // Consensus Protocol Schemas
@@ -402,10 +412,9 @@ export const EVENT_SCHEMA_MAP = {
   [EventType.CLARIFICATION_TIMEOUT as string]: TASK_EVENT_SCHEMA,
   [EventType.SCHEDULE_TASK as string]: TASK_EVENT_SCHEMA,
   [EventType.CHUNK as string]: z.object({ content: z.string() }).passthrough(),
-  [EventType.CRITIC_TASK as string]: TASK_EVENT_SCHEMA,
-  [EventType.ESCALATION_LEVEL_TIMEOUT as string]: TASK_EVENT_SCHEMA,
-  [EventType.ESCALATION_COMPLETED as string]: TASK_EVENT_SCHEMA,
-  [EventType.COGNITIVE_HEALTH_CHECK as string]: HEALTH_REPORT_EVENT_SCHEMA,
+  [`${AgentType.RESEARCHER}_task`]: TASK_EVENT_SCHEMA,
+  [EventType.RESEARCH_TASK as string]: TASK_EVENT_SCHEMA,
+  [EventType.MERGER_TASK as string]: TASK_EVENT_SCHEMA,
 } as const;
 
 /** Keys of the EVENT_SCHEMA_MAP (for type-safe event type lookups). */

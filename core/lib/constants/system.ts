@@ -81,3 +81,15 @@ export const CONFIG_KEYS = {
   RECURSION_LIMIT: 'recursion_limit',
   SELECTIVE_DISCOVERY_MODE: 'selective_discovery_mode',
 } as const;
+
+/**
+ * Swarm orchestration constants.
+ */
+export const SWARM = {
+  /** Maximum recursive depth for swarm fanout to prevent runaway decomposition. */
+  MAX_RECURSIVE_DEPTH: 2,
+  /** Default max sub-tasks per decomposition. */
+  DEFAULT_MAX_SUB_TASKS: 4,
+  /** Default barrier timeout for parallel tasks (5 minutes). */
+  DEFAULT_BARRIER_TIMEOUT_MS: 300_000,
+} as const;

@@ -12,8 +12,20 @@
  * - Carries the gapIds it addresses
  */
 
-import { logger } from '../../lib/logger';
-import { AgentType } from '../../lib/types/agent';
+import { logger } from '../logger';
+import { AgentType } from '../types/agent';
+
+/** Options for plan decomposition. */
+export interface DecompositionOptions {
+  /** The default agent to assign if no specific intent is detected. */
+  defaultAgentId?: string;
+  /** Minimum length to attempt decomposition. */
+  minLength?: number;
+  /** Maximum number of sub-tasks. */
+  maxSubTasks?: number;
+  /** Whether to force decomposition even if short. */
+  force?: boolean;
+}
 
 /** A single decomposed sub-task from a strategic plan. */
 export interface PlanSubTask {
@@ -21,7 +33,7 @@ export interface PlanSubTask {
   subTaskId: string;
   /** The parent plan ID for traceability. */
   planId: string;
-  /** The specific instruction for the Coder Agent. */
+  /** The specific instruction for the Agent. */
   task: string;
   /** Which gap IDs this sub-task addresses. */
   gapIds: string[];
@@ -54,6 +66,7 @@ export interface DecomposedPlan {
  * Used for heuristic decomposition.
  */
 const STEP_MARKERS = [
+  /(?:^|\n)\s*###\s+Goal:\s+/i, // "### Goal: CODER" (Highest priority for deterministic splits)
   /^\d+\.\s+/m, // "1. Step"
   /^-\s+/m, // "- Step"
   /^Step\s+\d+/im, // "Step 1"
@@ -69,12 +82,12 @@ const STEP_MARKERS = [
  * Minimum plan length to attempt decomposition (characters).
  * Short plans don't benefit from decomposition.
  */
-const MIN_PLAN_LENGTH_FOR_DECOMPOSITION = 500;
+const DEFAULT_MIN_PLAN_LENGTH = 500;
 
 /**
  * Maximum number of sub-tasks to produce.
  */
-const MAX_SUB_TASKS = 5;
+const DEFAULT_MAX_SUB_TASKS = 5;
 
 /**
  * Decomposes a strategic plan into sub-tasks if it exceeds the complexity threshold.
@@ -83,13 +96,31 @@ const MAX_SUB_TASKS = 5;
  * @param plan - The full plan text.
  * @param planId - Unique identifier for this plan.
  * @param gapIds - All gap IDs the plan addresses.
+ * @param options - Optional decomposition controls.
  * @returns A DecomposedPlan with sub-tasks or the original plan as a single task.
  */
-export function decomposePlan(plan: string, planId: string, gapIds: string[]): DecomposedPlan {
-  // Short plans: dispatch as-is
-  if (plan.length < MIN_PLAN_LENGTH_FOR_DECOMPOSITION) {
+export function decomposePlan(
+  plan: string,
+  planId: string,
+  gapIds: string[],
+  options: DecompositionOptions = {}
+): DecomposedPlan {
+  const minLength = options.minLength ?? DEFAULT_MIN_PLAN_LENGTH;
+  const maxTasks = options.maxSubTasks ?? DEFAULT_MAX_SUB_TASKS;
+  const defaultAgent = options.defaultAgentId ?? AgentType.CODER;
+
+  // Bypass length check if plan uses explicit ### Goal: headers (structured missions)
+  // but still require minimum content per header to avoid fragmenting trivial plans
+  const hasGoalHeaders = (plan.match(/(?:^|\n)\s*###\s+Goal:\s+/gi) ?? []).length >= 2;
+  const avgCharsPerHeader = hasGoalHeaders
+    ? plan.length / (plan.match(/(?:^|\n)\s*###\s+Goal:\s+/gi) ?? []).length
+    : 0;
+  const hasSubstantiveHeaders = hasGoalHeaders && avgCharsPerHeader >= 50;
+
+  // Short plans: dispatch as-is unless forced or structured with substantive content
+  if (plan.length < minLength && !options.force && !hasSubstantiveHeaders) {
     logger.info(
-      `[PlanDecomposition] Plan too short (${plan.length} chars), dispatching as single task`
+      `[Decomposer] Plan too short (${plan.length} chars), dispatching as single task to ${defaultAgent}`
     );
     return {
       originalPlan: plan,
@@ -103,7 +134,7 @@ export function decomposePlan(plan: string, planId: string, gapIds: string[]): D
           order: 0,
           dependencies: [],
           complexity: estimateComplexity(plan),
-          agentId: determineAgent(plan),
+          agentId: determineAgent(plan, defaultAgent),
         },
       ],
       totalSubTasks: 1,
@@ -114,8 +145,8 @@ export function decomposePlan(plan: string, planId: string, gapIds: string[]): D
   // Try to split by step markers
   const segments = splitByStepMarkers(plan);
 
-  if (segments.length <= 1) {
-    logger.info('[PlanDecomposition] Could not identify sub-tasks, dispatching as single task');
+  if (segments.length <= 1 && !options.force) {
+    logger.info('[Decomposer] Could not identify sub-tasks, dispatching as single task');
     return {
       originalPlan: plan,
       planId,
@@ -128,7 +159,7 @@ export function decomposePlan(plan: string, planId: string, gapIds: string[]): D
           order: 0,
           dependencies: [],
           complexity: estimateComplexity(plan),
-          agentId: determineAgent(plan),
+          agentId: determineAgent(plan, defaultAgent),
         },
       ],
       totalSubTasks: 1,
@@ -136,12 +167,12 @@ export function decomposePlan(plan: string, planId: string, gapIds: string[]): D
     };
   }
 
-  // Cap at MAX_SUB_TASKS
-  const cappedSegments = segments.slice(0, MAX_SUB_TASKS);
+  // Cap at maxTasks
+  const cappedSegments = segments.slice(0, maxTasks);
 
   // If last segment was capped, append remaining content to it
-  if (segments.length > MAX_SUB_TASKS) {
-    const remaining = segments.slice(MAX_SUB_TASKS).join('\n\n');
+  if (segments.length > maxTasks) {
+    const remaining = segments.slice(maxTasks).join('\n\n');
     cappedSegments[cappedSegments.length - 1] += `\n\n${remaining}`;
   }
 
@@ -149,21 +180,17 @@ export function decomposePlan(plan: string, planId: string, gapIds: string[]): D
   const subTasks: PlanSubTask[] = cappedSegments.map((segment, index) => ({
     subTaskId: `${planId}-sub-${index}`,
     planId,
-    task:
-      `You are working on sub-task ${index + 1} of ${cappedSegments.length} for plan ${planId}.\n\n` +
-      `Full plan context:\n${plan.slice(0, 200)}...\n\n` +
-      `YOUR SPECIFIC TASK:\n${segment.trim()}\n\n` +
-      `Gap IDs for this sub-task: ${gapIds.join(', ')}`,
+    task: segment.trim(),
     gapIds: index < gapIds.length ? [gapIds[index % gapIds.length]] : gapIds.slice(0, 1),
     order: index,
-    dependencies: [], // Enable parallel execution
+    dependencies: [], // Enable parallel execution by default for Swarm
     complexity: estimateComplexity(segment),
-    agentId: determineAgent(segment),
+    agentId: determineAgent(segment, defaultAgent),
   }));
 
   logger.info(
-    `[PlanDecomposition] Decomposed plan into ${subTasks.length} sub-tasks: ` +
-      subTasks.map((s) => `#${s.order}(${s.complexity})`).join(', ')
+    `[Decomposer] Decomposed plan into ${subTasks.length} sub-tasks: ` +
+      subTasks.map((s) => `#${s.order}(${s.complexity} -> ${s.agentId})`).join(', ')
   );
 
   return {
@@ -177,12 +204,36 @@ export function decomposePlan(plan: string, planId: string, gapIds: string[]): D
 
 /**
  * Splits a plan text into segments using common step markers.
+ * For the ### Goal: header format, uses a lookahead split to preserve the header text.
+ * For other markers, falls back to line-based splitting.
  */
 function splitByStepMarkers(plan: string): string[] {
-  for (const marker of STEP_MARKERS) {
+  // Priority 1: ### Goal: headers – split on the start of each header line, preserving it
+  const goalHeaderPattern = /(?=(?:^|\n)\s*###\s+Goal:\s+)/i;
+  const goalParts = plan
+    .split(goalHeaderPattern)
+    .filter((s) => /###\s+Goal:\s+/i.test(s) && s.trim().length > 10);
+  if (goalParts.length > 1) return goalParts;
+
+  // Priority 2: Numbered list – split line-by-line collecting runs starting with "N."
+  const numberedLines = plan.split('\n');
+  const numbered: string[] = [];
+  let currentSection = '';
+  for (const line of numberedLines) {
+    if (/^\s*\d+\.\s+/.test(line)) {
+      if (currentSection.trim().length > 20) numbered.push(currentSection.trim());
+      currentSection = line;
+    } else {
+      currentSection += '\n' + line;
+    }
+  }
+  if (currentSection.trim().length > 20) numbered.push(currentSection.trim());
+  if (numbered.length > 1) return numbered;
+
+  // Priority 3: Other structural markers (horizontal rules, etc.)
+  for (const marker of STEP_MARKERS.slice(2)) {
     const parts = plan.split(marker);
     if (parts.length > 1) {
-      // Filter out empty parts
       const segments = parts.filter((s) => s.trim().length > 20);
       if (segments.length > 1) return segments;
     }
@@ -218,9 +269,17 @@ function estimateComplexity(text: string): number {
 
 /**
  * Heuristically determines the best agent for a plan segment.
- * Defaults to CODER, but pivots to RESEARCHER for technical discovery tasks.
+ * Prioritizes explicit ### Goal: [AgentType] headers over keyword matching.
  */
-function determineAgent(text: string): string {
+function determineAgent(text: string, defaultAgent: string): string {
+  // Priority 1: explicit goal header declaration
+  const goalHeader = text.match(/(?:^|\n)\s*###\s+Goal:\s+(RESEARCHER|CODER)\b/i);
+  if (goalHeader) {
+    const declared = goalHeader[1].toUpperCase();
+    if (declared === 'RESEARCHER') return AgentType.RESEARCHER;
+    if (declared === 'CODER') return AgentType.CODER;
+  }
+
   const researchKeywords = [
     /research/i,
     /investigate/i,
@@ -234,12 +293,25 @@ function determineAgent(text: string): string {
     /find (a )?pattern/i,
   ];
 
-  const isResearch = researchKeywords.some((p) => p.test(text));
+  const coderKeywords = [
+    /implement/i,
+    /create (a )?(file|function|module|api)/i,
+    /refactor/i,
+    /fix/i,
+    /update/i,
+    /deploy/i,
+    /write (a )?(test|spec|docs)/i,
+  ];
 
-  if (isResearch) {
-    logger.info(`[PlanDecomposition] Detected research intent in segment, routing to RESEARCHER`);
+  const isResearch = researchKeywords.some((p) => p.test(text));
+  const isCoding = coderKeywords.some((p) => p.test(text));
+
+  if (isResearch && !isCoding) {
     return AgentType.RESEARCHER;
   }
+  if (isCoding && !isResearch) {
+    return AgentType.CODER;
+  }
 
-  return AgentType.CODER;
+  return defaultAgent;
 }

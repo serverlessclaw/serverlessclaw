@@ -683,6 +683,8 @@ describe('Event Contract Verification', () => {
         EventType.CODER_TASK_COMPLETED,
         EventType.TASK_CANCELLED,
         EventType.HANDOFF,
+        EventType.MERGER_TASK,
+        EventType.RESEARCH_TASK,
       ];
 
       for (const eventType of criticalEventTypes) {
@@ -697,6 +699,8 @@ describe('Event Contract Verification', () => {
         `${AgentType.QA}_task`,
         `${AgentType.CRITIC}_task`,
         `${AgentType.FACILITATOR}_task`,
+        `${AgentType.RESEARCHER}_task`,
+        `${AgentType.MERGER}_task`,
       ];
 
       for (const taskType of agentTaskTypes) {

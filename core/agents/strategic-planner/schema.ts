@@ -8,6 +8,19 @@ export const StrategicPlanSchema = {
     status: { type: 'string', enum: ['SUCCESS', 'FAILED'] },
     plan: { type: 'string' },
     coveredGapIds: { type: 'array', items: { type: 'string' } },
+    tasks: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          agentId: { type: 'string', enum: ['CODER', 'RESEARCHER'] },
+          task: { type: 'string' },
+          gapIds: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['agentId', 'task', 'gapIds'],
+        additionalProperties: false,
+      },
+    },
     toolOptimizations: {
       type: 'array',
       items: {

@@ -204,6 +204,7 @@ export async function handlePatchMerge(eventDetail: Record<string, unknown>): Pr
     await cleanupWorkspace(mergeDir);
 
     const summary = [
+      `[AGGREGATED_RESULTS]`,
       `Merge ${failedPatches.length === 0 ? 'Complete' : 'Partial'}: ${appliedPatches.length}/${patchesToApply.length} patches applied`,
       failedPatches.length > 0 ? `Conflicts: ${failedPatches.map((f) => f.taskId).join(', ')}` : '',
       deploymentTriggered ? 'Deployment triggered.' : '',
