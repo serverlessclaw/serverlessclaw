@@ -12,7 +12,6 @@ import {
   Zap,
   Target,
   Activity,
-  AlertCircle,
   Loader2,
   ShieldCheck,
   Brain,
@@ -130,8 +129,9 @@ const formatFrequency = (expression?: string) => {
   if (expression.startsWith('rate(')) {
     const match = expression.match(/rate\((\d+)\s+(\w+)\)/);
     if (match) {
-      const [_, value, unit] = match;
+      const [, value, unit] = match;
       const unitShort = unit.endsWith('s') ? unit.slice(0, -1) : unit;
+
       return `Every ${value} ${unitShort}${parseInt(value) > 1 ? 's' : ''}`;
     }
   }
@@ -275,7 +275,7 @@ export default function ScheduleList() {
       if (!response.ok) throw new Error('Failed to delete schedule');
       toast.success(`Goal ${name} deleted`);
       fetchSchedules(true);
-    } catch (_error) {
+    } catch {
       toast.error('Failed to delete goal');
     } finally {
       setActionInProgress(null);
@@ -346,7 +346,7 @@ export default function ScheduleList() {
         <Card variant="glass" padding="md" className="border-white/5">
           <div className="flex justify-between items-start mb-2">
             <Typography variant="caption" className="text-white/60 uppercase tracking-widest">Scheduler Health</Typography>
-            <ActivityIcon size={16} className={fetchError ? 'text-red-500' : 'text-green-500'} />
+            <Activity size={16} className={fetchError ? 'text-red-500' : 'text-green-500'} />
           </div>
           <Badge 
             variant="outline" 
@@ -571,7 +571,7 @@ export default function ScheduleList() {
                 toast.success(`Goal ${name} established`);
                 setShowNewGoalModal(false);
                 fetchSchedules(true);
-              } catch (_error) {
+              } catch {
                 toast.error('Failed to establish goal');
               } finally {
                 setActionInProgress(null);
@@ -653,18 +653,3 @@ export default function ScheduleList() {
   );
 }
 
-const ActivityIcon = ({ size, className }: { size?: number; className?: string }) => (
-  <svg 
-    width={size} 
-    height={size} 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
-    className={className}
-  >
-    <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-  </svg>
-);

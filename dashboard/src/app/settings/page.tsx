@@ -1,4 +1,4 @@
-import { Resource } from 'sst';
+import { getResourceName } from '@/lib/sst-utils';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { AlertTriangle } from 'lucide-react';
@@ -14,7 +14,7 @@ import { EvolutionMode } from '@claw/core/lib/types/agent';
 
 async function getConfig() {
   try {
-    const tableName = (Resource as unknown as Record<string, { name: string }>).ConfigTable?.name;
+    const tableName = getResourceName('ConfigTable');
     if (!tableName) {
       console.error('ConfigTable name is missing from Resources');
       return {
@@ -196,7 +196,7 @@ async function updateConfig(formData: FormData) {
     .filter(Boolean);
 
   try {
-    const tableName = (Resource as unknown as Record<string, { name: string }>).ConfigTable?.name;
+    const tableName = getResourceName('ConfigTable');
     if (!tableName) {
       throw new Error('ConfigTable name is missing from Resources');
     }
@@ -335,8 +335,7 @@ async function updateConfig(formData: FormData) {
 async function triggerRebuild() {
   'use server';
   try {
-    const typedResource = Resource as unknown as { Deployer?: { name: string } };
-    const projectName = typedResource.Deployer?.name;
+    const projectName = getResourceName('Deployer');
     if (!projectName) {
       throw new Error('Deployer project not found in resources');
     }

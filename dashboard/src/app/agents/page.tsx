@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Shield, RefreshCw, Radio } from 'lucide-react';
+import { Plus, Shield, RefreshCw, Radio, Search } from 'lucide-react';
 import { THEME } from '@/lib/theme';
 import { toast } from 'sonner';
 import CyberConfirm from '@/components/CyberConfirm';
@@ -66,6 +66,7 @@ export default function AgentsPage() {
   const [allTools, setAllTools] = useState<Tool[]>([]);
   const [selectedAgentIdForTools, setSelectedAgentIdForTools] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [agentSearchQuery, setAgentSearchQuery] = useState('');
   const [isUpdatingTools, setIsUpdatingTools] = useState(false);
   const [reputation, setReputation] = useState<Record<string, { successRate: number; avgLatencyMs: number; tasksCompleted: number; tasksFailed: number }>>({});
 
@@ -85,7 +86,7 @@ export default function AgentsPage() {
       const agentsRes = await fetch('/api/agents');
       const agentsData = await agentsRes.json();
       setAgents(agentsData);
-      setInitialAgents(JSON.parse(JSON.stringify(agentsData)));
+      setInitialAgents(structuredClone(agentsData));
     } catch (err) {
       console.error('Failed to load agents:', err);
       toast.error('Failed to synchronize with agent registry');
@@ -181,7 +182,7 @@ export default function AgentsPage() {
         body: JSON.stringify(agents),
       });
       if (!response.ok) throw new Error('Failed to save');
-      setInitialAgents(JSON.parse(JSON.stringify(agents)));
+      setInitialAgents(structuredClone(agents));
       toast.success('Agent configurations synchronized successfully');
       setShowBackboneWarning(false);
     } catch (err) {
@@ -233,6 +234,9 @@ export default function AgentsPage() {
       ? agent.tools.filter(t => t !== toolName)
       : [...agent.tools, toolName];
 
+    // Store snapshot before optimistic update for rollback
+    const previousTools = [...agent.tools];
+
     // Optimistic Update
     setAgents((prev: Record<string, Agent>) => ({
       ...prev,
@@ -253,10 +257,10 @@ export default function AgentsPage() {
     } catch (err) {
       console.error('Failed to update tools:', err);
       toast.error('Failed to update tools');
-      // Revert
+      // Revert to snapshot taken before toggle
       setAgents(prev => ({
         ...prev,
-        [agentId]: { ...prev[agentId], tools: initialAgents[agentId]?.tools ?? [] }
+        [agentId]: { ...prev[agentId], tools: previousTools }
       }));
     } finally {
       setIsUpdatingTools(false);
@@ -279,6 +283,26 @@ export default function AgentsPage() {
     setAgents(next);
     setConfirmModal({ isOpen: false, agentId: '', agentName: '' });
     toast.success(`Agent '${confirmModal.agentName}' decommissioned`);
+  };
+
+  const cloneAgent = (id: string) => {
+    const original = agents[id];
+    if (!original) return;
+
+    const newId = `${id}-clone-${Date.now().toString().slice(-4)}`;
+    const clonedAgent: Agent = {
+      ...structuredClone(original),
+      id: newId,
+      name: `${original.name} (Clone)`,
+      isBackbone: false,
+      enabled: false,
+    };
+
+    setAgents((prev) => ({
+      ...prev,
+      [newId]: clonedAgent,
+    }));
+    toast.success(`Agent '${original.name}' cloned successfully`);
   };
 
   // Real-time message handler for agent state changes
@@ -305,6 +329,16 @@ export default function AgentsPage() {
   });
 
   const hasChanges = JSON.stringify(agents) !== JSON.stringify(initialAgents);
+
+  const filteredAgents = Object.fromEntries(
+    Object.entries(agents).filter(([id, agent]) => {
+      const searchStr = agentSearchQuery.toLowerCase();
+      return (
+        agent.name.toLowerCase().includes(searchStr) ||
+        id.toLowerCase().includes(searchStr)
+      );
+    })
+  );
 
   if (loading)
     return (
@@ -341,6 +375,18 @@ export default function AgentsPage() {
           </Typography>
         </div>
         <div className="flex gap-4 items-end">
+            <div className="relative w-64 group">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-cyan-400 transition-colors">
+                <Search size={14} />
+              </div>
+              <input 
+                type="text"
+                placeholder="Search nodes..."
+                value={agentSearchQuery}
+                onChange={(e) => setAgentSearchQuery(e.target.value)}
+                className="w-full bg-white/5 border border-white/5 rounded h-[34px] pl-9 pr-3 text-xs font-mono text-white placeholder:text-white/20 focus:outline-none focus:border-cyan-400/30 focus:bg-white/[0.08] transition-all"
+              />
+            </div>
             <div className="flex flex-col items-center">
                 <Typography variant="mono" color="muted" className="text-[10px] uppercase tracking-widest opacity-40 mb-1">NODES</Typography>
                 <Badge variant="outline" className={`px-4 py-1 font-bold text-xs border-${THEME.COLORS.INTEL}/20 text-${THEME.COLORS.INTEL}/60 uppercase`}>{Object.keys(agents).length}</Badge>
@@ -369,10 +415,11 @@ export default function AgentsPage() {
 
       <div className="max-w-6xl space-y-8 pb-20">
         <AgentTable
-          agents={agents}
+          agents={filteredAgents}
           reputation={reputation}
           updateAgent={updateAgent}
           deleteAgent={deleteAgent}
+          cloneAgent={cloneAgent}
           setSelectedAgentIdForTools={setSelectedAgentIdForTools}
           onSave={() => handleSave()}
           saving={saving}

@@ -102,6 +102,26 @@ export default function PipelineBoard({
     }
   };
 
+  const handleDragStart = (e: React.DragEvent, gapId: string) => {
+    e.dataTransfer.setData('gapId', gapId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetStatus: GapStatus) => {
+    e.preventDefault();
+    const gapId = e.dataTransfer.getData('gapId');
+    const gap = initialGaps.find(g => g.userId === gapId);
+    
+    if (gap && gap.status !== targetStatus) {
+      await handleUpdateStatus(gapId, targetStatus);
+    }
+  };
+
   const handleSelectAllInColumn = (status: GapStatus) => {
     const colGaps = initialGaps.filter(g => g.status === status);
     const newSelection = new Set(selectedGaps);
@@ -132,7 +152,12 @@ export default function PipelineBoard({
         const selectedCount = colGaps.filter(g => selectedGaps.has(g.userId)).length;
 
         return (
-          <div key={col.status} className="flex flex-col gap-4">
+          <div 
+            key={col.status} 
+            className="flex flex-col gap-4"
+            onDragOver={handleDragOver}
+            onDrop={(e) => handleDrop(e, col.status)}
+          >
             <div className={`flex flex-col p-3 glass-card border-white/5 bg-white/5 ${col.glow}`}>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -171,7 +196,9 @@ export default function PipelineBoard({
                 return (
                   <div 
                       key={gap.userId} 
-                      className={`glass-card pt-3 pl-3 pr-3 pb-2 border-white/5 hover:border-white/20 transition-all group relative overflow-hidden bg-black/40 ${selectedGaps.has(gap.userId) ? 'ring-1 ring-indigo-500/50 bg-indigo-500/5' : ''}`}
+                      draggable={!processing}
+                      onDragStart={(e) => handleDragStart(e, gap.userId)}
+                      className={`glass-card pt-3 pl-3 pr-3 pb-2 border-white/5 hover:border-white/20 transition-all group relative overflow-hidden bg-black/40 ${selectedGaps.has(gap.userId) ? 'ring-1 ring-indigo-500/50 bg-indigo-500/5' : ''} ${processing === gap.userId ? 'opacity-50 cursor-wait' : 'cursor-grab active:cursor-grabbing'}`}
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-2">

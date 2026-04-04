@@ -15,6 +15,7 @@ interface ChatSidebarProps {
   onTogglePin: (sessionId: string, isPinned: boolean) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  searchInputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
 export function ChatSidebar({ 
@@ -26,7 +27,8 @@ export function ChatSidebar({
   onDeleteAll,
   onTogglePin,
   searchQuery,
-  setSearchQuery
+  setSearchQuery,
+  searchInputRef
 }: ChatSidebarProps) {
   const filteredSessions = sessions
     .filter(s => s.title?.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -60,6 +62,7 @@ export function ChatSidebar({
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20 group-focus-within/search:text-cyber-green transition-colors" />
           <input
             type="text"
+            ref={searchInputRef as React.RefObject<HTMLInputElement>}
             placeholder="Search sessions..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

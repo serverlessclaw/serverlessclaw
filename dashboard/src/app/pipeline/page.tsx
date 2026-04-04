@@ -57,7 +57,12 @@ async function triggerBatchEvolution(gapIds: string[]) {
     const memory = new DynamoMemory();
 
     for (const gapId of gapIds) {
-      const numericId = gapId.split('#')[1];
+      const parts = gapId.split('#');
+      if (parts.length < 2 || !parts[1]) {
+        console.warn(`Malformed gap ID: ${gapId}, skipping evolution.`);
+        continue;
+      }
+      const numericId = parts[1];
       const plan = await memory.getDistilledMemory(`PLAN#${numericId}`);
 
       if (plan) {

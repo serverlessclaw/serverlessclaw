@@ -36,16 +36,25 @@ interface TraceIntelligenceViewProps {
   initialTraces: Trace[];
   sessionTitles?: Record<string, string>;
   initialTab?: TabType;
+  nextToken?: string;
 }
 
 type TabType = 'timeline' | 'sessions' | 'models' | 'tools' | 'agents' | 'live';
 
-export default function TraceIntelligenceView({ initialTraces, sessionTitles }: TraceIntelligenceViewProps) {
+export default function TraceIntelligenceView({ initialTraces, sessionTitles, nextToken }: TraceIntelligenceViewProps) {
   const [activeTab, setActiveTab] = useState<TabType>('timeline');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'started' | 'error'>('all');
+  const [sourceFilter, setSourceFilter] = useState<string>('all');
+  const [dateFilter, setDateFilter] = useState<'all' | '24h' | '7d'>('all');
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const [mountTime, setMountTime] = useState<number>(0);
   const { t } = useTranslations();
+
+  // Capture mount time once to provide stable reference for date filtering
+  React.useEffect(() => {
+    setMountTime(Date.now());
+  }, []);
 
   // Reset expansion when switching tabs
   React.useEffect(() => {
@@ -109,10 +118,20 @@ export default function TraceIntelligenceView({ initialTraces, sessionTitles }: 
         trace.toolsUsed.some((t: string) => t.toLowerCase().includes(searchQuery.toLowerCase()));
       
       const matchesStatus = statusFilter === 'all' || trace.status === statusFilter;
+      const matchesSource = sourceFilter === 'all' || trace.source === sourceFilter;
       
-      return matchesSearch && matchesStatus;
+      let matchesDate = true;
+      if (mountTime > 0) {
+        if (dateFilter === '24h') {
+          matchesDate = mountTime - trace.timestamp < 24 * 60 * 60 * 1000;
+        } else if (dateFilter === '7d') {
+          matchesDate = mountTime - trace.timestamp < 7 * 24 * 60 * 60 * 1000;
+        }
+      }
+      
+      return matchesSearch && matchesStatus && matchesSource && matchesDate;
     });
-  }, [traces, searchQuery, statusFilter]);
+  }, [traces, searchQuery, statusFilter, sourceFilter, dateFilter, mountTime]);
 
   // Grouping logic
   const groupedData = useMemo(() => {
@@ -278,13 +297,34 @@ export default function TraceIntelligenceView({ initialTraces, sessionTitles }: 
 
               <select 
                 value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as 'all' | 'completed' | 'started' | 'error')}
+                onChange={(e) => setStatusFilter(e.target.value as 'all' | 'completed' | 'started' | 'error')}
                 className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] font-bold uppercase text-white/70 focus:outline-none focus:border-cyber-blue/50"
               >
                 <option value="all">{t('STATUS_ALL')}</option>
                 <option value="completed">{t('STATUS_COMPLETED')}</option>
                 <option value="started">{t('STATUS_RUNNING')}</option>
                 <option value="error">{t('STATUS_ERROR')}</option>
+              </select>
+
+              <select 
+                value={sourceFilter}
+                onChange={(e) => setSourceFilter(e.target.value)}
+                className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] font-bold uppercase text-white/70 focus:outline-none focus:border-cyber-blue/50"
+              >
+                <option value="all">All Sources</option>
+                <option value="telegram">Telegram</option>
+                <option value="dashboard">Dashboard</option>
+                <option value="system">System</option>
+              </select>
+
+              <select 
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value as 'all' | '24h' | '7d')}
+                className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] font-bold uppercase text-white/70 focus:outline-none focus:border-cyber-blue/50"
+              >
+                <option value="all">All Time</option>
+                <option value="24h">Last 24h</option>
+                <option value="7d">Last 7 Days</option>
               </select>
             </>
           )}
@@ -406,6 +446,17 @@ export default function TraceIntelligenceView({ initialTraces, sessionTitles }: 
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {nextToken && activeTab === 'timeline' && (
+          <div className="flex justify-center pt-4">
+            <Link 
+              href={`/trace?nextToken=${nextToken}`}
+              className="px-6 py-2 rounded bg-cyber-blue/10 border border-cyber-blue/30 text-cyber-blue text-xs font-bold uppercase tracking-widest hover:bg-cyber-blue/20 transition-colors"
+            >
+              Load More Traces
+            </Link>
           </div>
         )}
 

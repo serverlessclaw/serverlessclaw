@@ -13,6 +13,7 @@ import Button from '@/components/ui/Button';
 import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
 import { EvolutionMode } from '@claw/core/lib/types/agent';
+import { SYSTEM } from '@claw/core/lib/constants';
 import { 
   LLMProvider, 
   OpenAIModel, 
@@ -86,18 +87,46 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
   const [evolutionMode, setEvolutionMode] = useState(config.evolutionMode ?? EvolutionMode.HITL);
   const [optimizationPolicy, setOptimizationPolicy] = useState(config.optimizationPolicy ?? 'balanced');
   const [activeLocale, setActiveLocale] = useState(config.activeLocale ?? 'en');
-  const [maxToolIterations, setMaxToolIterations] = useState(config.maxToolIterations ?? '5');
-  const [circuitBreakerThreshold, setCircuitBreakerThreshold] = useState(config.circuitBreakerThreshold ?? '3');
-  const [protectedResources, setProtectedResources] = useState(config.protectedResources ?? '');
-  const [reflectionFrequency, setReflectionFrequency] = useState(config.reflectionFrequency ?? '3');
-  const [strategicReviewFrequency, setStrategicReviewFrequency] = useState(config.strategicReviewFrequency ?? '12');
-  const [minGapsForReview, setMinGapsForReview] = useState(config.minGapsForReview ?? '3');
+  const [maxToolIterations, setMaxToolIterations] = useState(config.maxToolIterations ?? '15');
+  const [circuitBreakerThreshold, setCircuitBreakerThreshold] = useState(config.circuitBreakerThreshold ?? '5');
+  const [protectedResources, setProtectedResources] = useState(config.protectedResources ?? 'sst.config.ts, buildspec.yml, infra/');
+  const [reflectionFrequency, setReflectionFrequency] = useState(config.reflectionFrequency ?? '10');
+  const [strategicReviewFrequency, setStrategicReviewFrequency] = useState(config.strategicReviewFrequency ?? '24');
+  const [minGapsForReview, setMinGapsForReview] = useState(config.minGapsForReview ?? '10');
   const [recursionLimit, setRecursionLimit] = useState(config.recursionLimit ?? '50');
   const [deployLimit, setDeployLimit] = useState(config.deployLimit ?? '5');
   const [escalationEnabled, setEscalationEnabled] = useState(config.escalationEnabled ?? 'true');
   const [protocolFallbackEnabled, setProtocolFallbackEnabled] = useState(config.protocolFallbackEnabled ?? 'true');
 
   const { t, setLocale } = useTranslations();
+
+  const resetRouting = () => {
+    setActiveProvider(SYSTEM.DEFAULT_PROVIDER);
+    setActiveModel(SYSTEM.DEFAULT_MODEL);
+  };
+
+  const resetLanguage = () => {
+    setActiveLocale('en');
+    setLocale('en');
+  };
+
+  const resetEvolution = () => {
+    setEvolutionMode(EvolutionMode.HITL);
+    setOptimizationPolicy('balanced');
+    setMaxToolIterations('15');
+    setCircuitBreakerThreshold('5');
+    setRecursionLimit('50');
+    setDeployLimit('5');
+    setEscalationEnabled('true');
+    setProtocolFallbackEnabled('true');
+    setProtectedResources('sst.config.ts, buildspec.yml, infra/');
+  };
+
+  const resetReflection = () => {
+    setReflectionFrequency('10');
+    setStrategicReviewFrequency('24');
+    setMinGapsForReview('10');
+  };
 
   const hasChanges = 
     activeProvider !== config.provider ||
@@ -121,9 +150,18 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
       <form id="settings-form" action={updateConfig}>
         <Card variant="glass" padding="lg" className="space-y-8 cyber-border relative">
           <div className="space-y-4">
-            <Typography variant="caption" weight="bold" color="intel" uppercase className="flex items-center gap-2">
-              <Settings size={16} /> LLM Provider Routing
-            </Typography>
+            <div className="flex justify-between items-center">
+              <Typography variant="caption" weight="bold" color="intel" uppercase className="flex items-center gap-2">
+                <Settings size={16} /> LLM Provider Routing
+              </Typography>
+              <button
+                type="button"
+                onClick={resetRouting}
+                className="text-[9px] font-bold text-intel/40 hover:text-intel uppercase tracking-widest transition-colors flex items-center gap-1"
+              >
+                <RefreshCw size={10} /> Reset Defaults
+              </button>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
@@ -166,9 +204,18 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
           </div>
 
           <div className="pt-8 border-t border-white/5 space-y-4">
-            <Typography variant="caption" weight="bold" color="intel" uppercase className="flex items-center gap-2">
-              <RefreshCw size={16} /> {t('LANGUAGE')}
-            </Typography>
+            <div className="flex justify-between items-center">
+              <Typography variant="caption" weight="bold" color="intel" uppercase className="flex items-center gap-2">
+                <RefreshCw size={16} /> {t('LANGUAGE')}
+              </Typography>
+              <button
+                type="button"
+                onClick={resetLanguage}
+                className="text-[9px] font-bold text-intel/40 hover:text-intel uppercase tracking-widest transition-colors flex items-center gap-1"
+              >
+                <RefreshCw size={10} /> Reset Defaults
+              </button>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
@@ -193,9 +240,18 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
           </div>
 
           <div className="pt-8 border-t border-white/5 space-y-4">
-            <Typography variant="caption" weight="bold" color="primary" uppercase className="flex items-center gap-2">
-              <Zap size={16} /> Evolution Engine Control
-            </Typography>
+            <div className="flex justify-between items-center">
+              <Typography variant="caption" weight="bold" color="primary" uppercase className="flex items-center gap-2">
+                <Zap size={16} /> Evolution Engine Control
+              </Typography>
+              <button
+                type="button"
+                onClick={resetEvolution}
+                className="text-[9px] font-bold text-primary/40 hover:text-primary uppercase tracking-widest transition-colors flex items-center gap-1"
+              >
+                <RefreshCw size={10} /> Reset Defaults
+              </button>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
@@ -365,9 +421,18 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
           </div>
 
           <div className="pt-8 border-t border-white/5 space-y-4">
-            <Typography variant="caption" weight="bold" color="intel" uppercase className="flex items-center gap-2">
-              <RefreshCw size={16} /> Neural Reflection Config
-            </Typography>
+            <div className="flex justify-between items-center">
+              <Typography variant="caption" weight="bold" color="intel" uppercase className="flex items-center gap-2">
+                <RefreshCw size={16} /> Neural Reflection Config
+              </Typography>
+              <button
+                type="button"
+                onClick={resetReflection}
+                className="text-[9px] font-bold text-intel/40 hover:text-intel uppercase tracking-widest transition-colors flex items-center gap-1"
+              >
+                <RefreshCw size={10} /> Reset Defaults
+              </button>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">

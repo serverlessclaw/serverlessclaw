@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Paperclip, Edit2, Check, X, Brain } from 'lucide-react';
+import { Paperclip, Edit2, Check, X, Brain, Keyboard } from 'lucide-react';
 import Typography from '@/components/ui/Typography';
 import CyberConfirm from '@/components/CyberConfirm';
 import Button from '@/components/ui/Button';
@@ -12,7 +12,7 @@ import { ChatMessageList } from './ChatMessageList';
 import { ChatInput } from './ChatInput';
 import { QueuedMessagesList } from './QueuedMessages';
 import { useChatMessages } from './useChatMessages';
-import {    ToolCall } from './types';
+import { useKeyboardShortcuts, type ShortcutDefinition } from '@/hooks/useKeyboardShortcuts';
 import type { PendingMessage } from '@claw/core/lib/types/session';
 
 /**
@@ -63,7 +63,28 @@ export default function ChatContent() {
   // --- Refs ---
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const activeSessionRef = useRef<string>('');
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+  const createNewChatRef = useRef<() => void>(() => {});
+  const currentSessionRef = useRef<typeof currentSession>(null);
+
+  const shortcuts: ShortcutDefinition[] = [
+    { keys: 'meta+k', handler: () => searchInputRef.current?.focus(), description: 'Focus search' },
+    { keys: 'ctrl+k', handler: () => searchInputRef.current?.focus(), description: 'Focus search' },
+    { keys: 'meta+alt+n', handler: () => createNewChatRef.current(), description: 'New chat' },
+    { keys: 'ctrl+alt+n', handler: () => createNewChatRef.current(), description: 'New chat' },
+    { keys: 'meta+/', handler: () => chatInputRef.current?.focus(), description: 'Focus chat input' },
+    { keys: 'ctrl+/', handler: () => chatInputRef.current?.focus(), description: 'Focus chat input' },
+    { keys: 'meta+e', handler: () => { if (activeSessionId && currentSessionRef.current) setIsEditingTitle(true); }, description: 'Edit session title' },
+    { keys: 'ctrl+e', handler: () => { if (activeSessionId && currentSessionRef.current) setIsEditingTitle(true); }, description: 'Edit session title' },
+    { keys: 'meta+t', handler: () => setShowThinking(prev => !prev), description: 'Toggle thinking visibility' },
+    { keys: 'ctrl+t', handler: () => setShowThinking(prev => !prev), description: 'Toggle thinking visibility' },
+    { keys: '?', handler: () => setShowShortcutsHelp(prev => !prev), description: 'Show keyboard shortcuts help', preventDefault: false },
+  ];
+
+  useKeyboardShortcuts(shortcuts, !!activeSessionId);
   const hasProcessedPrompt = useRef<boolean>(false);
   const isPostInFlight = useRef<boolean>(false);
 
@@ -118,7 +139,8 @@ export default function ChatContent() {
 
   useEffect(() => {
     activeSessionRef.current = activeSessionId;
-  }, [activeSessionId]);
+    currentSessionRef.current = currentSession;
+  }, [activeSessionId, currentSession]);
 
   // URL State Management
   useEffect(() => {
@@ -260,6 +282,8 @@ export default function ChatContent() {
     router.push('/', { scroll: false });
   };
 
+  createNewChatRef.current = createNewChat;
+
   const deleteSession = (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
     setSessionToDelete(sessionId);
@@ -335,6 +359,7 @@ export default function ChatContent() {
         onTogglePin={togglePin}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
+        searchInputRef={searchInputRef}
       />
 
       <main 
@@ -420,6 +445,15 @@ export default function ChatContent() {
               <span className="text-[10px] font-mono uppercase tracking-wider hidden sm:inline">Thinking</span>
             </Button>
 
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowShortcutsHelp(true)}
+              className="p-1 text-white/40 hover:text-cyber-green transition-colors"
+              title="Keyboard shortcuts (?)"
+              icon={<Keyboard size={18} />}
+            />
+
             {isRealtimeActive && (
               <div className="flex items-center gap-2 bg-cyber-green/10 px-3 py-1 rounded border border-cyber-green/30">
                  <div className={`w-1.5 h-1.5 rounded-full bg-cyber-green ${CHAT_STYLES.ANIMATIONS.PULSE}`} />
@@ -447,6 +481,7 @@ export default function ChatContent() {
           fileInputRef={fileInputRef}
           onFileSelect={(e) => { if (e.target.files) handleFiles(Array.from(e.target.files)); }}
           isShaking={isShaking}
+          chatInputRef={chatInputRef}
         />
 
         {pendingMessages.length > 0 && (
@@ -476,6 +511,38 @@ export default function ChatContent() {
         onCancel={() => setShowDeleteAllConfirm(false)}
         variant="danger"
       />
+
+      {showShortcutsHelp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowShortcutsHelp(false)}>
+          <div className="glass-card border border-white/10 bg-black/90 rounded-2xl p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Keyboard size={18} className="text-cyber-green" />
+                <Typography variant="h3" weight="bold" color="white" glow className="uppercase">Keyboard Shortcuts</Typography>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setShowShortcutsHelp(false)} className="p-1 text-white/40 hover:text-white" icon={<X size={16} />} />
+            </div>
+            <div className="space-y-2 text-[11px] font-mono">
+              {[
+                { keys: 'Cmd/Ctrl + K', desc: 'Focus search' },
+                { keys: 'Cmd/Ctrl + Alt + N', desc: 'New chat' },
+                { keys: 'Cmd/Ctrl + /', desc: 'Focus chat input' },
+                { keys: 'Cmd/Ctrl + E', desc: 'Edit session title' },
+                { keys: 'Cmd/Ctrl + T', desc: 'Toggle thinking' },
+                { keys: 'Cmd/Ctrl + Enter', desc: 'Send message' },
+                { keys: 'Shift + Enter', desc: 'New line' },
+                { keys: 'Escape', desc: 'Close modals' },
+                { keys: '?', desc: 'Show this help' },
+              ].map(({ keys, desc }) => (
+                <div key={keys} className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
+                  <span className="text-white/60">{desc}</span>
+                  <kbd className="bg-white/10 border border-white/10 rounded px-2 py-0.5 text-[10px] text-cyber-green">{keys}</kbd>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

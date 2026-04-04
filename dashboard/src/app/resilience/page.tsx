@@ -77,12 +77,26 @@ async function getRecoveryLogs() {
 }
 
 
+async function getRecoveryState() {
+  try {
+    const memory = new DynamoMemory();
+    const items = await memory.listByPrefix('SYSTEM#RECOVERY#STATS');
+    return items?.[0] ?? null;
+  } catch (e) {
+    console.error('Error fetching recovery state:', e);
+    return null;
+  }
+}
+
+
 /** ResilienceHub — displays the live health status, recovery logs, and Dead Man's Switch circuit-breaker state for the ClawCenter Observability sector. */
 export default async function ResilienceHub() {
   const health = await getHealth();
   const logs = await getRecoveryLogs();
+  const recoveryState = await getRecoveryState();
 
   const isHealthy = health.status === 'ok';
+  const recoveryValue = recoveryState?.status === 'unhealthy' ? 30 : (isHealthy ? 100 : 60);
 
   return (
     <main className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-yellow-500/5 via-transparent to-transparent">
@@ -124,21 +138,23 @@ export default async function ResilienceHub() {
         <div className="flex justify-center">
           <div className="relative">
             <ResilienceGauge
-              value={Math.max(0, 100 - logs.length * 10)}
-              label="Error Rate"
-              subtitle="Last 24h failures"
+              value={Math.min(100, logs.length * 10)}
+              label="Error Density"
+              subtitle="Recent failure signals"
             />
           </div>
         </div>
+
         <div className="flex justify-center">
           <div className="relative">
             <ResilienceGauge
-              value={isHealthy ? 100 : 60}
+              value={recoveryValue}
               label="Recovery"
-              subtitle="Dead Man's Switch"
+              subtitle={recoveryState?.status === 'unhealthy' ? 'CIRCUIT BREAKER TRIPPED' : "Dead Man's Switch"}
             />
           </div>
         </div>
+
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

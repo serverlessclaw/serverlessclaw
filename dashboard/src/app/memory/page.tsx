@@ -1,7 +1,7 @@
-import { Resource } from 'sst';
+import { getResourceName } from '@/lib/sst-utils';
 export const dynamic = 'force-dynamic';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, DeleteCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, DeleteCommand, ScanCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { 
   Database, 
   Brain,
@@ -18,6 +18,7 @@ import MemoryTabs from './MemoryTabs';
 import MemorySearch from './MemorySearch';
 import MemoryPagination from './MemoryPagination';
 import MemoryTable from './MemoryTable';
+import { headers } from 'next/headers';
 
 interface MemoryMetadata {
   priority?: number;
@@ -34,6 +35,33 @@ interface MemoryItem {
   content: string;
   metadata?: MemoryMetadata;
   type?: string;
+}
+
+function decodePaginationToken(token: string): Record<string, unknown> | undefined {
+  try {
+    return JSON.parse(Buffer.from(token, 'base64').toString());
+  } catch {
+    return undefined;
+  }
+}
+
+function encodePaginationToken(key: Record<string, unknown> | undefined): string | undefined {
+  if (!key) return undefined;
+  return Buffer.from(JSON.stringify(key)).toString('base64');
+}
+
+function coerceToMemoryItem(item: unknown): MemoryItem | null {
+  if (!item || typeof item !== 'object') return null;
+  const obj = item as Record<string, unknown>;
+  if (!obj.userId || !obj.timestamp) return null;
+  return {
+    userId: String(obj.userId),
+    timestamp: Number(obj.timestamp),
+    createdAt: Number(obj.createdAt ?? 0),
+    content: String(obj.content ?? ''),
+    metadata: obj.metadata as MemoryMetadata | undefined,
+    type: obj.type as string | undefined,
+  };
 }
 
 async function getMemoryData(activeTab: string, query: string, nextToken?: string, subType?: string) {
@@ -56,7 +84,7 @@ async function getMemoryData(activeTab: string, query: string, nextToken?: strin
         const client = new DynamoDBClient({});
         const docClient = DynamoDBDocumentClient.from(client);
         const { Items } = await docClient.send(new ScanCommand({
-            TableName: (Resource as { MemoryTable: { name: string } }).MemoryTable.name,
+            TableName: getResourceName('MemoryTable') ?? '',
             ProjectionExpression: "#tp",
             ExpressionAttributeNames: { "#tp": "type" },
             Limit: 100
@@ -70,24 +98,16 @@ async function getMemoryData(activeTab: string, query: string, nextToken?: strin
   }
 
   const dynamicTypes = registeredTypes.filter(type => !knownTypes.has(type)).sort();
-  console.log('[MemoryVault] Discovered types:', registeredTypes, 'Filtered dynamic types:', dynamicTypes);
 
-  let parsedNext: Record<string, unknown> | undefined = undefined;
-  if (nextToken) {
-    try {
-        parsedNext = JSON.parse(Buffer.from(nextToken, 'base64').toString());
-    } catch (err) {
-        console.error('[MemoryVault] Failed to parse nextToken:', err);
-    }
-  }
+  const parsedNext = decodePaginationToken(nextToken ?? '');
 
   // Handle Search Tab
   if (query) {
      try {
          const result = await memory.searchInsights(undefined, query, undefined, 20, parsedNext);
          return {
-             items: (result.items || []) as unknown as MemoryItem[],
-             nextToken: result.lastEvaluatedKey ? Buffer.from(JSON.stringify(result.lastEvaluatedKey)).toString('base64') : undefined,
+             items: (result.items || []).map(coerceToMemoryItem).filter(Boolean) as MemoryItem[],
+             nextToken: encodePaginationToken(result.lastEvaluatedKey),
              counts: {
                 facts: 0, lessons: 0, gaps: 0, dynamic: 0
              },
@@ -117,30 +137,41 @@ async function getMemoryData(activeTab: string, query: string, nextToken?: strin
   try {
       if (activeTab === 'facts') {
           const res = await memory.getMemoryByTypePaginated('DISTILLED', 20, parsedNext);
-          items = (res.items || []) as unknown as MemoryItem[];
+          items = (res.items || []).map(coerceToMemoryItem).filter(Boolean) as MemoryItem[];
           next = res.lastEvaluatedKey;
       } else if (activeTab === 'lessons') {
+          // Fetch from all three lesson sources sequentially to build a proper merged cursor
           const [resNew, resLegacy, resStandard] = await Promise.all([
-            memory.getMemoryByTypePaginated('LESSON', 20, parsedNext).catch(() => ({ items: [] })),
-            memory.getMemoryByTypePaginated('lesson', 20, parsedNext).catch(() => ({ items: [] })),
-            memory.getMemoryByTypePaginated('MEMORY:TACTICAL_LESSON', 20, parsedNext).catch(() => ({ items: [] }))
+            memory.getMemoryByTypePaginated('LESSON', 20, parsedNext).catch(() => ({ items: [], lastEvaluatedKey: undefined })),
+            memory.getMemoryByTypePaginated('lesson', 20, parsedNext).catch(() => ({ items: [], lastEvaluatedKey: undefined })),
+            memory.getMemoryByTypePaginated('MEMORY:TACTICAL_LESSSON', 20, parsedNext).catch(() => ({ items: [], lastEvaluatedKey: undefined }))
           ]);
-          items = [...(resNew.items || []), ...(resLegacy.items || []), ...(resStandard.items || [])]
-            .map(i => i as unknown as MemoryItem)
-            .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-            .slice(0, 20);
-          next = ('lastEvaluatedKey' in resNew ? resNew.lastEvaluatedKey : undefined)
-            || ('lastEvaluatedKey' in resLegacy ? resLegacy.lastEvaluatedKey : undefined)
-            || ('lastEvaluatedKey' in resStandard ? resStandard.lastEvaluatedKey : undefined);
+          const allItems = [
+            ...(resNew.items || []).map(coerceToMemoryItem).filter(Boolean),
+            ...(resLegacy.items || []).map(coerceToMemoryItem).filter(Boolean),
+            ...(resStandard.items || []).map(coerceToMemoryItem).filter(Boolean),
+          ]
+            .filter((item): item is MemoryItem => item !== null)
+            .sort((a, b) => b.timestamp - a.timestamp);
+          items = allItems.slice(0, 20);
+          // Use the last item's key as the cursor for the merged result
+          if (allItems.length > 20) {
+            const lastItem = allItems[19];
+            next = { userId: lastItem.userId, timestamp: lastItem.timestamp };
+          } else {
+            next = (resNew as { lastEvaluatedKey?: Record<string, unknown> }).lastEvaluatedKey
+              || (resLegacy as { lastEvaluatedKey?: Record<string, unknown> }).lastEvaluatedKey
+              || (resStandard as { lastEvaluatedKey?: Record<string, unknown> }).lastEvaluatedKey;
+          }
       } else if (activeTab === 'gaps') {
           const res = await memory.getMemoryByTypePaginated('GAP', 20, parsedNext);
-          items = (res.items || []) as unknown as MemoryItem[];
+          items = (res.items || []).map(coerceToMemoryItem).filter(Boolean) as MemoryItem[];
           next = res.lastEvaluatedKey;
       } else if (activeTab === 'dynamic') {
           const typeToFetch = subType || dynamicTypes[0];
           if (typeToFetch) {
             const res = await memory.getMemoryByTypePaginated(typeToFetch, 20, parsedNext);
-            items = (res.items || []) as unknown as MemoryItem[];
+            items = (res.items || []).map(coerceToMemoryItem).filter(Boolean) as MemoryItem[];
             next = res.lastEvaluatedKey;
           }
       }
@@ -156,7 +187,7 @@ async function getMemoryData(activeTab: string, query: string, nextToken?: strin
 
   return {
     items,
-    nextToken: next ? Buffer.from(JSON.stringify(next)).toString('base64') : undefined,
+    nextToken: encodePaginationToken(next),
     dynamicTypes,
     counts: {
         facts: formatCount(countResults[0]),
@@ -169,15 +200,94 @@ async function getMemoryData(activeTab: string, query: string, nextToken?: strin
 
 async function pruneMemory(formData: FormData) {
   'use server';
+  const headersList = await headers();
+  const host = headersList.get('host');
+  if (!host || !host.startsWith('localhost')) {
+    throw new Error('Unauthorized: memory operations require local access');
+  }
+
   const userId = formData.get('userId') as string;
   const timestamp = parseInt(formData.get('timestamp') as string);
+
+  if (!userId || isNaN(timestamp)) {
+    throw new Error('Invalid memory key');
+  }
 
   const client = new DynamoDBClient({});
   const docClient = DynamoDBDocumentClient.from(client);
 
   await docClient.send(new DeleteCommand({
-    TableName: (Resource as { MemoryTable: { name: string } }).MemoryTable.name,
+    TableName: getResourceName('MemoryTable') ?? '',
     Key: { userId, timestamp }
+  }));
+
+  revalidatePath('/memory');
+}
+
+async function bulkPruneMemory(keys: Array<{ userId: string, timestamp: number }>) {
+  'use server';
+  const headersList = await headers();
+  const host = headersList.get('host');
+  if (!host || !host.startsWith('localhost')) {
+    throw new Error('Unauthorized: memory operations require local access');
+  }
+
+  const client = new DynamoDBClient({});
+  const docClient = DynamoDBDocumentClient.from(client);
+  const tableName = getResourceName('MemoryTable');
+
+  if (!tableName) throw new Error('MemoryTable not found');
+
+  await Promise.all(keys.map(key => 
+    docClient.send(new DeleteCommand({
+      TableName: tableName,
+      Key: { userId: key.userId, timestamp: key.timestamp }
+    }))
+  ));
+
+  revalidatePath('/memory');
+}
+
+async function updateMemoryContent(formData: FormData) {
+  'use server';
+  const headersList = await headers();
+  const host = headersList.get('host');
+  if (!host || !host.startsWith('localhost')) {
+    throw new Error('Unauthorized: memory operations require local access');
+  }
+
+  const userId = formData.get('userId') as string;
+  const timestamp = parseInt(formData.get('timestamp') as string);
+  const content = formData.get('content') as string;
+  const isJson = formData.get('isJson') === 'true';
+
+  if (!userId || isNaN(timestamp)) {
+    throw new Error('Invalid memory key');
+  }
+
+  if (content.length > 100_000) {
+    throw new Error('Content exceeds maximum length of 100,000 characters');
+  }
+
+  if (isJson) {
+    try {
+      JSON.parse(content);
+    } catch (e) {
+      console.error('Invalid JSON content for memory update:', e);
+      throw new Error('Content must be valid JSON');
+    }
+  }
+
+  const client = new DynamoDBClient({});
+  const docClient = DynamoDBDocumentClient.from(client);
+
+  await docClient.send(new UpdateCommand({
+    TableName: getResourceName('MemoryTable') ?? '',
+    Key: { userId, timestamp },
+    UpdateExpression: 'SET content = :c',
+    ExpressionAttributeValues: {
+      ':c': content,
+    },
   }));
 
   revalidatePath('/memory');
@@ -258,7 +368,12 @@ export default async function MemoryVault({
             {query && <Typography variant="body" color="muted" className="mt-2">Try adjusting your search query or filters.</Typography>}
           </Card>
         ) : (
-          <MemoryTable items={items} pruneAction={pruneMemory} />
+          <MemoryTable 
+            items={items} 
+            pruneAction={pruneMemory} 
+            updateAction={updateMemoryContent} 
+            bulkPruneAction={bulkPruneMemory}
+          />
         )}
 
         <MemoryPagination nextToken={next} />

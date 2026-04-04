@@ -1,6 +1,6 @@
 import React, { memo, useMemo, useState } from 'react';
 import Image from 'next/image';
-import { User, Bot, Terminal, File, Loader2, MessageCircle, Copy, Check, Wrench, ChevronDown, ChevronRight } from 'lucide-react';
+import { User, Bot, Terminal, File, Loader2, MessageCircle, Copy, Check, Wrench, ChevronDown, ChevronRight, Search, X as CloseIcon } from 'lucide-react';
 import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -271,48 +271,89 @@ interface ChatMessageListProps {
 }
 
 export function ChatMessageList({ messages, isLoading, scrollRef, onOptionClick, showThinking }: ChatMessageListProps) {
-  return (
-    <div 
-      ref={scrollRef}
-      className="flex-1 overflow-y-auto p-4 space-y-3 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/[0.02] via-transparent to-transparent custom-scrollbar"
-    >
-      {messages.length === 0 && !isLoading && (
-          <div className="h-full flex flex-col items-center justify-center text-white/80">
-              <Terminal size={48} className="mb-4 opacity-10" />
-              <Typography variant="h3" weight="normal" color="white" className="opacity-80">
-                System Ready // Waiting for Input Command/File
-              </Typography>
-              <Typography variant="mono" color="muted" className="mt-2 block">
-                Initialise interaction by sending a message
-              </Typography>
-          </div>
-      )}
+  const [msgSearchQuery, setMsgSearchQuery] = useState('');
+  
+  const filteredMessages = useMemo(() => {
+    if (!msgSearchQuery.trim()) return messages;
+    const lowerQuery = msgSearchQuery.toLowerCase();
+    return messages.filter(m => 
+      m.content?.toLowerCase().includes(lowerQuery) || 
+      m.thought?.toLowerCase().includes(lowerQuery) ||
+      m.agentName?.toLowerCase().includes(lowerQuery)
+    );
+  }, [messages, msgSearchQuery]);
 
-      {messages.map((m, i) => (
-        <ChatMessageRow 
-          key={m.messageId ? `${m.role}-${m.messageId}` : `local-${i}`} 
-          message={m} 
-          index={i} 
-          onOptionClick={onOptionClick}
-          showThinking={showThinking}
-          isLast={i === messages.length - 1}
-          isLoading={isLoading}
-        />
-      ))}
-      
-      {isLoading && (
-        <div className="flex gap-3 justify-start">
-          <div className="w-8 h-8 rounded shrink-0 flex items-center justify-center border bg-cyber-green/10 border-cyber-green/30 text-cyber-green animate-pulse">
-              <Bot size={16} />
-          </div>
-          <Card variant="glass" padding="sm" className="flex items-center gap-2">
-            <Loader2 size={14} className="animate-spin text-cyber-green" />
-            <Typography variant="caption" weight="bold" color="primary" className="animate-pulse">
-              Processing...
-            </Typography>
-          </Card>
+  return (
+    <div className="flex-1 flex flex-col min-h-0 bg-transparent relative">
+      {/* Local Message Search Overlay */}
+      <div className="absolute top-0 left-0 right-0 z-10 px-6 py-2 border-b border-white/5 bg-black/40 backdrop-blur-md flex items-center gap-3">
+        <div className="relative flex-1 group/msgsearch">
+          <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20 group-focus-within/msgsearch:text-cyber-green transition-colors" />
+          <input
+            type="text"
+            placeholder="Search messages..."
+            value={msgSearchQuery}
+            onChange={(e) => setMsgSearchQuery(e.target.value)}
+            className="w-full bg-white/[0.03] border border-white/5 focus:border-cyber-green/40 rounded py-1 pl-8 pr-4 text-[10px] text-white outline-none transition-all placeholder:text-white/10"
+          />
+          {msgSearchQuery && (
+            <button 
+              onClick={() => setMsgSearchQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-white/20 hover:text-white/60 transition-colors"
+            >
+              <CloseIcon size={10} />
+            </button>
+          )}
         </div>
-      )}
+        {msgSearchQuery && (
+          <Typography variant="mono" className="text-[9px] text-cyber-green/60 uppercase whitespace-nowrap">
+            {filteredMessages.length} Matches
+          </Typography>
+        )}
+      </div>
+
+      <div 
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto p-4 pt-12 space-y-3 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/[0.02] via-transparent to-transparent custom-scrollbar"
+      >
+        {filteredMessages.length === 0 && !isLoading && (
+            <div className="h-full flex flex-col items-center justify-center text-white/80">
+                <Terminal size={48} className="mb-4 opacity-10" />
+                <Typography variant="h3" weight="normal" color="white" className="opacity-80">
+                  {msgSearchQuery ? 'No matching signals found' : 'System Ready // Waiting for Input Command/File'}
+                </Typography>
+                <Typography variant="mono" color="muted" className="mt-2 block">
+                  {msgSearchQuery ? 'Try a different search query' : 'Initialise interaction by sending a message'}
+                </Typography>
+            </div>
+        )}
+
+        {filteredMessages.map((m, i) => (
+          <ChatMessageRow 
+            key={m.messageId ? `${m.role}-${m.messageId}` : `local-${i}`} 
+            message={m} 
+            index={i} 
+            onOptionClick={onOptionClick}
+            showThinking={showThinking}
+            isLast={i === messages.length - 1}
+            isLoading={isLoading}
+          />
+        ))}
+        
+        {isLoading && !msgSearchQuery && (
+          <div className="flex gap-3 justify-start">
+            <div className="w-8 h-8 rounded shrink-0 flex items-center justify-center border bg-cyber-green/10 border-cyber-green/30 text-cyber-green animate-pulse">
+                <Bot size={16} />
+            </div>
+            <Card variant="glass" padding="sm" className="flex items-center gap-2">
+              <Loader2 size={14} className="animate-spin text-cyber-green" />
+              <Typography variant="caption" weight="bold" color="primary" className="animate-pulse">
+                Processing...
+              </Typography>
+            </Card>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

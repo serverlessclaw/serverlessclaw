@@ -17,6 +17,7 @@ interface ChatInputProps {
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   isShaking?: boolean;
+  chatInputRef?: React.RefObject<HTMLTextAreaElement | null>;
 }
 
 export function ChatInput({
@@ -28,10 +29,12 @@ export function ChatInput({
   onRemoveAttachment,
   fileInputRef,
   onFileSelect,
-  isShaking = false
+  isShaking = false,
+  chatInputRef
 }: ChatInputProps) {
   const [localShake, setLocalShake] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const internalRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = (chatInputRef as React.RefObject<HTMLTextAreaElement>) || internalRef;
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +56,7 @@ export function ChatInput({
     if (isShaking) {
       textareaRef.current?.focus();
     }
-  }, [isShaking]);
+  }, [isShaking, textareaRef]);
 
   return (
     <div className="p-4 border-t border-white/5 bg-black/40 shrink-0">
@@ -108,7 +111,7 @@ export function ChatInput({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey || !e.shiftKey)) {
                   e.preventDefault();
                   handleSend(e);
                 }

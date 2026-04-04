@@ -5,6 +5,7 @@ import { Loader2, Brain } from 'lucide-react';
 import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
 import CognitiveHealthCard from '@/components/CognitiveHealthCard';
+import HealthTrendChart from '@/components/HealthTrendChart';
 import { Anomaly } from '@/lib/types/dashboard';
 
 interface AgentHealth {
@@ -57,6 +58,12 @@ export default function CognitiveHealthPage() {
           </Card>
         </div>
       </header>
+
+      {!loading && agents.length > 0 && (
+        <div className="max-w-4xl">
+          <HealthTrendChart currentScore={avgScore} />
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center h-64">

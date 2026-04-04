@@ -67,11 +67,20 @@ describe('/api/cognitive-health', () => {
     });
   });
 
-  it('should apply default values for missing fields', async () => {
+  it('should filter out items without required score field', async () => {
     const mockItems = [
       {
         userId: 'HEALTH#agent1',
-        // Missing all optional fields
+        // Missing score field -- should be filtered out
+      },
+      {
+        userId: 'HEALTH#agent2',
+        score: 70,
+        taskCompletionRate: 0.8,
+        reasoningCoherence: 7.0,
+        errorRate: 0.1,
+        memoryFragmentation: 0.2,
+        anomalies: [],
       },
     ];
 
@@ -83,18 +92,11 @@ describe('/api/cognitive-health', () => {
 
     expect(response.status).toBe(200);
     expect(data.agents).toHaveLength(1);
-    expect(data.agents[0]).toEqual({
-      agentId: 'agent1',
-      score: 85,
-      taskCompletionRate: 0.9,
-      reasoningCoherence: 8.0,
-      errorRate: 0.05,
-      memoryFragmentation: 0.2,
-      anomalies: [],
-    });
+    expect(data.agents[0].agentId).toBe('agent2');
+    expect(data.agents[0].score).toBe(70);
   });
 
-  it('should return empty array when no health data exists', async () => {
+  it('should return message when no health data exists', async () => {
     mockListByPrefix.mockResolvedValue([]);
 
     const { GET } = await import('./route');
@@ -103,17 +105,19 @@ describe('/api/cognitive-health', () => {
 
     expect(response.status).toBe(200);
     expect(data.agents).toEqual([]);
+    expect(data.message).toBe('No health data recorded');
   });
 
-  it('should return empty array on error', async () => {
+  it('should return 500 on error', async () => {
     mockListByPrefix.mockRejectedValue(new Error('DynamoDB error'));
 
     const { GET } = await import('./route');
     const response = await GET();
     const data = await response.json();
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(500);
     expect(data.agents).toEqual([]);
+    expect(data.error).toBe('Failed to fetch health data');
   });
 
   it('should strip HEALTH# prefix from agentId', async () => {

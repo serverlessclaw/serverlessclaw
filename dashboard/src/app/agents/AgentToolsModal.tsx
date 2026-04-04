@@ -91,7 +91,7 @@ export default function AgentToolsModal({
                       variant="ghost"
                       size="sm"
                       onClick={() => handleToggleTool(selectedAgentIdForTools, toolName)}
-                      disabled={isUpdatingTools ?? isUniversal}
+                      disabled={isUpdatingTools || isUniversal}
                       className="p-1 hover:bg-red-500/20 text-red-500/60 hover:text-red-500 transition-all h-6 w-6"
                       icon={<Plus size={10} />}
                     />

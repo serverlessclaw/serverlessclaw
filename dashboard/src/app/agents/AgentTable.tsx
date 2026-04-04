@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Eye, Trash2, Shield, ShieldAlert, Bot, Wrench } from 'lucide-react';
+import { Eye, Trash2, Shield, ShieldAlert, Bot, Wrench, Copy } from 'lucide-react';
 import Typography from '@/components/ui/Typography';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
@@ -13,6 +13,7 @@ interface AgentTableProps {
   reputation?: Record<string, { successRate: number; avgLatencyMs: number; tasksCompleted: number; tasksFailed: number }>;
   updateAgent: (id: string, updates: Partial<Agent>) => void;
   deleteAgent: (id: string) => void;
+  cloneAgent: (id: string) => void;
   setSelectedAgentIdForTools: (id: string | null) => void;
   onSave: () => void;
   saving: boolean;
@@ -24,6 +25,7 @@ export default function AgentTable({
   reputation,
   updateAgent,
   deleteAgent,
+  cloneAgent,
   setSelectedAgentIdForTools,
   onSave,
   saving,
@@ -157,6 +159,17 @@ export default function AgentTable({
                           className="text-white/50 hover:text-cyan-400 p-1"
                           icon={<Eye size={14} />}
                           title="View Details"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            cloneAgent(agent.id);
+                          }}
+                          className="text-white/50 hover:text-blue-400 p-1"
+                          icon={<Copy size={14} />}
+                          title="Clone Agent"
                         />
                         {!agent.isBackbone && (
                           <Button

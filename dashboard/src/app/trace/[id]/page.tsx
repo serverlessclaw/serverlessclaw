@@ -138,7 +138,7 @@ export default async function TraceDetailPage({
           
           <div className="text-right space-y-1">
             <Typography variant="mono" color="white" className="flex items-center justify-end gap-2 text-[10px]">
-              <Clock size={12} /> {new Date(rootNode.timestamp as number).toLocaleString()}
+              <Clock size={12} /> {rootNode.timestamp ? new Date(rootNode.timestamp).toLocaleString() : 'Unknown'}
             </Typography>
             <div className="flex items-center justify-end gap-2">
               <Typography variant="mono" color="white" className="text-[10px] block">
@@ -162,10 +162,10 @@ export default async function TraceDetailPage({
           <PathVisualizer trace={{ ...rootNode, nodes } as Trace} />
         </section>
 
-        {nodes.sort((a, b) => (a.timestamp as number) - (b.timestamp as number)).map((node) => (
+        {[...nodes].sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0)).map((node) => (
           <section key={node.nodeId} className="space-y-6">
             <Typography variant="caption" weight="black" className="tracking-[0.2em] flex items-center gap-2 mb-4">
-              <Activity size={14} className={`text-${THEME.COLORS.PRIMARY}`} /> Step::{node.nodeId} {node.parentId ? `(Parent: ${node.parentId.slice(0,8)})` : '(Root)'}
+              <Activity size={14} className="text-cyber-green" /> Step::{node.nodeId} {node.parentId ? `(Parent: ${node.parentId.slice(0,8)})` : '(Root)'}
             </Typography>
 
             <div className="space-y-4">
@@ -216,12 +216,12 @@ export default async function TraceDetailPage({
                       </div>
                     ) : null}
 
-                    {step.type === 'llm_response' ? (
+                    {step.type === TRACE_TYPES.LLM_RESPONSE ? (
                       <div className="mb-4 p-4 bg-cyber-green/[0.03] border border-cyber-green/10 rounded">
                         <div className="text-[10px] text-cyber-green/60 uppercase font-bold mb-2 tracking-widest flex items-center gap-2">
                            <Bot size={12} /> Generated_Response
                         </div>
-                        <span className="text-white/40">{step.timestamp}</span>
+                        <span className="text-white/40">{step.timestamp ? new Date(step.timestamp).toLocaleTimeString() : ''}</span>
                         <div className="text-xs text-white/90 leading-relaxed whitespace-pre-wrap font-mono">
                           {(() => {
                             const content = step.content.content;

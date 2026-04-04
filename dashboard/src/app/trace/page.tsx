@@ -7,31 +7,43 @@ import { TraceSource } from '@claw/core/lib/types/index';
 import Typography from '@/components/ui/Typography';
 import Badge from '@/components/ui/Badge';
 import TraceIntelligenceView from '@/components/TraceIntelligenceView';
+import ExportTracesButton from '@/components/ExportTracesButton';
 
 export const dynamic = 'force-dynamic';
 
-async function getTraces() {
+function decodePaginationToken(token: string): Record<string, unknown> | undefined {
+  try {
+    return JSON.parse(Buffer.from(token, 'base64').toString());
+  } catch {
+    return undefined;
+  }
+}
+
+function encodePaginationToken(key: Record<string, unknown> | undefined): string | undefined {
+  if (!key) return undefined;
+  return Buffer.from(JSON.stringify(key)).toString('base64');
+}
+
+async function getTraces(nextToken?: string) {
   try {
     const tableName = getResourceName('TraceTable');
     if (!tableName) {
       console.warn('TraceTable name is missing from Resources and Environment');
-      return [];
+      return { items: [], nextToken: undefined };
     }
     const client = new DynamoDBClient({});
     const docClient = DynamoDBDocumentClient.from(client);
     
-    // 1. Fetch generic dashboard-user traces via GSI (Fast & Precise)
-    // 2026 update: we scan for everything to ensure interleaved sorting for all user types
     const generalScan = docClient.send(
       new ScanCommand({
         TableName: tableName,
-        Limit: 1000,
+        Limit: 100,
+        ExclusiveStartKey: decodePaginationToken(nextToken ?? ''),
       })
     );
 
     const scanRes = await generalScan;
     
-    // Merge and deduplicate by traceId
     const merged = [...(scanRes.Items ?? [])];
     const uniqueMap = new Map();
     merged.forEach(item => uniqueMap.set(item.traceId, item));
@@ -42,12 +54,13 @@ async function getTraces() {
       return (Number.isFinite(bTs) ? bTs : 0) - (Number.isFinite(aTs) ? aTs : 0);
     });
     
-    // Filter out internal reflector/system tasks to keep the view clean for the user
-    // but keep dashboard/telegram traces
-    return allItems.filter(item => item.source !== TraceSource.SYSTEM);
+    const filtered = allItems.filter(item => item.source !== TraceSource.SYSTEM);
+    const encodedNext = encodePaginationToken(scanRes.LastEvaluatedKey);
+    
+    return { items: filtered, nextToken: encodedNext };
   } catch (e) {
     console.error('Error fetching traces:', e);
-    return [];
+    return { items: [], nextToken: undefined };
   }
 }
 
@@ -110,14 +123,17 @@ async function getSessionTitles() {
 export default async function AnalyticsTab({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; nextToken?: string }>;
 }) {
-  const [traces, config, sessionTitles, params] = await Promise.all([
-    getTraces(), 
+  const params = await searchParams;
+  const [tracesResult, config, sessionTitles] = await Promise.all([
+    getTraces(params.nextToken), 
     getConfig(), 
     getSessionTitles(),
-    searchParams,
   ]);
+
+  const traces = tracesResult.items;
+  const nextToken = tracesResult.nextToken;
 
   const validTabs = ['live', 'timeline', 'sessions', 'models', 'tools', 'agents'] as const;
   const initialTab = validTabs.includes(params.tab as typeof validTabs[number])
@@ -137,6 +153,7 @@ export default async function AnalyticsTab({
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:flex gap-3 lg:gap-4">
             <DeleteAllTracesButton />
+            <ExportTracesButton traces={traces} />
             <div className="flex flex-col items-center">
                 <Typography variant="mono" color="muted" className="text-[10px] uppercase tracking-widest opacity-40 mb-1">PROVIDER</Typography>
                 <Badge variant="outline" className="px-4 py-1 font-bold text-xs border-cyber-blue/20 text-cyber-blue/60 uppercase">{config.provider}</Badge>
@@ -153,7 +170,12 @@ export default async function AnalyticsTab({
         </header>
 
         {/* Traces Observatory */}
-        <TraceIntelligenceView initialTraces={traces} sessionTitles={sessionTitles} initialTab={initialTab} />
+        <TraceIntelligenceView 
+          initialTraces={traces} 
+          sessionTitles={sessionTitles} 
+          initialTab={initialTab} 
+          nextToken={nextToken} 
+        />
       </main>
   );
 }
