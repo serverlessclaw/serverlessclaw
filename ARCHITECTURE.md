@@ -77,15 +77,14 @@ The [Health Handler](file:///Users/pengcao/projects/serverlessclaw/core/handlers
 
 ### 5. Cost Impact
 
-| Scenario | Old (Scheduler) | New (Smart) |
-|----------|-----------------|-------------|
-| Idle (no users) | ~50 Lambda invocations/hour | 0 invocations |
-| Active session | 50 + 5 agents/hour | ~5 agents/hour (only on cold) |
+| Scenario        | Old (Scheduler)             | New (Smart)                   |
+| --------------- | --------------------------- | ----------------------------- |
+| Idle (no users) | ~50 Lambda invocations/hour | 0 invocations                 |
+| Active session  | 50 + 5 agents/hour          | ~5 agents/hour (only on cold) |
 
 **Estimated savings**: 60-80% reduction in warmup Lambda invocations
 
 ---
-
 
 ## High-Level System Diagram
 
@@ -257,6 +256,7 @@ To protect against misconfigured or tampered runtime routing, the `EventHandler`
                      v
                [Dynamic Handler Import]
 ```
+
 - **Discovery**: The `AgentRegistry` and `topology.ts` utility perform post-deployment discovery, merging backbone logic with user-defined personas.
 - **Visualization**: The **System Pulse** map in ClawCenter renders a unified, resilient graph of these interactions, covering the full stack from API Gateway to individual agent tools.
 

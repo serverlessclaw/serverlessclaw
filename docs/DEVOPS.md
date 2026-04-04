@@ -35,6 +35,7 @@ The main `Makefile` at the root is the "Hub". It includes specialized "Spoke" fi
 | `make test-affected`  | Test     | Run only tests affected by recent changes (smart selection) |
 | `make security-scan`  | Test     | Scan dependencies for security vulnerabilities              |
 | `make docs-check`     | Test     | Validate documentation is in sync with code                 |
+| `make manifest`       | CI       | Generate a failure manifest from CI logs                    |
 
 Note: SST-related Make targets invoke the workspace-local SST binary (`./node_modules/.bin/sst`) directly. Run `pnpm install` first so this binary is available.
 
@@ -43,6 +44,84 @@ Note: SST-related Make targets invoke the workspace-local SST binary (`./node_mo
 - Local development must use stage `local`: `make dev` (defaults to `LOCAL_STAGE=local`).
 - Deployment uses a single environment (default: `prod`): `make deploy` or `make release`.
 - Do not run `sst dev` against the deployment stage.
+
+---
+
+## Principles-to-Operations Checklist
+
+Use this checklist to enforce [Principles](./PRINCIPLES.md) as measurable operations instead of intent-only guidance.
+
+| Principle Area                           | Operational Gate                                                 | Command(s)                                                         | Cadence                                               | Evidence                                      |
+| ---------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------- | --------------------------------------------- |
+| Safety-First + Governance Boundaries     | Protected changes require explicit human approval before release | `make release` (only after approval recorded in PR/change request) | Per high-risk change                                  | Approval record + release logs                |
+| Mandatory Quality Sweeps                 | Lint, format, type-check, and tests must pass                    | `make gate` or `make check && make test`                           | Every push/merge                                      | CI job status + test output                   |
+| AI-Native + AI-Readiness                 | Enforce agent-friendliness score threshold                       | `make aiready`                                                     | Every push/merge                                      | AIReady scan output                           |
+| Reliability and Regression Control       | Coverage floor and trend regression detection                    | `make test-coverage-ci` and `make test-coverage-trend`             | On merge + weekly trend check                         | Coverage summary + `coverage-trend-report.md` |
+| Security and Supply-Chain Trust          | Dependency vulnerability scanning at defined severity threshold  | `make security-scan` (optionally `SEVERITY=critical`)              | At least weekly and before release                    | `security-audit-report.md`                    |
+| Documentation and Auditability           | Documentation must stay aligned with system behavior changes     | `make docs-check`                                                  | Every PR touching architecture/agents/tools/makefiles | `docs-validation-report.md`                   |
+| Deployment Health and Recovery Readiness | Post-deploy health verification must pass                        | `make verify URL=<env-health-endpoint>`                            | Every deployment/release                              | Health check logs                             |
+| Proactive and Efficient Stage Hygiene    | Local-only dev stage and controlled deploy stage usage           | `make dev` for local, `make deploy`/`make release` for shared env  | Always                                                | Command history + pipeline logs               |
+
+### Release-Minimum Checklist
+
+Before any production release, all items below must be true:
+
+1. `make gate` passes.
+2. `make test` passes.
+3. `make aiready` passes with threshold **80+**.
+4. `make security-scan` passes at your chosen severity policy.
+5. `make docs-check` reports no blocking drift.
+6. `make verify URL=...` passes after deployment.
+7. Human approval is recorded for any Governance Class C change from [PRINCIPLES.md](./PRINCIPLES.md).
+
+CodeBuild enforcement: the release pipeline in [buildspec.yml](../buildspec.yml) runs these checks as **blocking gates** (not warnings) for non-`SYNC_ONLY` deployments.
+
+---
+
+## Autonomous Remediation & Failure Manifests
+
+To support self-evolution and agentic improvement, the pipeline generates a machine-readable **Failure Manifest** when a quality gate or deployment fails.
+
+### The Failure Manifest (`failure-manifest.json`)
+
+When a build fails in CodeBuild, a `failure-manifest.json` is generated and uploaded as a build artifact. This manifest transforms unstructured log data into high-signal context for the **Coder Agent**.
+
+**Schema:**
+
+```json
+{
+  "timestamp": "2024-03-28T12:00:00Z",
+  "buildId": "codebuild:12345",
+  "commitHash": "a1b2c3d4",
+  "triggeredBy": {
+    "author": "Agent <agent@serverlessclaw.local>",
+    "message": "feat: autonomous improvement",
+    "changedFiles": ["core/agents/coder.ts"]
+  },
+  "failures": [
+    {
+      "gate": "test",
+      "command": "make test",
+      "exitCode": 1,
+      "logPath": "/tmp/ci-logs/test.log",
+      "summary": "FAIL core/handlers/events.test.ts > should handle failure",
+      "errorType": "test",
+      "affectedPackages": ["@claw/core"],
+      "affectedFiles": ["core/handlers/events.test.ts"],
+      "rawErrors": ["AssertionError: expected false to be true"]
+    }
+  ],
+  "nextStep": "fix_requested"
+}
+```
+
+### The Remediation Loop
+
+1. **Failure Detection**: `BuildMonitor` captures the `FAILED` state from CodeBuild.
+2. **Context Enrichment**: `BuildMonitor` fetches `failure-manifest.json` from S3 and attaches it to the `SYSTEM_BUILD_FAILED` event.
+3. **Agent Dispatch**: `SuperClaw` receives the event and dispatches the **Coder Agent** with the manifest as metadata.
+4. **High-Signal Fix**: The Coder Agent uses the `failures` array to pinpoint the exact file and error, bypassing the need to parse raw CloudWatch logs. If the agent needs to read full log files or other artifacts, it uses the `aws-s3_read_file` tool (MCP).
+5. **Pre-Flight Validation**: The Agent MUST run `make fix` and `make check` locally before calling `triggerDeployment` again.
 
 ---
 
@@ -225,12 +304,12 @@ make release
 
 The CI pipeline enforces code coverage thresholds to prevent regressions:
 
-| Metric      | Threshold | Description                    |
-|-------------|-----------|--------------------------------|
-| Lines       | 70%       | Statement coverage             |
-| Functions   | 70%       | Function/method coverage       |
-| Branches    | 70%       | Conditional branch coverage    |
-| Statements  | 70%       | Overall statement coverage     |
+| Metric     | Threshold | Description                 |
+| ---------- | --------- | --------------------------- |
+| Lines      | 70%       | Statement coverage          |
+| Functions  | 70%       | Function/method coverage    |
+| Branches   | 70%       | Conditional branch coverage |
+| Statements | 70%       | Overall statement coverage  |
 
 **CI Commands:**
 
@@ -248,6 +327,7 @@ make test-coverage-trend UPDATE_BASELINE=true
 **Coverage Trend Tracking:**
 
 The `make test-coverage-trend` command:
+
 - Tracks coverage over time (last 100 entries)
 - Detects coverage regressions (default: 5% drop threshold)
 - Generates a markdown report (`coverage-trend-report.md`)

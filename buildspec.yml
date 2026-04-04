@@ -5,6 +5,7 @@ phases:
     runtime-versions:
       nodejs: 24
     commands:
+      - mkdir -p /tmp/ci-logs
       - npm install -g pnpm
       - echo "Installing dependencies and Playwright in parallel..."
       - (pnpm install) &
@@ -47,14 +48,17 @@ phases:
       - |
         if [ "$SYNC_ONLY" != "true" ]; then
           echo "Starting autonomous deployment and quality gate (Tier 1) in parallel..."
-          make gate-deploy &
+          make gate-deploy > /tmp/ci-logs/gate-deploy.log 2>&1 &
           GATE_PID=$!
-          make deploy ENV=$SST_STAGE
+          make deploy ENV=$SST_STAGE > /tmp/ci-logs/deploy.log 2>&1
           DEPLOY_EXIT=$?
           wait $GATE_PID
           GATE_EXIT=$?
           if [ $DEPLOY_EXIT -ne 0 ] || [ $GATE_EXIT -ne 0 ]; then
             echo "Build failed: Deploy Exit=$DEPLOY_EXIT, Gate Exit=$GATE_EXIT"
+            # Move logs to current dir for artifact collection before exiting
+            cp /tmp/ci-logs/*.log . || true
+            npx tsx scripts/ci/generate-manifest.ts /tmp/ci-logs .
             exit 1
           fi
         fi
@@ -72,24 +76,38 @@ phases:
           API_URL=$(python3 -c "import json; print(json.load(open('.sst/outputs.json'))['apiUrl'])")
 
           echo "Running Tier 3 verification (Health + E2E) in parallel..."
-          make test-tier-3 URL=$API_URL
+          make test-tier-3 URL=$API_URL > /tmp/ci-logs/test-tier-3.log 2>&1
         fi
       - |
         if [ "$CODEBUILD_BUILD_SUCCEEDING" = "1" ] && [ "$SYNC_ONLY" != "true" ]; then
-          echo "Running post-deploy analysis (non-blocking)..."
-          make security-scan || echo "WARNING: Security scan reported issues (non-blocking)"
-          make docs-check || echo "WARNING: Docs check reported issues (non-blocking)"
-        fi
-      - |
-        if [ "$CODEBUILD_BUILD_SUCCEEDING" = "1" ] && [ "$SYNC_ONLY" != "true" ]; then
-          echo "Running coverage enforcement..."
-          make test-coverage-ci || {
-            echo "ERROR: Coverage thresholds not met. See coverage report above."
+          echo "Running release-minimum blocking checks (tests + security + docs)..."
+          make test > /tmp/ci-logs/test.log 2>&1 || {
+            echo "ERROR: Unit test suite failed."
+            npx tsx scripts/ci/generate-manifest.ts /tmp/ci-logs .
+            exit 1
+          }
+          make security-scan > /tmp/ci-logs/security.log 2>&1 || {
+            echo "ERROR: Security scan reported blocking vulnerabilities."
+            npx tsx scripts/ci/generate-manifest.ts /tmp/ci-logs .
+            exit 1
+          }
+          make docs-check > /tmp/ci-logs/docs-check.log 2>&1 || {
+            echo "ERROR: Documentation drift detected."
+            npx tsx scripts/ci/generate-manifest.ts /tmp/ci-logs .
             exit 1
           }
         fi
       - |
-        if [ "$CODEBUILD_BUILD_SUCCEEDING" = "1" ] && [ "$SYNC_ONLY" = "true" ] && [ -n "$GITHUB_TOKEN" ]; then
+        if [ "$CODEBUILD_BUILD_SUCCEEDING" = "1" ] && [ "$SYNC_ONLY" != "true" ]; then
+          echo "Running coverage enforcement..."
+          make test-coverage-ci > /tmp/ci-logs/coverage.log 2>&1 || {
+            echo "ERROR: Coverage thresholds not met. See coverage report above."
+            npx tsx scripts/ci/generate-manifest.ts /tmp/ci-logs .
+            exit 1
+          }
+        fi
+      - |
+        if [ "$CODEBUILD_BUILD_SUCCEEDING" = "1" ] && [ -n "$GITHUB_TOKEN" ]; then
           echo "Finalizing trunk sync back to GitHub..."
           git config --global user.email "agent@serverlessclaw.local"
           git config --global user.name "Claw Coder Agent"
@@ -104,3 +122,5 @@ phases:
 artifacts:
   files:
     - '**/*'
+    - 'failure-manifest.json'
+    - '*.log'

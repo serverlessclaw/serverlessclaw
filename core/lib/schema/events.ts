@@ -57,6 +57,7 @@ export const BUILD_EVENT_SCHEMA = BASE_EVENT_SCHEMA.extend({
   task: z.string().optional(),
   errorLogs: z.string().optional(),
   gapIds: z.array(z.string()).optional(),
+  failureManifest: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**

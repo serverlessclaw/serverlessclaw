@@ -32,6 +32,7 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
   const { userId, task, metadata, traceId, sessionId, isContinuation, initiatorId, depth } =
     payload;
   const gapIds = metadata?.gapIds as string[] | undefined;
+  const applyStagedChanges = metadata?.applyStagedChanges as boolean | undefined;
 
   if (!validatePayload({ userId, task: task || '' }, ['userId', 'task'])) {
     return;
@@ -41,7 +42,10 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
 
   // 1. Prepare writable /tmp workspace
   const { createWorkspace, cleanupWorkspace } = await import('../lib/utils/workspace-manager');
-  const workspacePath = await createWorkspace(traceId ?? `unknown-${Date.now()}`);
+  const workspacePath = await createWorkspace(
+    traceId ?? `unknown-${Date.now()}`,
+    applyStagedChanges
+  );
   const originalCwd = process.cwd();
   process.chdir(workspacePath);
   logger.info(`[Coder] Working in workspace: ${workspacePath}`);

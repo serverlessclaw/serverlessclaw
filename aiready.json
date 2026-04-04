@@ -49,11 +49,7 @@
       "minClusterFiles": 3,
       "minClusterTokenCost": 1000,
       "includeTests": true,
-      "exclude": [
-        "**/types/**",
-        "**/__mocks__/**",
-        "**/api/*/route.ts"
-      ]
+      "exclude": ["**/types/**", "**/__mocks__/**", "**/api/*/route.ts"]
     },
     "context-analyzer": {
       "maxContextBudget": 128000,

@@ -21,8 +21,7 @@ We distinguish between **Autonomous Agents** (LLM-powered decision-makers) and *
 | **QA Auditor**          | `core/agents/qa.ts`                  | `AgentRegistry` (Backbone) | Verifies satisfaction of deployed changes                                       |
 | **Critic Agent**        | `core/agents/critic.ts`              | `AgentRegistry` (Backbone) | Peer review for Council of Agents (security/performance/architect)              |
 | **Facilitator**         | `core/agents/prompts/facilitator.md` | `AgentRegistry` (Backbone) | Moderates multi-party collaboration sessions, drives consensus, closes sessions |
-| **Merger Agent**       | `core/agents/merger.ts`              | `AgentRegistry` (Backbone) | Structural code reconciliation for parallel evolution tasks                     |
-
+| **Merger Agent**        | `core/agents/merger.ts`              | `AgentRegistry` (Backbone) | Structural code reconciliation for parallel evolution tasks                     |
 
 ### 2. System Handlers (Logic-Powered)
 
@@ -170,6 +169,7 @@ To ensure coordination doesn't break as we add more agents, follow a **Contract-
 4. **Verify Handler**: Ensure your agent's handler uses `.parse()` and the correct schema to validate incoming `eventDetail`.
 
 // turbo
+
 ```bash
 npx vitest core/tests/contract.test.ts
 ```
@@ -230,24 +230,31 @@ Gets decomposed into 5 sub-tasks, each dispatched independently to Coder Agent(s
 To achieve production-grade stability, the system implements several critical reliability patterns:
 
 ### 1. Atomic Status Transitions
+
 Gaps now enforce strict state guards in `updateGapStatus`. A gap can only transition to a destination state (e.g., `PROGRESS`) if it is in the correct predecessor state (e.g., `PLANNED`). Failures throw explicit errors, preventing race conditions from leaving the system in an inconsistent state.
 
 ### 2. Universal Gap Locking
+
 All gap state modifications now require lock acquisition. The **Strategic Planner** acquires locks not only for the primary `gapId` but also for every `coveredGapId` before transitioning them to `PLANNED`. The **Coder Agent** acquires locks before transitioning gaps to `PROGRESS`. Locked gaps are skipped with a warning rather than silently corrupted, preventing race conditions when multiple agents target overlapping gaps.
 
 ### 3. Safe Gap Transitions
+
 The **Coder Agent** moves gaps to `PROGRESS` inside the `try` block (after `initAgent` succeeds), not before it. This ensures the `finally` block can always reset gaps to `OPEN` on failure — even if the LLM processing itself fails. Previously, a Lambda crash during `initAgent` would leave gaps permanently orphaned in `PROGRESS`.
 
 ### 4. Safe Metadata Updates (Reflector)
+
 The **Cognition Reflector** uses `updateGapMetadata()` instead of `setGap()` during semantic deduplication. This preserves the existing gap status (`PLANNED`, `PROGRESS`, etc.) while merging updated impact/urgency scores, preventing accidental reversion to `OPEN`.
 
 ### 5. Ephemeral Memory TTL
+
 `COUNCIL_PLAN` items use the `TEMP#` prefix so the `RetentionManager` applies the `EPHEMERAL` tier (1-day auto-prune). This prevents accumulation of transient council review data in DynamoDB.
 
 ### 6. Failure Recovery (Self-Healing)
+
 The **Coder Agent** implements a "Reset-on-Failure" policy. If a coding task fails (either via LLM signal or system error), any associated gaps are automatically moved back to `OPEN` status, making them eligible for re-planning
 
 ### 4. Parallel Dispatch Error Boundaries
+
 The **Parallel Handler** now traps dispatch errors (e.g., EventBridge throughput limits or schema mismatches) and immediately notifies the **Aggregator**. This prevents the system from hanging at a barrier while waiting for sub-tasks that were never actually started.
 
 ---

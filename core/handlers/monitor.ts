@@ -1,5 +1,6 @@
 import { CodeBuildClient, BatchGetBuildsCommand } from '@aws-sdk/client-codebuild';
 import { CloudWatchLogsClient, GetLogEventsCommand } from '@aws-sdk/client-cloudwatch-logs';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
@@ -13,6 +14,7 @@ import { getCircuitBreaker } from '../lib/safety/circuit-breaker';
 
 const codebuild = new CodeBuildClient({});
 const logs = new CloudWatchLogsClient({});
+const s3 = new S3Client({});
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const typedResource = Resource as unknown as SSTResource;
 
@@ -279,6 +281,36 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
           'Logs are empty.';
       }
 
+      // 4. Fetch Failure Manifest if available
+      let failureManifest = null;
+      const artifactLocation = build?.artifacts?.location;
+      if (artifactLocation && artifactLocation.includes('s3://')) {
+        try {
+          const s3Path = artifactLocation.replace('s3://', '');
+          const bucket = s3Path.split('/')[0];
+          const prefix = s3Path.split('/').slice(1).join('/');
+          const manifestKey = `${prefix}/failure-manifest.json`;
+
+          logger.info(`Attempting to fetch failure manifest from S3: ${bucket}/${manifestKey}`);
+          const s3Response = await s3.send(
+            new GetObjectCommand({
+              Bucket: bucket,
+              Key: manifestKey,
+            })
+          );
+          const manifestBody = await s3Response.Body?.transformToString();
+          if (manifestBody) {
+            failureManifest = JSON.parse(manifestBody);
+            logger.info('Successfully retrieved failure manifest from S3.');
+          }
+        } catch (e) {
+          logger.warn(
+            'Could not retrieve failure manifest from S3 (might not exist or is zipped):',
+            e
+          );
+        }
+      }
+
       // Notify failure
       await emitEvent(
         'build.monitor',
@@ -288,6 +320,7 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
           buildId,
           projectName,
           errorLogs: errorLogs.substring(Math.max(0, errorLogs.length - 3000)),
+          failureManifest,
           gapIds,
           traceId,
           initiatorId,

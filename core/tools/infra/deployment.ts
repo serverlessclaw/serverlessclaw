@@ -50,7 +50,26 @@ export const stageChanges = {
         }
       }
 
-      if (!modifiedFiles || modifiedFiles.length === 0) {
+      const { execSync } = await import('child_process');
+      const allFilesToStage = new Set(modifiedFiles || []);
+
+      try {
+        const gitStatus = execSync('git ls-files -m -o --exclude-standard', {
+          cwd: process.cwd(),
+          encoding: 'utf-8',
+        });
+        const gitFiles = gitStatus
+          .split('\n')
+          .map((f) => f.trim())
+          .filter(Boolean);
+        gitFiles.forEach((f) => allFilesToStage.add(f));
+      } catch (e) {
+        logger.warn('Failed to get git modified files, falling back to provided modifiedFiles', e);
+      }
+
+      const finalFiles = Array.from(allFilesToStage);
+
+      if (finalFiles.length === 0) {
         return 'No files to stage.';
       }
 
@@ -73,7 +92,7 @@ export const stageChanges = {
                 Body: fileBuffer,
               })
             );
-            resolve(`SUCCESS: ${modifiedFiles.length} files staged for deployment. (DoD Verified)`);
+            resolve(`SUCCESS: ${finalFiles.length} files staged for deployment. (DoD Verified)`);
           } catch (error) {
             resolve(`FAILED_TO_UPLOAD: ${formatErrorMessage(error)}`);
           } finally {
@@ -86,7 +105,7 @@ export const stageChanges = {
         });
 
         archive.pipe(output);
-        for (const file of modifiedFiles) {
+        for (const file of finalFiles) {
           const fullPath = path.resolve(process.cwd(), file);
           archive.file(fullPath, { name: file });
         }

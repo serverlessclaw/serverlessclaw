@@ -177,25 +177,30 @@ describe('EventHandler', () => {
 
       await handler(event as any, {} as any);
 
-      // Verify Agent.process was called
-      expect(mockProcess).toHaveBeenCalledWith(
-        'user-1',
-        expect.stringContaining('CRITICAL: Deployment build-123 failed'),
-        expect.objectContaining({ traceId: 'trace-1' })
+      // Verify coder_task was emitted
+      expect(mockSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: expect.objectContaining({
+            Entries: expect.arrayContaining([
+              expect.objectContaining({
+                DetailType: EventType.CODER_TASK,
+                Detail: expect.stringContaining('CRITICAL: Deployment build-123 failed'),
+              }),
+            ]),
+          }),
+        })
       );
 
       // Verify initiator wakeup
-      const { EventBridgeClient } = await import('@aws-sdk/client-eventbridge');
-      const eb = new EventBridgeClient({});
-      expect(eb.send).toHaveBeenCalledWith(
+      expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
           input: expect.objectContaining({
-            Entries: [
+            Entries: expect.arrayContaining([
               expect.objectContaining({
                 DetailType: EventType.CONTINUATION_TASK,
                 Detail: expect.stringContaining('BUILD_FAILURE_NOTIFICATION'),
               }),
-            ],
+            ]),
           }),
         })
       );

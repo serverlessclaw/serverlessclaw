@@ -14,8 +14,13 @@ vi.mock('sst', () => ({
 }));
 
 // 2. Mock AgentBus / EventBridge
-const { mockSend } = vi.hoisted(() => ({
+const { mockSend, mockEmitEvent } = vi.hoisted(() => ({
   mockSend: vi.fn().mockResolvedValue({}),
+  mockEmitEvent: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock('../../lib/utils/bus', () => ({
+  emitEvent: mockEmitEvent,
 }));
 
 vi.mock('@aws-sdk/client-eventbridge', () => ({
@@ -74,16 +79,12 @@ vi.mock('../../lib/logger', () => ({
 }));
 
 // 6. Mock shared functions
-const { mockWakeupInitiator, mockProcessEventWithAgent } = vi.hoisted(() => ({
+const { mockWakeupInitiator } = vi.hoisted(() => ({
   mockWakeupInitiator: vi.fn().mockResolvedValue(undefined),
-  mockProcessEventWithAgent: vi
-    .fn()
-    .mockResolvedValue({ responseText: 'test-response', attachments: [] }),
 }));
 
 vi.mock('./shared', () => ({
   wakeupInitiator: mockWakeupInitiator,
-  processEventWithAgent: mockProcessEventWithAgent,
 }));
 
 // 7. Mock schema
@@ -131,16 +132,18 @@ describe('build-handler', () => {
 
       await handleBuildFailure(eventDetail, mockContext);
 
-      expect(mockProcessEventWithAgent).toHaveBeenCalledWith(
-        'user-123',
-        'coder',
-        expect.stringContaining('CRITICAL: Deployment build-456 failed'),
+      expect(mockEmitEvent).toHaveBeenCalledWith(
+        'build.handler',
+        'coder_task',
         expect.objectContaining({
-          context: mockContext,
+          userId: 'user-123',
+          task: expect.stringContaining('CRITICAL: Deployment build-456 failed'),
           traceId: 'trace-789',
           sessionId: 'session-101',
-          handlerTitle: 'SYSTEM_NOTIFICATION',
-          outboundHandlerName: 'build-handler',
+          metadata: expect.objectContaining({
+            buildId: 'build-456',
+            applyStagedChanges: true,
+          }),
         })
       );
 
@@ -166,7 +169,7 @@ describe('build-handler', () => {
 
       await handleBuildFailure(eventDetail, mockContext);
 
-      expect(mockProcessEventWithAgent).toHaveBeenCalled();
+      expect(mockEmitEvent).toHaveBeenCalled();
       expect(mockWakeupInitiator).not.toHaveBeenCalled();
     });
 
@@ -183,11 +186,14 @@ describe('build-handler', () => {
 
       await handleBuildFailure(eventDetail, mockContext);
 
-      expect(mockProcessEventWithAgent).toHaveBeenCalledWith(
-        'user-123',
-        'coder',
-        expect.stringContaining('This deployment was addressing the following gaps: gap-1, gap-2'),
-        expect.anything()
+      expect(mockEmitEvent).toHaveBeenCalledWith(
+        'build.handler',
+        'coder_task',
+        expect.objectContaining({
+          task: expect.stringContaining(
+            'This deployment was addressing the following gaps: gap-1, gap-2'
+          ),
+        })
       );
     });
 
@@ -204,11 +210,14 @@ describe('build-handler', () => {
 
       await handleBuildFailure(eventDetail, mockContext);
 
-      expect(mockProcessEventWithAgent).toHaveBeenCalledWith(
-        'user-123',
-        'coder',
-        expect.stringContaining('Refer to the previous reasoning trace for context: trace-789'),
-        expect.anything()
+      expect(mockEmitEvent).toHaveBeenCalledWith(
+        'build.handler',
+        'coder_task',
+        expect.objectContaining({
+          task: expect.stringContaining(
+            'Refer to the previous reasoning trace for context: trace-789'
+          ),
+        })
       );
     });
 
@@ -224,11 +233,12 @@ describe('build-handler', () => {
 
       await handleBuildFailure(eventDetail, mockContext);
 
-      expect(mockProcessEventWithAgent).toHaveBeenCalledWith(
-        'user-123',
-        'coder',
-        expect.stringContaining('Error: Cannot find module'),
-        expect.anything()
+      expect(mockEmitEvent).toHaveBeenCalledWith(
+        'build.handler',
+        'coder_task',
+        expect.objectContaining({
+          task: expect.stringContaining('Error: Cannot find module'),
+        })
       );
     });
   });

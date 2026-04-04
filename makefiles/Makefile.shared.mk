@@ -235,4 +235,12 @@ define verify_up_to_date
        fi; \
        $(call log_success,Branch is up to date with remote)
 endef
+
+.PHONY: manifest
+manifest: ## Generate a failure manifest from CI logs (LOG_DIR, OUTPUT_DIR)
+	@$(call log_step,Generating failure manifest...)
+	@LOG_DIR=$(or $(LOG_DIR),/tmp/ci-logs); \
+	OUTPUT_DIR=$(or $(OUTPUT_DIR),.); \
+	pnpm exec tsx scripts/ci/generate-manifest.ts "$$LOG_DIR" "$$OUTPUT_DIR"
+
 endif

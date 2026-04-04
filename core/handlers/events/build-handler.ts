@@ -1,21 +1,22 @@
 import { BUILD_EVENT_SCHEMA } from '../../lib/schema/events';
 import { Context } from 'aws-lambda';
-import { wakeupInitiator, processEventWithAgent } from './shared';
+import { wakeupInitiator } from './shared';
 
 /**
  * Handles build failure events - triggers agent to investigate and fix.
  *
  * @param eventDetail - The build event detail.
- * @param context - The AWS Lambda context.
+ * @param _context - The AWS Lambda context.
  */
 export async function handleBuildFailure(
   eventDetail: Record<string, unknown>,
-  context: Context
+  _context: Context
 ): Promise<void> {
   const {
     userId,
     buildId,
     errorLogs,
+    failureManifest,
     traceId,
     gapIds,
     sessionId,
@@ -31,9 +32,14 @@ export async function handleBuildFailure(
     ? `Refer to the previous reasoning trace for context: ${traceId}`
     : '';
 
+  const manifestContext = failureManifest
+    ? `A structured failure manifest was generated. It contains detailed information about affected files and error types:\n${JSON.stringify(failureManifest, null, 2)}`
+    : '';
+
   const task = `CRITICAL: Deployment ${buildId} failed. 
     ${gapsContext}
     ${traceContext}
+    ${manifestContext}
 
     Here are the last few lines of the logs:
     ---
@@ -42,12 +48,21 @@ export async function handleBuildFailure(
     Please investigate the codebase using your tools, find the root cause, fix the issue, and trigger a new deployment. 
     Explain your plan to the user before proceeding.`;
 
-  await processEventWithAgent(userId, 'coder', task, {
-    context,
+  const { emitEvent } = await import('../../lib/utils/bus');
+  const { EventType } = await import('../../lib/types/agent');
+
+  await emitEvent('build.handler', EventType.CODER_TASK, {
+    userId,
+    task,
     traceId,
     sessionId,
-    handlerTitle: 'SYSTEM_NOTIFICATION',
-    outboundHandlerName: 'build-handler',
+    initiatorId: 'build-handler',
+    metadata: {
+      failureManifest,
+      buildId,
+      gapIds,
+      applyStagedChanges: true,
+    },
   });
 
   // WAKE UP INITIATOR
