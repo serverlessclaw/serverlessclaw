@@ -1,9 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
-  Settings, Zap, RefreshCw, Save
-} from 'lucide-react';
+import { Settings, Zap, RefreshCw, Save } from 'lucide-react';
 import { SYSTEM_CONFIG_METADATA } from '@claw/core/lib/metadata';
 import { useTranslations } from '@/components/Providers/TranslationsProvider';
 import CyberSelect from '@/components/CyberSelect';
@@ -14,18 +12,23 @@ import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
 import { EvolutionMode } from '@claw/core/lib/types/agent';
 import { SYSTEM } from '@claw/core/lib/constants';
-import { 
-  LLMProvider, 
-  OpenAIModel, 
-  BedrockModel, 
-  MiniMaxModel, 
-  OpenRouterModel 
+import {
+  LLMProvider,
+  OpenAIModel,
+  BedrockModel,
+  MiniMaxModel,
+  OpenRouterModel,
 } from '@claw/core/lib/types/llm';
 
 const PROVIDERS = {
   [LLMProvider.OPENAI]: {
     label: 'OpenAI (Native)',
-    models: [OpenAIModel.GPT_5_4, OpenAIModel.GPT_5_4_MINI, OpenAIModel.GPT_5_4_NANO, OpenAIModel.GPT_5_MINI],
+    models: [
+      OpenAIModel.GPT_5_4,
+      OpenAIModel.GPT_5_4_MINI,
+      OpenAIModel.GPT_5_4_NANO,
+      OpenAIModel.GPT_5_MINI,
+    ],
   },
   [LLMProvider.BEDROCK]: {
     label: 'AWS Bedrock (Native)',
@@ -70,14 +73,26 @@ function ConfigTooltip({ id }: { id: string }) {
   if (!meta) return null;
 
   return (
-    <CyberTooltip content={
-      <div className="space-y-2">
-        <p className="text-cyber-blue font-bold uppercase text-[9px] mb-1">Neural Integration: {meta.label}</p>
-        <p>{meta.implication}</p>
-        {meta.risk && <p><span className="text-red-400 font-bold">RISK:</span> {meta.risk}</p>}
-        {meta.safeguard && <p><span className="text-green-400 font-bold">SAFEGUARD:</span> {meta.safeguard}</p>}
-      </div>
-    } />
+    <CyberTooltip
+      content={
+        <div className="space-y-2">
+          <p className="text-cyber-blue font-bold uppercase text-[9px] mb-1">
+            Neural Integration: {meta.label}
+          </p>
+          <p>{meta.implication}</p>
+          {meta.risk && (
+            <p>
+              <span className="text-red-400 font-bold">RISK:</span> {meta.risk}
+            </p>
+          )}
+          {meta.safeguard && (
+            <p>
+              <span className="text-green-400 font-bold">SAFEGUARD:</span> {meta.safeguard}
+            </p>
+          )}
+        </div>
+      }
+    />
   );
 }
 
@@ -85,18 +100,30 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
   const [activeProvider, setActiveProvider] = useState(config.provider ?? LLMProvider.OPENAI);
   const [activeModel, setActiveModel] = useState(config.model ?? OpenAIModel.GPT_5_4);
   const [evolutionMode, setEvolutionMode] = useState(config.evolutionMode ?? EvolutionMode.HITL);
-  const [optimizationPolicy, setOptimizationPolicy] = useState(config.optimizationPolicy ?? 'balanced');
+  const [optimizationPolicy, setOptimizationPolicy] = useState(
+    config.optimizationPolicy ?? 'balanced'
+  );
   const [activeLocale, setActiveLocale] = useState(config.activeLocale ?? 'en');
   const [maxToolIterations, setMaxToolIterations] = useState(config.maxToolIterations ?? '15');
-  const [circuitBreakerThreshold, setCircuitBreakerThreshold] = useState(config.circuitBreakerThreshold ?? '5');
-  const [protectedResources, setProtectedResources] = useState(config.protectedResources ?? 'sst.config.ts, buildspec.yml, infra/');
-  const [reflectionFrequency, setReflectionFrequency] = useState(config.reflectionFrequency ?? '10');
-  const [strategicReviewFrequency, setStrategicReviewFrequency] = useState(config.strategicReviewFrequency ?? '24');
+  const [circuitBreakerThreshold, setCircuitBreakerThreshold] = useState(
+    config.circuitBreakerThreshold ?? '5'
+  );
+  const [protectedResources, setProtectedResources] = useState(
+    config.protectedResources ?? 'sst.config.ts, buildspec.yml, infra/'
+  );
+  const [reflectionFrequency, setReflectionFrequency] = useState(
+    config.reflectionFrequency ?? '10'
+  );
+  const [strategicReviewFrequency, setStrategicReviewFrequency] = useState(
+    config.strategicReviewFrequency ?? '24'
+  );
   const [minGapsForReview, setMinGapsForReview] = useState(config.minGapsForReview ?? '10');
   const [recursionLimit, setRecursionLimit] = useState(config.recursionLimit ?? '50');
   const [deployLimit, setDeployLimit] = useState(config.deployLimit ?? '5');
   const [escalationEnabled, setEscalationEnabled] = useState(config.escalationEnabled ?? 'true');
-  const [protocolFallbackEnabled, setProtocolFallbackEnabled] = useState(config.protocolFallbackEnabled ?? 'true');
+  const [protocolFallbackEnabled, setProtocolFallbackEnabled] = useState(
+    config.protocolFallbackEnabled ?? 'true'
+  );
 
   const { t, setLocale } = useTranslations();
 
@@ -128,7 +155,7 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
     setMinGapsForReview('10');
   };
 
-  const hasChanges = 
+  const hasChanges =
     activeProvider !== config.provider ||
     activeModel !== config.model ||
     evolutionMode !== config.evolutionMode ||
@@ -151,7 +178,13 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
         <Card variant="glass" padding="lg" className="space-y-8 cyber-border relative">
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <Typography variant="caption" weight="bold" color="intel" uppercase className="flex items-center gap-2">
+              <Typography
+                variant="caption"
+                weight="bold"
+                color="intel"
+                uppercase
+                className="flex items-center gap-2"
+              >
                 <Settings size={16} /> LLM Provider Routing
               </Typography>
               <button
@@ -165,7 +198,13 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Typography variant="caption" weight="bold" color="white" uppercase className="flex items-center">
+                <Typography
+                  variant="caption"
+                  weight="bold"
+                  color="white"
+                  uppercase
+                  className="flex items-center"
+                >
                   Active Provider
                   <ConfigTooltip id="active_provider" />
                 </Typography>
@@ -185,7 +224,13 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
                 />
               </div>
               <div className="space-y-2">
-                <Typography variant="caption" weight="bold" color="white" uppercase className="flex items-center">
+                <Typography
+                  variant="caption"
+                  weight="bold"
+                  color="white"
+                  uppercase
+                  className="flex items-center"
+                >
                   Default Model ID
                   <ConfigTooltip id="active_model" />
                 </Typography>
@@ -205,7 +250,13 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
 
           <div className="pt-8 border-t border-white/5 space-y-4">
             <div className="flex justify-between items-center">
-              <Typography variant="caption" weight="bold" color="intel" uppercase className="flex items-center gap-2">
+              <Typography
+                variant="caption"
+                weight="bold"
+                color="intel"
+                uppercase
+                className="flex items-center gap-2"
+              >
                 <RefreshCw size={16} /> {t('LANGUAGE')}
               </Typography>
               <button
@@ -219,7 +270,13 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Typography variant="caption" weight="bold" color="white" uppercase className="flex items-center">
+                <Typography
+                  variant="caption"
+                  weight="bold"
+                  color="white"
+                  uppercase
+                  className="flex items-center"
+                >
                   {t('LANGUAGE')}
                 </Typography>
                 <CyberSelect
@@ -241,7 +298,13 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
 
           <div className="pt-8 border-t border-white/5 space-y-4">
             <div className="flex justify-between items-center">
-              <Typography variant="caption" weight="bold" color="primary" uppercase className="flex items-center gap-2">
+              <Typography
+                variant="caption"
+                weight="bold"
+                color="primary"
+                uppercase
+                className="flex items-center gap-2"
+              >
                 <Zap size={16} /> Evolution Engine Control
               </Typography>
               <button
@@ -255,7 +318,13 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Typography variant="caption" weight="bold" color="white" uppercase className="flex items-center">
+                <Typography
+                  variant="caption"
+                  weight="bold"
+                  color="white"
+                  uppercase
+                  className="flex items-center"
+                >
                   Evolution Mode
                   <ConfigTooltip id="evolution_mode" />
                 </Typography>
@@ -271,7 +340,13 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
                 />
               </div>
               <div className="space-y-2">
-                <Typography variant="caption" weight="bold" color="white" uppercase className="flex items-center">
+                <Typography
+                  variant="caption"
+                  weight="bold"
+                  color="white"
+                  uppercase
+                  className="flex items-center"
+                >
                   Daily Deploy Limit
                   <ConfigTooltip id="deploy_limit" />
                 </Typography>
@@ -284,16 +359,37 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
                 />
               </div>
               <div className="space-y-2">
-                <Typography variant="caption" weight="bold" color="white" uppercase className="flex items-center">
+                <Typography
+                  variant="caption"
+                  weight="bold"
+                  color="white"
+                  uppercase
+                  className="flex items-center"
+                >
                   Optimization Policy
-                  <CyberTooltip content={
-                    <div className="space-y-2">
-                      <p><span className="text-cyber-blue font-bold">PRECEDENCE:</span> Priority 2. Overrides the &quot;intended&quot; profile of a task unless the Agent has a hardcoded Model.</p>
-                      <p><span className="text-cyber-blue font-bold">BALANCED:</span> Respects task requirements.</p>
-                      <p><span className="text-red-400 font-bold">AGGRESSIVE:</span> Forces DEEP reasoning for all nodes (High Quality/Cost).</p>
-                      <p><span className="text-green-400 font-bold">CONSERVATIVE:</span> Forces FAST reasoning (Low Cost/Complexity).</p>
-                    </div>
-                  } />
+                  <CyberTooltip
+                    content={
+                      <div className="space-y-2">
+                        <p>
+                          <span className="text-cyber-blue font-bold">PRECEDENCE:</span> Priority 2.
+                          Overrides the &quot;intended&quot; profile of a task unless the Agent has
+                          a hardcoded Model.
+                        </p>
+                        <p>
+                          <span className="text-cyber-blue font-bold">BALANCED:</span> Respects task
+                          requirements.
+                        </p>
+                        <p>
+                          <span className="text-red-400 font-bold">AGGRESSIVE:</span> Forces DEEP
+                          reasoning for all nodes (High Quality/Cost).
+                        </p>
+                        <p>
+                          <span className="text-green-400 font-bold">CONSERVATIVE:</span> Forces
+                          FAST reasoning (Low Cost/Complexity).
+                        </p>
+                      </div>
+                    }
+                  />
                 </Typography>
                 <CyberSelect
                   name="optimizationPolicy"
@@ -308,14 +404,28 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
                 />
               </div>
               <div className="space-y-2">
-                <Typography variant="caption" weight="bold" color="white" uppercase className="flex items-center">
+                <Typography
+                  variant="caption"
+                  weight="bold"
+                  color="white"
+                  uppercase
+                  className="flex items-center"
+                >
                   Max Tool Iterations
-                  <CyberTooltip content={
-                    <div className="space-y-2">
-                      <p><span className="text-cyber-blue font-bold">BENEFIT:</span> Allows agents to solve complex problems by looping through multiple tools.</p>
-                      <p><span className="text-red-400 font-bold">COST:</span> Each iteration is a separate LLM call. High values ( &gt; 20) can drain credits quickly.</p>
-                    </div>
-                  } />
+                  <CyberTooltip
+                    content={
+                      <div className="space-y-2">
+                        <p>
+                          <span className="text-cyber-blue font-bold">BENEFIT:</span> Allows agents
+                          to solve complex problems by looping through multiple tools.
+                        </p>
+                        <p>
+                          <span className="text-red-400 font-bold">COST:</span> Each iteration is a
+                          separate LLM call. High values ( &gt; 20) can drain credits quickly.
+                        </p>
+                      </div>
+                    }
+                  />
                 </Typography>
                 <input
                   name="maxToolIterations"
@@ -330,11 +440,22 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <Typography variant="caption" weight="bold" color="white" uppercase className="flex items-center">
-                     Circuit Breaker Threshold
-                     <ConfigTooltip id="circuit_breaker_threshold" />
+                  <Typography
+                    variant="caption"
+                    weight="bold"
+                    color="white"
+                    uppercase
+                    className="flex items-center"
+                  >
+                    Circuit Breaker Threshold
+                    <ConfigTooltip id="circuit_breaker_threshold" />
                   </Typography>
-                  <Typography variant="mono" weight="bold" color={Number(config.consecutiveBuildFailures) > 0 ? 'danger' : 'primary'} className="text-[10px]">
+                  <Typography
+                    variant="mono"
+                    weight="bold"
+                    color={Number(config.consecutiveBuildFailures) > 0 ? 'danger' : 'primary'}
+                    className="text-[10px]"
+                  >
                     Failures: {config.consecutiveBuildFailures}
                   </Typography>
                 </div>
@@ -347,14 +468,28 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
                 />
               </div>
               <div className="space-y-2">
-                <Typography variant="caption" weight="bold" color="white" uppercase className="flex items-center">
+                <Typography
+                  variant="caption"
+                  weight="bold"
+                  color="white"
+                  uppercase
+                  className="flex items-center"
+                >
                   Recursion Limit
-                  <CyberTooltip content={
-                    <div className="space-y-2">
-                      <p><span className="text-cyber-blue font-bold">IMPLICATION:</span> Controls agent delegation depth. Higher values enable more complex orchestrations.</p>
-                      <p><span className="text-red-400 font-bold">RISK:</span> High values can obfuscate infinite logical loops between agents.</p>
-                    </div>
-                  } />
+                  <CyberTooltip
+                    content={
+                      <div className="space-y-2">
+                        <p>
+                          <span className="text-cyber-blue font-bold">IMPLICATION:</span> Controls
+                          agent delegation depth. Higher values enable more complex orchestrations.
+                        </p>
+                        <p>
+                          <span className="text-red-400 font-bold">RISK:</span> High values can
+                          obfuscate infinite logical loops between agents.
+                        </p>
+                      </div>
+                    }
+                  />
                 </Typography>
                 <input
                   name="recursionLimit"
@@ -365,7 +500,13 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
                 />
               </div>
               <div className="space-y-2">
-                <Typography variant="caption" weight="bold" color="white" uppercase className="flex items-center">
+                <Typography
+                  variant="caption"
+                  weight="bold"
+                  color="white"
+                  uppercase
+                  className="flex items-center"
+                >
                   Escalation Engine
                   <ConfigTooltip id="escalation_enabled" />
                 </Typography>
@@ -381,7 +522,13 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
                 />
               </div>
               <div className="space-y-2">
-                <Typography variant="caption" weight="bold" color="white" uppercase className="flex items-center">
+                <Typography
+                  variant="caption"
+                  weight="bold"
+                  color="white"
+                  uppercase
+                  className="flex items-center"
+                >
                   Protocol Fallback
                   <ConfigTooltip id="protocol_fallback_enabled" />
                 </Typography>
@@ -398,14 +545,28 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
               </div>
             </div>
             <div className="space-y-2">
-              <Typography variant="caption" weight="bold" color="white" uppercase className="flex items-center">
+              <Typography
+                variant="caption"
+                weight="bold"
+                color="white"
+                uppercase
+                className="flex items-center"
+              >
                 Protected Resource Scopes
-                <CyberTooltip content={
-                  <div className="space-y-2">
-                    <p><span className="text-cyber-blue font-bold">BENEFIT:</span> Critical files that Coder Agent is forbidden from modifying.</p>
-                    <p><span className="text-red-400 font-bold">SAFEGUARD:</span> Protects infrastructure and core orchestrator logic from accidental deletion.</p>
-                  </div>
-                } />
+                <CyberTooltip
+                  content={
+                    <div className="space-y-2">
+                      <p>
+                        <span className="text-cyber-blue font-bold">BENEFIT:</span> Critical files
+                        that Coder Agent is forbidden from modifying.
+                      </p>
+                      <p>
+                        <span className="text-red-400 font-bold">SAFEGUARD:</span> Protects
+                        infrastructure and core orchestrator logic from accidental deletion.
+                      </p>
+                    </div>
+                  }
+                />
               </Typography>
               <input
                 name="protectedResources"
@@ -422,7 +583,13 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
 
           <div className="pt-8 border-t border-white/5 space-y-4">
             <div className="flex justify-between items-center">
-              <Typography variant="caption" weight="bold" color="intel" uppercase className="flex items-center gap-2">
+              <Typography
+                variant="caption"
+                weight="bold"
+                color="intel"
+                uppercase
+                className="flex items-center gap-2"
+              >
                 <RefreshCw size={16} /> Neural Reflection Config
               </Typography>
               <button
@@ -436,15 +603,33 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Typography variant="caption" weight="bold" color="white" uppercase className="flex items-center">
+                <Typography
+                  variant="caption"
+                  weight="bold"
+                  color="white"
+                  uppercase
+                  className="flex items-center"
+                >
                   Reflection Frequency (msgs)
-                  <CyberTooltip content={
-                    <div className="space-y-2">
-                      <p><span className="text-cyber-blue font-bold">BENEFIT:</span> How often the system &quot;thinks&quot; about the conversation to extract new facts and lessons.</p>
-                      <p><span className="text-red-400 font-bold">CONS:</span> Low values ( &lt; 5) increase token cost and can cause &quot;Cognitive Overload&quot; (too many minor facts).</p>
-                      <p><span className="text-green-400 font-bold">RECOMMENDED:</span> 10-15.</p>
-                    </div>
-                  } />
+                  <CyberTooltip
+                    content={
+                      <div className="space-y-2">
+                        <p>
+                          <span className="text-cyber-blue font-bold">BENEFIT:</span> How often the
+                          system &quot;thinks&quot; about the conversation to extract new facts and
+                          lessons.
+                        </p>
+                        <p>
+                          <span className="text-red-400 font-bold">CONS:</span> Low values ( &lt; 5)
+                          increase token cost and can cause &quot;Cognitive Overload&quot; (too many
+                          minor facts).
+                        </p>
+                        <p>
+                          <span className="text-green-400 font-bold">RECOMMENDED:</span> 10-15.
+                        </p>
+                      </div>
+                    }
+                  />
                 </Typography>
                 <input
                   name="reflectionFrequency"
@@ -455,14 +640,28 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
                 />
               </div>
               <div className="space-y-2">
-                <Typography variant="caption" weight="bold" color="white" uppercase className="flex items-center">
+                <Typography
+                  variant="caption"
+                  weight="bold"
+                  color="white"
+                  uppercase
+                  className="flex items-center"
+                >
                   Strategic Review Interval (hrs)
-                  <CyberTooltip content={
-                    <div className="space-y-2">
-                      <p><span className="text-cyber-blue font-bold">BENEFIT:</span> The cooldown between large-scale architectural reviews.</p>
-                      <p><span className="text-red-400 font-bold">CONS:</span> Too frequent reviews can lead to redundant micro-optimizations.</p>
-                    </div>
-                  } />
+                  <CyberTooltip
+                    content={
+                      <div className="space-y-2">
+                        <p>
+                          <span className="text-cyber-blue font-bold">BENEFIT:</span> The cooldown
+                          between large-scale architectural reviews.
+                        </p>
+                        <p>
+                          <span className="text-red-400 font-bold">CONS:</span> Too frequent reviews
+                          can lead to redundant micro-optimizations.
+                        </p>
+                      </div>
+                    }
+                  />
                 </Typography>
                 <input
                   name="strategicReviewFrequency"
@@ -473,14 +672,29 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
                 />
               </div>
               <div className="space-y-2">
-                <Typography variant="caption" weight="bold" color="white" uppercase className="flex items-center">
+                <Typography
+                  variant="caption"
+                  weight="bold"
+                  color="white"
+                  uppercase
+                  className="flex items-center"
+                >
                   Min Gaps for Review
-                  <CyberTooltip content={
-                    <div className="space-y-2">
-                      <p><span className="text-cyber-blue font-bold">BENEFIT:</span> Minimum number of identified capability gaps required to trigger a Strategic Review.</p>
-                      <p><span className="text-green-400 font-bold">BENEFIT:</span> Ensures reviews only happen when there is enough &quot;evidence&quot; to justify a system change.</p>
-                    </div>
-                  } />
+                  <CyberTooltip
+                    content={
+                      <div className="space-y-2">
+                        <p>
+                          <span className="text-cyber-blue font-bold">BENEFIT:</span> Minimum number
+                          of identified capability gaps required to trigger a Strategic Review.
+                        </p>
+                        <p>
+                          <span className="text-green-400 font-bold">BENEFIT:</span> Ensures reviews
+                          only happen when there is enough &quot;evidence&quot; to justify a system
+                          change.
+                        </p>
+                      </div>
+                    }
+                  />
                 </Typography>
                 <input
                   name="minGapsForReview"

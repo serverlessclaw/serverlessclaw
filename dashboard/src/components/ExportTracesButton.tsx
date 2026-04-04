@@ -16,13 +16,13 @@ export default function ExportTracesButton({ traces }: ExportTracesButtonProps) 
         toast.error('No traces to export');
         return;
       }
-      
+
       const exportData = {
         exportedAt: new Date().toISOString(),
         totalTraces: traces.length,
-        traces
+        traces,
       };
-      
+
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -32,7 +32,7 @@ export default function ExportTracesButton({ traces }: ExportTracesButtonProps) 
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
+
       toast.success(`${traces.length} traces exported successfully`);
     } catch (err) {
       console.error('Export failed:', err);
@@ -42,7 +42,13 @@ export default function ExportTracesButton({ traces }: ExportTracesButtonProps) 
 
   return (
     <div className="flex flex-col items-center">
-      <Typography variant="mono" color="muted" className="text-[10px] uppercase tracking-widest opacity-40 mb-1">EXPORT</Typography>
+      <Typography
+        variant="mono"
+        color="muted"
+        className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
+      >
+        EXPORT
+      </Typography>
       <Button
         variant="outline"
         size="sm"

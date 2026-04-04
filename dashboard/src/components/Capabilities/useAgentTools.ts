@@ -15,32 +15,34 @@ export function useAgentTools(agents: AgentConfig[]) {
   const [optimisticAgents, setOptimisticAgents] = useState(agents);
 
   const handleToggleToolAssignment = async (
-    agentId: string, 
-    toolName: string, 
+    agentId: string,
+    toolName: string,
     isAttached: boolean
   ) => {
     const formData = new FormData();
     formData.append('agentId', agentId);
-    
-    const agent = optimisticAgents.find(a => a.id === agentId);
+
+    const agent = optimisticAgents.find((a) => a.id === agentId);
     if (!agent) return;
 
-    const newTools = isAttached 
-      ? agent.tools.filter(t => t !== toolName)
+    const newTools = isAttached
+      ? agent.tools.filter((t) => t !== toolName)
       : [...agent.tools, toolName];
-    
-    newTools.forEach(t => formData.append('tools', t));
+
+    newTools.forEach((t) => formData.append('tools', t));
 
     // Optimistic update
-    setOptimisticAgents(prev => prev.map(a => 
-      a.id === agentId ? { ...a, tools: newTools } : a
-    ));
+    setOptimisticAgents((prev) =>
+      prev.map((a) => (a.id === agentId ? { ...a, tools: newTools } : a))
+    );
 
     startTransition(async () => {
       try {
         const result = await updateAgentTools(formData);
         if (result?.error) throw new Error(result.error);
-        toast.success(isAttached ? `Revoked ${toolName} from ${agentId}` : `Assigned ${toolName} to ${agentId}`);
+        toast.success(
+          isAttached ? `Revoked ${toolName} from ${agentId}` : `Assigned ${toolName} to ${agentId}`
+        );
         router.refresh();
       } catch {
         toast.error('Sync failed. Reverting changes.');
@@ -54,7 +56,7 @@ export function useAgentTools(agents: AgentConfig[]) {
     title: '',
     message: '',
     onConfirm: () => {},
-    variant: 'warning'
+    variant: 'warning',
   });
 
   const handleDetachTool = (agentId: string, toolName: string) => {
@@ -63,7 +65,7 @@ export function useAgentTools(agents: AgentConfig[]) {
       title: 'Neural Decoupling',
       message: `Are you sure you want to remove '${toolName}' from this agent? This will immediately revoke its access to this capability.`,
       variant: 'warning',
-      onConfirm: () => handleToggleToolAssignment(agentId, toolName, true)
+      onConfirm: () => handleToggleToolAssignment(agentId, toolName, true),
     });
   };
 
@@ -74,6 +76,6 @@ export function useAgentTools(agents: AgentConfig[]) {
     handleToggleToolAssignment,
     handleDetachTool,
     confirmModal,
-    setConfirmModal
+    setConfirmModal,
   };
 }

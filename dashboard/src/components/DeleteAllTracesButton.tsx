@@ -37,7 +37,7 @@ export default function DeleteAllTracesButton() {
 
   return (
     <>
-      <CyberConfirm 
+      <CyberConfirm
         isOpen={showConfirm}
         title="Total Archive Purge"
         message="You are about to permanently erase ALL neural execution traces from the database. This will eliminate the entire historical logic record."

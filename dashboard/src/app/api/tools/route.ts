@@ -17,7 +17,7 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error('Failed to fetch tools:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch tools' }, 
+      { error: 'Failed to fetch tools' },
       { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
     );
   }

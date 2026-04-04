@@ -19,7 +19,7 @@ const TranslationsContext = createContext<TranslationsContextType | undefined>(u
  * TranslationsProvider manages the UI localization state and provides a translation utility.
  * It supports dynamic language switching and persists the language direction on the document element.
  */
-export const TranslationsProvider: React.FC<{ 
+export const TranslationsProvider: React.FC<{
   children: React.ReactNode;
   initialLocale?: Locale;
 }> = ({ children, initialLocale = 'en' }) => {

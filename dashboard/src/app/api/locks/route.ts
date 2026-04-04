@@ -27,20 +27,25 @@ export async function GET(): Promise<NextResponse> {
       })
     );
 
-    const locks = (Items ?? []).map((item) => ({
-      lockId: item.userId.replace('LOCK#', ''),
-      rawId: item.userId,
-      expiresAt: item.expiresAt,
-      acquiredAt: item.acquiredAt,
-      timestamp: item.timestamp,
-      isExpired: item.expiresAt < Math.floor(Date.now() / 1000),
-    })).sort((a, b) => b.acquiredAt - a.acquiredAt);
+    const locks = (Items ?? [])
+      .map((item) => ({
+        lockId: item.userId.replace('LOCK#', ''),
+        rawId: item.userId,
+        expiresAt: item.expiresAt,
+        acquiredAt: item.acquiredAt,
+        timestamp: item.timestamp,
+        isExpired: item.expiresAt < Math.floor(Date.now() / 1000),
+      }))
+      .sort((a, b) => b.acquiredAt - a.acquiredAt);
 
     return NextResponse.json({ locks });
   } catch (error) {
     console.error('Error fetching locks:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch locks', details: error instanceof Error ? error.message : String(error) },
+      {
+        error: 'Failed to fetch locks',
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
     );
   }
@@ -81,7 +86,10 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
   } catch (error) {
     console.error('Error releasing lock:', error);
     return NextResponse.json(
-      { error: 'Failed to release lock', details: error instanceof Error ? error.message : String(error) },
+      {
+        error: 'Failed to release lock',
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
     );
   }

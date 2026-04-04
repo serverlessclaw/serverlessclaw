@@ -21,7 +21,7 @@ export async function deleteMemoryItem(
   try {
     const typedResource = Resource as unknown as { MemoryTable?: { name: string } };
     const tableName = typedResource.MemoryTable?.name;
-    
+
     if (!tableName) {
       throw new Error('MemoryTable name is missing from Resources');
     }

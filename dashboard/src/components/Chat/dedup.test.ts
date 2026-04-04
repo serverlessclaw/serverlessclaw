@@ -72,7 +72,7 @@ describe('isDuplicate', () => {
 
   it('does not add anything to seenIds for content-based checks', () => {
     isDuplicate(seenIds, [assistant('x')], undefined, 'x'); // duplicate
-    isDuplicate(seenIds, [], undefined, 'y');                // new
+    isDuplicate(seenIds, [], undefined, 'y'); // new
     expect(seenIds.size).toBe(0);
   });
 

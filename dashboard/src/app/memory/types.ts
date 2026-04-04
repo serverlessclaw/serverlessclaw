@@ -17,7 +17,7 @@ export interface MemoryItem {
 export function getBadgeVariant(item: MemoryItem) {
   const userId = item.userId || '';
   const type = item.type || '';
-  
+
   if (
     userId.startsWith('GAP') ||
     userId.startsWith('GAP#') ||
@@ -25,9 +25,8 @@ export function getBadgeVariant(item: MemoryItem) {
     type === 'MEMORY:STRATEGIC_GAP'
   )
     return 'danger';
-    
-  if (type === 'MEMORY:GAP_LOCK' || userId.includes('#LOCK'))
-    return 'warning';
+
+  if (type === 'MEMORY:GAP_LOCK' || userId.includes('#LOCK')) return 'warning';
 
   if (
     userId.startsWith('LESSON') ||
@@ -36,7 +35,7 @@ export function getBadgeVariant(item: MemoryItem) {
     type === 'MEMORY:TACTICAL_LESSON'
   )
     return 'primary';
-    
+
   if (
     userId.startsWith('DISTILLED') ||
     userId.startsWith('DISTILLED#') ||
@@ -44,14 +43,14 @@ export function getBadgeVariant(item: MemoryItem) {
     type === 'MEMORY:SYSTEM_KNOWLEDGE'
   )
     return 'intel';
-    
+
   if (
-    type === 'MEMORY:USER_PREFERENCE' || 
+    type === 'MEMORY:USER_PREFERENCE' ||
     userId.startsWith('USER#') ||
     userId.startsWith('SESSIONS#')
   )
     return 'warning';
-    
+
   return 'audit';
 }
 
@@ -66,9 +65,6 @@ export function getCategoryLabel(item: MemoryItem) {
   if (type === 'MEMORY:GAP_LOCK') return 'RESOURCE LOCK';
 
   return (
-    item.metadata?.category ||
-    type.replace('MEMORY:', '').replace(/_/g, ' ') ||
-    'MEMORY OBJECT'
+    item.metadata?.category || type.replace('MEMORY:', '').replace(/_/g, ' ') || 'MEMORY OBJECT'
   );
 }
-

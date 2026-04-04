@@ -26,7 +26,8 @@ const Button: React.FC<ButtonProps> = ({
   const variantStyles = {
     primary: THEME.CLASSES.BUTTON_PRIMARY,
     danger: THEME.CLASSES.BUTTON_DANGER,
-    outline: 'border border-[var(--card-border)] hover:bg-[var(--card-bg)] text-[var(--foreground)]',
+    outline:
+      'border border-[var(--card-border)] hover:bg-[var(--card-bg)] text-[var(--foreground)]',
     ghost: 'hover:bg-[var(--card-bg)] text-[var(--foreground)]/70 hover:text-[var(--foreground)]',
   }[variant];
 

@@ -75,7 +75,10 @@ export default function LoginPage() {
                 disabled={loading}
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                <Zap size={16} className={loading ? 'text-cyber-green animate-pulse' : 'text-white/50'} />
+                <Zap
+                  size={16}
+                  className={loading ? 'text-cyber-green animate-pulse' : 'text-white/50'}
+                />
               </div>
             </div>
           </div>
@@ -93,7 +96,9 @@ export default function LoginPage() {
             loading={loading}
             fullWidth
             size="lg"
-            icon={<ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />}
+            icon={
+              <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+            }
             className="flex-row-reverse"
           >
             {loading ? 'Synchronizing' : 'Initialize Claw Link'}

@@ -9,11 +9,11 @@ interface CyberTooltipProps {
   position?: 'top' | 'bottom' | 'left' | 'right';
 }
 
-export default function CyberTooltip({ 
-  content, 
+export default function CyberTooltip({
+  content,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  children, 
-  position = 'top' 
+  children,
+  position = 'top',
 }: CyberTooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
 
@@ -25,20 +25,43 @@ export default function CyberTooltip({
   };
 
   return (
-    <div 
+    <div
       className="relative inline-block ml-1 group"
       onMouseEnter={() => setIsVisible(true)}
       onMouseLeave={() => setIsVisible(false)}
     >
       <Info size={12} className="text-white/40 hover:text-white/80 transition-colors cursor-help" />
-      
+
       {isVisible && (
-        <div className={`absolute z-50 w-64 p-3 bg-black/90 border border-white/20 rounded shadow-2xl text-[10px] leading-relaxed text-white/90 backdrop-blur-md animate-in fade-in zoom-in duration-200 ${positionClasses[position]}`}>
+        <div
+          className={`absolute z-50 w-64 p-3 bg-black/90 border border-white/20 rounded shadow-2xl text-[10px] leading-relaxed text-white/90 backdrop-blur-md animate-in fade-in zoom-in duration-200 ${positionClasses[position]}`}
+        >
           {content}
-          <div className="absolute w-2 h-2 bg-black border-r border-b border-white/20 rotate-45" style={{
-            ...(position === 'top' ? { bottom: '-5px', left: 'calc(50% - 4px)', borderRight: '1px solid rgba(255,255,255,0.2)', borderBottom: '1px solid rgba(255,255,255,0.2)', borderLeft: 'none', borderTop: 'none' } : {}),
-            ...(position === 'bottom' ? { top: '-5px', left: 'calc(50% - 4px)', borderLeft: '1px solid rgba(255,255,255,0.2)', borderTop: '1px solid rgba(255,255,255,0.2)', borderRight: 'none', borderBottom: 'none' } : {}),
-          }} />
+          <div
+            className="absolute w-2 h-2 bg-black border-r border-b border-white/20 rotate-45"
+            style={{
+              ...(position === 'top'
+                ? {
+                    bottom: '-5px',
+                    left: 'calc(50% - 4px)',
+                    borderRight: '1px solid rgba(255,255,255,0.2)',
+                    borderBottom: '1px solid rgba(255,255,255,0.2)',
+                    borderLeft: 'none',
+                    borderTop: 'none',
+                  }
+                : {}),
+              ...(position === 'bottom'
+                ? {
+                    top: '-5px',
+                    left: 'calc(50% - 4px)',
+                    borderLeft: '1px solid rgba(255,255,255,0.2)',
+                    borderTop: '1px solid rgba(255,255,255,0.2)',
+                    borderRight: 'none',
+                    borderBottom: 'none',
+                  }
+                : {}),
+            }}
+          />
         </div>
       )}
     </div>

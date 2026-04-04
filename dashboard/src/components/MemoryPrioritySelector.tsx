@@ -14,19 +14,26 @@ interface MemoryPrioritySelectorProps {
  * Prevents "Event handlers cannot be passed to Client Component props" errors
  * by encapsulating interactivity.
  */
-export default function MemoryPrioritySelector({ 
-  userId, 
-  timestamp, 
-  currentPriority 
+export default function MemoryPrioritySelector({
+  userId,
+  timestamp,
+  currentPriority,
 }: MemoryPrioritySelectorProps) {
-  
   return (
     <form className="flex items-center gap-2 bg-black/40 px-2 py-1 rounded border border-white/5">
       <input type="hidden" name="userId" value={userId} />
       <input type="hidden" name="timestamp" value={timestamp} />
-      <Typography variant="caption" weight="bold" color="white" uppercase className="text-[9px] tracking-tighter">Prio:</Typography>
-      <select 
-        name="priority" 
+      <Typography
+        variant="caption"
+        weight="bold"
+        color="white"
+        uppercase
+        className="text-[9px] tracking-tighter"
+      >
+        Prio:
+      </Typography>
+      <select
+        name="priority"
         defaultValue={currentPriority}
         onChange={(e) => {
           // In a real app we might use useFormStatus or a Server Action directly
@@ -35,8 +42,10 @@ export default function MemoryPrioritySelector({
         }}
         className="bg-transparent text-amber-400 text-[10px] font-bold outline-none cursor-pointer"
       >
-        {[1,3,5,7,8,10].map(p => (
-          <option key={p} value={p} className="bg-[#1a1a1a]">{p}</option>
+        {[1, 3, 5, 7, 8, 10].map((p) => (
+          <option key={p} value={p} className="bg-[#1a1a1a]">
+            {p}
+          </option>
         ))}
       </select>
     </form>

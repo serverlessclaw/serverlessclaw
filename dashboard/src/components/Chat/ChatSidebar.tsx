@@ -18,21 +18,24 @@ interface ChatSidebarProps {
   searchInputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
-export function ChatSidebar({ 
-  sessions, 
-  activeSessionId, 
-  onSessionSelect, 
-  onNewChat, 
-  onDeleteSession, 
+export function ChatSidebar({
+  sessions,
+  activeSessionId,
+  onSessionSelect,
+  onNewChat,
+  onDeleteSession,
   onDeleteAll,
   onTogglePin,
   searchQuery,
   setSearchQuery,
-  searchInputRef
+  searchInputRef,
 }: ChatSidebarProps) {
   const filteredSessions = sessions
-    .filter(s => s.title?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                 s.lastMessage?.toLowerCase().includes(searchQuery.toLowerCase()))
+    .filter(
+      (s) =>
+        s.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.lastMessage?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
     .sort((a, b) => {
       if (a.isPinned && !b.isPinned) return -1;
       if (!a.isPinned && b.isPinned) return 1;
@@ -45,11 +48,11 @@ export function ChatSidebar({
     const now = Math.floor(Date.now() / 1000);
     const diff = expiresAt - now;
     if (diff <= 0) return 'Expired';
-    
+
     const hours = Math.floor(diff / (60 * 60));
     if (hours < 1) return 'Expires soon';
     if (hours < 24) return `Expires in ${hours}h`;
-    
+
     const days = Math.floor(hours / 24);
     return `Expires in ${days}d`;
   };
@@ -59,7 +62,10 @@ export function ChatSidebar({
       {/* Search Header */}
       <div className="p-6 shrink-0 border-b border-white/5">
         <div className="relative group/search">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20 group-focus-within/search:text-cyber-green transition-colors" />
+          <Search
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20 group-focus-within/search:text-cyber-green transition-colors"
+          />
           <input
             type="text"
             ref={searchInputRef as React.RefObject<HTMLInputElement>}
@@ -74,7 +80,7 @@ export function ChatSidebar({
       <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pt-6 pb-2 space-y-2">
         <div className="mb-4 px-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Clock size={10} className="text-white/60" /> 
+            <Clock size={10} className="text-white/60" />
             <Typography variant="caption" weight="bold" color="muted">
               CONVERSATION_LOGS
             </Typography>
@@ -87,11 +93,13 @@ export function ChatSidebar({
               className="text-red-500/60 hover:text-red-500 p-0 h-auto gap-1"
               icon={<Trash2 size={10} />}
             >
-              <Typography variant="mono" color="danger" className="text-[8px]">PURGE_ALL</Typography>
+              <Typography variant="mono" color="danger" className="text-[8px]">
+                PURGE_ALL
+              </Typography>
             </Button>
           )}
         </div>
-        
+
         {filteredSessions.length === 0 ? (
           <Card variant="solid" padding="sm" className="text-center italic text-white/20">
             <Typography variant="caption">
@@ -118,50 +126,72 @@ export function ChatSidebar({
               }`}
             >
               {s.isPinned && (
-                <div className={`absolute top-0 right-0 w-8 h-8 flex items-center justify-end pr-2 pt-1 opacity-40 text-${THEME.COLORS.PRIMARY}`}>
-                   <Pin size={10} className="rotate-45" />
+                <div
+                  className={`absolute top-0 right-0 w-8 h-8 flex items-center justify-end pr-2 pt-1 opacity-40 text-${THEME.COLORS.PRIMARY}`}
+                >
+                  <Pin size={10} className="rotate-45" />
                 </div>
               )}
 
               <div className="flex justify-between items-start gap-2 w-full">
-                <Typography 
-                  variant="caption" 
-                  weight="bold" 
+                <Typography
+                  variant="caption"
+                  weight="bold"
                   className={`truncate ${activeSessionId === s.sessionId ? `text-${THEME.COLORS.PRIMARY}` : 'text-white/80'}`}
                 >
                   {s.title ?? 'Untitled Trace'}
                 </Typography>
               </div>
 
-              <Typography variant="mono" color="muted" className="truncate italic block h-4 w-full cursor-pointer leading-tight">
+              <Typography
+                variant="mono"
+                color="muted"
+                className="truncate italic block h-4 w-full cursor-pointer leading-tight"
+              >
                 {s.lastMessage ?? 'Waiting for signal...'}
               </Typography>
-              
+
               <div className="flex items-center justify-between w-full">
                 <div className="flex items-center gap-3">
-                  <Typography variant="mono" color="muted" className="text-[8px] cursor-pointer opacity-80">
-                      {new Date(s.updatedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                  <Typography
+                    variant="mono"
+                    color="muted"
+                    className="text-[8px] cursor-pointer opacity-80"
+                  >
+                    {new Date(s.updatedAt).toLocaleString([], {
+                      dateStyle: 'short',
+                      timeStyle: 'short',
+                    })}
                   </Typography>
                   {!s.isPinned && s.expiresAt && (
-                    <Typography variant="mono" className="text-[8px] text-amber-500/60 lowercase italic">
-                        {getExpiryText(s.expiresAt)}
+                    <Typography
+                      variant="mono"
+                      className="text-[8px] text-amber-500/60 lowercase italic"
+                    >
+                      {getExpiryText(s.expiresAt)}
                     </Typography>
                   )}
                 </div>
 
                 <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                   <Button
+                  <Button
                     variant="ghost"
                     size="sm"
-                    onClick={(e) => { e.stopPropagation(); onTogglePin(s.sessionId, !s.isPinned); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onTogglePin(s.sessionId, !s.isPinned);
+                    }}
                     className={`p-1 h-auto transition-colors z-10 ${s.isPinned ? `text-${THEME.COLORS.PRIMARY}` : 'text-white/20'}`}
                     icon={s.isPinned ? <PinOff size={12} /> : <Pin size={12} />}
-                    title={s.isPinned ? "Unpin Session" : "Pin Session"}
+                    title={s.isPinned ? 'Unpin Session' : 'Pin Session'}
                   />
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={(e) => { e.stopPropagation(); onDeleteSession(e, s.sessionId); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteSession(e, s.sessionId);
+                    }}
                     className="p-1 text-red-500/40 hover:text-red-500 h-auto transition-colors z-10"
                     icon={<Trash2 size={12} />}
                     title="Delete Conversation"
@@ -179,9 +209,16 @@ export function ChatSidebar({
           fullWidth
           variant="outline"
           className="h-11 border-dashed border-white/10 hover:border-cyber-green/40 hover:bg-cyber-green/5 group"
-          icon={<Plus size={16} className="group-hover:rotate-90 transition-transform text-cyber-green" />}
+          icon={
+            <Plus
+              size={16}
+              className="group-hover:rotate-90 transition-transform text-cyber-green"
+            />
+          }
         >
-          <span className="group-hover:text-cyber-green transition-colors font-bold uppercase tracking-wider text-xs">Start New Chat</span>
+          <span className="group-hover:text-cyber-green transition-colors font-bold uppercase tracking-wider text-xs">
+            Start New Chat
+          </span>
         </Button>
       </div>
     </aside>

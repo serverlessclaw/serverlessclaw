@@ -85,6 +85,8 @@ export function createStorage() {
     ActiveProvider: new sst.Secret('ActiveProvider'),
     ActiveModel: new sst.Secret('ActiveModel'),
     GitHubToken: new sst.Secret('GitHubToken'),
+    GitHubWebhookSecret: new sst.Secret('GitHubWebhookSecret'),
+    JiraWebhookSecret: new sst.Secret('JiraWebhookSecret'),
     DashboardPassword: new sst.Secret('DashboardPassword'),
   };
 

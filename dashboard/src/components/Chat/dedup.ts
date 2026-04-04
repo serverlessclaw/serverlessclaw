@@ -21,18 +21,18 @@ export function isDuplicate(
   content: string
 ): boolean {
   if (messageId) {
-    const existsInState = prev.some(m => m.messageId === messageId);
+    const existsInState = prev.some((m) => m.messageId === messageId);
     if (existsInState) {
       return true;
     }
     seenIds.add(messageId);
     return false;
   }
-  
+
   // For empty content (processing/tool delegation), only deduplicate if we already have an empty one from assistant
   if (content === '') {
-    return prev.some(m => m.role === 'assistant' && m.content === '');
+    return prev.some((m) => m.role === 'assistant' && m.content === '');
   }
 
-  return prev.some(m => m.role === 'assistant' && m.content === content);
+  return prev.some((m) => m.role === 'assistant' && m.content === content);
 }

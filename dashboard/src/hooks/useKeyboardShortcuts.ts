@@ -9,8 +9,17 @@ export interface ShortcutDefinition {
   preventDefault?: boolean;
 }
 
-function parseShortcut(shortcut: string): { metaKey: boolean; ctrlKey: boolean; altKey: boolean; shiftKey: boolean; key: string } {
-  const parts = shortcut.toLowerCase().split('+').map(s => s.trim());
+function parseShortcut(shortcut: string): {
+  metaKey: boolean;
+  ctrlKey: boolean;
+  altKey: boolean;
+  shiftKey: boolean;
+  key: string;
+} {
+  const parts = shortcut
+    .toLowerCase()
+    .split('+')
+    .map((s) => s.trim());
   return {
     metaKey: parts.includes('meta') || parts.includes('cmd'),
     ctrlKey: parts.includes('ctrl'),
@@ -38,25 +47,29 @@ export function useKeyboardShortcuts(shortcuts: ShortcutDefinition[], enabled = 
     shortcutsRef.current = shortcuts;
   }, [shortcuts]);
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (!enabled) return;
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (!enabled) return;
 
-    const target = e.target as HTMLElement;
-    const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+      const target = e.target as HTMLElement;
+      const isInput =
+        target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
 
-    for (const shortcut of shortcutsRef.current) {
-      if (matchesShortcut(e, shortcut.keys)) {
-        if (isInput && !shortcut.keys.toLowerCase().includes('enter')) {
-          continue;
+      for (const shortcut of shortcutsRef.current) {
+        if (matchesShortcut(e, shortcut.keys)) {
+          if (isInput && !shortcut.keys.toLowerCase().includes('enter')) {
+            continue;
+          }
+          if (shortcut.preventDefault !== false) {
+            e.preventDefault();
+          }
+          shortcut.handler();
+          break;
         }
-        if (shortcut.preventDefault !== false) {
-          e.preventDefault();
-        }
-        shortcut.handler();
-        break;
       }
-    }
-  }, [enabled]);
+    },
+    [enabled]
+  );
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -73,7 +86,7 @@ export const SHORTCUT_DESCRIPTIONS: Record<string, string> = {
   'ctrl+/': 'Focus chat input',
   'meta+enter': 'Send message',
   'ctrl+enter': 'Send message',
-  'escape': 'Close modal / Cancel',
+  escape: 'Close modal / Cancel',
   'meta+e': 'Edit session title',
   'ctrl+e': 'Edit session title',
   'meta+d': 'Delete current session',

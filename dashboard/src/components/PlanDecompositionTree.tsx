@@ -30,8 +30,14 @@ export default function PlanDecompositionTree({ planId, title, subTasks }: PlanT
           <GitCommit size={24} />
         </div>
         <div>
-          <Typography variant="h3" glow uppercase>{title}</Typography>
-          <Typography variant="mono" color="muted" className="text-xs mt-1 uppercase tracking-widest opacity-40">
+          <Typography variant="h3" glow uppercase>
+            {title}
+          </Typography>
+          <Typography
+            variant="mono"
+            color="muted"
+            className="text-xs mt-1 uppercase tracking-widest opacity-40"
+          >
             ROOT_PLAN: {planId}
           </Typography>
         </div>
@@ -41,15 +47,25 @@ export default function PlanDecompositionTree({ planId, title, subTasks }: PlanT
         {sortedTasks.map((task, index) => (
           <div key={task.subTaskId} className="flex gap-6 items-start group">
             <div className="flex flex-col items-center pt-1">
-              <div className={`
+              <div
+                className={`
                 w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-500
-                ${task.status === 'DONE' ? 'bg-cyber-green/20 border-cyber-green text-cyber-green' : 
-                  task.status === 'PROGRESS' ? 'bg-cyber-blue/20 border-cyber-blue text-cyber-blue animate-pulse' :
-                  'bg-white/5 border-white/10 text-white/40 group-hover:border-white/20'}
-              `}>
-                {task.status === 'DONE' ? <CheckCircle2 size={16} /> : 
-                 task.status === 'PROGRESS' ? <Clock size={16} /> : 
-                 <Circle size={12} />}
+                ${
+                  task.status === 'DONE'
+                    ? 'bg-cyber-green/20 border-cyber-green text-cyber-green'
+                    : task.status === 'PROGRESS'
+                      ? 'bg-cyber-blue/20 border-cyber-blue text-cyber-blue animate-pulse'
+                      : 'bg-white/5 border-white/10 text-white/40 group-hover:border-white/20'
+                }
+              `}
+              >
+                {task.status === 'DONE' ? (
+                  <CheckCircle2 size={16} />
+                ) : task.status === 'PROGRESS' ? (
+                  <Clock size={16} />
+                ) : (
+                  <Circle size={12} />
+                )}
               </div>
               {index < sortedTasks.length - 1 && (
                 <div className="py-2">
@@ -60,14 +76,21 @@ export default function PlanDecompositionTree({ planId, title, subTasks }: PlanT
 
             <div className="flex-1 bg-white/[0.02] border border-white/5 p-4 rounded-xl hover:bg-white/[0.05] transition-all">
               <div className="flex justify-between items-start mb-2">
-                <Typography variant="mono" className="text-[10px] uppercase tracking-tighter opacity-40 font-bold">
+                <Typography
+                  variant="mono"
+                  className="text-[10px] uppercase tracking-tighter opacity-40 font-bold"
+                >
                   SUB_TASK_{task.order + 1}
                 </Typography>
-                <div className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${
-                  task.status === 'DONE' ? 'bg-cyber-green/20 text-cyber-green' :
-                  task.status === 'PROGRESS' ? 'bg-cyber-blue/20 text-cyber-blue' :
-                  'bg-white/10 text-white/40'
-                }`}>
+                <div
+                  className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${
+                    task.status === 'DONE'
+                      ? 'bg-cyber-green/20 text-cyber-green'
+                      : task.status === 'PROGRESS'
+                        ? 'bg-cyber-blue/20 text-cyber-blue'
+                        : 'bg-white/10 text-white/40'
+                  }`}
+                >
                   {task.status}
                 </div>
               </div>

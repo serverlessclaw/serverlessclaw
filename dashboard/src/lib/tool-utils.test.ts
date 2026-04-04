@@ -138,9 +138,7 @@ describe('tool-utils', () => {
 
       expect(MCPBridge.getExternalTools).toHaveBeenCalledWith(undefined, true);
       expect(result).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ name: 'fallback_tool' }),
-        ])
+        expect.arrayContaining([expect.objectContaining({ name: 'fallback_tool' })])
       );
     });
 

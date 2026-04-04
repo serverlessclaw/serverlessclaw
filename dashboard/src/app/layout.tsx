@@ -1,29 +1,29 @@
-import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
-import "../globals.css";
+import type { Metadata } from 'next';
+import { Inter, JetBrains_Mono } from 'next/font/google';
+import '../globals.css';
 
 const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
+  variable: '--font-inter',
+  subsets: ['latin'],
 });
 
 const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
+  variable: '--font-jetbrains-mono',
+  subsets: ['latin'],
 });
 
-import Sidebar from "@/components/Sidebar";
+import Sidebar from '@/components/Sidebar';
 import { Toaster } from 'sonner';
-import { TranslationsProvider } from "@/components/Providers/TranslationsProvider";
-import { ConfigManager } from "@claw/core/lib/registry/config";
-import { CONFIG_KEYS } from "@claw/core/lib/constants";
+import { TranslationsProvider } from '@/components/Providers/TranslationsProvider';
+import { ConfigManager } from '@claw/core/lib/registry/config';
+import { CONFIG_KEYS } from '@claw/core/lib/constants';
 
 export const metadata: Metadata = {
-  title: "ClawCenter | Neural Hub",
-  description: "Autonomous Agent Command & Control Hub",
+  title: 'ClawCenter | Neural Hub',
+  description: 'Autonomous Agent Command & Control Hub',
 };
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export default async function RootLayout({
   children,
@@ -31,7 +31,10 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   // Fetch the active locale from system config (server-side)
-  const initialLocale = (await ConfigManager.getTypedConfig<string>(CONFIG_KEYS.ACTIVE_LOCALE, 'en')) as 'en' | 'cn';
+  const initialLocale = (await ConfigManager.getTypedConfig<string>(
+    CONFIG_KEYS.ACTIVE_LOCALE,
+    'en'
+  )) as 'en' | 'cn';
 
   return (
     <html
@@ -39,13 +42,19 @@ export default async function RootLayout({
       suppressHydrationWarning
       className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body suppressHydrationWarning className="min-h-full flex bg-[#0a0a0a] text-white font-mono text-base antialiased">
+      <body
+        suppressHydrationWarning
+        className="min-h-full flex bg-[#0a0a0a] text-white font-mono text-base antialiased"
+      >
         <TranslationsProvider initialLocale={initialLocale}>
-          <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-cyber-green focus:text-black">
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-cyber-green focus:text-black"
+          >
             Skip to content
           </a>
-          <Toaster 
-            position="bottom-right" 
+          <Toaster
+            position="bottom-right"
             toastOptions={{
               className: 'cyber-toast',
               classNames: {
@@ -53,7 +62,7 @@ export default async function RootLayout({
                 error: 'cyber-toast-error',
                 description: 'cyber-toast-description',
               },
-            }} 
+            }}
           />
           <div className="flex h-screen w-full overflow-hidden">
             <Sidebar />

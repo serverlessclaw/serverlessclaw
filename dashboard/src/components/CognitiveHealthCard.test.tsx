@@ -6,19 +6,33 @@ import CognitiveHealthCard from './CognitiveHealthCard';
 // Mock the UI components
 vi.mock('@/components/ui/Card', () => ({
   default: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card" className={className}>{children}</div>
+    <div data-testid="card" className={className}>
+      {children}
+    </div>
   ),
 }));
 
 vi.mock('@/components/ui/Typography', () => ({
   default: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="typography" className={className}>{children}</div>
+    <div data-testid="typography" className={className}>
+      {children}
+    </div>
   ),
 }));
 
 vi.mock('@/components/ui/Badge', () => ({
-  default: ({ children, className, variant }: { children: React.ReactNode; className?: string; variant?: string }) => (
-    <span data-testid="badge" data-variant={variant} className={className}>{children}</span>
+  default: ({
+    children,
+    className,
+    variant,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+    variant?: string;
+  }) => (
+    <span data-testid="badge" data-variant={variant} className={className}>
+      {children}
+    </span>
   ),
 }));
 
@@ -49,16 +63,16 @@ describe('CognitiveHealthCard', () => {
 
   it('should display metrics correctly', () => {
     render(<CognitiveHealthCard {...defaultProps} />);
-    
+
     expect(screen.getByText('Task Completion')).toBeInTheDocument();
     expect(screen.getByText('95.0%')).toBeInTheDocument();
-    
+
     expect(screen.getByText('Reasoning Coherence')).toBeInTheDocument();
     expect(screen.getByText('8.5/10')).toBeInTheDocument();
-    
+
     expect(screen.getByText('Error Rate')).toBeInTheDocument();
     expect(screen.getByText('2.0%')).toBeInTheDocument();
-    
+
     expect(screen.getByText('Memory Fragmentation')).toBeInTheDocument();
     expect(screen.getByText('15.0%')).toBeInTheDocument();
   });
@@ -73,9 +87,9 @@ describe('CognitiveHealthCard', () => {
       { type: 'PERFORMANCE', severity: 'HIGH', message: 'High latency detected' },
       { type: 'MEMORY', severity: 'MEDIUM', message: 'Memory leak suspected' },
     ];
-    
+
     render(<CognitiveHealthCard {...defaultProps} anomalies={anomalies} />);
-    
+
     expect(screen.getByText('Anomalies')).toBeInTheDocument();
     expect(screen.getByText('HIGH')).toBeInTheDocument();
     expect(screen.getByText('High latency detected')).toBeInTheDocument();
@@ -84,12 +98,10 @@ describe('CognitiveHealthCard', () => {
   });
 
   it('should show anomaly count badge when anomalies exist', () => {
-    const anomalies = [
-      { type: 'PERFORMANCE', severity: 'HIGH', message: 'Test anomaly' },
-    ];
-    
+    const anomalies = [{ type: 'PERFORMANCE', severity: 'HIGH', message: 'Test anomaly' }];
+
     render(<CognitiveHealthCard {...defaultProps} anomalies={anomalies} />);
-    
+
     expect(screen.getByTestId('alert-triangle')).toBeInTheDocument();
     expect(screen.getByText('1')).toBeInTheDocument();
   });
@@ -115,7 +127,7 @@ describe('CognitiveHealthCard', () => {
   it('should clamp score to 0-100 range', () => {
     render(<CognitiveHealthCard {...defaultProps} score={150} />);
     expect(screen.getByText('100')).toBeInTheDocument();
-    
+
     render(<CognitiveHealthCard {...defaultProps} score={-10} />);
     expect(screen.getByText('0')).toBeInTheDocument();
   });
@@ -123,7 +135,7 @@ describe('CognitiveHealthCard', () => {
   it('should apply correct badge variant for CRITICAL severity', () => {
     const anomalies = [{ type: 'TEST', severity: 'CRITICAL', message: 'Critical issue' }];
     render(<CognitiveHealthCard {...defaultProps} anomalies={anomalies} />);
-    
+
     const badges = screen.getAllByTestId('badge');
     // First badge is the anomaly count badge, second is the severity badge
     expect(badges[1]).toHaveAttribute('data-variant', 'danger');
@@ -132,7 +144,7 @@ describe('CognitiveHealthCard', () => {
   it('should apply correct badge variant for HIGH severity', () => {
     const anomalies = [{ type: 'TEST', severity: 'HIGH', message: 'High issue' }];
     render(<CognitiveHealthCard {...defaultProps} anomalies={anomalies} />);
-    
+
     const badges = screen.getAllByTestId('badge');
     expect(badges[1]).toHaveAttribute('data-variant', 'warning');
   });
@@ -140,7 +152,7 @@ describe('CognitiveHealthCard', () => {
   it('should apply correct badge variant for MEDIUM severity', () => {
     const anomalies = [{ type: 'TEST', severity: 'MEDIUM', message: 'Medium issue' }];
     render(<CognitiveHealthCard {...defaultProps} anomalies={anomalies} />);
-    
+
     const badges = screen.getAllByTestId('badge');
     expect(badges[1]).toHaveAttribute('data-variant', 'audit');
   });
@@ -148,19 +160,19 @@ describe('CognitiveHealthCard', () => {
   it('should apply correct badge variant for LOW severity', () => {
     const anomalies = [{ type: 'TEST', severity: 'LOW', message: 'Low issue' }];
     render(<CognitiveHealthCard {...defaultProps} anomalies={anomalies} />);
-    
+
     const badges = screen.getAllByTestId('badge');
     expect(badges[1]).toHaveAttribute('data-variant', 'outline');
   });
 
   it('should render SVG gauge with correct structure', () => {
     const { container } = render(<CognitiveHealthCard {...defaultProps} />);
-    
+
     const svg = container.querySelector('svg');
     expect(svg).toBeInTheDocument();
     expect(svg).toHaveAttribute('width', '100');
     expect(svg).toHaveAttribute('height', '100');
-    
+
     const circles = container.querySelectorAll('circle');
     expect(circles).toHaveLength(2); // Background circle + progress circle
   });

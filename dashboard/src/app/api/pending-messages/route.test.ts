@@ -31,11 +31,11 @@ describe('PendingMessages API Route', () => {
     it('should return pending messages', async () => {
       const messages = [{ id: '1', content: 'test' }];
       mockSessionStateManagerInstance.getPendingMessages.mockResolvedValue(messages);
-      
+
       const req = new NextRequest('http://localhost/api/pending-messages?sessionId=s1');
       const res = await GET(req);
       const data = await res.json();
-      
+
       expect(res.status).toBe(200);
       expect(data.pendingMessages).toEqual(messages);
     });
@@ -53,21 +53,21 @@ describe('PendingMessages API Route', () => {
 
     it('should return 200 on success', async () => {
       mockSessionStateManagerInstance.removePendingMessage.mockResolvedValue(true);
-      
+
       const req = new NextRequest('http://localhost/api/pending-messages', {
         method: 'DELETE',
         body: JSON.stringify({ sessionId: 's1', messageId: 'm1' }),
       });
       const res = await DELETE(req);
       const data = await res.json();
-      
+
       expect(res.status).toBe(200);
       expect(data.success).toBe(true);
     });
 
     it('should return 404 if message not found', async () => {
       mockSessionStateManagerInstance.removePendingMessage.mockResolvedValue(false);
-      
+
       const req = new NextRequest('http://localhost/api/pending-messages', {
         method: 'DELETE',
         body: JSON.stringify({ sessionId: 's1', messageId: 'm1' }),
@@ -89,14 +89,14 @@ describe('PendingMessages API Route', () => {
 
     it('should return 200 on successful update', async () => {
       mockSessionStateManagerInstance.updatePendingMessage.mockResolvedValue(true);
-      
+
       const req = new NextRequest('http://localhost/api/pending-messages', {
         method: 'PATCH',
         body: JSON.stringify({ sessionId: 's1', messageId: 'm1', content: 'new content' }),
       });
       const res = await PATCH(req);
       const data = await res.json();
-      
+
       expect(res.status).toBe(200);
       expect(data.success).toBe(true);
     });

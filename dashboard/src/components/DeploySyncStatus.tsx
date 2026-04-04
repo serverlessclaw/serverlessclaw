@@ -47,20 +47,27 @@ export default function DeploySyncStatus() {
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-6">
         <GitBranch size={18} className="text-cyber-blue" />
-        <Typography variant="h3" uppercase glow>Deployment Sync Tracker</Typography>
+        <Typography variant="h3" uppercase glow>
+          Deployment Sync Tracker
+        </Typography>
       </div>
 
       <div className="space-y-3">
         {syncs.map((sync) => (
-          <div 
+          <div
             key={sync.buildId}
             className="bg-white/5 border border-white/10 p-4 rounded-lg flex items-center justify-between hover:border-white/20 transition-colors"
           >
             <div className="flex items-center gap-4">
-              <div className={
-                sync.status === 'SUCCESS' ? 'text-cyber-green' : 
-                sync.status === 'FAILED' ? 'text-red-500' : 'text-cyber-blue'
-              }>
+              <div
+                className={
+                  sync.status === 'SUCCESS'
+                    ? 'text-cyber-green'
+                    : sync.status === 'FAILED'
+                      ? 'text-red-500'
+                      : 'text-cyber-blue'
+                }
+              >
                 {sync.status === 'SUCCESS' && <CheckCircle2 size={20} />}
                 {sync.status === 'FAILED' && <XCircle size={20} />}
                 {sync.status === 'PROGRESS' && <Loader2 size={20} className="animate-spin" />}
@@ -68,11 +75,19 @@ export default function DeploySyncStatus() {
 
               <div>
                 <div className="flex items-center gap-2">
-                  <Typography variant="mono" className="text-sm font-bold">{sync.buildId.slice(0, 12)}</Typography>
-                  <Badge variant={
-                    sync.status === 'SUCCESS' ? 'primary' : 
-                    sync.status === 'FAILED' ? 'danger' : 'intel'
-                  } className="text-[9px] px-2 py-0">
+                  <Typography variant="mono" className="text-sm font-bold">
+                    {sync.buildId.slice(0, 12)}
+                  </Typography>
+                  <Badge
+                    variant={
+                      sync.status === 'SUCCESS'
+                        ? 'primary'
+                        : sync.status === 'FAILED'
+                          ? 'danger'
+                          : 'intel'
+                    }
+                    className="text-[9px] px-2 py-0"
+                  >
                     {sync.status}
                   </Badge>
                 </div>
@@ -91,7 +106,7 @@ export default function DeploySyncStatus() {
             </div>
 
             <div className="flex gap-1">
-              {sync.gapIds.map(id => (
+              {sync.gapIds.map((id) => (
                 <div key={id} className="w-2 h-2 rounded-full bg-cyber-blue/40" title={id} />
               ))}
             </div>

@@ -27,7 +27,7 @@ describe('Input Component', () => {
 
     const input = screen.getByPlaceholderText('Type here');
     await user.type(input, 'hello');
-    
+
     expect(onChange).toHaveBeenCalled();
     expect(input).toHaveValue('hello');
   });

@@ -24,9 +24,12 @@ const COLORS = [
   '#06b6d4',
 ];
 
-export default function ToolUsageTrendChart({ tools, days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] }: ToolUsageTrendChartProps) {
+export default function ToolUsageTrendChart({
+  tools,
+  days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+}: ToolUsageTrendChartProps) {
   const maxCalls = useMemo(() => {
-    const allCalls = tools.flatMap(t => t.calls);
+    const allCalls = tools.flatMap((t) => t.calls);
     return Math.max(...allCalls, 1);
   }, [tools]);
 
@@ -38,12 +41,23 @@ export default function ToolUsageTrendChart({ tools, days = ['Mon', 'Tue', 'Wed'
 
   return (
     <Card variant="glass" padding="lg" className="border-white/5 bg-black/40">
-      <Typography variant="caption" weight="black" color="intel" uppercase className="tracking-[0.4em] mb-6 block">7-Day Tool Usage Trends</Typography>
+      <Typography
+        variant="caption"
+        weight="black"
+        color="intel"
+        uppercase
+        className="tracking-[0.4em] mb-6 block"
+      >
+        7-Day Tool Usage Trends
+      </Typography>
 
       <div className="flex flex-wrap gap-4 mb-4">
         {tools.map((tool, i) => (
           <div key={tool.name} className="flex items-center gap-2 text-[10px] font-mono">
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tool.color ?? COLORS[i % COLORS.length] }} />
+            <div
+              className="w-2 h-2 rounded-full"
+              style={{ backgroundColor: tool.color ?? COLORS[i % COLORS.length] }}
+            />
             <span className="text-white/60 uppercase">{tool.name}</span>
           </div>
         ))}
@@ -55,8 +69,25 @@ export default function ToolUsageTrendChart({ tools, days = ['Mon', 'Tue', 'Wed'
             const y = padding + chartHeight - tick * chartHeight;
             return (
               <g key={tick}>
-                <line x1={padding} y1={y} x2={width - padding} y2={y} stroke="white" strokeOpacity="0.05" strokeDasharray="4 4" />
-                <text x={padding - 5} y={y} fill="white" fillOpacity="0.2" fontSize="8" fontFamily="monospace" textAnchor="end" alignmentBaseline="middle">
+                <line
+                  x1={padding}
+                  y1={y}
+                  x2={width - padding}
+                  y2={y}
+                  stroke="white"
+                  strokeOpacity="0.05"
+                  strokeDasharray="4 4"
+                />
+                <text
+                  x={padding - 5}
+                  y={y}
+                  fill="white"
+                  fillOpacity="0.2"
+                  fontSize="8"
+                  fontFamily="monospace"
+                  textAnchor="end"
+                  alignmentBaseline="middle"
+                >
                   {Math.round(tick * maxCalls)}
                 </text>
               </g>
@@ -83,11 +114,13 @@ export default function ToolUsageTrendChart({ tools, days = ['Mon', 'Tue', 'Wed'
           })}
 
           {tools.map((tool, toolIndex) => {
-            const points = tool.calls.map((calls, i) => {
-              const x = padding + (i * chartWidth) / (tool.calls.length - 1);
-              const y = padding + chartHeight - (calls / maxCalls) * chartHeight;
-              return `${x},${y}`;
-            }).join(' ');
+            const points = tool.calls
+              .map((calls, i) => {
+                const x = padding + (i * chartWidth) / (tool.calls.length - 1);
+                const y = padding + chartHeight - (calls / maxCalls) * chartHeight;
+                return `${x},${y}`;
+              })
+              .join(' ');
 
             const areaPath = `M ${padding},${padding + chartHeight} ${points} L ${padding + chartWidth},${padding + chartHeight} Z`;
             const color = tool.color ?? COLORS[toolIndex % COLORS.length];
@@ -114,7 +147,13 @@ export default function ToolUsageTrendChart({ tools, days = ['Mon', 'Tue', 'Wed'
                   const y = padding + chartHeight - (calls / maxCalls) * chartHeight;
                   return (
                     <g key={i} className="group/point">
-                      <circle cx={x} cy={y} r="3" fill={color} className="transition-all duration-300 group-hover/point:r-5" />
+                      <circle
+                        cx={x}
+                        cy={y}
+                        r="3"
+                        fill={color}
+                        className="transition-all duration-300 group-hover/point:r-5"
+                      />
                       <text
                         x={x}
                         y={y - 8}

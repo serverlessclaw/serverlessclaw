@@ -6,54 +6,54 @@
 
 ## 🛠️ Available Tools
 
-| Tool                      | Purpose                                                                               | Protected? | Writes to Cloud? |
-| ------------------------- | ------------------------------------------------------------------------------------- | :--------: | :--------------: |
-| `requestResearch`        | Dispatches a technical research mission to the Researcher Agent. Standardized parallel fan-out. |     —      |        ✅        |
-| `dispatchTask`            | Sends a task to EventBridge → Specialized Agent                                       |     —      |        ✅        |
-| `seekClarification`       | Pauses current agent and requests directions from initiator                           |     —      |        ✅        |
-| `provideClarification`    | Answers a request and resumes the target agent                                        |     —      |        ✅        |
-| `triggerDeployment`       | Starts a CodeBuild deploy (circuit-breaker protected, supports Atomic Sync)           |     ✅     |        ✅        |
-| `checkHealth`             | Deep cognitive probe of AgentBus, Core Tools, and LLM Providers                       |     —      |        ✅        |
-| `runCognitiveHealthCheck` | Runs deep cognitive health check on agents (reasoning, memory, anomalies)             |     —      |        ✅        |
-| `rollbackDeployment`      | Emergency Git revert + redeploy                                                       |     —      |        ✅        |
-| `reportGap`               | Records a capability gap or technical failure                                         |     —      |        ✅        |
-| `manageGap`               | Updates or lists capability gaps in the system                                        |     —      |        ✅        |
-| `recallKnowledge`         | JIT retrieval of distilled facts/lessons                                              |     —      |        —         |
-| `listAgents`              | Discovers available specialized agents                                                |     —      |        —         |
-| `discoverSkills`          | Searches MCP marketplace for new capabilities                                         |     —      |        —         |
-| `registerMCPServer`       | Dynamically connects a new MCP bridge                                                 |     —      |        ✅        |
-| `deleteMcpServer`         | Removes an MCP connection                                                             |     —      |        ✅        |
-| `installSkill`            | Adds a tool to an agent's roster                                                      |     —      |        ✅        |
-| `uninstallSkill`          | Removes a tool from an agent's roster                                                 |     —      |        ✅        |
-| `discoverPeers`           | Discovers peer agents in the swarm (filter by capability/category)                    |     —      |        —         |
-| `registerPeer`            | Registers a bidirectional peer connection in swarm topology                           |     —      |        ✅        |
-| `requestConsensus`        | Requests swarm consensus (majority/unanimous/weighted modes)                          |     —      |        ✅        |
-| `createWorkspace`         | Creates a new multi-human multi-agent workspace                                       |     —      |        ✅        |
-| `inviteMember`            | Invites a human or agent to a workspace (admin/owner only)                            |     —      |        ✅        |
-| `updateMemberRole`        | Updates a member's role within a workspace                                            |     —      |        ✅        |
-| `removeMember`            | Removes a member from a workspace (cannot remove owner)                               |     —      |        ✅        |
-| `getWorkspace`            | Retrieves workspace details including all members                                     |     —      |        —         |
-| `listWorkspaces`          | Lists all workspace IDs in the system                                                 |     —      |        —         |
-| `createCollaboration`     | Creates a multi-party collaboration session (supports workspaceId)                    |     —      |        ✅        |
-| `joinCollaboration`       | Joins an existing collaboration to access shared context                              |     —      |        ✅        |
-| `getCollaborationContext` | Gets shared session conversation history                                              |     —      |        —         |
-| `writeToCollaboration`    | Writes a message to the shared collaboration session                                  |     —      |        ✅        |
-| `closeCollaboration`      | Closes a collaboration session                                                        |     —      |        ✅        |
-| `listMyCollaborations`    | Lists all collaborations for the current agent                                        |     —      |        —         |
-| `broadcastMessage`        | Broadcasts a message to all active participants in a session                          |     —      |        ✅        |
-| `debugAgent`              | Sets debug level and captures detailed traces for a specific agent                    |     —      |        ✅        |
-| `switchModel`             | Hot-swaps the LLM provider or model for the current agent                             |     —      |        ✅        |
-| `cancelGoal`              | Cancels a scheduled proactive goal or task                                            |     —      |        ✅        |
-| `listSchedules`           | Lists all active proactive goals and scheduled tasks                                  |     —      |        —         |
-| `signalOrchestration`     | Deterministic signal to move a goal to the next state                                 |     —      |        ✅        |
-| `voteOnProposal`          | Submits a vote for an active consensus proposal                                       |     —      |        ✅        |
-| `checkReputation`         | Retrieves an agent's rolling 7-day performance metrics (success rate, latency, score) |     —      |        —         |
-| `mcp-filesystem-*`        | MCP-driven file operations (read/write/list/search)                                   |     ✅     |        —         |
-| `git-status` / `git-diff` | Version control awareness (MCP)                                                       |     —      |        —         |
-| `google-search`           | Real-time global intelligence (MCP)                                                   |     —      |        —         |
-| `puppeteer-*`             | Browser automation & UI vision (MCP)                                                  |     ✅     |        —         |
-| `fetch`                   | Deep reading of docs/web pages (MCP)                                                  |     —      |        —         |
-| `aws-*`                   | Infrastructure auditing & logs (MCP)                                                  |     ✅     |        —         |
+| Tool                      | Purpose                                                                                         | Protected? | Writes to Cloud? |
+| ------------------------- | ----------------------------------------------------------------------------------------------- | :--------: | :--------------: |
+| `requestResearch`         | Dispatches a technical research mission to the Researcher Agent. Standardized parallel fan-out. |     —      |        ✅        |
+| `dispatchTask`            | Sends a task to EventBridge → Specialized Agent                                                 |     —      |        ✅        |
+| `seekClarification`       | Pauses current agent and requests directions from initiator                                     |     —      |        ✅        |
+| `provideClarification`    | Answers a request and resumes the target agent                                                  |     —      |        ✅        |
+| `triggerDeployment`       | Starts a CodeBuild deploy (circuit-breaker protected, supports Atomic Sync)                     |     ✅     |        ✅        |
+| `checkHealth`             | Deep cognitive probe of AgentBus, Core Tools, and LLM Providers                                 |     —      |        ✅        |
+| `runCognitiveHealthCheck` | Runs deep cognitive health check on agents (reasoning, memory, anomalies)                       |     —      |        ✅        |
+| `rollbackDeployment`      | Emergency Git revert + redeploy                                                                 |     —      |        ✅        |
+| `reportGap`               | Records a capability gap or technical failure                                                   |     —      |        ✅        |
+| `manageGap`               | Updates or lists capability gaps in the system                                                  |     —      |        ✅        |
+| `recallKnowledge`         | JIT retrieval of distilled facts/lessons                                                        |     —      |        —         |
+| `listAgents`              | Discovers available specialized agents                                                          |     —      |        —         |
+| `discoverSkills`          | Searches MCP marketplace for new capabilities                                                   |     —      |        —         |
+| `registerMCPServer`       | Dynamically connects a new MCP bridge                                                           |     —      |        ✅        |
+| `deleteMcpServer`         | Removes an MCP connection                                                                       |     —      |        ✅        |
+| `installSkill`            | Adds a tool to an agent's roster                                                                |     —      |        ✅        |
+| `uninstallSkill`          | Removes a tool from an agent's roster                                                           |     —      |        ✅        |
+| `discoverPeers`           | Discovers peer agents in the swarm (filter by capability/category)                              |     —      |        —         |
+| `registerPeer`            | Registers a bidirectional peer connection in swarm topology                                     |     —      |        ✅        |
+| `requestConsensus`        | Requests swarm consensus (majority/unanimous/weighted modes)                                    |     —      |        ✅        |
+| `createWorkspace`         | Creates a new multi-human multi-agent workspace                                                 |     —      |        ✅        |
+| `inviteMember`            | Invites a human or agent to a workspace (admin/owner only)                                      |     —      |        ✅        |
+| `updateMemberRole`        | Updates a member's role within a workspace                                                      |     —      |        ✅        |
+| `removeMember`            | Removes a member from a workspace (cannot remove owner)                                         |     —      |        ✅        |
+| `getWorkspace`            | Retrieves workspace details including all members                                               |     —      |        —         |
+| `listWorkspaces`          | Lists all workspace IDs in the system                                                           |     —      |        —         |
+| `createCollaboration`     | Creates a multi-party collaboration session (supports workspaceId)                              |     —      |        ✅        |
+| `joinCollaboration`       | Joins an existing collaboration to access shared context                                        |     —      |        ✅        |
+| `getCollaborationContext` | Gets shared session conversation history                                                        |     —      |        —         |
+| `writeToCollaboration`    | Writes a message to the shared collaboration session                                            |     —      |        ✅        |
+| `closeCollaboration`      | Closes a collaboration session                                                                  |     —      |        ✅        |
+| `listMyCollaborations`    | Lists all collaborations for the current agent                                                  |     —      |        —         |
+| `broadcastMessage`        | Broadcasts a message to all active participants in a session                                    |     —      |        ✅        |
+| `debugAgent`              | Sets debug level and captures detailed traces for a specific agent                              |     —      |        ✅        |
+| `switchModel`             | Hot-swaps the LLM provider or model for the current agent                                       |     —      |        ✅        |
+| `cancelGoal`              | Cancels a scheduled proactive goal or task                                                      |     —      |        ✅        |
+| `listSchedules`           | Lists all active proactive goals and scheduled tasks                                            |     —      |        —         |
+| `signalOrchestration`     | Deterministic signal to move a goal to the next state                                           |     —      |        ✅        |
+| `voteOnProposal`          | Submits a vote for an active consensus proposal                                                 |     —      |        ✅        |
+| `checkReputation`         | Retrieves an agent's rolling 7-day performance metrics (success rate, latency, score)           |     —      |        —         |
+| `mcp-filesystem-*`        | MCP-driven file operations (read/write/list/search)                                             |     ✅     |        —         |
+| `git-status` / `git-diff` | Version control awareness (MCP)                                                                 |     —      |        —         |
+| `google-search`           | Real-time global intelligence (MCP)                                                             |     —      |        —         |
+| `puppeteer-*`             | Browser automation & UI vision (MCP)                                                            |     ✅     |        —         |
+| `fetch`                   | Deep reading of docs/web pages (MCP)                                                            |     —      |        —         |
+| `aws-*`                   | Infrastructure auditing & logs (MCP)                                                            |     ✅     |        —         |
 
 ---
 
@@ -208,8 +208,9 @@ To ensure tools are always available even in unstable network conditions or Lamb
     [ Call Tool ]
           |
     +-----v-----+
-    |  MCP Hub  | (Primary - SSE)
-    |  (Remote) | [5s Timeout]
+    |  Unified  | (Primary - Lambda Invoke)
+    | Multiplexer [10s Timeout]
+    | (Lambda)  | [Routing: x-mcp-server]
     +-----+-----+
           |
     (Fail / Timeout)
@@ -222,9 +223,10 @@ To ensure tools are always available even in unstable network conditions or Lamb
 
 ### Reliability Guardrails:
 
-1. **Physical Resource Headroom**: Agents running MCP tools require `LARGE` (2048MB) memory to avoid OOM crashes during `npx` installations.
-2. **Persistence Safeguards**: Any "Connection Interrupted" message is preserved in the UI even during background session refreshes.
+1. **Physical Resource Headroom**: The Unified Multiplexer is provisioned with `MEDIUM_LARGE` (1024MB) memory to accommodate concurrent tool executions (e.g., Git + Filesystem).
+2. **Persistence Safeguards**: Tool results are cached in the `MemoryTable` via the `mcp_tools_cache_<server>` key to avoid redundant discovery calls.
 3. **Environment Hardening**: Writable cache paths in `/tmp` prevent `npm` from crashing when attempting to write to the read-only Lambda home directory.
+4. **Log Consolidation**: All tool invocations are logged with a `[MCP-MULTIPLEXER]` prefix, enabling unified tracing of complex tool sequences.
 
 ---
 

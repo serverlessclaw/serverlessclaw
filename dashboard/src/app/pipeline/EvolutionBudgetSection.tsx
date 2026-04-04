@@ -29,7 +29,10 @@ export default function EvolutionBudgetSection() {
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white/5 border border-white/10 p-6 rounded-2xl animate-pulse">
+            <div
+              key={i}
+              className="bg-white/5 border border-white/10 p-6 rounded-2xl animate-pulse"
+            >
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-11 h-11 bg-white/10 rounded-xl" />
                 <div className="h-3 w-24 bg-white/10 rounded" />

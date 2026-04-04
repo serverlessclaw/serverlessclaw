@@ -1,7 +1,18 @@
 'use client';
 
 import React from 'react';
-import { X, Bot, Shield, ShieldAlert, Settings2, Cpu, ChevronRight, Wrench, Trash2, Save } from 'lucide-react';
+import {
+  X,
+  Bot,
+  Shield,
+  ShieldAlert,
+  Settings2,
+  Cpu,
+  ChevronRight,
+  Wrench,
+  Trash2,
+  Save,
+} from 'lucide-react';
 import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -9,18 +20,23 @@ import Button from '@/components/ui/Button';
 import CyberSelect from '@/components/CyberSelect';
 import { Agent } from '@/lib/types/ui';
 
-import { 
-  LLMProvider, 
-  OpenAIModel, 
-  BedrockModel, 
-  MiniMaxModel, 
-  OpenRouterModel 
+import {
+  LLMProvider,
+  OpenAIModel,
+  BedrockModel,
+  MiniMaxModel,
+  OpenRouterModel,
 } from '@claw/core/lib/types/llm';
 
 const PROVIDERS = {
   [LLMProvider.OPENAI]: {
     label: 'OpenAI (Native)',
-    models: [OpenAIModel.GPT_5_4, OpenAIModel.GPT_5_4_MINI, OpenAIModel.GPT_5_4_NANO, OpenAIModel.GPT_5_MINI],
+    models: [
+      OpenAIModel.GPT_5_4,
+      OpenAIModel.GPT_5_4_MINI,
+      OpenAIModel.GPT_5_4_NANO,
+      OpenAIModel.GPT_5_MINI,
+    ],
   },
   [LLMProvider.BEDROCK]: {
     label: 'AWS Bedrock (Native)',
@@ -46,7 +62,10 @@ const REASONING_PROFILES = [
 
 interface AgentDetailModalProps {
   agent: Agent | null;
-  reputation?: Record<string, { successRate: number; avgLatencyMs: number; tasksCompleted: number; tasksFailed: number }>;
+  reputation?: Record<
+    string,
+    { successRate: number; avgLatencyMs: number; tasksCompleted: number; tasksFailed: number }
+  >;
   onClose: () => void;
   updateAgent: (id: string, updates: Partial<Agent>) => void;
   onDelete: (id: string) => void;
@@ -79,10 +98,18 @@ export default function AgentDetailModal({
         {/* Header */}
         <div className="sticky top-0 z-10 bg-[#0a0a0a] border-b border-white/10 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className={`p-2 rounded ${
-              agent.isBackbone ? 'bg-cyan-500/20 text-cyan-400' : 'bg-white/5 text-white'
-            }`}>
-              {isLogicOnly ? <ShieldAlert size={18} /> : (agent.isBackbone ? <Shield size={18} /> : <Bot size={18} />)}
+            <div
+              className={`p-2 rounded ${
+                agent.isBackbone ? 'bg-cyan-500/20 text-cyan-400' : 'bg-white/5 text-white'
+              }`}
+            >
+              {isLogicOnly ? (
+                <ShieldAlert size={18} />
+              ) : agent.isBackbone ? (
+                <Shield size={18} />
+              ) : (
+                <Bot size={18} />
+              )}
             </div>
             <div className="flex items-center gap-3">
               <input
@@ -90,12 +117,25 @@ export default function AgentDetailModal({
                 onChange={(e) => updateAgent(agent.id, { name: e.target.value })}
                 className="bg-transparent border-none text-white font-bold outline-none focus:ring-1 focus:ring-white/20 rounded px-1 text-base uppercase tracking-tight"
               />
-              <Typography variant="mono" color="muted" className="text-[10px] opacity-50">{agent.id}</Typography>
-              {agent.isBackbone && <Badge variant="primary" className="py-0">Backbone</Badge>}
-              {isLogicOnly && <Badge variant="audit" className="py-0">System Logic</Badge>}
+              <Typography variant="mono" color="muted" className="text-[10px] opacity-50">
+                {agent.id}
+              </Typography>
+              {agent.isBackbone && (
+                <Badge variant="primary" className="py-0">
+                  Backbone
+                </Badge>
+              )}
+              {isLogicOnly && (
+                <Badge variant="audit" className="py-0">
+                  System Logic
+                </Badge>
+              )}
             </div>
           </div>
-          <button onClick={onClose} className="text-white/40 hover:text-white transition-colors p-1">
+          <button
+            onClick={onClose}
+            className="text-white/40 hover:text-white transition-colors p-1"
+          >
             <X size={18} />
           </button>
         </div>
@@ -105,16 +145,34 @@ export default function AgentDetailModal({
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Prompt Section */}
             <div className="lg:col-span-7 space-y-3">
-              <Typography variant="caption" weight="bold" color="white" uppercase className="flex items-center gap-2">
+              <Typography
+                variant="caption"
+                weight="bold"
+                color="white"
+                uppercase
+                className="flex items-center gap-2"
+              >
                 <Settings2 size={12} className="text-cyan-400" />
                 {isLogicOnly ? 'Execution Parameters' : 'System Instructions'}
               </Typography>
               {isLogicOnly ? (
-                <Card variant="solid" padding="md" className="w-full text-[10px] text-white/40 font-mono italic leading-relaxed min-h-[200px]">
-                  This agent operates on deterministic system logic rather than autonomous reasoning.
-                  Instructions are hardcoded in the codebase for maximum reliability and safety.
-                  <br /><br />
-                  <Typography variant="mono" weight="bold" color="white" uppercase className="flex items-center gap-2 mt-4 opacity-60">
+                <Card
+                  variant="solid"
+                  padding="md"
+                  className="w-full text-[10px] text-white/40 font-mono italic leading-relaxed min-h-[200px]"
+                >
+                  This agent operates on deterministic system logic rather than autonomous
+                  reasoning. Instructions are hardcoded in the codebase for maximum reliability and
+                  safety.
+                  <br />
+                  <br />
+                  <Typography
+                    variant="mono"
+                    weight="bold"
+                    color="white"
+                    uppercase
+                    className="flex items-center gap-2 mt-4 opacity-60"
+                  >
                     <ChevronRight size={10} /> source_path: core/handlers/{agent.id}.ts
                   </Typography>
                 </Card>
@@ -132,30 +190,57 @@ export default function AgentDetailModal({
             <div className="lg:col-span-5 space-y-4">
               {!isLogicOnly && (
                 <Card variant="solid" padding="sm" className="space-y-4">
-                  <Typography variant="caption" weight="bold" color="white" uppercase className="flex items-center gap-2">
+                  <Typography
+                    variant="caption"
+                    weight="bold"
+                    color="white"
+                    uppercase
+                    className="flex items-center gap-2"
+                  >
                     <Cpu size={12} className="text-green-400" /> Hardware Alignment
                   </Typography>
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Typography variant="mono" weight="bold" color="white" uppercase className="text-[9px] opacity-60">LLM Provider</Typography>
+                      <Typography
+                        variant="mono"
+                        weight="bold"
+                        color="white"
+                        uppercase
+                        className="text-[9px] opacity-60"
+                      >
+                        LLM Provider
+                      </Typography>
                       <CyberSelect
                         value={agent.provider || ''}
                         onChange={(val) => updateAgent(agent.id, { provider: val, model: '' })}
                         options={[
                           { value: '', label: 'INHERIT_SYSTEM_DEFAULT' },
-                          ...Object.entries(PROVIDERS).map(([id, p]) => ({ value: id, label: p.label })),
+                          ...Object.entries(PROVIDERS).map(([id, p]) => ({
+                            value: id,
+                            label: p.label,
+                          })),
                         ]}
                         className="w-full"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Typography variant="mono" weight="bold" color="white" uppercase className="text-[9px] opacity-60">Model ID</Typography>
+                      <Typography
+                        variant="mono"
+                        weight="bold"
+                        color="white"
+                        uppercase
+                        className="text-[9px] opacity-60"
+                      >
+                        Model ID
+                      </Typography>
                       <CyberSelect
                         value={agent.model || ''}
                         onChange={(val) => updateAgent(agent.id, { model: val })}
                         options={
                           agent.provider
-                            ? PROVIDERS[agent.provider as keyof typeof PROVIDERS]?.models.map((m) => ({ value: m, label: m })) ?? []
+                            ? (PROVIDERS[agent.provider as keyof typeof PROVIDERS]?.models.map(
+                                (m) => ({ value: m, label: m })
+                              ) ?? [])
                             : []
                         }
                         disabled={!agent.provider}
@@ -164,7 +249,15 @@ export default function AgentDetailModal({
                       />
                     </div>
                     <div className="space-y-2">
-                      <Typography variant="mono" weight="bold" color="white" uppercase className="text-[9px] opacity-60">Reasoning Profile</Typography>
+                      <Typography
+                        variant="mono"
+                        weight="bold"
+                        color="white"
+                        uppercase
+                        className="text-[9px] opacity-60"
+                      >
+                        Reasoning Profile
+                      </Typography>
                       <CyberSelect
                         value={agent.reasoningProfile || ''}
                         onChange={(val) => updateAgent(agent.id, { reasoningProfile: val })}
@@ -177,18 +270,32 @@ export default function AgentDetailModal({
               )}
 
               <Card variant="solid" padding="sm" className="border-cyan-400/10 bg-cyan-400/[0.02]">
-                <Typography variant="caption" weight="bold" color="intel" uppercase className="flex items-center gap-2 mb-2">
+                <Typography
+                  variant="caption"
+                  weight="bold"
+                  color="intel"
+                  uppercase
+                  className="flex items-center gap-2 mb-2"
+                >
                   <ChevronRight size={12} /> Execution Context
                 </Typography>
                 <Typography variant="caption" color="white" className="italic block opacity-70">
                   Agent Type: {agent.isBackbone ? 'PERSISTENT_BACKBONE' : 'DYNAMIC_SPOKE'}.
-                  {isLogicOnly ? ' Core resilience logic.' : ' Authorized to interact with global bus and session memory.'}
+                  {isLogicOnly
+                    ? ' Core resilience logic.'
+                    : ' Authorized to interact with global bus and session memory.'}
                 </Typography>
               </Card>
 
               {reputation && reputation[agent.id] && (
                 <Card variant="solid" padding="sm" className="border-white/10">
-                  <Typography variant="caption" weight="bold" color="white" uppercase className="flex items-center gap-2 mb-3">
+                  <Typography
+                    variant="caption"
+                    weight="bold"
+                    color="white"
+                    uppercase
+                    className="flex items-center gap-2 mb-3"
+                  >
                     <ChevronRight size={12} className="text-green-400" /> Reputation
                   </Typography>
                   <div className="space-y-2 font-mono text-[10px]">
@@ -202,19 +309,23 @@ export default function AgentDetailModal({
                     </div>
                     <div className="flex justify-between">
                       <span className="text-white/40 uppercase">Success Rate</span>
-                      <span className={`font-bold ${
-                        reputation[agent.id].successRate >= 0.8
-                          ? 'text-green-400'
-                          : reputation[agent.id].successRate >= 0.5
-                          ? 'text-amber-400'
-                          : 'text-red-400'
-                      }`}>
+                      <span
+                        className={`font-bold ${
+                          reputation[agent.id].successRate >= 0.8
+                            ? 'text-green-400'
+                            : reputation[agent.id].successRate >= 0.5
+                              ? 'text-amber-400'
+                              : 'text-red-400'
+                        }`}
+                      >
                         {(reputation[agent.id].successRate * 100).toFixed(1)}%
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-white/40 uppercase">Avg Latency</span>
-                      <span className="text-white/80">{reputation[agent.id].avgLatencyMs.toFixed(0)}ms</span>
+                      <span className="text-white/80">
+                        {reputation[agent.id].avgLatencyMs.toFixed(0)}ms
+                      </span>
                     </div>
                   </div>
                 </Card>
@@ -244,10 +355,22 @@ export default function AgentDetailModal({
               className="text-white/50 hover:text-green-400 p-2 flex items-center gap-2"
             >
               <Wrench size={14} />
-              <span className="text-[10px] font-bold uppercase tracking-widest">Tools ({agent.tools?.length ?? 0})</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest">
+                Tools ({agent.tools?.length ?? 0})
+              </span>
             </Button>
-            <label className={`flex items-center gap-2 ${agent.isBackbone ? 'cursor-not-allowed' : 'cursor-pointer'} group`}>
-              <Typography variant="caption" weight="bold" color="white" uppercase className="text-xs group-hover:text-green-400 transition-colors">Active</Typography>
+            <label
+              className={`flex items-center gap-2 ${agent.isBackbone ? 'cursor-not-allowed' : 'cursor-pointer'} group`}
+            >
+              <Typography
+                variant="caption"
+                weight="bold"
+                color="white"
+                uppercase
+                className="text-xs group-hover:text-green-400 transition-colors"
+              >
+                Active
+              </Typography>
               <div className="relative">
                 <input
                   type="checkbox"

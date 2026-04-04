@@ -37,7 +37,11 @@ describe('Button Component', () => {
   it('does not fire click when disabled', async () => {
     const user = userEvent.setup();
     const onClick = vi.fn();
-    render(<Button disabled onClick={onClick}>Disabled</Button>);
+    render(
+      <Button disabled onClick={onClick}>
+        Disabled
+      </Button>
+    );
 
     await user.click(screen.getByText('Disabled'));
     expect(onClick).not.toHaveBeenCalled();
@@ -59,7 +63,11 @@ describe('Button Component', () => {
   });
 
   it('does not render icon when loading', () => {
-    render(<Button loading icon={<span data-testid="icon">Icon</span>}>With Icon</Button>);
+    render(
+      <Button loading icon={<span data-testid="icon">Icon</span>}>
+        With Icon
+      </Button>
+    );
     expect(screen.queryByTestId('icon')).not.toBeInTheDocument();
   });
 });

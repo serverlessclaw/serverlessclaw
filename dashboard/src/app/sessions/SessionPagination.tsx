@@ -23,13 +23,15 @@ export default function SessionPagination({ nextToken }: SessionPaginationProps)
 
   return (
     <div className="flex justify-center mt-10 pb-10">
-      <Button 
-        variant="outline" 
+      <Button
+        variant="outline"
         onClick={handleNext}
         icon={<ChevronRight size={16} />}
         className="px-10 border-white/5 hover:border-cyber-blue/40 transition-all group"
       >
-        <span className="group-hover:text-cyber-blue transition-colors uppercase tracking-widest text-[11px] font-bold">Load Next Sessions Page</span>
+        <span className="group-hover:text-cyber-blue transition-colors uppercase tracking-widest text-[11px] font-bold">
+          Load Next Sessions Page
+        </span>
       </Button>
     </div>
   );

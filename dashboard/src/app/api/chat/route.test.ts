@@ -374,9 +374,7 @@ describe('Dashboard API: POST /api/chat (streaming)', () => {
 
   it('returns 400 for streaming request with no text or attachments', async () => {
     const { POST } = await import('./route');
-    const res = await POST(
-      makeRequest({}, { searchParams: { stream: 'true' } })
-    );
+    const res = await POST(makeRequest({}, { searchParams: { stream: 'true' } }));
     expect(res.status).toBe(400);
   });
 
@@ -506,7 +504,9 @@ describe('Dashboard API: PATCH /api/chat', () => {
 
   it('updates conversation metadata with both title and isPinned', async () => {
     const { PATCH } = await import('./route');
-    const res = await PATCH(makeRequest({ sessionId: 'sess-3', title: 'Pinned Chat', isPinned: true }));
+    const res = await PATCH(
+      makeRequest({ sessionId: 'sess-3', title: 'Pinned Chat', isPinned: true })
+    );
     const data = await res.json();
 
     expect(res.status).toBe(200);
@@ -514,7 +514,11 @@ describe('Dashboard API: PATCH /api/chat', () => {
     expect(mockSaveConversationMeta).toHaveBeenCalledWith(
       'dashboard-user',
       'sess-3',
-      expect.objectContaining({ title: 'Pinned Chat', isPinned: true, updatedAt: expect.any(Number) })
+      expect.objectContaining({
+        title: 'Pinned Chat',
+        isPinned: true,
+        updatedAt: expect.any(Number),
+      })
     );
   });
 

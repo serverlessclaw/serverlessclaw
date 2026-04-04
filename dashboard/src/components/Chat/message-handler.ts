@@ -29,24 +29,22 @@ export function shouldProcessChunk(
   expectedUserId: string
 ): boolean {
   // Normalize incoming userId (remove CONV# prefix if present)
-  const incomingUserId = data.userId?.startsWith('CONV#') 
-    ? data.userId.split('#')[1] 
-    : data.userId;
+  const incomingUserId = data.userId?.startsWith('CONV#') ? data.userId.split('#')[1] : data.userId;
 
   if (incomingUserId !== expectedUserId) {
     return false;
   }
-  
+
   const type = data['detail-type'];
   if (type !== 'chunk' && type !== 'outbound_message') {
     return false;
   }
-  
+
   // If no session ID in chunk, it's a global signal for the user
   if (!data.sessionId) {
     return true;
   }
-  
+
   // Otherwise it MUST match the current active session
   const match = data.sessionId === currentActiveId;
   return match;
@@ -78,18 +76,23 @@ export function applyChunkToMessages(
   if (existingIndex !== -1) {
     const updated = [...prev];
     const existing = updated[existingIndex];
-    const isFinal = (data as IncomingChunk & { 'detail-type'?: string })['detail-type'] === 'outbound_message';
-    
+    const isFinal =
+      (data as IncomingChunk & { 'detail-type'?: string })['detail-type'] === 'outbound_message';
+
     if (data.isThought) {
       updated[existingIndex] = {
         ...existing,
-        thought: isFinal ? (data.message ?? existing.thought) : (existing.thought ?? '') + (data.message ?? ''),
+        thought: isFinal
+          ? (data.message ?? existing.thought)
+          : (existing.thought ?? '') + (data.message ?? ''),
         options: data.options ?? existing.options,
       };
     } else {
       updated[existingIndex] = {
         ...existing,
-        content: isFinal ? (data.message ?? existing.content) : (existing.content ?? '') + (data.message ?? ''),
+        content: isFinal
+          ? (data.message ?? existing.content)
+          : (existing.content ?? '') + (data.message ?? ''),
         attachments: data.attachments ?? existing.attachments,
         tool_calls: data.toolCalls || data.tool_calls || existing.tool_calls,
         options: data.options ?? existing.options,
@@ -131,7 +134,8 @@ export function mapHistoryMessage(m: HistoryMessage): ChatMessage {
     role: m.role === 'assistant' || m.role === 'system' ? 'assistant' : 'user',
     content: m.content,
     thought: m.thought,
-    agentName: m.agentName ?? (m.role === 'assistant' || m.role === 'system' ? 'SuperClaw' : undefined),
+    agentName:
+      m.agentName ?? (m.role === 'assistant' || m.role === 'system' ? 'SuperClaw' : undefined),
     attachments: m.attachments,
     options: m.options,
     tool_calls: m.tool_calls,

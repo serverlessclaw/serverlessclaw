@@ -27,7 +27,9 @@ async function fetchWorkspacesFromConfig(): Promise<WorkspaceData[]> {
   const index = ((await ConfigManager.getRawConfig(WORKSPACE_INDEX)) as string[]) ?? [];
   const workspaces: WorkspaceData[] = [];
   for (const workspaceId of index) {
-    const data = (await ConfigManager.getRawConfig(`workspace:${workspaceId}`)) as WorkspaceData | null;
+    const data = (await ConfigManager.getRawConfig(
+      `workspace:${workspaceId}`
+    )) as WorkspaceData | null;
     if (data) {
       workspaces.push({
         workspaceId: data.workspaceId,
@@ -84,7 +86,7 @@ export const POST = withApiHandler(async (body: Record<string, unknown>) => {
     await inviteMember(workspaceId, 'dashboard', input);
     return { success: true };
   }
-  
+
   if (body.action === 'updateRole') {
     requireFields(body, 'workspaceId', 'memberId', 'role');
     const workspaceId = asNonEmptyString(body.workspaceId, 'workspaceId');
@@ -96,7 +98,7 @@ export const POST = withApiHandler(async (body: Record<string, unknown>) => {
     await updateMemberRole(workspaceId, 'dashboard', memberId, role);
     return { success: true };
   }
-  
+
   if (body.action === 'remove') {
     requireFields(body, 'workspaceId', 'memberId');
     const workspaceId = asNonEmptyString(body.workspaceId, 'workspaceId');
@@ -106,7 +108,7 @@ export const POST = withApiHandler(async (body: Record<string, unknown>) => {
     await removeMember(workspaceId, 'dashboard', memberId);
     return { success: true };
   }
-  
+
   // Default: create workspace
   requireFields(body, 'name', 'ownerId');
   const name = asNonEmptyString(body.name, 'name');

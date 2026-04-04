@@ -111,7 +111,7 @@ test: ## Run unit tests with vitest (via Turbo)
 
 test-silent: ## Run unit tests in silent mode (via Turbo)
 	@$(call log_step,Running unit tests (silent) via Turbo...)
-	@$(PNPM) run test:silent
+	@$(PNPM) run test-silent
 
 test-watch: ## Run unit tests in watch mode (Direct)
 	@$(PNPM) exec vitest

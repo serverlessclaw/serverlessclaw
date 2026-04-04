@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { AUTH, API_ROUTES, DYNAMO_KEYS, HTTP_STATUS, UI_STRINGS, ROUTES, TRACE_TYPES, TRACE_STATUS } from './constants';
+import {
+  AUTH,
+  API_ROUTES,
+  DYNAMO_KEYS,
+  HTTP_STATUS,
+  UI_STRINGS,
+  ROUTES,
+  TRACE_TYPES,
+  TRACE_STATUS,
+} from './constants';
 
 describe('constants', () => {
   describe('AUTH', () => {
@@ -36,7 +45,7 @@ describe('constants', () => {
   });
 
   describe('DYNAMO_KEYS', () => {
-   it('has expected keys', () => {
+    it('has expected keys', () => {
       expect(DYNAMO_KEYS.DEPLOY_LIMIT).toBe('deploy_limit');
       expect(DYNAMO_KEYS.AGENTS_CONFIG).toBe('agents_config');
     });

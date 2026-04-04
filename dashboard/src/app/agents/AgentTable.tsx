@@ -10,7 +10,10 @@ import AgentDetailModal from './AgentDetailModal';
 
 interface AgentTableProps {
   agents: Record<string, Agent>;
-  reputation?: Record<string, { successRate: number; avgLatencyMs: number; tasksCompleted: number; tasksFailed: number }>;
+  reputation?: Record<
+    string,
+    { successRate: number; avgLatencyMs: number; tasksCompleted: number; tasksFailed: number }
+  >;
   updateAgent: (id: string, updates: Partial<Agent>) => void;
   deleteAgent: (id: string) => void;
   cloneAgent: (id: string) => void;
@@ -43,19 +46,36 @@ export default function AgentTable({
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-white/5 bg-white/[0.02]">
-                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40">Agent</th>
-                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40">Type</th>
-                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40 text-center">Status</th>
-                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40">Provider</th>
-                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40">Model</th>
-                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40 text-center">Tools</th>
-                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40 text-center">Reputation</th>
-                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40 text-right">Action</th>
+                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40">
+                  Agent
+                </th>
+                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40">
+                  Type
+                </th>
+                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40 text-center">
+                  Status
+                </th>
+                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40">
+                  Provider
+                </th>
+                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40">
+                  Model
+                </th>
+                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40 text-center">
+                  Tools
+                </th>
+                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40 text-center">
+                  Reputation
+                </th>
+                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40 text-right">
+                  Action
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {agentList.map((agent) => {
-                const isLogicOnly = agent.id === 'monitor' || agent.id === 'recovery' || agent.id === 'events';
+                const isLogicOnly =
+                  agent.id === 'monitor' || agent.id === 'recovery' || agent.id === 'events';
 
                 return (
                   <tr
@@ -67,13 +87,27 @@ export default function AgentTable({
                   >
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
-                        <div className={`p-1.5 rounded ${
-                          agent.isBackbone ? 'bg-cyan-500/20 text-cyan-400' : 'bg-white/5 text-white/70'
-                        }`}>
-                          {isLogicOnly ? <ShieldAlert size={14} /> : (agent.isBackbone ? <Shield size={14} /> : <Bot size={14} />)}
+                        <div
+                          className={`p-1.5 rounded ${
+                            agent.isBackbone
+                              ? 'bg-cyan-500/20 text-cyan-400'
+                              : 'bg-white/5 text-white/70'
+                          }`}
+                        >
+                          {isLogicOnly ? (
+                            <ShieldAlert size={14} />
+                          ) : agent.isBackbone ? (
+                            <Shield size={14} />
+                          ) : (
+                            <Bot size={14} />
+                          )}
                         </div>
                         <div className="flex flex-col">
-                          <Typography variant="mono" weight="bold" className="text-xs text-white/90">
+                          <Typography
+                            variant="mono"
+                            weight="bold"
+                            className="text-xs text-white/90"
+                          >
                             {agent.name}
                           </Typography>
                           <Typography variant="mono" className="text-[9px] text-white/30 mt-0.5">
@@ -84,11 +118,17 @@ export default function AgentTable({
                     </td>
                     <td className="px-5 py-3">
                       {agent.isBackbone ? (
-                        <Badge variant="intel" className="py-0 whitespace-nowrap">Backbone</Badge>
+                        <Badge variant="intel" className="py-0 whitespace-nowrap">
+                          Backbone
+                        </Badge>
                       ) : isLogicOnly ? (
-                        <Badge variant="audit" className="py-0 whitespace-nowrap">System Logic</Badge>
+                        <Badge variant="audit" className="py-0 whitespace-nowrap">
+                          System Logic
+                        </Badge>
                       ) : (
-                        <Badge variant="outline" className="py-0 whitespace-nowrap">Dynamic</Badge>
+                        <Badge variant="outline" className="py-0 whitespace-nowrap">
+                          Dynamic
+                        </Badge>
                       )}
                     </td>
                     <td className="px-5 py-3 text-center">
@@ -103,17 +143,24 @@ export default function AgentTable({
                             : 'bg-white/5 text-white/30 border-white/10'
                         } ${agent.isBackbone ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-white/10'}`}
                       >
-                        <div className={`w-1.5 h-1.5 rounded-full ${agent.enabled ? 'bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.6)]' : 'bg-white/20'}`} />
+                        <div
+                          className={`w-1.5 h-1.5 rounded-full ${agent.enabled ? 'bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.6)]' : 'bg-white/20'}`}
+                        />
                         {agent.enabled ? 'Active' : 'Off'}
                       </button>
                     </td>
                     <td className="px-5 py-3">
                       <Typography variant="mono" className="text-[11px] text-white/50">
-                        {agent.provider ? agent.provider.charAt(0).toUpperCase() + agent.provider.slice(1) : 'Default'}
+                        {agent.provider
+                          ? agent.provider.charAt(0).toUpperCase() + agent.provider.slice(1)
+                          : 'Default'}
                       </Typography>
                     </td>
                     <td className="px-5 py-3">
-                      <Typography variant="mono" className="text-[11px] text-white/50 truncate max-w-[180px] block">
+                      <Typography
+                        variant="mono"
+                        className="text-[11px] text-white/50 truncate max-w-[180px] block"
+                      >
                         {agent.model || '-'}
                       </Typography>
                     </td>
@@ -137,14 +184,16 @@ export default function AgentTable({
                             reputation[agent.id].successRate >= 0.8
                               ? 'text-green-400'
                               : reputation[agent.id].successRate >= 0.5
-                              ? 'text-amber-400'
-                              : 'text-red-400'
+                                ? 'text-amber-400'
+                                : 'text-red-400'
                           }`}
                         >
                           {(reputation[agent.id].successRate * 100).toFixed(0)}%
                         </Typography>
                       ) : (
-                        <Typography variant="mono" className="text-[11px] text-white/30">-</Typography>
+                        <Typography variant="mono" className="text-[11px] text-white/30">
+                          -
+                        </Typography>
                       )}
                     </td>
                     <td className="px-5 py-3 text-right">

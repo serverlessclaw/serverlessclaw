@@ -30,7 +30,7 @@ export function ChatInput({
   fileInputRef,
   onFileSelect,
   isShaking = false,
-  chatInputRef
+  chatInputRef,
 }: ChatInputProps) {
   const [localShake, setLocalShake] = useState(false);
   const internalRef = useRef<HTMLTextAreaElement>(null);
@@ -73,7 +73,9 @@ export function ChatInput({
                 ) : (
                   <div className="flex items-center gap-2 bg-white/5 p-2 rounded border border-white/10">
                     <File size={16} className="text-white/40" />
-                    <Typography variant="mono" className="text-[8px] max-w-[80px] truncate">{a.file.name}</Typography>
+                    <Typography variant="mono" className="text-[8px] max-w-[80px] truncate">
+                      {a.file.name}
+                    </Typography>
                   </div>
                 )}
                 <button
@@ -102,9 +104,14 @@ export function ChatInput({
             size="sm"
             onClick={() => fileInputRef.current?.click()}
             className="h-[52px] w-[52px] !rounded-lg border border-white/5 hover:border-cyber-green/30 bg-white/[0.02] flex items-center justify-center p-0 self-center"
-            icon={<Paperclip size={20} className="text-white/40 group-hover:text-cyber-green transition-colors" />}
+            icon={
+              <Paperclip
+                size={20}
+                className="text-white/40 group-hover:text-cyber-green transition-colors"
+              />
+            }
           />
-          
+
           <div className={`flex-1 relative flex ${shouldShake ? 'animate-shake' : ''}`}>
             <textarea
               ref={textareaRef}
@@ -124,7 +131,7 @@ export function ChatInput({
                 const target = e.target as HTMLTextAreaElement;
                 target.style.height = '52px';
                 if (target.scrollHeight > 52) {
-                    target.style.height = `${target.scrollHeight}px`;
+                  target.style.height = `${target.scrollHeight}px`;
                 }
               }}
             />

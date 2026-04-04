@@ -10,80 +10,80 @@ import { ChatMessage, HistoryMessage } from './types';
 
 describe('shouldProcessChunk', () => {
   it('returns true when chunk has no sessionId (general topic)', () => {
-    const chunk: IncomingChunk & { 'detail-type': string } = { 
-        message: 'Hello', 
-        userId: 'user-1',
-        'detail-type': 'chunk'
+    const chunk: IncomingChunk & { 'detail-type': string } = {
+      message: 'Hello',
+      userId: 'user-1',
+      'detail-type': 'chunk',
     };
     expect(shouldProcessChunk(chunk, 'sess-1', 'user-1')).toBe(true);
   });
 
   it('normalizes incoming userId by stripping CONV# prefix', () => {
-    const chunk: IncomingChunk & { 'detail-type': string } = { 
-        message: 'Hello', 
-        userId: 'CONV#user-1#sess-1', 
-        sessionId: 'sess-1',
-        'detail-type': 'chunk'
+    const chunk: IncomingChunk & { 'detail-type': string } = {
+      message: 'Hello',
+      userId: 'CONV#user-1#sess-1',
+      sessionId: 'sess-1',
+      'detail-type': 'chunk',
     };
     expect(shouldProcessChunk(chunk, 'sess-1', 'user-1')).toBe(true);
   });
 
   it('handles incoming userId with CONV# prefix but no additional # segments', () => {
-    const chunk: IncomingChunk & { 'detail-type': string } = { 
-        message: 'Hello', 
-        userId: 'CONV#user-1', 
-        sessionId: 'sess-1',
-        'detail-type': 'chunk'
+    const chunk: IncomingChunk & { 'detail-type': string } = {
+      message: 'Hello',
+      userId: 'CONV#user-1',
+      sessionId: 'sess-1',
+      'detail-type': 'chunk',
     };
     expect(shouldProcessChunk(chunk, 'sess-1', 'user-1')).toBe(true);
   });
 
   it('returns true when chunk sessionId matches active session', () => {
-    const chunk: IncomingChunk & { 'detail-type': string } = { 
-        message: 'Hello', 
-        userId: 'user-1', 
-        sessionId: 'sess-1',
-        'detail-type': 'chunk'
+    const chunk: IncomingChunk & { 'detail-type': string } = {
+      message: 'Hello',
+      userId: 'user-1',
+      sessionId: 'sess-1',
+      'detail-type': 'chunk',
     };
     expect(shouldProcessChunk(chunk, 'sess-1', 'user-1')).toBe(true);
   });
 
   it('returns false when chunk sessionId does not match active session', () => {
-    const chunk: IncomingChunk & { 'detail-type': string } = { 
-        message: 'Hello', 
-        userId: 'user-1', 
-        sessionId: 'sess-2',
-        'detail-type': 'chunk'
+    const chunk: IncomingChunk & { 'detail-type': string } = {
+      message: 'Hello',
+      userId: 'user-1',
+      sessionId: 'sess-2',
+      'detail-type': 'chunk',
     };
     expect(shouldProcessChunk(chunk, 'sess-1', 'user-1')).toBe(false);
   });
 
   it('returns true even when chunk has no message and no thought (may have options/tools)', () => {
-    const chunk: IncomingChunk & { 'detail-type': string } = { 
-        userId: 'user-1', 
-        sessionId: 'sess-1',
-        'detail-type': 'chunk'
+    const chunk: IncomingChunk & { 'detail-type': string } = {
+      userId: 'user-1',
+      sessionId: 'sess-1',
+      'detail-type': 'chunk',
     };
     expect(shouldProcessChunk(chunk, 'sess-1', 'user-1')).toBe(true);
   });
 
   it('returns true when chunk has empty message but isThought is set', () => {
-    const chunk: IncomingChunk & { 'detail-type': string } = { 
-        userId: 'user-1', 
-        sessionId: 'sess-1', 
-        message: '', 
-        isThought: true,
-        'detail-type': 'chunk'
+    const chunk: IncomingChunk & { 'detail-type': string } = {
+      userId: 'user-1',
+      sessionId: 'sess-1',
+      message: '',
+      isThought: true,
+      'detail-type': 'chunk',
     };
     expect(shouldProcessChunk(chunk, 'sess-1', 'user-1')).toBe(true);
   });
 
   it('returns false when chunk userId does not match', () => {
-    const chunk: IncomingChunk & { 'detail-type': string } = { 
-        message: 'Hello', 
-        userId: 'other-user', 
-        sessionId: 'sess-1',
-        'detail-type': 'chunk'
+    const chunk: IncomingChunk & { 'detail-type': string } = {
+      message: 'Hello',
+      userId: 'other-user',
+      sessionId: 'sess-1',
+      'detail-type': 'chunk',
     };
     expect(shouldProcessChunk(chunk, 'sess-1', 'user-1')).toBe(false);
   });
@@ -124,7 +124,13 @@ describe('applyChunkToMessages', () => {
 
   it('accumulates thought chunks on existing message', () => {
     const prev: ChatMessage[] = [
-      { role: 'assistant', content: '', thought: 'Let me', messageId: 'trace-1', agentName: 'SuperClaw' },
+      {
+        role: 'assistant',
+        content: '',
+        thought: 'Let me',
+        messageId: 'trace-1',
+        agentName: 'SuperClaw',
+      },
     ];
     const chunk: IncomingChunk = { message: ' think', messageId: 'trace-1', isThought: true };
 
@@ -181,9 +187,16 @@ describe('applyChunkToMessages', () => {
 
   it('merges tool_calls from chunk into existing message', () => {
     const prev: ChatMessage[] = [
-      { role: 'assistant', content: 'Calling tool...', messageId: 'trace-1', agentName: 'SuperClaw' },
+      {
+        role: 'assistant',
+        content: 'Calling tool...',
+        messageId: 'trace-1',
+        agentName: 'SuperClaw',
+      },
     ];
-    const toolCalls = [{ id: 'tc-1', type: 'function' as const, function: { name: 'test', arguments: '{}' } }];
+    const toolCalls = [
+      { id: 'tc-1', type: 'function' as const, function: { name: 'test', arguments: '{}' } },
+    ];
     const chunk: IncomingChunk = { message: '', messageId: 'trace-1', toolCalls };
 
     const result = applyChunkToMessages(prev, chunk);

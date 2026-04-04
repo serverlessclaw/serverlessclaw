@@ -37,7 +37,11 @@ export const POST = withApiHandler(async (body) => {
       // Store refined content as a distilled memory for the planner to pick up
       await memory.updateDistilledMemory(
         `REFINED#GAP#${normalizedId}`,
-        JSON.stringify({ originalGapId: normalizedId, refinedContent: content, refinedAt: Date.now() })
+        JSON.stringify({
+          originalGapId: normalizedId,
+          refinedContent: content,
+          refinedAt: Date.now(),
+        })
       );
     }
   }

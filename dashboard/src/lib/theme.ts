@@ -12,27 +12,27 @@ export const THEME = {
     WARNING: 'orange-400',
     AUDIT: 'yellow-400',
   },
-  
+
   // Tailwind class mappings for common UI elements
   CLASSES: {
     // Buttons
     BUTTON_PRIMARY: 'bg-cyber-green text-black hover:shadow-[0_0_20px_rgba(0,255,163,0.4)]',
     BUTTON_DANGER: 'bg-red-950/40 hover:bg-red-900/60 text-red-200 border-red-800/50',
-    
+
     // Status
     STATUS_ACTIVE: 'text-[var(--cyber-green)]',
     STATUS_ERROR: 'text-red-500',
     STATUS_WARNING: 'text-orange-400',
-    
+
     // Borders & Glass
     BORDER_DEFAULT: 'border-[var(--card-border)]',
     BORDER_PRIMARY: 'border-[var(--cyber-green)]/30',
     BORDER_INTEL: 'border-[var(--cyber-blue)]/30',
     BORDER_DANGER: 'border-red-500/30',
-    
+
     // Headers
     HEADER_INTEL: 'text-[var(--cyber-blue)]',
     HEADER_PRIMARY: 'text-[var(--cyber-green)]',
     HEADER_REFLECT: 'text-purple-400',
-  }
+  },
 } as const;

@@ -33,7 +33,7 @@ async function getTraces(nextToken?: string) {
     }
     const client = new DynamoDBClient({});
     const docClient = DynamoDBDocumentClient.from(client);
-    
+
     const generalScan = docClient.send(
       new ScanCommand({
         TableName: tableName,
@@ -43,20 +43,20 @@ async function getTraces(nextToken?: string) {
     );
 
     const scanRes = await generalScan;
-    
+
     const merged = [...(scanRes.Items ?? [])];
     const uniqueMap = new Map();
-    merged.forEach(item => uniqueMap.set(item.traceId, item));
-    
+    merged.forEach((item) => uniqueMap.set(item.traceId, item));
+
     const allItems = Array.from(uniqueMap.values()).sort((a, b) => {
       const bTs = Number(b.timestamp);
       const aTs = Number(a.timestamp);
       return (Number.isFinite(bTs) ? bTs : 0) - (Number.isFinite(aTs) ? aTs : 0);
     });
-    
-    const filtered = allItems.filter(item => item.source !== TraceSource.SYSTEM);
+
+    const filtered = allItems.filter((item) => item.source !== TraceSource.SYSTEM);
     const encodedNext = encodePaginationToken(scanRes.LastEvaluatedKey);
-    
+
     return { items: filtered, nextToken: encodedNext };
   } catch (e) {
     console.error('Error fetching traces:', e);
@@ -74,15 +74,15 @@ async function getConfig() {
     }
     const client = new DynamoDBClient({});
     const docClient = DynamoDBDocumentClient.from(client);
-    
+
     const [providerRes, modelRes] = await Promise.all([
       docClient.send(new GetCommand({ TableName: tableName, Key: { key: 'active_provider' } })),
-      docClient.send(new GetCommand({ TableName: tableName, Key: { key: 'active_model' } }))
+      docClient.send(new GetCommand({ TableName: tableName, Key: { key: 'active_model' } })),
     ]);
 
     return {
       provider: providerRes.Item?.value ?? LLMProvider.OPENAI,
-      model: modelRes.Item?.value ?? OpenAIModel.GPT_5_4
+      model: modelRes.Item?.value ?? OpenAIModel.GPT_5_4,
     };
   } catch (e) {
     console.error('Error fetching config:', e);
@@ -94,21 +94,23 @@ async function getSessionTitles() {
   try {
     const tableName = getResourceName('MemoryTable');
     if (!tableName) return {};
-    
+
     const client = new DynamoDBClient({});
     const docClient = DynamoDBDocumentClient.from(client);
-    
+
     // Scan for all session metadata records across all users
-    const res = await docClient.send(new ScanCommand({
-      TableName: tableName,
-      FilterExpression: 'begins_with(userId, :prefix)',
-      ExpressionAttributeValues: {
-        ':prefix': 'SESSIONS#'
-      }
-    }));
-    
+    const res = await docClient.send(
+      new ScanCommand({
+        TableName: tableName,
+        FilterExpression: 'begins_with(userId, :prefix)',
+        ExpressionAttributeValues: {
+          ':prefix': 'SESSIONS#',
+        },
+      })
+    );
+
     const titles: Record<string, string> = {};
-    res.Items?.forEach(item => {
+    res.Items?.forEach((item) => {
       if (item.sessionId) {
         titles[item.sessionId] = item.title ?? 'Untitled Conversation';
       }
@@ -127,8 +129,8 @@ export default async function AnalyticsTab({
 }) {
   const params = await searchParams;
   const [tracesResult, config, sessionTitles] = await Promise.all([
-    getTraces(params.nextToken), 
-    getConfig(), 
+    getTraces(params.nextToken),
+    getConfig(),
     getSessionTitles(),
   ]);
 
@@ -136,46 +138,76 @@ export default async function AnalyticsTab({
   const nextToken = tracesResult.nextToken;
 
   const validTabs = ['live', 'timeline', 'sessions', 'models', 'tools', 'agents'] as const;
-  const initialTab = validTabs.includes(params.tab as typeof validTabs[number])
-    ? params.tab as typeof validTabs[number]
+  const initialTab = validTabs.includes(params.tab as (typeof validTabs)[number])
+    ? (params.tab as (typeof validTabs)[number])
     : undefined;
 
   return (
     <main className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-green/5 via-transparent to-transparent">
-        <header className="flex flex-col lg:flex-row lg:justify-between lg:items-end border-b border-white/5 pb-6 gap-6">
-          <div>
-            <Typography variant="h2" color="white" glow uppercase>
-              Trace Intelligence
+      <header className="flex flex-col lg:flex-row lg:justify-between lg:items-end border-b border-white/5 pb-6 gap-6">
+        <div>
+          <Typography variant="h2" color="white" glow uppercase>
+            Trace Intelligence
+          </Typography>
+          <Typography variant="body" color="muted" className="mt-2 block">
+            Neural observation of autonomous agent logic paths and decision matrices.
+          </Typography>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:flex gap-3 lg:gap-4">
+          <DeleteAllTracesButton />
+          <ExportTracesButton traces={traces} />
+          <div className="flex flex-col items-center">
+            <Typography
+              variant="mono"
+              color="muted"
+              className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
+            >
+              PROVIDER
             </Typography>
-            <Typography variant="body" color="muted" className="mt-2 block">
-              Neural observation of autonomous agent logic paths and decision matrices.
+            <Badge
+              variant="outline"
+              className="px-4 py-1 font-bold text-xs border-cyber-blue/20 text-cyber-blue/60 uppercase"
+            >
+              {config.provider}
+            </Badge>
+          </div>
+          <div className="flex flex-col items-center">
+            <Typography
+              variant="mono"
+              color="muted"
+              className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
+            >
+              MODEL
             </Typography>
+            <Badge
+              variant="outline"
+              className="px-4 py-1 font-bold text-xs border-white/10 text-white/60 uppercase"
+            >
+              {config.model}
+            </Badge>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:flex gap-3 lg:gap-4">
-            <DeleteAllTracesButton />
-            <ExportTracesButton traces={traces} />
-            <div className="flex flex-col items-center">
-                <Typography variant="mono" color="muted" className="text-[10px] uppercase tracking-widest opacity-40 mb-1">PROVIDER</Typography>
-                <Badge variant="outline" className="px-4 py-1 font-bold text-xs border-cyber-blue/20 text-cyber-blue/60 uppercase">{config.provider}</Badge>
-            </div>
-            <div className="flex flex-col items-center">
-                <Typography variant="mono" color="muted" className="text-[10px] uppercase tracking-widest opacity-40 mb-1">MODEL</Typography>
-                <Badge variant="outline" className="px-4 py-1 font-bold text-xs border-white/10 text-white/60 uppercase">{config.model}</Badge>
-            </div>
-            <div className="flex flex-col items-center">
-                <Typography variant="mono" color="muted" className="text-[10px] uppercase tracking-widest opacity-40 mb-1">TOTAL_OPS</Typography>
-                <Badge variant="primary" className="px-4 py-1 font-black text-xs">{traces.length}</Badge>
-            </div>
+          <div className="flex flex-col items-center">
+            <Typography
+              variant="mono"
+              color="muted"
+              className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
+            >
+              TOTAL_OPS
+            </Typography>
+            <Badge variant="primary" className="px-4 py-1 font-black text-xs">
+              {traces.length}
+            </Badge>
           </div>
-        </header>
+        </div>
+      </header>
 
-        {/* Traces Observatory */}
-        <TraceIntelligenceView 
-          initialTraces={traces} 
-          sessionTitles={sessionTitles} 
-          initialTab={initialTab} 
-          nextToken={nextToken} 
-        />
-      </main>
+      {/* Traces Observatory */}
+      <TraceIntelligenceView
+        initialTraces={traces}
+        sessionTitles={sessionTitles}
+        initialTab={initialTab}
+        nextToken={nextToken}
+      />
+    </main>
   );
 }

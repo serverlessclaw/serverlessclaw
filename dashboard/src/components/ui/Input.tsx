@@ -5,23 +5,19 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   error?: string;
 }
 
-const Input = forwardRef<HTMLInputElement, InputProps>(({
-  label,
-  error,
-  className = '',
-  ...props
-}, ref) => {
-  return (
-    <div className="space-y-1">
-      {label && (
-        <label className="block text-[10px] uppercase tracking-widest font-bold text-white/40">
-          {label}
-        </label>
-      )}
-      <input
-        {...props}
-        ref={ref}
-        className={`
+const Input = forwardRef<HTMLInputElement, InputProps>(
+  ({ label, error, className = '', ...props }, ref) => {
+    return (
+      <div className="space-y-1">
+        {label && (
+          <label className="block text-[10px] uppercase tracking-widest font-bold text-white/40">
+            {label}
+          </label>
+        )}
+        <input
+          {...props}
+          ref={ref}
+          className={`
           w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5
           text-white text-sm placeholder:text-white/30
           focus:outline-none focus:border-cyber-blue/50 focus:ring-1 focus:ring-cyber-blue/20
@@ -29,13 +25,12 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
           ${error ? 'border-red-500/50' : ''}
           ${className}
         `}
-      />
-      {error && (
-        <p className="text-[10px] text-red-400 mt-1">{error}</p>
-      )}
-    </div>
-  );
-});
+        />
+        {error && <p className="text-[10px] text-red-400 mt-1">{error}</p>}
+      </div>
+    );
+  }
+);
 
 Input.displayName = 'Input';
 

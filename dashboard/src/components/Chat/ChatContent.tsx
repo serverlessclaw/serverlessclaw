@@ -20,7 +20,8 @@ import type { PendingMessage } from '@claw/core/lib/types/session';
  */
 const CHAT_STYLES = {
   GRADIENTS: {
-    MAIN_BG: 'bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-green/5 via-[#0a0a0a] to-[#0a0a0a]',
+    MAIN_BG:
+      'bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-green/5 via-[#0a0a0a] to-[#0a0a0a]',
     DRAG_OVER: 'bg-cyber-green/10',
   },
   SHADOWS: {
@@ -29,7 +30,7 @@ const CHAT_STYLES = {
   ANIMATIONS: {
     PULSE: 'animate-pulse',
     BOUNCE: 'animate-bounce',
-  }
+  },
 } as const;
 
 /**
@@ -75,13 +76,46 @@ export default function ChatContent() {
     { keys: 'ctrl+k', handler: () => searchInputRef.current?.focus(), description: 'Focus search' },
     { keys: 'meta+alt+n', handler: () => createNewChatRef.current(), description: 'New chat' },
     { keys: 'ctrl+alt+n', handler: () => createNewChatRef.current(), description: 'New chat' },
-    { keys: 'meta+/', handler: () => chatInputRef.current?.focus(), description: 'Focus chat input' },
-    { keys: 'ctrl+/', handler: () => chatInputRef.current?.focus(), description: 'Focus chat input' },
-    { keys: 'meta+e', handler: () => { if (activeSessionId && currentSessionRef.current) setIsEditingTitle(true); }, description: 'Edit session title' },
-    { keys: 'ctrl+e', handler: () => { if (activeSessionId && currentSessionRef.current) setIsEditingTitle(true); }, description: 'Edit session title' },
-    { keys: 'meta+t', handler: () => setShowThinking(prev => !prev), description: 'Toggle thinking visibility' },
-    { keys: 'ctrl+t', handler: () => setShowThinking(prev => !prev), description: 'Toggle thinking visibility' },
-    { keys: '?', handler: () => setShowShortcutsHelp(prev => !prev), description: 'Show keyboard shortcuts help', preventDefault: false },
+    {
+      keys: 'meta+/',
+      handler: () => chatInputRef.current?.focus(),
+      description: 'Focus chat input',
+    },
+    {
+      keys: 'ctrl+/',
+      handler: () => chatInputRef.current?.focus(),
+      description: 'Focus chat input',
+    },
+    {
+      keys: 'meta+e',
+      handler: () => {
+        if (activeSessionId && currentSessionRef.current) setIsEditingTitle(true);
+      },
+      description: 'Edit session title',
+    },
+    {
+      keys: 'ctrl+e',
+      handler: () => {
+        if (activeSessionId && currentSessionRef.current) setIsEditingTitle(true);
+      },
+      description: 'Edit session title',
+    },
+    {
+      keys: 'meta+t',
+      handler: () => setShowThinking((prev) => !prev),
+      description: 'Toggle thinking visibility',
+    },
+    {
+      keys: 'ctrl+t',
+      handler: () => setShowThinking((prev) => !prev),
+      description: 'Toggle thinking visibility',
+    },
+    {
+      keys: '?',
+      handler: () => setShowShortcutsHelp((prev) => !prev),
+      description: 'Show keyboard shortcuts help',
+      preventDefault: false,
+    },
   ];
 
   useKeyboardShortcuts(shortcuts, !!activeSessionId);
@@ -92,18 +126,13 @@ export default function ChatContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const { 
-    isRealtimeActive, 
-    sessions, 
-    fetchSessions, 
-    skipNextHistoryFetch, 
-    seenMessageIds 
-  } = useChatConnection(
-    activeSessionId,
-    () => {}, // setMessages will be from useChatMessages
-    setIsLoading,
-    isPostInFlight
-  );
+  const { isRealtimeActive, sessions, fetchSessions, skipNextHistoryFetch, seenMessageIds } =
+    useChatConnection(
+      activeSessionId,
+      () => {}, // setMessages will be from useChatMessages
+      setIsLoading,
+      isPostInFlight
+    );
 
   const {
     messages,
@@ -128,7 +157,7 @@ export default function ChatContent() {
     activeSessionRef
   );
 
-  const currentSession = sessions.find(s => s.sessionId === activeSessionId);
+  const currentSession = sessions.find((s) => s.sessionId === activeSessionId);
 
   // --- Title and Session Sync ---
   useEffect(() => {
@@ -302,8 +331,8 @@ export default function ChatContent() {
         }
         fetchSessions();
       }
-    } catch (error) { 
-      console.error('Failed to delete session:', error); 
+    } catch (error) {
+      console.error('Failed to delete session:', error);
     }
     setShowDeleteConfirm(false);
   };
@@ -317,8 +346,8 @@ export default function ChatContent() {
         router.push('/', { scroll: false });
         fetchSessions();
       }
-    } catch (error) { 
-      console.error('Failed to delete all history:', error); 
+    } catch (error) {
+      console.error('Failed to delete all history:', error);
     }
     setShowDeleteAllConfirm(false);
   };
@@ -332,8 +361,8 @@ export default function ChatContent() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sessionId: activeSessionId, messageId, content: newContent }),
     });
-    setPendingMessages(prev =>
-      prev.map(m => (m.id === messageId ? { ...m, content: newContent } : m))
+    setPendingMessages((prev) =>
+      prev.map((m) => (m.id === messageId ? { ...m, content: newContent } : m))
     );
   };
 
@@ -344,15 +373,20 @@ export default function ChatContent() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sessionId: activeSessionId, messageId }),
     });
-    setPendingMessages(prev => prev.filter(m => m.id !== messageId));
+    setPendingMessages((prev) => prev.filter((m) => m.id !== messageId));
   };
 
   return (
     <div className="flex flex-1 min-h-0 overflow-hidden">
-      <ChatSidebar 
+      <ChatSidebar
         sessions={sessions}
         activeSessionId={activeSessionId}
-        onSessionSelect={(id) => { if (activeSessionId !== id) { setMessages([]); setActiveSessionId(id); } }}
+        onSessionSelect={(id) => {
+          if (activeSessionId !== id) {
+            setMessages([]);
+            setActiveSessionId(id);
+          }
+        }}
         onNewChat={createNewChat}
         onDeleteSession={deleteSession}
         onDeleteAll={() => setShowDeleteAllConfirm(true)}
@@ -362,7 +396,7 @@ export default function ChatContent() {
         searchInputRef={searchInputRef}
       />
 
-      <main 
+      <main
         className={`flex-1 flex flex-col min-w-0 ${CHAT_STYLES.GRADIENTS.MAIN_BG} transition-colors relative ${isDragging ? CHAT_STYLES.GRADIENTS.DRAG_OVER : ''}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -370,13 +404,20 @@ export default function ChatContent() {
       >
         {isDragging && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-cyber-green/10 border-2 border-dashed border-cyber-green pointer-events-none">
-            <div className={`flex flex-col items-center gap-4 bg-black/80 p-12 rounded-2xl border border-cyber-green/30 ${CHAT_STYLES.SHADOWS.DROP_ZONE}`}>
-              <Paperclip size={64} className={`text-cyber-green ${CHAT_STYLES.ANIMATIONS.BOUNCE}`} />
-              <Typography variant="h2" weight="bold" color="primary" glow>DROP FILES TO UPLOAD</Typography>
+            <div
+              className={`flex flex-col items-center gap-4 bg-black/80 p-12 rounded-2xl border border-cyber-green/30 ${CHAT_STYLES.SHADOWS.DROP_ZONE}`}
+            >
+              <Paperclip
+                size={64}
+                className={`text-cyber-green ${CHAT_STYLES.ANIMATIONS.BOUNCE}`}
+              />
+              <Typography variant="h2" weight="bold" color="primary" glow>
+                DROP FILES TO UPLOAD
+              </Typography>
             </div>
           </div>
         )}
-        
+
         <header className="px-6 pb-6 pt-10 border-b border-white/5 flex flex-col lg:flex-row lg:justify-between lg:items-end shrink-0 min-h-[70px] gap-6">
           <div className="flex-1 min-w-0 mr-4">
             {activeSessionId && currentSession ? (
@@ -391,33 +432,39 @@ export default function ChatContent() {
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') saveTitle();
                         if (e.key === 'Escape') {
-                           setIsEditingTitle(false);
-                           setEditedTitle(currentSession?.title ?? 'Untitled Trace');
+                          setIsEditingTitle(false);
+                          setEditedTitle(currentSession?.title ?? 'Untitled Trace');
                         }
                       }}
                       className="bg-white/5 border border-cyber-green/30 rounded px-2 py-1 text-lg font-bold text-white outline-none w-full"
                     />
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={saveTitle} 
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={saveTitle}
                       className="p-1 hover:text-cyber-green h-auto"
                       icon={<Check size={18} />}
                     />
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => setIsEditingTitle(false)} 
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsEditingTitle(false)}
                       className="p-1 hover:text-red-500 h-auto"
                       icon={<X size={18} />}
                     />
                   </div>
                 ) : (
                   <div className="flex items-center gap-3">
-                    <Typography variant="h2" weight="bold" color="white" glow className="truncate uppercase">
-                       {currentSession?.title || 'Untitled Trace'}
+                    <Typography
+                      variant="h2"
+                      weight="bold"
+                      color="white"
+                      glow
+                      className="truncate uppercase"
+                    >
+                      {currentSession?.title || 'Untitled Trace'}
                     </Typography>
-                    <Button 
+                    <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setIsEditingTitle(true)}
@@ -428,7 +475,13 @@ export default function ChatContent() {
                 )}
               </div>
             ) : (
-              <Typography variant="h2" weight="bold" color="white" glow className="truncate uppercase">
+              <Typography
+                variant="h2"
+                weight="bold"
+                color="white"
+                glow
+                className="truncate uppercase"
+              >
                 Direct Chat
               </Typography>
             )}
@@ -439,10 +492,12 @@ export default function ChatContent() {
               size="sm"
               onClick={() => setShowThinking(!showThinking)}
               className={`p-1 flex items-center gap-2 transition-colors ${showThinking ? 'text-cyber-green' : 'text-white/40 hover:text-white/70'}`}
-              title={showThinking ? "Hide thinking blocks" : "Show thinking blocks"}
+              title={showThinking ? 'Hide thinking blocks' : 'Show thinking blocks'}
               icon={<Brain size={18} />}
             >
-              <span className="text-[10px] font-mono uppercase tracking-wider hidden sm:inline">Thinking</span>
+              <span className="text-[10px] font-mono uppercase tracking-wider hidden sm:inline">
+                Thinking
+              </span>
             </Button>
 
             <Button
@@ -456,30 +511,40 @@ export default function ChatContent() {
 
             {isRealtimeActive && (
               <div className="flex items-center gap-2 bg-cyber-green/10 px-3 py-1 rounded border border-cyber-green/30">
-                 <div className={`w-1.5 h-1.5 rounded-full bg-cyber-green ${CHAT_STYLES.ANIMATIONS.PULSE}`} />
-                 <Typography variant="mono" weight="bold" className="text-cyber-green text-[10px]">LIVE</Typography>
+                <div
+                  className={`w-1.5 h-1.5 rounded-full bg-cyber-green ${CHAT_STYLES.ANIMATIONS.PULSE}`}
+                />
+                <Typography variant="mono" weight="bold" className="text-cyber-green text-[10px]">
+                  LIVE
+                </Typography>
               </div>
             )}
           </div>
         </header>
 
-        <ChatMessageList 
-          messages={messages} 
-          isLoading={isLoading} 
+        <ChatMessageList
+          messages={messages}
+          isLoading={isLoading}
           scrollRef={scrollRef}
           onOptionClick={handleOptionClick}
           showThinking={showThinking}
         />
 
-        <ChatInput 
+        <ChatInput
           input={input}
           setInput={setInput}
           isLoading={isLoading}
-          onSend={(e) => { e.preventDefault(); sendMessage(input); setInput(''); }}
+          onSend={(e) => {
+            e.preventDefault();
+            sendMessage(input);
+            setInput('');
+          }}
           attachments={attachments}
-          onRemoveAttachment={(i) => setAttachments(prev => prev.filter((_, idx) => idx !== i))}
+          onRemoveAttachment={(i) => setAttachments((prev) => prev.filter((_, idx) => idx !== i))}
           fileInputRef={fileInputRef}
-          onFileSelect={(e) => { if (e.target.files) handleFiles(Array.from(e.target.files)); }}
+          onFileSelect={(e) => {
+            if (e.target.files) handleFiles(Array.from(e.target.files));
+          }}
           isShaking={isShaking}
           chatInputRef={chatInputRef}
         />
@@ -495,7 +560,7 @@ export default function ChatContent() {
         )}
       </main>
 
-      <CyberConfirm 
+      <CyberConfirm
         isOpen={showDeleteConfirm}
         title="Delete Conversation"
         message="Are you sure you want to purge this record from memory?"
@@ -503,7 +568,7 @@ export default function ChatContent() {
         onCancel={() => setShowDeleteConfirm(false)}
         variant="warning"
       />
-      <CyberConfirm 
+      <CyberConfirm
         isOpen={showDeleteAllConfirm}
         title="PURGE ALL HISTORY"
         message="WARNING: This action is irreversible. All active session history will be destroyed. Continue?"
@@ -513,14 +578,28 @@ export default function ChatContent() {
       />
 
       {showShortcutsHelp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowShortcutsHelp(false)}>
-          <div className="glass-card border border-white/10 bg-black/90 rounded-2xl p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowShortcutsHelp(false)}
+        >
+          <div
+            className="glass-card border border-white/10 bg-black/90 rounded-2xl p-6 max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Keyboard size={18} className="text-cyber-green" />
-                <Typography variant="h3" weight="bold" color="white" glow className="uppercase">Keyboard Shortcuts</Typography>
+                <Typography variant="h3" weight="bold" color="white" glow className="uppercase">
+                  Keyboard Shortcuts
+                </Typography>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => setShowShortcutsHelp(false)} className="p-1 text-white/40 hover:text-white" icon={<X size={16} />} />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowShortcutsHelp(false)}
+                className="p-1 text-white/40 hover:text-white"
+                icon={<X size={16} />}
+              />
             </div>
             <div className="space-y-2 text-[11px] font-mono">
               {[
@@ -534,9 +613,14 @@ export default function ChatContent() {
                 { keys: 'Escape', desc: 'Close modals' },
                 { keys: '?', desc: 'Show this help' },
               ].map(({ keys, desc }) => (
-                <div key={keys} className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
+                <div
+                  key={keys}
+                  className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0"
+                >
                   <span className="text-white/60">{desc}</span>
-                  <kbd className="bg-white/10 border border-white/10 rounded px-2 py-0.5 text-[10px] text-cyber-green">{keys}</kbd>
+                  <kbd className="bg-white/10 border border-white/10 rounded px-2 py-0.5 text-[10px] text-cyber-green">
+                    {keys}
+                  </kbd>
                 </div>
               ))}
             </div>

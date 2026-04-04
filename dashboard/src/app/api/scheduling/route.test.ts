@@ -3,7 +3,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockSend = vi.fn();
 
 vi.mock('@aws-sdk/client-scheduler', () => ({
-  SchedulerClient: class { send = mockSend; },
+  SchedulerClient: class {
+    send = mockSend;
+  },
   ListSchedulesCommand: class {},
   GetScheduleCommand: class {},
   CreateScheduleCommand: class {},
@@ -148,7 +150,12 @@ describe('Scheduling API Route', () => {
   describe('PATCH', () => {
     it('updates schedule state', async () => {
       mockSend
-        .mockResolvedValueOnce({ Name: 'test', ScheduleExpression: 'rate(5m)', FlexibleTimeWindow: { Mode: 'OFF' }, Target: {} })
+        .mockResolvedValueOnce({
+          Name: 'test',
+          ScheduleExpression: 'rate(5m)',
+          FlexibleTimeWindow: { Mode: 'OFF' },
+          Target: {},
+        })
         .mockResolvedValueOnce({});
 
       const { PATCH } = await import('./route');

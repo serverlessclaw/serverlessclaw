@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React from 'react';
 import { Search, Plus, Wrench, X, RefreshCw } from 'lucide-react';
@@ -34,8 +34,12 @@ export default function AgentToolsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-      <Card variant="solid" padding="lg" className="max-w-4xl w-full max-h-[90vh] flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)] relative overflow-hidden border-cyber-green/20">
-        <Button 
+      <Card
+        variant="solid"
+        padding="lg"
+        className="max-w-4xl w-full max-h-[90vh] flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)] relative overflow-hidden border-cyber-green/20"
+      >
+        <Button
           variant="ghost"
           size="sm"
           onClick={() => setSelectedAgentIdForTools(null)}
@@ -46,10 +50,15 @@ export default function AgentToolsModal({
         <header className="mb-6">
           <div className="flex items-center gap-4 text-cyber-green mb-2">
             <Wrench size={24} />
-            <Typography variant="h2" color="primary" weight="black" uppercase className="italic">Manage Agent Tools</Typography>
+            <Typography variant="h2" color="primary" weight="black" uppercase className="italic">
+              Manage Agent Tools
+            </Typography>
           </div>
           <Typography variant="body" color="white" className="opacity-80 block">
-            Assign functional capabilities to <span className="text-white font-black underline decoration-cyber-green/30 underline-offset-4">{agents[selectedAgentIdForTools].name}</span>
+            Assign functional capabilities to{' '}
+            <span className="text-white font-black underline decoration-cyber-green/30 underline-offset-4">
+              {agents[selectedAgentIdForTools].name}
+            </span>
           </Typography>
         </header>
 
@@ -57,7 +66,7 @@ export default function AgentToolsModal({
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-white/20">
             <Search size={14} />
           </div>
-          <input 
+          <input
             type="text"
             placeholder="Search tools & skills..."
             value={searchQuery}
@@ -69,23 +78,35 @@ export default function AgentToolsModal({
         <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-8">
           {/* Active Tools */}
           <div>
-            <Typography variant="caption" weight="black" color="muted" className="tracking-[0.2em] mb-4 flex items-center gap-2">
-              <Plus size={12} className="text-white/40" /> 
+            <Typography
+              variant="caption"
+              weight="black"
+              color="muted"
+              className="tracking-[0.2em] mb-4 flex items-center gap-2"
+            >
+              <Plus size={12} className="text-white/40" />
               Active Skills
             </Typography>
             <div className="flex flex-wrap gap-2">
               {(agents[selectedAgentIdForTools].tools ?? []).map((toolName: string) => {
                 const isUniversal = ['discoverSkills', 'installSkill'].includes(toolName);
                 return (
-                  <div 
-                    key={toolName} 
+                  <div
+                    key={toolName}
                     className={`group flex items-center gap-3 pl-3 pr-1 py-1 border transition-all ${
-                      isUniversal ? 'bg-blue-500/5 border-blue-500/20 text-blue-400' : 'bg-cyber-green/5 border-cyber-green/20 text-cyber-green'
+                      isUniversal
+                        ? 'bg-blue-500/5 border-blue-500/20 text-blue-400'
+                        : 'bg-cyber-green/5 border-cyber-green/20 text-cyber-green'
                     }`}
                   >
-                    <Typography variant="mono" className="text-[10px] uppercase font-bold tracking-widest">
+                    <Typography
+                      variant="mono"
+                      className="text-[10px] uppercase font-bold tracking-widest"
+                    >
                       {toolName}
-                      {isUniversal && <span className="ml-2 text-[8px] opacity-40 font-mono">(Core)</span>}
+                      {isUniversal && (
+                        <span className="ml-2 text-[8px] opacity-40 font-mono">(Core)</span>
+                      )}
                     </Typography>
                     <Button
                       variant="ghost"
@@ -99,29 +120,43 @@ export default function AgentToolsModal({
                 );
               })}
               {(agents[selectedAgentIdForTools].tools || []).length === 0 && (
-                <Typography variant="mono" color="muted" className="text-[10px] italic">No active tools assigned.</Typography>
+                <Typography variant="mono" color="muted" className="text-[10px] italic">
+                  No active tools assigned.
+                </Typography>
               )}
             </div>
           </div>
 
           {/* Available Tools */}
           <div>
-            <Typography variant="caption" weight="black" color="muted" className="tracking-[0.2em] mb-4 flex items-center gap-2">
-              <Plus size={12} className="text-white/40" /> 
+            <Typography
+              variant="caption"
+              weight="black"
+              color="muted"
+              className="tracking-[0.2em] mb-4 flex items-center gap-2"
+            >
+              <Plus size={12} className="text-white/40" />
               Available Insertions
             </Typography>
-            
+
             {loadingTools ? (
               <div className="flex flex-col items-center justify-center py-12 text-white/30 gap-4">
                 <RefreshCw size={24} className="animate-spin text-cyber-green" />
-                <Typography variant="mono" className="text-[10px] uppercase tracking-widest">Synchronizing Tool Registry...</Typography>
+                <Typography variant="mono" className="text-[10px] uppercase tracking-widest">
+                  Synchronizing Tool Registry...
+                </Typography>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {(allTools || [])
-                  .filter(t => !(agents[selectedAgentIdForTools]?.tools ?? []).includes(t.name))
-                  .filter(t => !searchQuery || t.name.toLowerCase().includes(searchQuery.toLowerCase()) || t.description.toLowerCase().includes(searchQuery.toLowerCase()))
-                  .map(tool => (
+                  .filter((t) => !(agents[selectedAgentIdForTools]?.tools ?? []).includes(t.name))
+                  .filter(
+                    (t) =>
+                      !searchQuery ||
+                      t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      t.description.toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+                  .map((tool) => (
                     <Button
                       key={tool.name}
                       variant="ghost"
@@ -130,17 +165,22 @@ export default function AgentToolsModal({
                       className={`flex flex-col items-start p-3 rounded-sm border border-white/5 bg-white/[0.02] hover:bg-cyber-green/10 hover:border-cyber-green/30 transition-all h-auto text-left group`}
                     >
                       <div className="flex justify-between items-center w-full mb-1">
-                        <Typography variant="mono" className="text-[10px] font-bold text-white/90 group-hover:text-cyber-green transition-colors uppercase">
+                        <Typography
+                          variant="mono"
+                          className="text-[10px] font-bold text-white/90 group-hover:text-cyber-green transition-colors uppercase"
+                        >
                           {tool.name}
                         </Typography>
                         <Plus size={10} className="text-white/40 group-hover:text-cyber-green" />
                       </div>
-                      <Typography variant="mono" className="text-[9px] line-clamp-2 leading-relaxed h-8 text-white/50 group-hover:text-white/70 transition-colors">
+                      <Typography
+                        variant="mono"
+                        className="text-[9px] line-clamp-2 leading-relaxed h-8 text-white/50 group-hover:text-white/70 transition-colors"
+                      >
                         {tool.description}
                       </Typography>
                     </Button>
-                  ))
-                }
+                  ))}
               </div>
             )}
           </div>
@@ -148,9 +188,13 @@ export default function AgentToolsModal({
 
         <footer className="mt-8 pt-6 border-t border-white/5 flex justify-between items-center bg-black/20 shrink-0">
           <Typography variant="mono" color="muted" className="text-[10px] italic">
-            {isUpdatingTools ? 'Synchronizing neural pathways...' : loadingTools ? 'Downloading tool definitions...' : 'System stable. All changes persisted immediately.'}
+            {isUpdatingTools
+              ? 'Synchronizing neural pathways...'
+              : loadingTools
+                ? 'Downloading tool definitions...'
+                : 'System stable. All changes persisted immediately.'}
           </Typography>
-          <Button 
+          <Button
             variant="primary"
             size="sm"
             onClick={() => setSelectedAgentIdForTools(null)}

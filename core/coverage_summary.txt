@@ -1,0 +1,797 @@
+
+> @claw/core@1.0.0 test-coverage /Users/pengcao/projects/serverlessclaw/core
+> vitest run --coverage --config ../vitest.config.ts
+
+[vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.dev/rolldown
+
+[1m[46m RUN [49m[22m [36mv4.1.0 [39m[90m/Users/pengcao/projects/serverlessclaw/core[39m
+      [2mCoverage enabled with [22m[33mv8[39m
+
+[2m12:53:06 AM[22m [33m[1m[vite][22m[39m (ssr) warning: invalid import "./${cleanModulePath}". A file extension must be included in the static part of the import. For example: import(`./foo/${bar}.js`).
+  Plugin: vite:dynamic-import-vars
+  File: /Users/pengcao/projects/serverlessclaw/core/handlers/events.ts
+[2m12:53:06 AM[22m [33m[1m[vite][22m[39m (ssr) warning: invalid import "./${cleanFallbackPath}". A file extension must be included in the static part of the import. For example: import(`./foo/${bar}.js`).
+  Plugin: vite:dynamic-import-vars
+  File: /Users/pengcao/projects/serverlessclaw/core/handlers/events.ts
+ [32m✓[39m lib/utils/bus.test.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 547[2mms[22m[39m
+       [33m[2m✓[22m[39m should store in DLQ after max retries [33m 309[2mms[22m[39m
+ [32m✓[39m handlers/concurrency-monitor.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 1072[2mms[22m[39m
+     [33m[2m✓[22m[39m should handle Lambda SDK errors gracefully [33m 496[2mms[22m[39m
+ [32m✓[39m agents/strategic-planner.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 964[2mms[22m[39m
+     [33m[2m✓[22m[39m should mark gaps PLANNED based on coveredGapIds in structured output (scheduled review) [33m 813[2mms[22m[39m
+[90mstderr[2m | tools/collaboration/clarification.test.ts[2m > [22m[2mClarification Tools[2m > [22m[2mprovideClarification[2m > [22m[2mshould pass through traceId and sessionId
+[22m[39mFailed to update clarification status: Error: It does not look like SST links are active. If this is in local development and you are not starting this process through the multiplexer, wrap your command with `sst dev -- <command>`
+    at Object.typedResource [as get] (file:///Users/pengcao/projects/serverlessclaw/node_modules/[4m.pnpm[24m/sst@4.5.12/node_modules/[4msst[24m/dist/resource.js:88:19)
+    at DynamoMemory.tableName [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/base.ts:48:12[90m)[39m
+    at DynamoMemory.updateItem [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/base.ts:152:23[90m)[39m
+    at Module.updateClarificationStatus [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/clarification-operations.ts:146:14[90m)[39m
+    at DynamoMemory.updateClarificationStatus [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/dynamo-memory.ts:296:29[90m)[39m
+    at Object.execute [90m(/Users/pengcao/projects/serverlessclaw/core/[39mtools/collaboration/clarification.ts:91:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at [90m/Users/pengcao/projects/serverlessclaw/core/[39mtools/collaboration/clarification.test.ts:231:7
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest/runner[24m/dist/index.js:1258:20
+
+[90mstderr[2m | tools/collaboration/clarification.test.ts[2m > [22m[2mClarification Tools[2m > [22m[2mprovideClarification[2m > [22m[2mshould update clarification status when traceId and agentId provided
+[22m[39mFailed to update clarification status: Error: It does not look like SST links are active. If this is in local development and you are not starting this process through the multiplexer, wrap your command with `sst dev -- <command>`
+    at Object.typedResource [as get] (file:///Users/pengcao/projects/serverlessclaw/node_modules/[4m.pnpm[24m/sst@4.5.12/node_modules/[4msst[24m/dist/resource.js:88:19)
+    at DynamoMemory.tableName [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/base.ts:48:12[90m)[39m
+    at DynamoMemory.updateItem [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/base.ts:152:23[90m)[39m
+    at Module.updateClarificationStatus [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/clarification-operations.ts:146:14[90m)[39m
+    at DynamoMemory.updateClarificationStatus [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/dynamo-memory.ts:296:29[90m)[39m
+    at Object.execute [90m(/Users/pengcao/projects/serverlessclaw/core/[39mtools/collaboration/clarification.ts:91:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at [90m/Users/pengcao/projects/serverlessclaw/core/[39mtools/collaboration/clarification.test.ts:281:7
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest/runner[24m/dist/index.js:1258:20
+
+[90mstderr[2m | tools/collaboration/clarification.test.ts[2m > [22m[2mClarification Tools[2m > [22m[2mprovideClarification[2m > [22m[2mshould not fail when memory update fails
+[22m[39mFailed to update clarification status: Error: It does not look like SST links are active. If this is in local development and you are not starting this process through the multiplexer, wrap your command with `sst dev -- <command>`
+    at Object.typedResource [as get] (file:///Users/pengcao/projects/serverlessclaw/node_modules/[4m.pnpm[24m/sst@4.5.12/node_modules/[4msst[24m/dist/resource.js:88:19)
+    at DynamoMemory.tableName [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/base.ts:48:12[90m)[39m
+    at DynamoMemory.updateItem [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/base.ts:152:23[90m)[39m
+    at Module.updateClarificationStatus [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/clarification-operations.ts:146:14[90m)[39m
+    at DynamoMemory.updateClarificationStatus [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/dynamo-memory.ts:296:29[90m)[39m
+    at Object.execute [90m(/Users/pengcao/projects/serverlessclaw/core/[39mtools/collaboration/clarification.ts:91:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at [90m/Users/pengcao/projects/serverlessclaw/core/[39mtools/collaboration/clarification.test.ts:293:22
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest/runner[24m/dist/index.js:1258:20
+
+ [32m✓[39m tools/collaboration/clarification.test.ts [2m([22m[2m19 tests[22m[2m)[22m[33m 1613[2mms[22m[39m
+       [33m[2m✓[22m[39m should pass through traceId and sessionId [33m 1597[2mms[22m[39m
+ [32m✓[39m handlers/events.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 719[2mms[22m[39m
+       [33m[2m✓[22m[39m should triage health report and send outbound message [33m 477[2mms[22m[39m
+ [32m✓[39m handlers/recovery.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 2074[2mms[22m[39m
+     [33m[2m✓[22m[39m should NOT trigger CodeBuild if health check passes [33m 1361[2mms[22m[39m
+     [33m[2m✓[22m[39m should log error but continue if EventBridge escalation fails [33m 385[2mms[22m[39m
+ [32m✓[39m lib/warmup/warmup-manager.test.ts [2m([22m[2m17 tests[22m[2m)[22m[33m 2524[2mms[22m[39m
+       [33m[2m✓[22m[39m should detect cold start when latency > 2000ms [33m 2503[2mms[22m[39m
+ [32m✓[39m lib/mcp/client-manager.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 282[2mms[22m[39m
+[90mstderr[2m | lib/utils/topology.test.ts[2m > [22m[2mdiscoverSystemTopology[2m > [22m[2mshould be resilient to DynamoDB errors
+[22m[39mFailed to scan dynamic agents, proceeding with backbone only: Error: DDB Down
+    at [90m/Users/pengcao/projects/serverlessclaw/core/[39mlib/utils/topology.test.ts:197:69
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest/runner[24m/dist/index.js:1258:20
+
+ [32m✓[39m handlers/events/proactive-handler.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 457[2mms[22m[39m
+     [33m[2m✓[22m[39m should handle errors gracefully during dispatch [33m 444[2mms[22m[39m
+ [32m✓[39m lib/utils/topology/edges.test.ts [2m([22m[2m56 tests[22m[2m)[22m[33m 2794[2mms[22m[39m
+     [33m[2m✓[22m[39m returns sendMessage mapping to notifier [33m 2776[2mms[22m[39m
+ [32m✓[39m tests/tracing-integration.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 1421[2mms[22m[39m
+       [33m[2m✓[22m[39m should emit PLAN_GENERATED trace after successful planning [33m 1378[2mms[22m[39m
+ [32m✓[39m lib/utils/topology.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 2227[2mms[22m[39m
+     [33m[2m✓[22m[39m should always include baseline infrastructure nodes [33m 2186[2mms[22m[39m
+ [32m✓[39m tests/mechanisms.integration.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 437[2mms[22m[39m
+       [33m[2m✓[22m[39m should reflect recovery activity in verification status after health failure [33m 436[2mms[22m[39m
+ [32m✓[39m handlers/webhook.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 660[2mms[22m[39m
+     [33m[2m✓[22m[39m should process user messages and call SuperClaw [33m 484[2mms[22m[39m
+ [32m✓[39m agents/strategic-planner/council-continuation.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 145[2mms[22m[39m
+ [32m✓[39m agents/strategic-planner/council.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 78[2mms[22m[39m
+ [32m✓[39m tools/collaboration/collaboration.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 184[2mms[22m[39m
+ [32m✓[39m handlers/events/merger-handler.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 205[2mms[22m[39m
+ [32m✓[39m handlers/health.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 273[2mms[22m[39m
+ [32m✓[39m handlers/monitor.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 264[2mms[22m[39m
+ [32m✓[39m tools/infra/topology.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m tests/multimodal.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 387[2mms[22m[39m
+     [33m[2m✓[22m[39m should pass attachments to the provider for vision analysis [33m 386[2mms[22m[39m
+ [32m✓[39m tests/workspace-collaboration.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 259[2mms[22m[39m
+ [32m✓[39m tools/knowledge/mcp.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m lib/mcp.parallel.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 58[2mms[22m[39m
+ [32m✓[39m lib/agent/executor.session.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 108[2mms[22m[39m
+ [32m✓[39m lib/session/session-state.test.ts [2m([22m[2m50 tests[22m[2m)[22m[32m 147[2mms[22m[39m
+ [32m✓[39m agents/superclaw.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m lib/mcp.test.ts [2m([22m[2m31 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m lib/agent.stream.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 116[2mms[22m[39m
+ [32m✓[39m lib/schema/events.test.ts [2m([22m[2m192 tests[22m[2m)[22m[32m 81[2mms[22m[39m
+ [32m✓[39m handlers/events/escalation-handler.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m handlers/heartbeat.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m lib/config/config-defaults.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m lib/lifecycle/error-recovery.test.ts [2m([22m[2m61 tests[22m[2m)[22m[33m 4961[2mms[22m[39m
+     [33m[2m✓[22m[39m should fall through to next provider on failure [33m 3161[2mms[22m[39m
+     [33m[2m✓[22m[39m should use fallback on failure [33m 1646[2mms[22m[39m
+ [32m✓[39m tools/system/hot-config.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m lib/utils/lru.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tests/trace-dag-validation.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 114[2mms[22m[39m
+ [32m✓[39m handlers/events/consensus-handler.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m lib/schema/orchestration.test.ts [2m([22m[2m65 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+Warning: A vi.mock('../../lib/registry') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../tools/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/metrics/token-usage') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/registry') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../tools/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/metrics/token-usage') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/registry') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../tools/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/metrics/token-usage') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/registry') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../tools/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/metrics/token-usage') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/registry') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../tools/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/metrics/token-usage') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/registry') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../tools/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/metrics/token-usage') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/registry') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../tools/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/metrics/token-usage') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/registry') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../tools/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/metrics/token-usage') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../tools/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/metrics/token-usage') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../tools/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+ [32m✓[39m lib/memory/cached-memory.test.ts [2m([22m[2m67 tests[22m[2m)[22m[32m 75[2mms[22m[39m
+ [32m✓[39m lib/safety/circuit-breaker.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+ [32m✓[39m lib/metrics/cognitive-metrics.test.ts [2m([22m[2m40 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+ [32m✓[39m tools/collaboration/messaging.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+ [32m✓[39m lib/utils/workspace-manager.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 59[2mms[22m[39m
+ [32m✓[39m agents/strategic-planner/prompts.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 158[2mms[22m[39m
+ [32m✓[39m tools/knowledge/agent.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32m✓[39m lib/memory/session-operations.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m lib/event-routing.test.ts [2m([22m[2m36 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+[90mstderr[2m | lib/metrics/metrics.test.ts[2m > [22m[2mMetrics[2m > [22m[2memitMetrics[2m > [22m[2mshould handle CloudWatch send failure gracefully
+[22m[39m[METRICS] Failed to emit CloudWatch metrics: Error: CloudWatch unavailable
+    at [90m/Users/pengcao/projects/serverlessclaw/core/[39mlib/metrics/metrics.test.ts:64:38
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest/runner[24m/dist/index.js:296:11
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest/runner[24m/dist/index.js:1258:26
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest/runner[24m/dist/index.js:1681:20
+    at new Promise (<anonymous>)
+    at runWithCancel (file:///Users/pengcao/projects/serverlessclaw/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest/runner[24m/dist/index.js:1678:10)
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest/runner[24m/dist/index.js:1660:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///Users/pengcao/projects/serverlessclaw/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest/runner[24m/dist/index.js:1627:10)
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest/runner[24m/dist/index.js:2309:64
+
+ [32m✓[39m lib/metrics/metrics.test.ts [2m([22m[2m29 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+[90mstdout[2m | lib/safety/safety-engine.test.ts[2m > [22m[2mSafetyEngine[2m > [22m[2mTier-based approval[2m > [22m[2mshould require no approvals in AUTONOMOUS tier
+[22m[39mcheckRateLimits called {
+  action: [32m'code_change'[39m,
+  maxDeploymentsPerDay: [33m10[39m,
+  maxShellCommandsPerHour: [33m200[39m,
+  maxFileWritesPerHour: [33m500[39m
+}
+
+[90mstdout[2m | lib/safety/safety-engine.test.ts[2m > [22m[2mSafetyEngine[2m > [22m[2mTier-based approval[2m > [22m[2mshould require no approvals in AUTONOMOUS tier
+[22m[39mcheckRateLimits called {
+  action: [32m'deployment'[39m,
+  maxDeploymentsPerDay: [33m10[39m,
+  maxShellCommandsPerHour: [33m200[39m,
+  maxFileWritesPerHour: [33m500[39m
+}
+
+[90mstdout[2m | lib/safety/safety-engine.test.ts[2m > [22m[2mSafetyEngine[2m > [22m[2mTier-based approval[2m > [22m[2mshould require no approvals in AUTONOMOUS tier
+[22m[39mcheckRateLimits called {
+  action: [32m'file_operation'[39m,
+  maxDeploymentsPerDay: [33m10[39m,
+  maxShellCommandsPerHour: [33m200[39m,
+  maxFileWritesPerHour: [33m500[39m
+}
+
+[90mstdout[2m | lib/safety/safety-engine.test.ts[2m > [22m[2mSafetyEngine[2m > [22m[2mTier-based approval[2m > [22m[2mshould require no approvals in AUTONOMOUS tier
+[22m[39mcheckRateLimits called {
+  action: [32m'shell_command'[39m,
+  maxDeploymentsPerDay: [33m10[39m,
+  maxShellCommandsPerHour: [33m200[39m,
+  maxFileWritesPerHour: [33m500[39m
+}
+
+[90mstdout[2m | lib/safety/safety-engine.test.ts[2m > [22m[2mSafetyEngine[2m > [22m[2mResource-level controls[2m > [22m[2mshould allow access to regular source files
+[22m[39mcheckRateLimits called {
+  action: [32m'file_operation'[39m,
+  maxDeploymentsPerDay: [33m10[39m,
+  maxShellCommandsPerHour: [33m200[39m,
+  maxFileWritesPerHour: [33m500[39m
+}
+
+[90mstdout[2m | lib/safety/safety-engine.test.ts[2m > [22m[2mSafetyEngine[2m > [22m[2mTool-specific overrides[2m > [22m[2mshould remove tool override
+[22m[39mcheckRateLimits called {
+  action: [32m'code_change'[39m,
+  maxDeploymentsPerDay: [33m10[39m,
+  maxShellCommandsPerHour: [33m200[39m,
+  maxFileWritesPerHour: [33m500[39m
+}
+
+[90mstdout[2m | lib/safety/safety-engine.test.ts[2m > [22m[2mSafetyEngine[2m > [22m[2mRate limiting[2m > [22m[2mshould enforce deployment daily limits
+[22m[39mcheckRateLimits called {
+  action: [32m'deployment'[39m,
+  maxDeploymentsPerDay: [33m2[39m,
+  maxShellCommandsPerHour: [33m200[39m,
+  maxFileWritesPerHour: [33m500[39m
+}
+
+[90mstdout[2m | lib/safety/safety-engine.test.ts[2m > [22m[2mSafetyEngine[2m > [22m[2mRate limiting[2m > [22m[2mshould enforce deployment daily limits
+[22m[39mcheckRateLimits called {
+  action: [32m'deployment'[39m,
+  maxDeploymentsPerDay: [33m2[39m,
+  maxShellCommandsPerHour: [33m200[39m,
+  maxFileWritesPerHour: [33m500[39m
+}
+
+[90mstdout[2m | lib/safety/safety-engine.test.ts[2m > [22m[2mSafetyEngine[2m > [22m[2mRate limiting[2m > [22m[2mshould enforce deployment daily limits
+[22m[39mcheckRateLimits called {
+  action: [32m'deployment'[39m,
+  maxDeploymentsPerDay: [33m2[39m,
+  maxShellCommandsPerHour: [33m200[39m,
+  maxFileWritesPerHour: [33m500[39m
+}
+
+[90mstdout[2m | lib/safety/safety-engine.test.ts[2m > [22m[2mSafetyEngine[2m > [22m[2mRate limiting[2m > [22m[2mshould enforce shell command hourly limits
+[22m[39mcheckRateLimits called {
+  action: [32m'shell_command'[39m,
+  maxDeploymentsPerDay: [33m10[39m,
+  maxShellCommandsPerHour: [33m2[39m,
+  maxFileWritesPerHour: [33m500[39m
+}
+
+[90mstdout[2m | lib/safety/safety-engine.test.ts[2m > [22m[2mSafetyEngine[2m > [22m[2mRate limiting[2m > [22m[2mshould enforce shell command hourly limits
+[22m[39mcheckRateLimits called {
+  action: [32m'shell_command'[39m,
+  maxDeploymentsPerDay: [33m10[39m,
+  maxShellCommandsPerHour: [33m2[39m,
+  maxFileWritesPerHour: [33m500[39m
+}
+
+[90mstdout[2m | lib/safety/safety-engine.test.ts[2m > [22m[2mSafetyEngine[2m > [22m[2mRate limiting[2m > [22m[2mshould enforce shell command hourly limits
+[22m[39mcheckRateLimits called {
+  action: [32m'shell_command'[39m,
+  maxDeploymentsPerDay: [33m10[39m,
+  maxShellCommandsPerHour: [33m2[39m,
+  maxFileWritesPerHour: [33m500[39m
+}
+
+[90mstdout[2m | lib/safety/safety-engine.test.ts[2m > [22m[2mSafetyEngine[2m > [22m[2mRate limiting[2m > [22m[2mshould enforce file write hourly limits
+[22m[39mcheckRateLimits called {
+  action: [32m'file_operation'[39m,
+  maxDeploymentsPerDay: [33m10[39m,
+  maxShellCommandsPerHour: [33m200[39m,
+  maxFileWritesPerHour: [33m1[39m
+}
+
+[90mstdout[2m | lib/safety/safety-engine.test.ts[2m > [22m[2mSafetyEngine[2m > [22m[2mRate limiting[2m > [22m[2mshould enforce file write hourly limits
+[22m[39mcheckRateLimits called {
+  action: [32m'file_operation'[39m,
+  maxDeploymentsPerDay: [33m10[39m,
+  maxShellCommandsPerHour: [33m200[39m,
+  maxFileWritesPerHour: [33m1[39m
+}
+
+ [32m✓[39m lib/agent.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 71[2mms[22m[39m
+ [32m✓[39m lib/safety/safety-engine.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 125[2mms[22m[39m
+ [32m✓[39m lib/handoff.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+[90mstderr[2m | lib/memory/insight-operations.test.ts[2m > [22m[2mInsight Operations[2m > [22m[2maddMemory[2m > [22m[2mshould include createdAt in putItem and metadata
+[22m[39mSimilarity check failed: TypeError: Cannot read properties of undefined (reading 'Items')
+    at DynamoMemory.queryItemsPaginated [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/base.ts:87:26[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at DynamoMemory.queryItems [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/base.ts:103:23[90m)[39m
+    at queryByTypeAndMap [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/utils.ts:253:17[90m)[39m
+    at findSimilarMemory [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/insight-operations.ts:34:19[90m)[39m
+    at addRecord [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/insight-operations.ts:81:20[90m)[39m
+    at [90m/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/insight-operations.test.ts:33:7
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest/runner[24m/dist/index.js:1258:20
+
+ [32m✓[39m tests/contract.test.ts [2m([22m[2m70 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+ [32m✓[39m lib/memory/insight-operations.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+ [32m✓[39m tools/infra/deployment.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 97[2mms[22m[39m
+ [32m✓[39m lib/handoff-ignore.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 52[2mms[22m[39m
+ [32m✓[39m lib/agent-memory.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 51[2mms[22m[39m
+ [32m✓[39m handlers/events/parallel-task-completed-handler.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 108[2mms[22m[39m
+ [32m✓[39m lib/lifecycle/escalation-manager.test.ts [2m([22m[2m33 tests[22m[2m)[22m[32m 101[2mms[22m[39m
+ [32m✓[39m handlers/events/shared.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+ [32m✓[39m handlers/bridge.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m lib/lifecycle/scheduler.test.ts [2m([22m[2m33 tests[22m[2m)[22m[32m 52[2mms[22m[39m
+ [32m✓[39m agents/cognition-reflector/prompts.test.ts [2m([22m[2m29 tests[22m[2m)[22m[32m 56[2mms[22m[39m
+ [32m✓[39m tests/evolution-loop.integration.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m lib/config/escalation-defaults.test.ts [2m([22m[2m65 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m lib/backbone.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m handlers/events/task-result-handler.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m lib/providers/minimax.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m lib/session/identity.test.ts [2m([22m[2m41 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+ [32m✓[39m tools/knowledge/storage.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m tools/collaboration/schema.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m tools/infra/orchestration.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m lib/lock.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+ [32m✓[39m lib/metrics/deploy-stats.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m lib/memory/gap-operations.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m✓[39m handlers/events/clarification-handler.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m lib/memory/collaboration-operations.test.ts [2m([22m[2m36 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m✓[39m lib/memory/integration.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 97[2mms[22m[39m
+ [32m✓[39m tools/infra/scheduler.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m agents/qa.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m mcp-servers/multiplexer.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m lib/utils/trace-helper.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m lib/agent/dag-executor.test.ts [2m([22m[2m53 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m lib/memory/scope.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 57[2mms[22m[39m
+ [32m✓[39m handlers/events/continuation-handler.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 86[2mms[22m[39m
+ [32m✓[39m tools/knowledge/config.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+[90mstderr[2m | lib/memory/evolution.test.ts[2m > [22m[2mDynamoMemory Evolution — Hit Tracking & Registry[2m > [22m[2maddRecord (via addMemory)[2m > [22m[2mshould register the memory type in SYSTEM#REGISTRY
+[22m[39mSimilarity check failed: TypeError: Cannot read properties of undefined (reading 'Items')
+    at DynamoMemory.queryItemsPaginated [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/base.ts:87:26[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at DynamoMemory.queryItems [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/base.ts:103:23[90m)[39m
+    at queryByTypeAndMap [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/utils.ts:253:17[90m)[39m
+    at findSimilarMemory [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/insight-operations.ts:34:19[90m)[39m
+    at addRecord [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/insight-operations.ts:81:20[90m)[39m
+    at [90m/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/evolution.test.ts:42:7
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest/runner[24m/dist/index.js:1258:20
+
+[90mstderr[2m | lib/memory/evolution.test.ts[2m > [22m[2mDynamoMemory Evolution — Hit Tracking & Registry[2m > [22m[2maddRecord (via addMemory)[2m > [22m[2mshould initialize hitCount and lastAccessed in metadata
+[22m[39mSimilarity check failed: TypeError: Cannot read properties of undefined (reading 'Items')
+    at DynamoMemory.queryItemsPaginated [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/base.ts:87:26[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at DynamoMemory.queryItems [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/base.ts:103:23[90m)[39m
+    at queryByTypeAndMap [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/utils.ts:253:17[90m)[39m
+    at findSimilarMemory [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/insight-operations.ts:34:19[90m)[39m
+    at addRecord [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/insight-operations.ts:81:20[90m)[39m
+    at [90m/Users/pengcao/projects/serverlessclaw/core/[39mlib/memory/evolution.test.ts:63:7
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest/runner[24m/dist/index.js:1258:20
+
+ [32m✓[39m lib/providers/fallback.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 46[2mms[22m[39m
+ [32m✓[39m tools/registry-utils.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m agents/cognition-reflector.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m lib/memory/evolution.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+ [32m✓[39m lib/agent/schema.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m lib/utils/realtime.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m handlers/events/parallel-handler.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m lib/providers/attachments.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m agents/strategic-planner/evolution.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m lib/providers/openrouter.stream.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m lib/feature-flags.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m lib/memory/reputation-operations.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m lib/safety/semantic-loop-detector.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tools/system/definitions.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m lib/memory/collaboration.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m lib/memory/dynamo-memory.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m lib/agent/parallel-aggregator.test.ts [2m([22m[2m37 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m lib/agent/executor-helper.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+[90mstderr[2m | lib/utils/metadata.test.ts[2m > [22m[2mextractMetadata[2m > [22m[2mshould return defaults for invalid metadata
+[22m[39mMetadata validation failed, returning defaults: ZodError: [
+  {
+    "expected": "number",
+    "code": "invalid_type",
+    "path": [
+      "count"
+    ],
+    "message": "Invalid input: expected number, received string"
+  }
+]
+    at Module.extractMetadata [90m(/Users/pengcao/projects/serverlessclaw/core/[39mlib/utils/metadata.ts:20:19[90m)[39m
+    at [90m/Users/pengcao/projects/serverlessclaw/core/[39mlib/utils/metadata.test.ts:76:20
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest/runner[24m/dist/index.js:296:11
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest/runner[24m/dist/index.js:1258:26
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest/runner[24m/dist/index.js:1681:20
+    at new Promise (<anonymous>)
+    at runWithCancel (file:///Users/pengcao/projects/serverlessclaw/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest/runner[24m/dist/index.js:1678:10)
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest/runner[24m/dist/index.js:1660:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///Users/pengcao/projects/serverlessclaw/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest/runner[24m/dist/index.js:1627:10)
+
+ [32m✓[39m lib/providers/bedrock.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+ [32m✓[39m lib/utils/metadata.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m handlers/events/research-handler.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m lib/metrics/token-usage.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m lib/schema/webhook.test.ts [2m([22m[2m55 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m lib/agent-routing.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m tools/infra/rollback.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m lib/agent/executor.stream.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m adapters/__tests__/adapters.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m agents/merger.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m lib/memory/cache.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m lib/agent/assembler.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m lib/memory/utils.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m lib/utils/agent-helpers.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m handlers/events/cognitive-health-handler.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m lib/providers/utils.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m agents/coder.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 91[2mms[22m[39m
+ [32m✓[39m lib/utils/agent-helpers/event-emitter.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m handlers/events/parallel-barrier-timeout-handler.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m lib/metrics/slo.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m lib/providers/openrouter.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m tools/collaboration/workspace.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m lib/mcp/tool-mapper.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m lib/utils/tool-error.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m lib/logger.test.ts [2m([22m[2m40 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+ [32m✓[39m lib/memory/base.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m handlers/agent-runner.decomposition.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m lib/agent/executor.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 170[2mms[22m[39m
+ [32m✓[39m lib/safety/safety-config.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m lib/lifecycle/health.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m lib/metadata.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m lib/agent/context-manager.test.ts [2m([22m[2m29 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m lib/idempotency.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m lib/providers/minimax.stream.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m agents/strategic-planner/schema.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m lib/agent/context-strategies.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m lib/agent/protocol-fallback.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m lib/agent/tool-executor.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m lib/utils/typed-emit.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m handlers/events/clarification-timeout-handler.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m tests/parallel-stress.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m lib/memory/clarification-operations.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m lib/utils/topology/classifiers.test.ts [2m([22m[2m39 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m lib/providers/bedrock.stream.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m lib/registry/config.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m lib/providers/openai.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m handlers/mcp-warmup.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m lib/memory/tiering.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m handlers/events/cancellation-handler.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m lib/agent-router.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m lib/agent/executor.tokens.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m lib/utils/topology/nodes.test.ts [2m([22m[2m37 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m agents/critic.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m lib/memory/pagination.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m handlers/dlq-handler.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m lib/registry.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m lib/tracer.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+[90mstderr[2m | tests/parallel-aggregation.test.ts[2m > [22m[2mParallel Aggregation Integration[2m > [22m[2mshould fallback to summary if agent-guided fails
+[22m[39m[vitest] The vi.fn() mock did not use 'function' or 'class' in its implementation, see https://vitest.dev/api/vi#vi-spyon for examples.
+
+ [32m✓[39m tests/parallel-aggregation.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m lib/lifecycle/alerting.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m tools/knowledge/schema.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m tools/system/health.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m lib/schema.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m handlers/events/parallel-failure.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m tools/system/fs.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m handlers/events/build-handler.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m lib/memory/workspace-operations.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m lib/types/constants.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m lib/providers/integration.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m tests/schema-type-drift.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m lib/agent/context.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m lib/safety/safety-limiter.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m lib/providers/index.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m lib/lifecycle/self-verify.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m handlers/agent-runner.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m lib/config/config-validator.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m lib/agent/emitter.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m lib/utils/normalize.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m lib/config/config-versioning.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m lib/providers/openai.stream.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m tests/decomposer.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m lib/metrics/token-budget-enforcer.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m tools/system/git.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m handlers/notifier.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m lib/utils/ddb-client.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m✓[39m lib/safety/safety-config-manager.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m tests/swarm-recursive.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m tools/infra/schema.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m tools/system/schema.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m lib/utils/fs-security.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m lib/agent/decomposer.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m lib/utils/agent-helpers/llm-utils.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m handlers/events/health-handler.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m lib/agent/options.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m agents/cognition-reflector/schema.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m lib/types/session.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m lib/outbound.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m lib/skills.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tools/system/validation.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m agents/critic/collab.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m lib/prompts/snippets.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m lib/utils/pii.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+ [32m✓[39m agents/critic/schema.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m tools/knowledge/metadata.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m handlers/realtime-auth.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m lib/types/mcp.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m lib/utils/error.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+[90mstdout[2m | lib/metrics/metrics.integration.test.ts[2m > [22m[2mMetrics Permission Integration[2m > [22m[2mshould successfully emit a heartbeat metric to CloudWatch
+[22m[39mSkipping integration test (INTEGRATION_TESTS not set to true)
+
+ [32m✓[39m lib/metrics/metrics.integration.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m lib/constants.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tools/infra/generate-patch.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m lib/registry.tools.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m215 passed[39m[22m[90m (215)[39m
+[2m      Tests [22m [1m[32m3063 passed[39m[22m[90m (3063)[39m
+[2m   Start at [22m 00:53:05
+[2m   Duration [22m 20.81s[2m (transform 18.34s, setup 26.21s, import 56.25s, tests 28.59s, environment 50ms)[22m
+
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   84.39 |    73.43 |   86.12 |   85.01 |                   
+ __mocks__         |      80 |      100 |      70 |      80 |                   
+  dynamodb.ts      |   73.91 |      100 |    62.5 |   73.91 | 27-28,32-33,47-48 
+  lambda.ts        |     100 |      100 |     100 |     100 |                   
+  logger.ts        |     100 |      100 |     100 |     100 |                   
+ adapters/input    |   56.88 |    46.63 |   57.69 |   58.71 |                   
+  generic-http.ts  |   88.88 |    84.61 |     100 |   88.88 | 27-30             
+  github.ts        |   44.68 |    41.97 |      50 |   45.65 | ...57,161,180-292 
+  jira.ts          |   42.35 |    31.11 |      50 |   44.44 | ...78,188,209-329 
+  telegram.ts      |   81.33 |    79.48 |   71.42 |    85.5 | ...85-186,226-227 
+  types.ts         |      50 |      100 |       0 |      50 | 19-20             
+ agents            |   81.36 |    67.34 |   91.42 |   81.14 |                   
+  coder.ts         |   81.03 |    71.59 |    90.9 |   81.41 | ...57-263,276,295 
+  ...-reflector.ts |   84.44 |       66 |   66.66 |   84.26 | ...03,196,220-221 
+  critic.ts        |   89.58 |    65.78 |     100 |   89.36 | 34,63-69,146      
+  merger.ts        |   60.97 |    41.66 |     100 |   60.97 | ...99-111,131-147 
+  qa.ts            |   73.83 |    56.86 |   83.33 |   72.54 | ...53,258,261-262 
+  ...ic-planner.ts |   89.87 |    81.69 |     100 |   89.74 | 54-55,138-148     
+  superclaw.ts     |     100 |      100 |     100 |     100 |                   
+ ...tion-reflector |     100 |      100 |     100 |     100 |                   
+  prompts.ts       |     100 |      100 |     100 |     100 |                   
+  schema.ts        |     100 |      100 |     100 |     100 |                   
+ agents/critic     |     100 |      100 |     100 |     100 |                   
+  schema.ts        |     100 |      100 |     100 |     100 |                   
+ agents/prompts    |       0 |        0 |       0 |       0 |                   
+  index.ts         |       0 |        0 |       0 |       0 |                   
+ ...ategic-planner |   87.54 |    75.98 |   82.85 |   87.96 |                   
+  council.ts       |   86.66 |    88.88 |     100 |   86.66 | 72-76             
+  evolution.ts     |     100 |    83.33 |     100 |     100 | 48                
+  processing.ts    |   86.73 |     75.3 |   45.45 |   87.62 | ...23-325,344-362 
+  prompts.ts       |   84.61 |    68.25 |     100 |   85.39 | 93-108,120,166    
+  scheduler.ts     |     100 |      100 |     100 |     100 |                   
+  schema.ts        |     100 |      100 |     100 |     100 |                   
+  validation.ts    |   76.92 |    77.77 |     100 |      75 | 20,25,43          
+ handlers          |   76.72 |    61.99 |   71.42 |   77.89 |                   
+  agent-runner.ts  |   98.07 |    85.71 |     100 |   98.03 | 169               
+  bridge.ts        |   96.66 |    94.73 |     100 |   96.66 | 91                
+  ...cy-monitor.ts |   64.28 |    28.57 |     100 |   64.28 | 55-91             
+  dlq-handler.ts   |     100 |     87.5 |     100 |     100 | 51                
+  events.ts        |      62 |    53.12 |   66.66 |      62 | ...01,113,121-131 
+  health.ts        |   69.23 |    68.75 |   66.66 |      72 | 44-57             
+  heartbeat.ts     |    87.5 |      100 |     100 |    87.5 | 37                
+  mcp-warmup.ts    |     100 |    83.33 |     100 |     100 | 18                
+  monitor.ts       |      75 |    58.62 |   57.14 |    74.8 | ...39,288-307,334 
+  notifier.ts      |   67.52 |    40.96 |   70.58 |   71.29 | ...96,307,351-359 
+  realtime-auth.ts |     100 |      100 |     100 |     100 |                   
+  recovery.ts      |   79.03 |    70.83 |      50 |   79.03 | ...,68-73,170-193 
+  webhook.ts       |   75.43 |     61.9 |      50 |   78.18 | ...,55-56,156-157 
+ handlers/events   |   87.22 |    72.99 |    87.5 |    87.8 |                   
+  build-handler.ts |     100 |    93.75 |     100 |     100 | 35                
+  ...on-handler.ts |     100 |    88.46 |     100 |     100 | 44,84,149         
+  ...on-handler.ts |   96.87 |    86.66 |     100 |   96.87 | 135               
+  ...ut-handler.ts |     100 |    86.95 |     100 |     100 | 115-145           
+  ...th-handler.ts |     100 |      100 |     100 |     100 |                   
+  ...us-handler.ts |   86.66 |    79.48 |     100 |   87.71 | ...87,141-143,175 
+  ...on-handler.ts |     100 |    83.33 |     100 |     100 | 29                
+  ...on-handler.ts |     100 |      100 |     100 |     100 |                   
+  ...th-handler.ts |     100 |      100 |     100 |     100 |                   
+  ...er-handler.ts |   91.66 |    68.18 |   66.66 |   94.87 | 26-28,200         
+  ...ut-handler.ts |     100 |    78.94 |     100 |     100 | 39-40,46-57,110   
+  ...el-handler.ts |     100 |    91.52 |     100 |     100 | ...91,271,286,327 
+  ...ed-handler.ts |   98.43 |     87.5 |     100 |   98.36 | 197               
+  ...ve-handler.ts |   85.71 |       50 |     100 |   85.71 | 41                
+  ...ch-handler.ts |   86.36 |    52.94 |      75 |   85.71 | 82-94,149,153     
+  shared.ts        |   95.23 |     92.5 |     100 |      95 | 149-150           
+  ...lt-handler.ts |   46.77 |    40.19 |      50 |   47.93 | ...76-312,326-368 
+ lib               |   89.19 |    78.02 |   93.54 |   89.81 |                   
+  agent-router.ts  |   98.11 |    82.92 |     100 |     100 | ...20,145,172,207 
+  agent-routing.ts |     100 |    84.61 |     100 |     100 | 32-33             
+  agent.ts         |   75.93 |    62.09 |   71.42 |   76.56 | ...47-449,547-548 
+  backbone.ts      |     100 |      100 |     100 |     100 |                   
+  constants.ts     |       0 |        0 |       0 |       0 |                   
+  event-routing.ts |     100 |      100 |     100 |     100 |                   
+  feature-flags.ts |   77.77 |       90 |      75 |      80 | 32,72-78,98-99    
+  handoff.ts       |     100 |      100 |     100 |     100 |                   
+  idempotency.ts   |     100 |      100 |     100 |     100 |                   
+  lock.ts          |     100 |      100 |     100 |     100 |                   
+  logger.ts        |    90.9 |       80 |     100 |   90.56 | 19-21,120,144     
+  mcp.ts           |   93.84 |      100 |      90 |   93.44 | 43,151,169-170    
+  metadata.ts      |     100 |      100 |     100 |     100 |                   
+  outbound.ts      |     100 |      100 |     100 |     100 |                   
+  registry.ts      |    92.1 |    84.21 |     100 |   92.85 | ...99,241,276-277 
+  schema.ts        |   76.19 |       75 |     100 |   76.19 | 20-21,34,59-60    
+  skills.ts        |   94.73 |       75 |     100 |     100 | 47-49             
+  tracer.ts        |   88.88 |    52.38 |      90 |   88.88 | 100-108,168       
+ lib/agent         |    84.3 |    76.03 |   93.13 |   84.35 |                   
+  assembler.ts     |   97.14 |    83.33 |      75 |   97.05 | 168               
+  ...g-resolver.ts |   55.55 |    42.85 |     100 |   68.18 | 35-47             
+  ...xt-manager.ts |   89.02 |    79.48 |    87.5 |      88 | 108,332-384,394   
+  ...strategies.ts |     100 |      100 |     100 |     100 |                   
+  context.ts       |     100 |    84.61 |     100 |     100 | 30-31             
+  dag-executor.ts  |   96.74 |    86.76 |     100 |   96.63 | 105-106,246-247   
+  decomposer.ts    |   98.88 |    94.59 |     100 |     100 | 121,243,264,285   
+  emitter.ts       |   80.95 |    77.77 |     100 |    82.5 | 61-66,179-181     
+  executor-core.ts |   66.97 |    55.42 |   89.47 |   66.34 | ...72-681,687-694 
+  ...tor-helper.ts |     100 |      100 |     100 |     100 |                   
+  ...utor-types.ts |   85.71 |       80 |     100 |   85.71 | 139               
+  executor.ts      |     100 |      100 |     100 |     100 |                   
+  ...aggregator.ts |     100 |      100 |     100 |     100 |                   
+  ...l-fallback.ts |   90.66 |    81.25 |     100 |   91.78 | 53-54,292-296     
+  schema.ts        |     100 |      100 |     100 |     100 |                   
+  tool-executor.ts |   63.01 |    70.21 |      60 |    62.5 | 71-102,184-194    
+  tracer-init.ts   |     100 |    66.66 |     100 |     100 | 33-35             
+ lib/config        |     100 |    97.72 |     100 |     100 |                   
+  ...g-defaults.ts |     100 |      100 |     100 |     100 |                   
+  ...-validator.ts |     100 |    96.87 |     100 |     100 | 118               
+  ...versioning.ts |     100 |      100 |     100 |     100 |                   
+  ...n-defaults.ts |     100 |      100 |     100 |     100 |                   
+ lib/constants     |     100 |      100 |     100 |     100 |                   
+  errors.ts        |     100 |      100 |     100 |     100 |                   
+  localization.ts  |     100 |      100 |     100 |     100 |                   
+  memory.ts        |     100 |      100 |     100 |     100 |                   
+  network.ts       |     100 |      100 |     100 |     100 |                   
+  system.ts        |     100 |      100 |     100 |     100 |                   
+  tools.ts         |     100 |      100 |     100 |     100 |                   
+  tracing.ts       |     100 |      100 |     100 |     100 |                   
+ lib/lifecycle     |   97.36 |    95.17 |   95.45 |   97.78 |                   
+  alerting.ts      |     100 |      100 |     100 |     100 |                   
+  ...r-recovery.ts |   96.07 |    95.69 |   86.66 |      96 | 149,155,369,380   
+  ...on-manager.ts |   97.72 |    97.77 |     100 |   98.47 | 244-245           
+  health.ts        |   97.43 |    96.96 |     100 |   98.64 | 244               
+  scheduler.ts     |     100 |      100 |     100 |     100 |                   
+  self-verify.ts   |   95.12 |    72.22 |   88.88 |   94.73 | 36-42             
+ lib/mcp           |    63.8 |    55.33 |   57.14 |   63.75 |                   
+  ...nt-manager.ts |   69.29 |    57.69 |      50 |   69.02 | ...02-203,237-298 
+  tool-mapper.ts   |   51.02 |    52.94 |   66.66 |   51.06 | 82-136,157        
+ lib/memory        |   82.06 |    75.04 |   77.06 |   83.29 |                   
+  base.ts          |   73.52 |    60.71 |   56.25 |   76.19 | ...57,268,283-310 
+  cache.ts         |     100 |    90.62 |     100 |     100 | 142,181-190       
+  cached-memory.ts |     100 |    96.77 |     100 |     100 | 213               
+  ...operations.ts |   70.96 |    66.66 |   71.42 |   70.96 | 85-126            
+  ...operations.ts |     100 |      100 |     100 |     100 |                   
+  dynamo-memory.ts |   45.28 |    57.14 |   45.09 |   45.28 | ...77,404,418,440 
+  ...operations.ts |   70.31 |     57.3 |   77.77 |   70.32 | ...44-545,616-622 
+  index.ts         |       0 |        0 |       0 |       0 |                   
+  ...operations.ts |   66.93 |    54.83 |   48.27 |   71.55 | ...16-448,491-520 
+  ...operations.ts |   84.44 |    67.34 |   66.66 |   86.04 | 154-160           
+  ...operations.ts |     100 |      100 |     100 |     100 |                   
+  tiering.ts       |   97.14 |      100 |     100 |   97.14 | 111               
+  utils.ts         |   77.04 |     87.8 |    87.5 |   77.77 | 178-196           
+  ...operations.ts |   88.57 |    78.26 |   94.44 |   93.33 | 78-79,145,181     
+ lib/metrics       |   88.86 |     80.4 |    87.5 |   89.61 |                   
+  ...ve-metrics.ts |    88.2 |    78.67 |   93.54 |   89.32 | ...66,479,481,483 
+  deploy-stats.ts  |   96.15 |    80.76 |     100 |   96.15 | 101               
+  ...on-metrics.ts |   45.45 |       50 |      40 |   45.45 | 23,46,66,80-98    
+  index.ts         |       0 |        0 |       0 |       0 |                   
+  metrics.ts       |    92.1 |    92.85 |     100 |   91.66 | 28,44-45          
+  slo.ts           |    90.9 |    88.23 |   66.66 |   96.42 | 73                
+  ...t-enforcer.ts |   80.39 |    57.89 |   92.85 |   78.72 | ...72-174,238-241 
+  token-usage.ts   |     100 |    93.54 |     100 |     100 | 62,263            
+ lib/prompts       |   96.29 |    91.66 |     100 |   96.29 |                   
+  snippets.ts      |   96.29 |    91.66 |     100 |   96.29 | 21                
+ lib/providers     |   82.84 |    64.14 |   82.02 |   84.62 |                   
+  bedrock.ts       |   83.84 |    65.05 |   66.66 |   85.24 | ...22,427-443,477 
+  fallback.ts      |   85.71 |    68.62 |    92.3 |   86.36 | ...25-326,339-340 
+  index.ts         |   66.66 |    54.54 |   77.77 |   66.66 | 64-154            
+  minimax.ts       |      77 |    62.26 |     100 |   76.76 | ...06,335,343-359 
+  openai.ts        |   84.61 |    59.16 |     100 |   87.75 | ...75,379,391-392 
+  openrouter.ts    |   83.67 |    67.18 |   78.57 |   87.96 | ...22,437,505-507 
+  utils.ts         |   93.33 |    95.45 |   85.71 |   96.15 | 114               
+ lib/registry      |   86.48 |    88.88 |     100 |   86.11 |                   
+  config.ts        |   86.48 |    88.88 |     100 |   86.11 | 131,143-155       
+ lib/safety        |   87.29 |     76.4 |   92.42 |    87.9 |                   
+  ...it-breaker.ts |   77.11 |    68.25 |    91.3 |   77.98 | ...77,328,349-376 
+  ...ig-manager.ts |     100 |    92.85 |     100 |     100 | 68                
+  safety-config.ts |     100 |      100 |     100 |     100 |                   
+  safety-engine.ts |   87.58 |    70.24 |   95.45 |   87.24 | ...35,489,496,556 
+  ...ty-limiter.ts |   98.21 |    97.61 |     100 |   98.14 | 155               
+  ...p-detector.ts |      90 |    81.48 |   81.81 |   92.72 | 191,209-212       
+ lib/schema        |     100 |      100 |     100 |     100 |                   
+  events.ts        |     100 |      100 |     100 |     100 |                   
+  orchestration.ts |     100 |      100 |     100 |     100 |                   
+  webhook.ts       |     100 |      100 |     100 |     100 |                   
+ lib/session       |   95.25 |    89.42 |     100 |   95.07 |                   
+  identity.ts      |   91.39 |    85.93 |     100 |   91.15 | ...68,620,648-649 
+  session-state.ts |     100 |       95 |     100 |     100 | 339,392           
+ lib/types         |   98.58 |        0 |   97.36 |   98.58 |                   
+  agent.ts         |     100 |      100 |     100 |     100 |                   
+  collaboration.ts |   33.33 |        0 |      50 |   33.33 | 66-67             
+  constants.ts     |     100 |      100 |     100 |     100 |                   
+  escalation.ts    |     100 |      100 |     100 |     100 |                   
+  index.ts         |       0 |        0 |       0 |       0 |                   
+  llm.ts           |     100 |      100 |     100 |     100 |                   
+  logger.ts        |     100 |      100 |     100 |     100 |                   
+  mcp.ts           |       0 |        0 |       0 |       0 |                   
+  memory.ts        |     100 |      100 |     100 |     100 |                   
+  metrics.ts       |     100 |      100 |     100 |     100 |                   
+  reputation.ts    |       0 |        0 |       0 |       0 |                   
+  session.ts       |       0 |        0 |       0 |       0 |                   
+  system.ts        |       0 |        0 |       0 |       0 |                   
+  tool.ts          |     100 |      100 |     100 |     100 |                   
+  workspace.ts     |     100 |      100 |     100 |     100 |                   
+ lib/utils         |   85.07 |    76.83 |   90.32 |   85.64 |                   
+  agent-helpers.ts |   72.72 |    83.78 |   81.81 |   72.72 | ...97-104,159-182 
+  bus.ts           |   86.82 |    76.28 |    90.9 |    86.5 | ...06,426-438,463 
+  ddb-client.ts    |     100 |      100 |     100 |     100 |                   
+  error.ts         |     100 |      100 |     100 |     100 |                   
+  fs-security.ts   |   93.75 |    93.33 |     100 |   93.33 | 38                
+  lru.ts           |     100 |     87.5 |     100 |     100 | 20,63             
+  metadata.ts      |     100 |      100 |     100 |     100 |                   
+  normalize.ts     |     100 |      100 |     100 |     100 |                   
+  pii.ts           |   91.89 |     91.3 |   83.33 |     100 | 30,62             
+  realtime.ts      |     100 |       50 |     100 |     100 | 8                 
+  tool-error.ts    |     100 |      100 |     100 |     100 |                   
+  topology.ts      |   77.27 |       20 |   33.33 |   77.27 | 23-27,55-63,77    
+  trace-helper.ts  |   87.87 |    66.66 |     100 |    93.1 | 105,139           
+  typed-emit.ts    |     100 |      100 |     100 |     100 |                   
+  ...ce-manager.ts |      40 |       35 |   66.66 |      40 | ...3-54,63-92,122 
+ .../agent-helpers |     100 |    93.33 |     100 |     100 |                   
+  event-emitter.ts |     100 |       90 |     100 |     100 | 42                
+  llm-utils.ts     |     100 |      100 |     100 |     100 |                   
+ ...utils/topology |     100 |    98.13 |     100 |     100 |                   
+  classifiers.ts   |     100 |      100 |     100 |     100 |                   
+  constants.ts     |     100 |      100 |     100 |     100 |                   
+  edges.ts         |     100 |     99.2 |     100 |     100 | 260               
+  nodes.ts         |     100 |    94.73 |     100 |     100 | 155,168,171       
+ lib/warmup        |    91.2 |     92.3 |     100 |   91.11 |                   
+  index.ts         |       0 |        0 |       0 |       0 |                   
+  ...up-manager.ts |    91.2 |     92.3 |     100 |   91.11 | ...47-250,318-319 
+ mcp-servers       |   71.42 |    47.36 |     100 |   74.07 |                   
+  multiplexer.ts   |   71.42 |    47.36 |     100 |   74.07 | 21-30,119-126     
+ tools             |   70.27 |       75 |      75 |   67.64 |                   
+  index.ts         |     100 |      100 |     100 |     100 |                   
+  ...stry-utils.ts |   69.44 |       75 |      75 |   66.66 | 51-74             
+ .../collaboration |   96.06 |    97.59 |     100 |   96.51 |                   
+  clarification.ts |     100 |      100 |     100 |     100 |                   
+  collaboration.ts |   97.02 |    96.77 |     100 |   97.89 | 77,112            
+  index.ts         |     100 |      100 |     100 |     100 |                   
+  messaging.ts     |     100 |      100 |     100 |     100 |                   
+  schema.ts        |     100 |      100 |     100 |     100 |                   
+  workspace.ts     |    90.9 |      100 |     100 |    90.9 | 83,119,198,218    
+ tools/infra       |   79.79 |    75.53 |   73.17 |   80.58 |                   
+  deployment.ts    |    64.7 |    65.51 |      45 |   65.98 | 22-115,152,228    
+  index.ts         |     100 |      100 |     100 |     100 |                   
+  orchestration.ts |     100 |      100 |     100 |     100 |                   
+  rollback.ts      |   83.33 |       50 |     100 |    90.9 | 30                
+  scheduler.ts     |     100 |      100 |     100 |     100 |                   
+  schema.ts        |     100 |      100 |     100 |     100 |                   
+  topology.ts      |   95.65 |       85 |     100 |   95.23 | 94,151            
+ tools/knowledge   |   70.02 |    57.59 |   82.97 |   71.47 |                   
+  agent.ts         |    77.9 |    58.69 |    90.9 |    77.9 | ...97,204,231,269 
+  config.ts        |     100 |    92.85 |     100 |     100 | 44                
+  index.ts         |     100 |      100 |     100 |     100 |                   
+  mcp.ts           |     100 |       90 |     100 |     100 | 21                
+  metadata.ts      |   83.33 |       50 |     100 |    90.9 | 42                
+  research.ts      |      10 |        0 |       0 |      10 | 12-51             
+  schema.ts        |     100 |      100 |     100 |     100 |                   
+  storage.ts       |   60.42 |    53.21 |      76 |    61.9 | ...71-474,485-503 
+ tools/system      |   75.21 |     64.7 |   72.72 |   75.65 |                   
+  fs.ts            |   94.11 |    78.57 |     100 |   96.96 | 109               
+  git.ts           |     100 |      100 |     100 |     100 |                   
+  health.ts        |   60.97 |       50 |      50 |   60.97 | ...60,65-72,83-91 
+  hot-config.ts    |     100 |      100 |     100 |     100 |                   
+  index.ts         |     100 |      100 |     100 |     100 |                   
+  reputation.ts    |    8.33 |        0 |       0 |    8.33 | 12-37             
+  schema.ts        |     100 |      100 |     100 |     100 |                   
+  validation.ts    |     100 |      100 |     100 |     100 |                   
+-------------------|---------|----------|---------|---------|-------------------

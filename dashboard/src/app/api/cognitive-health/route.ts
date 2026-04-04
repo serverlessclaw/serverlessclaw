@@ -21,16 +21,25 @@ export async function GET() {
     }
 
     const agents: AgentHealthRecord[] = items
-      .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null && typeof (item as Record<string, unknown>).score === 'number')
+      .filter(
+        (item): item is Record<string, unknown> =>
+          typeof item === 'object' &&
+          item !== null &&
+          typeof (item as Record<string, unknown>).score === 'number'
+      )
       .map((item) => {
         const record = item as Record<string, unknown>;
         return {
-          agentId: typeof record.userId === 'string' ? record.userId.replace('HEALTH#', '') : 'unknown',
+          agentId:
+            typeof record.userId === 'string' ? record.userId.replace('HEALTH#', '') : 'unknown',
           score: typeof record.score === 'number' ? record.score : 0,
-          taskCompletionRate: typeof record.taskCompletionRate === 'number' ? record.taskCompletionRate : 0,
-          reasoningCoherence: typeof record.reasoningCoherence === 'number' ? record.reasoningCoherence : 0,
+          taskCompletionRate:
+            typeof record.taskCompletionRate === 'number' ? record.taskCompletionRate : 0,
+          reasoningCoherence:
+            typeof record.reasoningCoherence === 'number' ? record.reasoningCoherence : 0,
           errorRate: typeof record.errorRate === 'number' ? record.errorRate : 0,
-          memoryFragmentation: typeof record.memoryFragmentation === 'number' ? record.memoryFragmentation : 0,
+          memoryFragmentation:
+            typeof record.memoryFragmentation === 'number' ? record.memoryFragmentation : 0,
           anomalies: Array.isArray(record.anomalies) ? record.anomalies : [],
         };
       });

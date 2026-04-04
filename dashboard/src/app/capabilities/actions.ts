@@ -17,13 +17,15 @@ export async function updateAgentTools(formData: FormData) {
     const client = new DynamoDBClient({});
     const docClient = DynamoDBDocumentClient.from(client);
 
-    await docClient.send(new PutCommand({
-      TableName: tableName,
-      Item: {
-        key: `${agentId}_tools`,
-        value: toolNames
-      }
-    }));
+    await docClient.send(
+      new PutCommand({
+        TableName: tableName,
+        Item: {
+          key: `${agentId}_tools`,
+          value: toolNames,
+        },
+      })
+    );
 
     revalidatePath('/capabilities');
     return { success: true };
@@ -37,19 +39,21 @@ export async function registerMCPServer(name: string, command: string, env: stri
   try {
     const tableName = getResourceName('ConfigTable');
     if (!tableName) return { error: 'ConfigTable name is missing' };
-    
+
     const client = new DynamoDBClient({});
     const docClient = DynamoDBDocumentClient.from(client);
 
     // 1. Get current servers
     const { GetCommand, PutCommand } = await import('@aws-sdk/lib-dynamodb');
-    const { Item } = await docClient.send(new GetCommand({
-      TableName: tableName,
-      Key: { key: 'mcp_servers' }
-    }));
+    const { Item } = await docClient.send(
+      new GetCommand({
+        TableName: tableName,
+        Key: { key: 'mcp_servers' },
+      })
+    );
 
     const servers = Item?.value ?? {};
-    
+
     // Parse env if provided
     let parsedEnv = {};
     try {
@@ -60,13 +64,15 @@ export async function registerMCPServer(name: string, command: string, env: stri
 
     servers[name] = {
       command,
-      env: parsedEnv
+      env: parsedEnv,
     };
 
-    await docClient.send(new PutCommand({
-      TableName: tableName,
-      Item: { key: 'mcp_servers', value: servers }
-    }));
+    await docClient.send(
+      new PutCommand({
+        TableName: tableName,
+        Item: { key: 'mcp_servers', value: servers },
+      })
+    );
 
     revalidatePath('/capabilities');
     return { success: true };
@@ -80,24 +86,28 @@ export async function deleteMCPServer(serverName: string) {
   try {
     const tableName = getResourceName('ConfigTable');
     if (!tableName) return { error: 'ConfigTable name is missing' };
-    
+
     const client = new DynamoDBClient({});
     const docClient = DynamoDBDocumentClient.from(client);
 
     // 1. Get current servers
     const { GetCommand, PutCommand } = await import('@aws-sdk/lib-dynamodb');
-    const { Item } = await docClient.send(new GetCommand({
-      TableName: tableName,
-      Key: { key: 'mcp_servers' }
-    }));
+    const { Item } = await docClient.send(
+      new GetCommand({
+        TableName: tableName,
+        Key: { key: 'mcp_servers' },
+      })
+    );
 
     const servers = Item?.value ?? {};
     if (servers[serverName]) {
       delete servers[serverName];
-      await docClient.send(new PutCommand({
-        TableName: tableName,
-        Item: { key: 'mcp_servers', value: servers }
-      }));
+      await docClient.send(
+        new PutCommand({
+          TableName: tableName,
+          Item: { key: 'mcp_servers', value: servers },
+        })
+      );
     }
 
     revalidatePath('/capabilities');

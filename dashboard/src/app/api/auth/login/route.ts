@@ -19,18 +19,22 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     let correctPassword = Resource.DashboardPassword?.value;
 
     // Handle unset SST secrets in dev mode (SST uses placeholders like {{ Name }})
-    if (isDev && (!correctPassword || (typeof correctPassword === 'string' && correctPassword.includes('{{')))) {
+    if (
+      isDev &&
+      (!correctPassword || (typeof correctPassword === 'string' && correctPassword.includes('{{')))
+    ) {
       correctPassword = 'test-password';
     }
 
     // Allow the correct password, or fallback to 'test-password' in development for E2E tests
-    const isAuthorized = password && correctPassword && (
-      password === correctPassword || (isDev && password === 'test-password')
-    );
+    const isAuthorized =
+      password &&
+      correctPassword &&
+      (password === correctPassword || (isDev && password === 'test-password'));
 
     if (isAuthorized) {
       const response = NextResponse.json({ success: true });
-      
+
       // Set a secure, HttpOnly cookie for "authentication"
       response.cookies.set(AUTH.COOKIE_NAME, AUTH.COOKIE_VALUE, {
         httpOnly: true,
@@ -39,13 +43,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         maxAge: AUTH.COOKIE_MAX_AGE,
         path: '/',
       });
-      
+
       return response;
     }
 
-    return NextResponse.json({ error: AUTH.ERROR_INVALID_CREDENTIALS }, { status: HTTP_STATUS.UNAUTHORIZED });
+    return NextResponse.json(
+      { error: AUTH.ERROR_INVALID_CREDENTIALS },
+      { status: HTTP_STATUS.UNAUTHORIZED }
+    );
   } catch (error) {
     console.error('Auth Error:', error);
-    return NextResponse.json({ error: AUTH.ERROR_SYSTEM_FAILURE }, { status: HTTP_STATUS.INTERNAL_SERVER_ERROR });
+    return NextResponse.json(
+      { error: AUTH.ERROR_SYSTEM_FAILURE },
+      { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
+    );
   }
 }

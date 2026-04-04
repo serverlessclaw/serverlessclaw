@@ -13,7 +13,7 @@ We distinguish between **Autonomous Agents** (LLM-powered decision-makers) and *
 
 | Agent                   | Runtime                              | Config Source              | Responsibilities                                                                |
 | ----------------------- | ------------------------------------ | -------------------------- | ------------------------------------------------------------------------------- |
-| **SuperClaw**           | `core/handlers/webhook.ts`           | `core/agents/superclaw.ts` | Interprets user intent, delegates, deploys, self-decomposes missions |
+| **SuperClaw**           | `core/handlers/webhook.ts`           | `core/agents/superclaw.ts` | Interprets user intent, delegates, deploys, self-decomposes missions            |
 | **Coder Agent**         | `core/agents/coder.ts`               | `AgentRegistry` (Backbone) | Writes code, runs pre-flight checks                                             |
 | **Agent Runner**        | `core/handlers/agent-runner.ts`      | `AgentRegistry` (Dynamic)  | Generic runner for any user-defined agent                                       |
 | **Strategic Planner**   | `core/agents/strategic-planner.ts`   | `AgentRegistry` (Backbone) | Designs strategic evolution plans                                               |
@@ -51,9 +51,11 @@ The system features a specialized **Research Agent** (Researcher) designed for d
 Research operates in two primary modes based on the complexity of the goal:
 
 #### 1. Single Search (Linear)
+
 For straightforward questions, the Researcher performs a standard iterative reasoning loop, using MCP tools (Search, Fetch, Puppeteer) sequentially to reach a conclusion.
 
 #### 2. Parallel Exploration (Swarm)
+
 For complex comparisons or broad discovery, the Researcher **self-decomposes** the goal into parallel sub-tasks. These are dispatched to multiple Researcher instances, aggregated via DynamoDB, and synthesized into a final report.
 
 ### Research Flow Diagram
@@ -61,7 +63,7 @@ For complex comparisons or broad discovery, the Researcher **self-decomposes** t
 ```text
     [ INITIATOR ] (Strategic Planner / SuperClaw)
           |
-          v 
+          v
    ( RESEARCH_TASK ) ----> [ RESEARCH HANDLER ]
           |                       |
           |           /-----------+-----------\
@@ -125,19 +127,25 @@ Users can set a global `optimization_policy` to control system-wide reasoning de
 The system supports recursive, asynchronous task decomposition. Any agent can act as a **Mission Commander** by returning a plan with structured markers.
 
 ### 1. Mission Decomposition
+
 When an agent returns a response containing:
+
 - `### Goal: [AgentType] - [Task]`
 - `### Step: [Task]`
 
 The `AgentRunner` automatically intercepts this, pauses the initiator, and dispatches $N$ parallel tasks via the `AgentBus`.
 
 ### 2. Recursive Depth Control
+
 To prevent runaway loops, the system enforces a strict recursive depth limit defined in `SWARM.MAX_RECURSIVE_DEPTH`.
+
 - **Default Limit**: 5 levels (e.g., Strategic Planner -> Coder -> Researcher -> Sub-Researcher -> Specialist).
 - **Enforcement**: If a task is received at the maximum depth, further decomposition is disabled and the agent must complete the task atomically.
 
 ### 3. Worker Feedback Toggle
+
 During massive swarms, sub-agents (workers) can create significant dashboard noise.
+
 - **Config Key**: `worker_feedback_enabled` (Default: `true`)
 - **Behavior**: If `false`, agents initiated by anyone other than the `orchestrator` (e.g., sub-agents) will skip MQTT chunk emission.
 - **Root Recognition**: `SuperClaw` and any agent initiated directly by the `orchestrator` are always considered **Root** and will always emit feedback regardless of this toggle.

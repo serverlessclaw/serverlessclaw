@@ -251,9 +251,10 @@ class LambdaInvokeTransport {
           InvocationType: 'RequestResponse',
           Payload: JSON.stringify({
             httpMethod: 'POST',
-            path: '/mcp',
+            path: `/mcp/${this.serverName}`,
             headers: {
               'Content-Type': 'application/json',
+              'x-mcp-server': this.serverName,
             },
             body: messageString,
           }),

@@ -90,19 +90,18 @@ The [Health Handler](file:///Users/pengcao/projects/serverlessclaw/core/handlers
 
 ```text
 +-------------------+       +-----------------------+       +-------------------+
-| Messaging Client  +<----->+   AWS API Gateway     +------>+   AWS Lambda      |
-| (Telegram/Slack)  |       | (Webhook Endpoint)    |       | (Agent Brain)     |
-|                   |       |                       |       |         +         |
-|                   |       |                       |       |         +         |
+| Messaging Client  +<----->+   AWS API Gateway     +------>+   Input Adapters  |
+| (Telegram/Slack/  |       | (Webhook Endpoint)    |       | (Telegram, GitHub,|
+|  GitHub/Jira)     |       |                       |       |  Jira, Generic)   |
 +-------------------+       +-----------+-----------+       +---------|---------+
                                         |                             |
-                                        v                             |
-                            +-----------+-----------+                 |
-                            |                       |                 |
-                            |      ClawCenter       |<----------------+
-                            | (Intelligence Sector) |                 |
-                            |                       |                 |
-                            +-----------+-----------+                 |
+                                        v                             v
+                            +-----------+-----------+       +---------|---------+
+                            |                       |       |   AWS Lambda      |
+                            |      ClawCenter       |       | (Agent Brain)     |
+                            | (Intelligence Sector) |       |         +         |
+                            |                       |       |         +         |
+                            +-----------+-----------+       +---------|---------+
                                         |                             |
                                         v                             |
                             +-----------+-----------+                 |
@@ -133,6 +132,74 @@ The [Health Handler](file:///Users/pengcao/projects/serverlessclaw/core/handlers
     |                   |   |                       |
     +-------------------+   +-----------------------+
 ```
+
+---
+
+## Input Adapter Layer
+
+Serverless Claw uses a pluggable **Input Adapter** architecture to receive events from external systems. All adapters implement the `InputAdapter` interface, normalizing diverse webhook payloads into a common `InboundMessage` format.
+
+```text
+[ External System ]        [ Input Adapter ]        [ InboundMessage ]
++----------------+         +----------------+       +------------------+
+| Telegram       | ------> | TelegramAdapter| ----> | { source, userId,|
+| Webhook        |         |                |       |   sessionId, text}|
++----------------+         +----------------+       |   attachments,   |
+                                                   |   metadata }     |
++----------------+         +----------------+       +--------|---------+
+| GitHub         | ------> | GitHubAdapter  | ---->          |
+| Webhook/API    |         |                |                v
++----------------+         +----------------+       +------------------+
+| Jira           | ------> | JiraAdapter    | ----> | SuperClaw.process|
+| Webhook/API    |         |                |       +------------------+
++----------------+         +----------------+
+| Generic HTTP   | ------> | GenericHTTP    |
+| Webhook        |         | Adapter        |
++----------------+         +----------------+
+```
+
+### Adapter Directory Structure
+
+```
+core/adapters/
+├── input/                 # Input adapters (external -> internal)
+│   ├── types.ts          # InputAdapter interface, InboundMessage schema
+│   ├── telegram.ts       # Telegram webhook parser + media processing
+│   ├── github.ts         # GitHub webhooks (issues, PRs, comments) + API
+│   ├── jira.ts           # Jira webhooks (issues, comments) + API
+│   ├── generic-http.ts   # Generic HTTP webhook receiver
+│   └── index.ts          # Barrel exports
+└── output/               # Output adapters (internal -> external)
+    ├── types.ts          # OutputAdapter interface, OutboundMessage schema
+    └── index.ts          # Barrel exports
+```
+
+### Adding a New Input Adapter
+
+1. Create `core/adapters/input/<name>.ts` implementing the `InputAdapter` interface
+2. Define a Zod schema for the external payload format
+3. Implement `parse(raw: unknown): InboundMessage` to normalize the payload
+4. Optionally implement `processMedia(message)` for attachment handling
+5. Optionally add API methods (e.g., `createIssue`, `addComment`) for outbound actions
+6. Export from `core/adapters/input/index.ts`
+7. Add tests to `core/adapters/__tests__/adapters.test.ts`
+
+### Splitting Adapters to Separate Repos
+
+Adapters are designed to be extractable into separate npm packages when needed:
+
+**Signs it's time to split:**
+
+- Different release cadence than core
+- External contributor/maintainer
+- Independent deployment lifecycle
+
+**How to split:**
+
+1. Move adapter file to new repo (e.g., `serverlessclaw-integration-github`)
+2. Publish as `@claw/integration-github`
+3. Update core to import from package instead of local file
+4. No other code changes needed — interface remains the same
 
 ---
 
@@ -360,28 +427,29 @@ Serverless Claw has evolved from static tools to a **Dynamic Skill Architecture*
     +--------+--------+--------+
     |                 |        |
  [ Custom ]        [ MCP ]  [ Built-in ]
- Domains          External Hub Model Native
- (Lambda)           (SSE)     (Provider)
+ Domains        Multiplexer   Native
+ (Lambda)         (Lambda)    (Provider)
     |          +------+------+ |
     |          |             | |
  - infra/      v             v - python
- - knowledge/ [ Hub ] ----> [ Local ] - search
- - system/    (Prim)  (Fallback) - files
- - collaboration/
+ - knowledge/ [ Git ] ----> [ FS ] - search
+ - system/    [ S3  ]       [ AWS] - files
+ - collab/
 ```
 
 ### 1. Custom Skills (Internal)
 
 Tools written specifically for the ServerlessClaw environment (e.g., `triggerDeployment`). These run within the agent's AWS Lambda execution context and are defined in `core/tools/`.
 
-### 2. MCP Skills (External & Hybrid)
+### 2. MCP Skills (Unified Multiplexer Model)
 
 Connected via the **Model Context Protocol (MCP)**. This is the primary scaling vector for the system.
 
-- **Hub-First Architecture (New in May 2026)**: The system prioritizes high-speed connections to an external MCP Hub via SSE. This minimizes Lambda startup latency (cold starts) and offloads resource-heavy tasks (like browser automation) to external infrastructure.
-- **Graceful Local Fallback**: If the external Hub is unreachable or times out (5s limit), the `MCPBridge` seamlessly falls back to local spawning using `StdioClientTransport`.
+- **Unified Multiplexer Architecture (New in June 2026)**: The system consolidates multiple MCP servers (Git, Filesystem, AWS, etc.) into a single **Unified Multiplexer Lambda**. This reduces infrastructure sprawl, minimizes CloudWatch log fragmentation, and improves warming efficiency by keeping a single high-resource execution environment hot.
+- **Path-Based Routing**: The bridge routes requests to specific "virtual" servers using URL paths (e.g., `/mcp/git`) or the `x-mcp-server` header.
+- **Graceful Local Fallback**: If the external Hub or Multiplexer is unreachable, the system falls back to on-demand `npx` execution within the calling agent's context.
 - **Lambda Environment Hardening**:
-  - **Memory/Timeout**: High-resource agents (Coder, Planner, QA) and the Dashboard server are provisioned with **2048MB** (LARGE) and up to **15m** (MAX) to handle concurrent MCP child processes, while smaller utility agents use reduced resource profiles to optimize costs.
+  - **Memory/Timeout**: The Multiplexer is provisioned with **1024MB** (MEDIUM_LARGE) and **10m** (LONG) timeout to handle concurrent child processes and resource-heavy tools like Puppeteer.
   - **Writable Cache**: Uses `/tmp/mcp-cache` and `/tmp/npm-cache` to ensure `npx` has a writable scratch space in the read-only Lambda environment.
 - **Lazy Loading**: External servers are only connected to when an agent's specific toolset requires them.
 - **Dynamic Spawning**: Uses `npx` to fetch and run fallback servers on-demand.

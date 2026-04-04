@@ -12,7 +12,9 @@ const mockOptions = [
 
 describe('CyberSelect Component', () => {
   it('renders with placeholder when no value selected', () => {
-    render(<CyberSelect value="" onChange={vi.fn()} options={mockOptions} placeholder="Choose..." />);
+    render(
+      <CyberSelect value="" onChange={vi.fn()} options={mockOptions} placeholder="Choose..." />
+    );
     expect(screen.getByText('Choose...')).toBeInTheDocument();
   });
 

@@ -65,9 +65,7 @@ describe('ChatInput Component', () => {
     render(
       <ChatInput
         {...defaultProps}
-        attachments={[
-          { type: 'file', file: new File([''], 'document.pdf'), preview: '' },
-        ]}
+        attachments={[{ type: 'file', file: new File([''], 'document.pdf'), preview: '' }]}
       />
     );
     expect(screen.getByText('document.pdf')).toBeInTheDocument();
@@ -77,7 +75,13 @@ describe('ChatInput Component', () => {
     render(
       <ChatInput
         {...defaultProps}
-        attachments={[{ type: 'image', file: new File([''], 'photo.jpg'), preview: 'data:image/png;base64,test' }]}
+        attachments={[
+          {
+            type: 'image',
+            file: new File([''], 'photo.jpg'),
+            preview: 'data:image/png;base64,test',
+          },
+        ]}
       />
     );
     expect(screen.getByAltText('preview')).toBeInTheDocument();

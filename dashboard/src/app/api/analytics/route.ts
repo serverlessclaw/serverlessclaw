@@ -64,7 +64,10 @@ export async function GET(request: Request) {
   } catch (e) {
     console.error('Error fetching analytics:', e);
     return Response.json(
-      { error: 'Failed to fetch analytics data', details: e instanceof Error ? e.message : String(e) },
+      {
+        error: 'Failed to fetch analytics data',
+        details: e instanceof Error ? e.message : String(e),
+      },
       { status: 500 }
     );
   }

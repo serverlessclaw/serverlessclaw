@@ -22,9 +22,7 @@ describe('/api/cognitive-health', () => {
         reasoningCoherence: 8.5,
         errorRate: 0.02,
         memoryFragmentation: 0.15,
-        anomalies: [
-          { type: 'PERFORMANCE', severity: 'MEDIUM', message: 'High latency detected' },
-        ],
+        anomalies: [{ type: 'PERFORMANCE', severity: 'MEDIUM', message: 'High latency detected' }],
       },
       {
         userId: 'HEALTH#agent2',
@@ -32,7 +30,7 @@ describe('/api/cognitive-health', () => {
         taskCompletionRate: 0.98,
         reasoningCoherence: 9.0,
         errorRate: 0.01,
-        memoryFragmentation: 0.10,
+        memoryFragmentation: 0.1,
         anomalies: [],
       },
     ];
@@ -52,9 +50,7 @@ describe('/api/cognitive-health', () => {
       reasoningCoherence: 8.5,
       errorRate: 0.02,
       memoryFragmentation: 0.15,
-      anomalies: [
-        { type: 'PERFORMANCE', severity: 'MEDIUM', message: 'High latency detected' },
-      ],
+      anomalies: [{ type: 'PERFORMANCE', severity: 'MEDIUM', message: 'High latency detected' }],
     });
     expect(data.agents[1]).toEqual({
       agentId: 'agent2',
@@ -62,7 +58,7 @@ describe('/api/cognitive-health', () => {
       taskCompletionRate: 0.98,
       reasoningCoherence: 9.0,
       errorRate: 0.01,
-      memoryFragmentation: 0.10,
+      memoryFragmentation: 0.1,
       anomalies: [],
     });
   });
@@ -127,7 +123,7 @@ describe('/api/cognitive-health', () => {
         score: 75,
         taskCompletionRate: 0.85,
         reasoningCoherence: 7.5,
-        errorRate: 0.10,
+        errorRate: 0.1,
         memoryFragmentation: 0.25,
         anomalies: [],
       },
@@ -147,10 +143,10 @@ describe('/api/cognitive-health', () => {
       {
         userId: 'HEALTH#agent1',
         score: 60,
-        taskCompletionRate: 0.70,
+        taskCompletionRate: 0.7,
         reasoningCoherence: 6.0,
         errorRate: 0.15,
-        memoryFragmentation: 0.30,
+        memoryFragmentation: 0.3,
         anomalies: [
           { type: 'MEMORY', severity: 'HIGH', message: 'Memory leak detected' },
           { type: 'PERFORMANCE', severity: 'CRITICAL', message: 'System overload' },

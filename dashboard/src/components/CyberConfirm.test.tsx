@@ -7,14 +7,26 @@ import CyberConfirm from './CyberConfirm';
 describe('CyberConfirm Component', () => {
   it('renders nothing when isOpen is false', () => {
     const { container } = render(
-      <CyberConfirm isOpen={false} onConfirm={vi.fn()} onCancel={vi.fn()} title="Test" message="Message" />
+      <CyberConfirm
+        isOpen={false}
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+        title="Test"
+        message="Message"
+      />
     );
     expect(container.innerHTML).toBe('');
   });
 
   it('renders dialog when isOpen is true', () => {
     render(
-      <CyberConfirm isOpen={true} onConfirm={vi.fn()} onCancel={vi.fn()} title="Delete?" message="Are you sure?" />
+      <CyberConfirm
+        isOpen={true}
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+        title="Delete?"
+        message="Are you sure?"
+      />
     );
     expect(screen.getByText('Delete?')).toBeInTheDocument();
     expect(screen.getByText('Are you sure?')).toBeInTheDocument();

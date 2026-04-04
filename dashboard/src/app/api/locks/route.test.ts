@@ -33,7 +33,12 @@ describe('Locks API Route', () => {
       const now = Math.floor(Date.now() / 1000);
       mockSend.mockResolvedValue({
         Items: [
-          { userId: 'LOCK#session-1', expiresAt: now + 3600, acquiredAt: now - 100, timestamp: now },
+          {
+            userId: 'LOCK#session-1',
+            expiresAt: now + 3600,
+            acquiredAt: now - 100,
+            timestamp: now,
+          },
           { userId: 'LOCK#session-2', expiresAt: now - 100, acquiredAt: now - 200, timestamp: now },
         ],
       });

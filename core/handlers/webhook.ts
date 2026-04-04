@@ -1,37 +1,12 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
 import { sendOutboundMessage } from '../lib/outbound';
 import { logger } from '../lib/logger';
-import { TraceSource, AgentType } from '../lib/types/agent';
-import { AttachmentType } from '../lib/types/llm';
-import { SSTResource } from '../lib/types/system';
-import { Resource } from 'sst';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { z } from 'zod';
-import { TELEGRAM_UPDATE_SCHEMA } from '../lib/schema/webhook';
-
-const typedResource = Resource as unknown as SSTResource;
-
-// Default client for backward compatibility - can be overridden for testing
-const defaultS3 = new S3Client({});
-
-// Allow tests to inject a custom S3 client
-let injectedS3: S3Client | undefined;
+import { TraceSource, AgentType, Attachment } from '../lib/types/agent';
+import { TelegramAdapter } from '../adapters/input/telegram';
 
 /**
- * Sets a custom S3 client for testing purposes.
- * @param s3 - The S3 client to use
- */
-export function setS3Client(s3: S3Client): void {
-  injectedS3 = s3;
-}
-
-function getS3Client(): S3Client {
-  return injectedS3 ?? defaultS3;
-}
-
-/**
- * Main entry point for Telegram webhooks.
- * Processes user messages, acquires session locks, and delegates to the SuperClaw.
+ * Main entry point for webhooks (Telegram and other platforms).
+ * Processes inbound messages, handles media, and delegates to the SuperClaw.
  */
 export const handler = async (
   event: APIGatewayProxyEventV2,
@@ -40,7 +15,6 @@ export const handler = async (
   logger.info('[WEBHOOK] Start | Event:', event.body?.substring(0, 100));
 
   // --- SMART WARM-UP (Human-Activity Based) ---
-  // Only warm servers/agents that are cold based on tracked state
   const warmUpFunctions = process.env.WARM_UP_FUNCTIONS;
   const mcpServerArns = process.env.MCP_SERVER_ARNS;
   if (warmUpFunctions || mcpServerArns) {
@@ -55,12 +29,10 @@ export const handler = async (
         ttlSeconds: 900, // 15 minutes
       });
 
-      // Smart warmup: only warm servers/agents that are actually cold
-      // Fire-and-forget to avoid blocking the user request
       warmupManager
         .smartWarmup({
-          servers: Object.keys(serverArns), // MCP servers
-          agents: Object.keys(agentArns), // Critical agents
+          servers: Object.keys(serverArns),
+          agents: Object.keys(agentArns),
           intent: 'webhook-received',
           warmedBy: 'webhook',
         })
@@ -70,41 +42,39 @@ export const handler = async (
     }
   }
 
-  let parsedUpdate: z.infer<typeof TELEGRAM_UPDATE_SCHEMA>;
+  // Determine source and initialize appropriate adapter
+  const telegramAdapter = new TelegramAdapter();
+  let inbound;
 
   try {
-    if (!event.body) {
-      throw new Error('Missing event body');
-    }
-    parsedUpdate = TELEGRAM_UPDATE_SCHEMA.parse(JSON.parse(event.body));
+    if (!event.body) throw new Error('Missing event body');
+    // For now, default to Telegram as it's the primary channel
+    // In the future, this can be routed based on headers or path
+    inbound = telegramAdapter.parse(JSON.parse(event.body));
   } catch (error) {
-    logger.error('[WEBHOOK] Failed to parse or validate Telegram update:', error);
-    return { statusCode: 400, body: 'Invalid Telegram update format or missing body' };
+    logger.error('[WEBHOOK] Failed to parse inbound message:', error);
+    return { statusCode: 400, body: 'Invalid message format' };
   }
 
-  const message = parsedUpdate.message;
-  if (!message) {
-    logger.info('[WEBHOOK] No message in update');
-    // Non-message updates should be acknowledged so Telegram does not retry.
-    return { statusCode: 200, body: 'OK' };
-  }
+  const { chatId, userId, sessionId, text } = {
+    chatId: inbound.userId,
+    userId: inbound.userId,
+    sessionId: inbound.sessionId,
+    text: inbound.text,
+  };
 
-  const { chatId, userText } = message;
-
-  const hasActionableContent =
-    userText.length > 0 ||
-    !!(message.photo && message.photo.length > 0) ||
-    !!message.document ||
-    !!message.voice;
-
-  if (!hasActionableContent) {
+  if (!text && inbound.attachments.length === 0 && !inbound.metadata.rawMessage) {
     logger.info('[WEBHOOK] No actionable content');
     return { statusCode: 200, body: 'OK' };
   }
 
-  logger.info(`[WEBHOOK] User: ${chatId} | Text: ${userText.substring(0, 50)}`);
+  logger.info(
+    `[WEBHOOK] Source: ${inbound.source} | User: ${userId} | Text: ${text.substring(0, 50)}`
+  );
 
-  const attachments = await processTelegramMedia(message);
+  // Process Media/Attachments via Adapter
+  const messageWithMedia = await telegramAdapter.processMedia(inbound);
+  const attachments = messageWithMedia.attachments as Attachment[];
 
   // Lazy load dependencies to reduce initial context budget
   logger.info('[WEBHOOK] Lazy loading deps...');
@@ -132,7 +102,6 @@ export const handler = async (
   const lambdaRequestId = context.awsRequestId;
 
   // Request Handoff (Phase B3: Real-time Shared Awareness)
-  // Ensures agents enter OBSERVE mode if human is actively typing/sending
   await requestHandoff(chatId);
 
   // 1. Try to acquire processing flag
@@ -140,9 +109,8 @@ export const handler = async (
   const canProcess = await sessionStateManager.acquireProcessing(chatId, lambdaRequestId);
 
   if (!canProcess) {
-    // Agent is currently processing - add message to pending queue
     logger.info(`[WEBHOOK] Session ${chatId} busy, queuing message...`);
-    await sessionStateManager.addPendingMessage(chatId, userText, attachments);
+    await sessionStateManager.addPendingMessage(chatId, text, attachments);
     return { statusCode: 200, body: 'Message queued for processing' };
   }
 
@@ -152,11 +120,10 @@ export const handler = async (
     const config = await AgentRegistry.getAgentConfig(AgentType.SUPERCLAW);
     if (!config) throw new Error('Main agent config missing');
 
-    const { profile, cleanText } = SuperClaw.parseCommand(userText);
+    const { profile, cleanText } = SuperClaw.parseCommand(text);
 
     logger.info('[WEBHOOK] Loading tools...');
     const agentTools = await getAgentTools(AgentType.SUPERCLAW);
-    logger.info(`[WEBHOOK] Tools loaded: ${agentTools.map((t) => t.name).join(', ')}`);
 
     const agent = new SuperClaw(memory, provider, agentTools, config);
     logger.info('[WEBHOOK] Starting agent process...');
@@ -166,17 +133,16 @@ export const handler = async (
       {
         profile,
         context,
-        source: TraceSource.TELEGRAM,
+        source: inbound.source === 'telegram' ? TraceSource.TELEGRAM : TraceSource.API,
         attachments,
-        sessionId: chatId,
+        sessionId,
         sessionStateManager,
         ignoreHandoff: true,
       }
     );
-    logger.info('[WEBHOOK] Process complete. Response length:', responseText.length);
+    logger.info('[WEBHOOK] Process complete.');
 
-    // 4. Send response to Notifier via AgentBus
-    logger.info('[WEBHOOK] Sending outbound message...');
+    // 4. Send response back
     await sendOutboundMessage(
       'webhook.handler',
       chatId,
@@ -186,7 +152,6 @@ export const handler = async (
       'SuperClaw',
       resultAttachments
     );
-    logger.info('[WEBHOOK] All done.');
   } catch (err) {
     logger.error('[WEBHOOK] Execution Error:', err);
     throw err;
@@ -197,122 +162,3 @@ export const handler = async (
 
   return { statusCode: 200, body: 'OK' };
 };
-
-/**
- * Processes Telegram media attachments (photos, documents).
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function processTelegramMedia(message: Record<string, any>): Promise<any[]> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const attachments: any[] = [];
-  const token = typedResource.TelegramBotToken.value;
-
-  try {
-    if (message.photo) {
-      // Pick the largest photo size
-      const photo = message.photo[message.photo.length - 1];
-      const result = await handleTelegramFile(photo.file_id, AttachmentType.IMAGE, token);
-      if (result) attachments.push(result);
-    }
-
-    if (message.document) {
-      const result = await handleTelegramFile(
-        message.document.file_id,
-        AttachmentType.FILE,
-        token,
-        message.document.file_name,
-        message.document.mime_type
-      );
-      if (result) attachments.push(result);
-    }
-
-    if (message.voice) {
-      const result = await handleTelegramFile(
-        message.voice.file_id,
-        AttachmentType.FILE,
-        token,
-        'voice.ogg',
-        'audio/ogg'
-      );
-      if (result) attachments.push(result);
-    }
-  } catch (error) {
-    logger.error('Error processing Telegram media:', error);
-  }
-
-  return attachments;
-}
-
-/**
- * Downloads a file from Telegram and uploads it to S3.
- */
-async function handleTelegramFile(
-  fileId: string,
-  type: AttachmentType,
-  token: string,
-  fileName?: string,
-  mimeType?: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): Promise<any | null> {
-  const s3 = getS3Client();
-  const FETCH_TIMEOUT_MS = 5000;
-  try {
-    // 1. Get file path from Telegram
-    const fileInfoController = new AbortController();
-    const fileInfoTimeout = setTimeout(() => fileInfoController.abort(), FETCH_TIMEOUT_MS);
-    const fileInfoResponse = await fetch(
-      `https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`,
-      { signal: fileInfoController.signal }
-    );
-    clearTimeout(fileInfoTimeout);
-    const fileInfo = await fileInfoResponse.json();
-    if (!fileInfo.ok) {
-      logger.error('Telegram getFile failed:', fileInfo.description);
-      return null;
-    }
-
-    const filePath = fileInfo.result.file_path;
-    const downloadUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
-
-    // 2. Download file buffer
-    const downloadController = new AbortController();
-    const downloadTimeout = setTimeout(() => downloadController.abort(), FETCH_TIMEOUT_MS);
-    const response = await fetch(downloadUrl, { signal: downloadController.signal });
-    clearTimeout(downloadTimeout);
-    const buffer = Buffer.from(await response.arrayBuffer());
-
-    // 3. Upload to S3 StagingBucket
-    const key = `chat-attachments/${Date.now()}-${fileName ?? fileId}`;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const bucketName = (typedResource as any).StagingBucket.name;
-
-    await s3.send(
-      new PutObjectCommand({
-        Bucket: bucketName,
-        Key: key,
-        Body: buffer,
-        ContentType: mimeType,
-      })
-    );
-
-    const s3Url = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const attachment: any = {
-      type,
-      name: fileName ?? key.split('/').pop(),
-      mimeType,
-      url: s3Url,
-    };
-
-    // For images, provide base64 for direct vision processing if small enough
-    if (type === AttachmentType.IMAGE && buffer.length < 5 * 1024 * 1024) {
-      attachment.base64 = buffer.toString('base64');
-    }
-
-    return attachment;
-  } catch (error) {
-    logger.error('Failed to handle telegram file:', error);
-    return null;
-  }
-}

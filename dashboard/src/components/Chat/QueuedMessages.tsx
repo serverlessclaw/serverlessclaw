@@ -66,7 +66,12 @@ export function QueuedMessageItem({ message, onEdit, onRemove }: QueuedMessageIt
         </div>
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2 pl-1">
-            <Typography variant="caption" weight="bold" color="warning" className="flex items-center gap-1">
+            <Typography
+              variant="caption"
+              weight="bold"
+              color="warning"
+              className="flex items-center gap-1"
+            >
               <Clock size={10} className="animate-pulse" />
               Queued
             </Typography>
@@ -162,7 +167,8 @@ export function QueuedMessagesList({ messages, onEdit, onRemove }: QueuedMessage
       <div className="flex items-center gap-2 mb-2 px-1">
         <Clock size={14} className="text-amber-500 animate-pulse" />
         <Typography variant="caption" weight="bold" color="warning">
-          {messages.length} queued message{messages.length !== 1 ? 's' : ''} (waiting for current task)
+          {messages.length} queued message{messages.length !== 1 ? 's' : ''} (waiting for current
+          task)
         </Typography>
       </div>
       <div className="space-y-2">

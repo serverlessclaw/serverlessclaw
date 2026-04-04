@@ -7,7 +7,7 @@ vi.mock('@claw/core/lib/memory', () => {
   return {
     DynamoMemory: class {
       updateGapStatus = vi.fn().mockResolvedValue({ success: true });
-    }
+    },
   };
 });
 
@@ -32,7 +32,7 @@ vi.mock('@/lib/constants', () => ({
     BAD_REQUEST: 400,
     INTERNAL_SERVER_ERROR: 500,
     OK: 200,
-  }
+  },
 }));
 
 describe('Dashboard API: /api/memory/status', () => {

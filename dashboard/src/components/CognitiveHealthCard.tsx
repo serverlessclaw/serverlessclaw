@@ -19,10 +19,14 @@ interface CognitiveHealthCardProps {
 
 function severityVariant(severity: string) {
   switch (severity) {
-    case 'CRITICAL': return 'danger';
-    case 'HIGH': return 'warning';
-    case 'MEDIUM': return 'audit';
-    default: return 'outline';
+    case 'CRITICAL':
+      return 'danger';
+    case 'HIGH':
+      return 'warning';
+    case 'MEDIUM':
+      return 'audit';
+    default:
+      return 'outline';
   }
 }
 
@@ -63,17 +67,34 @@ export default function CognitiveHealthCard({
 
       <div className="flex justify-center relative">
         <svg width={size} height={size} className="transform -rotate-90">
-          <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={strokeWidth} />
           <circle
-            cx={size / 2} cy={size / 2} r={radius} fill="none"
-            stroke={stroke} strokeWidth={strokeWidth}
-            strokeDasharray={circumference} strokeDashoffset={offset}
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke="rgba(255,255,255,0.05)"
+            strokeWidth={strokeWidth}
+          />
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke={stroke}
+            strokeWidth={strokeWidth}
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
             strokeLinecap="round"
-            style={{ transition: 'stroke-dashoffset 1s ease-in-out', filter: `drop-shadow(0 0 4px ${glow})` }}
+            style={{
+              transition: 'stroke-dashoffset 1s ease-in-out',
+              filter: `drop-shadow(0 0 4px ${glow})`,
+            }}
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-lg font-bold font-mono" style={{ color: stroke }}>{Math.round(Math.min(100, Math.max(0, score)))}</span>
+          <span className="text-lg font-bold font-mono" style={{ color: stroke }}>
+            {Math.round(Math.min(100, Math.max(0, score)))}
+          </span>
         </div>
       </div>
 
@@ -98,10 +119,19 @@ export default function CognitiveHealthCard({
 
       {anomalies.length > 0 && (
         <div className="space-y-2 pt-2 border-t border-white/5">
-          <Typography variant="mono" color="muted" className="block uppercase tracking-widest text-[9px]">Anomalies</Typography>
+          <Typography
+            variant="mono"
+            color="muted"
+            className="block uppercase tracking-widest text-[9px]"
+          >
+            Anomalies
+          </Typography>
           {anomalies.map((a, i) => (
             <div key={i} className="flex items-start gap-2">
-              <Badge variant={severityVariant(a.severity) as 'danger' | 'warning' | 'audit' | 'outline'} className="shrink-0 text-[8px]">
+              <Badge
+                variant={severityVariant(a.severity) as 'danger' | 'warning' | 'audit' | 'outline'}
+                className="shrink-0 text-[8px]"
+              >
                 {a.severity}
               </Badge>
               <span className="text-[10px] text-white/60 leading-tight">{a.message}</span>

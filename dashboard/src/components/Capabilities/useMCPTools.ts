@@ -28,10 +28,8 @@ export function useMCPTools(initialTools: MCPTool[]): UseMCPToolsResult {
   const discoverTools = useCallback(async () => {
     hasAttemptedDiscovery.current = true;
     // Only discover if we have placeholder tools (skipConnection mode)
-    const placeholderTools = initialTools.filter(t => 
-      t.isExternal && t.name.endsWith('_tools')
-    );
-    
+    const placeholderTools = initialTools.filter((t) => t.isExternal && t.name.endsWith('_tools'));
+
     if (placeholderTools.length === 0) {
       // Already have real tools, no need to discover
       return;
@@ -44,22 +42,22 @@ export function useMCPTools(initialTools: MCPTool[]): UseMCPToolsResult {
       // Fetch real tools from API
       const response = await fetch('/api/tools?refresh=true');
       if (!response.ok) throw new Error('Failed to fetch tools');
-      
+
       const data = await response.json();
       const realTools = data.tools.filter((t: MCPTool) => t.isExternal);
-      
+
       // Count MCP servers (not tools)
-      const mcpServerNames = placeholderTools.map(t => t.name.replace('_tools', ''));
-      
+      const mcpServerNames = placeholderTools.map((t) => t.name.replace('_tools', ''));
+
       // Simulate progressive discovery for UX - one server at a time
       for (let i = 0; i < mcpServerNames.length; i++) {
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise((resolve) => setTimeout(resolve, 300));
         setDiscoveredCount(i + 1);
       }
-      
+
       // Update with all real tools after discovery
-      setMcpTools(prev => {
-        const localTools = prev.filter(t => !t.isExternal);
+      setMcpTools((prev) => {
+        const localTools = prev.filter((t) => !t.isExternal);
         return [...localTools, ...realTools];
       });
 
@@ -76,16 +74,14 @@ export function useMCPTools(initialTools: MCPTool[]): UseMCPToolsResult {
 
   // Auto-discover on mount if we have placeholders
   useEffect(() => {
-    const placeholderTools = initialTools.filter(t => 
-      t.isExternal && t.name.endsWith('_tools')
-    );
-    
+    const placeholderTools = initialTools.filter((t) => t.isExternal && t.name.endsWith('_tools'));
+
     if (placeholderTools.length > 0 && !hasAttemptedDiscovery.current) {
       // Delay slightly to let page render first
       const timer = setTimeout(() => {
         discoverTools();
       }, 500);
-      
+
       return () => clearTimeout(timer);
     }
   }, [initialTools, discoverTools]);
@@ -95,6 +91,6 @@ export function useMCPTools(initialTools: MCPTool[]): UseMCPToolsResult {
     isLoading,
     discoveredCount,
     totalCount,
-    refresh: discoverTools
+    refresh: discoverTools,
   };
 }

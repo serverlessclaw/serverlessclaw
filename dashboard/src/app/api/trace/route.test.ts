@@ -46,7 +46,12 @@ describe('Trace API Route', () => {
 
   it('deletes a single trace by traceId', async () => {
     mockSend
-      .mockResolvedValueOnce({ Items: [{ traceId: 'trace-1', nodeId: 'node-1' }, { traceId: 'trace-1', nodeId: 'node-2' }] })
+      .mockResolvedValueOnce({
+        Items: [
+          { traceId: 'trace-1', nodeId: 'node-1' },
+          { traceId: 'trace-1', nodeId: 'node-2' },
+        ],
+      })
       .mockResolvedValueOnce({});
 
     const { DELETE } = await import('./route');
@@ -74,7 +79,10 @@ describe('Trace API Route', () => {
   it('deletes all traces when traceId=all', async () => {
     mockSend
       .mockResolvedValueOnce({
-        Items: [{ traceId: 't1', nodeId: 'n1' }, { traceId: 't2', nodeId: 'n2' }],
+        Items: [
+          { traceId: 't1', nodeId: 'n1' },
+          { traceId: 't2', nodeId: 'n2' },
+        ],
         LastEvaluatedKey: undefined,
       })
       .mockResolvedValueOnce({ UnprocessedItems: {} });

@@ -4,11 +4,7 @@ import React, { useState, useEffect } from 'react';
 import AgentsTab from './AgentsTab';
 import AnalyticsTab from './AnalyticsTab';
 import Button from '../ui/Button';
-import { 
-  Search,
-  Activity, BookOpen, ExternalLink, Cpu,
-  Sparkles
-} from 'lucide-react';
+import { Search, Activity, BookOpen, ExternalLink, Cpu, Sparkles } from 'lucide-react';
 import MCPTab from './MCPTab';
 import LibraryTab from './LibraryTab';
 import LeaderboardTab from './LeaderboardTab';
@@ -19,8 +15,10 @@ import { CapabilitiesViewProps } from './types';
 
 export default function CapabilitiesView({ allTools, mcpServers, agents }: CapabilitiesViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'agents' | 'library' | 'analytics' | 'mcp' | 'usage'>('analytics');
-  
+  const [activeTab, setActiveTab] = useState<'agents' | 'library' | 'analytics' | 'mcp' | 'usage'>(
+    'analytics'
+  );
+
   const {
     optimisticAgents,
     setOptimisticAgents,
@@ -28,16 +26,15 @@ export default function CapabilitiesView({ allTools, mcpServers, agents }: Capab
     handleToggleToolAssignment,
     handleDetachTool,
     confirmModal,
-    setConfirmModal
+    setConfirmModal,
   } = useAgentTools(agents);
 
-  const mappedTools = React.useMemo(() => 
-    allTools.map(t => ({ ...t, isExternal: !!t.isExternal })), 
-  [allTools]);
+  const mappedTools = React.useMemo(
+    () => allTools.map((t) => ({ ...t, isExternal: !!t.isExternal })),
+    [allTools]
+  );
 
-  const {
-    mcpTools
-  } = useMCPTools(mappedTools);
+  const { mcpTools } = useMCPTools(mappedTools);
 
   // Sync with props if they change
   useEffect(() => {
@@ -45,7 +42,9 @@ export default function CapabilitiesView({ allTools, mcpServers, agents }: Capab
   }, [agents, setOptimisticAgents]);
 
   return (
-    <div className={`space-y-10 transition-all duration-500 ${isPending ? 'opacity-80' : 'opacity-100'}`}>
+    <div
+      className={`space-y-10 transition-all duration-500 ${isPending ? 'opacity-80' : 'opacity-100'}`}
+    >
       {/* Navigation & Search */}
       <div className="flex flex-col lg:flex-row gap-6 justify-between items-start lg:items-center sticky top-0 z-20 bg-black/90 backdrop-blur-xl p-6 border-b border-white/5 -mx-6 lg:-mx-10 -mt-10 mb-10">
         <nav className="flex gap-1 bg-white/5 p-1 rounded-sm border border-white/5 overflow-x-auto no-scrollbar">
@@ -55,16 +54,18 @@ export default function CapabilitiesView({ allTools, mcpServers, agents }: Capab
             { id: 'agents', label: 'Assignments', icon: Cpu },
             { id: 'library', label: 'Capability Library', icon: BookOpen },
             { id: 'mcp', label: 'Skill Bridges', icon: ExternalLink },
-          ].map(tab => (
+          ].map((tab) => (
             <Button
               key={tab.id}
               variant={activeTab === tab.id ? 'primary' : 'ghost'}
               size="sm"
-              onClick={() => setActiveTab(tab.id as 'agents' | 'library' | 'analytics' | 'mcp' | 'usage')}
+              onClick={() =>
+                setActiveTab(tab.id as 'agents' | 'library' | 'analytics' | 'mcp' | 'usage')
+              }
               icon={<tab.icon size={12} />}
               className={`px-6 font-black tracking-widest transition-all whitespace-nowrap ${
-                activeTab === tab.id 
-                  ? 'shadow-[0_0_20px_rgba(0,224,255,0.2)]' 
+                activeTab === tab.id
+                  ? 'shadow-[0_0_20px_rgba(0,224,255,0.2)]'
                   : 'text-white/40 hover:text-white/60'
               }`}
             >
@@ -88,7 +89,7 @@ export default function CapabilitiesView({ allTools, mcpServers, agents }: Capab
       </div>
 
       {activeTab === 'analytics' && (
-        <AnalyticsTab 
+        <AnalyticsTab
           allTools={mcpTools}
           optimisticAgents={optimisticAgents}
           handleDetachTool={handleDetachTool}
@@ -99,7 +100,7 @@ export default function CapabilitiesView({ allTools, mcpServers, agents }: Capab
       )}
 
       {activeTab === 'usage' && (
-        <LeaderboardTab 
+        <LeaderboardTab
           allTools={mcpTools}
           optimisticAgents={optimisticAgents}
           searchQuery={searchQuery}
@@ -107,7 +108,7 @@ export default function CapabilitiesView({ allTools, mcpServers, agents }: Capab
       )}
 
       {activeTab === 'agents' && (
-        <AgentsTab 
+        <AgentsTab
           allTools={mcpTools}
           agents={agents}
           optimisticAgents={optimisticAgents}
@@ -116,12 +117,10 @@ export default function CapabilitiesView({ allTools, mcpServers, agents }: Capab
         />
       )}
 
-      {activeTab === 'mcp' && (
-        <MCPTab mcpServers={mcpServers} searchQuery={searchQuery} />
-      )}
+      {activeTab === 'mcp' && <MCPTab mcpServers={mcpServers} searchQuery={searchQuery} />}
 
       {activeTab === 'library' && (
-        <LibraryTab 
+        <LibraryTab
           allTools={mcpTools}
           optimisticAgents={optimisticAgents}
           searchQuery={searchQuery}

@@ -52,6 +52,12 @@ export interface SSTResource {
   OpenRouterApiKey: { value: string };
   /** Secret: MiniMax API authentication key. */
   MiniMaxApiKey: { value: string };
+  /** Secret: GitHub API authentication token. */
+  GitHubToken: { value: string };
+  /** Secret: GitHub webhook signature secret. */
+  GitHubWebhookSecret: { value: string };
+  /** Secret: Jira webhook signature/secret. */
+  JiraWebhookSecret: { value: string };
   /** The AWS region where resources are deployed. */
   AwsRegion: { value: string };
   /** Secret: Active LLM provider configuration. */

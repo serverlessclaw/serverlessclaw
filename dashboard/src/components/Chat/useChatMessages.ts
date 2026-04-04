@@ -37,16 +37,21 @@ export function useChatMessages(
             role: m.role === 'assistant' || m.role === 'system' ? 'assistant' : 'user',
             content: m.content,
             thought: m.thought,
-            agentName: m.agentName ?? (m.role === 'assistant' || m.role === 'system' ? 'SuperClaw' : undefined),
+            agentName:
+              m.agentName ??
+              (m.role === 'assistant' || m.role === 'system' ? 'SuperClaw' : undefined),
             attachments: m.attachments,
             options: m.options,
             tool_calls: m.tool_calls,
             messageId: m.messageId || m.traceId,
           }));
 
-          const historyIds = new Set(history.map((msg: ChatMessage) => msg.messageId).filter(Boolean));
-          const localOnly = prev.filter((msg: ChatMessage) => 
-            msg.role === 'assistant' && msg.messageId && !historyIds.has(msg.messageId)
+          const historyIds = new Set(
+            history.map((msg: ChatMessage) => msg.messageId).filter(Boolean)
+          );
+          const localOnly = prev.filter(
+            (msg: ChatMessage) =>
+              msg.role === 'assistant' && msg.messageId && !historyIds.has(msg.messageId)
           );
 
           history.forEach((msg: ChatMessage) => {
@@ -67,7 +72,9 @@ export function useChatMessages(
     const targetId = data.messageId || tempId;
     seenMessageIds.current.add(targetId);
     setMessages((prev: ChatMessage[]) => {
-      const existingIdx = prev.findIndex((m: ChatMessage) => m.messageId === targetId && m.role === 'assistant');
+      const existingIdx = prev.findIndex(
+        (m: ChatMessage) => m.messageId === targetId && m.role === 'assistant'
+      );
       if (existingIdx !== -1) {
         const existing = prev[existingIdx];
         const hasExistingContent = existing.content && existing.content.length > 0;
@@ -75,21 +82,24 @@ export function useChatMessages(
         const updated = [...prev];
         updated[existingIdx] = {
           ...existing,
-          content: hasExistingContent ? existing.content : (data.reply || existing.content),
-          thought: hasExistingThought ? existing.thought : (data.thought || existing.thought),
+          content: hasExistingContent ? existing.content : data.reply || existing.content,
+          thought: hasExistingThought ? existing.thought : data.thought || existing.thought,
           tool_calls: data.tool_calls || existing.tool_calls,
           agentName: data.agentName || existing.agentName,
         };
         return updated;
       }
-      return [...prev, {
-        role: 'assistant',
-        content: data.reply || (data.tool_calls ? 'Executing tools...' : ''),
-        thought: data.thought,
-        messageId: targetId,
-        agentName: data.agentName || 'SuperClaw',
-        tool_calls: data.tool_calls,
-      }];
+      return [
+        ...prev,
+        {
+          role: 'assistant',
+          content: data.reply || (data.tool_calls ? 'Executing tools...' : ''),
+          thought: data.thought,
+          messageId: targetId,
+          agentName: data.agentName || 'SuperClaw',
+          tool_calls: data.tool_calls,
+        },
+      ];
     });
   };
 
@@ -99,13 +109,16 @@ export function useChatMessages(
     if (sessionId === activeSessionRef.current) {
       const errorId = `error_${Date.now()}`;
       seenMessageIds.current.add(errorId);
-      setMessages((prev: ChatMessage[]) => [...prev, { 
-        role: 'assistant', 
-        content: errorMsg, 
-        agentName: 'SystemGuard',
-        messageId: errorId,
-        isError: true
-      }]);
+      setMessages((prev: ChatMessage[]) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: errorMsg,
+          agentName: 'SystemGuard',
+          messageId: errorId,
+          isError: true,
+        },
+      ]);
     }
     try {
       await fetch('/api/memory/gap', {
@@ -113,8 +126,8 @@ export function useChatMessages(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           details: `Chat failure in session ${sessionId}. Error: ${error instanceof Error ? error.message : String(error)}`,
-          metadata: { category: 'strategic_gap', urgency: 7, impact: 5 }
-        })
+          metadata: { category: 'strategic_gap', urgency: 7, impact: 5 },
+        }),
       });
     } catch (e) {
       console.error('Failed to report strategic gap:', e);
@@ -128,49 +141,54 @@ export function useChatMessages(
     const userMsg = text.trim();
     const currentAttachments = [...attachments];
     const tempId = crypto.randomUUID();
-    
-    setMessages((prev: ChatMessage[]) => [...prev, { 
-      role: 'user', 
-      content: userMsg,
-      messageId: tempId,
-      attachments: currentAttachments.map(a => ({
-        type: a.type,
-        name: a.file.name,
-        mimeType: a.file.type,
-        url: a.preview
-      }))
-    }]);
-    
+
+    setMessages((prev: ChatMessage[]) => [
+      ...prev,
+      {
+        role: 'user',
+        content: userMsg,
+        messageId: tempId,
+        attachments: currentAttachments.map((a) => ({
+          type: a.type,
+          name: a.file.name,
+          mimeType: a.file.type,
+          url: a.preview,
+        })),
+      },
+    ]);
+
     setIsLoading(true);
     setAttachments([]);
     isPostInFlight.current = true;
 
     let currentSessionId = activeSessionRef.current;
     if (!currentSessionId) {
-       currentSessionId = `session_${Date.now()}`;
-       skipNextHistoryFetch.current = true;
-       activeSessionRef.current = currentSessionId;
-       setActiveSessionId(currentSessionId);
+      currentSessionId = `session_${Date.now()}`;
+      skipNextHistoryFetch.current = true;
+      activeSessionRef.current = currentSessionId;
+      setActiveSessionId(currentSessionId);
     }
 
     try {
-      const apiAttachments = await Promise.all(currentAttachments.map(async (a) => {
-        const base64 = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
-          reader.readAsDataURL(a.file);
-        });
-        return { type: a.type, name: a.file.name, mimeType: a.file.type, base64 };
-      }));
+      const apiAttachments = await Promise.all(
+        currentAttachments.map(async (a) => {
+          const base64 = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+            reader.readAsDataURL(a.file);
+          });
+          return { type: a.type, name: a.file.name, mimeType: a.file.type, base64 };
+        })
+      );
 
       const response = await fetch('/api/chat?stream=true', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          text: userMsg, 
-          sessionId: currentSessionId, 
-          attachments: apiAttachments, 
-          traceId: tempId 
+        body: JSON.stringify({
+          text: userMsg,
+          sessionId: currentSessionId,
+          attachments: apiAttachments,
+          traceId: tempId,
         }),
       });
 
@@ -180,12 +198,15 @@ export function useChatMessages(
         const errorContent = data.details || data.error || AGENT_ERRORS.PROCESS_FAILURE;
         console.error('Chat API error:', data);
         if (currentSessionId === activeSessionRef.current) {
-          setMessages((prev: ChatMessage[]) => [...prev, {
-            role: 'assistant',
-            content: errorContent,
-            agentName: 'SystemGuard',
-            isError: true
-          }]);
+          setMessages((prev: ChatMessage[]) => [
+            ...prev,
+            {
+              role: 'assistant',
+              content: errorContent,
+              agentName: 'SystemGuard',
+              isError: true,
+            },
+          ]);
         }
         fetchSessions();
         return;
@@ -210,26 +231,29 @@ export function useChatMessages(
     const currentSessionId = activeSessionRef.current;
     setIsLoading(true);
     isPostInFlight.current = true;
-    
+
     try {
       const response = await fetch('/api/chat?stream=true', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          text: comment || 'I approve the tool execution.', 
-          sessionId: currentSessionId, 
-          approvedToolCalls: [callId] 
+        body: JSON.stringify({
+          text: comment || 'I approve the tool execution.',
+          sessionId: currentSessionId,
+          approvedToolCalls: [callId],
         }),
       });
-      
+
       if (!response.ok) {
         const data = await response.json();
-        setMessages((prev: ChatMessage[]) => [...prev, { 
-          role: 'assistant', 
-          content: `Error during approval: ${data.error || 'Unknown error'}`, 
-          agentName: 'SystemGuard',
-          isError: true 
-        }]);
+        setMessages((prev: ChatMessage[]) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: `Error during approval: ${data.error || 'Unknown error'}`,
+            agentName: 'SystemGuard',
+            isError: true,
+          },
+        ]);
       }
       fetchSessions();
     } catch (error) {
@@ -247,26 +271,29 @@ export function useChatMessages(
     const currentSessionId = activeSessionRef.current;
     setIsLoading(true);
     isPostInFlight.current = true;
-    
+
     try {
       const response = await fetch('/api/chat?stream=true', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          text: comment || 'I reject this tool execution.', 
-          sessionId: currentSessionId, 
-          rejectedToolCalls: [callId] 
+        body: JSON.stringify({
+          text: comment || 'I reject this tool execution.',
+          sessionId: currentSessionId,
+          rejectedToolCalls: [callId],
         }),
       });
-      
+
       if (!response.ok) {
         const data = await response.json();
-        setMessages((prev: ChatMessage[]) => [...prev, { 
-          role: 'assistant', 
-          content: `Error during rejection: ${data.error || 'Unknown error'}`, 
-          agentName: 'SystemGuard',
-          isError: true 
-        }]);
+        setMessages((prev: ChatMessage[]) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: `Error during rejection: ${data.error || 'Unknown error'}`,
+            agentName: 'SystemGuard',
+            isError: true,
+          },
+        ]);
       }
       fetchSessions();
     } catch (error) {
@@ -284,26 +311,29 @@ export function useChatMessages(
     const currentSessionId = activeSessionRef.current;
     setIsLoading(true);
     isPostInFlight.current = true;
-    
+
     try {
       const response = await fetch('/api/chat?stream=true', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          text: comment || 'Requesting clarification.', 
-          sessionId: currentSessionId, 
-          clarifiedToolCalls: [callId] 
+        body: JSON.stringify({
+          text: comment || 'Requesting clarification.',
+          sessionId: currentSessionId,
+          clarifiedToolCalls: [callId],
         }),
       });
-      
+
       if (!response.ok) {
         const data = await response.json();
-        setMessages((prev: ChatMessage[]) => [...prev, { 
-          role: 'assistant', 
-          content: `Error during clarification: ${data.error || 'Unknown error'}`, 
-          agentName: 'SystemGuard',
-          isError: true 
-        }]);
+        setMessages((prev: ChatMessage[]) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: `Error during clarification: ${data.error || 'Unknown error'}`,
+            agentName: 'SystemGuard',
+            isError: true,
+          },
+        ]);
       }
       fetchSessions();
     } catch (error) {
@@ -321,26 +351,29 @@ export function useChatMessages(
     const currentSessionId = activeSessionRef.current;
     setIsLoading(true);
     isPostInFlight.current = true;
-    
+
     try {
       const response = await fetch('/api/chat?stream=true', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          text: comment || 'Stop the current task.', 
-          sessionId: currentSessionId, 
-          cancelledTasks: [taskId] 
+        body: JSON.stringify({
+          text: comment || 'Stop the current task.',
+          sessionId: currentSessionId,
+          cancelledTasks: [taskId],
         }),
       });
-      
+
       if (!response.ok) {
         const data = await response.json();
-        setMessages((prev: ChatMessage[]) => [...prev, { 
-          role: 'assistant', 
-          content: `Error during cancellation: ${data.error || 'Unknown error'}`, 
-          agentName: 'SystemGuard',
-          isError: true 
-        }]);
+        setMessages((prev: ChatMessage[]) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: `Error during cancellation: ${data.error || 'Unknown error'}`,
+            agentName: 'SystemGuard',
+            isError: true,
+          },
+        ]);
       }
       fetchSessions();
     } catch (error) {
@@ -366,7 +399,7 @@ export function useChatMessages(
         return { file, preview, type };
       })
     );
-    setAttachments(prev => [...prev, ...newAttachments]);
+    setAttachments((prev) => [...prev, ...newAttachments]);
   };
 
   return {
@@ -382,6 +415,6 @@ export function useChatMessages(
     handleToolApproval,
     handleToolRejection,
     handleToolClarification,
-    handleTaskCancellation
+    handleTaskCancellation,
   };
 }

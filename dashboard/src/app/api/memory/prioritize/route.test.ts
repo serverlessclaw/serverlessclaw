@@ -48,7 +48,13 @@ describe('Memory Prioritize API Route', () => {
     const { POST } = await import('./route');
     const req = new NextRequest('http://localhost/api/memory/prioritize', {
       method: 'POST',
-      body: JSON.stringify({ userId: 'user1', timestamp: 12345, priority: 8, urgency: 5, impact: 7 }),
+      body: JSON.stringify({
+        userId: 'user1',
+        timestamp: 12345,
+        priority: 8,
+        urgency: 5,
+        impact: 7,
+      }),
     });
     const res = await POST(req);
     const data = await res.json();

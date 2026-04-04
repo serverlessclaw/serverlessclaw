@@ -49,7 +49,10 @@ export default function CyberSelect({
   }, []);
 
   return (
-    <div ref={containerRef} className={`relative ${compact ? 'min-w-[120px]' : 'min-w-[200px]'} ${className}`}>
+    <div
+      ref={containerRef}
+      className={`relative ${compact ? 'min-w-[120px]' : 'min-w-[200px]'} ${className}`}
+    >
       {/* Hidden input for form submission compatibility */}
       {name && <input type="hidden" name={name} value={value} />}
 
@@ -76,7 +79,9 @@ export default function CyberSelect({
       </Button>
 
       {isOpen && (
-        <div className={`absolute z-50 w-full mt-1 bg-black border border-${THEME.COLORS.INTEL}/30 rounded shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_20px_rgba(0,224,255,0.1)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200`}>
+        <div
+          className={`absolute z-50 w-full mt-1 bg-black border border-${THEME.COLORS.INTEL}/30 rounded shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_20px_rgba(0,224,255,0.1)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200`}
+        >
           <div className="max-h-60 overflow-y-auto custom-scrollbar">
             {options.length === 0 ? (
               <div className="px-3 py-2 text-[10px] text-white/30 italic tracking-widest">

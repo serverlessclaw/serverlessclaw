@@ -135,9 +135,7 @@ export function requireEnum<T extends string>(
 export function validateBody<T extends z.ZodType>(body: unknown, schema: T): z.infer<T> {
   const result = schema.safeParse(body);
   if (!result.success) {
-    const issues = result.error.issues
-      .map((i) => `${i.path.join('.')}: ${i.message}`)
-      .join('; ');
+    const issues = result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
     throw new ApiError(`Validation failed: ${issues}`, HTTP_STATUS.BAD_REQUEST);
   }
   return result.data;

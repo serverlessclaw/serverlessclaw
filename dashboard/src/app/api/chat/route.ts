@@ -11,19 +11,30 @@ import { revalidatePath } from 'next/cache';
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    const { text, sessionId, attachments, approvedToolCalls, traceId: clientTraceId } = await req.json();
+    const {
+      text,
+      sessionId,
+      attachments,
+      approvedToolCalls,
+      traceId: clientTraceId,
+    } = await req.json();
     const isStream = req.nextUrl.searchParams.get('stream') === 'true';
     const userId = 'dashboard-user'; // Fixed ID for dashboard chat
-    
+
     // Use a unique ID for the specific session history
     const storageId = sessionId ? `CONV#${userId}#${sessionId}` : userId;
 
     if (!text && (!attachments || attachments.length === 0)) {
-      return NextResponse.json({ error: UI_STRINGS.MISSING_MESSAGE }, { status: HTTP_STATUS.BAD_REQUEST });
+      return NextResponse.json(
+        { error: UI_STRINGS.MISSING_MESSAGE },
+        { status: HTTP_STATUS.BAD_REQUEST }
+      );
     }
 
-    console.log(`[Chat API] POST request - text: ${text?.substring(0, 20)}..., sessionId: ${sessionId}, attachments: ${attachments?.length ?? 0}, stream: ${isStream}`);
-    
+    console.log(
+      `[Chat API] POST request - text: ${text?.substring(0, 20)}..., sessionId: ${sessionId}, attachments: ${attachments?.length ?? 0}, stream: ${isStream}`
+    );
+
     const { DynamoMemory, CachedMemory } = await import('@claw/core/lib/memory');
     const { ProviderManager } = await import('@claw/core/lib/providers/index');
     const { getAgentTools } = await import('@claw/core/tools/index');
@@ -36,19 +47,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const provider = new ProviderManager();
     const config = await AgentRegistry.getAgentConfig(AgentType.SUPERCLAW);
     const agentTools = await getAgentTools(AgentType.SUPERCLAW);
-    const agent = new Agent(memory, provider, agentTools, config?.systemPrompt ?? SUPERCLAW_SYSTEM_PROMPT, config ?? undefined);
+    const agent = new Agent(
+      memory,
+      provider,
+      agentTools,
+      config?.systemPrompt ?? SUPERCLAW_SYSTEM_PROMPT,
+      config ?? undefined
+    );
 
     if (isStream) {
       // In a serverless environment like AWS Lambda, we can't easily "background" a task
       // without keeping the response open or using a separate trigger.
       // However, SST/Next.js on Lambda often supports Response Streaming.
-      // For this implementation, we consume the stream and the chunks are emitted 
+      // For this implementation, we consume the stream and the chunks are emitted
       // via EventBridge -> IoT Core in the background.
-      
+
       // We start the stream but don't await its full completion before returning to the UI
       // IF the platform supports it. On standard Lambda, we MUST await or the process dies.
       // But we can return the initial "accepted" response and let chunks flow via IoT.
-      
+
       const streamResult = await (async () => {
         const stream = agent.stream(storageId, text ?? '', {
           sessionId,
@@ -68,8 +85,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
         if (sessionId) {
           await memory.saveConversationMeta(userId, sessionId, {
-            lastMessage: finalResponse.length > 60 ? finalResponse.substring(0, 60) + '...' : finalResponse,
-            updatedAt: Date.now()
+            lastMessage:
+              finalResponse.length > 60 ? finalResponse.substring(0, 60) + '...' : finalResponse,
+            updatedAt: Date.now(),
           });
         }
 
@@ -85,25 +103,39 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json(streamResult);
     }
 
-    const { responseText, thought: resultThought, attachments: resultAttachments, tool_calls: resultToolCalls, traceId } = await agent.process(storageId, text ?? '', { 
-      sessionId, 
-      source: TraceSource.DASHBOARD, 
+    const {
+      responseText,
+      thought: resultThought,
+      attachments: resultAttachments,
+      tool_calls: resultToolCalls,
+      traceId,
+    } = await agent.process(storageId, text ?? '', {
+      sessionId,
+      source: TraceSource.DASHBOARD,
       attachments,
-      approvedToolCalls 
+      approvedToolCalls,
     });
 
     // Update conversation metadata for the sidebar
     if (sessionId) {
       await memory.saveConversationMeta(userId, sessionId, {
-        lastMessage: responseText.length > 60 ? responseText.substring(0, 60) + '...' : responseText,
-        updatedAt: Date.now()
+        lastMessage:
+          responseText.length > 60 ? responseText.substring(0, 60) + '...' : responseText,
+        updatedAt: Date.now(),
       });
     }
 
-    return NextResponse.json({ reply: responseText, thought: resultThought, agentName: 'SuperClaw', attachments: resultAttachments, tool_calls: resultToolCalls, messageId: traceId });
+    return NextResponse.json({
+      reply: responseText,
+      thought: resultThought,
+      agentName: 'SuperClaw',
+      attachments: resultAttachments,
+      tool_calls: resultToolCalls,
+      messageId: traceId,
+    });
   } catch (error) {
     console.error(UI_STRINGS.API_CHAT_ERROR, error);
-    
+
     // Persist error to history if we have sessionId
     try {
       const { sessionId } = await req.clone().json();
@@ -123,7 +155,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     return NextResponse.json(
-      { error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) },
+      {
+        error: 'Internal Server Error',
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
     );
   }
@@ -143,8 +178,12 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Missing sessionId' }, { status: 400 });
     }
 
-    await memory.saveConversationMeta(userId, sessionId, { title, isPinned, updatedAt: Date.now() });
-    
+    await memory.saveConversationMeta(userId, sessionId, {
+      title,
+      isPinned,
+      updatedAt: Date.now(),
+    });
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Failed to update session:', error);
@@ -168,14 +207,14 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
 
     if (sessionId === 'all') {
       const sessions = await memory.listConversations(userId);
-      await Promise.all(sessions.map(s => memory.deleteConversation(userId, s.sessionId)));
+      await Promise.all(sessions.map((s) => memory.deleteConversation(userId, s.sessionId)));
       revalidatePath('/');
       return NextResponse.json({ success: true, count: sessions.length });
     }
 
     await memory.deleteConversation(userId, sessionId);
     revalidatePath('/');
-    
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Failed to delete session:', error);

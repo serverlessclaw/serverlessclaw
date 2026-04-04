@@ -16,20 +16,20 @@ export default function ExportButton({ sessionId, sessionTitle }: ExportButtonPr
   const handleExport = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     setIsExporting(true);
     try {
       const res = await fetch(`/api/chat?sessionId=${sessionId}`);
       if (!res.ok) throw new Error('Failed to fetch session history');
-      
+
       const data = await res.json();
       const exportData = {
         sessionId,
         title: sessionTitle,
         exportedAt: new Date().toISOString(),
-        messages: data.history || []
+        messages: data.history || [],
       };
-      
+
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -39,7 +39,7 @@ export default function ExportButton({ sessionId, sessionTitle }: ExportButtonPr
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
+
       toast.success('Session exported successfully');
     } catch (err) {
       console.error('Export failed:', err);

@@ -3,15 +3,25 @@
 import React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import {
-  MessageSquare, Wrench, CheckCircle, ShieldAlert, Zap, HelpCircle, Pause, Play,
-  Layers, GitBranch, Shield, Cpu
+  MessageSquare,
+  Wrench,
+  CheckCircle,
+  ShieldAlert,
+  Zap,
+  HelpCircle,
+  Pause,
+  Play,
+  Layers,
+  GitBranch,
+  Shield,
+  Cpu,
 } from 'lucide-react';
 import { TRACE_TYPES } from '@claw/core/lib/constants';
 
 // --- Custom Node Components ---
 
 export const TriggerNode = ({ data }: { data: { label: string; onClick?: () => void } }) => (
-  <div 
+  <div
     onClick={() => data.onClick && data.onClick()}
     className="px-4 py-2 shadow-md rounded-md bg-[#1a1a1a] border-2 border-cyber-green text-white min-w-[150px] max-w-[350px] cursor-pointer hover:scale-105 transition-transform"
   >
@@ -22,12 +32,20 @@ export const TriggerNode = ({ data }: { data: { label: string; onClick?: () => v
     <div className="text-[11px] font-mono line-clamp-2 text-white/70 italic">
       &quot;{data.label}&quot;
     </div>
-    <Handle type="source" position={Position.Bottom} className="w-2 h-2 !bg-cyber-green border-none" />
+    <Handle
+      type="source"
+      position={Position.Bottom}
+      className="w-2 h-2 !bg-cyber-green border-none"
+    />
   </div>
 );
 
-export const LLMNode = ({ data }: { data: { type: string; agentId?: string; label?: string; onClick?: () => void } }) => (
-  <div 
+export const LLMNode = ({
+  data,
+}: {
+  data: { type: string; agentId?: string; label?: string; onClick?: () => void };
+}) => (
+  <div
     onClick={() => data.onClick && data.onClick()}
     className="px-4 py-3 shadow-lg rounded-md bg-[#0f172a] border border-cyber-blue text-white min-w-[180px] max-w-[350px] cursor-pointer hover:scale-105 transition-transform"
   >
@@ -46,37 +64,49 @@ export const LLMNode = ({ data }: { data: { type: string; agentId?: string; labe
     <div className="text-[11px] font-mono text-white/100 leading-tight line-clamp-2">
       {data.label ?? 'Reasoning...'}
     </div>
-    <Handle type="source" position={Position.Bottom} className="w-2 h-2 !bg-cyber-blue border-none" />
+    <Handle
+      type="source"
+      position={Position.Bottom}
+      className="w-2 h-2 !bg-cyber-blue border-none"
+    />
   </div>
 );
 
-export const ToolNode = ({ data }: { data: { agentId?: string; toolName: string; status?: string; onClick?: () => void } }) => (
-  <div 
+export const ToolNode = ({
+  data,
+}: {
+  data: { agentId?: string; toolName: string; status?: string; onClick?: () => void };
+}) => (
+  <div
     onClick={() => data.onClick && data.onClick()}
     className="px-4 py-3 shadow-lg rounded-md bg-[#1e1b1e] border border-yellow-500/50 text-white min-w-[180px] max-w-[350px] cursor-pointer hover:scale-105 transition-transform"
   >
-     <Handle type="target" position={Position.Top} className="w-2 h-2 !bg-yellow-500 border-none" />
+    <Handle type="target" position={Position.Top} className="w-2 h-2 !bg-yellow-500 border-none" />
     <div className="flex items-center mb-1">
       <Wrench size={14} className="text-yellow-500 mr-2" />
-      <span className="text-[10px] font-bold tracking-widest text-yellow-500/80">Tool Execution</span>
+      <span className="text-[10px] font-bold tracking-widest text-yellow-500/80">
+        Tool Execution
+      </span>
     </div>
     {data.agentId && (
       <div className="text-[9px] font-mono text-yellow-500/50 mb-2 font-bold uppercase tracking-tighter">
         Owner: {data.agentId}
       </div>
     )}
-    <div className="text-[11px] font-mono text-white/100 font-bold mb-1">
-      {data.toolName}
-    </div>
+    <div className="text-[11px] font-mono text-white/100 font-bold mb-1">{data.toolName}</div>
     <div className="text-[9px] font-mono text-white/60 truncate italic">
       {data.status ?? 'Executing...'}
     </div>
-    <Handle type="source" position={Position.Bottom} className="w-2 h-2 !bg-yellow-500 border-none" />
+    <Handle
+      type="source"
+      position={Position.Bottom}
+      className="w-2 h-2 !bg-yellow-500 border-none"
+    />
   </div>
 );
 
 export const ErrorNode = ({ data }: { data: { label: string; onClick?: () => void } }) => (
-  <div 
+  <div
     onClick={() => data.onClick && data.onClick()}
     className="px-4 py-3 shadow-lg rounded-md bg-red-500/10 border-2 border-red-500 text-white min-w-[180px] max-w-[350px] cursor-pointer hover:scale-105 transition-transform"
   >
@@ -85,15 +115,13 @@ export const ErrorNode = ({ data }: { data: { label: string; onClick?: () => voi
       <ShieldAlert size={14} className="text-red-500 mr-2" />
       <span className="text-[10px] font-bold tracking-widest text-red-500">Execution error</span>
     </div>
-    <div className="text-[11px] font-mono text-white line-clamp-2">
-      {data.label}
-    </div>
+    <div className="text-[11px] font-mono text-white line-clamp-2">{data.label}</div>
     <Handle type="source" position={Position.Bottom} className="w-2 h-2 !bg-red-500 border-none" />
   </div>
 );
 
 export const ResultNode = ({ data }: { data: { label: string; onClick?: () => void } }) => (
-  <div 
+  <div
     onClick={() => data.onClick && data.onClick()}
     className="px-4 py-3 shadow-xl rounded-md bg-cyber-green/10 border-2 border-cyber-green text-white min-w-[200px] max-w-[350px] cursor-pointer hover:scale-105 transition-transform"
   >
@@ -102,21 +130,25 @@ export const ResultNode = ({ data }: { data: { label: string; onClick?: () => vo
       <CheckCircle size={14} className="text-cyber-green mr-2" />
       <span className="text-[10px] font-bold tracking-widest text-cyber-green">Final response</span>
     </div>
-    <div className="text-[11px] font-mono text-white line-clamp-3">
-      {data.label}
-    </div>
+    <div className="text-[11px] font-mono text-white line-clamp-3">{data.label}</div>
   </div>
 );
 
-export const ClarificationNode = ({ data }: { data: { agentId?: string; question?: string; onClick?: () => void } }) => (
-  <div 
+export const ClarificationNode = ({
+  data,
+}: {
+  data: { agentId?: string; question?: string; onClick?: () => void };
+}) => (
+  <div
     onClick={() => data.onClick && data.onClick()}
     className="px-4 py-3 shadow-lg rounded-md bg-[#2d1f3d] border-2 border-purple-500 text-white min-w-[180px] max-w-[350px] cursor-pointer hover:scale-105 transition-transform"
   >
     <Handle type="target" position={Position.Top} className="w-2 h-2 !bg-purple-500 border-none" />
     <div className="flex items-center mb-1">
       <HelpCircle size={14} className="text-purple-400 mr-2" />
-      <span className="text-[10px] font-bold tracking-widest text-purple-400/80">Clarification Request</span>
+      <span className="text-[10px] font-bold tracking-widest text-purple-400/80">
+        Clarification Request
+      </span>
     </div>
     {data.agentId && (
       <div className="text-[9px] font-mono text-purple-400/60 mb-2 font-bold uppercase tracking-tighter">
@@ -126,12 +158,20 @@ export const ClarificationNode = ({ data }: { data: { agentId?: string; question
     <div className="text-[11px] font-mono text-white/90 leading-tight line-clamp-2 italic">
       &quot;{data.question ?? 'Needs clarification'}&quot;
     </div>
-    <Handle type="source" position={Position.Bottom} className="w-2 h-2 !bg-purple-500 border-none" />
+    <Handle
+      type="source"
+      position={Position.Bottom}
+      className="w-2 h-2 !bg-purple-500 border-none"
+    />
   </div>
 );
 
-export const WaitingNode = ({ data }: { data: { agentId?: string; reason?: string; onClick?: () => void } }) => (
-  <div 
+export const WaitingNode = ({
+  data,
+}: {
+  data: { agentId?: string; reason?: string; onClick?: () => void };
+}) => (
+  <div
     onClick={() => data.onClick && data.onClick()}
     className="px-4 py-3 shadow-lg rounded-md bg-[#1a2a1a] border-2 border-yellow-500 text-white min-w-[180px] max-w-[350px] cursor-pointer hover:scale-105 transition-transform"
   >
@@ -148,19 +188,29 @@ export const WaitingNode = ({ data }: { data: { agentId?: string; reason?: strin
     <div className="text-[11px] font-mono text-white/70 leading-tight line-clamp-2">
       {data.reason ?? 'Waiting for input...'}
     </div>
-    <Handle type="source" position={Position.Bottom} className="w-2 h-2 !bg-yellow-500 border-none" />
+    <Handle
+      type="source"
+      position={Position.Bottom}
+      className="w-2 h-2 !bg-yellow-500 border-none"
+    />
   </div>
 );
 
-export const BarrierNode = ({ data }: { data: { taskCount?: number; status?: string; onClick?: () => void } }) => (
-  <div 
+export const BarrierNode = ({
+  data,
+}: {
+  data: { taskCount?: number; status?: string; onClick?: () => void };
+}) => (
+  <div
     onClick={() => data.onClick && data.onClick()}
     className="px-4 py-3 shadow-lg rounded-md bg-[#1f1a2d] border-2 border-violet-500 text-white min-w-[180px] max-w-[350px] cursor-pointer hover:scale-105 transition-transform"
   >
     <Handle type="target" position={Position.Top} className="w-2 h-2 !bg-violet-500 border-none" />
     <div className="flex items-center mb-1">
       <Layers size={14} className="text-violet-400 mr-2" />
-      <span className="text-[10px] font-bold tracking-widest text-violet-400/80">Parallel Barrier</span>
+      <span className="text-[10px] font-bold tracking-widest text-violet-400/80">
+        Parallel Barrier
+      </span>
     </div>
     <div className="text-[11px] font-mono text-white/90 leading-tight">
       {data.taskCount ? `Waiting for ${data.taskCount} sub-agents` : 'Aggregating results'}
@@ -168,12 +218,20 @@ export const BarrierNode = ({ data }: { data: { taskCount?: number; status?: str
     <div className="text-[9px] font-mono text-violet-400/60 mt-1">
       {data.status ?? 'waiting_for_sub_agents'}
     </div>
-    <Handle type="source" position={Position.Bottom} className="w-2 h-2 !bg-violet-500 border-none" />
+    <Handle
+      type="source"
+      position={Position.Bottom}
+      className="w-2 h-2 !bg-violet-500 border-none"
+    />
   </div>
 );
 
-export const CouncilNode = ({ data }: { data: { reviewType?: string; status?: string; onClick?: () => void } }) => (
-  <div 
+export const CouncilNode = ({
+  data,
+}: {
+  data: { reviewType?: string; status?: string; onClick?: () => void };
+}) => (
+  <div
     onClick={() => data.onClick && data.onClick()}
     className="px-4 py-3 shadow-lg rounded-md bg-[#2d1a1a] border-2 border-red-500 text-white min-w-[180px] max-w-[350px] cursor-pointer hover:scale-105 transition-transform"
   >
@@ -185,15 +243,17 @@ export const CouncilNode = ({ data }: { data: { reviewType?: string; status?: st
     <div className="text-[11px] font-mono text-white/90 leading-tight">
       {data.reviewType ?? 'Peer review in progress'}
     </div>
-    <div className="text-[9px] font-mono text-red-400/60 mt-1">
-      {data.status ?? 'reviewing'}
-    </div>
+    <div className="text-[9px] font-mono text-red-400/60 mt-1">{data.status ?? 'reviewing'}</div>
     <Handle type="source" position={Position.Bottom} className="w-2 h-2 !bg-red-500 border-none" />
   </div>
 );
 
-export const ContinuationNode = ({ data }: { data: { direction?: string; initiatorId?: string; onClick?: () => void } }) => (
-  <div 
+export const ContinuationNode = ({
+  data,
+}: {
+  data: { direction?: string; initiatorId?: string; onClick?: () => void };
+}) => (
+  <div
     onClick={() => data.onClick && data.onClick()}
     className="px-4 py-3 shadow-lg rounded-md bg-[#0f2a2a] border-2 border-teal-500 text-white min-w-[180px] max-w-[350px] cursor-pointer hover:scale-105 transition-transform"
   >
@@ -214,15 +274,21 @@ export const ContinuationNode = ({ data }: { data: { direction?: string; initiat
   </div>
 );
 
-export const CircuitBreakerNode = ({ data }: { data: { previousState?: string; newState?: string; reason?: string; onClick?: () => void } }) => (
-  <div 
+export const CircuitBreakerNode = ({
+  data,
+}: {
+  data: { previousState?: string; newState?: string; reason?: string; onClick?: () => void };
+}) => (
+  <div
     onClick={() => data.onClick && data.onClick()}
     className="px-4 py-3 shadow-lg rounded-md bg-[#2a1f0f] border-2 border-orange-500 text-white min-w-[180px] max-w-[350px] cursor-pointer hover:scale-105 transition-transform"
   >
     <Handle type="target" position={Position.Top} className="w-2 h-2 !bg-orange-500 border-none" />
     <div className="flex items-center mb-1">
       <Cpu size={14} className="text-orange-400 mr-2" />
-      <span className="text-[10px] font-bold tracking-widest text-orange-400/80">Circuit Breaker</span>
+      <span className="text-[10px] font-bold tracking-widest text-orange-400/80">
+        Circuit Breaker
+      </span>
     </div>
     <div className="text-[11px] font-mono text-white/90 leading-tight">
       {data.previousState} → {data.newState}
@@ -230,12 +296,20 @@ export const CircuitBreakerNode = ({ data }: { data: { previousState?: string; n
     <div className="text-[9px] font-mono text-orange-400/60 mt-1 line-clamp-2">
       {data.reason ?? 'State change'}
     </div>
-    <Handle type="source" position={Position.Bottom} className="w-2 h-2 !bg-orange-500 border-none" />
+    <Handle
+      type="source"
+      position={Position.Bottom}
+      className="w-2 h-2 !bg-orange-500 border-none"
+    />
   </div>
 );
 
-export const CancellationNode = ({ data }: { data: { taskId?: string; reason?: string; onClick?: () => void } }) => (
-  <div 
+export const CancellationNode = ({
+  data,
+}: {
+  data: { taskId?: string; reason?: string; onClick?: () => void };
+}) => (
+  <div
     onClick={() => data.onClick && data.onClick()}
     className="px-4 py-3 shadow-lg rounded-md bg-[#2a0f0f] border-2 border-rose-500 text-white min-w-[180px] max-w-[350px] cursor-pointer hover:scale-105 transition-transform"
   >
@@ -254,8 +328,12 @@ export const CancellationNode = ({ data }: { data: { taskId?: string; reason?: s
   </div>
 );
 
-export const ResumedNode = ({ data }: { data: { agentId?: string; reason?: string; onClick?: () => void } }) => (
-  <div 
+export const ResumedNode = ({
+  data,
+}: {
+  data: { agentId?: string; reason?: string; onClick?: () => void };
+}) => (
+  <div
     onClick={() => data.onClick && data.onClick()}
     className="px-4 py-3 shadow-lg rounded-md bg-[#0f2a1a] border-2 border-emerald-500 text-white min-w-[180px] max-w-[350px] cursor-pointer hover:scale-105 transition-transform"
   >
@@ -272,7 +350,11 @@ export const ResumedNode = ({ data }: { data: { agentId?: string; reason?: strin
     <div className="text-[11px] font-mono text-white/70 leading-tight line-clamp-2">
       {data.reason ?? 'Agent resumed execution'}
     </div>
-    <Handle type="source" position={Position.Bottom} className="w-2 h-2 !bg-emerald-500 border-none" />
+    <Handle
+      type="source"
+      position={Position.Bottom}
+      className="w-2 h-2 !bg-emerald-500 border-none"
+    />
   </div>
 );
 

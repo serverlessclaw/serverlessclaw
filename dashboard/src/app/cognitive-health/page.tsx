@@ -30,9 +30,8 @@ export default function CognitiveHealthPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const avgScore = agents.length > 0
-    ? Math.round(agents.reduce((sum, a) => sum + a.score, 0) / agents.length)
-    : 0;
+  const avgScore =
+    agents.length > 0 ? Math.round(agents.reduce((sum, a) => sum + a.score, 0) / agents.length) : 0;
 
   return (
     <main className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyan-500/5 via-transparent to-transparent">
@@ -47,12 +46,28 @@ export default function CognitiveHealthPage() {
         </div>
         <div className="flex gap-4">
           <Card variant="glass" padding="sm" className="px-4 py-2 min-w-[120px]">
-            <Typography variant="mono" color="white" className="mb-1 block opacity-90">Agents</Typography>
-            <Typography variant="h3" weight="bold" className="text-cyan-400">{agents.length}</Typography>
+            <Typography variant="mono" color="white" className="mb-1 block opacity-90">
+              Agents
+            </Typography>
+            <Typography variant="h3" weight="bold" className="text-cyan-400">
+              {agents.length}
+            </Typography>
           </Card>
           <Card variant="glass" padding="sm" className="px-4 py-2 min-w-[120px]">
-            <Typography variant="mono" color="white" className="mb-1 block opacity-90">Avg Score</Typography>
-            <Typography variant="h3" weight="bold" className={avgScore >= 80 ? 'text-[var(--cyber-green)]' : avgScore >= 60 ? 'text-amber-400' : 'text-red-500'}>
+            <Typography variant="mono" color="white" className="mb-1 block opacity-90">
+              Avg Score
+            </Typography>
+            <Typography
+              variant="h3"
+              weight="bold"
+              className={
+                avgScore >= 80
+                  ? 'text-[var(--cyber-green)]'
+                  : avgScore >= 60
+                    ? 'text-amber-400'
+                    : 'text-red-500'
+              }
+            >
               {avgScore}
             </Typography>
           </Card>
@@ -76,10 +91,18 @@ export default function CognitiveHealthPage() {
           ))}
         </div>
       ) : (
-        <Card variant="solid" padding="lg" className="h-48 flex flex-col items-center justify-center opacity-20 border-dashed">
+        <Card
+          variant="solid"
+          padding="lg"
+          className="h-48 flex flex-col items-center justify-center opacity-20 border-dashed"
+        >
           <Brain size={32} className="mb-4" />
-          <Typography variant="body" weight="normal">No cognitive health data available</Typography>
-          <Typography variant="caption" color="muted" className="mt-2 block">Agents will appear once health metrics are recorded.</Typography>
+          <Typography variant="body" weight="normal">
+            No cognitive health data available
+          </Typography>
+          <Typography variant="caption" color="muted" className="mt-2 block">
+            Agents will appear once health metrics are recorded.
+          </Typography>
         </Card>
       )}
     </main>

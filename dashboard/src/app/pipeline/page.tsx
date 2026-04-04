@@ -1,7 +1,5 @@
 export const dynamic = 'force-dynamic';
-import {
-  Kanban
-} from 'lucide-react';
+import { Kanban } from 'lucide-react';
 import { GapStatus } from '@claw/core/lib/types';
 import { revalidatePath } from 'next/cache';
 import PipelineBoard from './PipelineBoard';
@@ -12,20 +10,18 @@ import { GapItem } from '@claw/core/lib/types/memory';
 import Typography from '@/components/ui/Typography';
 import { deleteMemoryItem } from '@/lib/actions/dynamodb-actions';
 
-
-
-
 async function getGaps(): Promise<GapItem[]> {
   try {
     const memory = new DynamoMemory();
     const items = await memory.listByPrefix('GAP#');
-    return (items as unknown as GapItem[] ?? []).sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
+    return ((items as unknown as GapItem[]) ?? []).sort(
+      (a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0)
+    );
   } catch (e) {
     console.error('Error fetching gaps:', e);
     return [];
   }
 }
-
 
 async function updateStatus(gapId: string, status: string) {
   'use server';
@@ -73,7 +69,7 @@ async function triggerBatchEvolution(gapIds: string[]) {
           metadata: {
             gapIds: [gapId],
           },
-          source: 'pipeline'
+          source: 'pipeline',
         });
 
         // Update status to PROGRESS
@@ -99,7 +95,13 @@ export default async function EvolutionPipeline() {
         <header className="flex flex-col lg:flex-row lg:justify-between lg:items-end border-b border-white/5 pb-6 gap-6">
           <div>
             <div className="flex items-center gap-3">
-              <Typography variant="h2" color="white" glow uppercase className="flex items-center gap-3">
+              <Typography
+                variant="h2"
+                color="white"
+                glow
+                uppercase
+                className="flex items-center gap-3"
+              >
                 <Kanban size={28} className="text-amber-500" /> Evolution Pipeline
               </Typography>
             </div>
@@ -108,14 +110,22 @@ export default async function EvolutionPipeline() {
             </Typography>
           </div>
           <div className="flex gap-4">
-              <div className="glass-card px-4 py-2 text-[10px] border-amber-500/20">
-                  <div className="text-white/50 mb-1 uppercase font-bold tracking-widest">Active Gaps</div>
-                  <div className="font-bold text-amber-500 text-lg">{gaps.filter(g => g.status !== GapStatus.DONE).length}</div>
+            <div className="glass-card px-4 py-2 text-[10px] border-amber-500/20">
+              <div className="text-white/50 mb-1 uppercase font-bold tracking-widest">
+                Active Gaps
               </div>
-              <div className="glass-card px-4 py-2 text-[10px] border-cyber-green/20">
-                  <div className="text-white/50 mb-1 uppercase font-bold tracking-widest">Historical Success</div>
-                  <div className="font-bold text-cyber-green text-lg">{gaps.filter(g => g.status === GapStatus.DONE).length}</div>
+              <div className="font-bold text-amber-500 text-lg">
+                {gaps.filter((g) => g.status !== GapStatus.DONE).length}
               </div>
+            </div>
+            <div className="glass-card px-4 py-2 text-[10px] border-cyber-green/20">
+              <div className="text-white/50 mb-1 uppercase font-bold tracking-widest">
+                Historical Success
+              </div>
+              <div className="font-bold text-cyber-green text-lg">
+                {gaps.filter((g) => g.status === GapStatus.DONE).length}
+              </div>
+            </div>
           </div>
         </header>
 

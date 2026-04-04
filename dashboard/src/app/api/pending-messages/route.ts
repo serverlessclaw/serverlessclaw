@@ -27,7 +27,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   } catch (error) {
     console.error('Failed to get pending messages:', error);
     return NextResponse.json(
-      { error: 'Failed to get pending messages', details: error instanceof Error ? error.message : String(error) },
+      {
+        error: 'Failed to get pending messages',
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }
@@ -47,14 +50,20 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
     const success = await sessionStateManager.removePendingMessage(sessionId, messageId);
 
     if (!success) {
-      return NextResponse.json({ error: 'Message not found or already processed' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Message not found or already processed' },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Failed to remove pending message:', error);
     return NextResponse.json(
-      { error: 'Failed to remove pending message', details: error instanceof Error ? error.message : String(error) },
+      {
+        error: 'Failed to remove pending message',
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }
@@ -65,7 +74,10 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
     const { sessionId, messageId, content } = await req.json();
 
     if (!sessionId || !messageId || content === undefined) {
-      return NextResponse.json({ error: 'Missing sessionId, messageId, or content' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Missing sessionId, messageId, or content' },
+        { status: 400 }
+      );
     }
 
     if (typeof content !== 'string' || content.trim().length === 0) {
@@ -75,17 +87,27 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
     const { SessionStateManager } = await import('@claw/core/lib/session/session-state');
     const sessionStateManager = new SessionStateManager();
 
-    const success = await sessionStateManager.updatePendingMessage(sessionId, messageId, content.trim());
+    const success = await sessionStateManager.updatePendingMessage(
+      sessionId,
+      messageId,
+      content.trim()
+    );
 
     if (!success) {
-      return NextResponse.json({ error: 'Message not found or already processed' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Message not found or already processed' },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Failed to update pending message:', error);
     return NextResponse.json(
-      { error: 'Failed to update pending message', details: error instanceof Error ? error.message : String(error) },
+      {
+        error: 'Failed to update pending message',
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }

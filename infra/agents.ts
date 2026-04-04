@@ -144,7 +144,7 @@ export function createAgents(
       ? [
           {
             actions: ['lambda:InvokeFunction'],
-            resources: Object.values(mcpServers.servers).map((s) => s.arn),
+            resources: [mcpServers.multiplexer.arn],
           },
         ]
       : []),
@@ -204,7 +204,16 @@ export function createAgents(
       ? {
           MCP_SERVER_ARNS: $util.jsonStringify(
             Object.fromEntries(
-              Object.entries(mcpServers.servers).map(([name, fn]) => [name, fn.arn])
+              [
+                'git',
+                'filesystem',
+                'google-search',
+                'puppeteer',
+                'fetch',
+                'aws',
+                'aws-s3',
+                'ast',
+              ].map((name) => [name, mcpServers.multiplexer.arn])
             )
           ),
         }

@@ -15,12 +15,12 @@ import AgentTable from './AgentTable';
 import { Tool, Agent } from '@/lib/types/ui';
 import { useRealtime, RealtimeMessage } from '@/hooks/useRealtime';
 
-import { 
-  LLMProvider, 
-  OpenAIModel, 
-  BedrockModel, 
-  MiniMaxModel, 
-  OpenRouterModel 
+import {
+  LLMProvider,
+  OpenAIModel,
+  BedrockModel,
+  MiniMaxModel,
+  OpenRouterModel,
 } from '@claw/core/lib/types/llm';
 
 // Agent interface moved to ui.ts
@@ -28,7 +28,12 @@ import {
 const PROVIDERS = {
   [LLMProvider.OPENAI]: {
     label: 'OpenAI (Native)',
-    models: [OpenAIModel.GPT_5_4, OpenAIModel.GPT_5_4_MINI, OpenAIModel.GPT_5_4_NANO, OpenAIModel.GPT_5_MINI],
+    models: [
+      OpenAIModel.GPT_5_4,
+      OpenAIModel.GPT_5_4_MINI,
+      OpenAIModel.GPT_5_4_NANO,
+      OpenAIModel.GPT_5_MINI,
+    ],
   },
   [LLMProvider.BEDROCK]: {
     label: 'AWS Bedrock (Native)',
@@ -68,7 +73,12 @@ export default function AgentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [agentSearchQuery, setAgentSearchQuery] = useState('');
   const [isUpdatingTools, setIsUpdatingTools] = useState(false);
-  const [reputation, setReputation] = useState<Record<string, { successRate: number; avgLatencyMs: number; tasksCompleted: number; tasksFailed: number }>>({});
+  const [reputation, setReputation] = useState<
+    Record<
+      string,
+      { successRate: number; avgLatencyMs: number; tasksCompleted: number; tasksFailed: number }
+    >
+  >({});
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -79,7 +89,7 @@ export default function AgentsPage() {
     agentId: '',
     agentName: '',
   });
-  
+
   const loadAgents = async () => {
     setLoading(true);
     try {
@@ -98,7 +108,7 @@ export default function AgentsPage() {
   const loadTools = async (forceRefresh = false) => {
     if (forceRefresh) setRefreshingTools(true);
     else setLoadingTools(true);
-    
+
     try {
       const toolsRes = await fetch(`/api/tools${forceRefresh ? '?refresh=true' : ''}`);
       const toolsData = await toolsRes.json();
@@ -153,19 +163,21 @@ export default function AgentsPage() {
   const handleSave = async (force: boolean = false) => {
     // Detect backbone changes
     if (!force) {
-      const changedBackbone = Object.values(agents).filter(agent => {
-        if (!agent.isBackbone) return false;
-        const initial = initialAgents[agent.id];
-        if (!initial) return false;
-        return (
-          agent.name !== initial.name ||
-          agent.systemPrompt !== initial.systemPrompt ||
-          agent.model !== initial.model ||
-          agent.provider !== initial.provider ||
-          agent.reasoningProfile !== initial.reasoningProfile ||
-          agent.enabled !== initial.enabled
-        );
-      }).map(a => a.name ?? a.id);
+      const changedBackbone = Object.values(agents)
+        .filter((agent) => {
+          if (!agent.isBackbone) return false;
+          const initial = initialAgents[agent.id];
+          if (!initial) return false;
+          return (
+            agent.name !== initial.name ||
+            agent.systemPrompt !== initial.systemPrompt ||
+            agent.model !== initial.model ||
+            agent.provider !== initial.provider ||
+            agent.reasoningProfile !== initial.reasoningProfile ||
+            agent.enabled !== initial.enabled
+          );
+        })
+        .map((a) => a.name ?? a.id);
 
       if (changedBackbone.length > 0) {
         setBackboneChanges(changedBackbone);
@@ -214,10 +226,10 @@ export default function AgentsPage() {
 
   const finalizeNewAgent = () => {
     if (!newAgent.id || !newAgent.name) {
-        toast.error('Agent ID and Name are required.');
-        return;
+      toast.error('Agent ID and Name are required.');
+      return;
     }
-    
+
     setAgents((prev) => ({
       ...prev,
       [newAgent.id!]: { ...newAgent, tools: [] } as Agent,
@@ -230,8 +242,8 @@ export default function AgentsPage() {
     if (!agent) return;
 
     const isEnabled = agent.tools.includes(toolName);
-    const newTools = isEnabled 
-      ? agent.tools.filter(t => t !== toolName)
+    const newTools = isEnabled
+      ? agent.tools.filter((t) => t !== toolName)
       : [...agent.tools, toolName];
 
     // Store snapshot before optimistic update for rollback
@@ -240,7 +252,7 @@ export default function AgentsPage() {
     // Optimistic Update
     setAgents((prev: Record<string, Agent>) => ({
       ...prev,
-      [agentId]: { ...prev[agentId], tools: newTools }
+      [agentId]: { ...prev[agentId], tools: newTools },
     }));
 
     setIsUpdatingTools(true);
@@ -248,19 +260,19 @@ export default function AgentsPage() {
       const { updateAgentTools } = await import('@/app/capabilities/actions');
       const formData = new FormData();
       formData.append('agentId', agentId);
-      newTools.forEach(t => formData.append('tools', t));
-      
+      newTools.forEach((t) => formData.append('tools', t));
+
       const result = await updateAgentTools(formData);
       if (result?.error) throw new Error(result.error);
-      
+
       toast.success(`Agent tools updated`);
     } catch (err) {
       console.error('Failed to update tools:', err);
       toast.error('Failed to update tools');
       // Revert to snapshot taken before toggle
-      setAgents(prev => ({
+      setAgents((prev) => ({
         ...prev,
-        [agentId]: { ...prev[agentId], tools: previousTools }
+        [agentId]: { ...prev[agentId], tools: previousTools },
       }));
     } finally {
       setIsUpdatingTools(false);
@@ -308,10 +320,10 @@ export default function AgentsPage() {
   // Real-time message handler for agent state changes
   const handleRealtimeMessage = useCallback((_topic: string, message: RealtimeMessage) => {
     const type = message['detail-type'];
-    
+
     // Refresh agents on relevant events
     if (
-      type === 'agent_config_updated' || 
+      type === 'agent_config_updated' ||
       type === 'agent_status_changed' ||
       type === 'task_completed' ||
       type === 'task_failed'
@@ -325,7 +337,7 @@ export default function AgentsPage() {
   // Use Realtime Hook for live updates
   const { isConnected } = useRealtime({
     topics: ['agents/+/signal', 'system/+/signal'],
-    onMessage: handleRealtimeMessage
+    onMessage: handleRealtimeMessage,
   });
 
   const hasChanges = JSON.stringify(agents) !== JSON.stringify(initialAgents);
@@ -333,25 +345,29 @@ export default function AgentsPage() {
   const filteredAgents = Object.fromEntries(
     Object.entries(agents).filter(([id, agent]) => {
       const searchStr = agentSearchQuery.toLowerCase();
-      return (
-        agent.name.toLowerCase().includes(searchStr) ||
-        id.toLowerCase().includes(searchStr)
-      );
+      return agent.name.toLowerCase().includes(searchStr) || id.toLowerCase().includes(searchStr);
     })
   );
 
   if (loading)
     return (
       <main className="flex-1 p-10 flex items-center justify-center text-white/40">
-        <Typography variant="mono" color="intel" uppercase className="flex items-center gap-3 animate-pulse">
+        <Typography
+          variant="mono"
+          color="intel"
+          uppercase
+          className="flex items-center gap-3 animate-pulse"
+        >
           <RefreshCw className="animate-spin" size={20} /> Initializing Agent Manager...
         </Typography>
       </main>
     );
 
   return (
-    <main className={`flex-1 overflow-y-auto p-6 lg:p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-${THEME.COLORS.INTEL}/5 via-transparent to-transparent`}>
-      <CyberConfirm 
+    <main
+      className={`flex-1 overflow-y-auto p-6 lg:p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-${THEME.COLORS.INTEL}/5 via-transparent to-transparent`}
+    >
+      <CyberConfirm
         isOpen={confirmModal.isOpen}
         title="Agent Decommissioning"
         message={`Are you sure you want to decommission specialized agent '${confirmModal.agentName}'? This will remove it from the system.`}
@@ -365,7 +381,9 @@ export default function AgentsPage() {
             <Typography variant="h2" color="white" glow uppercase>
               Agents
             </Typography>
-            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] uppercase tracking-widest font-bold ${isConnected ? 'bg-cyber-green/10 text-cyber-green border border-cyber-green/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'}`}>
+            <div
+              className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] uppercase tracking-widest font-bold ${isConnected ? 'bg-cyber-green/10 text-cyber-green border border-cyber-green/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'}`}
+            >
               <Radio size={10} className={isConnected ? 'animate-pulse' : ''} />
               {isConnected ? 'SIGNAL: ACTIVE' : 'SIGNAL: DISCONNECTED'}
             </div>
@@ -375,41 +393,52 @@ export default function AgentsPage() {
           </Typography>
         </div>
         <div className="flex gap-4 items-end">
-            <div className="relative w-64 group">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-cyan-400 transition-colors">
-                <Search size={14} />
-              </div>
-              <input 
-                type="text"
-                placeholder="Search nodes..."
-                value={agentSearchQuery}
-                onChange={(e) => setAgentSearchQuery(e.target.value)}
-                className="w-full bg-white/5 border border-white/5 rounded h-[34px] pl-9 pr-3 text-xs font-mono text-white placeholder:text-white/20 focus:outline-none focus:border-cyan-400/30 focus:bg-white/[0.08] transition-all"
-              />
+          <div className="relative w-64 group">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-cyan-400 transition-colors">
+              <Search size={14} />
             </div>
-            <div className="flex flex-col items-center">
-                <Typography variant="mono" color="muted" className="text-[10px] uppercase tracking-widest opacity-40 mb-1">NODES</Typography>
-                <Badge variant="outline" className={`px-4 py-1 font-bold text-xs border-${THEME.COLORS.INTEL}/20 text-${THEME.COLORS.INTEL}/60 uppercase`}>{Object.keys(agents).length}</Badge>
-            </div>
-            <Button
-              onClick={syncRegistry}
-              variant="outline"
-              size="sm"
-              disabled={refreshingTools}
-              icon={<RefreshCw size={14} className={refreshingTools ? 'animate-spin' : ''} />}
-              className="h-[34px] uppercase font-black tracking-widest border-white/5 hover:bg-white/5"
+            <input
+              type="text"
+              placeholder="Search nodes..."
+              value={agentSearchQuery}
+              onChange={(e) => setAgentSearchQuery(e.target.value)}
+              className="w-full bg-white/5 border border-white/5 rounded h-[34px] pl-9 pr-3 text-xs font-mono text-white placeholder:text-white/20 focus:outline-none focus:border-cyan-400/30 focus:bg-white/[0.08] transition-all"
+            />
+          </div>
+          <div className="flex flex-col items-center">
+            <Typography
+              variant="mono"
+              color="muted"
+              className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
             >
-              {refreshingTools ? 'Syncing...' : 'Sync Registry'}
-            </Button>
-            <Button
-              onClick={addAgent}
+              NODES
+            </Typography>
+            <Badge
               variant="outline"
-              size="sm"
-              icon={<Plus size={14} />}
-              className="h-[34px] uppercase font-black tracking-widest"
+              className={`px-4 py-1 font-bold text-xs border-${THEME.COLORS.INTEL}/20 text-${THEME.COLORS.INTEL}/60 uppercase`}
             >
-              New Agent
-            </Button>
+              {Object.keys(agents).length}
+            </Badge>
+          </div>
+          <Button
+            onClick={syncRegistry}
+            variant="outline"
+            size="sm"
+            disabled={refreshingTools}
+            icon={<RefreshCw size={14} className={refreshingTools ? 'animate-spin' : ''} />}
+            className="h-[34px] uppercase font-black tracking-widest border-white/5 hover:bg-white/5"
+          >
+            {refreshingTools ? 'Syncing...' : 'Sync Registry'}
+          </Button>
+          <Button
+            onClick={addAgent}
+            variant="outline"
+            size="sm"
+            icon={<Plus size={14} />}
+            className="h-[34px] uppercase font-black tracking-widest"
+          >
+            New Agent
+          </Button>
         </div>
       </header>
 
@@ -430,30 +459,38 @@ export default function AgentsPage() {
       {/* Backbone Warning Modal */}
       {showBackboneWarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-          <Card variant="solid" padding="lg" className="border-2 border-red-500/50 max-w-lg w-full shadow-[0_0_50px_rgba(239,68,68,0.2)] space-y-6">
+          <Card
+            variant="solid"
+            padding="lg"
+            className="border-2 border-red-500/50 max-w-lg w-full shadow-[0_0_50px_rgba(239,68,68,0.2)] space-y-6"
+          >
             <div className="flex items-center gap-4 text-red-500">
               <Shield size={32} className="animate-pulse" />
-              <Typography variant="h3" color="danger" weight="black" uppercase className="italic">Critical Backbone Modification</Typography>
+              <Typography variant="h3" color="danger" weight="black" uppercase className="italic">
+                Critical Backbone Modification
+              </Typography>
             </div>
-            
+
             <div className="space-y-4 font-mono text-[11px] leading-relaxed">
               <p className="text-white/80">
-                <span className="text-red-500 font-bold">WARNING:</span> You are attempting to modify core backbone orchestrators:
+                <span className="text-red-500 font-bold">WARNING:</span> You are attempting to
+                modify core backbone orchestrators:
               </p>
               <div className="bg-red-500/5 border border-red-500/20 p-3 rounded">
-                {backboneChanges.map(name => (
+                {backboneChanges.map((name) => (
                   <div key={name} className="text-red-400 font-bold">
                     {`> DETECTED_CHANGE: ${name}`}
                   </div>
                 ))}
               </div>
               <p className="text-white/60">
-                Backbone agents are critical to the system&apos;s connectivity and core logic. 
-                Unauthorized or incorrect modifications can lead to cascading failures, deadlocked tasks, 
-                or loss of system autonomy.
+                Backbone agents are critical to the system&apos;s connectivity and core logic.
+                Unauthorized or incorrect modifications can lead to cascading failures, deadlocked
+                tasks, or loss of system autonomy.
               </p>
               <p className="text-white font-bold italic border-l-2 border-red-500 pl-3">
-                &quot;I understand that these changes affect the system&apos;s fundamental architecture and I take full responsibility for this modification.&quot;
+                &quot;I understand that these changes affect the system&apos;s fundamental
+                architecture and I take full responsibility for this modification.&quot;
               </p>
             </div>
 

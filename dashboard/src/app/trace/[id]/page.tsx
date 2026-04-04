@@ -2,18 +2,18 @@ import React from 'react';
 import { Resource } from 'sst';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
-import { 
-  ArrowLeft, 
-  Clock, 
-  Activity, 
-  MessageSquare, 
-  Wrench, 
-  CheckCircle, 
+import {
+  ArrowLeft,
+  Clock,
+  Activity,
+  MessageSquare,
+  Wrench,
+  CheckCircle,
   ShieldAlert,
   ChevronDown,
   LayoutGrid,
   Bot,
-  Zap
+  Zap,
 } from 'lucide-react';
 import Link from 'next/link';
 import PathVisualizer from '@/components/PathVisualizer';
@@ -27,7 +27,6 @@ import { SSTResource } from '@claw/core/lib/types/index';
 import { Trace, TraceStep } from '@/lib/types/ui';
 
 export const dynamic = 'force-dynamic';
-
 
 /**
  * Fetches all nodes for a specific trace record from DynamoDB
@@ -46,7 +45,7 @@ async function getTraceNodes(traceId: string): Promise<Trace[]> {
         removeUndefinedValues: true,
       },
     });
-    
+
     const { Items } = await docClient.send(
       new QueryCommand({
         TableName: tableName,
@@ -54,7 +53,7 @@ async function getTraceNodes(traceId: string): Promise<Trace[]> {
         ExpressionAttributeValues: { ':tid': traceId },
       })
     );
-    
+
     return (Items as Trace[]) ?? [];
   } catch (e) {
     console.error('Error fetching trace nodes:', e);
@@ -97,7 +96,9 @@ export default async function TraceDetailPage({
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-[#0a0a0a]">
         <ShieldAlert size={48} className="mb-4 opacity-20 text-red-500" />
-        <Typography variant="h2" weight="bold" color="white">{UI_STRINGS.TRACE_NOT_FOUND}</Typography>
+        <Typography variant="h2" weight="bold" color="white">
+          {UI_STRINGS.TRACE_NOT_FOUND}
+        </Typography>
         <Link href="/trace" className="mt-4 flex items-center gap-2">
           <Typography variant="caption" color="primary" weight="bold" className="hover:underline">
             <ArrowLeft size={16} className="inline mr-1" /> {UI_STRINGS.RETURN_TO_BASE}
@@ -108,23 +109,33 @@ export default async function TraceDetailPage({
   }
 
   // Use the root node (usually the first one or one with nodeId='root') for header info
-  const rootNode = nodes.find(n => n.nodeId === 'root') ?? nodes[0];
+  const rootNode = nodes.find((n) => n.nodeId === 'root') ?? nodes[0];
 
   return (
     <div className="flex-1 overflow-y-auto p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-blue/5 via-transparent to-transparent">
       <header className="mb-10">
         <Link href="/trace" className="group">
-          <Typography variant="caption" color="white" weight="bold" className="flex items-center gap-2 mb-6 hover:text-cyber-green transition-colors">
-            <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> {UI_STRINGS.BACK_TO_INTELLIGENCE}
+          <Typography
+            variant="caption"
+            color="white"
+            weight="bold"
+            className="flex items-center gap-2 mb-6 hover:text-cyber-green transition-colors"
+          >
+            <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />{' '}
+            {UI_STRINGS.BACK_TO_INTELLIGENCE}
           </Typography>
         </Link>
-        
+
         <div className="flex justify-between items-end border-b border-white/5 pb-8">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <span className={`text-[10px] px-2 py-0.5 rounded-sm font-bold ${
-                rootNode.status === TRACE_STATUS.COMPLETED ? 'bg-cyber-green/20 text-cyber-green' : 'bg-yellow-500/20 text-yellow-500'
-              }`}>
+              <span
+                className={`text-[10px] px-2 py-0.5 rounded-sm font-bold ${
+                  rootNode.status === TRACE_STATUS.COMPLETED
+                    ? 'bg-cyber-green/20 text-cyber-green'
+                    : 'bg-yellow-500/20 text-yellow-500'
+                }`}
+              >
                 {rootNode.status}
               </span>
               <Typography variant="h1" weight="bold" className="tracking-tighter">
@@ -135,21 +146,45 @@ export default async function TraceDetailPage({
               {rootNode.initialContext?.userText ?? 'System orchestrated task execution.'}
             </Typography>
           </div>
-          
+
           <div className="text-right space-y-1">
-            <Typography variant="mono" color="white" className="flex items-center justify-end gap-2 text-[10px]">
-              <Clock size={12} /> {rootNode.timestamp ? new Date(rootNode.timestamp).toLocaleString() : 'Unknown'}
+            <Typography
+              variant="mono"
+              color="white"
+              className="flex items-center justify-end gap-2 text-[10px]"
+            >
+              <Clock size={12} />{' '}
+              {rootNode.timestamp ? new Date(rootNode.timestamp).toLocaleString() : 'Unknown'}
             </Typography>
             <div className="flex items-center justify-end gap-2">
               <Typography variant="mono" color="white" className="text-[10px] block">
-                Source: <span className="text-cyber-blue font-bold tracking-tighter ml-1">[{rootNode.source ?? 'Unknown'}]</span>
+                Source:{' '}
+                <span className="text-cyber-blue font-bold tracking-tighter ml-1">
+                  [{rootNode.source ?? 'Unknown'}]
+                </span>
               </Typography>
-              <Typography variant="mono" color="white" className="text-[10px] border-l border-white/10 pl-2 ml-1">
+              <Typography
+                variant="mono"
+                color="white"
+                className="text-[10px] border-l border-white/10 pl-2 ml-1"
+              >
                 UID: {rootNode.userId}
               </Typography>
             </div>
-            <Typography variant="mono" color="white" className="flex items-center justify-end gap-2 text-[10px]">
-              TOTAL STEPS: <Typography variant="mono" weight="bold" color="primary" className="bg-primary/10 px-1 rounded-sm">{nodes.reduce((acc, n) => acc + (n.steps?.length ?? 0), 0)}</Typography>
+            <Typography
+              variant="mono"
+              color="white"
+              className="flex items-center justify-end gap-2 text-[10px]"
+            >
+              TOTAL STEPS:{' '}
+              <Typography
+                variant="mono"
+                weight="bold"
+                color="primary"
+                className="bg-primary/10 px-1 rounded-sm"
+              >
+                {nodes.reduce((acc, n) => acc + (n.steps?.length ?? 0), 0)}
+              </Typography>
             </Typography>
           </div>
         </div>
@@ -162,122 +197,184 @@ export default async function TraceDetailPage({
           <PathVisualizer trace={{ ...rootNode, nodes } as Trace} />
         </section>
 
-        {[...nodes].sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0)).map((node) => (
-          <section key={node.nodeId} className="space-y-6">
-            <Typography variant="caption" weight="black" className="tracking-[0.2em] flex items-center gap-2 mb-4">
-              <Activity size={14} className="text-cyber-green" /> Step::{node.nodeId} {node.parentId ? `(Parent: ${node.parentId.slice(0,8)})` : '(Root)'}
-            </Typography>
+        {[...nodes]
+          .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0))
+          .map((node) => (
+            <section key={node.nodeId} className="space-y-6">
+              <Typography
+                variant="caption"
+                weight="black"
+                className="tracking-[0.2em] flex items-center gap-2 mb-4"
+              >
+                <Activity size={14} className="text-cyber-green" /> Step::{node.nodeId}{' '}
+                {node.parentId ? `(Parent: ${node.parentId.slice(0, 8)})` : '(Root)'}
+              </Typography>
 
-            <div className="space-y-4">
-              {node.steps?.map((step: TraceStep) => (
-                <div key={step.stepId} className="glass-card border-white/5 overflow-hidden">
-                  <div className="p-4 flex items-center justify-between bg-white/[0.02]">
-                    <div className="flex items-center gap-4">
-                      <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center">
-                        <StepIcon type={step.type} />
+              <div className="space-y-4">
+                {node.steps?.map((step: TraceStep) => (
+                  <div key={step.stepId} className="glass-card border-white/5 overflow-hidden">
+                    <div className="p-4 flex items-center justify-between bg-white/[0.02]">
+                      <div className="flex items-center gap-4">
+                        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center">
+                          <StepIcon type={step.type} />
+                        </div>
+                        <div>
+                          <Typography
+                            variant="caption"
+                            weight="bold"
+                            color="white"
+                            className="tracking-wider block"
+                          >
+                            {step.type}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            weight="medium"
+                            color="white"
+                            className="block"
+                          >
+                            {step.type === TRACE_TYPES.TOOL_CALL
+                              ? `Executing ${(step.content?.tool as string) || (step.content?.toolName as string) || ''}`
+                              : step.type === TRACE_TYPES.TOOL_RESULT
+                                ? `Observation from ${(step.content?.tool as string) || (step.content?.toolName as string) || 'tool'}`
+                                : step.type === TRACE_TYPES.LLM_CALL
+                                  ? 'Agent Request (Input)'
+                                  : step.type === TRACE_TYPES.LLM_RESPONSE
+                                    ? 'Agent Response (Output)'
+                                    : 'Error detected'}
+                          </Typography>
+                        </div>
                       </div>
-                      <div>
-                        <Typography variant="caption" weight="bold" color="white" className="tracking-wider block">{step.type}</Typography>
-                         <Typography variant="caption" weight="medium" color="white" className="block">
-                          {step.type === TRACE_TYPES.TOOL_CALL ? `Executing ${(step.content?.tool as string) || (step.content?.toolName as string) || ''}` : 
-                          step.type === TRACE_TYPES.TOOL_RESULT ? `Observation from ${(step.content?.tool as string) || (step.content?.toolName as string) || 'tool'}` :
-                           step.type === TRACE_TYPES.LLM_CALL ? 'Agent Request (Input)' : 
-                           step.type === TRACE_TYPES.LLM_RESPONSE ? 'Agent Response (Output)' : 'Error detected'}
-                        </Typography>
-                      </div>
+                      <Typography variant="mono" color="muted" className="text-[9px]">
+                        {new Date(step.timestamp as number).toLocaleTimeString()}
+                      </Typography>
                     </div>
-                    <Typography variant="mono" color="muted" className="text-[9px]">
-                      {new Date(step.timestamp as number).toLocaleTimeString()}
-                    </Typography>
-                  </div>
-                  
-                  <div className="p-4 bg-black/40 border-t border-white/5">
-                    {step.type === TRACE_TYPES.TOOL_RESULT && 
-                     step.content?.result && 
-                     typeof step.content.result === 'object' && 
-                     (step.content.result as { images?: string[] }).images ? (
-                      <div className="mb-4 space-y-4">
-                        <div className="text-[10px] text-cyber-blue/60 uppercase font-bold tracking-widest flex items-center gap-2">
-                           <LayoutGrid size={12} /> Generated_Visuals
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                           {(step.content.result as { images: string[] }).images.map((img: string, imgIdx: number) => (
-                            <div key={imgIdx} className="border border-white/10 rounded overflow-hidden bg-black/20 group/img relative">
-                              <Image 
-                                src={img.startsWith('data:') ? img : `data:image/png;base64,${img}`} 
-                                alt={`Output ${imgIdx}`}
-                                width={800}
-                                height={600}
-                                className="w-full h-auto object-contain max-h-[400px]"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
 
-                    {step.type === TRACE_TYPES.LLM_RESPONSE ? (
-                      <div className="mb-4 p-4 bg-cyber-green/[0.03] border border-cyber-green/10 rounded">
-                        <div className="text-[10px] text-cyber-green/60 uppercase font-bold mb-2 tracking-widest flex items-center gap-2">
-                           <Bot size={12} /> Generated_Response
-                        </div>
-                        <span className="text-white/40">{step.timestamp ? new Date(step.timestamp).toLocaleTimeString() : ''}</span>
-                        <div className="text-xs text-white/90 leading-relaxed whitespace-pre-wrap font-mono">
-                          {(() => {
-                            const content = step.content.content;
-                            if (!content) return '';
-                            try {
-                              const parsed = JSON.parse(content);
-                              return JSON.stringify(parsed, null, 2);
-                            } catch {
-                              return content;
-                            }
-                          })()}
-                        </div>
-                        {step.content.tool_calls && step.content.tool_calls.length > 0 && (
-                          <div className="mt-4 pt-4 border-t border-cyber-green/10">
-                             <div className="text-[10px] text-yellow-500/60 uppercase font-bold mb-2 tracking-widest">
-                               Requested_Tools
-                             </div>
-                             <div className="space-y-2">
-                               {step.content.tool_calls.map((tc: { function: { name: string; arguments: string } }, tci: number) => (
-                                 <div key={tci} className="text-[10px] bg-yellow-500/5 border border-yellow-500/10 p-2 rounded font-mono text-yellow-500/80">
-                                   {tc.function.name}({tc.function.arguments})
-                                 </div>
-                               ))}
-                             </div>
+                    <div className="p-4 bg-black/40 border-t border-white/5">
+                      {step.type === TRACE_TYPES.TOOL_RESULT &&
+                      step.content?.result &&
+                      typeof step.content.result === 'object' &&
+                      (step.content.result as { images?: string[] }).images ? (
+                        <div className="mb-4 space-y-4">
+                          <div className="text-[10px] text-cyber-blue/60 uppercase font-bold tracking-widest flex items-center gap-2">
+                            <LayoutGrid size={12} /> Generated_Visuals
                           </div>
-                        )}
-                      </div>
-                    ) : null}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {(step.content.result as { images: string[] }).images.map(
+                              (img: string, imgIdx: number) => (
+                                <div
+                                  key={imgIdx}
+                                  className="border border-white/10 rounded overflow-hidden bg-black/20 group/img relative"
+                                >
+                                  <Image
+                                    src={
+                                      img.startsWith('data:') ? img : `data:image/png;base64,${img}`
+                                    }
+                                    alt={`Output ${imgIdx}`}
+                                    width={800}
+                                    height={600}
+                                    className="w-full h-auto object-contain max-h-[400px]"
+                                  />
+                                </div>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      ) : null}
 
-                    <details className="group">
-                      <summary className="list-none cursor-pointer flex items-center justify-between">
-                        <Typography variant="mono" weight="bold" color="primary" className="tracking-widest flex items-center gap-1 hover:text-cyber-green transition-colors">
-                          {UI_STRINGS.RAW_PAYLOAD}
-                        </Typography>
-                        <ChevronDown size={14} className="text-cyber-green/60 group-open:rotate-180 transition-transform" />
-                      </summary>
-                      <div className="mt-4 p-4 bg-black/60 rounded border border-white/5 overflow-x-auto">
-                        <pre className="text-[11px] leading-relaxed text-cyber-blue/80">
-                          {JSON.stringify(step.content, null, 2)}
-                        </pre>
-                      </div>
-                    </details>
+                      {step.type === TRACE_TYPES.LLM_RESPONSE ? (
+                        <div className="mb-4 p-4 bg-cyber-green/[0.03] border border-cyber-green/10 rounded">
+                          <div className="text-[10px] text-cyber-green/60 uppercase font-bold mb-2 tracking-widest flex items-center gap-2">
+                            <Bot size={12} /> Generated_Response
+                          </div>
+                          <span className="text-white/40">
+                            {step.timestamp ? new Date(step.timestamp).toLocaleTimeString() : ''}
+                          </span>
+                          <div className="text-xs text-white/90 leading-relaxed whitespace-pre-wrap font-mono">
+                            {(() => {
+                              const content = step.content.content;
+                              if (!content) return '';
+                              try {
+                                const parsed = JSON.parse(content);
+                                return JSON.stringify(parsed, null, 2);
+                              } catch {
+                                return content;
+                              }
+                            })()}
+                          </div>
+                          {step.content.tool_calls && step.content.tool_calls.length > 0 && (
+                            <div className="mt-4 pt-4 border-t border-cyber-green/10">
+                              <div className="text-[10px] text-yellow-500/60 uppercase font-bold mb-2 tracking-widest">
+                                Requested_Tools
+                              </div>
+                              <div className="space-y-2">
+                                {step.content.tool_calls.map(
+                                  (
+                                    tc: { function: { name: string; arguments: string } },
+                                    tci: number
+                                  ) => (
+                                    <div
+                                      key={tci}
+                                      className="text-[10px] bg-yellow-500/5 border border-yellow-500/10 p-2 rounded font-mono text-yellow-500/80"
+                                    >
+                                      {tc.function.name}({tc.function.arguments})
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : null}
+
+                      <details className="group">
+                        <summary className="list-none cursor-pointer flex items-center justify-between">
+                          <Typography
+                            variant="mono"
+                            weight="bold"
+                            color="primary"
+                            className="tracking-widest flex items-center gap-1 hover:text-cyber-green transition-colors"
+                          >
+                            {UI_STRINGS.RAW_PAYLOAD}
+                          </Typography>
+                          <ChevronDown
+                            size={14}
+                            className="text-cyber-green/60 group-open:rotate-180 transition-transform"
+                          />
+                        </summary>
+                        <div className="mt-4 p-4 bg-black/60 rounded border border-white/5 overflow-x-auto">
+                          <pre className="text-[11px] leading-relaxed text-cyber-blue/80">
+                            {JSON.stringify(step.content, null, 2)}
+                          </pre>
+                        </div>
+                      </details>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        ))}
+                ))}
+              </div>
+            </section>
+          ))}
 
         {rootNode.finalResponse && (
           <section className="mt-12">
-            <Typography variant="caption" weight="black" className="tracking-[0.2em] flex items-center gap-2 mb-4">
-              <CheckCircle size={14} className={`text-${THEME.COLORS.PRIMARY}`} /> {UI_STRINGS.FINAL_OUTPUT}
+            <Typography
+              variant="caption"
+              weight="black"
+              className="tracking-[0.2em] flex items-center gap-2 mb-4"
+            >
+              <CheckCircle size={14} className={`text-${THEME.COLORS.PRIMARY}`} />{' '}
+              {UI_STRINGS.FINAL_OUTPUT}
             </Typography>
-            <Card variant="glass" padding="lg" className="border-cyber-green/20 bg-cyber-green/[0.02]">
-              <Typography variant="body" color="white" className="leading-relaxed whitespace-pre-wrap">
+            <Card
+              variant="glass"
+              padding="lg"
+              className="border-cyber-green/20 bg-cyber-green/[0.02]"
+            >
+              <Typography
+                variant="body"
+                color="white"
+                className="leading-relaxed whitespace-pre-wrap"
+              >
                 {rootNode.finalResponse}
               </Typography>
             </Card>

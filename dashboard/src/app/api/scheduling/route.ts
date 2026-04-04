@@ -1,12 +1,12 @@
-import { 
-  SchedulerClient, 
-  ListSchedulesCommand, 
+import {
+  SchedulerClient,
+  ListSchedulesCommand,
   GetScheduleCommand,
   CreateScheduleCommand,
   DeleteScheduleCommand,
   UpdateScheduleCommand,
   FlexibleTimeWindowMode,
-  ActionAfterCompletion
+  ActionAfterCompletion,
 } from '@aws-sdk/client-scheduler';
 import { NextResponse } from 'next/server';
 import { HTTP_STATUS } from '@claw/core/lib/constants';
@@ -21,7 +21,7 @@ const scheduler = new SchedulerClient({});
 export async function GET() {
   try {
     const { Schedules } = await scheduler.send(new ListSchedulesCommand({}));
-    
+
     if (!Schedules) return NextResponse.json([]);
 
     const detailedSchedules = await Promise.all(
@@ -44,7 +44,10 @@ export async function GET() {
   } catch (error) {
     console.error('Failed to fetch schedules:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch schedules', details: error instanceof Error ? error.message : String(error) }, 
+      {
+        error: 'Failed to fetch schedules',
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
     );
   }
@@ -75,14 +78,16 @@ export async function POST(request: Request) {
       now.setSeconds(now.getSeconds() + 5);
       const atExpression = `at(${now.toISOString().split('.')[0]})`;
 
-      await scheduler.send(new CreateScheduleCommand({
-        Name: triggerName,
-        ScheduleExpression: atExpression,
-        Target: existing.Target,
-        FlexibleTimeWindow: { Mode: FlexibleTimeWindowMode.OFF },
-        ActionAfterCompletion: ActionAfterCompletion.DELETE,
-        Description: `One-time trigger for ${name}`,
-      }));
+      await scheduler.send(
+        new CreateScheduleCommand({
+          Name: triggerName,
+          ScheduleExpression: atExpression,
+          Target: existing.Target,
+          FlexibleTimeWindow: { Mode: FlexibleTimeWindowMode.OFF },
+          ActionAfterCompletion: ActionAfterCompletion.DELETE,
+          Description: `One-time trigger for ${name}`,
+        })
+      );
 
       return NextResponse.json({ success: true, triggerName });
     }
@@ -92,18 +97,20 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Scheduler resources not found' }, { status: 500 });
       }
 
-      await scheduler.send(new CreateScheduleCommand({
-        Name: name,
-        ScheduleExpression: expression,
-        Description: description,
-        FlexibleTimeWindow: { Mode: FlexibleTimeWindowMode.OFF },
-        Target: {
-          Arn: targetArn,
-          RoleArn: roleArn,
-          Input: JSON.stringify(payload),
-        },
-        State: 'ENABLED',
-      }));
+      await scheduler.send(
+        new CreateScheduleCommand({
+          Name: name,
+          ScheduleExpression: expression,
+          Description: description,
+          FlexibleTimeWindow: { Mode: FlexibleTimeWindowMode.OFF },
+          Target: {
+            Arn: targetArn,
+            RoleArn: roleArn,
+            Input: JSON.stringify(payload),
+          },
+          State: 'ENABLED',
+        })
+      );
 
       return NextResponse.json({ success: true });
     }
@@ -112,7 +119,10 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Failed to process schedule POST:', error);
     return NextResponse.json(
-      { error: 'Failed to process request', details: error instanceof Error ? error.message : String(error) }, 
+      {
+        error: 'Failed to process request',
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
     );
   }
@@ -131,20 +141,25 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Schedule not found' }, { status: 404 });
     }
 
-    await scheduler.send(new UpdateScheduleCommand({
-      Name: name,
-      ScheduleExpression: existing.ScheduleExpression,
-      Description: existing.Description,
-      FlexibleTimeWindow: existing.FlexibleTimeWindow,
-      Target: existing.Target,
-      State: state,
-    }));
+    await scheduler.send(
+      new UpdateScheduleCommand({
+        Name: name,
+        ScheduleExpression: existing.ScheduleExpression,
+        Description: existing.Description,
+        FlexibleTimeWindow: existing.FlexibleTimeWindow,
+        Target: existing.Target,
+        State: state,
+      })
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Failed to update schedule:', error);
     return NextResponse.json(
-      { error: 'Failed to update schedule', details: error instanceof Error ? error.message : String(error) }, 
+      {
+        error: 'Failed to update schedule',
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
     );
   }
@@ -167,7 +182,10 @@ export async function DELETE(request: Request) {
   } catch (error) {
     console.error('Failed to delete schedule:', error);
     return NextResponse.json(
-      { error: 'Failed to delete schedule', details: error instanceof Error ? error.message : String(error) }, 
+      {
+        error: 'Failed to delete schedule',
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
     );
   }

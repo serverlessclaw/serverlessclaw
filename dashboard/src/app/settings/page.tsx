@@ -344,9 +344,7 @@ async function triggerRebuild() {
     await client.send(
       new StartBuildCommand({
         projectName,
-        environmentVariablesOverride: [
-          { name: 'INFRA_REBUILD', value: 'true' },
-        ],
+        environmentVariablesOverride: [{ name: 'INFRA_REBUILD', value: 'true' }],
       })
     );
 
@@ -376,7 +374,13 @@ export default async function SettingsPage() {
         <SettingsForm config={config} updateConfig={updateConfig} />
 
         <Card variant="solid" padding="lg" className="border-red-900/20 bg-red-950/5 space-y-6">
-          <Typography variant="caption" weight="bold" color="danger" uppercase className="flex items-center gap-2">
+          <Typography
+            variant="caption"
+            weight="bold"
+            color="danger"
+            uppercase
+            className="flex items-center gap-2"
+          >
             <AlertTriangle size={16} /> Danger Zone
           </Typography>
           <div className="flex flex-col md:flex-row md:justify-between md:items-center bg-red-950/20 p-6 rounded border border-red-900/30 gap-4">

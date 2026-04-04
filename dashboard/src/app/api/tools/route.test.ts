@@ -19,8 +19,18 @@ describe('Tools API Route', () => {
 
   it('returns tools list on success', async () => {
     const tools = [
-      { name: 'recallKnowledge', description: 'Recall knowledge', usage: { count: 5, lastUsed: 12345 }, isExternal: false },
-      { name: 'mcp_tool', description: 'External tool', usage: { count: 0, lastUsed: 0 }, isExternal: true },
+      {
+        name: 'recallKnowledge',
+        description: 'Recall knowledge',
+        usage: { count: 5, lastUsed: 12345 },
+        isExternal: false,
+      },
+      {
+        name: 'mcp_tool',
+        description: 'External tool',
+        usage: { count: 0, lastUsed: 0 },
+        isExternal: true,
+      },
     ];
     mockGetToolUsage.mockResolvedValue({});
     mockGetAllTools.mockResolvedValue(tools);

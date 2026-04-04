@@ -24,7 +24,7 @@ export default function MemorySearch() {
       }
       // Reset pagination when searching
       params.delete('next');
-      
+
       router.push(`/memory?${params.toString()}`);
     }, 400);
 

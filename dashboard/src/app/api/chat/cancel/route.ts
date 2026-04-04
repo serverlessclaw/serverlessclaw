@@ -35,7 +35,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   } catch (error) {
     console.error('[Cancel API] Failed to cancel task:', error);
     return NextResponse.json(
-      { error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) },
+      {
+        error: 'Internal Server Error',
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
     );
   }

@@ -40,13 +40,13 @@ const VISUALIZER_CONFIG = {
     MIN: 0.2,
     MAX: 1.5,
     FIT_PADDING: 0.2,
-  }
+  },
 } as const;
 
 /**
  * Helper to process trace nodes and steps into React Flow nodes and edges.
  * Handles recursive branching for delegated tasks.
- * 
+ *
  * @param traceNodes List of all trace nodes in the session.
  * @param initialNodes Output array for React Flow nodes.
  * @param initialEdges Output array for React Flow edges.
@@ -69,7 +69,12 @@ function processTraceNodes(
    * @param parentStepId Optional ID of the parent step that triggered this branch.
    * @returns Current Y coordinate after rendering the branch.
    */
-  function renderBranch(traceNode: Trace, startX: number, startY: number, parentStepId?: string): number {
+  function renderBranch(
+    traceNode: Trace,
+    startX: number,
+    startY: number,
+    parentStepId?: string
+  ): number {
     if (processedNodes.has(traceNode.nodeId)) return startY;
     processedNodes.add(traceNode.nodeId);
 
@@ -82,10 +87,15 @@ function processTraceNodes(
       id: entryId,
       type: 'trigger',
       data: {
-        label: traceNode.nodeId === 'root' 
-          ? (traceNode.initialContext?.userText || 'System Task')
-          : `Delegated to ${traceNode.initialContext?.agentId ?? 'Agent'}`,
-        onClick: () => setSelectedStep({ type: 'trigger', content: traceNode.initialContext as Record<string, unknown> })
+        label:
+          traceNode.nodeId === 'root'
+            ? traceNode.initialContext?.userText || 'System Task'
+            : `Delegated to ${traceNode.initialContext?.agentId ?? 'Agent'}`,
+        onClick: () =>
+          setSelectedStep({
+            type: 'trigger',
+            content: traceNode.initialContext as Record<string, unknown>,
+          }),
       },
       position: { x: startX, y: currentY },
     });
@@ -96,7 +106,11 @@ function processTraceNodes(
         source: lastStepId,
         target: entryId,
         animated: true,
-        style: { stroke: VISUALIZER_CONFIG.COLORS.DELEGATE, strokeWidth: 2, strokeDasharray: '5,5' },
+        style: {
+          stroke: VISUALIZER_CONFIG.COLORS.DELEGATE,
+          strokeWidth: 2,
+          strokeDasharray: '5,5',
+        },
         label: 'DELEGATE',
         labelStyle: { fill: VISUALIZER_CONFIG.COLORS.DELEGATE, fontSize: 8, fontWeight: 'bold' },
         markerEnd: { type: MarkerType.ArrowClosed, color: VISUALIZER_CONFIG.COLORS.DELEGATE },
@@ -117,7 +131,12 @@ function processTraceNodes(
         initialNodes.push({
           id: stepNodeId,
           type: 'llm',
-          data: { type: TRACE_TYPES.LLM_CALL, label: 'LLM synthesis request.', agentId, onClick: () => setSelectedStep(step) },
+          data: {
+            type: TRACE_TYPES.LLM_CALL,
+            label: 'LLM synthesis request.',
+            agentId,
+            onClick: () => setSelectedStep(step),
+          },
           position: { x: startX, y: currentY },
         });
         added = true;
@@ -125,7 +144,12 @@ function processTraceNodes(
         initialNodes.push({
           id: stepNodeId,
           type: 'llm',
-          data: { type: TRACE_TYPES.LLM_RESPONSE, label: step.content.content ?? 'LLM Response.', agentId, onClick: () => setSelectedStep(step) },
+          data: {
+            type: TRACE_TYPES.LLM_RESPONSE,
+            label: step.content.content ?? 'LLM Response.',
+            agentId,
+            onClick: () => setSelectedStep(step),
+          },
           position: { x: startX, y: currentY },
         });
         added = true;
@@ -134,7 +158,12 @@ function processTraceNodes(
         initialNodes.push({
           id: stepNodeId,
           type: 'tool',
-          data: { toolName: tName, status: `Exec: ${JSON.stringify(step.content?.args || {}).substring(0, 20)}...`, agentId, onClick: () => setSelectedStep(step) },
+          data: {
+            toolName: tName,
+            status: `Exec: ${JSON.stringify(step.content?.args || {}).substring(0, 20)}...`,
+            agentId,
+            onClick: () => setSelectedStep(step),
+          },
           position: { x: startX, y: currentY },
         });
         added = true;
@@ -142,9 +171,14 @@ function processTraceNodes(
         // Recursively handle task dispatching/branching
         if (tName === 'dispatchTask' && step.content.args?.agentId) {
           const targetAgentId = String(step.content.args.agentId);
-          const childNode = traceNodes.find(n => n.parentId === traceNode.nodeId && (n.initialContext?.agentId === targetAgentId || n.nodeId.includes(targetAgentId)));
+          const childNode = traceNodes.find(
+            (n) =>
+              n.parentId === traceNode.nodeId &&
+              (n.initialContext?.agentId === targetAgentId || n.nodeId.includes(targetAgentId))
+          );
           if (childNode) {
-            const branchOffset = (xOffsetMap.get(traceNode.nodeId) ?? 0) + VISUALIZER_CONFIG.LAYOUT.BRANCH_X_OFFSET;
+            const branchOffset =
+              (xOffsetMap.get(traceNode.nodeId) ?? 0) + VISUALIZER_CONFIG.LAYOUT.BRANCH_X_OFFSET;
             xOffsetMap.set(traceNode.nodeId, branchOffset);
             renderBranch(childNode, startX + branchOffset, currentY, stepNodeId);
           }
@@ -153,7 +187,12 @@ function processTraceNodes(
         initialNodes.push({
           id: stepNodeId,
           type: 'tool',
-          data: { toolName: step.content.tool || 'OBSERVATION', status: `Res: ${String(step.content?.result || '').substring(0, 20)}...`, agentId, onClick: () => setSelectedStep(step) },
+          data: {
+            toolName: step.content.tool || 'OBSERVATION',
+            status: `Res: ${String(step.content?.result || '').substring(0, 20)}...`,
+            agentId,
+            onClick: () => setSelectedStep(step),
+          },
           position: { x: startX, y: currentY },
         });
         added = true;
@@ -161,7 +200,10 @@ function processTraceNodes(
         initialNodes.push({
           id: stepNodeId,
           type: 'error',
-          data: { label: (step.content?.errorMessage as string) ?? 'Process Error', onClick: () => setSelectedStep(step) },
+          data: {
+            label: (step.content?.errorMessage as string) ?? 'Process Error',
+            onClick: () => setSelectedStep(step),
+          },
           position: { x: startX, y: currentY },
         });
         added = true;
@@ -169,15 +211,27 @@ function processTraceNodes(
         initialNodes.push({
           id: stepNodeId,
           type: 'clarification',
-          data: { agentId: step.content.agentId ?? agentId, question: step.content.question ?? 'Needs input', onClick: () => setSelectedStep(step) },
+          data: {
+            agentId: step.content.agentId ?? agentId,
+            question: step.content.question ?? 'Needs input',
+            onClick: () => setSelectedStep(step),
+          },
           position: { x: startX, y: currentY },
         });
         added = true;
-      } else if (step.type === TRACE_TYPES.AGENT_WAITING || step.type === TRACE_TYPES.AGENT_RESUMED || step.type === TRACE_TYPES.CLARIFICATION_RESPONSE) {
+      } else if (
+        step.type === TRACE_TYPES.AGENT_WAITING ||
+        step.type === TRACE_TYPES.AGENT_RESUMED ||
+        step.type === TRACE_TYPES.CLARIFICATION_RESPONSE
+      ) {
         initialNodes.push({
           id: stepNodeId,
           type: step.type === TRACE_TYPES.AGENT_WAITING ? 'waiting' : 'resumed',
-          data: { agentId: step.content.agentId ?? agentId, reason: step.content.reason || step.content.answer || 'Status Change', onClick: () => setSelectedStep(step) },
+          data: {
+            agentId: step.content.agentId ?? agentId,
+            reason: step.content.reason || step.content.answer || 'Status Change',
+            onClick: () => setSelectedStep(step),
+          },
           position: { x: startX, y: currentY },
         });
         added = true;
@@ -191,7 +245,11 @@ function processTraceNodes(
         initialNodes.push({
           id: stepNodeId,
           type: 'barrier',
-          data: { taskCount: step.content.taskCount, status: step.content.status || 'parallel_op', onClick: () => setSelectedStep(step) },
+          data: {
+            taskCount: step.content.taskCount,
+            status: step.content.status || 'parallel_op',
+            onClick: () => setSelectedStep(step),
+          },
           position: { x: startX, y: currentY },
         });
         added = true;
@@ -200,7 +258,12 @@ function processTraceNodes(
         initialNodes.push({
           id: stepNodeId,
           type: 'llm',
-          data: { type: step.type, label: `Status: ${step.type}`, agentId, onClick: () => setSelectedStep(step) },
+          data: {
+            type: step.type,
+            label: `Status: ${step.type}`,
+            agentId,
+            onClick: () => setSelectedStep(step),
+          },
           position: { x: startX, y: currentY },
         });
         added = true;
@@ -227,7 +290,11 @@ function processTraceNodes(
       initialNodes.push({
         id: resultId,
         type: 'result',
-        data: { label: traceNode.finalResponse, onClick: () => setSelectedStep({ type: 'result', content: { response: traceNode.finalResponse } }) },
+        data: {
+          label: traceNode.finalResponse,
+          onClick: () =>
+            setSelectedStep({ type: 'result', content: { response: traceNode.finalResponse } }),
+        },
         position: { x: startX, y: currentY },
       });
 
@@ -246,7 +313,8 @@ function processTraceNodes(
   }
 
   const rootNode = traceNodes.find((n) => n.nodeId === 'root') ?? traceNodes[0];
-  if (rootNode) renderBranch(rootNode, VISUALIZER_CONFIG.LAYOUT.INITIAL_X, VISUALIZER_CONFIG.LAYOUT.INITIAL_Y);
+  if (rootNode)
+    renderBranch(rootNode, VISUALIZER_CONFIG.LAYOUT.INITIAL_X, VISUALIZER_CONFIG.LAYOUT.INITIAL_Y);
 }
 
 interface PathVisualizerProps {
@@ -257,7 +325,9 @@ interface PathVisualizerProps {
  * Internal component for rendering the React Flow canvas.
  */
 function PathVisualizerContent({ trace }: PathVisualizerProps) {
-  const [selectedStep, setSelectedStep] = React.useState<TraceStep | { type: string; content: Record<string, unknown> } | null>(null);
+  const [selectedStep, setSelectedStep] = React.useState<
+    TraceStep | { type: string; content: Record<string, unknown> } | null
+  >(null);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const { fitView } = useReactFlow();
@@ -265,13 +335,13 @@ function PathVisualizerContent({ trace }: PathVisualizerProps) {
   useEffect(() => {
     const initialNodes: Node[] = [];
     const initialEdges: Edge[] = [];
-    
-    const nodesToProcess = (!trace.nodes || trace.nodes.length === 0) ? [trace] : trace.nodes;
+
+    const nodesToProcess = !trace.nodes || trace.nodes.length === 0 ? [trace] : trace.nodes;
     processTraceNodes(nodesToProcess, initialNodes, initialEdges, setSelectedStep);
 
     setNodes(initialNodes);
     setEdges(initialEdges);
-    
+
     setTimeout(() => {
       fitView({ padding: VISUALIZER_CONFIG.ZOOM.FIT_PADDING });
     }, 100);
@@ -280,11 +350,11 @@ function PathVisualizerContent({ trace }: PathVisualizerProps) {
   return (
     <div className="h-[600px] w-full bg-black/40 rounded-lg border border-white/5 relative group overflow-hidden cyber-border">
       <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-         <div className="text-[10px] text-cyber-green/60 font-mono tracking-widest bg-black/80 px-2 py-1 border border-cyber-green/30">
-           TRACE VISUALIZER
-         </div>
+        <div className="text-[10px] text-cyber-green/60 font-mono tracking-widest bg-black/80 px-2 py-1 border border-cyber-green/30">
+          TRACE VISUALIZER
+        </div>
       </div>
-      
+
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -297,14 +367,14 @@ function PathVisualizerContent({ trace }: PathVisualizerProps) {
         colorMode="dark"
       >
         <Background color={VISUALIZER_CONFIG.COLORS.BACKGROUND_GRID} gap={20} />
-        <Controls showInteractive={false} className="!bg-black/80 !border-white/10 !fill-cyber-green" />
+        <Controls
+          showInteractive={false}
+          className="!bg-black/80 !border-white/10 !fill-cyber-green"
+        />
       </ReactFlow>
 
       {selectedStep && (
-        <StepDetailPanel 
-          selectedStep={selectedStep} 
-          onClose={() => setSelectedStep(null)} 
-        />
+        <StepDetailPanel selectedStep={selectedStep} onClose={() => setSelectedStep(null)} />
       )}
     </div>
   );

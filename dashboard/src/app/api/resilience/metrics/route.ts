@@ -38,7 +38,9 @@ export const GET = withApiHandler(async () => {
   // Recovery success: percentage of recent failures that were subsequently resolved
   // This is distinct from errorRate — it measures incident resolution, not raw failure rate
   const recoverySuccess =
-    recentFailures > 0 ? Math.round((recentSuccesses / (recentFailures + recentSuccesses)) * 100) : 100;
+    recentFailures > 0
+      ? Math.round((recentSuccesses / (recentFailures + recentSuccesses)) * 100)
+      : 100;
 
   return {
     healthScore: Math.max(0, Math.min(100, healthScore)),

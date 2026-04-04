@@ -30,10 +30,16 @@ function renderContent(content: string) {
       <div className="space-y-3">
         {Object.entries(obj).map(([key, value]) => (
           <div key={key} className="bg-white/[0.03] border border-white/5 rounded-lg p-4">
-            <Typography variant="mono" className="text-[10px] uppercase tracking-widest text-white/40 mb-1 block">
-              {key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}
+            <Typography
+              variant="mono"
+              className="text-[10px] uppercase tracking-widest text-white/40 mb-1 block"
+            >
+              {key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase())}
             </Typography>
-            <Typography variant="body" className="text-sm text-white/80 leading-relaxed whitespace-pre-wrap">
+            <Typography
+              variant="body"
+              className="text-sm text-white/80 leading-relaxed whitespace-pre-wrap"
+            >
               {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
             </Typography>
           </div>
@@ -49,7 +55,12 @@ function renderContent(content: string) {
   return <p className="text-white/90 leading-relaxed text-[15px] whitespace-pre-wrap">{content}</p>;
 }
 
-export default function MemoryDetailModal({ item, onClose, onDelete, onUpdate }: MemoryDetailModalProps) {
+export default function MemoryDetailModal({
+  item,
+  onClose,
+  onDelete,
+  onUpdate,
+}: MemoryDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -102,7 +113,8 @@ export default function MemoryDetailModal({ item, onClose, onDelete, onUpdate }:
 
   const handleDelete = () => {
     // eslint-disable-next-line no-alert
-    if (!confirm('Are you sure you want to delete this memory? This action cannot be undone.')) return;
+    if (!confirm('Are you sure you want to delete this memory? This action cannot be undone.'))
+      return;
     onDelete(item.userId, item.timestamp);
     onClose();
   };
@@ -144,10 +156,15 @@ export default function MemoryDetailModal({ item, onClose, onDelete, onUpdate }:
                 onClick={handleSave}
                 disabled={isSaving}
                 className="text-cyber-green/60 hover:text-cyber-green p-1"
-                icon={isSaving ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
+                icon={
+                  isSaving ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />
+                }
               />
             )}
-            <button onClick={onClose} className="text-white/40 hover:text-white transition-colors p-1 ml-2">
+            <button
+              onClick={onClose}
+              className="text-white/40 hover:text-white transition-colors p-1 ml-2"
+            >
               <X size={18} />
             </button>
           </div>
@@ -188,7 +205,9 @@ export default function MemoryDetailModal({ item, onClose, onDelete, onUpdate }:
                 <Clock size={11} className="text-white/30" />
                 <span className="text-white/40">Recalled</span>
                 <span className="text-white/50">
-                  {item.metadata?.lastAccessed ? new Date(item.metadata.lastAccessed).toLocaleDateString() : 'Never'}
+                  {item.metadata?.lastAccessed
+                    ? new Date(item.metadata.lastAccessed).toLocaleDateString()
+                    : 'Never'}
                 </span>
               </div>
               {item.metadata?.impact != null && (

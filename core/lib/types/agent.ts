@@ -183,6 +183,7 @@ export enum AgentType {
 export enum TraceSource {
   DASHBOARD = 'dashboard',
   TELEGRAM = 'telegram',
+  API = 'api',
   SYSTEM = 'system',
   UNKNOWN = 'unknown',
 }

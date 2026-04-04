@@ -26,17 +26,23 @@ async function getAgentConfigs() {
   try {
     const { AgentRegistry } = await import('@claw/core/lib/registry');
     const configs = await AgentRegistry.getAllConfigs();
-    const agents = Object.values(configs).map(c => ({
+    const agents = Object.values(configs).map((c) => ({
       id: c.id,
       name: c.name,
-      tools: c.tools ?? []
+      tools: c.tools ?? [],
     }));
 
     // Fetch individual usage for each agent
-    const agentsWithUsage = await Promise.all(agents.map(async (a) => {
-      const usage = (await AgentRegistry.getRawConfig(`tool_usage_${a.id}`)) as Record<string, { count: number; lastUsed: number }> ?? {};
-      return { ...a, usage };
-    }));
+    const agentsWithUsage = await Promise.all(
+      agents.map(async (a) => {
+        const usage =
+          ((await AgentRegistry.getRawConfig(`tool_usage_${a.id}`)) as Record<
+            string,
+            { count: number; lastUsed: number }
+          >) ?? {};
+        return { ...a, usage };
+      })
+    );
 
     return agentsWithUsage;
   } catch (e) {
@@ -49,7 +55,7 @@ export default async function CapabilitiesPage() {
   const [usage, mcpServers, agents] = await Promise.all([
     getToolUsage(),
     getMCPServers(),
-    getAgentConfigs()
+    getAgentConfigs(),
   ]);
   const allTools = await getAllTools(usage);
 
@@ -65,28 +71,48 @@ export default async function CapabilitiesPage() {
           </Typography>
         </div>
         <div className="flex gap-4">
-            <div className="flex flex-col items-center text-center">
-                <Typography variant="mono" color="muted" className="text-[10px] uppercase tracking-widest opacity-40 mb-1">LOCAL</Typography>
-                <Badge variant="outline" className="px-4 py-1 font-bold text-xs border-yellow-500/20 text-yellow-500/60 uppercase">{allTools.filter(t => !t.isExternal).length}</Badge>
-            </div>
-            <div className="flex flex-col items-center text-center">
-                <Typography variant="mono" color="muted" className="text-[10px] uppercase tracking-widest opacity-40 mb-1">BRIDGES</Typography>
-                <Badge variant="outline" className="px-4 py-1 font-bold text-xs border-cyber-blue/20 text-cyber-blue/60 uppercase">{Object.keys(mcpServers).length}</Badge>
-            </div>
+          <div className="flex flex-col items-center text-center">
+            <Typography
+              variant="mono"
+              color="muted"
+              className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
+            >
+              LOCAL
+            </Typography>
+            <Badge
+              variant="outline"
+              className="px-4 py-1 font-bold text-xs border-yellow-500/20 text-yellow-500/60 uppercase"
+            >
+              {allTools.filter((t) => !t.isExternal).length}
+            </Badge>
+          </div>
+          <div className="flex flex-col items-center text-center">
+            <Typography
+              variant="mono"
+              color="muted"
+              className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
+            >
+              BRIDGES
+            </Typography>
+            <Badge
+              variant="outline"
+              className="px-4 py-1 font-bold text-xs border-cyber-blue/20 text-cyber-blue/60 uppercase"
+            >
+              {Object.keys(mcpServers).length}
+            </Badge>
+          </div>
         </div>
       </header>
 
-      <CapabilitiesView 
-        allTools={allTools} 
-        mcpServers={mcpServers}
-        agents={agents}
-      />
+      <CapabilitiesView allTools={allTools} mcpServers={mcpServers} agents={agents} />
 
       <div className="glass-card p-6 border-white/5 text-white/40 flex items-center gap-4">
         <AlertCircle size={20} className="text-[var(--cyber-blue)]/60 shrink-0" />
         <p className="text-[10px] uppercase tracking-widest leading-relaxed">
-          [SYSTEM_ADVISORY]: This registry defines the global functional baseline. To assign these tools to specific agents, 
-          navigate to the <span className="text-[var(--cyber-blue)] mx-1 font-bold">Agents</span> page and select &quot;Configure Tools&quot; for the desired entity.
+          [SYSTEM_ADVISORY]: This registry defines the global functional baseline. To assign these
+          tools to specific agents, navigate to the{' '}
+          <span className="text-[var(--cyber-blue)] mx-1 font-bold">Agents</span> page and select
+          &quot;Configure Tools&quot; for the desired entity.
         </p>
       </div>
     </main>

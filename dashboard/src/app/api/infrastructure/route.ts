@@ -19,7 +19,7 @@ const INFRA_LABELS = {
 /**
  * GET handler for infrastructure topology.
  * Discovers and returns the system's infrastructure nodes and their relationships.
- * 
+ *
  * @returns A promise that resolves to a NextResponse containing the topology JSON.
  */
 export async function GET(): Promise<NextResponse> {
@@ -29,7 +29,7 @@ export async function GET(): Promise<NextResponse> {
 
     // 1. Try to load full system topology from DynamoDB (persisted by Build Monitor)
     const storedTopology = await AgentRegistry.getFullTopology();
-    
+
     // 2. Perform Live Discovery to get latest state
     console.log('Performing live topology discovery...');
     const liveTopology = await discoverSystemTopology();
@@ -44,7 +44,6 @@ export async function GET(): Promise<NextResponse> {
       return NextResponse.json(liveTopology);
     }
 
-
     // 4. Static Fallback for initial deployment or broken environments
     const infraNodes: Array<{ id: string; type: string; label: string; description?: string }> = [];
     if (Resource.AgentBus) {
@@ -53,7 +52,12 @@ export async function GET(): Promise<NextResponse> {
     if (Resource.MemoryTable) {
       infraNodes.push({ id: INFRA_IDS.MEMORY, type: 'infra', label: INFRA_LABELS.MEMORY });
     }
-    infraNodes.push({ id: INFRA_IDS.CODEBUILD, type: 'infra', label: INFRA_LABELS.CODEBUILD, description: 'AWS CodeBuild Service' });
+    infraNodes.push({
+      id: INFRA_IDS.CODEBUILD,
+      type: 'infra',
+      label: INFRA_LABELS.CODEBUILD,
+      description: 'AWS CodeBuild Service',
+    });
 
     return NextResponse.json({ nodes: infraNodes, edges: [] });
   } catch (error) {

@@ -17,7 +17,11 @@ export interface UseRealtimeOptions {
  * Shared hook for AWS IoT Core MQTT connectivity.
  * Used by Chat, Collaboration Canvas, and Resilience Gauge.
  */
-export function useRealtime({ topics = [], onMessage, userId = 'dashboard-user' }: UseRealtimeOptions = {}) {
+export function useRealtime({
+  topics = [],
+  onMessage,
+  userId = 'dashboard-user',
+}: UseRealtimeOptions = {}) {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const mqttClientRef = useRef<mqtt.MqttClient | null>(null);
@@ -39,11 +43,11 @@ export function useRealtime({ topics = [], onMessage, userId = 'dashboard-user' 
         }
 
         // AWS IoT WebSockets require the /mqtt path
-        const baseUrl = config.realtime.url.endsWith('/mqtt') 
-          ? config.realtime.url 
+        const baseUrl = config.realtime.url.endsWith('/mqtt')
+          ? config.realtime.url
           : `${config.realtime.url}/mqtt`;
 
-        const mqttUrl = config.realtime.authorizer 
+        const mqttUrl = config.realtime.authorizer
           ? `${baseUrl}?x-amz-customauthorizer-name=${config.realtime.authorizer}`
           : baseUrl;
 
@@ -61,12 +65,12 @@ export function useRealtime({ topics = [], onMessage, userId = 'dashboard-user' 
           setIsConnected(true);
           setError(null);
           console.log('[Realtime] Connected to IoT Core');
-          
+
           // Default subscriptions
           const defaultTopics = [`users/${userId}/#`];
           const allTopics = Array.from(new Set([...defaultTopics, ...topics]));
-          
-          allTopics.forEach(topic => {
+
+          allTopics.forEach((topic) => {
             console.log(`[Realtime] Subscribing to: ${topic}`);
             client.subscribe(topic);
           });

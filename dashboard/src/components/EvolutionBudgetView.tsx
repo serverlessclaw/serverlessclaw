@@ -18,9 +18,16 @@ export default function EvolutionBudgetView({ budgets }: { budgets: TrackBudget[
           <div className="p-3 bg-cyber-blue/10 rounded-xl text-cyber-blue">
             <DollarSign size={20} />
           </div>
-          <Typography variant="mono" className="text-xs uppercase tracking-widest text-white/40 font-bold">TOTAL_ALLOCATED</Typography>
+          <Typography
+            variant="mono"
+            className="text-xs uppercase tracking-widest text-white/40 font-bold"
+          >
+            TOTAL_ALLOCATED
+          </Typography>
         </div>
-        <Typography variant="h2" glow>${totalAllocated.toFixed(2)}</Typography>
+        <Typography variant="h2" glow>
+          ${totalAllocated.toFixed(2)}
+        </Typography>
       </div>
 
       <div className="bg-white/5 border border-white/10 p-6 rounded-2xl relative overflow-hidden group">
@@ -29,9 +36,16 @@ export default function EvolutionBudgetView({ budgets }: { budgets: TrackBudget[
           <div className="p-3 bg-cyber-green/10 rounded-xl text-cyber-green">
             <TrendingUp size={20} />
           </div>
-          <Typography variant="mono" className="text-xs uppercase tracking-widest text-white/40 font-bold">TOTAL_SPENT</Typography>
+          <Typography
+            variant="mono"
+            className="text-xs uppercase tracking-widest text-white/40 font-bold"
+          >
+            TOTAL_SPENT
+          </Typography>
         </div>
-        <Typography variant="h2" className="text-cyber-green" glow>${totalSpent.toFixed(2)}</Typography>
+        <Typography variant="h2" className="text-cyber-green" glow>
+          ${totalSpent.toFixed(2)}
+        </Typography>
       </div>
 
       <div className="bg-white/5 border border-white/10 p-6 rounded-2xl relative overflow-hidden group">
@@ -40,9 +54,16 @@ export default function EvolutionBudgetView({ budgets }: { budgets: TrackBudget[
           <div className="p-3 bg-amber-500/10 rounded-xl text-amber-500">
             <PieChart size={20} />
           </div>
-          <Typography variant="mono" className="text-xs uppercase tracking-widest text-white/40 font-bold">BUDGET_UTILIZATION</Typography>
+          <Typography
+            variant="mono"
+            className="text-xs uppercase tracking-widest text-white/40 font-bold"
+          >
+            BUDGET_UTILIZATION
+          </Typography>
         </div>
-        <Typography variant="h2" className="text-amber-500" glow>{totalPercent.toFixed(1)}%</Typography>
+        <Typography variant="h2" className="text-amber-500" glow>
+          {totalPercent.toFixed(1)}%
+        </Typography>
       </div>
     </div>
   );

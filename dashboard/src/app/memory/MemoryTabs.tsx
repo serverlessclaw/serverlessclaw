@@ -19,9 +19,9 @@ interface MemoryTabsProps {
 export default function MemoryTabs({ tabs }: MemoryTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   if (!tabs || tabs.length === 0) return null;
-  
+
   const activeTab = searchParams.get('tab') || tabs[0]?.id || '';
 
   const handleTabChange = (tabId: string) => {
@@ -45,16 +45,16 @@ export default function MemoryTabs({ tabs }: MemoryTabsProps) {
           <span className={`${activeTab === tab.id ? 'text-cyber-blue' : 'text-muted'}`}>
             {tab.icon}
           </span>
-          <Typography 
-            variant="mono" 
-            weight={activeTab === tab.id ? "bold" : "medium"} 
-            uppercase 
+          <Typography
+            variant="mono"
+            weight={activeTab === tab.id ? 'bold' : 'medium'}
+            uppercase
             className="text-[11px] tracking-widest"
           >
             {tab.label}
           </Typography>
-          <Badge 
-            variant={activeTab === tab.id ? "intel" : "outline"} 
+          <Badge
+            variant={activeTab === tab.id ? 'intel' : 'outline'}
             className="ml-1 px-2 py-0.5 text-[10px] font-black"
           >
             {tab.count}

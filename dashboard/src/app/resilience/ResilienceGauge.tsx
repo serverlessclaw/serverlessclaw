@@ -69,11 +69,11 @@ export default function ResilienceGauge({
         />
       </svg>
       {/* Center text */}
-      <div className="absolute flex flex-col items-center justify-center" style={{ width: size, height: size }}>
-        <span
-          className="text-xl font-bold font-mono"
-          style={{ color }}
-        >
+      <div
+        className="absolute flex flex-col items-center justify-center"
+        style={{ width: size, height: size }}
+      >
+        <span className="text-xl font-bold font-mono" style={{ color }}>
           {Math.round(value)}%
         </span>
       </div>

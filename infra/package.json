@@ -11,6 +11,8 @@
   },
   "scripts": {
     "test": "vitest run",
+    "test-silent": "vitest run --reporter=dot --config ../vitest.config.ts",
+    "test-coverage": "vitest run --coverage --config ../vitest.config.ts",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "format-check": "prettier --check . --ignore-path ../.prettierignore",

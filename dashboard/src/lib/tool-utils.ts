@@ -18,7 +18,12 @@ interface GetAllToolsOptions {
 export async function getToolUsage(): Promise<Record<string, { count: number; lastUsed: number }>> {
   try {
     const { AgentRegistry } = await import('@claw/core/lib/registry');
-    return (await AgentRegistry.getRawConfig('tool_usage')) as Record<string, { count: number; lastUsed: number }> ?? {};
+    return (
+      ((await AgentRegistry.getRawConfig('tool_usage')) as Record<
+        string,
+        { count: number; lastUsed: number }
+      >) ?? {}
+    );
   } catch (e) {
     console.error('Error fetching tool usage:', e);
     return {};
@@ -41,23 +46,32 @@ export async function getAllTools(
     const { MCPBridge } = await import('@claw/core/lib/mcp');
 
     // 1. Local tools
-    const localTools = Object.values(tools).map(t => ({
+    const localTools = Object.values(tools).map((t) => ({
       name: t.name,
       description: t.description,
       usage: usage[t.name] ?? { count: 0, lastUsed: 0 },
-      isExternal: false
+      isExternal: false,
     }));
 
     // 2. MCP tools (use cache by default for dashboard speed)
     let externalToolsDefinitions: { name: string; description: string }[] = [];
     if (forceRefresh) {
-      externalToolsDefinitions = (await MCPBridge.getExternalTools()) as { name: string; description: string }[];
+      externalToolsDefinitions = (await MCPBridge.getExternalTools()) as {
+        name: string;
+        description: string;
+      }[];
     } else {
-      externalToolsDefinitions = (await MCPBridge.getCachedTools()) as { name: string; description: string }[];
+      externalToolsDefinitions = (await MCPBridge.getCachedTools()) as {
+        name: string;
+        description: string;
+      }[];
       // If cache is empty, use skipConnection mode to avoid timeout and ENOSPC
       // This shows server names without actually connecting to them (no npx execution)
       if (externalToolsDefinitions.length === 0) {
-        externalToolsDefinitions = (await MCPBridge.getExternalTools(undefined, true)) as { name: string; description: string }[];
+        externalToolsDefinitions = (await MCPBridge.getExternalTools(undefined, true)) as {
+          name: string;
+          description: string;
+        }[];
       }
     }
 
@@ -65,17 +79,17 @@ export async function getAllTools(
       name: t.name,
       description: t.description,
       usage: usage[t.name] ?? { count: 0, lastUsed: 0 },
-      isExternal: true
+      isExternal: true,
     }));
 
     return [...localTools, ...mcpTools];
   } catch (e) {
     console.error('Error fetching all tools:', e);
-    return Object.values(tools).map(t => ({
+    return Object.values(tools).map((t) => ({
       name: t.name,
       description: t.description,
       usage: usage[t.name] ?? { count: 0, lastUsed: 0 },
-      isExternal: false
+      isExternal: false,
     }));
   }
 }
