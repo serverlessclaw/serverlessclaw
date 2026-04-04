@@ -22,7 +22,7 @@ test-tier-3: ## Run Tier 3: Deployment health and E2E (uses .sst/outputs.json if
 	fi ; \
 	if [ -z "$$API_URL" ]; then $(call log_error,API URL is required for Tier 3); exit 1; fi; \
 	if [ -z "$$FINAL_DASHBOARD_URL" ]; then $(call log_error,DASHBOARD URL is required for Tier 3); exit 1; fi; \
-	$(call run_parallel_gate,verify~$(MAKE) verify URL=$$API_URL||e2e~$(MAKE) test-e2e-deployed URL=$$FINAL_DASHBOARD_URL)
+	@$(call run_parallel_gate,verify~$(MAKE) verify URL=$$API_URL||e2e~$(MAKE) test-e2e-deployed URL=$$FINAL_DASHBOARD_URL)
 
 verify: ## Verify the deployment health. Usage: make verify URL=https://...
 	@$(call log_info,Verifying deployment health at $(URL)...)

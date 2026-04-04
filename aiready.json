@@ -54,7 +54,7 @@
     "context-analyzer": {
       "maxContextBudget": 128000,
       "minCohesion": 0.6,
-      "maxDepth": 8,
+      "maxDepth": 15,
       "maxFragmentation": 0.4,
       "focus": "all",
       "includeNodeModules": false
@@ -96,11 +96,16 @@
         "S3",
         "ARN",
         "SST",
-        "DDB",
         "TTL",
         "PK",
         "SK",
-        "LKG"
+        "LKG",
+        "QA",
+        "HITL",
+        "ROI",
+        "AST",
+        "MCP",
+        "DDB"
       ],
       "disableChecks": [
         "naming-consistency:const-uppercase-snake-case",

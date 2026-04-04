@@ -9,11 +9,11 @@ include makefiles/Makefile.release.mk
 
 pre-commit: ## Run pre-commit checks in parallel (lint-staged, type-check, docs-check, test-silent)
 	@$(call log_step,Running pre-commit checks in parallel...)
-	$(call run_parallel_gate,lint~$(MAKE) lint-staged||typecheck~$(MAKE) type-check||docs~$(MAKE) docs-check||test~$(MAKE) test-silent)
+	@$(call run_parallel_gate,lint~$(MAKE) lint-staged||typecheck~$(MAKE) type-check||docs~$(MAKE) docs-check||test~$(MAKE) test-silent)
 
 pre-push: ## Run fast quality gate in parallel (rebase check + fast gate + security + aiready)
 	@$(call log_step,Running pre-push checks in parallel...)
-	$(call run_parallel_gate,rebase~$(MAKE) verify-up-to-date||gate~$(MAKE) gate-fast||security~$(MAKE) security-scan||aiready~$(MAKE) aiready)
+	@$(call run_parallel_gate,rebase~$(MAKE) verify-up-to-date||gate~$(MAKE) gate-fast||security~$(MAKE) security-scan||aiready~$(MAKE) aiready)
 
 help-agent: help ## Show optimized help for AI agents
 

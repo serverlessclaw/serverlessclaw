@@ -416,6 +416,7 @@ export const EVENT_SCHEMA_MAP = {
   [`${AgentType.RESEARCHER}_task`]: TASK_EVENT_SCHEMA,
   [EventType.RESEARCH_TASK as string]: TASK_EVENT_SCHEMA,
   [EventType.MERGER_TASK as string]: TASK_EVENT_SCHEMA,
+  [EventType.COGNITIVE_HEALTH_CHECK as string]: TASK_EVENT_SCHEMA,
 } as const;
 
 /** Keys of the EVENT_SCHEMA_MAP (for type-safe event type lookups). */

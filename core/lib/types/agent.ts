@@ -378,33 +378,6 @@ export interface QAFailureFeedback {
 }
 
 /**
- * Individual issue identified during QA audit feedback.
- */
-export interface QAFailureIssue {
-  /** File path where the issue was found. */
-  file: string;
-  /** Line number of the issue (1-indexed). */
-  line: number;
-  /** Clear explanation of what failed. */
-  description: string;
-  /** What should happen (expected behavior). */
-  expected: string;
-  /** What actually happened (actual behavior). */
-  actual: string;
-}
-
-/**
- * Structured feedback block returned by QA Auditor on REOPEN status.
- * Machine-readable format enabling Coder Agent to parse and fix issues autonomously.
- */
-export interface QAFailureFeedback {
-  /** Type of failure: logic error, missing test, docs drift, or security risk. */
-  failureType: 'LOGIC_ERROR' | 'MISSING_TEST' | 'DOCS_DRIFT' | 'SECURITY_RISK';
-  /** List of specific issues found during audit. */
-  issues: QAFailureIssue[];
-}
-
-/**
  * Generic interface for communication channels (Telegram, Slack, IoT).
  */
 export interface IChannel {

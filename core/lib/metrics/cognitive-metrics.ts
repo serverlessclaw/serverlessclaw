@@ -627,8 +627,8 @@ export class HealthTrendAnalyzer {
       try {
         const items = await this.base.scanByPrefix(prefix);
         allItems.push(...items);
-      } catch {
-        // Skip prefixes that fail
+      } catch (error) {
+        logger.warn('Failed to scan prefix for memory health analysis', { prefix, error });
       }
     }
 
