@@ -90,7 +90,8 @@ The **Build Monitor** resolves metadata by prioritizing DynamoDB but falling bac
 
 If a deployment fails, the **Build Monitor** detects the failure and emits a `SYSTEM_BUILD_FAILED` event.
 
-- **Triage**: SuperClaw analyzes the failure logs.
+- **Triage**: SuperClaw analyzes the failure logs using the **Failure Manifest** (see [DEVOPS.md#autonomous-remediation--failure-manifests](./DEVOPS.md#autonomous-remediation--failure-manifests)).
+- **High-Signal Remediation**: The system automatically reconstructs the failing workspace state (including uncommitted patches) to enable precise fixes by the Coder agent.
 - **Rollback**: If consecutive failures occur, the **Dead Man's Switch** triggers an emergency Git rollback to the last known stable commit.
 
 ## Gap Status Flow

@@ -123,6 +123,93 @@ When a build fails in CodeBuild, a `failure-manifest.json` is generated and uplo
 4. **High-Signal Fix**: The Coder Agent uses the `failures` array to pinpoint the exact file and error, bypassing the need to parse raw CloudWatch logs. If the agent needs to read full log files or other artifacts, it uses the `aws-s3_read_file` tool (MCP).
 5. **Pre-Flight Validation**: The Agent MUST run `make fix` and `make check` locally before calling `triggerDeployment` again.
 
+### Deployment & Remediation Flows
+
+The system distinguishes between direct single-agent deployments and parallel swarm deployments.
+
+#### 1. Single Coder Workflow (Direct)
+
+```text
+[ Coder Agent ]
+      |
+      +-- (1) implements logic & tests
+      |
+      +-- (2) tool: stageChanges() --------> [ S3 Bucket ]
+      |       (zips local files)        (staged_changes.zip)
+      |                                        |
+      +-- (3) tool: triggerDeployment()        |
+                   |                           |
+                   v                           |
+          [ CodeBuild Pipeline ] <-------------+
+          (pulls main + unzips S3)
+                   |
+         +---------+---------+
+         |                   |
+    [ SUCCESS ]          [ FAILURE ]
+         |                   |
+  (4) git push main          +--> [ Build Monitor ]
+  (Final Sync)                       |
+                               (5) event: SYSTEM_BUILD_FAILED
+                                   (Attach failure-manifest.json)
+                                     |
+                                     v
+[ Coder Agent ] <-------------- [ SuperClaw ]
+      |
+  (6) Init Workspace (Main branch)
+  (7) Reads manifest, fixes, and loops back to (2)
+```
+
+#### 2. Parallel Swarm Workflow (Merger)
+
+In parallel flows, Coders produce "Patches" which are reconciled by a Merger Agent before deployment.
+
+```text
+[ SuperClaw ] --(Decompose)--> [ Coder A ]  &  [ Coder B ]
+                                    |              |
+                                    +---(Patch A)--+---(Patch B)
+                                             |
+                                             v
+                                     [ Merger Agent ]
+                                             |
+                            (1) Reconcile Patch A + Patch B
+                                             |
+                            (2) tool: stageChanges() --------> [ S3 Bucket ]
+                                (zips the COMBINED code)    (staged_changes.zip)
+                                             |                       |
+                            (3) tool: triggerDeployment()            |
+                                             |                       |
+                                             v                       |
+                                    [ CodeBuild Pipeline ] <---------+
+                                    (Main + Combined Zip)
+                                             |
+                                   +---------+---------+
+                                   |                   |
+                              [ SUCCESS ]          [ FAILURE ]
+                                   |                   |
+                            (4) git push main          +--> [ Build Monitor ]
+                                                               |
+                                                         (5) event: SYSTEM_BUILD_FAILED
+                                                             (Attach failure-manifest.json)
+                                                               |
+                                                               v
+[ Coder Agent (The Fixer) ] <---------------------------- [ SuperClaw ]
+      |
+  (6) Init Workspace (Main branch)
+      +-- **CRITICAL**: Download & Unzip S3 staged_changes.zip
+      |   (Fixer now sees Coder A + Coder B's work as "Unstaged")
+      |
+  (7) Debugs the COMBINED failure, fixes, and re-triggers
+```
+
+### Workspace Layering Logic
+
+To ensure agents always work on high-signal context, the **Agent Workspace Manager** reconstructs the exact state of the failed build:
+
+1.  **Base Layer (The "Last Deployment")**: The agent copies everything from `/var/task` (the latest stable code that passed the previous pipeline) into a writable `/tmp/workspace/` directory.
+2.  **Virtual Trunk**: The agent runs `git init` and `git commit` to establish a local baseline.
+3.  **Remediation Layer (The "Staged Changes")**: If remediating a failure (`applyStagedChanges: true`), the agent downloads `staged_changes.zip` from S3 and unzips it over the base layer.
+4.  **Result**: The agent sees the Merger's uncommitted work as "Unstaged Changes," allowing for a non-destructive fix that preserves parallel work.
+
 ---
 
 ## Environment & Secrets
