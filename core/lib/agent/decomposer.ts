@@ -15,6 +15,9 @@
 import { logger } from '../logger';
 import { AgentType } from '../types/agent';
 
+/** Standard prefix for aggregated swarm results. */
+export const AGGREGATED_RESULTS_PREFIX = '[AGGREGATED_RESULTS]';
+
 /** Options for plan decomposition. */
 export interface DecompositionOptions {
   /** The default agent to assign if no specific intent is detected. */
@@ -107,6 +110,8 @@ export function decomposePlan(
 ): DecomposedPlan {
   const minLength = options.minLength ?? DEFAULT_MIN_PLAN_LENGTH;
   const maxTasks = options.maxSubTasks ?? DEFAULT_MAX_SUB_TASKS;
+
+  // 2026: Default to SuperClaw or Coder based on input
   const defaultAgent = options.defaultAgentId ?? AgentType.CODER;
 
   // Bypass length check if plan uses explicit ### Goal: headers (structured missions)

@@ -13,7 +13,7 @@ We distinguish between **Autonomous Agents** (LLM-powered decision-makers) and *
 
 | Agent                   | Runtime                              | Config Source              | Responsibilities                                                                |
 | ----------------------- | ------------------------------------ | -------------------------- | ------------------------------------------------------------------------------- |
-| **SuperClaw**           | `core/handlers/webhook.ts`           | `core/agents/superclaw.ts` | Interprets user intent, delegates, deploys                                      |
+| **SuperClaw**           | `core/handlers/webhook.ts`           | `core/agents/superclaw.ts` | Interprets user intent, delegates, deploys, self-decomposes missions |
 | **Coder Agent**         | `core/agents/coder.ts`               | `AgentRegistry` (Backbone) | Writes code, runs pre-flight checks                                             |
 | **Agent Runner**        | `core/handlers/agent-runner.ts`      | `AgentRegistry` (Dynamic)  | Generic runner for any user-defined agent                                       |
 | **Strategic Planner**   | `core/agents/strategic-planner.ts`   | `AgentRegistry` (Backbone) | Designs strategic evolution plans                                               |
@@ -44,7 +44,7 @@ Specialized agent for AST-aware patch reconciliation. Used during parallel evolu
 
 ## 🔍 Research & Discovery Mode
 
-The system features a specialized **Research Agent** (Researcher) designed for deep technical exploration, library analysis, and pattern discovery. It can be triggered by the **Strategic Planner** or **SuperClaw** using the `technicalResearch` tool.
+The system features a specialized **Research Agent** (Researcher) designed for deep technical exploration, library analysis, and pattern discovery. It can be triggered by the **Strategic Planner** or **SuperClaw** using the `requestResearch` tool.
 
 ### Research Workflow
 
@@ -117,6 +117,30 @@ Users can set a global `optimization_policy` to control system-wide reasoning de
 - **AGGRESSIVE**: Forces `DEEP` reasoning for all nodes (Highest Quality, Highest Cost).
 - **CONSERVATIVE**: Forces `FAST` reasoning (Lowest Latency, Lowest Cost).
 - **BALANCED**: Respects the task's intended profile.
+
+---
+
+## 🌊 Swarm Orchestration (Stellar Harbor)
+
+The system supports recursive, asynchronous task decomposition. Any agent can act as a **Mission Commander** by returning a plan with structured markers.
+
+### 1. Mission Decomposition
+When an agent returns a response containing:
+- `### Goal: [AgentType] - [Task]`
+- `### Step: [Task]`
+
+The `AgentRunner` automatically intercepts this, pauses the initiator, and dispatches $N$ parallel tasks via the `AgentBus`.
+
+### 2. Recursive Depth Control
+To prevent runaway loops, the system enforces a strict recursive depth limit defined in `SWARM.MAX_RECURSIVE_DEPTH`.
+- **Default Limit**: 5 levels (e.g., Strategic Planner -> Coder -> Researcher -> Sub-Researcher -> Specialist).
+- **Enforcement**: If a task is received at the maximum depth, further decomposition is disabled and the agent must complete the task atomically.
+
+### 3. Worker Feedback Toggle
+During massive swarms, sub-agents (workers) can create significant dashboard noise.
+- **Config Key**: `worker_feedback_enabled` (Default: `true`)
+- **Behavior**: If `false`, agents initiated by anyone other than the `orchestrator` (e.g., sub-agents) will skip MQTT chunk emission.
+- **Root Recognition**: `SuperClaw` and any agent initiated directly by the `orchestrator` are always considered **Root** and will always emit feedback regardless of this toggle.
 
 ---
 
@@ -296,6 +320,10 @@ Gaps now enforce strict state guards in `updateGapStatus`. A gap can only transi
 ### 2. Universal Gap Locking
 
 All gap state modifications now require lock acquisition. The **Strategic Planner** acquires locks not only for the primary `gapId` but also for every `coveredGapId` before transitioning them to `PLANNED`. The **Coder Agent** acquires locks before transitioning gaps to `PROGRESS`. Locked gaps are skipped with a warning rather than silently corrupted, preventing race conditions when multiple agents target overlapping gaps.
+
+### Neural Mission Decomposition Flow
+
+When any agent (especially SuperClaw or the Strategic Planner) generates a complex plan using standardized markers (`### Goal:` or `### Step:`), the system automatically decomposes it into parallel sub-tasks via the `AgentRunner`:
 
 ### 3. Safe Gap Transitions
 

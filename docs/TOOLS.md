@@ -8,6 +8,7 @@
 
 | Tool                      | Purpose                                                                               | Protected? | Writes to Cloud? |
 | ------------------------- | ------------------------------------------------------------------------------------- | :--------: | :--------------: |
+| `requestResearch`        | Dispatches a technical research mission to the Researcher Agent. Standardized parallel fan-out. |     —      |        ✅        |
 | `dispatchTask`            | Sends a task to EventBridge → Specialized Agent                                       |     —      |        ✅        |
 | `seekClarification`       | Pauses current agent and requests directions from initiator                           |     —      |        ✅        |
 | `provideClarification`    | Answers a request and resumes the target agent                                        |     —      |        ✅        |

@@ -85,6 +85,7 @@ export enum ConnectionProfile {
   TRACE = 'trace',
   KNOWLEDGE = 'knowledge',
   DEPLOYER = 'deployer',
+  MEMORY_TABLE = 'memoryTable',
 }
 
 /**

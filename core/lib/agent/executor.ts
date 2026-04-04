@@ -273,7 +273,16 @@ export class AgentExecutor {
     const cancellationMsg = await ExecutorHelper.checkCancellation(taskId);
     if (cancellationMsg) {
       if (emitter) {
-        emitter.emitChunk(userId, sessionId, traceId, cancellationMsg, this.agentName);
+        emitter.emitChunk(
+          userId,
+          sessionId,
+          traceId,
+          cancellationMsg,
+          this.agentName,
+          false,
+          undefined,
+          options.currentInitiator
+        );
       }
       yield { content: cancellationMsg };
       return;
@@ -399,7 +408,16 @@ export class AgentExecutor {
           const [newThought, thoughtDelta] = appendDedup(fullThought, chunk.thought);
           fullThought = newThought;
           if (emitter && thoughtDelta) {
-            emitter.emitChunk(userId, sessionId, traceId, thoughtDelta, this.agentName, true);
+            emitter.emitChunk(
+              userId,
+              sessionId,
+              traceId,
+              thoughtDelta,
+              this.agentName,
+              true,
+              undefined,
+              options.currentInitiator
+            );
           }
         }
 
@@ -416,17 +434,44 @@ export class AgentExecutor {
                 // Handle basic escapes if any
                 newText = newText.replace(/\\n/g, '\n').replace(/\\"/g, '"');
                 if (newText && emitter)
-                  emitter.emitChunk(userId, sessionId, traceId, newText, this.agentName, false);
+                  emitter.emitChunk(
+                    userId,
+                    sessionId,
+                    traceId,
+                    newText,
+                    this.agentName,
+                    false,
+                    undefined,
+                    options.currentInitiator
+                  );
               }
             } else if (emitter) {
-              emitter.emitChunk(userId, sessionId, traceId, chunk.content, this.agentName, false);
+              emitter.emitChunk(
+                userId,
+                sessionId,
+                traceId,
+                chunk.content,
+                this.agentName,
+                false,
+                undefined,
+                options.currentInitiator
+              );
             }
           } else {
             // Text mode: emit deduped delta to UI
             const [newContent, contentDelta] = appendDedup(fullContent, chunk.content);
             fullContent = newContent;
             if (emitter && contentDelta) {
-              emitter.emitChunk(userId, sessionId, traceId, contentDelta, this.agentName, false);
+              emitter.emitChunk(
+                userId,
+                sessionId,
+                traceId,
+                contentDelta,
+                this.agentName,
+                false,
+                undefined,
+                options.currentInitiator
+              );
             }
           }
         }
@@ -471,7 +516,16 @@ export class AgentExecutor {
       if (isPauseTool && !fullContent) {
         const ackMsg = `I'm on it. I'll engage the appropriate agent for you.`;
         if (emitter) {
-          emitter.emitChunk(userId, sessionId, traceId, ackMsg, this.agentName);
+          emitter.emitChunk(
+            userId,
+            sessionId,
+            traceId,
+            ackMsg,
+            this.agentName,
+            false,
+            undefined,
+            options.currentInitiator
+          );
         }
         yield { content: ackMsg };
       }
@@ -504,7 +558,16 @@ export class AgentExecutor {
         if (toolResult.responseText) {
           const pauseMessage = `\n\n${ExecutorHelper.formatUserFriendlyResponse(toolResult.responseText)}`;
           if (emitter) {
-            emitter.emitChunk(userId, sessionId, traceId, pauseMessage, this.agentName);
+            emitter.emitChunk(
+              userId,
+              sessionId,
+              traceId,
+              pauseMessage,
+              this.agentName,
+              false,
+              undefined,
+              options.currentInitiator
+            );
           }
           yield { content: pauseMessage };
         }
@@ -690,7 +753,8 @@ export class AgentExecutor {
             `\n\n${approvalMsg}`,
             this.agentName,
             false,
-            opts as NonNullable<Message['options']>
+            opts as NonNullable<Message['options']>,
+            options.currentInitiator
           );
         return { content: `\n\n${approvalMsg}`, options: opts as NonNullable<Message['options']> };
       }

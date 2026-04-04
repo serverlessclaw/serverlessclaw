@@ -20,23 +20,26 @@ import {
   RESEARCHER_SYSTEM_PROMPT,
 } from '../agents/prompts/index';
 
-const TOOL_DISCOVER_SKILLS = TOOLS.discoverSkills;
-const TOOL_INSTALL_SKILL = TOOLS.installSkill;
-const TOOL_SAVE_MEMORY = TOOLS.saveMemory;
-const TOOL_SEEK_CLARIFICATION = TOOLS.seekClarification;
-const TOOL_PROVIDE_CLARIFICATION = TOOLS.provideClarification;
-const TOOL_recallKnowledge = TOOLS.recallKnowledge;
-const TOOL_SEND_MESSAGE = TOOLS.sendMessage;
-const TOOL_MANAGE_GAP = TOOLS.manageGap;
-const TOOL_REPORT_GAP = TOOLS.reportGap;
-const TOOL_CHECK_HEALTH = TOOLS.checkHealth;
-const TOOL_INSPECT_TOPOLOGY = TOOLS.inspectTopology;
-const TOOL_LIST_AGENTS = TOOLS.listAgents;
 /**
  * Backbone Registry: The single source of truth for essential system components.
  * Reserved for LLM-based Agents and logic-based Handlers.
  * All tools assigned to agents follow camelCase naming conventions.
  */
+
+const BACKBONE_LLM_CONFIG = {
+  provider: LLMProvider.MINIMAX,
+  model: MiniMaxModel.M2_7,
+};
+
+const UNIVERSAL_SYSTEM_TOOLS = [
+  TOOLS.saveMemory,
+  TOOLS.recallKnowledge,
+  TOOLS.sendMessage,
+  TOOLS.discoverSkills,
+  TOOLS.installSkill,
+  TOOLS.seekClarification,
+  TOOLS.provideClarification,
+];
 export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
   [AgentType.SUPERCLAW]: {
     id: AgentType.SUPERCLAW,
@@ -47,37 +50,27 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     icon: 'Bot',
     enabled: true,
     isBackbone: true,
-    provider: LLMProvider.MINIMAX,
-    model: MiniMaxModel.M2_7,
+    ...BACKBONE_LLM_CONFIG,
     reasoningProfile: ReasoningProfile.STANDARD,
     defaultCommunicationMode: 'text',
     tools: [
+      ...UNIVERSAL_SYSTEM_TOOLS,
       TOOLS.dispatchTask,
-      'signalOrchestration',
-
-      TOOL_LIST_AGENTS,
-      TOOL_recallKnowledge,
-
+      TOOLS.signalOrchestration,
+      TOOLS.listAgents,
       TOOLS.checkConfig,
-      TOOL_DISCOVER_SKILLS,
-      TOOL_INSTALL_SKILL,
-
-      'createCollaboration',
-      'joinCollaboration',
-      'getCollaborationContext',
-      'writeToCollaboration',
-      'closeCollaboration',
-      'listMyCollaborations',
-
+      TOOLS.createCollaboration,
+      TOOLS.joinCollaboration,
+      TOOLS.getCollaborationContext,
+      TOOLS.writeToCollaboration,
+      TOOLS.closeCollaboration,
+      TOOLS.listMyCollaborations,
       TOOLS.registerMCPServer,
-      TOOL_MANAGE_GAP,
-      TOOL_REPORT_GAP,
-      TOOL_SAVE_MEMORY,
-      TOOL_PROVIDE_CLARIFICATION,
-      TOOL_INSPECT_TOPOLOGY,
+      TOOLS.manageGap,
+      TOOLS.reportGap,
+      TOOLS.inspectTopology,
       'aws-s3_read_file',
       'aws-s3_list_objects',
-
       TOOLS.createAgent,
       TOOLS.deleteAgent,
       TOOLS.syncAgentRegistry,
@@ -86,6 +79,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       TOOLS.triggerBatchEvolution,
       TOOLS.prioritizeMemory,
       TOOLS.deleteTraces,
+      TOOLS.requestResearch,
     ],
     connectionProfile: [
       ConnectionProfile.BUS,
@@ -104,22 +98,21 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     icon: 'Code',
     enabled: true,
     isBackbone: true,
+    ...BACKBONE_LLM_CONFIG,
+    reasoningProfile: ReasoningProfile.DEEP,
     defaultCommunicationMode: 'json',
     tools: [
+      ...UNIVERSAL_SYSTEM_TOOLS,
       TOOLS.runTests,
-
       TOOLS.runShellCommand,
-
       TOOLS.stageChanges,
-
       TOOLS.generatePatch,
-
       TOOLS.triggerDeployment,
-
       TOOLS.validateCode,
-      TOOL_CHECK_HEALTH,
-
+      TOOLS.checkHealth,
       TOOLS.inspectTrace,
+      TOOLS.inspectTopology,
+      TOOLS.requestResearch,
       'aws-s3_read_file',
       'aws-s3_write_file',
       'aws-s3_list_objects',
@@ -137,17 +130,8 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       'fetch_get',
       'aws_list_resources',
       'aws_get_resource',
-      TOOL_SEND_MESSAGE,
-      TOOL_DISCOVER_SKILLS,
-      TOOL_INSTALL_SKILL,
-      TOOL_SAVE_MEMORY,
-      TOOL_SEEK_CLARIFICATION,
-      TOOL_INSPECT_TOPOLOGY,
     ],
     maxIterations: 50,
-    provider: LLMProvider.MINIMAX,
-    model: MiniMaxModel.M2_7,
-    reasoningProfile: ReasoningProfile.DEEP,
     connectionProfile: [
       ConnectionProfile.BUS,
       ConnectionProfile.MEMORY,
@@ -167,32 +151,26 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     icon: 'Brain',
     enabled: true,
     isBackbone: true,
-    provider: LLMProvider.MINIMAX,
-    model: MiniMaxModel.M2_7,
+    ...BACKBONE_LLM_CONFIG,
     reasoningProfile: ReasoningProfile.DEEP,
     defaultCommunicationMode: 'json',
     tools: [
-      'signalOrchestration',
-      'technicalResearch',
-      TOOL_recallKnowledge,
+      ...UNIVERSAL_SYSTEM_TOOLS,
+      TOOLS.signalOrchestration,
+      TOOLS.technicalResearch,
       TOOLS.dispatchTask,
-      TOOL_MANAGE_GAP,
-      TOOL_REPORT_GAP,
-      TOOL_SEND_MESSAGE,
+      TOOLS.manageGap,
+      TOOLS.reportGap,
+      TOOLS.requestResearch,
       TOOLS.listAgents,
       TOOLS.manageAgentTools,
-      TOOL_DISCOVER_SKILLS,
-      TOOL_INSTALL_SKILL,
-      TOOL_SAVE_MEMORY,
-      TOOL_SEEK_CLARIFICATION,
-      TOOL_PROVIDE_CLARIFICATION,
-      TOOL_INSPECT_TOPOLOGY,
-      'createCollaboration',
-      'joinCollaboration',
-      'getCollaborationContext',
-      'writeToCollaboration',
-      'closeCollaboration',
-      'listMyCollaborations',
+      TOOLS.inspectTopology,
+      TOOLS.createCollaboration,
+      TOOLS.joinCollaboration,
+      TOOLS.getCollaborationContext,
+      TOOLS.writeToCollaboration,
+      TOOLS.closeCollaboration,
+      TOOLS.listMyCollaborations,
     ],
     connectionProfile: [
       ConnectionProfile.BUS,
@@ -211,20 +189,10 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     icon: 'Search',
     enabled: true,
     isBackbone: true,
-    provider: LLMProvider.MINIMAX,
-    model: MiniMaxModel.M2_7,
+    ...BACKBONE_LLM_CONFIG,
     reasoningProfile: ReasoningProfile.STANDARD,
     defaultCommunicationMode: 'json',
-    tools: [
-      TOOL_recallKnowledge,
-      TOOL_MANAGE_GAP,
-      TOOL_REPORT_GAP,
-      TOOL_SEND_MESSAGE,
-      TOOL_DISCOVER_SKILLS,
-      TOOL_INSTALL_SKILL,
-      TOOL_SAVE_MEMORY,
-      TOOL_SEEK_CLARIFICATION,
-    ],
+    tools: [...UNIVERSAL_SYSTEM_TOOLS, TOOLS.manageGap, TOOLS.reportGap],
     connectionProfile: [
       ConnectionProfile.BUS,
       ConnectionProfile.MEMORY,
@@ -242,20 +210,10 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     icon: 'FlaskConical',
     enabled: true,
     isBackbone: true,
-    provider: LLMProvider.MINIMAX,
-    model: MiniMaxModel.M2_7,
+    ...BACKBONE_LLM_CONFIG,
     reasoningProfile: ReasoningProfile.STANDARD,
     defaultCommunicationMode: 'json',
-    tools: [
-      TOOL_recallKnowledge,
-      TOOL_CHECK_HEALTH,
-      TOOL_SEND_MESSAGE,
-      TOOL_DISCOVER_SKILLS,
-      TOOL_INSTALL_SKILL,
-      TOOL_SAVE_MEMORY,
-      TOOL_SEEK_CLARIFICATION,
-      'triggerTrunkSync',
-    ],
+    tools: [...UNIVERSAL_SYSTEM_TOOLS, TOOLS.checkHealth, TOOLS.triggerTrunkSync],
     connectionProfile: [
       ConnectionProfile.BUS,
       ConnectionProfile.MEMORY,
@@ -274,26 +232,20 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     icon: 'Shield',
     enabled: true,
     isBackbone: true,
-    provider: LLMProvider.MINIMAX,
-    model: MiniMaxModel.M2_7,
+    ...BACKBONE_LLM_CONFIG,
     reasoningProfile: ReasoningProfile.THINKING,
     defaultCommunicationMode: 'json',
     tools: [
-      TOOL_recallKnowledge,
-      TOOL_SEND_MESSAGE,
-      TOOL_DISCOVER_SKILLS,
-      TOOL_INSTALL_SKILL,
-      TOOL_SAVE_MEMORY,
-      TOOL_SEEK_CLARIFICATION,
+      ...UNIVERSAL_SYSTEM_TOOLS,
+      TOOLS.createCollaboration,
+      TOOLS.joinCollaboration,
+      TOOLS.getCollaborationContext,
+      TOOLS.writeToCollaboration,
+      TOOLS.closeCollaboration,
+      TOOLS.listMyCollaborations,
       'filesystem_read_file',
       'filesystem_list_directory',
       'grep_search',
-      'createCollaboration',
-      'joinCollaboration',
-      'getCollaborationContext',
-      'writeToCollaboration',
-      'closeCollaboration',
-      'listMyCollaborations',
     ],
     connectionProfile: [
       ConnectionProfile.BUS,
@@ -312,17 +264,15 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     icon: 'MessageSquareShare',
     enabled: true,
     isBackbone: true,
-    provider: LLMProvider.MINIMAX,
-    model: MiniMaxModel.M2_7,
+    ...BACKBONE_LLM_CONFIG,
     reasoningProfile: ReasoningProfile.STANDARD,
     defaultCommunicationMode: 'text',
     tools: [
-      TOOL_SEND_MESSAGE,
-      'getCollaborationContext',
-      'writeToCollaboration',
-      'closeCollaboration',
-      'listMyCollaborations',
-      TOOL_recallKnowledge,
+      ...UNIVERSAL_SYSTEM_TOOLS,
+      TOOLS.getCollaborationContext,
+      TOOLS.writeToCollaboration,
+      TOOLS.closeCollaboration,
+      TOOLS.listMyCollaborations,
     ],
     connectionProfile: [
       ConnectionProfile.BUS,
@@ -341,22 +291,20 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     icon: 'GitMerge',
     enabled: true,
     isBackbone: true,
-    provider: LLMProvider.MINIMAX,
-    model: MiniMaxModel.M2_7,
+    ...BACKBONE_LLM_CONFIG,
     reasoningProfile: ReasoningProfile.THINKING,
     defaultCommunicationMode: 'json',
     tools: [
-      TOOL_recallKnowledge,
+      ...UNIVERSAL_SYSTEM_TOOLS,
+      TOOLS.technicalResearch,
+      TOOLS.requestResearch,
       'filesystem_read_file',
       'filesystem_list_directory',
-      'technicalResearch',
       'git_status',
       'git_diff',
       'grep_search',
       'ast_search_code', // Structural analysis
       'ast_get_file_structure', // AST structure
-      TOOL_SEND_MESSAGE,
-      TOOL_SAVE_MEMORY,
     ],
     connectionProfile: [
       ConnectionProfile.BUS,
@@ -392,7 +340,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     icon: 'ShieldCheck',
     enabled: true,
     isBackbone: true,
-    connectionProfile: [ConnectionProfile.DEPLOYER, 'memoryTable'],
+    connectionProfile: [ConnectionProfile.DEPLOYER, ConnectionProfile.MEMORY_TABLE],
   },
   [AgentType.RESEARCHER]: {
     id: AgentType.RESEARCHER,
@@ -403,17 +351,12 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     icon: 'Microscope',
     enabled: true,
     isBackbone: true,
-    provider: LLMProvider.MINIMAX,
-    model: MiniMaxModel.M2_7,
+    ...BACKBONE_LLM_CONFIG,
     reasoningProfile: ReasoningProfile.THINKING,
     defaultCommunicationMode: 'text',
     tools: [
-      TOOL_recallKnowledge,
-      TOOL_SEND_MESSAGE,
-      TOOL_REPORT_GAP,
-      TOOL_SAVE_MEMORY,
-      TOOL_DISCOVER_SKILLS,
-      TOOL_INSTALL_SKILL,
+      ...UNIVERSAL_SYSTEM_TOOLS,
+      TOOLS.reportGap,
       'google-search_search',
       'fetch_get',
       'puppeteer_navigate',

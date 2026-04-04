@@ -334,6 +334,12 @@ export async function handleTaskResult(
         const overallStatus =
           successRate === 1 ? 'success' : successRate >= threshold ? 'partial' : 'failed';
 
+        if (overallStatus === 'partial') {
+          logger.info(
+            `[Aggregation] Partial success accepted for traceId ${traceId} (Rate: ${successRate}). Proceeding to synthesis.`
+          );
+        }
+
         // Atomic completion check to prevent double-firing with timeout handler
         const marked = await aggregator.markAsCompleted(userId, traceId, overallStatus);
 

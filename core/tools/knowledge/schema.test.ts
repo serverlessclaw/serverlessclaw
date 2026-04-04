@@ -22,6 +22,7 @@ describe('Knowledge Domain Tool Schemas', () => {
     'refineMemory',
     'forceReleaseLock',
     'technicalResearch',
+    'requestResearch',
     'registerMCPServer',
     'unregisterMCPServer',
     'getMcpConfig',

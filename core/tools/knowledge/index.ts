@@ -3,6 +3,7 @@ import * as storageTools from './storage';
 import * as mcpTools from './mcp';
 import * as metadataTools from './metadata';
 import * as configTools from './config';
+import * as researchTools from './research';
 
 /**
  * Knowledge Domain Tool Registry
@@ -13,7 +14,7 @@ export const knowledgeTools = {
   ...mcpTools,
   ...metadataTools,
   ...configTools,
-  technicalResearch: agentTools.technicalResearch,
+  ...researchTools,
 };
 
 export { knowledgeSchema } from './schema';

@@ -160,13 +160,34 @@ export class AgentEmitter {
     chunk: string,
     agentName?: string,
     isThought?: boolean,
-    options?: Array<{ label: string; value: string; type?: ButtonType }>
+    options?: Array<{ label: string; value: string; type?: ButtonType }>,
+    initiatorId: string = 'orchestrator'
   ): Promise<void> {
     try {
       const agentId = this.config?.id ?? 'unknown';
+
+      // Feature: Worker Feedback Toggle
+      // If this is a worker agent (initiated by another agent, not the orchestrator)
+      // and worker feedback is disabled, skip emission.
+      const isRoot = initiatorId === 'orchestrator' || agentId === 'superclaw';
+
+      if (!isRoot) {
+        const { AGENT_DEFAULTS } = await import('./executor');
+        let feedbackEnabled: boolean = AGENT_DEFAULTS.WORKER_FEEDBACK_ENABLED;
+        try {
+          if (!process.env.VITEST) {
+            const customEnabled = await AgentRegistry.getRawConfig('worker_feedback_enabled');
+            if (customEnabled !== undefined)
+              feedbackEnabled = customEnabled === 'true' || customEnabled === true;
+          }
+        } catch {
+          // Fallback to default
+        }
+        if (!feedbackEnabled) return;
+      }
       // Root orchestrator uses traceId directly to match API response/history
       // Sub-agents use traceId-agentId to maintain distinct bubbles
-      const messageId = agentId === 'superclaw' ? traceId : `${traceId}-${agentId}`;
+      const messageId = isRoot ? traceId : `${traceId}-${agentId}`;
 
       // Normalize userId to base form for MQTT topic consistency
       const { extractBaseUserId } = await import('../utils/agent-helpers');

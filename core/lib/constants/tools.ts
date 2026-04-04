@@ -64,6 +64,8 @@ export const TOOLS = {
   voteOnProposal: 'voteOnProposal',
   rollbackDeployment: 'rollbackDeployment',
   checkReputation: 'checkReputation',
+  requestResearch: 'requestResearch',
+  technicalResearch: 'technicalResearch',
 } as const;
 
 /**

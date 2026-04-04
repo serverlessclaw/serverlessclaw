@@ -487,6 +487,28 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     },
     connectionProfile: ['bus'],
   },
+  requestResearch: {
+    name: 'requestResearch',
+    description:
+      'Dispatches a technical research mission to the Researcher Agent. The current agent execution will pause until research is completed.',
+    parameters: {
+      type: 'object',
+      properties: {
+        goal: {
+          type: 'string',
+          description:
+            'The technical research goal or question (e.g., "Research Auth0 vs Cognito").',
+        },
+        parallel: {
+          type: 'boolean',
+          description: 'Whether to allow the agent to decompose this into parallel sub-tasks.',
+        },
+      },
+      required: ['goal'],
+      additionalProperties: false,
+    },
+    connectionProfile: ['bus'],
+  },
 
   // MCP (from mcp.ts)
   registerMCPServer: {

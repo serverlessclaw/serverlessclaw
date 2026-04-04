@@ -207,7 +207,11 @@ export async function handleParallelTaskCompleted(
         
         ${taskSummaries}
         
-        Please synthesize these results and determine the next logical action for the system. Return your response as a clear recommendation for the user or the next task to be executed.`;
+        Please synthesize these results. 
+        - If tasks succeeded: Provide a cohesive summary and determine the next logical action.
+        - If many tasks failed or timed out: Analyze the errors, identify common bottlenecks, and provide a concrete RECOVERY PLAN to achieve the original goal.
+        
+        Return your response as a clear recommendation for the user or the next task to be executed.`;
 
       const { responseText } = await aggregatorAgent.process(userId, prompt, {
         profile: ReasoningProfile.STANDARD,

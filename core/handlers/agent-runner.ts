@@ -1,4 +1,5 @@
-import { TraceSource, TaskEvent, Attachment } from '../lib/types/agent';
+import { TraceSource, TaskEvent, Attachment, AgentType } from '../lib/types/agent';
+import { SWARM } from '../lib/constants/system';
 import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
 import {
@@ -82,6 +83,94 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
     const processResult = await agent.process(userId, task, processOptions);
     finalResponseText = processResult.responseText;
     finalAttachments = processResult.attachments;
+
+    // Swarm Self-Organization: Decompose high-level plans into parallel sub-tasks
+    // This allows orchestrators like SuperClaw to automatically fan-out complex instructions.
+    const isAggregation = finalResponseText.includes('[AGGREGATED_RESULTS]');
+    const hasMissionMarkers =
+      finalResponseText.includes('### Goal:') || finalResponseText.includes('### Step');
+
+    const isPaused = isTaskPaused(finalResponseText);
+
+    if (
+      !isContinuation &&
+      !isAggregation &&
+      !isPaused &&
+      (payload.depth ?? 0) < SWARM.MAX_RECURSIVE_DEPTH &&
+      (hasMissionMarkers || finalResponseText.length > 800)
+    ) {
+      const { decomposePlan } = await import('../lib/agent/decomposer');
+      const decomposed = decomposePlan(
+        finalResponseText,
+        traceId || `plan-${Date.now()}`,
+        [], // Gaps are usually handled by Coder specifically, but we can pass them if available
+        {
+          defaultAgentId: AgentType.CODER,
+          maxSubTasks: SWARM.DEFAULT_MAX_SUB_TASKS,
+        }
+      );
+
+      if (decomposed.wasDecomposed && decomposed.subTasks.length > 1) {
+        logger.info(
+          `[AgentRunner] Mission detected from ${agentId}. Decomposing into ${decomposed.subTasks.length} parallel tasks.`
+        );
+
+        const { emitTypedEvent } = await import('../lib/utils/typed-emit');
+        const { EventType } = await import('../lib/types/agent');
+
+        const subTaskEvents = decomposed.subTasks.map((sub) => ({
+          taskId: sub.subTaskId,
+          agentId: sub.agentId,
+          task: sub.task,
+          metadata: {
+            ...payload.metadata,
+            traceId: traceId ?? sub.planId,
+            gapIds: sub.gapIds,
+            subTaskId: sub.subTaskId,
+            planId: sub.planId,
+          },
+        }));
+
+        try {
+          await emitTypedEvent(agentId as AgentType, EventType.PARALLEL_TASK_DISPATCH, {
+            userId: baseUserId,
+            tasks: subTaskEvents,
+            barrierTimeoutMs: 15 * 60 * 1000, // 15 mins default for swarm
+            aggregationType: 'agent_guided',
+            aggregationPrompt: `I have completed the parallel execution of the mission: "${finalResponseText.substring(0, 200)}...". 
+                               Please synthesize the results and provide a final summary.
+                               Prepend the result with [AGGREGATED_RESULTS].`,
+            traceId,
+            initiatorId: agentId,
+            depth: (payload.depth ?? 0) + 1,
+            sessionId,
+          });
+
+          // Return a PAUSED signal so the user knows we are working in the background
+          const pausedResponse = `TASK_PAUSED: I have decomposed this mission into ${decomposed.subTasks.length} parallel sub-tasks. I will notify you once the swarm completes the execution and I've synthesized the results.`;
+
+          // Emit the notification of decomposition
+          await emitTaskEvent({
+            source: `${agentId}.runner`,
+            agentId: agentId as AgentType,
+            userId: baseUserId,
+            task,
+            response: pausedResponse,
+            traceId,
+            taskId,
+            sessionId,
+            initiatorId: payload.initiatorId,
+            depth: payload.depth,
+            userNotified: true,
+          });
+
+          return pausedResponse;
+        } catch (dispatchError) {
+          logger.error(`[AgentRunner] Failed to dispatch mission tasks:`, dispatchError);
+          // Fall through to normal response if dispatch fails
+        }
+      }
+    }
   }
 
   logger.info(`Agent Runner [${agentId}] completed task:`, finalResponseText);
