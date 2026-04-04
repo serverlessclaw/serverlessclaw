@@ -16,7 +16,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const { password } = await req.json();
     const isDev = process.env.NODE_ENV !== 'production';
-    let correctPassword = Resource.DashboardPassword?.value;
+    let correctPassword;
+    try {
+      correctPassword = Resource.DashboardPassword?.value;
+    } catch (e) {
+      // In local dev without `sst dev`, Resource access might throw
+      if (!isDev) throw e;
+    }
 
     // Handle unset SST secrets in dev mode (SST uses placeholders like {{ Name }})
     if (

@@ -16,6 +16,7 @@
     "test": "turbo run test",
     "test-silent": "turbo run test-silent",
     "test-coverage": "turbo run test-coverage",
+    "test-e2e": "make test-e2e",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "lint": "turbo run lint",

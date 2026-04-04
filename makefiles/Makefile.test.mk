@@ -132,8 +132,8 @@ test-component: ## Run component tests (via Turbo)
 	@$(PNPM) exec turbo run test -- --reporter=verbose '**/*.test.tsx'
 
 test-e2e: ## Run E2E tests with Playwright (local dev server)
-	@$(call log_step,Running E2E tests...)
-	@$(PNPM) exec playwright test $(if $(PW_SHARD),--shard=$(PW_SHARD),)
+	@$(call log_step,Running E2E tests (Isolated environment)...)
+	@unset npm_config_prefix && $(PNPM) exec playwright test $(if $(PW_SHARD),--shard=$(PW_SHARD),)
 
 test-e2e-deployed: ## Run E2E tests against deployed URL. Usage: make test-e2e-deployed URL=https://...
 	@$(call log_step,Running E2E tests against deployed URL...)

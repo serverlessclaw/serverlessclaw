@@ -11,8 +11,8 @@ setup('authenticate', async ({ page }) => {
   await page.fill('input[type="password"]', password);
   await page.click('button[type="submit"]');
 
-  // Wait for redirect to home page
-  await page.waitForURL('/');
+  // Wait for redirect to home page with generous timeout for dev mode warmup
+  await page.waitForURL('/', { timeout: 60000 });
 
   // Save authentication state
   await page.context().storageState({ path: authFile });

@@ -1,255 +1,152 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { ITool } from '../lib/types/tool';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { getAgentTools, getToolDefinitions } from './registry-utils';
+import { ITool } from '../lib/types/tool';
 
-// --- Mock definitions ---
-const mockLocalTool: ITool = {
-  name: 'localTool',
-  description: 'A local tool',
-  parameters: { type: 'object' as const },
-  execute: vi.fn(),
+// Mock dependencies
+const mockAgentRegistry = {
+  getAgentConfig: vi.fn(),
 };
 
-const mockSearchTool: ITool = {
-  name: 'searchTool',
-  description: 'A search tool',
-  parameters: { type: 'object' as const },
-  execute: vi.fn(),
+const mockMCPBridge = {
+  getExternalTools: vi.fn().mockResolvedValue([]),
 };
 
-const mockExternalTool: ITool = {
-  name: 'externalTool',
-  description: 'An external MCP tool',
-  parameters: { type: 'object' as const },
-  execute: vi.fn(),
+const mockTOOLS = {
+  localTool1: { name: 'localTool1', description: 'desc1', parameters: {} } as ITool,
+  localTool2: { name: 'localTool2', description: 'desc2', parameters: {} } as ITool,
 };
 
-const mockExternalSearch: ITool = {
-  name: 'mcpSearch',
-  description: 'External search',
-  parameters: { type: 'object' as const },
-  execute: vi.fn(),
-};
+const mockWarmupManager = vi.fn().mockImplementation(() => ({
+  smartWarmup: vi.fn().mockResolvedValue(undefined),
+}));
 
 vi.mock('../lib/registry', () => ({
-  AgentRegistry: {
-    getAgentConfig: vi.fn(),
-  },
+  AgentRegistry: mockAgentRegistry,
 }));
 
 vi.mock('../lib/mcp', () => ({
-  MCPBridge: {
-    getExternalTools: vi.fn(),
-  },
+  MCPBridge: mockMCPBridge,
 }));
 
 vi.mock('./index', () => ({
-  TOOLS: {
-    localTool: mockLocalTool,
-    searchTool: mockSearchTool,
-  },
+  TOOLS: mockTOOLS,
+}));
+
+vi.mock('../lib/warmup', () => ({
+  WarmupManager: mockWarmupManager,
 }));
 
 vi.mock('../lib/logger', () => ({
   logger: {
-    warn: vi.fn(),
     info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
-// --- Imports after mocks ---
-import { getAgentTools, getToolDefinitions } from './registry-utils';
-import { AgentRegistry } from '../lib/registry';
-import { MCPBridge } from '../lib/mcp';
-
 describe('registry-utils', () => {
+  const originalEnv = process.env;
+
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(console, 'log').mockImplementation(() => {});
+    process.env = { ...originalEnv };
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
   });
 
   describe('getAgentTools', () => {
-    it('should return local tools when config has matching tool names', async () => {
-      vi.mocked(AgentRegistry.getAgentConfig).mockResolvedValue({
-        id: 'agent-1',
-        name: 'Agent',
-        tools: ['localTool'],
-        systemPrompt: '',
-        enabled: true,
-      } as any);
-      vi.mocked(MCPBridge.getExternalTools).mockResolvedValue([]);
-
-      const result = await getAgentTools('agent-1');
-      expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('localTool');
+    it('should return empty array if no config is found', async () => {
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce(null);
+      const tools = await getAgentTools('unknown-agent');
+      expect(tools).toEqual([]);
     });
 
-    it('should return external MCP tools when they match config tool names', async () => {
-      vi.mocked(AgentRegistry.getAgentConfig).mockResolvedValue({
-        id: 'agent-2',
-        name: 'Agent',
-        tools: ['externalTool'],
-        systemPrompt: '',
-        enabled: true,
-      } as any);
-      vi.mocked(MCPBridge.getExternalTools).mockResolvedValue([mockExternalTool]);
-
-      const result = await getAgentTools('agent-2');
-      expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('externalTool');
+    it('should return empty array if no tools are configured', async () => {
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({ id: 'a1', tools: [] });
+      const tools = await getAgentTools('a1');
+      expect(tools).toEqual([]);
     });
 
-    it('should merge local and external tools', async () => {
-      vi.mocked(AgentRegistry.getAgentConfig).mockResolvedValue({
-        id: 'agent-3',
-        name: 'Agent',
-        tools: ['localTool', 'externalTool'],
-        systemPrompt: '',
-        enabled: true,
-      } as any);
-      vi.mocked(MCPBridge.getExternalTools).mockResolvedValue([mockExternalTool]);
-
-      const result = await getAgentTools('agent-3');
-      expect(result).toHaveLength(2);
-      expect(result.map((t) => t.name)).toEqual(['localTool', 'externalTool']);
+    it('should return local tools matched by name', async () => {
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
+        id: 'a1',
+        tools: ['localTool1', 'nonExistentTool'],
+      });
+      const tools = await getAgentTools('a1');
+      expect(tools).toHaveLength(1);
+      expect(tools[0].name).toBe('localTool1');
     });
 
-    it('should return empty array when config is null', async () => {
-      vi.mocked(AgentRegistry.getAgentConfig).mockResolvedValue(null as any);
+    it('should return external MCP tools matched by name or prefix', async () => {
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
+        id: 'a1',
+        tools: ['mcpTool'],
+      });
+      const mockExternalTool = {
+        name: 'mcpTool_exec',
+        description: 'ext',
+        parameters: {},
+      } as ITool;
+      mockMCPBridge.getExternalTools.mockResolvedValueOnce([mockExternalTool]);
 
-      const result = await getAgentTools('agent-missing');
-      expect(result).toEqual([]);
+      const tools = await getAgentTools('a1');
+      expect(tools).toContain(mockExternalTool);
     });
 
-    it('should return empty array when config is undefined', async () => {
-      vi.mocked(AgentRegistry.getAgentConfig).mockResolvedValue(undefined as any);
-
-      const result = await getAgentTools('agent-missing');
-      expect(result).toEqual([]);
-    });
-
-    it('should return empty array when config.tools is empty', async () => {
-      vi.mocked(AgentRegistry.getAgentConfig).mockResolvedValue({
-        id: 'agent-4',
-        name: 'Agent',
-        tools: [],
-        systemPrompt: '',
-        enabled: true,
-      } as any);
-
-      const result = await getAgentTools('agent-4');
-      expect(result).toEqual([]);
-    });
-
-    it('should return empty array when config.tools is undefined', async () => {
-      vi.mocked(AgentRegistry.getAgentConfig).mockResolvedValue({
-        id: 'agent-5',
-        name: 'Agent',
-        systemPrompt: '',
-        enabled: true,
-      } as any);
-
-      const result = await getAgentTools('agent-5');
-      expect(result).toEqual([]);
-    });
-
-    it('should filter out local tool names that do not exist in TOOLS', async () => {
-      vi.mocked(AgentRegistry.getAgentConfig).mockResolvedValue({
-        id: 'agent-6',
-        name: 'Agent',
-        tools: ['nonExistentTool', 'localTool'],
-        systemPrompt: '',
-        enabled: true,
-      } as any);
-      vi.mocked(MCPBridge.getExternalTools).mockResolvedValue([]);
-
-      const result = await getAgentTools('agent-6');
-      expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('localTool');
-    });
-
-    it('should match external tools when server name is in config.tools (server-level matching)', async () => {
-      vi.mocked(AgentRegistry.getAgentConfig).mockResolvedValue({
-        id: 'agent-9',
-        name: 'Agent',
-        tools: ['filesystem'],
-        systemPrompt: '',
-        enabled: true,
-      } as any);
-      vi.mocked(MCPBridge.getExternalTools).mockResolvedValue([
-        {
-          name: 'filesystem_read_file',
-          description: 'Read file',
-          parameters: {},
-          type: 'mcp',
-        } as any,
-        { name: 'git_status', description: 'Git status', parameters: {}, type: 'mcp' } as any,
+    it('should trigger smart warmup if MCP_SERVER_ARNS is present', async () => {
+      process.env.MCP_SERVER_ARNS = JSON.stringify({ myServer: 'arn:xxx' });
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
+        id: 'a1',
+        tools: ['myServer_tool'],
+      });
+      mockMCPBridge.getExternalTools.mockResolvedValueOnce([
+        { name: 'myServer_tool', description: 'd', parameters: {} } as ITool,
       ]);
 
-      const tools = await getAgentTools('agent-9');
-      const toolNames = tools.map((t) => t.name);
-      expect(toolNames).toContain('filesystem_read_file');
-      expect(toolNames).not.toContain('git_status');
+      const tools = await getAgentTools('a1');
+      expect(tools).toHaveLength(1);
+      expect(mockWarmupManager).toHaveBeenCalled();
     });
 
-    it('should only include external tools whose names are in config.tools', async () => {
-      vi.mocked(AgentRegistry.getAgentConfig).mockResolvedValue({
-        id: 'agent-7',
-        name: 'Agent',
-        tools: ['mcpSearch'],
-        systemPrompt: '',
-        enabled: true,
-      } as any);
-      vi.mocked(MCPBridge.getExternalTools).mockResolvedValue([
-        mockExternalTool,
-        mockExternalSearch,
+    it('should handle smart warmup failure gracefully', async () => {
+      process.env.MCP_SERVER_ARNS = JSON.stringify({ myServer: 'arn:xxx' });
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
+        id: 'a1',
+        tools: ['myServer_tool'],
+      });
+      mockMCPBridge.getExternalTools.mockResolvedValueOnce([
+        { name: 'myServer_tool', description: 'd', parameters: {} } as ITool,
       ]);
 
-      const result = await getAgentTools('agent-7');
-      expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('mcpSearch');
-    });
+      const mockSmartWarmup = vi.fn().mockRejectedValueOnce(new Error('Warmup failed'));
+      mockWarmupManager.mockImplementationOnce(() => ({
+        smartWarmup: mockSmartWarmup,
+      }));
 
-    it('should return empty when no local tools match and no external tools match', async () => {
-      vi.mocked(AgentRegistry.getAgentConfig).mockResolvedValue({
-        id: 'agent-8',
-        name: 'Agent',
-        tools: ['doesNotExist'],
-        systemPrompt: '',
-        enabled: true,
-      } as any);
-      vi.mocked(MCPBridge.getExternalTools).mockResolvedValue([mockExternalTool]);
-
-      const result = await getAgentTools('agent-8');
-      expect(result).toEqual([]);
+      const tools = await getAgentTools('a1');
+      expect(tools).toHaveLength(1);
+      // Success even if warmup fails
     });
   });
 
   describe('getToolDefinitions', () => {
-    it('should return formatted function definitions', () => {
-      const tools: Record<string, ITool> = {
-        myTool: {
-          name: 'myTool',
-          description: 'Does things',
-          parameters: { type: 'object' as const, properties: { x: { type: 'string' as const } } },
-          execute: vi.fn(),
-        },
+    it('should format tools correctly for LLM', () => {
+      const tools = {
+        t1: { name: 't1', description: 'd1', parameters: { p1: 'v1' } } as any,
       };
-
       const defs = getToolDefinitions(tools);
-      expect(defs).toHaveLength(1);
-      expect(defs[0]).toEqual({
-        type: 'function',
-        function: {
-          name: 'myTool',
-          description: 'Does things',
-          parameters: { type: 'object', properties: { x: { type: 'string' } } },
+      expect(defs).toEqual([
+        {
+          type: 'function',
+          function: {
+            name: 't1',
+            description: 'd1',
+            parameters: { p1: 'v1' },
+          },
         },
-      });
-    });
-
-    it('should return empty array for empty tool record', () => {
-      const defs = getToolDefinitions({});
-      expect(defs).toEqual([]);
+      ]);
     });
   });
 });

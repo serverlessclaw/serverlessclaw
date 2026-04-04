@@ -96,6 +96,10 @@ vi.mock('../lib/outbound', () => ({
   sendOutboundMessage: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('../handlers/events/shared', () => ({
+  wakeupInitiator: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('@aws-sdk/client-eventbridge', () => ({
   EventBridgeClient: class {
     send = vi.fn().mockResolvedValue({});
@@ -124,6 +128,10 @@ const BASE_PAYLOAD = {
 describe('QA Agent — REOPEN cap and HITL escalation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    memoryMocks.updateGapStatus.mockResolvedValue({ success: true });
+    memoryMocks.incrementGapAttemptCount.mockResolvedValue(1);
+    memoryMocks.acquireGapLock.mockResolvedValue(true);
+    memoryMocks.releaseGapLock.mockResolvedValue(true);
     registryMocks.getRawConfig.mockResolvedValue(EvolutionMode.AUTO);
   });
 
@@ -211,5 +219,97 @@ describe('QA Agent — REOPEN cap and HITL escalation', () => {
     expect(capturedPrompt).toMatch(/validateCode|read_file|listFiles|checkHealth/i);
     // Coder response is clearly labelled as unverified
     expect(capturedPrompt).toMatch(/unverified/i);
+  });
+
+  it('should skip verification if payload is incomplete', async () => {
+    const incompletePayload = { detail: { userId: 'u1' } }; // missing gapIds
+    await handler(incompletePayload as any, {} as any);
+    expect(agentProcess).not.toHaveBeenCalled();
+  });
+
+  it('should handle JSON parse failure and fallback to REOPEN', async () => {
+    agentProcess.mockResolvedValueOnce({
+      responseText: 'Not a JSON string',
+    });
+
+    await handler(BASE_PAYLOAD as any, {} as any);
+
+    // Default status is REOPEN
+    expect(memoryMocks.updateGapStatus).toHaveBeenCalledWith('GAP#1001', GapStatus.OPEN);
+  });
+
+  it('should handle lock acquisition failure during SUCCESS path', async () => {
+    agentProcess.mockResolvedValueOnce({
+      responseText: JSON.stringify({ status: 'SUCCESS', auditReport: 'ok' }),
+    });
+    memoryMocks.acquireGapLock.mockResolvedValueOnce(false);
+
+    await handler(BASE_PAYLOAD as any, {} as any);
+
+    expect(memoryMocks.updateGapStatus).not.toHaveBeenCalledWith('GAP#1001', GapStatus.DONE);
+  });
+
+  it('should handle gap status update failure', async () => {
+    agentProcess.mockResolvedValueOnce({
+      responseText: JSON.stringify({ status: 'SUCCESS', auditReport: 'ok' }),
+    });
+    memoryMocks.updateGapStatus.mockResolvedValueOnce({ success: false, error: 'DB Error' });
+
+    await handler(BASE_PAYLOAD as any, {} as any);
+
+    expect(memoryMocks.updateGapStatus).toHaveBeenCalled();
+    // It should log error but not throw
+  });
+
+  it('should not auto-close gaps in HITL mode', async () => {
+    agentProcess.mockResolvedValueOnce({
+      responseText: JSON.stringify({ status: 'SUCCESS', auditReport: 'ok' }),
+    });
+    registryMocks.getRawConfig.mockResolvedValue(EvolutionMode.HITL);
+
+    await handler(BASE_PAYLOAD as any, {} as any);
+
+    expect(memoryMocks.updateGapStatus).not.toHaveBeenCalledWith('GAP#1001', GapStatus.DONE);
+  });
+
+  it('should dispatch task to initiator if initiatorId is present on failure', async () => {
+    agentProcess.mockResolvedValueOnce({
+      responseText: JSON.stringify({ status: 'REOPEN', auditReport: 'fail' }),
+    });
+    const payloadWithInitiator = {
+      detail: { ...BASE_PAYLOAD.detail, initiatorId: 'initiator-1' },
+    };
+
+    const { wakeupInitiator } = await import('../handlers/events/shared');
+
+    await handler(payloadWithInitiator as any, {} as any);
+
+    expect(wakeupInitiator).toHaveBeenCalledWith(
+      'user-1',
+      'initiator-1',
+      expect.stringContaining(
+        'QA_VERIFICATION_FAILED: The changes for gaps GAP#1001 failed verification'
+      ),
+      'trace-1',
+      undefined,
+      undefined
+    );
+  });
+
+  it('should fallback to dispatcher if no initiatorId is present on failure', async () => {
+    agentProcess.mockResolvedValueOnce({
+      responseText: JSON.stringify({ status: 'REOPEN', auditReport: 'fail' }),
+    });
+
+    const { TOOLS } = await import('../tools/index');
+
+    await handler(BASE_PAYLOAD as any, {} as any);
+
+    expect(TOOLS.dispatchTask.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentId: 'coder',
+        task: expect.stringContaining('QA verification failed'),
+      })
+    );
   });
 });

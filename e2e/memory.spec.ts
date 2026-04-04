@@ -11,7 +11,9 @@ test.describe('Memory Management', () => {
   test('displays memory tabs', async ({ page }) => {
     await page.goto('/memory');
     // Should have tabs for different memory views
-    await expect(page.locator('[role="tablist"], .tabs, nav')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('[role="tablist"], .tabs, nav').first()).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test('displays gaps list', async ({ page }) => {

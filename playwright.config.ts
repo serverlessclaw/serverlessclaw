@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
-  timeout: 30_000,
+  timeout: 60_000,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   use: {
@@ -13,10 +13,10 @@ export default defineConfig({
   webServer: process.env.BASE_URL
     ? undefined // skip local server when testing a deployed URL
     : {
-        command: 'make dev-mono',
+        command: 'pnpm --filter dashboard dev',
         port: 7777,
         reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
+        timeout: 300_000,
       },
   projects: [
     { name: 'setup', testMatch: /.*\.setup\.ts/ },

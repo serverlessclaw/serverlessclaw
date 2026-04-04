@@ -5,9 +5,10 @@ include makefiles/Makefile.shared.mk
 
 .PHONY: check gate gate-deploy gate-tier-1 gate-tier-2 gate-fast fix lint lint-fix format format-check type-check aiready lint-staged
 
-gate: ## Run all quality checks in parallel (via Turborepo)
+gate: ## Run all quality checks in parallel (via Turborepo) + E2E
 	@$(call log_step,Running full quality gate in parallel via Turbo...)
 	@$(PNPM) run gate
+	@$(MAKE) test-e2e
 
 gate-tier-1: ## Fast Tier 1 checks (via Turborepo)
 	@$(call log_step,Running Tier 1 (Fast) gate via Turbo...)
@@ -21,9 +22,10 @@ gate-fast: ## Fast local gate (only affected packages)
 	@$(call log_step,Running fast local gate via Turbo...)
 	@$(PNPM) exec turbo run check test --filter="[origin/main]"
 
-gate-deploy: ## Pre-deploy gate (Tier 1 + aiready)
+gate-deploy: ## Pre-deploy gate (Tier 1 + aiready + e2e)
 	@$(call log_step,Running deploy gate via Turbo...)
 	@$(PNPM) exec turbo run check aiready
+	@$(MAKE) test-e2e
 
 check: ## Run all quality checks (via Turborepo)
 	@$(call log_step,Running all quality checks via Turbo...)
