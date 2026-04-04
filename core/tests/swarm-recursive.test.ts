@@ -236,14 +236,18 @@ describe('Swarm Recursive Flow Integration', () => {
         aggregationPrompt: 'Synthesize research findings',
       });
 
-      expect(mockAgentProcess).toHaveBeenCalled();
+      expect(mockAgentProcess).not.toHaveBeenCalled();
       expect(mockWakeupInitiator).toHaveBeenCalledWith(
         'user-1',
         AgentType.RESEARCHER,
-        expect.any(String),
+        expect.stringContaining('[AGGREGATED_RESULTS]'),
         'trace-1',
         undefined,
-        1
+        1,
+        false,
+        undefined,
+        'trace-1',
+        EventType.RESEARCH_TASK
       );
     });
   });
@@ -341,7 +345,8 @@ describe('Swarm Recursive Flow Integration', () => {
 
       expect(mockWakeupInitiator).toHaveBeenCalled();
       const callArg = mockWakeupInitiator.mock.calls[0][2];
-      expect(callArg).toMatch(/partial|PARTIAL/i);
+      // New format includes details and emojis
+      expect(callArg).toContain('❌');
     });
   });
 });

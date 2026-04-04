@@ -67,7 +67,10 @@ describe('Parallel Aggregation Integration', () => {
       'Synthesized Next Action',
       'trace-456',
       undefined,
-      1
+      1,
+      false,
+      undefined,
+      'trace-456'
     );
   });
 
@@ -96,7 +99,10 @@ describe('Parallel Aggregation Integration', () => {
       expect.stringContaining('Parallel Dispatch Complete'),
       'trace-456',
       undefined,
-      1
+      1,
+      false,
+      undefined,
+      'trace-456'
     );
   });
 
@@ -154,7 +160,10 @@ describe('Parallel Aggregation Integration', () => {
       expect.stringContaining('Parallel Dispatch Complete'),
       'trace-456',
       undefined,
-      1
+      1,
+      false,
+      undefined,
+      'trace-456'
     );
   });
 });
