@@ -74,7 +74,7 @@ describe('Knowledge Domain Tool Schemas', () => {
       recallKnowledge: ['query', 'category'],
       saveMemory: ['content', 'category'],
       reportGap: ['content', 'impact', 'urgency', 'category'],
-      manageGap: ['gapId', 'status'],
+      manageGap: [],
       pruneMemory: ['partitionKey', 'timestamp'],
       discoverSkills: [],
       installSkill: ['skillName', 'agentId'],
