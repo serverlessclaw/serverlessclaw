@@ -246,7 +246,7 @@ describe('research-handler', () => {
       expect(mockAgentProcess).not.toHaveBeenCalled();
     });
 
-    it('should not decompose when depth >= 2', async () => {
+    it('should not decompose when depth >= SWARM.MAX_RECURSIVE_DEPTH', async () => {
       const eventDetail = {
         userId: 'user-1',
         taskId: 'task-1',
@@ -254,7 +254,7 @@ describe('research-handler', () => {
         metadata: {},
         traceId: 'trace-1',
         initiatorId: AgentType.RESEARCHER,
-        depth: 2,
+        depth: 5,
         sessionId: 'session-1',
       };
 

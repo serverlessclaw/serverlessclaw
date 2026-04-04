@@ -86,7 +86,9 @@ describe('AgentExecutor.streamLoop', () => {
       'trace-123',
       'Hello',
       'Test Agent',
-      false
+      false,
+      undefined,
+      'superclaw'
     );
     expect(mockEmitter.emitChunk).toHaveBeenCalledWith(
       'user-1',
@@ -94,7 +96,9 @@ describe('AgentExecutor.streamLoop', () => {
       'trace-123',
       ' world',
       'Test Agent',
-      false
+      false,
+      undefined,
+      'superclaw'
     );
   });
 
@@ -273,7 +277,16 @@ describe('AgentExecutor.streamLoop', () => {
 
     // Metadata + Content + Final Usage
     expect(chunks).toHaveLength(3);
-    expect(chunks[1].content).toBe('Hello there!');
+    expect(mockEmitter.emitChunk).toHaveBeenCalledWith(
+      'user-1',
+      'sess-txt',
+      'trace-txt',
+      'Hello there!',
+      'Test Agent',
+      false,
+      undefined,
+      'superclaw'
+    );
     expect(chunks[1].tool_calls).toBeUndefined();
   });
 });

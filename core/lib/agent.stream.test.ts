@@ -308,7 +308,9 @@ describe('Agent.stream()', () => {
       'client-trace-123',
       'Streamed response',
       'Test Agent',
-      false
+      false,
+      undefined,
+      'test-agent'
     );
 
     // Assistant message should use the same traceId

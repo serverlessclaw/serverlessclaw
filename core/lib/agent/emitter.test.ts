@@ -284,21 +284,48 @@ describe('AgentEmitter', () => {
   describe('emitChunk', () => {
     it('publishes to correct MQTT topic with session', async () => {
       mockPublishToRealtime.mockResolvedValue(undefined);
-      await emitter.emitChunk('user1', 'session1', 'trace1', 'hello');
+      await emitter.emitChunk(
+        'user1',
+        'session1',
+        'trace1',
+        'hello',
+        undefined,
+        false,
+        undefined,
+        'orchestrator'
+      );
       expect(mockPublishToRealtime).toHaveBeenCalledTimes(1);
       expect(mockPublishToRealtime.mock.calls[0][0]).toBe('users/user1/sessions/session1/signal');
     });
 
     it('publishes to topic without session', async () => {
       mockPublishToRealtime.mockResolvedValue(undefined);
-      await emitter.emitChunk('user1', undefined, 'trace1', 'hello');
+      await emitter.emitChunk(
+        'user1',
+        undefined,
+        'trace1',
+        'hello',
+        undefined,
+        false,
+        undefined,
+        'orchestrator'
+      );
       expect(mockPublishToRealtime.mock.calls[0][0]).toBe('users/user1/signal');
     });
 
     it('sanitizes special characters in userId for MQTT', async () => {
       mockExtractBaseUserId.mockReturnValue('user+1#test');
       mockPublishToRealtime.mockResolvedValue(undefined);
-      await emitter.emitChunk('user+1#test', 'session1', 'trace1', 'hello');
+      await emitter.emitChunk(
+        'user+1#test',
+        'session1',
+        'trace1',
+        'hello',
+        undefined,
+        false,
+        undefined,
+        'orchestrator'
+      );
       const topic = mockPublishToRealtime.mock.calls[0][0];
       expect(topic).toBe('users/user_1_test/sessions/session1/signal');
     });
@@ -306,14 +333,48 @@ describe('AgentEmitter', () => {
     it('uses traceId as messageId for superclaw agent', async () => {
       mockPublishToRealtime.mockResolvedValue(undefined);
       const superEmitter = new AgentEmitter({ id: 'superclaw', name: 'SuperClaw' } as any);
-      await superEmitter.emitChunk('user1', 'session1', 'trace1', 'hello');
+      await superEmitter.emitChunk(
+        'user1',
+        'session1',
+        'trace1',
+        'hello',
+        undefined,
+        false,
+        undefined,
+        'orchestrator'
+      );
       const payload = mockPublishToRealtime.mock.calls[0][1];
       expect(payload.messageId).toBe('trace1');
     });
 
-    it('uses traceId-agentId as messageId for sub-agents', async () => {
+    it('uses traceId as messageId for root agents (orchestrator)', async () => {
       mockPublishToRealtime.mockResolvedValue(undefined);
-      await emitter.emitChunk('user1', 'session1', 'trace1', 'hello');
+      await emitter.emitChunk(
+        'user1',
+        'session1',
+        'trace1',
+        'hello',
+        undefined,
+        false,
+        undefined,
+        'orchestrator'
+      );
+      const payload = mockPublishToRealtime.mock.calls[0][1];
+      expect(payload.messageId).toBe('trace1');
+    });
+
+    it('uses traceId-agentId as messageId for worker agents (no superclaw/orchestrator)', async () => {
+      mockPublishToRealtime.mockResolvedValue(undefined);
+      await emitter.emitChunk(
+        'user1',
+        'session1',
+        'trace1',
+        'hello',
+        undefined,
+        false,
+        undefined,
+        'planner'
+      );
       const payload = mockPublishToRealtime.mock.calls[0][1];
       expect(payload.messageId).toBe('trace1-agent1');
     });
@@ -321,20 +382,47 @@ describe('AgentEmitter', () => {
     it('handles publish failure gracefully', async () => {
       mockPublishToRealtime.mockRejectedValue(new Error('IoT down'));
       await expect(
-        emitter.emitChunk('user1', 'session1', 'trace1', 'hello')
+        emitter.emitChunk(
+          'user1',
+          'session1',
+          'trace1',
+          'hello',
+          undefined,
+          false,
+          undefined,
+          'orchestrator'
+        )
       ).resolves.not.toThrow();
     });
 
     it('includes chunk content in payload', async () => {
       mockPublishToRealtime.mockResolvedValue(undefined);
-      await emitter.emitChunk('user1', 'session1', 'trace1', 'test message');
+      await emitter.emitChunk(
+        'user1',
+        'session1',
+        'trace1',
+        'test message',
+        undefined,
+        false,
+        undefined,
+        'orchestrator'
+      );
       const payload = mockPublishToRealtime.mock.calls[0][1];
       expect(payload.message).toBe('test message');
     });
 
     it('includes isThought flag', async () => {
       mockPublishToRealtime.mockResolvedValue(undefined);
-      await emitter.emitChunk('user1', 'session1', 'trace1', 'thinking...', undefined, true);
+      await emitter.emitChunk(
+        'user1',
+        'session1',
+        'trace1',
+        'thinking...',
+        undefined,
+        true,
+        undefined,
+        'orchestrator'
+      );
       const payload = mockPublishToRealtime.mock.calls[0][1];
       expect(payload.isThought).toBe(true);
     });
@@ -342,7 +430,16 @@ describe('AgentEmitter', () => {
     it('includes options buttons', async () => {
       mockPublishToRealtime.mockResolvedValue(undefined);
       const options = [{ label: 'Yes', value: 'yes' }];
-      await emitter.emitChunk('user1', 'session1', 'trace1', 'confirm?', undefined, false, options);
+      await emitter.emitChunk(
+        'user1',
+        'session1',
+        'trace1',
+        'confirm?',
+        undefined,
+        false,
+        options,
+        'orchestrator'
+      );
       const payload = mockPublishToRealtime.mock.calls[0][1];
       expect(payload.options).toEqual(options);
     });
@@ -350,22 +447,49 @@ describe('AgentEmitter', () => {
     it('uses default agent name when no config', async () => {
       const defaultEmitter = new AgentEmitter();
       mockPublishToRealtime.mockResolvedValue(undefined);
-      await defaultEmitter.emitChunk('user1', 'session1', 'trace1', 'hello');
+      await defaultEmitter.emitChunk(
+        'user1',
+        'session1',
+        'trace1',
+        'hello',
+        undefined,
+        false,
+        undefined,
+        'orchestrator'
+      );
       const payload = mockPublishToRealtime.mock.calls[0][1];
       expect(payload.agentName).toBe('SuperClaw');
     });
 
-    it('uses traceId as messageId for unknown agent without config', async () => {
+    it('uses traceId as messageId for unknown root agent (orchestrator)', async () => {
       const defaultEmitter = new AgentEmitter();
       mockPublishToRealtime.mockResolvedValue(undefined);
-      await defaultEmitter.emitChunk('user1', 'session1', 'trace1', 'hello');
+      await defaultEmitter.emitChunk(
+        'user1',
+        'session1',
+        'trace1',
+        'hello',
+        undefined,
+        false,
+        undefined,
+        'orchestrator'
+      );
       const payload = mockPublishToRealtime.mock.calls[0][1];
-      expect(payload.messageId).toBe('trace1-unknown');
+      expect(payload.messageId).toBe('trace1');
     });
 
     it('includes correct detail-type', async () => {
       mockPublishToRealtime.mockResolvedValue(undefined);
-      await emitter.emitChunk('user1', 'session1', 'trace1', 'hello');
+      await emitter.emitChunk(
+        'user1',
+        'session1',
+        'trace1',
+        'hello',
+        undefined,
+        false,
+        undefined,
+        'orchestrator'
+      );
       const payload = mockPublishToRealtime.mock.calls[0][1];
       expect(payload['detail-type']).toBe('chunk');
     });
