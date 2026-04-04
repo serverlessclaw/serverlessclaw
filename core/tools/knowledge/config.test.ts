@@ -19,7 +19,8 @@ vi.mock('../../lib/logger', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
 }));
 
-vi.mock('../../lib/types/index', () => ({
+vi.mock('../../lib/types/index', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/types/index')>()),
   EventType: { CONTINUATION_TASK: 'continuation_task' },
 }));
 
@@ -39,13 +40,8 @@ vi.mock('../../lib/outbound', () => ({
   sendOutboundMessage: vi.fn(),
 }));
 
-vi.mock('../../lib/types/llm', () => ({
-  LLMProvider: {
-    OPENAI: 'openai',
-    BEDROCK: 'bedrock',
-    OPENROUTER: 'openrouter',
-    MINIMAX: 'minimax',
-  },
+vi.mock('../../lib/types/llm', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/types/llm')>()),
   MessageRole: { USER: 'user', ASSISTANT: 'assistant' },
   AttachmentType: {},
 }));
