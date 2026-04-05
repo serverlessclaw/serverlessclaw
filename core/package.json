@@ -12,7 +12,7 @@
     "./handlers/*": "./handlers/*.js"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.39.0",
+    "@anthropic-ai/sdk": "^0.82.0",
     "@aws-sdk/client-bedrock-runtime": "^3.1010.0",
     "@aws-sdk/client-cloudwatch": "^3.1014.0",
     "@aws-sdk/client-cloudwatch-logs": "^3.1009.0",
