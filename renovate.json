@@ -6,7 +6,7 @@
   "prConcurrentLimit": 0,
   "prHourlyLimit": 0,
   "automerge": true,
-  "platformAutomerge": false,
+  "platformAutomerge": true,
   "prCreation": "immediate",
   "rebaseConflictedPrs": true,
   "rebaseWhen": "behind-base-branch",
