@@ -49,7 +49,7 @@ import Card from '@/components/ui/Card';
 /**
  * Maps agnostic icon keys to Lucide components.
  */
-const ICON_COMPONENTS: Record<string, typeof Bot> = {
+export const ICON_COMPONENTS: Record<string, typeof Bot> = {
   APP: Globe,
   BOT: Bot,
   BRAIN: Brain,
@@ -256,7 +256,7 @@ const nodeTypes = {
  * @param iconName Optional icon name override.
  * @returns A React icon element.
  */
-const getAgentIcon = (id: string, iconKey?: string): React.ReactNode => {
+export const getAgentIcon = (id: string, iconKey?: string): React.ReactNode => {
   // 1. Try mapping the explicit iconKey (e.g. 'BOT', 'CODE')
   if (iconKey && ICON_COMPONENTS[iconKey]) {
     const Icon = ICON_COMPONENTS[iconKey];
@@ -286,7 +286,7 @@ const getAgentIcon = (id: string, iconKey?: string): React.ReactNode => {
  * @param id The agent ID.
  * @returns A descriptive string.
  */
-const getAgentDescription = (id: string): string => {
+export const getAgentDescription = (id: string): string => {
   const descMap: Record<string, string> = {
     superclaw: 'Processes input, retrieves memory, and orchestrates task delegation to spokes.',
     coder:

@@ -107,6 +107,64 @@ const getStatusColor = (status: string) => {
 };
 
 const nodeTypes = {
+  initiatorNode: ({ data }: { data: { initiatorId: string; sessionId?: string; traceId: string } }) => (
+    <div className="relative group transition-all duration-300 z-10 hover:z-50">
+      <div className="px-4 py-3 shadow-lg rounded-md bg-black border border-cyan-500/50 min-w-[180px] relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-16 h-16 bg-cyan-500/5 rounded-full blur-xl -mr-8 -mt-8"></div>
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-sm shrink-0 bg-cyan-500/10 text-cyan-400">
+            <User size={16} />
+          </div>
+          <div className="overflow-hidden">
+            <div className="text-[10px] font-bold uppercase tracking-tighter truncate text-cyan-400">
+              INITIATOR
+            </div>
+            <div className="text-sm font-bold text-white/90 break-words leading-tight">
+              {data.initiatorId || 'System'}
+            </div>
+            {data.sessionId && (
+              <div className="text-[9px] text-white/50 mt-1 truncate">
+                Session: {data.sessionId}
+              </div>
+            )}
+          </div>
+        </div>
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          className="!bg-cyan-500/50 !border-none !w-2 !h-2"
+        />
+      </div>
+    </div>
+  ),
+  aggregatorNode: ({ data }: { data: { type: string; traceId: string } }) => (
+    <div className="relative group transition-all duration-300 z-10 hover:z-50">
+      <div className="px-4 py-3 shadow-lg rounded-md bg-black border border-fuchsia-500/50 min-w-[200px] relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-16 h-16 bg-fuchsia-500/5 rounded-full blur-xl -mr-8 -mt-8"></div>
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-sm shrink-0 bg-fuchsia-500/10 text-fuchsia-400">
+            <Bot size={16} />
+          </div>
+          <div className="overflow-hidden">
+            <div className="text-[10px] font-bold uppercase tracking-tighter truncate text-fuchsia-400">
+              AGGREGATOR
+            </div>
+            <div className="text-sm font-bold text-white/90 break-words leading-tight">
+              SuperClaw Orchestrator
+            </div>
+            <div className="text-[9px] text-white/50 mt-1">
+              Strategy: {data.type || 'COMBINE'}
+            </div>
+          </div>
+        </div>
+        <Handle
+          type="target"
+          position={Position.Top}
+          className="!bg-fuchsia-500/50 !border-none !w-2 !h-2"
+        />
+      </div>
+    </div>
+  ),
   agentActivity: ({ data }: { data: AgentActivity }) => (
     <div className="relative group transition-all duration-300 z-10 hover:z-50">
       <div className="px-4 py-3 shadow-lg rounded-md bg-black border border-purple-500/50 min-w-[200px] relative overflow-hidden">
@@ -178,13 +236,13 @@ const nodeTypes = {
   dagStatus: ({
     data,
   }: {
-    data: { completed: number; failed: number; pending: number; ready: number; total: number };
+    data: { completed: number; failed: number; pending: number; ready: number; total: number; traceId?: string };
   }) => (
     <div className="relative group transition-all duration-300 z-10 hover:z-50">
       <div className="px-4 py-3 shadow-lg rounded-md bg-black border border-cyber-green/30 min-w-[160px] relative overflow-hidden">
         <div className="absolute inset-0 bg-cyber-green/5 animate-pulse"></div>
         <div className="text-[8px] font-bold text-cyber-green uppercase tracking-[0.3em] mb-2 relative z-10">
-          DAG STATUS
+          DAG STATUS {data.traceId ? `[${data.traceId.substring(0,8)}]` : ''}
         </div>
         <div className="grid grid-cols-2 gap-2 text-[10px] relative z-10">
           <div className="flex items-center gap-1">
@@ -209,6 +267,16 @@ const nodeTypes = {
           </div>
         </div>
         <div className="mt-2 text-[9px] text-white/50 relative z-10">Total: {data.total} tasks</div>
+        <Handle
+          type="target"
+          position={Position.Top}
+          className="!bg-cyber-green/50 !border-none !w-2 !h-2"
+        />
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          className="!bg-cyber-green/50 !border-none !w-2 !h-2"
+        />
       </div>
     </div>
   ),
@@ -262,6 +330,9 @@ export function CollaborationCanvasContent() {
         (
           dispatch: {
             traceId: string;
+            initiatorId?: string;
+            sessionId?: string;
+            aggregationType?: string;
             tasks: TaskNodeData[];
             dagState?: {
               nodes: Record<
@@ -277,9 +348,22 @@ export function CollaborationCanvasContent() {
           },
           dispatchIndex: number
         ) => {
-          const offsetX = dispatchIndex * 500;
+          const offsetX = dispatchIndex * 600;
 
-          // Add DAG status node
+          // 1. Add Initiator Node (Top Level)
+          const initiatorId = `initiator-${dispatch.traceId}`;
+          newNodes.push({
+            id: initiatorId,
+            type: 'initiatorNode',
+            position: { x: offsetX + 150, y: -150 },
+            data: {
+              initiatorId: dispatch.initiatorId,
+              sessionId: dispatch.sessionId,
+              traceId: dispatch.traceId,
+            },
+          });
+
+          // 2. Add DAG status node (Orchestrator Level)
           const completedCount = dispatch.dagState?.completedTasks?.length ?? 0;
           const failedCount = dispatch.dagState?.failedTasks?.length ?? 0;
           const totalTasks = dispatch.tasks.length;
@@ -290,29 +374,95 @@ export function CollaborationCanvasContent() {
             (t: TaskNodeData) => t.status === 'ready' || t.status === 'running'
           ).length;
 
+          const dagNodeId = `dag-${dispatch.traceId}`;
           newNodes.push({
-            id: `dag-${dispatch.traceId}`,
+            id: dagNodeId,
             type: 'dagStatus',
-            position: { x: offsetX, y: 0 },
+            position: { x: offsetX + 150, y: 0 },
             data: {
               completed: completedCount,
               failed: failedCount,
               pending: pendingCount,
               ready: readyCount,
               total: totalTasks,
+              traceId: dispatch.traceId,
             },
           });
 
-          // Add task nodes
+          // Connect Initiator to DAG Status
+          newEdges.push({
+            id: `edge-${initiatorId}-to-${dagNodeId}`,
+            source: initiatorId,
+            target: dagNodeId,
+            animated: true,
+            style: { stroke: '#06b6d4', strokeWidth: 1.5, opacity: 0.6 },
+            markerEnd: { type: MarkerType.ArrowClosed, color: '#06b6d4', width: 15, height: 15 },
+          });
+
+          // Aggregate tasks by agent
+          const agentTasks = new Map<string, TaskNodeData[]>();
+          dispatch.tasks.forEach((t: TaskNodeData) => {
+            const aId = t.agentId || 'unassigned';
+            if (!agentTasks.has(aId)) agentTasks.set(aId, []);
+            agentTasks.get(aId)!.push(t);
+          });
+
+          const agents = Array.from(agentTasks.entries());
+          const agentCount = agents.length;
+          
+          // 3. Add Agent Activity nodes (Worker Level)
+          agents.forEach(([agentId, tasks], agentIndex) => {
+            const agentNodeId = `agent-${dispatch.traceId}-${agentId}`;
+            const agentX = offsetX + (agentIndex - (agentCount - 1) / 2) * 260 + 150; 
+            
+            newNodes.push({
+              id: agentNodeId,
+              type: 'agentActivity',
+              position: { x: agentX, y: 150 },
+              data: {
+                agentId,
+                agentName: agentId,
+                activeTasks: tasks.filter(t => t.status === 'running' || t.status === 'pending' || t.status === 'ready'),
+                completedCount: tasks.filter(t => t.status === 'completed').length,
+                failedCount: tasks.filter(t => t.status === 'failed').length,
+              }
+            });
+
+            // Connect DAG Status to Agent
+            newEdges.push({
+              id: `edge-${dagNodeId}-to-${agentNodeId}`,
+              source: dagNodeId,
+              target: agentNodeId,
+              animated: true,
+              style: { stroke: '#a855f7', strokeWidth: 1.5, opacity: 0.6 },
+              markerEnd: { type: MarkerType.ArrowClosed, color: '#a855f7', width: 15, height: 15 },
+            });
+          });
+
+          let maxTaskY = 150;
+
+          // 4. Add Task nodes (Execution Level)
           dispatch.tasks.forEach((task: TaskNodeData, taskIndex: number) => {
             const taskNodeId = `task-${dispatch.traceId}-${task.taskId}`;
+            const agentId = task.agentId || 'unassigned';
+            
+            // Group tasks visually under their assigned agent
+            const agentIndex = agents.findIndex(([aId]) => aId === agentId);
+            const taskX = offsetX + (agentIndex - (agentCount - 1) / 2) * 260 + 150;
+            
+            // Spread tasks vertically under the agent
+            const agentTasksList = agents.find(([aId]) => aId === agentId)?.[1] || [];
+            const taskIndexInAgent = agentTasksList.findIndex((t) => t.taskId === task.taskId);
+            const taskY = 320 + (taskIndexInAgent >= 0 ? taskIndexInAgent : taskIndex) * 110;
+
+            maxTaskY = Math.max(maxTaskY, taskY);
 
             newNodes.push({
               id: taskNodeId,
               type: 'taskNode',
               position: {
-                x: offsetX + (taskIndex % 3) * 220,
-                y: 100 + Math.floor(taskIndex / 3) * 100,
+                x: taskX,
+                y: taskY,
               },
               data: {
                 ...task,
@@ -353,7 +503,48 @@ export function CollaborationCanvasContent() {
                   });
                 }
               });
+            } else {
+              // If it doesn't depend on other tasks, link it from its agent to show parallel dispatch
+              const agentNodeId = `agent-${dispatch.traceId}-${agentId}`;
+              newEdges.push({
+                id: `edge-agent-${agentNodeId}-to-${taskNodeId}`,
+                source: agentNodeId,
+                target: taskNodeId,
+                animated: task.status === 'running' || task.status === 'ready',
+                style: { stroke: '#a855f7', strokeWidth: 1.5, opacity: 0.3, strokeDasharray: '5,5' },
+              });
             }
+          });
+
+          // 5. Add Aggregator Node (Bottom Level)
+          const aggregatorNodeId = `aggregator-${dispatch.traceId}`;
+          const aggregatorY = maxTaskY + 200;
+          newNodes.push({
+            id: aggregatorNodeId,
+            type: 'aggregatorNode',
+            position: { x: offsetX + 150, y: aggregatorY },
+            data: {
+              type: dispatch.aggregationType || 'COMBINE',
+              traceId: dispatch.traceId,
+            },
+          });
+
+          // Connect Task nodes to Aggregator Node
+          dispatch.tasks.forEach((task: TaskNodeData) => {
+            const taskNodeId = `task-${dispatch.traceId}-${task.taskId}`;
+            
+            newEdges.push({
+              id: `edge-${taskNodeId}-to-${aggregatorNodeId}`,
+              source: taskNodeId,
+              target: aggregatorNodeId,
+              animated: task.status === 'completed',
+              style: { 
+                stroke: task.status === 'completed' ? '#d946ef' : '#ffffff30', 
+                strokeWidth: 1.5,
+                strokeDasharray: task.status === 'completed' ? undefined : '5,5'
+              },
+              markerEnd: { type: MarkerType.ArrowClosed, color: task.status === 'completed' ? '#d946ef' : '#ffffff30', width: 15, height: 15 },
+            });
           });
         }
       );

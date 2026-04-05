@@ -220,7 +220,7 @@ export default function TraceIntelligenceView({
               </div>
             )}
             <div className="flex items-center gap-2 font-mono opacity-60">
-              <Clock size={12} /> {new Date(trace.timestamp).toLocaleTimeString()}
+              <Clock size={12} /> {new Date(trace.timestamp).toISOString().slice(11, 19)}
             </div>
             <div className="group-hover:text-cyber-green transition-all transform group-hover:translate-x-1">
               <ChevronRight size={18} />
