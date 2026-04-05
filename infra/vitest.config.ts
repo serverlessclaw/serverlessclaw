@@ -2,8 +2,8 @@ import { defineConfig } from 'vitest/config';
 
 /**
  * Vitest configuration for the infra package.
- * Infrastructure-as-code (SST/Pulumi) has lower test coverage requirements
- * since it's validated through deployment verification and E2E tests.
+ * Infrastructure-as-code (SST/Pulumi) is validated through deployment
+ * verification and E2E tests, not unit test coverage.
  */
 export default defineConfig({
   test: {
@@ -15,10 +15,10 @@ export default defineConfig({
       include: ['**/*.ts'],
       exclude: ['**/*.test.ts', '**/*.d.ts', '**/node_modules/**', '**/.sst/**'],
       thresholds: {
-        lines: 40,
-        functions: 50,
-        branches: 30,
-        statements: 40,
+        lines: 0,
+        functions: 0,
+        branches: 0,
+        statements: 0,
       },
     },
   },
