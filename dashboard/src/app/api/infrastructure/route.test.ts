@@ -55,7 +55,7 @@ describe('Infrastructure API Route', () => {
     expect(data).toEqual(liveTopology);
   });
 
-  it('falls back to static infrastructure when both stored and live are empty', async () => {
+  it('returns empty topology when both stored and live are empty', async () => {
     mockGetFullTopology.mockResolvedValue({ nodes: [], edges: [] });
     mockDiscoverSystemTopology.mockResolvedValue({ nodes: [], edges: [] });
 
@@ -65,12 +65,13 @@ describe('Infrastructure API Route', () => {
 
     expect(res.status).toBe(200);
     expect(data.nodes).toBeDefined();
-    expect(data.nodes.length).toBeGreaterThan(0);
+    expect(data.nodes).toEqual([]);
     expect(data.edges).toEqual([]);
   });
 
-  it('returns 500 on error', async () => {
-    mockGetFullTopology.mockRejectedValue(new Error('DynamoDB error'));
+  it('returns 500 on critical error (discoverSystemTopology throws)', async () => {
+    mockGetFullTopology.mockResolvedValue({ nodes: [], edges: [] });
+    mockDiscoverSystemTopology.mockRejectedValue(new Error('SDK failure'));
 
     const { GET } = await import('./route');
     const res = await GET();

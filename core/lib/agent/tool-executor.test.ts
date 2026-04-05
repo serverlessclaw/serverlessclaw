@@ -33,6 +33,7 @@ function createTool(overrides: Partial<any> = {}) {
     execute: overrides.execute ?? vi.fn().mockResolvedValue('success'),
     requiresApproval: overrides.requiresApproval ?? false,
     argSchema: overrides.argSchema,
+    requiredPermissions: overrides.requiredPermissions,
   };
 }
 
@@ -311,6 +312,184 @@ describe('ToolExecutor', () => {
         tracer
       );
       expect(result.toolCallCount).toBe(0);
+    });
+
+    it('bypasses RBAC check for SYSTEM user', async () => {
+      const tool = createTool({
+        requiredPermissions: ['admin'],
+        execute: vi.fn().mockResolvedValue('success'),
+      });
+      const messages: any[] = [];
+      const attachments: any[] = [];
+
+      const result = await ToolExecutor.executeToolCalls(
+        [createToolCall()],
+        [tool],
+        messages,
+        attachments,
+        createExecContext({ userId: 'SYSTEM' }),
+        tracer
+      );
+
+      expect(result.toolCallCount).toBe(1);
+      expect(messages[0].content).toBe('success');
+    });
+
+    it('bypasses RBAC check when userId is empty', async () => {
+      const tool = createTool({
+        requiredPermissions: ['admin'],
+        execute: vi.fn().mockResolvedValue('success'),
+      });
+      const messages: any[] = [];
+      const attachments: any[] = [];
+
+      const result = await ToolExecutor.executeToolCalls(
+        [createToolCall()],
+        [tool],
+        messages,
+        attachments,
+        createExecContext({ userId: '' }),
+        tracer
+      );
+
+      expect(result.toolCallCount).toBe(1);
+      expect(messages[0].content).toBe('success');
+    });
+
+    it('returns FAILED message when RBAC permission check fails', async () => {
+      const tool = createTool({
+        requiredPermissions: ['admin', 'deploy'],
+        execute: vi.fn().mockResolvedValue('should not run'),
+      });
+      const messages: any[] = [];
+      const attachments: any[] = [];
+
+      const result = await ToolExecutor.executeToolCalls(
+        [createToolCall()],
+        [tool],
+        messages,
+        attachments,
+        createExecContext({ userId: 'user-no-perms' }),
+        tracer
+      );
+
+      expect(result.toolCallCount).toBe(0);
+      expect(messages[0].content).toContain('FAILED');
+      expect(messages[0].content).toContain('Unauthorized');
+      expect(messages[0].content).toContain('admin, deploy');
+    });
+
+    it('continues execution when all permissions are granted', async () => {
+      const tool = createTool({
+        requiredPermissions: ['read', 'write'],
+        execute: vi.fn().mockResolvedValue('allowed'),
+      });
+      const messages: any[] = [];
+      const attachments: any[] = [];
+
+      const result = await ToolExecutor.executeToolCalls(
+        [createToolCall()],
+        [tool],
+        messages,
+        attachments,
+        createExecContext({ userId: 'SYSTEM' }),
+        tracer
+      );
+
+      expect(result.toolCallCount).toBe(1);
+      expect(messages[0].content).toBe('allowed');
+    });
+
+    it('handles RBAC check failure gracefully on import error', async () => {
+      const tool = createTool({
+        requiredPermissions: ['admin'],
+        execute: vi.fn().mockResolvedValue('should not run'),
+      });
+      const messages: any[] = [];
+      const attachments: any[] = [];
+
+      const result = await ToolExecutor.executeToolCalls(
+        [createToolCall()],
+        [tool],
+        messages,
+        attachments,
+        createExecContext({ userId: 'user1' }),
+        tracer
+      );
+
+      expect(result.toolCallCount).toBe(0);
+      expect(messages[0].content).toContain('FAILED');
+      expect(messages[0].content).toContain('Unauthorized');
+    });
+
+    it('injects userId and sessionId from execContext when not in args', async () => {
+      const executeFn = vi.fn().mockResolvedValue('done');
+      const tool = createTool({ execute: executeFn });
+      const messages: any[] = [];
+      const attachments: any[] = [];
+
+      await ToolExecutor.executeToolCalls(
+        [createToolCall({ args: {} })],
+        [tool],
+        messages,
+        attachments,
+        createExecContext({ userId: 'user-ctx', sessionId: 'session-ctx' }),
+        tracer
+      );
+
+      const calledArgs = executeFn.mock.calls[0][0];
+      expect(calledArgs.userId).toBe('user-ctx');
+      expect(calledArgs.sessionId).toBe('session-ctx');
+    });
+
+    it('handles ToolResult with empty text and falls back to JSON.stringify', async () => {
+      const tool = createTool({
+        execute: vi.fn().mockResolvedValue({ text: '', data: { key: 'value' } }),
+      });
+      const messages: any[] = [];
+      const attachments: any[] = [];
+
+      await ToolExecutor.executeToolCalls(
+        [createToolCall()],
+        [tool],
+        messages,
+        attachments,
+        createExecContext(),
+        tracer
+      );
+
+      expect(messages[0].content).toBe('{"text":"","data":{"key":"value"}}');
+    });
+
+    it('handles multiple tool calls where first requires approval and second succeeds', async () => {
+      const tool1 = createTool({
+        name: 'needs-approval',
+        requiresApproval: true,
+        execute: vi.fn().mockResolvedValue('should not run'),
+      });
+      const tool2 = createTool({
+        name: 'safe-tool',
+        execute: vi.fn().mockResolvedValue('safe result'),
+      });
+      const messages: any[] = [];
+      const attachments: any[] = [];
+
+      const result = await ToolExecutor.executeToolCalls(
+        [
+          createToolCall({ id: 'c1', name: 'needs-approval' }),
+          createToolCall({ id: 'c2', name: 'safe-tool' }),
+        ],
+        [tool1, tool2],
+        messages,
+        attachments,
+        createExecContext(),
+        tracer
+      );
+
+      expect(result.paused).toBe(true);
+      expect(result.asyncWait).toBe(true);
+      expect(result.toolCallCount).toBe(0);
+      expect(messages).toHaveLength(0);
     });
   });
 });

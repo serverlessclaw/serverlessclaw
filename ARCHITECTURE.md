@@ -63,17 +63,17 @@ Value: {
 
 High-memory agents (Coder, Planner) remain idle and cost-free when no user interaction is occurring. Upon receiving a message:
 
-1. **Webhook Trigger**: The [Webhook Handler](file:///Users/pengcao/projects/serverlessclaw/core/handlers/webhook.ts) immediately checks warm state
+1. **Webhook Trigger**: The [Webhook Handler](./core/handlers/webhook.ts) immediately checks warm state
 2. **Smart Check**: Only warms servers/agents that are actually cold (expired TTL)
 3. **Fire-and-Forget**: Warmup signals are asynchronous to avoid blocking user requests
 
 ### 3. Recovery Warmup
 
-During emergency recovery sequences, the [Recovery Handler](file:///Users/pengcao/projects/serverlessclaw/core/handlers/recovery.ts) automatically warms critical agents and MCP servers to ensure they're ready for recovery operations.
+During emergency recovery sequences, the [Recovery Handler](./core/handlers/recovery.ts) automatically warms critical agents and MCP servers to ensure they're ready for recovery operations.
 
 ### 4. Health Reporting
 
-The [Health Handler](file:///Users/pengcao/projects/serverlessclaw/core/handlers/health.ts) includes warm state information in health responses, allowing dashboard visualization of which servers are currently warm.
+The [Health Handler](./core/handlers/health.ts) includes warm state information in health responses, allowing dashboard visualization of which servers are currently warm.
 
 ### 5. Cost Impact
 

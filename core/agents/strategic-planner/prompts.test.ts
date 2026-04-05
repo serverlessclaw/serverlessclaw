@@ -467,7 +467,7 @@ describe('buildProactiveReviewPrompt', () => {
 
     const { buildProactiveReviewPrompt } = await import('./prompts');
     const oldTimestamp = (Date.now() - 48 * TIME.SECONDS_IN_HOUR * TIME.MS_PER_SECOND).toString();
-    const gapsForReview = Array.from({ length: 5 }, (_, i) => ({
+    const gapsForReview = Array.from({ length: 25 }, (_, i) => ({
       id: `gap-${i}`,
       content: `gap ${i}`,
       metadata: { impact: 5 } as any,
@@ -567,7 +567,7 @@ describe('buildProactiveReviewPrompt', () => {
     }));
 
     const { buildProactiveReviewPrompt } = await import('./prompts');
-    const gapsForReview = Array.from({ length: 5 }, (_, i) => ({
+    const gapsForReview = Array.from({ length: 25 }, (_, i) => ({
       id: `review-gap-${i}`,
       content: `review gap ${i}`,
       metadata: { impact: 5 } as any,
@@ -626,7 +626,7 @@ describe('buildProactiveReviewPrompt', () => {
     }));
 
     const { buildProactiveReviewPrompt } = await import('./prompts');
-    const gapsForReview = Array.from({ length: 5 }, (_, i) => ({
+    const gapsForReview = Array.from({ length: 25 }, (_, i) => ({
       id: `review-gap-${i}`,
       content: `review gap ${i}`,
       metadata: { impact: 5 } as any,
@@ -673,7 +673,7 @@ describe('buildProactiveReviewPrompt', () => {
     }));
 
     const { buildProactiveReviewPrompt } = await import('./prompts');
-    const gapsForReview = Array.from({ length: 5 }, (_, i) => ({
+    const gapsForReview = Array.from({ length: 25 }, (_, i) => ({
       id: `review-gap-${i}`,
       content: `review gap ${i}`,
       metadata: { impact: 5 } as any,
@@ -750,8 +750,15 @@ describe('buildProactiveReviewPrompt', () => {
       },
     ];
 
+    const gapsForReview = Array.from({ length: 25 }, (_, i) => ({
+      id: `review-gap-${i}`,
+      content: `review gap ${i}`,
+      metadata: { impact: 5 } as any,
+      timestamp: Date.now(),
+    }));
+
     const memory = createMockMemory({
-      getAllGaps: vi.fn().mockResolvedValue(gaps),
+      getAllGaps: vi.fn().mockResolvedValueOnce(gapsForReview).mockResolvedValueOnce(gaps),
       searchInsights: vi.fn().mockResolvedValue({ items: [] }),
       getFailedPlans: vi.fn().mockResolvedValue([]),
       updateDistilledMemory: vi.fn().mockResolvedValue(undefined),
@@ -791,8 +798,15 @@ describe('buildProactiveReviewPrompt', () => {
       { id: 'gap-3', content: 'three', metadata: { impact: 3 } as any, timestamp: Date.now() },
     ];
 
+    const gapsForReview = Array.from({ length: 25 }, (_, i) => ({
+      id: `review-gap-${i}`,
+      content: `review gap ${i}`,
+      metadata: { impact: 5 } as any,
+      timestamp: Date.now(),
+    }));
+
     const memory = createMockMemory({
-      getAllGaps: vi.fn().mockResolvedValue(gaps),
+      getAllGaps: vi.fn().mockResolvedValueOnce(gapsForReview).mockResolvedValueOnce(gaps),
       searchInsights: vi.fn().mockResolvedValue({ items: [] }),
       getFailedPlans: vi.fn().mockResolvedValue([]),
       updateDistilledMemory: vi.fn().mockResolvedValue(undefined),

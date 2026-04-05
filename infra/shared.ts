@@ -15,6 +15,7 @@ export interface SharedContext {
   heartbeatHandler?: sst.aws.Function;
   schedulerRole?: aws.iam.Role;
   dlq?: sst.aws.Queue;
+  multiplexer?: sst.aws.Function;
   agents?: unknown; // Generic for now to avoid circular deps with createAgents return type
 }
 

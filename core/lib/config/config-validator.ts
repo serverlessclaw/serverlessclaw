@@ -39,6 +39,18 @@ const CONFIG_SCHEMAS = {
     max: 365,
     description: 'Days before gap considered stale',
   },
+  strategic_review_frequency: {
+    type: 'number',
+    min: 1,
+    max: 720,
+    description: 'Hours between proactive strategic planner reviews',
+  },
+  min_gaps_for_review: {
+    type: 'number',
+    min: 1,
+    max: 1000,
+    description: 'Minimum open gaps required to trigger a proactive strategic review',
+  },
   backoff_base_ms: {
     type: 'number',
     min: 60000,

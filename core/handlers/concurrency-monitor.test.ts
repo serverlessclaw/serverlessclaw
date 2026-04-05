@@ -24,9 +24,13 @@ vi.mock('../lib/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
-vi.mock('../lib/utils/bus', () => ({
-  emitEvent: mockEmitEvent,
-}));
+vi.mock('../lib/utils/bus', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    emitEvent: mockEmitEvent,
+  };
+});
 
 import { handler } from './concurrency-monitor';
 import { logger } from '../lib/logger';
@@ -70,5 +74,33 @@ describe('concurrency-monitor', () => {
     for (let i = 0; i < 5; i++) {
       await expect(handler()).resolves.not.toThrow();
     }
+  });
+});
+
+import { handleRecursionLimitExceeded } from './events/shared';
+
+describe('Infinite Loop Prevention', () => {
+  it('should halt infinite execution loops when recursion limit is reached', async () => {
+    const mockUserId = 'user-loop-test';
+    const mockSessionId = 'session-123';
+
+    await handleRecursionLimitExceeded(
+      mockUserId,
+      mockSessionId,
+      'concurrency-monitor',
+      'Simulated infinite loop limit reached. Halting execution.'
+    );
+
+    // It should emit a system event to notify the user and stop the chain
+    expect(mockEmitEvent).toHaveBeenCalledWith(
+      'concurrency-monitor',
+      'outbound_message',
+      expect.objectContaining({
+        userId: mockUserId,
+        sessionId: mockSessionId,
+        message: expect.stringContaining('Simulated infinite loop'),
+      }),
+      expect.anything()
+    );
   });
 });

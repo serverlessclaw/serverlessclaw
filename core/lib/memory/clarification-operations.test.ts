@@ -9,9 +9,12 @@ import {
   updateClarificationStatus,
   findExpiredClarifications,
   incrementClarificationRetry,
+  saveEscalationState,
+  getEscalationState,
 } from './clarification-operations';
 import type { BaseMemoryProvider } from './base';
 import { ClarificationStatus } from '../types/memory';
+import { EscalationChannel } from '../types/escalation';
 
 vi.mock('../logger', () => ({
   logger: {
@@ -187,6 +190,146 @@ describe('clarification-operations', () => {
       const result = await incrementClarificationRetry(mockBase, 'trace-123', 'coder-agent');
 
       expect(result).toBe(0);
+    });
+  });
+
+  describe('saveEscalationState', () => {
+    it('should save escalation state with correct PK construction', async () => {
+      const state = {
+        traceId: 'trace-456',
+        agentId: 'coder-agent',
+        userId: 'user123',
+        currentLevel: 2,
+        policyId: 'default',
+        startedAt: Date.now(),
+        currentLevelExpiresAt: Date.now() + 600000,
+        notifiedChannels: [EscalationChannel.TELEGRAM],
+        completed: false,
+      };
+
+      await saveEscalationState(mockBase, state);
+
+      expect(mockBase.putItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'ESCALATION#trace-456#coder-agent',
+          traceId: 'trace-456',
+          agentId: 'coder-agent',
+        })
+      );
+    });
+
+    it('should set TTL with 24h buffer', async () => {
+      const now = Date.now();
+      vi.spyOn(Date, 'now').mockReturnValue(now);
+
+      const state = {
+        traceId: 'trace-789',
+        agentId: 'agent-x',
+        userId: 'user456',
+        currentLevel: 1,
+        policyId: 'default',
+        startedAt: now,
+        currentLevelExpiresAt: now + 300000,
+        notifiedChannels: [EscalationChannel.TELEGRAM],
+        completed: false,
+      };
+
+      await saveEscalationState(mockBase, state);
+
+      const call = (mockBase.putItem as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      const expectedTtl = Math.floor(now / 1000) + 86400;
+      expect(call.expiresAt).toBe(expectedTtl);
+
+      vi.restoreAllMocks();
+    });
+
+    it('should set type field to ESCALATION_STATE', async () => {
+      const state = {
+        traceId: 'trace-abc',
+        agentId: 'agent-y',
+        userId: 'user789',
+        currentLevel: 3,
+        policyId: 'critical',
+        startedAt: Date.now(),
+        currentLevelExpiresAt: Date.now() + 900000,
+        notifiedChannels: [EscalationChannel.TELEGRAM, EscalationChannel.EMAIL],
+        completed: false,
+      };
+
+      await saveEscalationState(mockBase, state);
+
+      expect(mockBase.putItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'ESCALATION_STATE',
+        })
+      );
+    });
+
+    it('should set timestamp to 0 and createdAt to current time', async () => {
+      const state = {
+        traceId: 'trace-def',
+        agentId: 'agent-z',
+        userId: 'user000',
+        currentLevel: 1,
+        policyId: 'default',
+        startedAt: Date.now(),
+        currentLevelExpiresAt: Date.now() + 300000,
+        notifiedChannels: [EscalationChannel.DASHBOARD],
+        completed: false,
+      };
+
+      await saveEscalationState(mockBase, state);
+
+      expect(mockBase.putItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          timestamp: 0,
+          createdAt: expect.any(Number),
+        })
+      );
+    });
+  });
+
+  describe('getEscalationState', () => {
+    it('should return escalation state when found', async () => {
+      const mockState = {
+        userId: 'ESCALATION#trace-456#coder-agent',
+        traceId: 'trace-456',
+        agentId: 'coder-agent',
+        currentLevel: 2,
+        policyId: 'default',
+        completed: false,
+      };
+      mockBase.queryItems = vi.fn().mockResolvedValue([mockState]);
+
+      const result = await getEscalationState(mockBase, 'trace-456', 'coder-agent');
+
+      expect(result).toEqual(mockState);
+      expect(mockBase.queryItems).toHaveBeenCalledWith(
+        expect.objectContaining({
+          KeyConditionExpression: 'userId = :pk',
+          ExpressionAttributeValues: {
+            ':pk': 'ESCALATION#trace-456#coder-agent',
+          },
+          Limit: 1,
+        })
+      );
+    });
+
+    it('should return null when not found', async () => {
+      mockBase.queryItems = vi.fn().mockResolvedValue([]);
+
+      const result = await getEscalationState(mockBase, 'trace-missing', 'agent');
+
+      expect(result).toBeNull();
+      expect(mockBase.queryItems).toHaveBeenCalledWith(
+        expect.objectContaining({
+          KeyConditionExpression: 'userId = :pk',
+          ExpressionAttributeValues: {
+            ':pk': 'ESCALATION#trace-missing#agent',
+          },
+          Limit: 1,
+        })
+      );
     });
   });
 });

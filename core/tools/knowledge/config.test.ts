@@ -136,8 +136,8 @@ describe('checkConfig', () => {
       traceId: 'trace-3',
     });
 
-    expect(result).toContain('ACTIVE_PROVIDER: openai (default)');
-    expect(result).toContain('ACTIVE_MODEL: gpt-5.4-mini (default)');
+    expect(result).toContain('ACTIVE_PROVIDER: minimax (default)');
+    expect(result).toContain('ACTIVE_MODEL: MiniMax-M2.7 (default)');
   });
 
   it('includes staging bucket name', async () => {

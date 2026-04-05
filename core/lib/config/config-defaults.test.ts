@@ -29,6 +29,8 @@ describe('CONFIG_DEFAULTS', () => {
         'TRACE_RETENTION_DAYS',
         'MESSAGE_RETENTION_DAYS',
         'STALE_GAP_DAYS',
+        'STRATEGIC_REVIEW_FREQUENCY_HOURS',
+        'MIN_GAPS_FOR_REVIEW',
         'CLARIFICATION_TIMEOUT_MS',
         'CLARIFICATION_MAX_RETRIES',
         'PARALLEL_BARRIER_TIMEOUT_MS',
@@ -100,6 +102,10 @@ describe('getConfigValue', () => {
 
   it('should return code default when runtime value is undefined', () => {
     expect(getConfigValue('MAX_TOOL_ITERATIONS', undefined)).toBe(50);
+    expect(getConfigValue('STALE_GAP_DAYS')).toBe(30);
+    expect(getConfigValue('MAX_RECOVERY_ATTEMPTS')).toBe(4);
+    expect(getConfigValue('STRATEGIC_REVIEW_FREQUENCY_HOURS')).toBe(48);
+    expect(getConfigValue('MIN_GAPS_FOR_REVIEW')).toBe(20);
   });
 });
 
@@ -128,5 +134,8 @@ describe('getHotSwappableKeys', () => {
     expect(keyNames).toContain('DEPLOY_LIMIT');
     expect(keyNames).toContain('CIRCUIT_BREAKER_THRESHOLD');
     expect(keyNames).toContain('FEATURE_FLAGS_ENABLED');
+    expect(keyNames).toContain('STALE_GAP_DAYS');
+    expect(keyNames).toContain('STRATEGIC_REVIEW_FREQUENCY_HOURS');
+    expect(keyNames).toContain('MIN_GAPS_FOR_REVIEW');
   });
 });

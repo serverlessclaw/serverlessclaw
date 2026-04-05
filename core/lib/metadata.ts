@@ -3,7 +3,7 @@
  * Shared between core agents (reasoning) and dashboard (UI).
  */
 
-import { LLMProvider, OpenAIModel } from './types/llm';
+import { LLMProvider, MiniMaxModel } from './types/llm';
 import { EvolutionMode } from './types/agent';
 export interface ConfigOptionMetadata {
   label: string;
@@ -21,14 +21,14 @@ export const SYSTEM_CONFIG_METADATA: Record<string, ConfigOptionMetadata> = {
     implication:
       'Native providers offer the lowest latency. Switching during a session may cause context disruption.',
     risk: 'High provider latency can stall evolution loops.',
-    default: LLMProvider.OPENAI,
+    default: LLMProvider.MINIMAX,
   },
   active_model: {
     label: 'LLM Model',
     description: 'The specific model ID used for system-wide reasoning.',
     implication:
       'Advanced models improve quality and reasoning depth; smaller models reduce cost and latency.',
-    default: OpenAIModel.GPT_5_4,
+    default: MiniMaxModel.M2_7,
   },
   deploy_limit: {
     label: 'Daily Deploy Limit',
@@ -90,13 +90,13 @@ export const SYSTEM_CONFIG_METADATA: Record<string, ConfigOptionMetadata> = {
     label: 'Strategic Review Interval',
     description: 'Hours between large-scale architectural reviews.',
     implication: 'Ensures the system periodically re-aligns with high-level goals.',
-    default: '12',
+    default: '48',
   },
   min_gaps_for_review: {
     label: 'Min Gaps for Review',
     description: 'Required capability gaps before a review is triggered.',
     implication: 'Ensures strategic reviews have sufficient data to be meaningful.',
-    default: '3',
+    default: '20',
   },
   max_tool_iterations: {
     label: 'Max Tool Iterations',

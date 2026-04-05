@@ -249,7 +249,7 @@ export function createAgents(
   const buildMonitor = new sst.aws.Function('BuildMonitor', {
     handler: 'core/handlers/monitor.handler',
     dev: liveInLocalOnly,
-    link: [...baseLink, stagingBucket],
+    link: [...baseLink, stagingBucket, deployer, ...(ctx.multiplexer ? [ctx.multiplexer] : [])],
     architecture: LAMBDA_ARCHITECTURE,
     nodejs: { loader: NODEJS_LOADERS },
     permissions: [

@@ -37,7 +37,7 @@ import Button from '@/components/ui/Button';
 export default function Sidebar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
-  const { t } = useTranslations();
+  const { t, locale, setLocale } = useTranslations();
 
   // Close sidebar on navigation to improve mobile UX
   useEffect(() => {
@@ -200,33 +200,56 @@ export default function Sidebar() {
           })}
         </nav>
 
-        <Link
-          href={ROUTES.SYSTEM_PULSE}
-          className="block pt-6 border-t border-white/5 space-y-4 group/status"
-        >
-          <div className="bg-white/5 rounded p-3 group-hover/status:bg-white/10 transition-colors cursor-pointer">
-            <Typography
-              variant="mono"
-              weight="bold"
-              className="text-[10px] text-white/90 tracking-wider uppercase"
-            >
-              {t('SYSTEM_STATUS')}
+        <div className="block pt-6 border-t border-white/5 space-y-4">
+          <Link
+            href={ROUTES.SYSTEM_PULSE}
+            className="block group/status"
+          >
+            <div className="bg-white/5 rounded p-3 group-hover/status:bg-white/10 transition-colors cursor-pointer">
+              <Typography
+                variant="mono"
+                weight="bold"
+                className="text-[10px] text-white/90 tracking-wider uppercase"
+              >
+                {t('SYSTEM_STATUS')}
+              </Typography>
+              <div
+                className={`text-[10px] text-${THEME.COLORS.PRIMARY} mt-1.5 flex items-center gap-2 font-bold uppercase`}
+              >
+                <span className="relative flex h-2 w-2">
+                  <span
+                    className={`animate-ping absolute inline-flex h-full w-full rounded-full bg-${THEME.COLORS.PRIMARY} opacity-75`}
+                  ></span>
+                  <span
+                    className={`relative inline-flex rounded-full h-2 w-2 bg-${THEME.COLORS.PRIMARY}`}
+                  ></span>
+                </span>
+                {t('SYSTEM_ONLINE')} &gt; {t('CONNECTED')}
+              </div>
+            </div>
+          </Link>
+
+          <div className="flex items-center justify-between px-1 pb-2">
+            <Typography variant="caption" className="text-white/50 text-[10px] uppercase tracking-wider font-mono">
+              {t('LANGUAGE')}
             </Typography>
-            <div
-              className={`text-[10px] text-${THEME.COLORS.PRIMARY} mt-1.5 flex items-center gap-2 font-bold uppercase`}
-            >
-              <span className="relative flex h-2 w-2">
-                <span
-                  className={`animate-ping absolute inline-flex h-full w-full rounded-full bg-${THEME.COLORS.PRIMARY} opacity-75`}
-                ></span>
-                <span
-                  className={`relative inline-flex rounded-full h-2 w-2 bg-${THEME.COLORS.PRIMARY}`}
-                ></span>
-              </span>
-              {t('SYSTEM_ONLINE')} &gt; {t('CONNECTED')}
+            <div className="flex gap-2 text-[10px] font-mono">
+              <button
+                onClick={(e) => { e.preventDefault(); setLocale('en'); }}
+                className={`transition-colors ${locale === 'en' ? 'text-white font-bold' : 'text-white/40 hover:text-white/70'}`}
+              >
+                EN
+              </button>
+              <span className="text-white/20">|</span>
+              <button
+                onClick={(e) => { e.preventDefault(); setLocale('cn'); }}
+                className={`transition-colors ${locale === 'cn' ? 'text-white font-bold' : 'text-white/40 hover:text-white/70'}`}
+              >
+                中文
+              </button>
             </div>
           </div>
-        </Link>
+        </div>
       </aside>
     </>
   );

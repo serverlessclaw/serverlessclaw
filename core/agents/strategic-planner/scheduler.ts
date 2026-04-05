@@ -1,6 +1,7 @@
 import { logger } from '../../lib/logger';
 import { AgentType } from '../../lib/types/agent';
 import { parseConfigInt } from '../../lib/providers/utils';
+import { CONFIG_DEFAULTS } from '../../lib/config/config-defaults';
 
 /**
  * Manages the self-scheduling of proactive strategic reviews.
@@ -19,7 +20,10 @@ export async function manageProactiveScheduling(
 
     const GOAL_ID = `PLANNER#STRATEGIC_REVIEW#${baseUserId}`;
     const customFreq = await AgentRegistry.getRawConfig('strategic_review_frequency');
-    const frequencyHrs = parseConfigInt(customFreq, 24);
+    const frequencyHrs = parseConfigInt(
+      customFreq,
+      CONFIG_DEFAULTS.STRATEGIC_REVIEW_FREQUENCY_HOURS.code
+    );
 
     await DynamicScheduler.ensureProactiveGoal({
       goalId: GOAL_ID,

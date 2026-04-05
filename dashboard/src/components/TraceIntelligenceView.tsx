@@ -300,8 +300,8 @@ export default function TraceIntelligenceView({
       </div>
 
       {/* Tabs & Filters */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-white/5 pb-4">
-        <div className="flex p-1 bg-white/5 rounded-lg border border-white/5 overflow-x-auto">
+      <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-6 border-b border-white/5 pb-6 max-w-full overflow-hidden">
+        <div className="flex p-1 bg-white/5 rounded-xl border border-white/10 w-full 2xl:w-auto overflow-x-auto">
           {[
             { id: 'live', label: t('LIVE'), icon: Activity },
             { id: 'timeline', label: t('TIMELINE'), icon: Clock },
@@ -313,7 +313,7 @@ export default function TraceIntelligenceView({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as TabType)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all duration-300 ${
+              className={`flex-1 2xl:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-[10px] md:text-[11px] font-bold uppercase tracking-wider transition-all duration-300 ${
                 activeTab === tab.id
                   ? tab.id === 'live'
                     ? 'bg-cyber-green/10 text-cyber-green border border-cyber-green/20 shadow-[0_0_15px_rgba(0,255,136,0.1)]'
@@ -330,58 +330,58 @@ export default function TraceIntelligenceView({
           ))}
         </div>
 
-        <div className="flex flex-wrap items-center gap-4">
-          {activeTab !== 'live' && (
-            <>
-              <div className="relative group">
-                <Search
-                  size={14}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-cyber-blue transition-colors"
-                />
-                <input
-                  type="text"
-                  placeholder={t('FILTER_NEURAL_PATHS')}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-xs text-white placeholder:text-white/20 focus:outline-none focus:border-cyber-blue/50 w-full md:w-64 transition-all"
-                />
-              </div>
+        <div 
+          className={`flex flex-wrap items-center gap-3 w-full 2xl:w-auto 2xl:justify-end overflow-hidden transition-all duration-300 min-h-[40px] ${
+            activeTab === 'live' ? 'opacity-0 pointer-events-none invisible' : 'opacity-100 visible'
+          }`}
+        >
+          <div className="relative group flex-1 md:flex-none">
+            <Search
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-cyber-blue transition-colors"
+            />
+            <input
+              type="text"
+              placeholder={t('FILTER_NEURAL_PATHS')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-xs text-white placeholder:text-white/20 focus:outline-none focus:border-cyber-blue/50 w-full md:w-48 lg:w-64 transition-all"
+            />
+          </div>
 
-              <select
-                value={statusFilter}
-                onChange={(e) =>
-                  setStatusFilter(e.target.value as 'all' | 'completed' | 'started' | 'error')
-                }
-                className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] font-bold uppercase text-white/70 focus:outline-none focus:border-cyber-blue/50"
-              >
-                <option value="all">{t('STATUS_ALL')}</option>
-                <option value="completed">{t('STATUS_COMPLETED')}</option>
-                <option value="started">{t('STATUS_RUNNING')}</option>
-                <option value="error">{t('STATUS_ERROR')}</option>
-              </select>
+          <select
+            value={statusFilter}
+            onChange={(e) =>
+              setStatusFilter(e.target.value as 'all' | 'completed' | 'started' | 'error')
+            }
+            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] font-bold uppercase text-white/70 focus:outline-none focus:border-cyber-blue/50 flex-1 md:flex-none min-w-[100px]"
+          >
+            <option value="all">{t('STATUS_ALL')}</option>
+            <option value="completed">{t('STATUS_COMPLETED')}</option>
+            <option value="started">{t('STATUS_RUNNING')}</option>
+            <option value="error">{t('STATUS_ERROR')}</option>
+          </select>
 
-              <select
-                value={sourceFilter}
-                onChange={(e) => setSourceFilter(e.target.value)}
-                className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] font-bold uppercase text-white/70 focus:outline-none focus:border-cyber-blue/50"
-              >
-                <option value="all">All Sources</option>
-                <option value="telegram">Telegram</option>
-                <option value="dashboard">Dashboard</option>
-                <option value="system">System</option>
-              </select>
+          <select
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value)}
+            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] font-bold uppercase text-white/70 focus:outline-none focus:border-cyber-blue/50 flex-1 md:flex-none min-w-[100px]"
+          >
+            <option value="all">All Sources</option>
+            <option value="telegram">Telegram</option>
+            <option value="dashboard">Dashboard</option>
+            <option value="system">System</option>
+          </select>
 
-              <select
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value as 'all' | '24h' | '7d')}
-                className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] font-bold uppercase text-white/70 focus:outline-none focus:border-cyber-blue/50"
-              >
-                <option value="all">All Time</option>
-                <option value="24h">Last 24h</option>
-                <option value="7d">Last 7 Days</option>
-              </select>
-            </>
-          )}
+          <select
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value as 'all' | '24h' | '7d')}
+            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] font-bold uppercase text-white/70 focus:outline-none focus:border-cyber-blue/50 flex-1 md:flex-none min-w-[100px]"
+          >
+            <option value="all">All Time</option>
+            <option value="24h">Last 24h</option>
+            <option value="7d">Last 7 Days</option>
+          </select>
         </div>
       </div>
 

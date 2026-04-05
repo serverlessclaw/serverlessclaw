@@ -30,6 +30,16 @@ vi.mock('../../lib/logger', () => ({
   },
 }));
 
+// Mock ConfigManager for debugAgent - using hoisted mock factory
+const mockSaveRawConfig = vi.fn().mockResolvedValue(undefined);
+vi.mock('../../lib/registry/config', async () => {
+  return {
+    ConfigManager: {
+      saveRawConfig: mockSaveRawConfig,
+    },
+  };
+});
+
 // Mock constants
 vi.mock('../../lib/constants', () => ({
   MEMORY_KEYS: {
@@ -65,7 +75,7 @@ vi.mock('../../lib/memory', () => ({
   }),
 }));
 
-import { checkHealth, runCognitiveHealthCheck } from './health';
+import { checkHealth, runCognitiveHealthCheck, debugAgent } from './health';
 import { checkCognitiveHealth } from '../../lib/lifecycle/health';
 
 // Mock exec
@@ -78,6 +88,8 @@ describe('system tools', () => {
     codebuildMock.reset();
     ddbMock.reset();
     vi.clearAllMocks();
+    mockSaveRawConfig.mockReset();
+    mockSaveRawConfig.mockResolvedValue(undefined);
   });
 
   describe('checkHealth', () => {
@@ -115,12 +127,19 @@ describe('system tools', () => {
       expect(result).toContain('FAILED');
       expect(result).toContain('System unstable');
     });
+
+    it('should return error message when checkCognitiveHealth throws', async () => {
+      vi.mocked(checkCognitiveHealth).mockRejectedValue(new Error('Health service down'));
+
+      const result = await checkHealth.execute({});
+      expect(result).toContain('Error executing health check');
+      expect(result).toContain('Health service down');
+    });
   });
 
   describe('runCognitiveHealthCheck', () => {
     it('should return success with default snapshot', async () => {
       const result = await runCognitiveHealthCheck.execute({});
-      // With empty metrics, the score should be 100 (default)
       expect(result).toContain('100/100');
       expect(result).toContain('optimal');
     });
@@ -141,6 +160,80 @@ describe('system tools', () => {
       expect(parsed.memory).toBeDefined();
       expect(parsed.anomalies).toBeDefined();
       expect(parsed.agentMetrics).toBeDefined();
+    });
+
+    it('should return warning when score is between 60 and 79', async () => {
+      const mockSnapshot = {
+        overallScore: 70,
+        anomalies: [{ severity: 'medium', message: 'test' }],
+        timestamp: Date.now(),
+        reasoning: {},
+        memory: {},
+        agentMetrics: [],
+      };
+      const { CognitiveHealthMonitor } = await import('../../lib/metrics/cognitive-metrics');
+      vi.mocked(CognitiveHealthMonitor).prototype.takeSnapshot = vi
+        .fn()
+        .mockResolvedValue(mockSnapshot);
+
+      const result = await runCognitiveHealthCheck.execute({});
+      expect(result).toContain('70/100');
+      expect(result).toContain('Minor degradation');
+    });
+
+    it('should return critical when score is below 60', async () => {
+      const mockSnapshot = {
+        overallScore: 40,
+        anomalies: [
+          { severity: 'critical', message: 'critical issue' },
+          { severity: 'high', message: 'high issue' },
+          { severity: 'low', message: 'low issue' },
+        ],
+        timestamp: Date.now(),
+        reasoning: {},
+        memory: {},
+        agentMetrics: [],
+      };
+      const { CognitiveHealthMonitor } = await import('../../lib/metrics/cognitive-metrics');
+      vi.mocked(CognitiveHealthMonitor).prototype.takeSnapshot = vi
+        .fn()
+        .mockResolvedValue(mockSnapshot);
+
+      const result = await runCognitiveHealthCheck.execute({});
+      expect(result).toContain('40/100');
+      expect(result).toContain('Anomalies: 3 (2 critical/high)');
+      expect(result).toContain('Significant cognitive degradation');
+    });
+
+    it('should return error message when cognitive health check throws', async () => {
+      const { CognitiveHealthMonitor } = await import('../../lib/metrics/cognitive-metrics');
+      vi.mocked(CognitiveHealthMonitor).prototype.takeSnapshot = vi
+        .fn()
+        .mockRejectedValue(new Error('Connection failed'));
+
+      const result = await runCognitiveHealthCheck.execute({});
+      expect(result).toContain('Error executing cognitive health check');
+      expect(result).toContain('Connection failed');
+    });
+  });
+
+  describe('debugAgent', () => {
+    it('should activate debug mode for an agent', async () => {
+      mockSaveRawConfig.mockResolvedValue(undefined);
+
+      const result = await debugAgent.execute({ agentId: 'test-agent', level: 'debug' });
+      expect(result).toContain('DEBUG_MODE_ACTIVATED');
+      expect(result).toContain('test-agent');
+      expect(result).toContain('DEBUG');
+      expect(mockSaveRawConfig).toHaveBeenCalledWith('debug_test-agent', 'debug');
+    });
+
+    it('should return error message when config save fails', async () => {
+      mockSaveRawConfig.mockRejectedValue(new Error('Config service unavailable'));
+
+      const result = await debugAgent.execute({ agentId: 'test-agent', level: 'verbose' });
+      expect(result).toContain('Failed to activate debug mode');
+      expect(result).toContain('Config service unavailable');
     });
   });
 });

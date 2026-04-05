@@ -46,7 +46,7 @@ vi.mock('sst', () => ({
     KnowledgeBucket: { name: 'test-knowledge' },
     Notifier: { name: 'test-notifier' },
     RealtimeBridge: { name: 'test-rt-bridge' },
-    RealtimeBus: { name: 'test-bridge' },
+    Realtime: { name: 'test-realtime' },
     Dashboard: { url: 'https://dashboard.test' },
     SuperClaw: { name: 'test-main' },
     Coder: { name: 'test-coder' },
@@ -77,9 +77,8 @@ describe('discoverSystemTopology', () => {
     expect(nodeIds).toContain('agentbus');
     expect(nodeIds).toContain('deployer');
     expect(nodeIds).toContain('dashboard');
-    expect(nodeIds).toContain('memorytable');
-    expect(nodeIds).toContain('tracetable');
-    expect(nodeIds).toContain('configtable');
+    // MemoryTable, ConfigTable, TraceTable all map to 'clawdb' via idOverride
+    expect(nodeIds).toContain('clawdb');
     expect(nodeIds).toContain('mcpgitserver');
     expect(nodeIds).toContain('realtimebus');
     expect(nodeIds).toContain('telegram');

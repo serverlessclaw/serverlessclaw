@@ -43,7 +43,7 @@ import {
 
 describe('ORPHAN_NODES', () => {
   it('contains the expected number of orphan nodes', () => {
-    expect(ORPHAN_NODES.length).toBe(6);
+    expect(ORPHAN_NODES.length).toBe(8);
   });
 
   it('includes dashboard node', () => {
@@ -114,8 +114,11 @@ describe('discoverSstNodes', () => {
       activeProvider: { name: 'openai' },
       validResource: { name: 'test' },
     });
-    expect(result.length).toBe(1);
-    expect(result[0].id).toBe('validresource');
+    // App, token, password, secretVal, awsRegion, activeModel, activeProvider are filtered.
+    // myKey and validResource are kept.
+    expect(result.length).toBe(2);
+    expect(result.map((n) => n.id)).toContain('validresource');
+    expect(result.map((n) => n.id)).toContain('mykey');
   });
 
   it('lowercases resource keys for node IDs', () => {
@@ -131,7 +134,7 @@ describe('discoverSstNodes', () => {
     });
     expect(result[0].type).toBe(NODE_TYPE.INFRA);
     expect(result[0].icon).toBe(NODE_ICON.DATABASE);
-    expect(result[0].label).toBe('Memory (DynamoDB)');
+    expect(result[0].label).toBe('ClawDB (Single Table)');
     expect(result[0].isBackbone).toBe(true);
   });
 

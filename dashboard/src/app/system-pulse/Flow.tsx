@@ -337,12 +337,14 @@ export function FlowContent() {
       const TIER_Y: Record<string, number> = {
         APP: -100,
         COMM: 150,
-        AGENT: 400,
-        INFRA: 700,
+        AGENT: 330, 
+        INFRA: 620, // Increased to provide breathing room from layer 3
       };
 
       tiers.forEach((tier) => {
-        const nodesInTier = topology.nodes.filter((n) => (n.tier || 'INFRA') === tier);
+        const nodesInTier = topology.nodes.filter(
+          (n) => (n.tier?.toUpperCase() || 'INFRA') === tier
+        );
 
         // Horizontal centering based on degree
         nodesInTier.sort((a, b) => (nodeDegrees[b.id] ?? 0) - (nodeDegrees[a.id] ?? 0));
@@ -356,9 +358,10 @@ export function FlowContent() {
         const totalInTier = centeredNodes.length;
         const yPos = TIER_Y[tier] ?? 700;
 
-        let spacing = 250;
-        if (tier === 'AGENT') spacing = 300;
-        if (tier === 'COMM') spacing = 450;
+        let spacing = 260;
+        if (tier === 'AGENT') spacing = 230; 
+        if (tier === 'COMM') spacing = 320; 
+        if (tier === 'INFRA') spacing = 280; // Increased from 220 so they aren't squished
 
         const totalWidth = (totalInTier - 1) * spacing;
         const startX = 400 - totalWidth / 2;

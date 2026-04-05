@@ -22,6 +22,7 @@ describe('classifyResource', () => {
       expect(c.icon).toBe(NODE_ICON.BUS);
       expect(c.label).toBe('AgentBus (EventBridge)');
       expect(c.tier).toBe(NODE_TIER.COMM);
+      expect(c.idOverride).toBe('agentbus');
     });
 
     it('matches bus', () => {
@@ -36,7 +37,7 @@ describe('classifyResource', () => {
       expect(c.type).toBe(NODE_TYPE.INFRA);
       expect(c.icon).toBe(NODE_ICON.APP);
       expect(c.label).toBe('Webhook API');
-      expect(c.tier).toBe(NODE_TIER.APP);
+      expect(c.tier).toBe(NODE_TIER.COMM);
     });
 
     it('matches keys containing api', () => {
@@ -46,42 +47,17 @@ describe('classifyResource', () => {
     });
   });
 
-  describe('memory classifier', () => {
-    it('matches memorytable', () => {
-      const c = classifyResource('memorytable')!;
-      expect(c.type).toBe(NODE_TYPE.INFRA);
-      expect(c.icon).toBe(NODE_ICON.DATABASE);
-      expect(c.label).toBe('Memory (DynamoDB)');
-      expect(c.tier).toBe(NODE_TIER.INFRA);
-    });
-
-    it('matches memory', () => {
-      const c = classifyResource('memory')!;
-      expect(c.label).toBe('Memory (DynamoDB)');
-    });
-  });
-
-  describe('traces classifier', () => {
-    it('matches tracetable', () => {
-      const c = classifyResource('tracetable')!;
-      expect(c.icon).toBe(NODE_ICON.SEARCH);
-      expect(c.label).toBe('Traces (DynamoDB)');
-    });
-
-    it('matches traces', () => {
-      expect(classifyResource('traces')).toBeDefined();
-    });
-  });
-
-  describe('config classifier', () => {
-    it('matches configtable', () => {
-      const c = classifyResource('configtable')!;
-      expect(c.icon).toBe(NODE_ICON.GEAR);
-      expect(c.label).toBe('Config (DynamoDB)');
-    });
-
-    it('matches config', () => {
-      expect(classifyResource('config')).toBeDefined();
+  describe('clawdb classifier', () => {
+    it('matches memory, traces, and config tables', () => {
+      const keys = ['memorytable', 'memory', 'tracetable', 'traces', 'configtable', 'config'];
+      keys.forEach((key) => {
+        const c = classifyResource(key)!;
+        expect(c.type).toBe(NODE_TYPE.INFRA);
+        expect(c.icon).toBe(NODE_ICON.DATABASE);
+        expect(c.label).toBe('ClawDB (Single Table)');
+        expect(c.tier).toBe(NODE_TIER.INFRA);
+        expect(c.idOverride).toBe('clawdb');
+      });
     });
   });
 
@@ -90,6 +66,7 @@ describe('classifyResource', () => {
       const c = classifyResource('knowledgebucket')!;
       expect(c.icon).toBe(NODE_ICON.DATABASE);
       expect(c.label).toBe('Knowledge Storage (S3)');
+      expect(c.idOverride).toBe('knowledgebucket');
     });
 
     it('matches knowledge', () => {
@@ -100,8 +77,9 @@ describe('classifyResource', () => {
   describe('staging classifier', () => {
     it('matches stagingbucket', () => {
       const c = classifyResource('stagingbucket')!;
-      expect(c.icon).toBe(NODE_ICON.HAMMER);
+      expect(c.icon).toBe(NODE_ICON.DATABASE);
       expect(c.label).toBe('Staging Storage (S3)');
+      expect(c.idOverride).toBe('stagingbucket');
     });
 
     it('matches staging', () => {
@@ -114,6 +92,7 @@ describe('classifyResource', () => {
       const c = classifyResource('deployer')!;
       expect(c.icon).toBe(NODE_ICON.HAMMER);
       expect(c.tier).toBe(NODE_TIER.INFRA);
+      expect(c.idOverride).toBe('deployer');
     });
 
     it('matches codebuild', () => {
@@ -152,6 +131,7 @@ describe('classifyResource', () => {
       expect(c.icon).toBe(NODE_ICON.SIGNAL);
       expect(c.label).toBe('Realtime Bridge (Lambda)');
       expect(c.tier).toBe(NODE_TIER.COMM);
+      expect(c.idOverride).toBe('realtimebridge');
     });
 
     it('matches bridge', () => {
@@ -164,6 +144,7 @@ describe('classifyResource', () => {
       const c = classifyResource('realtimebus')!;
       expect(c.icon).toBe(NODE_ICON.RADIO);
       expect(c.label).toBe('Realtime Bus (IoT Core)');
+      expect(c.idOverride).toBe('realtimebus');
     });
   });
 
@@ -171,7 +152,8 @@ describe('classifyResource', () => {
     it('matches heartbeathandler', () => {
       const c = classifyResource('heartbeathandler')!;
       expect(c.icon).toBe(NODE_ICON.SIGNAL);
-      expect(c.label).toBe('Heartbeat Handler');
+      expect(c.label).toBe('Heartbeat Engine');
+      expect(c.idOverride).toBe('heartbeat');
     });
 
     it('matches heartbeat', () => {
@@ -235,7 +217,7 @@ describe('classifyResource', () => {
   });
 
   describe('agent classifier', () => {
-    it('matches known agent names', () => {
+    it('matches known LLM agent names', () => {
       const agentNames = [
         'superclaw',
         'coder',
@@ -249,7 +231,7 @@ describe('classifyResource', () => {
         const c = classifyResource(name)!;
         expect(c).toBeDefined();
         expect(c.type).toBe(NODE_TYPE.AGENT);
-        expect(c.icon).toBe(NODE_ICON.BOT);
+        expect(c.icon).toBe(NODE_ICON.BRAIN);
         expect(c.tier).toBe(NODE_TIER.AGENT);
       }
     });
@@ -257,12 +239,17 @@ describe('classifyResource', () => {
     it('matches keys containing agent', () => {
       expect(classifyResource('myagent')).toBeDefined();
       expect(classifyResource('customagent')).toBeDefined();
-      expect(classifyResource('agentrunner')).toBeDefined();
     });
 
-    it('matches keys containing worker', () => {
-      expect(classifyResource('worker1')).toBeDefined();
-      expect(classifyResource('myworker')).toBeDefined();
+    it('matches logic handlers and workers', () => {
+      const workerNames = ['worker1', 'myworker', 'taskhandler', 'jobmonitor'];
+      for (const name of workerNames) {
+        const c = classifyResource(name)!;
+        expect(c).toBeDefined();
+        expect(c.type).toBe(NODE_TYPE.AGENT);
+        expect(c.icon).toBe(NODE_ICON.GEAR);
+        expect(c.tier).toBe(NODE_TIER.AGENT);
+      }
     });
   });
 });

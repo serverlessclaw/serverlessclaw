@@ -13,11 +13,23 @@ export function mapProfileToResource(profile: string, busId: string): string | n
   const lowerProfile = profile.toLowerCase();
 
   if (lowerProfile === 'bus' || lowerProfile === INFRA_NODE_ID.AGENT_BUS) return busId;
-  if (lowerProfile === 'memory' || lowerProfile === INFRA_NODE_ID.MEMORY_TABLE)
+  if (
+    lowerProfile === 'memory' ||
+    lowerProfile === INFRA_NODE_ID.MEMORY_TABLE ||
+    lowerProfile === 'memorytable'
+  )
     return INFRA_NODE_ID.MEMORY_TABLE;
-  if (lowerProfile === 'config' || lowerProfile === INFRA_NODE_ID.CONFIG_TABLE)
+  if (
+    lowerProfile === 'config' ||
+    lowerProfile === INFRA_NODE_ID.CONFIG_TABLE ||
+    lowerProfile === 'configtable'
+  )
     return INFRA_NODE_ID.CONFIG_TABLE;
-  if (lowerProfile === 'trace' || lowerProfile === INFRA_NODE_ID.TRACE_TABLE)
+  if (
+    lowerProfile === 'trace' ||
+    lowerProfile === INFRA_NODE_ID.TRACE_TABLE ||
+    lowerProfile === 'tracetable'
+  )
     return INFRA_NODE_ID.TRACE_TABLE;
   if (lowerProfile === 'storage' || lowerProfile === INFRA_NODE_ID.STAGING_BUCKET)
     return INFRA_NODE_ID.STAGING_BUCKET;
@@ -32,15 +44,28 @@ export function mapProfileToResource(profile: string, busId: string): string | n
   if (lowerProfile === INFRA_NODE_ID.SCHEDULER) return INFRA_NODE_ID.SCHEDULER;
   if (lowerProfile === INFRA_NODE_ID.NOTIFIER) return INFRA_NODE_ID.NOTIFIER;
 
-  // MCP Servers
-  if (lowerProfile === 'ast') return INFRA_NODE_ID.MCP_AST;
-  if (lowerProfile === 'git') return INFRA_NODE_ID.MCP_GIT;
-  if (lowerProfile === 'filesystem') return INFRA_NODE_ID.MCP_FILESYSTEM;
-  if (lowerProfile === 'google-search') return INFRA_NODE_ID.MCP_GOOGLE_SEARCH;
-  if (lowerProfile === 'puppeteer') return INFRA_NODE_ID.MCP_PUPPETEER;
-  if (lowerProfile === 'fetch') return INFRA_NODE_ID.MCP_FETCH;
-  if (lowerProfile === 'aws') return INFRA_NODE_ID.MCP_AWS;
-  if (lowerProfile === 'aws-s3') return INFRA_NODE_ID.MCP_AWS_S3;
+  // MCP Servers (Unified Multiplexer fallback)
+  const mcpMultiplexerId = 'mcp-multiplexer';
+  const isMcpProfile = [
+    'ast',
+    'git',
+    'filesystem',
+    'google-search',
+    'puppeteer',
+    'fetch',
+    'aws',
+    'aws-s3',
+  ].includes(lowerProfile);
+
+  if (isMcpProfile) return mcpMultiplexerId;
+
+  if (lowerProfile === 'sqs' || lowerProfile === INFRA_NODE_ID.SQS) return INFRA_NODE_ID.SQS;
+  if (lowerProfile === 'docs' || lowerProfile === INFRA_NODE_ID.DOCUMENTS)
+    return INFRA_NODE_ID.DOCUMENTS;
+  if (lowerProfile === 'search' || lowerProfile === INFRA_NODE_ID.OPEN_SEARCH)
+    return INFRA_NODE_ID.OPEN_SEARCH;
+  if (lowerProfile === 'api' || lowerProfile === INFRA_NODE_ID.API)
+    return INFRA_NODE_ID.WEBHOOK_API;
 
   return null;
 }
@@ -81,6 +106,12 @@ export async function mapToolToResources(toolName: string): Promise<string[]> {
     if (toolName.startsWith('fetch_')) return ['fetch'];
     if (toolName.startsWith('aws_')) return ['aws'];
     if (toolName.startsWith('aws-s3_')) return ['aws-s3'];
+    if (toolName.includes('memory') || toolName.includes('kv')) return ['memory'];
+    if (toolName.includes('config')) return ['config'];
+    if (toolName.includes('trace') || toolName.includes('history')) return ['trace'];
+    if (toolName.includes('search') || toolName.includes('vector')) return ['search'];
+    if (toolName.includes('knowledge') || toolName.includes('rag')) return ['knowledge'];
+    if (toolName.includes('deploy') || toolName.includes('build')) return ['codebuild'];
     return [];
   }
 
@@ -99,7 +130,8 @@ export function inferNodeEdges(nodes: TopologyNode[]): TopologyEdge[] {
     (node) =>
       node.type === NODE_TYPE.BUS ||
       node.id === INFRA_NODE_ID.AGENT_BUS ||
-      node.id === INFRA_NODE_ID.BUS
+      node.id === INFRA_NODE_ID.BUS ||
+      node.label.toLowerCase().includes('bus')
   );
   const busId = busNode?.id ?? INFRA_NODE_ID.AGENT_BUS;
 
@@ -212,11 +244,7 @@ export function inferNodeEdges(nodes: TopologyNode[]): TopologyEdge[] {
       });
     }
 
-    const coreTables = [
-      INFRA_NODE_ID.MEMORY_TABLE,
-      INFRA_NODE_ID.CONFIG_TABLE,
-      INFRA_NODE_ID.TRACE_TABLE,
-    ];
+    const coreTables = [INFRA_NODE_ID.CLAWDB];
 
     coreTables.forEach((table) => {
       if (nodes.some((node) => node.id === table)) {
@@ -228,6 +256,112 @@ export function inferNodeEdges(nodes: TopologyNode[]): TopologyEdge[] {
         });
       }
     });
+
+    const coreBuckets = [INFRA_NODE_ID.STAGING_BUCKET, INFRA_NODE_ID.KNOWLEDGE_BUCKET];
+
+    coreBuckets.forEach((bucket) => {
+      if (nodes.some((node) => node.id === bucket)) {
+        edges.push({
+          id: `dashboard-manage-${bucket}`,
+          source: dashboardNode.id,
+          target: bucket,
+          label: EDGE_LABEL.MANAGE_FILES,
+        });
+      }
+    });
+
+    // H. Deployer (CodeBuild) Links
+    const deployerNode = nodes.find(
+      (node) => node.id === INFRA_NODE_ID.DEPLOYER || node.id === 'codebuild'
+    );
+    if (deployerNode) {
+      if (nodes.some((node) => node.id === INFRA_NODE_ID.STAGING_BUCKET)) {
+        edges.push({
+          id: `${deployerNode.id}-staging-link`,
+          source: deployerNode.id,
+          target: INFRA_NODE_ID.STAGING_BUCKET,
+          label: EDGE_LABEL.DEPLOY,
+        });
+      }
+      if (busNode) {
+        edges.push({
+          id: `${deployerNode.id}-bus-signal`,
+          source: deployerNode.id,
+          target: busId,
+          label: EDGE_LABEL.SIGNAL,
+        });
+      }
+    }
+
+    // I. SQS to EventBridge
+    const sqsNode = nodes.find(
+      (node) => node.id === INFRA_NODE_ID.SQS || node.label.includes('SQS')
+    );
+    if (sqsNode && busNode) {
+      edges.push({
+        id: `sqs-bus-link`,
+        source: sqsNode.id,
+        target: busId,
+        label: EDGE_LABEL.SIGNAL,
+      });
+    }
+
+    // J. External / Orphan Connectivity
+    const githubNode = nodes.find((n) => n.id === 'github');
+    const coderNode = nodes.find((n) => n.id === 'coder' || n.id === 'coderagent');
+    if (githubNode && coderNode) {
+      edges.push({
+        id: 'github-coder-read',
+        source: githubNode.id,
+        target: coderNode.id,
+        label: EDGE_LABEL.READ_FILES,
+      });
+      edges.push({
+        id: 'coder-github-commit',
+        source: coderNode.id,
+        target: githubNode.id,
+        label: EDGE_LABEL.DEPLOY,
+      });
+    }
+
+    if (githubNode && deployerNode) {
+      edges.push({
+        id: 'github-deployer-source',
+        source: githubNode.id,
+        target: deployerNode.id,
+        label: EDGE_LABEL.DEPLOY,
+      });
+    }
+
+    const usersNode = nodes.find((n) => n.id === 'external_users');
+    if (usersNode) {
+      if (apiNode) {
+        edges.push({
+          id: 'users-api-request',
+          source: usersNode.id,
+          target: apiNode.id,
+          label: EDGE_LABEL.INBOUND,
+        });
+      }
+      edges.push({
+        id: 'users-dash-visit',
+        source: usersNode.id,
+        target: dashboardNode.id,
+        label: EDGE_LABEL.INBOUND,
+      });
+    }
+
+    // K. Notifier to Telegram (Outbound)
+    const notifierNode = nodes.find((n) => n.id === 'notifier' || n.id === INFRA_NODE_ID.NOTIFIER);
+    const telegramNode = nodes.find((n) => n.id === INFRA_NODE_ID.TELEGRAM);
+    if (notifierNode && telegramNode) {
+      edges.push({
+        id: 'notifier-telegram-send',
+        source: notifierNode.id,
+        target: telegramNode.id,
+        label: EDGE_LABEL.OUTBOUND,
+      });
+    }
   }
 
   return edges;
@@ -245,7 +379,8 @@ export async function inferBackboneEdges(nodes: TopologyNode[]): Promise<Topolog
     (node) =>
       node.type === NODE_TYPE.BUS ||
       node.id === INFRA_NODE_ID.AGENT_BUS ||
-      node.id === INFRA_NODE_ID.BUS
+      node.id === INFRA_NODE_ID.BUS ||
+      node.label.toLowerCase().includes('bus')
   );
   const busId = busNode?.id ?? INFRA_NODE_ID.AGENT_BUS;
 

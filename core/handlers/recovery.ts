@@ -12,6 +12,7 @@ import { MEMORY_KEYS, RETENTION } from '../lib/constants';
 import { emitEvent } from '../lib/utils/bus';
 import { formatErrorMessage } from '../lib/utils/error';
 import { getCircuitBreaker } from '../lib/safety/circuit-breaker';
+import { CONFIG_DEFAULTS } from '../lib/config/config-defaults';
 
 const codebuild = new CodeBuildClient({});
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -21,8 +22,8 @@ const memory = new DynamoMemory();
 
 const RECOVERY_LOCK_ID = 'dead-mans-switch-recovery';
 // TTL slightly longer than the Dead Man's Switch schedule (15 min) to guarantee one-at-a-time.
-const RECOVERY_LOCK_TTL_SECONDS = 20 * 60;
-const MAX_RECOVERY_ATTEMPTS = 4;
+const RECOVERY_LOCK_TTL_SECONDS = CONFIG_DEFAULTS.RECOVERY_LOCK_TTL_SECONDS.code;
+const MAX_RECOVERY_ATTEMPTS = CONFIG_DEFAULTS.MAX_RECOVERY_ATTEMPTS.code;
 
 /**
  * Performs a health check on the system and triggers an emergency recovery (rollback) if unhealthy.

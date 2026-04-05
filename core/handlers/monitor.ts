@@ -156,7 +156,7 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
         logger.info('System topology updated successfully.');
 
         const infraNodes = topology.nodes.filter(
-          (n: TopologyNode) => n.type === 'infra' || n.type === 'dashboard'
+          (n: TopologyNode) => n.type === 'infra' || n.type === 'dashboard' || n.type === 'bus'
         );
         await ConfigManager.saveRawConfig('infra_config', infraNodes);
         logger.info('Infrastructure Configuration successfully saved to ConfigTable');

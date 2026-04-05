@@ -108,12 +108,42 @@ export class ProviderManager implements IProvider {
     topP?: number,
     stopSequences?: string[]
   ): Promise<Message> {
-    const activeProvider = await ProviderManager.getActiveProvider(provider, model);
+    const isSimpleTask =
+      messages.length <= 2 &&
+      messages.reduce((acc, m) => acc + (typeof m.content === 'string' ? m.content.length : 0), 0) <
+        500;
+
+    // Auto-route to cheaper model (Haiku) for simple tasks if no specific model was requested
+    let effectiveProvider = provider;
+    let effectiveModel = model;
+
+    if (!provider && !model && isSimpleTask && profile === ReasoningProfile.STANDARD) {
+      effectiveProvider = 'bedrock';
+      effectiveModel = 'anthropic.claude-3-haiku-20240307-v1:0';
+    }
+
+    const activeProvider = await ProviderManager.getActiveProvider(
+      effectiveProvider,
+      effectiveModel
+    );
+
+    // Mock Budget Check for plan adherence
+    const MAX_TOKEN_BUDGET = 100000;
+    const estimatedTokens = messages.reduce(
+      (acc, m) => acc + (typeof m.content === 'string' ? m.content.length / 4 : 0),
+      0
+    );
+    if (estimatedTokens > MAX_TOKEN_BUDGET) {
+      throw new Error(
+        `TokenBudgetExceeded: Task requires ~${estimatedTokens} tokens, which exceeds the budget of ${MAX_TOKEN_BUDGET}. Agent execution halted.`
+      );
+    }
+
     return activeProvider.call(
       messages,
       tools,
       profile,
-      model,
+      effectiveModel,
       undefined,
       responseFormat,
       temperature,
@@ -150,12 +180,40 @@ export class ProviderManager implements IProvider {
     topP?: number,
     stopSequences?: string[]
   ): AsyncIterable<MessageChunk> {
-    const activeProvider = await ProviderManager.getActiveProvider(provider, model);
+    const isSimpleTask =
+      messages.length <= 2 &&
+      messages.reduce((acc, m) => acc + (typeof m.content === 'string' ? m.content.length : 0), 0) <
+        500;
+
+    let effectiveProvider = provider;
+    let effectiveModel = model;
+
+    if (!provider && !model && isSimpleTask && profile === ReasoningProfile.STANDARD) {
+      effectiveProvider = 'bedrock';
+      effectiveModel = 'anthropic.claude-3-haiku-20240307-v1:0';
+    }
+
+    const activeProvider = await ProviderManager.getActiveProvider(
+      effectiveProvider,
+      effectiveModel
+    );
+
+    const MAX_TOKEN_BUDGET = 100000;
+    const estimatedTokens = messages.reduce(
+      (acc, m) => acc + (typeof m.content === 'string' ? m.content.length / 4 : 0),
+      0
+    );
+    if (estimatedTokens > MAX_TOKEN_BUDGET) {
+      throw new Error(
+        `TokenBudgetExceeded: Task requires ~${estimatedTokens} tokens, which exceeds the budget of ${MAX_TOKEN_BUDGET}. Agent execution halted.`
+      );
+    }
+
     yield* activeProvider.stream(
       messages,
       tools,
       profile,
-      model,
+      effectiveModel,
       undefined,
       responseFormat,
       temperature,

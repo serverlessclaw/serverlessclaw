@@ -5,6 +5,7 @@ import {
   PutCommand,
   UpdateCommand,
   QueryCommand,
+  DeleteCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { DynamoMemory } from '../memory';
 import { GapStatus, EvolutionTrack } from '../types/agent';
@@ -15,18 +16,14 @@ import {
   determineTrack,
   updateGapMetadata,
   archiveStaleGaps,
+  acquireGapLock,
+  releaseGapLock,
+  getGapLock,
 } from './gap-operations';
 
 vi.mock('../registry', () => ({
   AgentRegistry: {
     getRetentionDays: vi.fn(),
-  },
-}));
-
-vi.mock('sst', () => ({
-  Resource: {
-    MemoryTable: { name: 'test-memory-table' },
-    ConfigTable: { name: 'test-config-table' },
   },
 }));
 
@@ -384,6 +381,192 @@ describe('Gap-Track Assignment', () => {
     it('should default to feature track', () => {
       expect(determineTrack('Add new user dashboard widget')).toBe(EvolutionTrack.FEATURE);
       expect(determineTrack('Implement chat export functionality')).toBe(EvolutionTrack.FEATURE);
+    });
+  });
+});
+
+describe('Gap Lock Operations', () => {
+  let base: DynamoMemory;
+
+  beforeEach(() => {
+    ddbMock.reset();
+    vi.clearAllMocks();
+    base = new DynamoMemory();
+  });
+
+  describe('acquireGapLock', () => {
+    it('should return true on success (creates lock item)', async () => {
+      ddbMock.on(UpdateCommand).resolves({});
+
+      const result = await acquireGapLock(base, 'GAP#42', 'agent-planner-1');
+
+      expect(result).toBe(true);
+      const calls = ddbMock.commandCalls(UpdateCommand);
+      expect(calls).toHaveLength(1);
+      const input = calls[0].args[0].input;
+      expect(input.Key).toEqual({ userId: 'GAP_LOCK#42', timestamp: 0 });
+      expect(input.ExpressionAttributeValues).toEqual(
+        expect.objectContaining({
+          ':type': 'GAP_LOCK',
+          ':agentId': 'agent-planner-1',
+          ':locked': 'LOCKED',
+        })
+      );
+    });
+
+    it('should return false when ConditionalCheckFailedException (already locked)', async () => {
+      const conditionalError = Object.assign(new Error('ConditionalCheckFailed'), {
+        name: 'ConditionalCheckFailedException',
+      });
+      ddbMock.on(UpdateCommand).rejects(conditionalError);
+
+      const result = await acquireGapLock(base, 'GAP#42', 'agent-coder-1');
+
+      expect(result).toBe(false);
+    });
+
+    it('should return false when other errors occur (silently caught)', async () => {
+      ddbMock.on(UpdateCommand).rejects(new Error('NetworkError'));
+
+      const result = await acquireGapLock(base, 'GAP#42', 'agent-planner-2');
+
+      expect(result).toBe(false);
+    });
+
+    it('should acquire lock when existing lock is expired', async () => {
+      ddbMock.on(UpdateCommand).resolves({});
+
+      const result = await acquireGapLock(base, 'GAP#42', 'agent-planner-3');
+
+      expect(result).toBe(true);
+    });
+
+    it('should normalize compound gap IDs', async () => {
+      ddbMock.on(UpdateCommand).resolves({});
+
+      await acquireGapLock(base, 'GAP#TOOLOPT-1710240000000-42', 'agent-1');
+
+      const calls = ddbMock.commandCalls(UpdateCommand);
+      // normalizeGapId strips GAP# prefix but does NOT extract trailing digits
+      expect(calls[0].args[0].input.Key).toEqual({
+        userId: 'GAP_LOCK#TOOLOPT-1710240000000-42',
+        timestamp: 0,
+      });
+    });
+  });
+
+  describe('releaseGapLock', () => {
+    it('should succeed on valid release (deletes lock item)', async () => {
+      ddbMock.on(DeleteCommand).resolves({});
+
+      await releaseGapLock(base, 'GAP#42', 'agent-planner-1');
+
+      const calls = ddbMock.commandCalls(DeleteCommand);
+      expect(calls).toHaveLength(1);
+      const input = calls[0].args[0].input;
+      expect(input.Key).toEqual({ userId: 'GAP_LOCK#42', timestamp: 0 });
+      expect(input.ConditionExpression).toBe('#content = :agentId');
+      expect(input.ExpressionAttributeValues).toEqual({ ':agentId': 'agent-planner-1' });
+    });
+
+    it('should silently catch ConditionalCheckFailedException (not owner)', async () => {
+      const conditionalError = Object.assign(new Error('ConditionalCheckFailed'), {
+        name: 'ConditionalCheckFailedException',
+      });
+      ddbMock.on(DeleteCommand).rejects(conditionalError);
+
+      await expect(releaseGapLock(base, 'GAP#42', 'wrong-agent')).resolves.toBeUndefined();
+    });
+
+    it('should silently catch other errors', async () => {
+      ddbMock.on(DeleteCommand).rejects(new Error('NetworkError'));
+
+      await expect(releaseGapLock(base, 'GAP#42', 'agent-1')).resolves.toBeUndefined();
+    });
+
+    it('should normalize compound gap IDs', async () => {
+      ddbMock.on(DeleteCommand).resolves({});
+
+      await releaseGapLock(base, 'GAP#TOOLOPT-1710240000000-42', 'agent-1');
+
+      const calls = ddbMock.commandCalls(DeleteCommand);
+      expect(calls[0].args[0].input.Key).toEqual({
+        userId: 'GAP_LOCK#TOOLOPT-1710240000000-42',
+        timestamp: 0,
+      });
+    });
+  });
+
+  describe('getGapLock', () => {
+    it('should return lock info when lock is active (not expired)', async () => {
+      const futureExpiresAt = Math.floor(Date.now() / 1000) + 1800;
+      ddbMock.on(QueryCommand).resolves({
+        Items: [
+          {
+            userId: 'GAP_LOCK#42',
+            timestamp: 0,
+            agentId: 'agent-planner-1',
+            expiresAt: futureExpiresAt,
+          },
+        ],
+      });
+
+      const result = await getGapLock(base, 'GAP#42');
+
+      expect(result).toEqual({
+        content: 'agent-planner-1',
+        expiresAt: futureExpiresAt,
+      });
+    });
+
+    it('should return null when lock is expired', async () => {
+      const pastExpiresAt = Math.floor(Date.now() / 1000) - 100;
+      ddbMock.on(QueryCommand).resolves({
+        Items: [
+          {
+            userId: 'GAP_LOCK#42',
+            timestamp: 0,
+            agentId: 'agent-planner-1',
+            expiresAt: pastExpiresAt,
+          },
+        ],
+      });
+
+      const result = await getGapLock(base, 'GAP#42');
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when no lock exists', async () => {
+      ddbMock.on(QueryCommand).resolves({ Items: [] });
+
+      const result = await getGapLock(base, 'GAP#42');
+
+      expect(result).toBeNull();
+    });
+
+    it('should return sentinel __LOCK_CHECK_FAILED__ on query error', async () => {
+      ddbMock.on(QueryCommand).rejects(new Error('QueryFailed'));
+
+      const result = await getGapLock(base, 'GAP#42');
+
+      expect(result).toEqual({
+        content: '__LOCK_CHECK_FAILED__',
+        expiresAt: Infinity,
+      });
+    });
+
+    it('should normalize compound gap IDs', async () => {
+      ddbMock.on(QueryCommand).resolves({ Items: [] });
+
+      await getGapLock(base, 'GAP#TOOLOPT-1710240000000-42');
+
+      const calls = ddbMock.commandCalls(QueryCommand);
+      expect(calls[0].args[0].input.ExpressionAttributeValues).toEqual(
+        expect.objectContaining({
+          ':lockKey': 'GAP_LOCK#TOOLOPT-1710240000000-42',
+        })
+      );
     });
   });
 });

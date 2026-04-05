@@ -28,8 +28,10 @@ export function createDashboard(ctx: SharedContext): { dashboard: sst.aws.Nextjs
       stagingBucket,
       knowledgeBucket,
       bus,
+      deployer, // Added for topology discovery
       ...(api ? [api] : []),
       ...(ctx.realtime ? [ctx.realtime] : []),
+      ...(ctx.multiplexer ? [ctx.multiplexer] : []), // Added for topology discovery
       ...getValidSecrets(ctx.secrets),
     ],
     environment: {

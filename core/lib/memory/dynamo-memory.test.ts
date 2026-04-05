@@ -5,20 +5,23 @@ import {
   UpdateCommand,
   PutCommand,
   QueryCommand,
+  DeleteCommand,
+  ScanCommand,
+  BatchWriteCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { DynamoMemory } from './dynamo-memory';
 import { GapStatus } from '../types/agent';
 import { MessageRole } from '../types/llm';
 import { AgentRegistry } from '../registry';
+import { InsightCategory } from '../types/memory';
 
-// Mock AgentRegistry
 vi.mock('../registry', () => ({
   AgentRegistry: {
     getRetentionDays: vi.fn(),
+    getRawConfig: vi.fn(),
   },
 }));
 
-// Mock SST Resource
 vi.mock('sst', () => ({
   Resource: {
     MemoryTable: { name: 'test-memory-table' },
@@ -108,20 +111,15 @@ describe('DynamoMemory Retention', () => {
       const timestamp = 1710240000000;
       const gapId = `GAP#${timestamp}`;
 
-      // First call fails with ConditionalCheckFailedException
       const error = new Error('ConditionalCheckFailedException');
       error.name = 'ConditionalCheckFailedException';
       ddbMock.on(UpdateCommand).rejectsOnce(error).resolves({});
 
-      // With atomic transitions (A4), ConditionalCheckFailedException means the
-      // status transition is invalid (e.g., trying to OPEN→PROGRESS but
-      // gap is already in PROGRESS). The function returns early instead of throwing.
       await expect(memory.updateGapStatus(gapId, GapStatus.PROGRESS)).resolves.toEqual({
         success: false,
         error: expect.stringContaining('Cannot transition gap'),
       });
 
-      // Should have only 1 UpdateCommand call (no retry)
       const updateCalls = ddbMock.commandCalls(UpdateCommand);
       expect(updateCalls).toHaveLength(1);
     });
@@ -130,7 +128,6 @@ describe('DynamoMemory Retention', () => {
       const gapId = 'GAP#some-unique-string';
       const actualTimestamp = 123456789;
 
-      const { QueryCommand } = await import('@aws-sdk/lib-dynamodb');
       ddbMock.on(QueryCommand).resolves({
         Items: [{ userId: gapId, timestamp: actualTimestamp, content: 'test', type: 'GAP' }],
       });
@@ -174,11 +171,718 @@ describe('DynamoMemory Retention', () => {
 
     it('should return 1 (not throw) if DDB call errors', async () => {
       ddbMock.on(UpdateCommand).rejects(new Error('DDB timeout'));
-      // Fallback path queries all gap statuses — return empty to let it fall through
       ddbMock.on(QueryCommand).resolves({ Items: [] });
 
       const count = await memory.incrementGapAttemptCount('GAP#1001');
       expect(count).toBe(1);
+    });
+  });
+});
+
+describe('DynamoMemory Delegation Tests', () => {
+  let memory: DynamoMemory;
+
+  beforeEach(() => {
+    ddbMock.reset();
+    vi.clearAllMocks();
+    memory = new DynamoMemory();
+  });
+
+  describe('Session Operations', () => {
+    it('should delegate deleteConversation to SessionOps', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [{ userId: 'SESSIONS#user-1', sessionId: 'session-1', updatedAt: 123456789 }],
+      });
+      ddbMock.on(BatchWriteCommand).resolves({ UnprocessedItems: {} });
+
+      await memory.deleteConversation('user-1', 'session-1');
+
+      expect(ddbMock.commandCalls(QueryCommand).length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should delegate updateDistilledMemory to SessionOps', async () => {
+      ddbMock.on(PutCommand).resolves({});
+
+      await memory.updateDistilledMemory('user-1', 'distilled facts');
+
+      const calls = ddbMock.commandCalls(PutCommand);
+      expect(calls).toHaveLength(1);
+      expect(calls[0].args[0].input.Item).toMatchObject({
+        userId: 'DISTILLED#user-1',
+        timestamp: 0,
+        type: 'DISTILLED',
+        content: 'distilled facts',
+      });
+    });
+
+    it('should delegate saveConversationMeta to SessionOps', async () => {
+      ddbMock.on(UpdateCommand).resolves({});
+
+      await memory.saveConversationMeta('user-1', 'session-1', {
+        title: 'test',
+      });
+
+      const calls = ddbMock.commandCalls(UpdateCommand);
+      expect(calls).toHaveLength(1);
+    });
+
+    it('should delegate saveLKGHash to SessionOps', async () => {
+      ddbMock.on(PutCommand).resolves({});
+
+      await memory.saveLKGHash('abc123');
+
+      const calls = ddbMock.commandCalls(PutCommand);
+      expect(calls).toHaveLength(1);
+      expect(calls[0].args[0].input.Item).toMatchObject({
+        userId: 'SYSTEM#LKG',
+        content: 'abc123',
+      });
+    });
+
+    it('should delegate getLatestLKGHash to SessionOps', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [{ userId: 'SYSTEM#LKG', content: 'abc123' }],
+      });
+
+      const result = await memory.getLatestLKGHash();
+
+      expect(result).toBe('abc123');
+    });
+
+    it('should delegate getLatestLKGHash to return null when no items', async () => {
+      ddbMock.on(QueryCommand).resolves({ Items: [] });
+
+      const result = await memory.getLatestLKGHash();
+
+      expect(result).toBeNull();
+    });
+
+    it('should delegate incrementRecoveryAttemptCount to SessionOps', async () => {
+      ddbMock.on(UpdateCommand).resolves({
+        Attributes: { attempts: 5 },
+      });
+
+      const result = await memory.incrementRecoveryAttemptCount();
+
+      expect(result).toBe(5);
+    });
+
+    it('should delegate resetRecoveryAttemptCount to SessionOps', async () => {
+      ddbMock.on(UpdateCommand).resolves({});
+
+      await memory.resetRecoveryAttemptCount();
+
+      const calls = ddbMock.commandCalls(UpdateCommand);
+      expect(calls).toHaveLength(1);
+    });
+
+    it('should delegate getSummary to SessionOps', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [{ content: 'test summary' }],
+      });
+
+      const result = await memory.getSummary('user-1');
+
+      expect(result).toBe('test summary');
+    });
+
+    it('should delegate updateSummary to SessionOps', async () => {
+      ddbMock.on(PutCommand).resolves({});
+
+      await memory.updateSummary('user-1', 'new summary');
+
+      const calls = ddbMock.commandCalls(PutCommand);
+      expect(calls).toHaveLength(1);
+    });
+  });
+
+  describe('Gap Operations', () => {
+    it('should delegate setGap to GapOps', async () => {
+      ddbMock.on(PutCommand).resolves({});
+
+      await memory.setGap('GAP#123', 'test gap details', {
+        category: InsightCategory.STRATEGIC_GAP,
+      } as any);
+
+      const calls = ddbMock.commandCalls(PutCommand);
+      expect(calls).toHaveLength(1);
+    });
+
+    it('should delegate getAllGaps to GapOps', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [
+          { userId: 'GAP#1', type: 'GAP', status: GapStatus.OPEN, content: 'gap 1' },
+          { userId: 'GAP#2', type: 'GAP', status: GapStatus.OPEN, content: 'gap 2' },
+        ],
+      });
+
+      const result = await memory.getAllGaps(GapStatus.OPEN);
+
+      expect(result).toHaveLength(2);
+    });
+
+    it('should delegate archiveStaleGaps to GapOps', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [
+          {
+            userId: 'GAP#1',
+            type: 'GAP',
+            status: GapStatus.OPEN,
+            createdAt: Date.now() - 100 * 24 * 60 * 60 * 1000,
+          },
+        ],
+      });
+      ddbMock.on(UpdateCommand).resolves({});
+
+      const result = await memory.archiveStaleGaps(90);
+
+      expect(result).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should delegate acquireGapLock to GapOps', async () => {
+      ddbMock.on(UpdateCommand).resolves({});
+
+      const result = await memory.acquireGapLock('GAP#123', 'agent-1');
+
+      expect(result).toBe(true);
+    });
+
+    it('should delegate releaseGapLock to GapOps', async () => {
+      ddbMock.on(DeleteCommand).resolves({});
+
+      await memory.releaseGapLock('GAP#123', 'agent-1');
+
+      const calls = ddbMock.commandCalls(DeleteCommand);
+      expect(calls.length).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should delegate getGapLock to GapOps', async () => {
+      const lockData = JSON.stringify({ agentId: 'agent-1', expiresAt: Date.now() + 60000 });
+      ddbMock.on(QueryCommand).resolves({
+        Items: [{ userId: 'GAP_LOCK#GAP#123', content: lockData }],
+      });
+
+      const result = await memory.getGapLock('GAP#123');
+
+      expect(result).not.toBeNull();
+    });
+
+    it('should delegate getGapLock to return null when not locked', async () => {
+      ddbMock.on(QueryCommand).resolves({ Items: [] });
+
+      const result = await memory.getGapLock('GAP#123');
+
+      expect(result).toBeNull();
+    });
+
+    it('should delegate updateGapMetadata to GapOps', async () => {
+      ddbMock.on(UpdateCommand).resolves({});
+
+      await memory.updateGapMetadata('GAP#123', {
+        priority: 1 as unknown as number,
+        impact: 'high',
+      } as any);
+
+      const calls = ddbMock.commandCalls(UpdateCommand);
+      expect(calls).toHaveLength(1);
+    });
+  });
+
+  describe('Insight Operations', () => {
+    it('should delegate addLesson to InsightOps', async () => {
+      ddbMock.on(PutCommand).resolves({});
+
+      await memory.addLesson('user-1', 'test lesson');
+
+      const calls = ddbMock.commandCalls(PutCommand);
+      expect(calls).toHaveLength(1);
+    });
+
+    it('should delegate getLessons to InsightOps', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [
+          { userId: 'user-1', type: 'LESSON', content: 'lesson 1' },
+          { userId: 'user-1', type: 'LESSON', content: 'lesson 2' },
+        ],
+      });
+
+      const result = await memory.getLessons('user-1');
+
+      expect(result).toEqual(['lesson 1', 'lesson 2']);
+    });
+
+    it('should delegate addMemory to InsightOps', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [{ userId: 'SYSTEM#REGISTRY', activeTypes: [] }],
+      });
+      ddbMock.on(PutCommand).resolves({});
+
+      const result = await memory.addMemory(
+        'user-1',
+        InsightCategory.USER_PREFERENCE,
+        'memory content'
+      );
+
+      expect(result).toBeGreaterThan(0);
+    });
+
+    it('should delegate searchInsights to InsightOps', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [
+          {
+            userId: 'user-1',
+            type: 'MEMORY:USER_PREFERENCE',
+            content: 'insight 1',
+            timestamp: 123,
+            metadata: {},
+          },
+        ],
+      });
+
+      const result = await memory.searchInsights(
+        'user-1',
+        'query',
+        InsightCategory.USER_PREFERENCE,
+        10
+      );
+
+      expect(result.items.length).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should delegate updateInsightMetadata to InsightOps', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [{ userId: 'user-1', timestamp: 123456789, content: 'test', metadata: {} }],
+      });
+      ddbMock.on(PutCommand).resolves({});
+
+      await memory.updateInsightMetadata('user-1', 123456789, { priority: 1 });
+
+      const putCalls = ddbMock.commandCalls(PutCommand);
+      expect(putCalls.length).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should delegate refineMemory to InsightOps', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [{ userId: 'user-1', timestamp: 123456789, content: 'original' }],
+      });
+      ddbMock.on(PutCommand).resolves({});
+
+      await memory.refineMemory('user-1', 123456789, 'updated content');
+
+      const putCalls = ddbMock.commandCalls(PutCommand);
+      expect(putCalls).toHaveLength(1);
+    });
+
+    it('should delegate getLowUtilizationMemory to InsightOps', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [
+          {
+            userId: 'SYSTEM#REGISTRY',
+            timestamp: 0,
+            activeTypes: ['MEMORY:USER_PREFERENCE'],
+          },
+        ],
+      });
+
+      const result = await memory.getLowUtilizationMemory(10);
+
+      expect(Array.isArray(result)).toBe(true);
+    });
+
+    it('should delegate recordMemoryHit to InsightOps', async () => {
+      ddbMock.on(UpdateCommand).resolves({});
+
+      await memory.recordMemoryHit('user-1', 123456789);
+
+      const calls = ddbMock.commandCalls(UpdateCommand);
+      expect(calls).toHaveLength(1);
+    });
+
+    it('should delegate recordFailurePattern to InsightOps', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [{ userId: 'SYSTEM#REGISTRY', timestamp: 0, activeTypes: [] }],
+      });
+      ddbMock.on(PutCommand).resolves({});
+
+      const result = await memory.recordFailurePattern('user-1', 'timeout error');
+
+      expect(result).toBeGreaterThan(0);
+    });
+
+    it('should delegate getFailurePatterns to InsightOps', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [
+          {
+            userId: 'user-1',
+            type: 'MEMORY:FAILURE_PATTERN',
+            content: 'pattern 1',
+            timestamp: 123,
+            metadata: {},
+          },
+        ],
+      });
+
+      const result = await memory.getFailurePatterns('user-1', 'timeout');
+
+      expect(result.length).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should delegate recordFailedPlan to InsightOps', async () => {
+      ddbMock.on(PutCommand).resolves({});
+
+      const result = await memory.recordFailedPlan(
+        'hash123',
+        'plan content',
+        ['GAP#1', 'GAP#2'],
+        'failed reason'
+      );
+
+      expect(result).toBeGreaterThan(0);
+      const calls = ddbMock.commandCalls(PutCommand);
+      expect(calls).toHaveLength(1);
+    });
+
+    it('should delegate getFailedPlans to InsightOps', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [
+          {
+            userId: 'SYSTEM#GLOBAL',
+            type: 'MEMORY:FAILURE_PATTERN',
+            content: '{"planHash":"hash123"}',
+            timestamp: 123,
+            tags: ['failed_plan'],
+            metadata: {},
+          },
+        ],
+      });
+
+      const result = await memory.getFailedPlans(10);
+
+      expect(result.length).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should delegate addGlobalLesson to InsightOps', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [{ userId: 'SYSTEM#REGISTRY', timestamp: 0, activeTypes: [] }],
+      });
+      ddbMock.on(PutCommand).resolves({});
+
+      const result = await memory.addGlobalLesson('global lesson');
+
+      expect(result).toBeGreaterThan(0);
+    });
+
+    it('should delegate getGlobalLessons to InsightOps', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [
+          {
+            userId: 'SYSTEM#GLOBAL',
+            type: 'MEMORY:LESSON',
+            content: 'global lesson 1',
+            timestamp: 123,
+            metadata: {},
+          },
+        ],
+      });
+
+      const result = await memory.getGlobalLessons(10);
+
+      expect(result.length).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('Memory Utility Operations', () => {
+    it('should delegate getMemoryByTypePaginated to MemoryUtils', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [{ userId: 'user-1', type: 'INSIGHT' }],
+      });
+
+      const result = await memory.getMemoryByTypePaginated('INSIGHT', 10);
+
+      expect(result.items).toHaveLength(1);
+    });
+
+    it('should delegate getMemoryByType to MemoryUtils', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [{ userId: 'user-1', type: 'INSIGHT' }],
+      });
+
+      const result = await memory.getMemoryByType('INSIGHT', 10);
+
+      expect(result).toHaveLength(1);
+    });
+
+    it('should delegate getRegisteredMemoryTypes to MemoryUtils', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [
+          {
+            userId: 'SYSTEM#REGISTRY',
+            timestamp: 0,
+            activeTypes: ['MEMORY:USER_PREFERENCE'],
+          },
+        ],
+      });
+
+      const result = await memory.getRegisteredMemoryTypes();
+
+      expect(result).toContain('MEMORY:USER_PREFERENCE');
+    });
+
+    it('should delegate listByPrefix to scanByPrefix', async () => {
+      ddbMock.on(ScanCommand).resolves({
+        Items: [{ userId: 'user-1#test', type: 'INSIGHT' }],
+      });
+
+      const result = await memory.listByPrefix('user-1#test');
+
+      expect(result).toHaveLength(1);
+    });
+  });
+
+  describe('Clarification Operations', () => {
+    it('should delegate saveClarificationRequest to ClarificationOps', async () => {
+      ddbMock.on(PutCommand).resolves({});
+
+      await memory.saveClarificationRequest({
+        traceId: 'trace-1',
+        agentId: 'agent-1',
+        question: 'test question',
+        status: 'pending' as any,
+        userId: 'user-1',
+        initiatorId: 'initiator-1',
+        originalTask: 'task',
+        depth: 0,
+        options: [],
+        context: {},
+      } as any);
+
+      const calls = ddbMock.commandCalls(PutCommand);
+      expect(calls).toHaveLength(1);
+    });
+
+    it('should delegate getClarificationRequest to ClarificationOps', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [
+          {
+            userId: 'CLARIFICATION#trace-1#agent-1',
+            timestamp: 0,
+            content: 'test question',
+            status: 'pending',
+          },
+        ],
+      });
+
+      const result = await memory.getClarificationRequest('trace-1', 'agent-1');
+
+      expect(result).not.toBeNull();
+    });
+
+    it('should delegate updateClarificationStatus to ClarificationOps', async () => {
+      ddbMock.on(UpdateCommand).resolves({});
+
+      await memory.updateClarificationStatus('trace-1', 'agent-1', 'resolved' as any);
+
+      const calls = ddbMock.commandCalls(UpdateCommand);
+      expect(calls).toHaveLength(1);
+    });
+
+    it('should delegate saveEscalationState to ClarificationOps', async () => {
+      ddbMock.on(PutCommand).resolves({});
+
+      await memory.saveEscalationState({
+        traceId: 'trace-1',
+        agentId: 'agent-1',
+        level: 1,
+        reason: 'test reason',
+        timestamp: Date.now(),
+      } as any);
+
+      const calls = ddbMock.commandCalls(PutCommand);
+      expect(calls).toHaveLength(1);
+    });
+
+    it('should delegate getEscalationState to ClarificationOps', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [
+          {
+            userId: 'ESCALATION#trace-1#agent-1',
+            timestamp: 0,
+            content: JSON.stringify({ level: 1, reason: 'test' }),
+          },
+        ],
+      });
+
+      const result = await memory.getEscalationState('trace-1', 'agent-1');
+
+      expect(result).not.toBeNull();
+    });
+
+    it('should delegate findExpiredClarifications to ClarificationOps', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [
+          {
+            userId: 'CLARIFY#trace-1',
+            type: 'CLARIFICATION_PENDING',
+            status: 'pending',
+            expiresAt: Math.floor(Date.now() / 1000) - 1000,
+          },
+        ],
+      });
+
+      const result = await memory.findExpiredClarifications();
+
+      expect(result.length).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should delegate incrementClarificationRetry to ClarificationOps', async () => {
+      ddbMock.on(UpdateCommand).resolves({
+        Attributes: { retryCount: 3 },
+      } as any);
+
+      const result = await memory.incrementClarificationRetry('trace-1', 'agent-1');
+
+      expect(result).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('Collaboration Operations', () => {
+    it('should delegate createCollaboration to CollaborationOps', async () => {
+      ddbMock.on(PutCommand).resolves({});
+
+      const result = await memory.createCollaboration(
+        'user-1',
+        'HUMAN' as any,
+        {
+          name: 'test collab',
+          description: 'test description',
+        } as any
+      );
+
+      expect(result).toBeDefined();
+    });
+
+    it('should delegate getCollaboration to CollaborationOps', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [
+          {
+            userId: 'COLLAB#123',
+            timestamp: 0,
+            content: 'test collab',
+            type: 'COLLABORATION',
+            participants: [{ type: 'HUMAN', id: 'user-1', role: 'owner' }],
+          },
+        ],
+      });
+
+      const result = await memory.getCollaboration('123');
+
+      expect(result).not.toBeNull();
+    });
+
+    it('should delegate getCollaboration to return null when not found', async () => {
+      ddbMock.on(QueryCommand).resolves({ Items: [] });
+
+      const result = await memory.getCollaboration('nonexistent');
+
+      expect(result).toBeNull();
+    });
+
+    it('should delegate addCollaborationParticipant to CollaborationOps', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [
+          {
+            userId: 'COLLAB#123',
+            timestamp: 0,
+            content: 'test',
+            type: 'COLLABORATION',
+            participants: [{ type: 'HUMAN', id: 'user-1', role: 'owner' }],
+          },
+        ],
+      });
+      ddbMock.on(PutCommand).resolves({});
+
+      await memory.addCollaborationParticipant(
+        '123',
+        'user-1',
+        'HUMAN' as any,
+        {
+          type: 'HUMAN',
+          id: 'user-3',
+          role: 'MEMBER',
+        } as any
+      );
+
+      const putCalls = ddbMock.commandCalls(PutCommand);
+      expect(putCalls.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should delegate listCollaborationsForParticipant to CollaborationOps', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [
+          {
+            userId: 'COLLAB_INDEX#HUMAN#user-1',
+            type: 'COLLABORATION_INDEX',
+            collaborationId: 'COLLAB#123',
+            collaborationName: 'test collab',
+            role: 'MEMBER',
+          },
+        ],
+      });
+
+      const result = await memory.listCollaborationsForParticipant('user-1', 'HUMAN' as any);
+
+      expect(result).toHaveLength(1);
+    });
+
+    it('should delegate checkCollaborationAccess to CollaborationOps', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [
+          {
+            userId: 'COLLAB#123',
+            timestamp: 0,
+            content: 'test',
+            type: 'COLLABORATION',
+            status: 'active',
+            participants: [{ type: 'HUMAN', id: 'user-1', role: 'MEMBER' }],
+          },
+        ],
+      });
+
+      const result = await memory.checkCollaborationAccess('123', 'user-1', 'HUMAN' as any);
+
+      expect(result).toBe(true);
+    });
+
+    it('should delegate closeCollaboration to CollaborationOps', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [
+          {
+            userId: 'COLLAB#123',
+            timestamp: 0,
+            type: 'COLLABORATION',
+            ownerId: 'user-1',
+            ownerType: 'HUMAN',
+            participants: [{ type: 'HUMAN', id: 'user-1', role: 'owner' }],
+          },
+        ],
+      });
+      ddbMock.on(PutCommand).resolves({});
+
+      await memory.closeCollaboration('123', 'user-1', 'HUMAN' as any);
+
+      const putCalls = ddbMock.commandCalls(PutCommand);
+      expect(putCalls.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  describe('Config Operations', () => {
+    it('should delegate getConfig to AgentRegistry.getRawConfig', async () => {
+      vi.mocked(AgentRegistry.getRawConfig).mockReturnValue(Promise.resolve('test-value') as any);
+
+      const result = await memory.getConfig('test-key');
+
+      expect(result).toBe('test-value');
+      expect(AgentRegistry.getRawConfig).toHaveBeenCalledWith('test-key');
     });
   });
 });

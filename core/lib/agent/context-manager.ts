@@ -234,9 +234,9 @@ export class ContextManager {
       if (msg.role !== MessageRole.TOOL && msg.role !== MessageRole.ASSISTANT) continue;
       const content = msg.content ?? '';
 
-      // Match paths ignoring boundary quotes
+      // Match paths ignoring boundary quotes (supports absolute and relative paths)
       const filePathRegex =
-        /(?:^|\s|["'`])(\/[^\s"']+\.(?:ts|tsx|js|jsx|py|sh|yaml|yml|json|md|sql|html|css))(?:["'`]|\s|$)/gm;
+        /(?:^|\s|["'`])((?:\.|\.\.)?\/[^\s"']+\.(?:ts|tsx|js|jsx|py|sh|yaml|yml|json|md|sql|html|css))(?:["'`]|\s|$)/gm;
       let match;
       while ((match = filePathRegex.exec(content)) !== null) {
         const fact = `file:${match[1]}`;

@@ -9,6 +9,30 @@ This document outlines the system-wide configuration keys available in the `Conf
 
 ## Configuration Keys
 
+### `strategic_review_frequency`
+
+- **Default**: 48 (hours between proactive reviews)
+- **Purpose**: Controls how often the Strategic Planner autonomously triggers a proactive gap review.
+- **Implications**:
+  - **Decreasing**: More frequent architectural self-audits; increases LLM token usage.
+  - **Increasing**: Reduces overhead but may allow stale capability gaps to accumulate.
+
+### `min_gaps_for_review`
+
+- **Default**: 20
+- **Purpose**: Minimum number of open capability gaps required before a proactive strategic review is triggered.
+- **Implications**:
+  - **Decreasing**: Reviews trigger earlier, useful for fast-moving projects.
+  - **Increasing**: Batches more gaps per review for higher-impact planning sessions.
+
+### `stale_gap_days`
+
+- **Default**: 30 (days)
+- **Purpose**: An open capability gap that has not progressed for this many days is automatically archived as stale.
+- **Implications**:
+  - **Decreasing**: Keeps the active gap list lean; risks prematurely archiving slow-moving improvements.
+  - **Increasing**: Retains more historical gaps; increases noise in planner context.
+
 ### `deploy_limit`
 
 - **Default**: 5 (deployments per UTC day)
@@ -59,7 +83,7 @@ This document outlines the system-wide configuration keys available in the `Conf
 
 ### `active_provider` / `active_model`
 
-- **Default**: `openai` / `gpt-5.4-mini`
+- **Default**: `minimax` / `MiniMax-M2.7`
 - **Purpose**: Hot-swapping the primary LLM backend for all system nodes.
 - **Implications**:
   - **Bedrock (Claude)**: Better for complex coding tasks; higher latency in some regions.

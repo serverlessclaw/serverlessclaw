@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getReputation, updateReputation, computeReputationScore } from './reputation-operations';
+import {
+  getReputation,
+  getReputations,
+  updateReputation,
+  computeReputationScore,
+} from './reputation-operations';
 import { MEMORY_KEYS } from '../constants';
 
 const mockBase = {
@@ -202,6 +207,216 @@ describe('ReputationOperations', () => {
       const score = computeReputationScore(oldRep);
 
       expect(score).toBeLessThan(0.9); // Perfect but stale
+    });
+
+    it('should handle zero total tasks without division by zero', () => {
+      const now = Date.now();
+      const zeroRep = {
+        agentId: 'agent-zero',
+        tasksCompleted: 0,
+        tasksFailed: 0,
+        totalLatencyMs: 0,
+        successRate: 0,
+        avgLatencyMs: 0,
+        lastActive: now,
+        windowStart: now,
+        expiresAt: 0,
+        createdAt: now,
+        totalTasks: 0,
+        rollingWindow: 7,
+        score: 0,
+      };
+      const score = computeReputationScore(zeroRep);
+
+      expect(score).toBeDefined();
+      expect(score).toBeGreaterThanOrEqual(0);
+      expect(score).toBeLessThanOrEqual(1);
+      expect(score).toBe(0.4); // 0*0.6 + 1*0.25 + 1*0.15 = 0.4
+    });
+
+    it('should handle lastActive far in future (negative hoursSinceActive)', () => {
+      const now = Date.now();
+      const futureRep = {
+        agentId: 'agent-future',
+        tasksCompleted: 5,
+        tasksFailed: 0,
+        totalLatencyMs: 5000,
+        successRate: 1.0,
+        avgLatencyMs: 1000,
+        lastActive: now + 100 * 3600000,
+        windowStart: now - 3600000,
+        expiresAt: 0,
+        createdAt: now - 3600000,
+        totalTasks: 5,
+        rollingWindow: 7,
+        score: 0,
+      };
+      const score = computeReputationScore(futureRep);
+
+      expect(score).toBeDefined();
+      expect(Number.isNaN(score)).toBe(false);
+      expect(score).toBeGreaterThan(1.0);
+    });
+
+    it('should return score of 0.4 for zero success rate, zero latency, recent activity', () => {
+      const now = Date.now();
+      const rep = {
+        agentId: 'agent-test',
+        tasksCompleted: 0,
+        tasksFailed: 5,
+        totalLatencyMs: 0,
+        successRate: 0,
+        avgLatencyMs: 0,
+        lastActive: now,
+        windowStart: now - 3600000,
+        expiresAt: 0,
+        createdAt: now - 3600000,
+        totalTasks: 5,
+        rollingWindow: 7,
+        score: 0,
+      };
+      const score = computeReputationScore(rep);
+
+      expect(score).toBeCloseTo(0.4, 2); // 0*0.6 + 1*0.25 + 1*0.15 = 0.4
+    });
+  });
+
+  describe('getReputations', () => {
+    it('should return reputations for multiple agents', async () => {
+      const now = Date.now();
+      const mockItems = [
+        {
+          agentId: 'agent-1',
+          tasksCompleted: 10,
+          tasksFailed: 2,
+          totalLatencyMs: 12000,
+          successRate: 0.833,
+          avgLatencyMs: 1200,
+          lastActive: now,
+          windowStart: now - 3600000,
+          expiresAt: 0,
+        },
+        {
+          agentId: 'agent-2',
+          tasksCompleted: 5,
+          tasksFailed: 0,
+          totalLatencyMs: 5000,
+          successRate: 1.0,
+          avgLatencyMs: 1000,
+          lastActive: now,
+          windowStart: now - 3600000,
+          expiresAt: 0,
+        },
+      ];
+
+      mockBase.queryItems
+        .mockResolvedValueOnce([mockItems[0]])
+        .mockResolvedValueOnce([mockItems[1]]);
+
+      const result = await getReputations(mockBase as any, ['agent-1', 'agent-2']);
+
+      expect(result.size).toBe(2);
+      expect(result.has('agent-1')).toBe(true);
+      expect(result.has('agent-2')).toBe(true);
+      expect(result.get('agent-1')?.tasksCompleted).toBe(10);
+      expect(result.get('agent-2')?.tasksCompleted).toBe(5);
+    });
+
+    it('should handle mix of found and not found agents', async () => {
+      const now = Date.now();
+      const mockItem = {
+        agentId: 'agent-1',
+        tasksCompleted: 10,
+        tasksFailed: 2,
+        totalLatencyMs: 12000,
+        successRate: 0.833,
+        avgLatencyMs: 1200,
+        lastActive: now,
+        windowStart: now - 3600000,
+        expiresAt: 0,
+      };
+
+      mockBase.queryItems.mockResolvedValueOnce([mockItem]).mockResolvedValueOnce([]);
+
+      const result = await getReputations(mockBase as any, ['agent-1', 'agent-missing']);
+
+      expect(result.size).toBe(1);
+      expect(result.has('agent-1')).toBe(true);
+      expect(result.has('agent-missing')).toBe(false);
+    });
+
+    it('should return empty map for empty array input', async () => {
+      const result = await getReputations(mockBase as any, []);
+
+      expect(result.size).toBe(0);
+      expect(mockBase.queryItems).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateReputation - additional cases', () => {
+    it('should create first record when no existing reputation', async () => {
+      mockBase.queryItems.mockResolvedValue([]);
+
+      await updateReputation(mockBase as any, 'agent-new', true, 500);
+
+      expect(mockBase.putItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          agentId: 'agent-new',
+          tasksCompleted: 1,
+          tasksFailed: 0,
+          totalLatencyMs: 500,
+          successRate: 1.0,
+          avgLatencyMs: 500,
+        })
+      );
+      expect(mockBase.putItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          createdAt: expect.any(Number),
+          windowStart: expect.any(Number),
+        })
+      );
+    });
+
+    it('should handle errors gracefully without throwing', async () => {
+      mockBase.queryItems.mockResolvedValue([]);
+      mockBase.putItem.mockRejectedValue(new Error('DynamoDB error'));
+
+      await expect(
+        updateReputation(mockBase as any, 'agent-error', true, 100)
+      ).resolves.not.toThrow();
+    });
+
+    it('should track failed tasks correctly', async () => {
+      mockBase.queryItems.mockResolvedValue([]);
+
+      await updateReputation(mockBase as any, 'agent-fail', false, 0);
+
+      expect(mockBase.putItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          agentId: 'agent-fail',
+          tasksCompleted: 0,
+          tasksFailed: 1,
+          totalLatencyMs: 0,
+          successRate: 0.0,
+          avgLatencyMs: 0,
+        })
+      );
+    });
+
+    it('should use default latency of 0 when not provided', async () => {
+      mockBase.queryItems.mockResolvedValue([]);
+
+      await updateReputation(mockBase as any, 'agent-default', true);
+
+      expect(mockBase.putItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          agentId: 'agent-default',
+          tasksCompleted: 1,
+          tasksFailed: 0,
+          totalLatencyMs: 0,
+          avgLatencyMs: 0,
+        })
+      );
     });
   });
 });

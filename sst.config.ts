@@ -105,6 +105,7 @@ export default $config({
       deployer,
       api, // Now available for linking if needed
     });
+    const multiplexer = mcpServers.multiplexer;
 
     // 6. Sub-Agents (Handlers & Logic)
     const agentResources = createAgents(
@@ -120,6 +121,7 @@ export default $config({
         realtime,
         dlq,
         api, // Linkable API instance
+        multiplexer,
       },
       mcpServers
     );
@@ -149,6 +151,7 @@ export default $config({
       deployer,
       api,
       realtime,
+      multiplexer,
       heartbeatHandler: agentResources.heartbeatHandler,
       schedulerRole: agentResources.schedulerRole,
     });

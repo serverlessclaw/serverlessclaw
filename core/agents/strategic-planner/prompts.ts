@@ -2,6 +2,7 @@ import { GapStatus, InsightCategory } from '../../lib/types/index';
 import type { IMemory } from '../../lib/types/index';
 import { MEMORY_KEYS, TIME } from '../../lib/constants';
 import { parseConfigInt } from '../../lib/providers/utils';
+import { CONFIG_DEFAULTS } from '../../lib/config/config-defaults';
 import type { PlannerPayload } from './types';
 
 /**
@@ -196,8 +197,11 @@ export async function buildProactiveReviewPrompt(
     const customFreq = await AgentRegistry.getRawConfig('strategic_review_frequency');
     const customMinGaps = await AgentRegistry.getRawConfig('min_gaps_for_review');
 
-    const frequencyHrs = parseConfigInt(customFreq, 48);
-    const minGaps = parseConfigInt(customMinGaps, 5);
+    const frequencyHrs = parseConfigInt(
+      customFreq,
+      CONFIG_DEFAULTS.STRATEGIC_REVIEW_FREQUENCY_HOURS.code
+    );
+    const minGaps = parseConfigInt(customMinGaps, CONFIG_DEFAULTS.MIN_GAPS_FOR_REVIEW.code);
 
     const check = await shouldRunProactiveReview(
       memory,
@@ -210,9 +214,11 @@ export async function buildProactiveReviewPrompt(
       return { prompt: '', shouldRun: false, status: check.reason };
     }
 
-    // Archive stale gaps older than 30 days
+    // Archive stale gaps older than configured days
     try {
-      const archivedCount = await memory.archiveStaleGaps(30);
+      const customStale = await AgentRegistry.getRawConfig('stale_gap_days');
+      const staleDays = parseConfigInt(customStale, CONFIG_DEFAULTS.STALE_GAP_DAYS.code);
+      const archivedCount = await memory.archiveStaleGaps(staleDays);
       if (archivedCount > 0) {
         // Log but continue
       }

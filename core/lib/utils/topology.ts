@@ -6,6 +6,7 @@ import {
   addOrphanNodes,
   mergeBackboneNodes,
   addDynamicAgents,
+  discoverAwsNodes,
 } from './topology/nodes';
 import { inferNodeEdges, inferBackboneEdges } from './topology/edges';
 
@@ -37,9 +38,17 @@ export async function discoverSystemTopology(): Promise<Topology> {
   const nodes: TopologyNode[] = [];
   const edges: TopologyEdge[] = [];
 
-  // 1. Reflective Node Discovery (SST Linked Resources)
-  const resourceMap = Resource as unknown as Record<string, unknown>;
-  nodes.push(...discoverSstNodes(resourceMap));
+  // 1. Reflective discovery of SST resources (linked links)
+  let sstNodes = discoverSstNodes(Resource as unknown as Record<string, unknown>);
+
+  // 1.1 Fallback to manual AWS SDK scan if Resource proxy is empty (e.g. non-SST dev mode)
+  if (sstNodes.length === 0) {
+    console.info(
+      '[TopologyDiscovery] SST Resource proxy empty. Falling back to AWS reflective scan...'
+    );
+    sstNodes = await discoverAwsNodes();
+  }
+  nodes.push(...sstNodes);
 
   // 2. Add Critical Non-Linked Nodes (Orphans)
   const addedOrphanNodes = addOrphanNodes(nodes);

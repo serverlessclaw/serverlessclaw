@@ -16,7 +16,7 @@ import {
  */
 export function createApi(_ctx: SharedContext): { api: sst.aws.ApiGatewayV2 } {
   const apiDomain = getDomainConfig('api');
-  const api = new sst.aws.ApiGatewayV2('WebhookApiV2', {
+  const api = new sst.aws.ApiGatewayV2('WebhookApi', {
     domain: apiDomain,
   });
 

@@ -2,16 +2,48 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mockClient } from 'aws-sdk-client-mock';
 import { CodeBuildClient, StartBuildCommand } from '@aws-sdk/client-codebuild';
 import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
-import { triggerDeployment, triggerInfraRebuild } from './deployment';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { triggerDeployment, triggerInfraRebuild, stageChanges, generatePatch } from './deployment';
 
 const codebuildMock = mockClient(CodeBuildClient);
 const ddbMock = mockClient(DynamoDBDocumentClient);
+const s3Mock = mockClient(S3Client);
+
+const mockExecSync = vi.fn();
+vi.mock('child_process', () => ({
+  execSync: (...args: any[]) => mockExecSync(...args),
+}));
+
+const mockArchiveOn = vi.fn();
+const mockArchivePipe = vi.fn();
+const mockArchiveFile = vi.fn();
+const mockArchiveFinalize = vi.fn();
+const mockCreateWriteStream = vi.fn();
+
+vi.mock('archiver', () => ({
+  default: vi.fn(() => ({
+    on: mockArchiveOn,
+    pipe: mockArchivePipe,
+    file: mockArchiveFile,
+    finalize: mockArchiveFinalize,
+  })),
+}));
+
+vi.mock('fs', () => ({
+  createWriteStream: (...args: any[]) => mockCreateWriteStream(...args),
+}));
+
+vi.mock('fs/promises', () => ({
+  readFile: vi.fn().mockResolvedValue(Buffer.from('test')),
+  unlink: vi.fn().mockResolvedValue(undefined),
+}));
 
 vi.mock('sst', () => ({
   Resource: {
     ConfigTable: { name: 'test-config-table' },
     Deployer: { name: 'test-deployer' },
     MemoryTable: { name: 'test-memory-table' },
+    StagingBucket: { name: 'test-staging-bucket' },
   },
 }));
 
@@ -43,7 +75,14 @@ describe('Deployment Tools', () => {
   beforeEach(() => {
     codebuildMock.reset();
     ddbMock.reset();
+    s3Mock.reset();
     vi.clearAllMocks();
+    mockExecSync.mockReset();
+    mockArchiveOn.mockReset();
+    mockArchivePipe.mockReset();
+    mockArchiveFile.mockReset();
+    mockArchiveFinalize.mockReset();
+    mockCreateWriteStream.mockReset();
     vi.mocked(getAgentContext).mockResolvedValue({
       memory: {
         getAllGaps: vi.fn().mockResolvedValue([]),
@@ -203,6 +242,23 @@ describe('Deployment Tools', () => {
       expect(result).toContain('BACKOFF_ACTIVE');
       expect(codebuildMock.calls()).toHaveLength(0);
     });
+
+    it('blocks deployment when infrastructure resources are not fully linked', async () => {
+      vi.mocked(getCircuitBreaker).mockReturnValue({
+        canProceed: vi.fn().mockResolvedValue({ allowed: true }),
+        recordFailure: vi.fn(),
+      } as any);
+      vi.mocked(getDeployCountToday).mockResolvedValue(0);
+      ddbMock.on(GetCommand).resolves({ Item: { value: '10' } });
+      codebuildMock.on(StartBuildCommand).resolves(undefined as any);
+
+      const result = await triggerDeployment.execute({
+        reason: 'test deployment',
+        userId: 'test-user',
+      });
+
+      expect(result).toContain('FAILED_TO_DEPLOY');
+    });
   });
 
   describe('triggerInfraRebuild', () => {
@@ -232,6 +288,457 @@ describe('Deployment Tools', () => {
       });
 
       expect(result).toContain('FAILED_TO_REBUILD');
+    });
+  });
+
+  describe('generatePatch', () => {
+    it('has correct tool definition', () => {
+      expect(generatePatch.name).toBe('generatePatch');
+      expect(generatePatch.description).toBeDefined();
+      expect(generatePatch.parameters).toBeDefined();
+    });
+
+    it('returns FAILED_DOD when recallKnowledge was not called', async () => {
+      vi.mocked(getAgentContext).mockResolvedValue({
+        memory: {
+          getHistory: vi
+            .fn()
+            .mockResolvedValue([
+              { content: 'TYPE_CHECK_PASSED' },
+              { content: 'UNIT_TESTS_PASSED' },
+            ]),
+        },
+      } as any);
+
+      const result = await generatePatch.execute({
+        sessionId: 'test-session',
+        skipValidation: false,
+      });
+
+      expect(result).toContain('FAILED_DOD');
+      expect(result).toContain('Call recallKnowledge first');
+    });
+
+    it('returns FAILED_DOD when validation was not performed', async () => {
+      vi.mocked(getAgentContext).mockResolvedValue({
+        memory: {
+          getHistory: vi.fn().mockResolvedValue([{ content: 'some other content' }]),
+        },
+      } as any);
+
+      const result = await generatePatch.execute({
+        sessionId: 'test-session',
+        skipValidation: false,
+      });
+
+      expect(result).toContain('FAILED_DOD');
+      expect(result).toContain('validated (validateCode) and tested');
+    });
+
+    it('skips validation when skipValidation is true', async () => {
+      mockExecSync.mockReturnValue('diff --git a/file.ts\n+++ b/file.ts\n+new line');
+
+      const result = await generatePatch.execute({
+        sessionId: 'test-session',
+        skipValidation: true,
+      });
+
+      expect(result).toContain('PATCH_START');
+      expect(result).toContain('PATCH_END');
+    });
+
+    it('returns NO_CHANGES when there are no differences', async () => {
+      vi.mocked(getAgentContext).mockResolvedValue({
+        memory: {
+          getHistory: vi.fn().mockResolvedValue([
+            { content: 'TYPE_CHECK_PASSED' },
+            { content: 'UNIT_TESTS_PASSED' },
+            {
+              tool_calls: [{ function: { name: 'recallKnowledge' } }],
+            },
+          ]),
+        },
+      } as any);
+
+      mockExecSync.mockReturnValue('');
+
+      const result = await generatePatch.execute({
+        sessionId: 'test-session',
+        skipValidation: false,
+      });
+
+      expect(result).toContain('NO_CHANGES');
+    });
+
+    it('handles errors during patch generation', async () => {
+      vi.mocked(getAgentContext).mockResolvedValue({
+        memory: {
+          getHistory: vi.fn().mockResolvedValue([
+            { content: 'TYPE_CHECK_PASSED' },
+            { content: 'UNIT_TESTS_PASSED' },
+            {
+              tool_calls: [{ function: { name: 'recallKnowledge' } }],
+            },
+          ]),
+        },
+      } as any);
+
+      mockExecSync.mockImplementation(() => {
+        throw new Error('git error');
+      });
+
+      const result = await generatePatch.execute({
+        sessionId: 'test-session',
+        skipValidation: false,
+      });
+
+      expect(result).toContain('FAILED_TO_GENERATE_PATCH');
+    });
+  });
+
+  describe('stageChanges', () => {
+    it('has correct tool definition', () => {
+      expect(stageChanges.name).toBe('stageChanges');
+      expect(stageChanges.description).toBeDefined();
+      expect(stageChanges.parameters).toBeDefined();
+    });
+
+    it('returns FAILED_DOD when validation was not performed', async () => {
+      vi.mocked(getAgentContext).mockResolvedValue({
+        memory: {
+          getHistory: vi.fn().mockResolvedValue([{ content: 'some content' }]),
+        },
+      } as any);
+
+      const result = await stageChanges.execute({
+        modifiedFiles: ['file.ts'],
+        sessionId: 'test-session',
+        skipValidation: false,
+      });
+
+      expect(result).toContain('FAILED_DOD');
+      expect(result).toContain('validated (validateCode) and tested');
+    });
+
+    it('returns FAILED_DOD when testing was not performed', async () => {
+      vi.mocked(getAgentContext).mockResolvedValue({
+        memory: {
+          getHistory: vi.fn().mockResolvedValue([{ content: 'TYPE_CHECK_PASSED' }]),
+        },
+      } as any);
+
+      const result = await stageChanges.execute({
+        modifiedFiles: ['file.ts'],
+        sessionId: 'test-session',
+        skipValidation: false,
+      });
+
+      expect(result).toContain('FAILED_DOD');
+      expect(result).toContain('validated (validateCode) and tested');
+    });
+
+    it('returns FAILED_DOD when recallKnowledge was not called', async () => {
+      vi.mocked(getAgentContext).mockResolvedValue({
+        memory: {
+          getHistory: vi
+            .fn()
+            .mockResolvedValue([
+              { content: 'TYPE_CHECK_PASSED' },
+              { content: 'UNIT_TESTS_PASSED' },
+            ]),
+        },
+      } as any);
+
+      const result = await stageChanges.execute({
+        modifiedFiles: ['file.ts'],
+        sessionId: 'test-session',
+        skipValidation: false,
+      });
+
+      expect(result).toContain('FAILED_DOD');
+      expect(result).toContain('Call recallKnowledge first');
+    });
+
+    it('returns message when no files to stage', async () => {
+      vi.mocked(getAgentContext).mockResolvedValue({
+        memory: {
+          getHistory: vi.fn().mockResolvedValue([
+            { content: 'TYPE_CHECK_PASSED' },
+            { content: 'UNIT_TESTS_PASSED' },
+            {
+              tool_calls: [{ function: { name: 'recallKnowledge' } }],
+            },
+          ]),
+        },
+      } as any);
+
+      mockExecSync.mockReturnValue('');
+
+      const result = await stageChanges.execute({
+        modifiedFiles: [],
+        sessionId: 'test-session',
+        skipValidation: false,
+      });
+
+      expect(result).toContain('No files to stage');
+    });
+
+    it('includes git modified files in staging', async () => {
+      vi.mocked(getAgentContext).mockResolvedValue({
+        memory: {
+          getHistory: vi.fn().mockResolvedValue([
+            { content: 'TYPE_CHECK_PASSED' },
+            { content: 'UNIT_TESTS_PASSED' },
+            {
+              tool_calls: [{ function: { name: 'recallKnowledge' } }],
+            },
+          ]),
+        },
+      } as any);
+
+      mockExecSync.mockReturnValue('git-file.ts\nanother-file.ts\n');
+
+      let archiveCloseCb: (() => void) | null = null;
+      mockArchiveOn.mockImplementation(function (
+        this: any,
+        event: string,
+        cb: (...args: any[]) => void
+      ) {
+        if (event === 'close') {
+          archiveCloseCb = cb as () => void;
+        }
+        return this;
+      });
+      mockCreateWriteStream.mockReturnValue({
+        on: function (event: string, cb: (...args: any[]) => void) {
+          if (event === 'close') {
+            setImmediate(() => cb());
+          }
+          return this;
+        },
+      });
+      mockArchiveFinalize.mockImplementation(() => {
+        if (archiveCloseCb) archiveCloseCb();
+      });
+
+      s3Mock.on(PutObjectCommand).resolves({});
+
+      const result = await stageChanges.execute({
+        modifiedFiles: ['file.ts'],
+        sessionId: 'test-session',
+        skipValidation: false,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(result).toContain('SUCCESS');
+      expect(result).toContain('files staged for deployment');
+    });
+
+    it('falls back to provided files when git status fails', async () => {
+      vi.mocked(getAgentContext).mockResolvedValue({
+        memory: {
+          getHistory: vi.fn().mockResolvedValue([
+            { content: 'TYPE_CHECK_PASSED' },
+            { content: 'UNIT_TESTS_PASSED' },
+            {
+              tool_calls: [{ function: { name: 'recallKnowledge' } }],
+            },
+          ]),
+        },
+      } as any);
+
+      mockExecSync.mockImplementation(() => {
+        throw new Error('git error');
+      });
+
+      let archiveCloseCb: (() => void) | null = null;
+      mockArchiveOn.mockImplementation(function (
+        this: any,
+        event: string,
+        cb: (...args: any[]) => void
+      ) {
+        if (event === 'close') {
+          archiveCloseCb = cb as () => void;
+        }
+        return this;
+      });
+      mockCreateWriteStream.mockReturnValue({
+        on: function (event: string, cb: (...args: any[]) => void) {
+          if (event === 'close') {
+            setImmediate(() => cb());
+          }
+          return this;
+        },
+      });
+      mockArchiveFinalize.mockImplementation(() => {
+        if (archiveCloseCb) archiveCloseCb();
+      });
+
+      s3Mock.on(PutObjectCommand).resolves({});
+
+      const result = await stageChanges.execute({
+        modifiedFiles: ['file.ts'],
+        sessionId: 'test-session',
+        skipValidation: false,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(result).toContain('SUCCESS');
+    });
+
+    it('returns FAILED_TO_UPLOAD when S3 upload fails', async () => {
+      vi.mocked(getAgentContext).mockResolvedValue({
+        memory: {
+          getHistory: vi.fn().mockResolvedValue([
+            { content: 'TYPE_CHECK_PASSED' },
+            { content: 'UNIT_TESTS_PASSED' },
+            {
+              tool_calls: [{ function: { name: 'recallKnowledge' } }],
+            },
+          ]),
+        },
+      } as any);
+
+      mockExecSync.mockReturnValue('file.ts\n');
+
+      let archiveCloseCb: (() => void) | null = null;
+      mockArchiveOn.mockImplementation(function (
+        this: any,
+        event: string,
+        cb: (...args: any[]) => void
+      ) {
+        if (event === 'close') {
+          archiveCloseCb = cb as () => void;
+        }
+        return this;
+      });
+      mockCreateWriteStream.mockReturnValue({
+        on: function (event: string, cb: (...args: any[]) => void) {
+          if (event === 'close') {
+            setImmediate(() => cb());
+          }
+          return this;
+        },
+      });
+      mockArchiveFinalize.mockImplementation(() => {
+        if (archiveCloseCb) archiveCloseCb();
+      });
+
+      s3Mock.on(PutObjectCommand).rejects(new Error('S3 upload failed'));
+
+      const result = await stageChanges.execute({
+        modifiedFiles: ['file.ts'],
+        sessionId: 'test-session',
+        skipValidation: false,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(result).toContain('FAILED_TO_UPLOAD');
+    });
+
+    it('returns FAILED_TO_ZIP when archiver encounters an error', async () => {
+      vi.mocked(getAgentContext).mockResolvedValue({
+        memory: {
+          getHistory: vi.fn().mockResolvedValue([
+            { content: 'TYPE_CHECK_PASSED' },
+            { content: 'UNIT_TESTS_PASSED' },
+            {
+              tool_calls: [{ function: { name: 'recallKnowledge' } }],
+            },
+          ]),
+        },
+      } as any);
+
+      mockExecSync.mockReturnValue('file.ts\n');
+
+      let archiveErrorCb: ((err: Error) => void) | null = null;
+      mockArchiveOn.mockImplementation(function (
+        this: any,
+        event: string,
+        cb: (...args: any[]) => void
+      ) {
+        if (event === 'error') {
+          archiveErrorCb = cb as (err: Error) => void;
+        }
+        return this;
+      });
+      mockCreateWriteStream.mockReturnValue({
+        on: function () {
+          return this;
+        },
+      });
+
+      mockArchiveFinalize.mockImplementation(() => {
+        if (archiveErrorCb) {
+          archiveErrorCb(new Error('Archive error'));
+        }
+      });
+
+      const result = await stageChanges.execute({
+        modifiedFiles: ['file.ts'],
+        sessionId: 'test-session',
+        skipValidation: false,
+      });
+
+      expect(result).toContain('FAILED_TO_ZIP');
+    });
+
+    it('returns FAILED_TO_STAGE when an unexpected error occurs', async () => {
+      vi.mocked(getAgentContext).mockResolvedValue({
+        memory: {
+          getHistory: vi.fn().mockRejectedValue(new Error('Memory error')),
+        },
+      } as any);
+
+      const result = await stageChanges.execute({
+        modifiedFiles: ['file.ts'],
+        sessionId: 'test-session',
+        skipValidation: false,
+      });
+
+      expect(result).toContain('FAILED_TO_STAGE');
+    });
+
+    it('skips validation when skipValidation is true for stageChanges', async () => {
+      mockExecSync.mockReturnValue('file.ts\n');
+
+      let archiveCloseCb: (() => void) | null = null;
+      mockArchiveOn.mockImplementation(function (
+        this: any,
+        event: string,
+        cb: (...args: any[]) => void
+      ) {
+        if (event === 'close') {
+          archiveCloseCb = cb as () => void;
+        }
+        return this;
+      });
+      mockCreateWriteStream.mockReturnValue({
+        on: function (event: string, cb: (...args: any[]) => void) {
+          if (event === 'close') {
+            setImmediate(() => cb());
+          }
+          return this;
+        },
+      });
+      mockArchiveFinalize.mockImplementation(() => {
+        if (archiveCloseCb) archiveCloseCb();
+      });
+
+      s3Mock.on(PutObjectCommand).resolves({});
+
+      const result = await stageChanges.execute({
+        modifiedFiles: ['file.ts'],
+        sessionId: 'test-session',
+        skipValidation: true,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(result).toContain('SUCCESS');
     });
   });
 });

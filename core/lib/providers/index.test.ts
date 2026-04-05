@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ProviderManager } from './index';
+import { MessageRole } from '../types/llm';
 
 // Mocking the imported dependencies and Resource
 vi.mock('sst', () => ({
@@ -90,5 +91,53 @@ describe('ProviderManager', () => {
     expect(capabilities).toBeDefined();
     // Default profile support
     expect(capabilities.supportedReasoningProfiles.length).toBeGreaterThan(0);
+  });
+
+  describe('Budget Limits and Routing', () => {
+    it('should route to cheaper model (Haiku) for simple tasks automatically', async () => {
+      const pm = new ProviderManager();
+
+      const mockCall = vi.fn().mockResolvedValue({ role: 'assistant', content: 'ok' });
+
+      vi.spyOn(ProviderManager, 'getActiveProvider').mockResolvedValueOnce({
+        call: mockCall,
+      } as any);
+
+      // Simple task (< 500 chars, <= 2 messages)
+      await pm.call([{ role: MessageRole.USER, content: 'hello' }]);
+
+      // Should have routed to Bedrock Haiku
+      expect(ProviderManager.getActiveProvider).toHaveBeenCalledWith(
+        'bedrock',
+        'anthropic.claude-3-haiku-20240307-v1:0'
+      );
+      expect(mockCall).toHaveBeenCalledWith(
+        [{ role: MessageRole.USER, content: 'hello' }],
+        undefined,
+        'standard',
+        'anthropic.claude-3-haiku-20240307-v1:0',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined
+      );
+    });
+
+    it('should throw TokenBudgetExceeded if estimated tokens exceed MAX_TOKEN_BUDGET', async () => {
+      const pm = new ProviderManager();
+
+      vi.spyOn(ProviderManager, 'getActiveProvider').mockResolvedValueOnce({
+        call: vi.fn(),
+      } as any);
+
+      // Create a huge message to exceed 100k tokens
+      const hugeMessage = 'a'.repeat(450000); // ~112.5k tokens
+
+      await expect(pm.call([{ role: MessageRole.USER, content: hugeMessage }])).rejects.toThrow(
+        /TokenBudgetExceeded/
+      );
+    });
   });
 });

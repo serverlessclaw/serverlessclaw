@@ -1,7 +1,7 @@
 import { Resource } from 'sst';
 import { ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { SSTResource } from '../../lib/types/system';
-import { LLMProvider, OpenAIModel } from '../../lib/types/llm';
+import { LLMProvider, MiniMaxModel } from '../../lib/types/llm';
 import { knowledgeSchema } from './schema';
 import { formatErrorMessage } from '../../lib/utils/error';
 
@@ -39,8 +39,8 @@ export const checkConfig = {
 AGENT_NAME: ${agentName}
 INITIATOR: ${initiatorId}
 TRACE_ID: ${traceId}
-ACTIVE_PROVIDER: ${injectedProvider ?? ddbProvider ?? LLMProvider.OPENAI + ' (default)'}
-ACTIVE_MODEL: ${injectedModel ?? ddbModel ?? OpenAIModel.GPT_5_4_MINI + ' (default)'}
+  ACTIVE_PROVIDER: ${injectedProvider ?? ddbProvider ?? LLMProvider.MINIMAX + ' (default)'}
+  ACTIVE_MODEL: ${injectedModel ?? ddbModel ?? MiniMaxModel.M2_7 + ' (default)'}
 STAGING_BUCKET: ${typedResource.StagingBucket?.name ?? 'N/A'}
     `.trim();
   },

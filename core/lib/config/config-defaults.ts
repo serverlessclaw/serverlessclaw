@@ -65,9 +65,9 @@ export const CONFIG_DEFAULTS = {
     description: 'Max probe deployments allowed in half-open state before reopening.',
   },
 
-  /** Maximum recovery attempts before escalation. Default: 2 */
+  /** Maximum recovery attempts before escalation. Default: 4 */
   MAX_RECOVERY_ATTEMPTS: {
-    code: 2,
+    code: 4,
     hotSwappable: false,
     configKey: null,
     description: 'Dead Mans Switch recovery attempts before alerting admin.',
@@ -105,12 +105,27 @@ export const CONFIG_DEFAULTS = {
     description: 'Days to retain conversation messages.',
   },
 
-  /** Days before a stale gap is auto-archived. Default: 14 */
+  /** Days before a stale gap is auto-archived. Default: 30 */
   STALE_GAP_DAYS: {
-    code: 14,
+    code: 30,
     hotSwappable: true,
     configKey: 'stale_gap_days',
     description: 'Days before an open gap is considered stale.',
+  },
+  /** Strategic review frequency (hours). Default: 48 */
+  STRATEGIC_REVIEW_FREQUENCY_HOURS: {
+    code: 48,
+    hotSwappable: true,
+    configKey: 'strategic_review_frequency',
+    description: 'Hours between proactive strategic planner reviews.',
+  },
+
+  /** Minimum number of gaps before triggering strategic review. Default: 20 */
+  MIN_GAPS_FOR_REVIEW: {
+    code: 20,
+    hotSwappable: true,
+    configKey: 'min_gaps_for_review',
+    description: 'Minimum open gaps required to trigger a proactive strategic review.',
   },
 
   /** Cooldown period after planner run (ms). Default: 21600000 (6 hours) */

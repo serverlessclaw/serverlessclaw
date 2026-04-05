@@ -112,13 +112,13 @@ describe('mapProfileToResource', () => {
   });
 
   it('maps MCP profiles correctly', () => {
-    expect(mapProfileToResource('git', busId)).toBe(INFRA_NODE_ID.MCP_GIT);
-    expect(mapProfileToResource('filesystem', busId)).toBe(INFRA_NODE_ID.MCP_FILESYSTEM);
-    expect(mapProfileToResource('google-search', busId)).toBe(INFRA_NODE_ID.MCP_GOOGLE_SEARCH);
-    expect(mapProfileToResource('puppeteer', busId)).toBe(INFRA_NODE_ID.MCP_PUPPETEER);
-    expect(mapProfileToResource('fetch', busId)).toBe(INFRA_NODE_ID.MCP_FETCH);
-    expect(mapProfileToResource('aws', busId)).toBe(INFRA_NODE_ID.MCP_AWS);
-    expect(mapProfileToResource('aws-s3', busId)).toBe(INFRA_NODE_ID.MCP_AWS_S3);
+    expect(mapProfileToResource('git', busId)).toBe('mcp-multiplexer');
+    expect(mapProfileToResource('filesystem', busId)).toBe('mcp-multiplexer');
+    expect(mapProfileToResource('google-search', busId)).toBe('mcp-multiplexer');
+    expect(mapProfileToResource('puppeteer', busId)).toBe('mcp-multiplexer');
+    expect(mapProfileToResource('fetch', busId)).toBe('mcp-multiplexer');
+    expect(mapProfileToResource('aws', busId)).toBe('mcp-multiplexer');
+    expect(mapProfileToResource('aws-s3', busId)).toBe('mcp-multiplexer');
   });
 
   it('returns null for unrecognized profiles', () => {
@@ -351,17 +351,11 @@ describe('inferNodeEdges', () => {
   it('creates dashboard query edges to core tables', () => {
     const nodes = [
       makeNode({ id: 'dashboard', type: NODE_TYPE.DASHBOARD }),
-      makeNode({ id: INFRA_NODE_ID.MEMORY_TABLE }),
-      makeNode({ id: INFRA_NODE_ID.CONFIG_TABLE }),
-      makeNode({ id: INFRA_NODE_ID.TRACE_TABLE }),
+      makeNode({ id: INFRA_NODE_ID.CLAWDB }),
     ];
     const edges = inferNodeEdges(nodes);
 
-    for (const table of [
-      INFRA_NODE_ID.MEMORY_TABLE,
-      INFRA_NODE_ID.CONFIG_TABLE,
-      INFRA_NODE_ID.TRACE_TABLE,
-    ]) {
+    for (const table of [INFRA_NODE_ID.CLAWDB]) {
       const queryEdge = edges.find(
         (e) => e.source === 'dashboard' && e.target === table && e.label === EDGE_LABEL.QUERY
       );
@@ -452,19 +446,15 @@ describe('inferBackboneEdges', () => {
   it('creates edges from tools via mapToolToResources', async () => {
     const nodes = [
       makeNode({ id: 'testhandler' }),
-      makeNode({ id: INFRA_NODE_ID.MCP_AWS_S3 }),
-      makeNode({ id: INFRA_NODE_ID.MCP_GIT }),
+      makeNode({ id: 'mcp-multiplexer' }),
       makeNode({ id: INFRA_NODE_ID.DEPLOYER }),
       makeNode({ id: INFRA_NODE_ID.AGENT_BUS }),
     ];
     const edges = await inferBackboneEdges(nodes);
 
-    // testhandler has tools: aws-s3_read_file, git_status
+    // testhandler has tools: aws-s3_read_file, git_status which map to mcp-multiplexer
     expect(
-      edges.find((e) => e.source === 'testhandler' && e.target === INFRA_NODE_ID.MCP_AWS_S3)
-    ).toBeDefined();
-    expect(
-      edges.find((e) => e.source === 'testhandler' && e.target === INFRA_NODE_ID.MCP_GIT)
+      edges.find((e) => e.source === 'testhandler' && e.target === 'mcp-multiplexer')
     ).toBeDefined();
   });
 

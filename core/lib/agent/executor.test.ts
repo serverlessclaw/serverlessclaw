@@ -455,4 +455,79 @@ describe('AgentExecutor', () => {
     expect(mockHighRiskTool.execute).toHaveBeenCalled();
     expect(result.responseText).toBe('SUCCESS: deleted');
   });
+
+  it('should trigger context truncation when messages exceed 90% of limit', async () => {
+    const longContent = 'x'.repeat(3000);
+    const messages: Message[] = Array.from({ length: 10 }, (_, i) => ({
+      role: i % 2 === 0 ? MessageRole.USER : MessageRole.ASSISTANT,
+      content: longContent,
+    }));
+
+    const executor = new AgentExecutor(
+      mockProvider as any,
+      [],
+      'test-agent',
+      'Test Agent',
+      'System prompt for context management testing',
+      null,
+      5000
+    );
+
+    mockProvider.call.mockResolvedValue({
+      role: MessageRole.ASSISTANT,
+      content: 'done after truncation',
+    });
+
+    const result = await executor.runLoop(
+      messages,
+      getDefaultOptions({
+        traceId: 't1',
+        taskId: 't1',
+        userText: 'test',
+        maxIterations: 1,
+      })
+    );
+
+    expect(result.responseText).toBe('done after truncation');
+    expect(messages.length).toBeGreaterThan(0);
+    expect(messages[0].role).toBe(MessageRole.SYSTEM);
+  });
+
+  it('should handle TOOL_REJECTION with no reason text', async () => {
+    const executor = new AgentExecutor(mockProvider as any, [], 'test-agent', 'Test Agent');
+
+    const messages: Message[] = [];
+    const options = getDefaultOptions({
+      userText: 'TOOL_REJECTION:call-999',
+    });
+
+    vi.spyOn((executor as any).core, 'callLLM').mockResolvedValue({
+      role: MessageRole.ASSISTANT,
+      content: 'Rejected.',
+    });
+
+    await executor.runLoop(messages, options);
+
+    expect(messages).toHaveLength(1);
+    expect(messages[0].content).toBe('USER_REJECTED_EXECUTION: User rejected this tool execution.');
+  });
+
+  it('should handle TOOL_CLARIFICATION with no comment text', async () => {
+    const executor = new AgentExecutor(mockProvider as any, [], 'test-agent', 'Test Agent');
+
+    const messages: Message[] = [];
+    const options = getDefaultOptions({
+      userText: 'TOOL_CLARIFICATION:call-888',
+    });
+
+    vi.spyOn((executor as any).core, 'callLLM').mockResolvedValue({
+      role: MessageRole.ASSISTANT,
+      content: 'Clarified.',
+    });
+
+    await executor.runLoop(messages, options);
+
+    expect(messages).toHaveLength(1);
+    expect(messages[0].content).toBe('USER_CLARIFICATION: ');
+  });
 });

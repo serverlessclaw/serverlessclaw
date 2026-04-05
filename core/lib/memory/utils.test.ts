@@ -9,6 +9,11 @@ import {
   getMemoryByType,
   getRegisteredMemoryTypes,
   queryLatestContentByUserId,
+  normalizeTags,
+  normalizeGapId,
+  getGapIdPK,
+  getGapTimestamp,
+  queryByTypeAndGetContent,
 } from './utils';
 import type { BaseMemoryProvider } from './base';
 import { InsightCategory } from '../types/index';
@@ -227,49 +232,183 @@ describe('memory/utils', () => {
     });
   });
 
-  describe('queryByTypeAndMap', () => {
-    it('should map items with createdAt correctly', async () => {
-      const { queryByTypeAndMap: qMap } = await import('./utils');
-      const timestamp = 1000;
-      const createdAt = 500;
-      mockBase.queryItems = vi.fn().mockResolvedValue([
-        {
-          userId: 'GAP#1',
-          content: 'Test content',
-          timestamp,
-          createdAt,
-          metadata: { category: InsightCategory.STRATEGIC_GAP },
-        },
-      ]);
-
-      const result = await qMap(mockBase, 'GAP', InsightCategory.STRATEGIC_GAP);
-
-      expect(result[0].createdAt).toBe(createdAt);
-      expect(result[0].timestamp).toBe(timestamp);
+  describe('normalizeTags', () => {
+    it('should return empty array for empty array input', () => {
+      expect(normalizeTags([])).toEqual([]);
     });
 
-    it('should fallback to metadata.createdAt then timestamp', async () => {
-      const { queryByTypeAndMap: qMap } = await import('./utils');
-      const timestamp = 1000;
-      const createdAt = 500;
-      mockBase.queryItems = vi.fn().mockResolvedValue([
-        {
-          userId: 'GAP#1',
-          content: 'Test',
-          timestamp,
-          metadata: { createdAt },
-        },
-        {
-          userId: 'GAP#2',
-          content: 'Test 2',
-          timestamp: 2000,
-        },
-      ]);
+    it('should return empty array for null input', () => {
+      expect(normalizeTags(null as unknown as string[])).toEqual([]);
+    });
 
-      const result = await qMap(mockBase, 'GAP', InsightCategory.STRATEGIC_GAP);
+    it('should return empty array for undefined input', () => {
+      expect(normalizeTags(undefined)).toEqual([]);
+    });
 
-      expect(result[0].createdAt).toBe(createdAt);
-      expect(result[1].createdAt).toBe(2000);
+    it('should trim whitespace from tags', () => {
+      expect(normalizeTags(['  tag1  ', ' tag2 '])).toEqual(['tag1', 'tag2']);
+    });
+
+    it('should lowercase tags', () => {
+      expect(normalizeTags(['TAG1', 'Tag2', 'tag3'])).toEqual(['tag1', 'tag2', 'tag3']);
+    });
+
+    it('should remove duplicates', () => {
+      expect(normalizeTags(['tag1', 'TAG1', ' tag1 '])).toEqual(['tag1']);
+    });
+
+    it('should handle mixed case with whitespace and duplicates', () => {
+      expect(normalizeTags(['  TAG1  ', 'tag1', ' Tag1 ', 'tag2'])).toEqual(['tag1', 'tag2']);
+    });
+
+    it('should filter out non-string items', () => {
+      expect(
+        normalizeTags(['tag1', 123 as unknown as string, null as unknown as string, 'tag2'])
+      ).toEqual(['tag1', 'tag2']);
+    });
+
+    it('should filter out empty strings after trim', () => {
+      expect(normalizeTags(['  ', '', 'tag1'])).toEqual(['tag1']);
+    });
+
+    it('should return sorted array', () => {
+      expect(normalizeTags(['zebra', 'alpha', 'beta'])).toEqual(['alpha', 'beta', 'zebra']);
+    });
+  });
+
+  describe('normalizeGapId', () => {
+    it('should return empty string for empty string input', () => {
+      expect(normalizeGapId('')).toBe('');
+    });
+
+    it('should strip single GAP# prefix', () => {
+      expect(normalizeGapId('GAP#123')).toBe('123');
+    });
+
+    it('should strip multiple GAP# prefixes', () => {
+      expect(normalizeGapId('GAP#GAP#123')).toBe('123');
+    });
+
+    it('should strip PROC# prefix', () => {
+      expect(normalizeGapId('PROC#123')).toBe('123');
+    });
+
+    it('should strip PROC# prefix followed by GAP#', () => {
+      expect(normalizeGapId('PROC#GAP#456')).toBe('GAP#456');
+    });
+
+    it('should handle mixed prefixes', () => {
+      expect(normalizeGapId('GAP#PROC#GAP#789')).toBe('GAP#789');
+    });
+
+    it('should return unchanged string if no prefix matches', () => {
+      expect(normalizeGapId('123')).toBe('123');
+    });
+  });
+
+  describe('getGapIdPK', () => {
+    it('should return GAP# with numeric ID for standard gap ID', () => {
+      expect(getGapIdPK('GAP#123')).toBe('GAP#123');
+    });
+
+    it('should strip prefix and return GAP# with numeric ID', () => {
+      expect(getGapIdPK('PROC#GAP#456')).toBe('GAP#456');
+    });
+
+    it('should handle non-numeric gap IDs by returning GAP# with original normalized ID', () => {
+      expect(getGapIdPK('GAP#abc')).toBe('GAP#abc');
+    });
+
+    it('should handle compound IDs', () => {
+      expect(getGapIdPK('GAP#GAP#789')).toBe('GAP#789');
+    });
+
+    it('should extract trailing numeric portion', () => {
+      expect(getGapIdPK('GAP#prefix123')).toBe('GAP#123');
+    });
+  });
+
+  describe('getGapTimestamp', () => {
+    it('should return numeric value for valid numeric gap ID', () => {
+      expect(getGapTimestamp('GAP#123')).toBe(123);
+    });
+
+    it('should return 0 for non-numeric normalized ID', () => {
+      expect(getGapTimestamp('GAP#abc')).toBe(0);
+    });
+
+    it('should handle NaN by returning 0', () => {
+      expect(getGapTimestamp('GAP#')).toBe(0);
+    });
+
+    it('should strip prefixes before parsing', () => {
+      expect(getGapTimestamp('PROC#GAP#456')).toBe(456);
+    });
+
+    it('should return 0 for empty string', () => {
+      expect(getGapTimestamp('')).toBe(0);
+    });
+  });
+
+  describe('queryByTypeAndGetContent', () => {
+    it('should use UserInsightIndex when userId is provided', async () => {
+      mockBase.queryItems = vi.fn().mockResolvedValue([{ content: 'User content' }]);
+
+      const result = await queryByTypeAndGetContent(mockBase, 'LESSON', 5, 'user123');
+
+      expect(result).toEqual(['User content']);
+      expect(mockBase.queryItems).toHaveBeenCalledWith(
+        expect.objectContaining({
+          IndexName: 'UserInsightIndex',
+          KeyConditionExpression: 'userId = :userId AND #tp = :type',
+          ExpressionAttributeNames: { '#tp': 'type' },
+          ExpressionAttributeValues: { ':userId': 'user123', ':type': 'LESSON' },
+          Limit: 5,
+          ScanIndexForward: false,
+        })
+      );
+    });
+
+    it('should use TypeTimestampIndex when userId is not provided', async () => {
+      mockBase.queryItems = vi.fn().mockResolvedValue([{ content: 'Global content' }]);
+
+      const result = await queryByTypeAndGetContent(mockBase, 'LESSON', 10);
+
+      expect(result).toEqual(['Global content']);
+      expect(mockBase.queryItems).toHaveBeenCalledWith(
+        expect.objectContaining({
+          IndexName: 'TypeTimestampIndex',
+          KeyConditionExpression: '#tp = :type',
+          ExpressionAttributeNames: { '#tp': 'type' },
+          ExpressionAttributeValues: { ':type': 'LESSON' },
+          Limit: 10,
+          ScanIndexForward: false,
+        })
+      );
+    });
+
+    it('should filter out empty content with filter(Boolean)', async () => {
+      mockBase.queryItems = vi
+        .fn()
+        .mockResolvedValue([
+          { content: 'Valid content' },
+          { content: '' },
+          { content: null },
+          { content: undefined },
+          { content: 'Another valid' },
+        ]);
+
+      const result = await queryByTypeAndGetContent(mockBase, 'LESSON', 10);
+
+      expect(result).toEqual(['Valid content', 'Another valid']);
+    });
+
+    it('should return empty array when no items found', async () => {
+      mockBase.queryItems = vi.fn().mockResolvedValue([]);
+
+      const result = await queryByTypeAndGetContent(mockBase, 'LESSON', 10);
+
+      expect(result).toEqual([]);
     });
   });
 });

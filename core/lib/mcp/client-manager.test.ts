@@ -38,6 +38,28 @@ vi.mock('@modelcontextprotocol/sdk/client/sse.js', () => ({
   },
 }));
 
+vi.mock('@aws-sdk/client-lambda', () => {
+  const mockSend = vi.fn().mockResolvedValue({
+    Payload: new TextEncoder().encode(
+      JSON.stringify({
+        statusCode: 200,
+        body: JSON.stringify({ jsonrpc: '2.0', result: {} }),
+      })
+    ),
+  });
+
+  return {
+    LambdaClient: class {
+      send = mockSend;
+      constructor(_config: any) {}
+    },
+    InvokeCommand: class {
+      constructor(_input: any) {}
+    },
+    _mockSend: mockSend,
+  };
+});
+
 vi.mock('../registry', () => ({
   AgentRegistry: {
     getRawConfig: vi.fn().mockResolvedValue(null),
@@ -56,7 +78,9 @@ vi.mock('../logger', () => ({
 describe('MCPClientManager', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
-    // We can't easily clear the static private maps, but we can closeAll
+    mockConnect.mockResolvedValue(undefined);
+    const { AgentRegistry } = await import('../registry');
+    vi.mocked(AgentRegistry.getRawConfig).mockResolvedValue(null);
     await MCPClientManager.closeAll();
   });
 
@@ -86,7 +110,6 @@ describe('MCPClientManager', () => {
   });
 
   it('handles concurrent connection requests and ensures only one client is created', async () => {
-    // Delay the connection to allow concurrency
     mockConnect.mockImplementation(async () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
       return undefined;
@@ -103,7 +126,6 @@ describe('MCPClientManager', () => {
     expect(client1).toBe(client2);
     expect(mockConnect).toHaveBeenCalledTimes(1);
 
-    // Call again after first one finished
     const client3 = await MCPClientManager.connect('concurrent-server', 'node server.js');
     expect(client3).toBe(client1);
     expect(mockConnect).toHaveBeenCalledTimes(1);
@@ -141,14 +163,12 @@ describe('MCPClientManager', () => {
   it('triggers circuit breaker after repeated failures', async () => {
     mockConnect.mockRejectedValue(new Error('Connection failed'));
 
-    // Fail 3 times
     for (let i = 0; i < 3; i++) {
       await expect(
         MCPClientManager.connect('failing-server', 'http://localhost')
       ).rejects.toThrow();
     }
 
-    // 4th attempt should be blocked by circuit breaker
     await expect(MCPClientManager.connect('failing-server', 'http://localhost')).rejects.toThrow(
       'Circuit breaker open for failing-server'
     );
@@ -166,5 +186,42 @@ describe('MCPClientManager', () => {
       'Server down-server is currently down'
     );
     expect(mockConnect).not.toHaveBeenCalled();
+  });
+
+  it('updates persistent health to up on successful connection', async () => {
+    const { AgentRegistry } = await import('../registry');
+
+    await MCPClientManager.connect('health-server', 'http://localhost:9090');
+
+    expect(AgentRegistry.saveRawConfig).toHaveBeenCalledWith(
+      'mcp_health_health-server',
+      expect.objectContaining({ status: 'up' })
+    );
+  });
+
+  it('marks server as down after MAX_FAILURES', async () => {
+    mockConnect.mockRejectedValue(new Error('Connection failed'));
+    const { AgentRegistry } = await import('../registry');
+
+    for (let i = 0; i < 3; i++) {
+      await expect(
+        MCPClientManager.connect('fail-mark-down', 'http://localhost')
+      ).rejects.toThrow();
+    }
+
+    expect(AgentRegistry.saveRawConfig).toHaveBeenCalledWith(
+      'mcp_health_fail-mark-down',
+      expect.objectContaining({ status: 'down' })
+    );
+  });
+
+  it('uses longer timeout for hub connections', async () => {
+    process.env.MCP_HUB_URL = 'http://hub.example.com';
+
+    await MCPClientManager.connect('hub-server', 'http://hub.example.com/mcp');
+
+    expect(mockConnect).toHaveBeenCalled();
+
+    delete process.env.MCP_HUB_URL;
   });
 });
