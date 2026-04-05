@@ -493,6 +493,28 @@ describe('Insight Operations', () => {
 
       vi.useRealTimers();
     });
+
+    it('should handle undefined content gracefully', async () => {
+      const now = 1710240000000;
+      vi.setSystemTime(now);
+      const UpdateCommand = (await import('@aws-sdk/lib-dynamodb')).UpdateCommand;
+
+      ddbMock.on(QueryCommand).resolves({ Items: [] });
+      ddbMock.on(PutCommand).resolves({});
+      ddbMock.on(UpdateCommand).resolves({});
+
+      // pass undefined content and ensure it does not throw and stores empty string
+      // (coerce via internal handling)
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      await memory.addMemory('USER#1', InsightCategory.USER_PREFERENCE, undefined);
+
+      const putCalls = ddbMock.commandCalls(PutCommand);
+      const item = putCalls[0]?.args[0].input.Item;
+      expect(item?.content).toBe('');
+
+      vi.useRealTimers();
+    });
   });
 
   describe('recordFailedPlan', () => {

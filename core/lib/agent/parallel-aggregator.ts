@@ -36,7 +36,8 @@ export class ParallelAggregator {
     taskMapping?: Array<{ taskId: string; agentId: string }>,
     aggregationType?: 'summary' | 'agent_guided' | 'merge_patches',
     aggregationPrompt?: string,
-    metadata?: Record<string, unknown>
+    metadata?: Record<string, unknown>,
+    initialQuery?: string
   ): Promise<void> {
     const expiresAt = Math.floor(Date.now() / TIME.MS_PER_SECOND) + TIME.SECONDS_IN_HOUR;
 
@@ -58,6 +59,7 @@ export class ParallelAggregator {
           results_ids: [],
           aggregationType,
           aggregationPrompt,
+          initialQuery,
           metadata: metadata ?? {},
         },
       })

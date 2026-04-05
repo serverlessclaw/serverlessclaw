@@ -140,6 +140,7 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
             aggregationPrompt: `I have completed the parallel execution of the mission: "${finalResponseText.substring(0, 200)}...". 
                                Please synthesize the results and provide a final summary.
                                Prepend the result with [AGGREGATED_RESULTS].`,
+            initialQuery: payload.task,
             traceId,
             initiatorId: agentId,
             depth: (payload.depth ?? 0) + 1,

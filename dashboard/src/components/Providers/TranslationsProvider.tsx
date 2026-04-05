@@ -33,11 +33,11 @@ export const TranslationsProvider: React.FC<{
   // Sync with localStorage on mount (Client-side only)
   useEffect(() => {
     const savedLocale = localStorage.getItem(STORAGE_KEY) as Locale | null;
-    if (savedLocale && savedLocale !== locale && (savedLocale === 'en' || savedLocale === 'cn')) {
+    if (savedLocale && savedLocale !== initialLocale && (savedLocale === 'en' || savedLocale === 'cn')) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocaleState(savedLocale);
     }
-  }, []);
+  }, [initialLocale]);
 
   useEffect(() => {
     document.documentElement.lang = locale;

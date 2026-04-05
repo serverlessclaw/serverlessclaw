@@ -82,6 +82,7 @@ export async function GET() {
         taskCount: item.taskCount as number,
         completedCount: item.completedCount as number,
         initiatorId: item.initiatorId as string,
+        initialQuery: item.initialQuery as string | undefined,
         sessionId: item.sessionId as string | undefined,
         aggregationType: item.aggregationType as string | undefined,
         tasks: tasksWithStatus,

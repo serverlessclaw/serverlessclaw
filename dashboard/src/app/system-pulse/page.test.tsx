@@ -15,7 +15,7 @@ vi.mock('next/dynamic', () => ({
 
 // Mock UI components
 vi.mock('@/components/ui/Typography', () => ({
-  default: ({ children }: any) => <div data-testid="typography">{children}</div>,
+  default: ({ children }: { children: React.ReactNode }) => <div data-testid="typography">{children}</div>,
 }));
 
 vi.mock('lucide-react', () => ({

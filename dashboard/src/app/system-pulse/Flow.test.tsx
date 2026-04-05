@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import React from 'react';
 import SystemPulseFlow, { getAgentIcon, getAgentDescription } from './Flow';
@@ -8,9 +8,8 @@ const mockFitView = vi.fn();
 
 // Mock @xyflow/react
 vi.mock('@xyflow/react', () => {
-  const React = require('react');
   return {
-    ReactFlow: ({ nodes, edges, children }: any) => (
+    ReactFlow: ({ nodes, edges, children }: { nodes: unknown[]; edges: unknown[]; children: React.ReactNode }) => (
       <div data-testid="react-flow" data-nodes={JSON.stringify(nodes)} data-edges={JSON.stringify(edges)}>
         {children}
       </div>
@@ -19,12 +18,12 @@ vi.mock('@xyflow/react', () => {
     Handle: () => <div data-testid="handle" />,
     Position: { Top: 'top', Bottom: 'bottom', Left: 'left', Right: 'right' },
     MarkerType: { ArrowClosed: 'arrowclosed' },
-    useNodesState: (initialNodes: any) => {
+    useNodesState: (initialNodes: unknown) => {
       const [nodes, setNodes] = React.useState(initialNodes);
       const onNodesChange = vi.fn();
       return [nodes, setNodes, onNodesChange];
     },
-    useEdgesState: (initialEdges: any) => {
+    useEdgesState: (initialEdges: unknown) => {
       const [edges, setEdges] = React.useState(initialEdges);
       const onEdgesChange = vi.fn();
       return [edges, setEdges, onEdgesChange];
@@ -34,13 +33,13 @@ vi.mock('@xyflow/react', () => {
       zoomOut: vi.fn(),
       fitView: mockFitView,
     }),
-    ReactFlowProvider: ({ children }: any) => <div data-testid="react-flow-provider">{children}</div>,
+    ReactFlowProvider: ({ children }: { children: React.ReactNode }) => <div data-testid="react-flow-provider">{children}</div>,
   };
 });
 
 // Mock UI components
 vi.mock('@/components/ui/Button', () => ({
-  default: ({ children, onClick, icon, title }: any) => (
+  default: ({ children, onClick, icon, title }: { children: React.ReactNode; onClick: () => void; icon: React.ReactNode; title: string }) => (
     <button onClick={onClick} data-testid="button" title={title}>
       {icon}
       {children}
@@ -49,11 +48,11 @@ vi.mock('@/components/ui/Button', () => ({
 }));
 
 vi.mock('@/components/ui/Typography', () => ({
-  default: ({ children }: any) => <div data-testid="typography">{children}</div>,
+  default: ({ children }: { children: React.ReactNode }) => <div data-testid="typography">{children}</div>,
 }));
 
 vi.mock('@/components/ui/Card', () => ({
-  default: ({ children }: any) => <div data-testid="card">{children}</div>,
+  default: ({ children }: { children: React.ReactNode }) => <div data-testid="card">{children}</div>,
 }));
 
 // Mock fetch

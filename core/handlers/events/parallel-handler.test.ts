@@ -193,7 +193,8 @@ describe('parallel-handler', () => {
         ]),
         undefined,
         undefined,
-        expect.objectContaining({ hasDependencies: false })
+        expect.objectContaining({ hasDependencies: false }),
+        undefined
       );
 
       expect(mockScheduleOneShotTimeout).toHaveBeenCalledWith(
@@ -278,7 +279,8 @@ describe('parallel-handler', () => {
         expect.any(Array),
         undefined,
         undefined,
-        expect.any(Object)
+        expect.any(Object),
+        undefined
       );
     });
 

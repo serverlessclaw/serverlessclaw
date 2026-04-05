@@ -1,7 +1,7 @@
 # Official ServerlessClaw: Autonomous AI Agent Swarm for AWS
 
 <p align="center">
-  <img src="./dashboard/public/hero-evolution.png" alt="ServerlessClaw - Official Autonomous AI Agent Swarm for AWS Infrastructure" width="800">
+  <img src="./dashboard/public/system-pulse.png" alt="ServerlessClaw Dashboard - Real-time Infrastructure Topology" width="800">
 </p>
 
 <p align="center">
@@ -72,7 +72,7 @@ In 2026, **the 24/7 VPS mascot is dead.** Running AI agent swarms on persistent 
 Serverless Claw doesn't just execute code; it **improves itself**. But unlike raw autonomous systems, every evolution is gated by a **Council of Agents**.
 
 <p align="center">
-  <img src="./dashboard/public/evolution-cycle.png" alt="Council-Verified Evolution Cycle - Autonomous AI Agent Swarm for AWS" width="800">
+  <img src="./dashboard/public/trace-portal.png" alt="ServerlessClaw Trace Portal - Neural Observation and Execution Paths" width="800">
 </p>
 
 ---
@@ -80,7 +80,7 @@ Serverless Claw doesn't just execute code; it **improves itself**. But unlike ra
 ## How It Works
 
 <p align="center">
-  <img src="./dashboard/public/clawcenter.png" alt="ServerlessClaw High-Level System Architecture and Neural Trace Graph" width="800">
+  <img src="./dashboard/public/chat-interface.png" alt="ServerlessClaw Intelligence Sector - Direct Chat and Mission Control" width="800">
 </p>
 
 When you send a message, **SuperClaw** receives it, develops a plan with the **Strategic Planner**, and dispatches tasks to specialized nodes via **EventBridge**. The system implements an **Asynchronous "Pause & Resume"** pattern — agents don't block; they emit a task and terminate, waking up only when a result signal is routed back. High-impact plans are peer-reviewed by the **Council of Agents**, while the **Facilitator** moderates collaborative sessions to drive consensus.

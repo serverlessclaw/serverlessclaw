@@ -73,6 +73,7 @@ export async function handleResearchTask(eventDetail: Record<string, unknown>): 
                              Synthesize the findings from these sub-tasks into a cohesive technical report. 
                              Focus on pattern discovery and actionable technical debt/gap identification.
                              Prepend the response with [AGGREGATED_RESULTS].`,
+          initialQuery: task,
           traceId,
           initiatorId: AgentType.RESEARCHER,
           depth: (depth ?? 0) + 1,

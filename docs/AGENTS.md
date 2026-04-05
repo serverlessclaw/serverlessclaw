@@ -355,6 +355,44 @@ The **Parallel Handler** now traps dispatch errors (e.g., EventBridge throughput
 
 ---
 
+## 📡 End-to-End Execution Tracing
+
+The system provides a unified, end-to-end trace of parallel agentic executions in the **Trace Intelligence** observatory. This view captures the entire lifecycle of a mission, from the initial user query to final synthesis.
+
+### Neural Execution Flow
+
+```text
+ [ INITIATOR ] (SuperClaw / Strategic Planner)
+       |
+       |  (1) Capture Initial Query
+       v
+[ PARALLEL DISPATCH ] (EventBridge)
+       |
+       +-- (2) Orchestrater Node (DAG Status)
+       |
+       +-- [ WORKER 1 ]     [ WORKER 2 ]     [ WORKER N ]
+       |       |                |                |
+       |   (3) Task 1       (4) Task 2       (5) Task N
+       |       |                |                |
+       \-------+----------------+----------------/
+               |
+               v
+      [ PENDING AGGREGATOR ] (Synthesis Tier)
+               |
+               v
+       [ FINAL RESPONSE ] (User Notified)
+```
+
+### Trace Components
+
+- **Initial Query**: The high-level intent or mission description that triggered the decomposition.
+- **Initiator**: The agent or system component that identified the need for parallelization.
+- **Neural Workers**: Specialized sub-agents (Coder, Researcher, etc.) assigned to specific sub-tasks.
+- **Execution DAG**: The dependency graph representing the order and status of sub-tasks.
+- **Pending Aggregator**: The synthesis logic that combines parallel results into a cohesive final output.
+
+---
+
 ## 🖥️ Dashboard Co-Management Flows
 
 The ClawCenter dashboard provides real-time co-management interfaces for multi-human multi-agent collaboration.

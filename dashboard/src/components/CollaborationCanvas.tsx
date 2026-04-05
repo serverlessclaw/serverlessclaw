@@ -107,26 +107,37 @@ const getStatusColor = (status: string) => {
 };
 
 const nodeTypes = {
-  initiatorNode: ({ data }: { data: { initiatorId: string; sessionId?: string; traceId: string } }) => (
+  initiatorNode: ({ data }: { data: { initiatorId: string; sessionId?: string; traceId: string; initialQuery?: string } }) => (
     <div className="relative group transition-all duration-300 z-10 hover:z-50">
-      <div className="px-4 py-3 shadow-lg rounded-md bg-black border border-cyan-500/50 min-w-[180px] relative overflow-hidden">
+      <div className="px-4 py-3 shadow-lg rounded-md bg-black border border-cyan-500/50 min-w-[220px] max-w-[300px] relative overflow-hidden">
         <div className="absolute top-0 right-0 w-16 h-16 bg-cyan-500/5 rounded-full blur-xl -mr-8 -mt-8"></div>
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-sm shrink-0 bg-cyan-500/10 text-cyan-400">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-sm shrink-0 bg-cyan-500/10 text-cyan-400 mt-1">
             <User size={16} />
           </div>
           <div className="overflow-hidden">
-            <div className="text-[10px] font-bold uppercase tracking-tighter truncate text-cyan-400">
-              INITIATOR
-            </div>
-            <div className="text-sm font-bold text-white/90 break-words leading-tight">
+            <div className="text-[10px] font-bold uppercase tracking-tighter truncate text-cyan-400 mb-1">
               {data.initiatorId || 'System'}
             </div>
-            {data.sessionId && (
-              <div className="text-[9px] text-white/50 mt-1 truncate">
-                Session: {data.sessionId}
+            {data.initialQuery ? (
+              <div className="text-xs font-medium text-white/90 leading-tight italic line-clamp-3">
+                &quot;{data.initialQuery}&quot;
+              </div>
+            ) : (
+              <div className="text-sm font-bold text-white/90 break-words leading-tight">
+                Root Initiator
               </div>
             )}
+            <div className="flex items-center gap-2 mt-2 opacity-40">
+               <div className="text-[8px] font-mono uppercase tracking-widest text-white">
+                 ID: {data.traceId.substring(0, 8)}
+               </div>
+               {data.sessionId && (
+                 <div className="text-[8px] font-mono text-white/60 truncate">
+                   • {data.sessionId.substring(0, 8)}
+                 </div>
+               )}
+            </div>
           </div>
         </div>
         <Handle
@@ -331,6 +342,7 @@ export function CollaborationCanvasContent() {
           dispatch: {
             traceId: string;
             initiatorId?: string;
+            initialQuery?: string;
             sessionId?: string;
             aggregationType?: string;
             tasks: TaskNodeData[];
@@ -360,6 +372,7 @@ export function CollaborationCanvasContent() {
               initiatorId: dispatch.initiatorId,
               sessionId: dispatch.sessionId,
               traceId: dispatch.traceId,
+              initialQuery: dispatch.initialQuery,
             },
           });
 

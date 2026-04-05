@@ -18,6 +18,7 @@ export interface ParallelTaskEvent {
   sessionId?: string;
   traceId?: string;
   initiatorId?: string;
+  initialQuery?: string;
   depth?: number;
   tasks: ParallelDispatchParams['tasks'];
   barrierTimeoutMs?: number;
@@ -36,6 +37,7 @@ export async function handleParallelDispatch(
     barrierTimeoutMs,
     traceId,
     initiatorId,
+    initialQuery,
     depth,
     sessionId,
     aggregationType,
@@ -102,7 +104,8 @@ export async function handleParallelDispatch(
     tasks.map((t) => ({ taskId: t.taskId, agentId: t.agentId })),
     aggregationType,
     aggregationPrompt,
-    aggregatorMetadata
+    aggregatorMetadata,
+    initialQuery
   );
 
   // If dependencies are enabled, use DAG execution

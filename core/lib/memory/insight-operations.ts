@@ -30,6 +30,7 @@ async function findSimilarMemory(
   content: string
 ): Promise<MemoryInsight | null> {
   try {
+    if (!content || typeof content !== 'string') return null;
     const fullType = `MEMORY:${category.toString().toUpperCase()}`;
     const items = await queryByTypeAndMap(
       base,
@@ -43,15 +44,20 @@ async function findSimilarMemory(
 
     if (items.length === 0) return null;
 
-    const newKeywords = content
+    const newKeywords = (content ?? '')
+      .toString()
       .toLowerCase()
       .split(/\W+/)
       .filter((w) => w.length > 3);
     for (const item of items) {
-      const oldKeywords = item.content
+      const oldKeywords = (item.content ?? '')
+        .toString()
         .toLowerCase()
         .split(/\W+/)
         .filter((w) => w.length > 3);
+
+      if (newKeywords.length === 0 || oldKeywords.length === 0) continue;
+
       const intersection = newKeywords.filter((w) => oldKeywords.includes(w));
       const similarity = intersection.length / Math.max(newKeywords.length, oldKeywords.length);
       if (similarity > 0.6) return item;
@@ -74,7 +80,7 @@ async function addRecord(
   metadata?: Partial<InsightMetadata> & { orgId?: string; tags?: string[] }
 ): Promise<number> {
   const { expiresAt } = await RetentionManager.getExpiresAt(baseCategory, scopeId);
-  const scrubbedContent = filterPII(content);
+  const scrubbedContent = filterPII(content ?? '');
   const fullType = `MEMORY:${category.toString().toUpperCase()}`;
 
   // 1. Semantic Deduplication / Upsert

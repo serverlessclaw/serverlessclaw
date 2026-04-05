@@ -275,6 +275,7 @@ export const PARALLEL_TASK_DISPATCH_SCHEMA = BASE_EVENT_SCHEMA.extend({
       dependsOn: z.array(z.string()).optional(),
     })
   ),
+  initialQuery: z.string().optional(),
   barrierTimeoutMs: z.number().optional(),
   aggregationType: z.enum(['summary', 'agent_guided', 'merge_patches']).optional(),
   aggregationPrompt: z.string().optional(),

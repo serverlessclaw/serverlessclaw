@@ -138,6 +138,26 @@ describe('ParallelAggregator', () => {
       expect(command.input.Item!.aggregationPrompt).toBe('combine results');
     });
 
+    it('should include initialQuery when provided', async () => {
+      mockSend.mockResolvedValueOnce({});
+
+      await aggregator.init(
+        'u1',
+        't2',
+        1,
+        'superclaw',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        'What is the weather?'
+      );
+
+      const command = mockSend.mock.calls[0][0] as PutCommand;
+      expect(command.input.Item!.initialQuery).toBe('What is the weather?');
+    });
+
     it('should include metadata when provided', async () => {
       mockSend.mockResolvedValueOnce({});
 
