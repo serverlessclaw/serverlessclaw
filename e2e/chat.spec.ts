@@ -6,12 +6,12 @@ test.describe('Chat Flow', () => {
   test('renders chat page', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('textarea')).toBeVisible();
-    await expect(page.getByRole('button', { name: /SEND/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'SEND', exact: true })).toBeVisible();
   });
 
   test('send button is disabled when input is empty', async ({ page }) => {
     await page.goto('/');
-    const sendButton = page.getByRole('button', { name: /SEND/i });
+    const sendButton = page.getByRole('button', { name: 'SEND', exact: true });
     await expect(sendButton).toBeDisabled();
   });
 
