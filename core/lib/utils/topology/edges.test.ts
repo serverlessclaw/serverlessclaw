@@ -37,6 +37,10 @@ vi.mock('../../backbone', () => ({
   },
 }));
 
+vi.mock('../../../tools/index', () => ({
+  TOOLS: {},
+}));
+
 import {
   mapProfileToResource,
   mapToolToResources,
