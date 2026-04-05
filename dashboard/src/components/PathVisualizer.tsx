@@ -16,8 +16,8 @@ import {
 import '@xyflow/react/dist/style.css';
 import { TRACE_TYPES } from '@claw/core/lib/constants';
 import { Trace, TraceStep } from '@/lib/types/ui';
-import { nodeTypes } from './Trace/nodes';
-import StepDetailPanel from './Trace/StepDetailPanel';
+import { nodeTypes } from '@/components/Trace/nodes';
+import StepDetailPanel from '@/components/Trace/StepDetailPanel';
 
 /**
  * Configuration for the Path Visualizer geometry and styling.

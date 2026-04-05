@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import PathVisualizer from '@/components/PathVisualizer';
-import TraceContextRegistrar from '../../../components/Trace/TraceContextRegistrar';
+import TraceContextRegistrar from '@/components/Trace/TraceContextRegistrar';
 import Image from 'next/image';
 import { UI_STRINGS } from '@/lib/constants';
 import { TRACE_TYPES, TRACE_STATUS } from '@claw/core/lib/constants';
