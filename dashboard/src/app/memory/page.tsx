@@ -1,4 +1,5 @@
 import { getResourceName } from '@/lib/sst-utils';
+import { decodePaginationToken, encodePaginationToken } from '@/lib/pagination-utils';
 export const dynamic = 'force-dynamic';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
@@ -35,18 +36,6 @@ interface MemoryItem {
   type?: string;
 }
 
-function decodePaginationToken(token: string): Record<string, unknown> | undefined {
-  try {
-    return JSON.parse(Buffer.from(token, 'base64').toString());
-  } catch {
-    return undefined;
-  }
-}
-
-function encodePaginationToken(key: Record<string, unknown> | undefined): string | undefined {
-  if (!key) return undefined;
-  return Buffer.from(JSON.stringify(key)).toString('base64');
-}
 
 function coerceToMemoryItem(item: unknown): MemoryItem | null {
   if (!item || typeof item !== 'object') return null;

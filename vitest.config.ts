@@ -15,7 +15,7 @@ export default defineConfig({
     globals: true,
     include: ['**/*.test.{ts,tsx}'],
     exclude: ['**/node_modules/**', '**/.next/**', '**/.open-next/**', 'e2e/**'],
-    setupFiles: ['./dashboard/src/test-setup.ts'],
+    setupFiles: [path.resolve(__dirname, './dashboard/src/test-setup.ts')],
     alias: {
       '@': path.resolve(__dirname, './dashboard/src'),
       '@claw/core': path.resolve(__dirname, './core'),

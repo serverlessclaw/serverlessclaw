@@ -1,4 +1,5 @@
 import { getResourceName } from '@/lib/sst-utils';
+import { decodePaginationToken, encodePaginationToken } from '@/lib/pagination-utils';
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, ScanCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
@@ -11,18 +12,6 @@ import ExportTracesButton from '@/components/ExportTracesButton';
 
 export const dynamic = 'force-dynamic';
 
-function decodePaginationToken(token: string): Record<string, unknown> | undefined {
-  try {
-    return JSON.parse(Buffer.from(token, 'base64').toString());
-  } catch {
-    return undefined;
-  }
-}
-
-function encodePaginationToken(key: Record<string, unknown> | undefined): string | undefined {
-  if (!key) return undefined;
-  return Buffer.from(JSON.stringify(key)).toString('base64');
-}
 
 async function getTraces(nextToken?: string) {
   try {
