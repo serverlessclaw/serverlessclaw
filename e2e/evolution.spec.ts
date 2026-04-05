@@ -50,9 +50,12 @@ test.describe('Evolution Pipeline', () => {
     await page.goto('/pipeline');
     await page.waitForLoadState('networkidle');
 
-    // Should not show critical error states
-    await expect(page.locator('body')).not.toContainText('Failed to fetch');
-    await expect(page.locator('body')).not.toContainText('Something went wrong');
+    // Should not show critical UI error states (not data content from gaps)
+    // Check for actual error UI components, not gap descriptions
+    await expect(
+      page.locator('[role="alert"], .error, [class*="error"], [class*="critical"]')
+    ).toHaveCount(0, { timeout: 10000 });
+    await expect(page.locator('text=/Something went wrong/i')).toHaveCount(0, { timeout: 5000 });
   });
 
   test('displays gap status badges with correct colors', async ({ page }) => {
