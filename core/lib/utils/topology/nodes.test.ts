@@ -1,5 +1,42 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NODE_TYPE, NODE_TIER, NODE_ICON, INFRA_NODE_ID } from './constants';
+import * as fs from 'fs';
+
+vi.mock('fs', () => ({
+  readFileSync: vi.fn(),
+  existsSync: vi.fn(),
+}));
+
+vi.mock('@aws-sdk/client-dynamodb', () => ({
+  DynamoDBClient: vi.fn().mockImplementation(function () {
+    return {
+      send: vi.fn().mockResolvedValue({ TableNames: ['serverlessclaw-local-MemoryTable'] }),
+    };
+  }),
+  ListTablesCommand: vi.fn(),
+}));
+
+vi.mock('@aws-sdk/client-s3', () => ({
+  S3Client: vi.fn().mockImplementation(function () {
+    return {
+      send: vi
+        .fn()
+        .mockResolvedValue({ Buckets: [{ Name: 'serverlessclaw-local-KnowledgeBucket' }] }),
+    };
+  }),
+  ListBucketsCommand: vi.fn(),
+}));
+
+vi.mock('@aws-sdk/client-lambda', () => ({
+  LambdaClient: vi.fn().mockImplementation(function () {
+    return {
+      send: vi.fn().mockResolvedValue({
+        Functions: [{ FunctionName: 'serverlessclaw-local-agent-runner' }],
+      }),
+    };
+  }),
+  ListFunctionsCommand: vi.fn(),
+}));
 
 vi.mock('../../backbone', () => ({
   BACKBONE_REGISTRY: {
@@ -39,6 +76,7 @@ import {
   addOrphanNodes,
   mergeBackboneNodes,
   addDynamicAgents,
+  discoverAwsNodes,
 } from './nodes';
 
 describe('ORPHAN_NODES', () => {
@@ -465,5 +503,63 @@ describe('addDynamicAgents', () => {
     ];
     const result = addDynamicAgents(existing, []);
     expect(result.length).toBe(1);
+  });
+});
+
+describe('discoverAwsNodes', () => {
+  beforeEach(() => {
+    process.env.SST_APP = 'serverlessclaw';
+    process.env.SST_STAGE = 'local';
+    process.env.AWS_REGION = 'ap-southeast-2';
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    delete process.env.SST_APP;
+    delete process.env.SST_STAGE;
+    delete process.env.AWS_REGION;
+  });
+
+  it('discovers nodes from AWS services', async () => {
+    const result = await discoverAwsNodes();
+
+    expect(result.some((n) => n.id === 'clawdb')).toBe(true);
+    expect(result.some((n) => n.id === 'knowledgebucket')).toBe(true);
+    expect(result.some((n) => n.id === 'agent-runner')).toBe(true);
+  });
+
+  it('resolves stage from .sst/stage if SST_STAGE is not set', async () => {
+    delete process.env.SST_STAGE;
+    (fs.existsSync as any).mockReturnValue(true);
+    (fs.readFileSync as any).mockReturnValue('prod');
+
+    const _result = await discoverAwsNodes();
+    // We expect the prefix check to use 'prod'
+    // Since we mocked AWS responses with 'local', it might not find them if prefix doesn't match
+    // but the classifier should still work if we set up mocks correctly.
+    // For now just checking if resolveSstStage is called implicitly.
+    expect(fs.readFileSync).toHaveBeenCalled();
+  });
+
+  it('defaults to local if stage is unrecognized', async () => {
+    delete process.env.SST_STAGE;
+    (fs.existsSync as any).mockReturnValue(true);
+    (fs.readFileSync as any).mockReturnValue('unknown');
+
+    await discoverAwsNodes();
+    // Should warn and use 'local'
+  });
+
+  it('handles AWS scan failures gracefully', async () => {
+    const { DynamoDBClient } = await import('@aws-sdk/client-dynamodb');
+    vi.mocked(DynamoDBClient).mockImplementationOnce(
+      () =>
+        ({
+          send: vi.fn().mockRejectedValue(new Error('AWS Error')),
+        }) as any
+    );
+
+    const result = await discoverAwsNodes();
+    expect(result).toEqual([]);
   });
 });

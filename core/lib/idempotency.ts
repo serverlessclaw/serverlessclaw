@@ -12,6 +12,9 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
 import { logger } from './logger';
+import { SSTResource } from './types/system';
+
+const typedResource = Resource as unknown as SSTResource;
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -35,7 +38,7 @@ interface IdempotencyRecord {
  */
 export async function getIdempotentResult(idempotencyKey: string): Promise<unknown | null> {
   try {
-    const tableName = Resource.MemoryTable.name;
+    const tableName = typedResource.MemoryTable.name;
 
     const response = await docClient.send(
       new GetCommand({
@@ -76,7 +79,7 @@ export async function getIdempotentResult(idempotencyKey: string): Promise<unkno
  */
 export async function setIdempotentResult(idempotencyKey: string, result: unknown): Promise<void> {
   try {
-    const tableName = Resource.MemoryTable.name;
+    const tableName = typedResource.MemoryTable.name;
     const now = Math.floor(Date.now() / 1000);
 
     const record: IdempotencyRecord = {
@@ -120,7 +123,7 @@ export async function setIdempotentResult(idempotencyKey: string, result: unknow
  */
 export async function deleteIdempotentKey(idempotencyKey: string): Promise<void> {
   try {
-    const tableName = Resource.MemoryTable.name;
+    const tableName = typedResource.MemoryTable.name;
 
     await docClient.send(
       new DeleteCommand({

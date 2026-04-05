@@ -422,7 +422,7 @@ export class ExecutorCore {
         completion_tokens: usage.totalOutputTokens,
         total_tokens: usage.total_tokens,
       },
-    } as any;
+    } as MessageChunk;
   }
 
   private async performPreLoopChecks(
