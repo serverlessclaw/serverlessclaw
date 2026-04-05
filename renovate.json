@@ -9,6 +9,7 @@
   "platformAutomerge": true,
   "prCreation": "immediate",
   "rebaseConflictedPrs": true,
+  "rebaseWhen": "behind-base-branch",
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
