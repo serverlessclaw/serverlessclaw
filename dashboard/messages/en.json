@@ -109,7 +109,7 @@
   "CHAT_PURGE_ALL_HISTORY": "PURGE ALL HISTORY",
   "CHAT_PURGE_WARNING": "WARNING: This action is irreversible. All active session history will be destroyed. Continue?",
   "CHAT_KEYBOARD_SHORTCUTS_TITLE": "Keyboard Shortcuts",
-  "CHAT_PLACEHOLDER": "Execute command or query system...",
+  "CHAT_PLACEHOLDER": "Ask or command...",
   "CHAT_CMD_ENTER": "Cmd + Enter",
   "CHAT_EXECUTING": "EXECUTING...",
   "CHAT_SEND": "SEND",

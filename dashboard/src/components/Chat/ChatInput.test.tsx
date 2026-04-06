@@ -39,7 +39,7 @@ describe('ChatInput Component', () => {
 
   it('renders the input textarea', () => {
     renderWithTranslations(<ChatInput {...defaultProps} />);
-    expect(screen.getByPlaceholderText('Execute command or query system...')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Ask or command...')).toBeInTheDocument();
   });
 
   it('renders SEND button when not loading', () => {

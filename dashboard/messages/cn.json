@@ -109,7 +109,7 @@
   "CHAT_PURGE_ALL_HISTORY": "清除所有历史",
   "CHAT_PURGE_WARNING": "警告：此操作不可逆。所有活跃会话历史将被销毁。继续？",
   "CHAT_KEYBOARD_SHORTCUTS_TITLE": "键盘快捷键",
-  "CHAT_PLACEHOLDER": "执行命令或查询系统...",
+  "CHAT_PLACEHOLDER": "输入命令或问题...",
   "CHAT_CMD_ENTER": "Cmd + Enter",
   "CHAT_EXECUTING": "执行中...",
   "CHAT_SEND": "发送",
