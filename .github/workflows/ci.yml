@@ -15,7 +15,7 @@ jobs:
         task: [lint, format-check, type-check, test-silent, test-coverage, aiready]
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
