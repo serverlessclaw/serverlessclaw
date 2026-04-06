@@ -235,7 +235,7 @@ const ChatMessageRow = memo(function ChatMessageRow({
   return (
     <div key={key} className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
       <div
-        className={`flex gap-3 max-w-[85%] ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+        className={`flex gap-3 max-w-[90%] ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
       >
         <div
           className={`w-8 h-8 rounded shrink-0 flex items-center justify-center border ${
@@ -470,7 +470,7 @@ export function ChatMessageList({
         className="flex-1 overflow-y-auto p-4 pt-12 space-y-3 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/[0.02] via-transparent to-transparent custom-scrollbar"
       >
         {filteredMessages.length === 0 && !isLoading && (
-          <div className="h-full flex flex-col items-center justify-center text-white/80">
+          <div className="min-h-0 flex-1 flex flex-col items-center justify-center text-white/80">
             <Terminal size={48} className="mb-4 opacity-10" />
             <Typography variant="h3" weight="normal" color="white" className="opacity-80">
               {msgSearchQuery

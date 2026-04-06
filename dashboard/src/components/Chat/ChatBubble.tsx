@@ -93,7 +93,7 @@ export default function ChatBubble() {
       {isOpen && !isMinimized && (
         <Card
           variant="glass"
-          className="w-[400px] h-[600px] flex flex-col shadow-2xl border-cyber-green/30 animate-in fade-in slide-in-from-bottom-4 duration-300 overflow-hidden"
+          className="w-[550px] h-[750px] flex flex-col shadow-2xl border-cyber-green/30 animate-in fade-in slide-in-from-bottom-4 duration-300 overflow-hidden"
           padding="none"
         >
           {/* Header */}
