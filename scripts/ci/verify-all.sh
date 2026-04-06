@@ -76,8 +76,8 @@ verify_local() {
 verify_production() {
   log_step "Verifying PRODUCTION environment..."
   
-  api_url="https://api.superclaw.getaiready.dev"
-  dashboard_url="https://superclaw.getaiready.dev"
+  api_url="https://api.demo.clawmore.ai"
+  dashboard_url="https://demo.clawmore.ai"
   
   # (a) API health check
   log_step "Checking API health at $api_url/health..."
@@ -159,9 +159,9 @@ main() {
   fi
   
   if [ $prod_ok -eq 1 ]; then
-    log_success "PRODUCTION (https://superclaw.getaiready.dev) is working"
+    log_success "PRODUCTION (https://demo.clawmore.ai) is working"
   else
-    log_error "PRODUCTION (https://superclaw.getaiready.dev) has issues"
+    log_error "PRODUCTION (https://demo.clawmore.ai) has issues"
   fi
   
   echo ""
