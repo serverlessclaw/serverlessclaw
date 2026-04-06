@@ -301,7 +301,7 @@ describe('DegradationDetector', () => {
     const metrics = createMetrics({ memoryMissRate: 0.6 });
     const anomalies = detector.detectAnomalies('agent-1', metrics);
 
-    const memoryAnomaly = anomalies.find((a) => a.type === AnomalyType.MEMORY_FRAGMENTATION);
+    const memoryAnomaly = anomalies.find((a) => a.type === AnomalyType.MEMORY_MISS);
     expect(memoryAnomaly).toBeDefined();
     expect(memoryAnomaly!.severity).toBe(AnomalySeverity.MEDIUM);
     expect(memoryAnomaly!.description).toContain('Memory miss rate');
@@ -311,7 +311,7 @@ describe('DegradationDetector', () => {
     const metrics = createMetrics({ memoryMissRate: 0.85 });
     const anomalies = detector.detectAnomalies('agent-1', metrics);
 
-    const memoryAnomaly = anomalies.find((a) => a.type === AnomalyType.MEMORY_FRAGMENTATION);
+    const memoryAnomaly = anomalies.find((a) => a.type === AnomalyType.MEMORY_MISS);
     expect(memoryAnomaly?.severity).toBe(AnomalySeverity.HIGH);
   });
 
@@ -397,7 +397,7 @@ describe('DegradationDetector', () => {
     const types = new Set(anomalies.map((a) => a.type));
     expect(types.has(AnomalyType.TASK_FAILURE_SPIKE)).toBe(true);
     expect(types.has(AnomalyType.REASONING_DEGRADATION)).toBe(true);
-    expect(types.has(AnomalyType.MEMORY_FRAGMENTATION)).toBe(true);
+    expect(types.has(AnomalyType.MEMORY_MISS)).toBe(true);
   });
 
   it('should include trigger metrics and suggestions in anomalies', () => {
@@ -604,6 +604,7 @@ describe('AnomalySeverity and AnomalyType enums', () => {
   it('should have all expected anomaly types', () => {
     expect(AnomalyType.REASONING_DEGRADATION).toBe('reasoning_degradation');
     expect(AnomalyType.MEMORY_FRAGMENTATION).toBe('memory_fragmentation');
+    expect(AnomalyType.MEMORY_MISS).toBe('memory_miss');
     expect(AnomalyType.TASK_FAILURE_SPIKE).toBe('task_failure_spike');
     expect(AnomalyType.LATENCY_ANOMALY).toBe('latency_anomaly');
     expect(AnomalyType.TOKEN_OVERUSE).toBe('token_overuse');

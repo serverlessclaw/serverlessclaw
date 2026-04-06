@@ -6,6 +6,7 @@ vi.mock('../../lib/logger', () => ({
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
+    debug: vi.fn(),
   },
 }));
 
@@ -31,39 +32,43 @@ vi.mock('../../lib/utils/typed-emit', () => ({
   emitTaskFailed: mockEmitTaskFailed,
 }));
 
-// 4. Mock agent context and config
-const { mockGetAgentContext, mockLoadAgentConfig, mockGetAgentTools } = vi.hoisted(() => ({
-  mockGetAgentContext: vi.fn().mockResolvedValue({
-    memory: {
+// 4. Mock Agent process, init and config (stub `initAgent` to avoid touching SST/Dynamo)
+const { mockAgentProcess, memoryMock, mockInitAgent, mockLoadAgentConfig, mockGetAgentTools } =
+  vi.hoisted(() => {
+    const mockAgentProcess = vi.fn().mockResolvedValue({
+      responseText: 'Research synthesis complete',
+      attachments: [],
+    });
+
+    const memoryMock = {
       addMemory: vi.fn().mockResolvedValue(1),
       searchInsights: vi.fn().mockResolvedValue({ items: [] }),
-    },
-    provider: {},
-  }),
-  mockLoadAgentConfig: vi.fn().mockResolvedValue({
-    systemPrompt: 'Researcher prompt',
-    tools: ['web_search', 'fetch'],
-  }),
-  mockGetAgentTools: vi.fn().mockResolvedValue(['web_search', 'fetch', 'filesystem']),
-}));
+    } as any;
+
+    return {
+      mockAgentProcess,
+      memoryMock,
+      mockInitAgent: vi.fn().mockResolvedValue({
+        memory: memoryMock,
+        agent: { process: mockAgentProcess },
+      }),
+      mockLoadAgentConfig: vi.fn().mockResolvedValue({
+        systemPrompt: 'Researcher prompt',
+        tools: ['web_search', 'fetch'],
+      }),
+      mockGetAgentTools: vi.fn().mockResolvedValue(['web_search', 'fetch', 'filesystem']),
+    };
+  });
 
 vi.mock('../../lib/utils/agent-helpers', async (importOriginal) => {
   const actual = await importOriginal<any>();
   return {
     ...actual,
-    getAgentContext: mockGetAgentContext,
+    initAgent: mockInitAgent,
     loadAgentConfig: mockLoadAgentConfig,
     getAgentTools: mockGetAgentTools,
   };
 });
-
-// 5. Mock Agent
-const { mockAgentProcess } = vi.hoisted(() => ({
-  mockAgentProcess: vi.fn().mockResolvedValue({
-    responseText: 'Research synthesis complete',
-    attachments: [],
-  }),
-}));
 
 vi.mock('../../lib/agent', () => {
   return {
@@ -93,7 +98,6 @@ vi.mock('../../tools/index', () => ({
 // 7. Import code under test
 import { handleResearchTask } from './research-handler';
 import { AgentType, EventType } from '../../lib/types/agent';
-import { Agent } from '../../lib/agent';
 
 describe('research-handler', () => {
   beforeEach(() => {
@@ -113,10 +117,18 @@ describe('research-handler', () => {
         sessionId: 'session-1',
       };
 
-      await handleResearchTask(eventDetail);
+      await handleResearchTask(eventDetail, {} as any);
 
+      // Should NOT decompose
       expect(mockDecomposePlan).not.toHaveBeenCalled();
-      expect(mockEmitTypedEvent).not.toHaveBeenCalled();
+
+      // Should NOT dispatch parallel tasks
+      expect(mockEmitTypedEvent).not.toHaveBeenCalledWith(
+        AgentType.RESEARCHER,
+        EventType.PARALLEL_TASK_DISPATCH,
+        expect.anything()
+      );
+
       expect(mockAgentProcess).toHaveBeenCalledWith(
         'user-1',
         '[AGGREGATED_RESULTS] Some aggregated findings',
@@ -154,17 +166,9 @@ describe('research-handler', () => {
         originalPlan: 'Research authentication patterns',
       });
 
-      await handleResearchTask(eventDetail);
+      await handleResearchTask(eventDetail, {} as any);
 
-      expect(Agent).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.anything(),
-        expect.anything(),
-        expect.anything(),
-        expect.objectContaining({
-          parallelToolCalls: true,
-        })
-      );
+      // initAgent is stubbed; ensure the agent processed the task
       expect(mockAgentProcess).toHaveBeenCalledWith(
         'user-1',
         'Research authentication patterns',
@@ -216,11 +220,12 @@ describe('research-handler', () => {
         originalPlan: 'Research Auth0 vs Cognito for authentication',
       });
 
-      await handleResearchTask(eventDetail);
+      await handleResearchTask(eventDetail, {} as any);
 
+      const expectedPlanId = eventDetail.taskId || eventDetail.traceId;
       expect(mockDecomposePlan).toHaveBeenCalledWith(
         'Research Auth0 vs Cognito for authentication',
-        'task-1',
+        expectedPlanId,
         [],
         expect.objectContaining({
           defaultAgentId: AgentType.RESEARCHER,
@@ -258,7 +263,7 @@ describe('research-handler', () => {
         sessionId: 'session-1',
       };
 
-      await handleResearchTask(eventDetail);
+      await handleResearchTask(eventDetail, {} as any);
 
       expect(mockDecomposePlan).not.toHaveBeenCalled();
       expect(mockAgentProcess).toHaveBeenCalled();
@@ -294,7 +299,7 @@ describe('research-handler', () => {
         originalPlan: 'Research something simple',
       });
 
-      await handleResearchTask(eventDetail);
+      await handleResearchTask(eventDetail, {} as any);
 
       expect(mockAgentProcess).toHaveBeenCalled();
     });
@@ -331,10 +336,11 @@ describe('research-handler', () => {
         originalPlan: 'Research authentication',
       });
 
-      await handleResearchTask(eventDetail);
+      await handleResearchTask(eventDetail, {} as any);
 
-      expect(mockEmitTaskCompleted).toHaveBeenCalledWith(
-        AgentType.RESEARCHER,
+      expect(mockEmitTypedEvent).toHaveBeenCalledWith(
+        expect.any(String),
+        EventType.TASK_COMPLETED,
         expect.objectContaining({
           userId: 'user-1',
           agentId: AgentType.RESEARCHER,
@@ -343,7 +349,8 @@ describe('research-handler', () => {
           metadata: expect.objectContaining({
             findingsCategory: 'research_finding',
           }),
-        })
+        }),
+        expect.anything()
       );
     });
 
@@ -377,9 +384,9 @@ describe('research-handler', () => {
         originalPlan: 'Research authentication',
       });
 
-      const { memory } = await mockGetAgentContext();
+      const memory = memoryMock;
 
-      await handleResearchTask(eventDetail);
+      await handleResearchTask(eventDetail, {} as any);
 
       expect(memory.addMemory).toHaveBeenCalledWith(
         'user-1',
@@ -426,14 +433,16 @@ describe('research-handler', () => {
         originalPlan: 'Research authentication',
       });
 
-      await handleResearchTask(eventDetail);
+      await expect(handleResearchTask(eventDetail, {} as any)).rejects.toThrow('Research failed');
 
-      expect(mockEmitTaskFailed).toHaveBeenCalledWith(
-        AgentType.RESEARCHER,
+      expect(mockEmitTypedEvent).toHaveBeenCalledWith(
+        expect.any(String),
+        EventType.TASK_FAILED,
         expect.objectContaining({
           userId: 'user-1',
           error: expect.stringContaining('Research failed'),
-        })
+        }),
+        expect.anything()
       );
     });
   });

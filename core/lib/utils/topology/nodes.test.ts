@@ -552,12 +552,9 @@ describe('discoverAwsNodes', () => {
 
   it('handles AWS scan failures gracefully', async () => {
     const { DynamoDBClient } = await import('@aws-sdk/client-dynamodb');
-    vi.mocked(DynamoDBClient).mockImplementationOnce(
-      () =>
-        ({
-          send: vi.fn().mockRejectedValue(new Error('AWS Error')),
-        }) as any
-    );
+    vi.mocked(DynamoDBClient).mockImplementationOnce(function (this: any) {
+      this.send = vi.fn().mockRejectedValue(new Error('AWS Error'));
+    } as any);
 
     const result = await discoverAwsNodes();
     expect(result).toEqual([]);

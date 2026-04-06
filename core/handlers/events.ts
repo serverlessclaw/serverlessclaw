@@ -98,12 +98,18 @@ export async function handler(
             try {
               handlerModule = await import(`./${cleanFallbackPath}`);
             } catch (fallbackError) {
-              logger.error(
-                `[SAFE_MODE] Critical fallback import failed for ${cleanFallbackPath}:`,
-                fallbackError
-              );
+              const fallbackErrorMsg = `[SAFE_MODE] Critical fallback import failed for ${cleanFallbackPath}: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`;
+              logger.error(fallbackErrorMsg);
+              throw new Error(fallbackErrorMsg);
             }
+          } else {
+            const noFallbackError = `[SAFE_MODE] Primary import failed for ${routing.module} and no fallback exists for ${detailType}`;
+            logger.error(noFallbackError);
+            throw new Error(noFallbackError);
           }
+        } else {
+          // Already using DEFAULT_EVENT_ROUTING and it failed
+          throw importError;
         }
       }
 
@@ -136,5 +142,6 @@ export async function handler(
       traceId,
       context: { detailType },
     });
+    throw error instanceof Error ? error : new Error(String(error));
   }
 }

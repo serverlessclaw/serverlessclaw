@@ -16,7 +16,7 @@ vi.mock('../../lib/utils/error', () => ({
 }));
 
 vi.mock('../../lib/logger', () => ({
-  logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
+  logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },
 }));
 
 vi.mock('../../lib/types/index', async (importOriginal) => ({

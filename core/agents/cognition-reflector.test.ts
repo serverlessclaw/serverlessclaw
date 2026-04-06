@@ -84,8 +84,7 @@ vi.mock('sst', () => ({
 
 // Mock agent-helpers: keep pure fn behaviour, stub async side-effects
 vi.mock('../lib/utils/agent-helpers', () => ({
-  // extractPayload must return the outer event so handler can access .detail on it
-  extractPayload: vi.fn((event: unknown) => event),
+  extractPayload: vi.fn((event: any) => event.detail || event),
   detectFailure: vi.fn((r: string) => r.startsWith('I encountered an internal error')),
   isTaskPaused: vi.fn((r: string) => r.startsWith('TASK_PAUSED')),
   loadAgentConfig: vi.fn().mockResolvedValue({

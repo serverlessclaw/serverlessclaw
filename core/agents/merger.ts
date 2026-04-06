@@ -22,7 +22,7 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
   const payload = extractPayload<AgentPayload>(event);
   const { userId, task, metadata, traceId, sessionId, initiatorId, depth } = payload;
 
-  // Fix: Handle results array from PARALLEL_TASK_COMPLETED dispatch
+  // Fix:Handle results array from PARALLEL_TASK_COMPLETED dispatch
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const results = (metadata?.results as any[]) ?? [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -50,30 +50,74 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
   }
 
   // 1. Initialize agent
-  const { agent } = await initAgent(AgentType.MERGER);
+  const { agent, memory } = await initAgent(AgentType.MERGER);
 
-  // 2. Guard: reject oversized patch payloads before sending to LLM context window
-  const patchJson = JSON.stringify(patches, null, 2);
-  const patchSizeBytes = Buffer.byteLength(patchJson, 'utf8');
-  if (patchSizeBytes > MAX_PATCH_SIZE_BYTES) {
-    const overSizeMsg = `FAILED: Patch payload too large for LLM reconciliation (${(patchSizeBytes / 1024).toFixed(1)} KB > ${(MAX_PATCH_SIZE_BYTES / 1024).toFixed(0)} KB).`;
-    logger.error(`[Merger] ${overSizeMsg}`);
+  // 1.5 Acquire gap locks to prevent concurrent state changes during reconciliation
+  const gapIds = (metadata?.gapIds as string[]) ?? [];
+  const acquiredLocks: string[] = [];
+  let lockFailure = false;
+
+  for (const gapId of gapIds) {
+    try {
+      const lockAcquired = await memory.acquireGapLock(gapId, AgentType.MERGER);
+      if (lockAcquired) {
+        acquiredLocks.push(gapId);
+      } else {
+        logger.warn(`[Merger] Could not acquire lock for gap ${gapId}, rolling back.`);
+        lockFailure = true;
+        break;
+      }
+    } catch (e) {
+      logger.error(`[Merger] Error acquiring lock for gap ${gapId}:`, e);
+      lockFailure = true;
+      break;
+    }
+  }
+
+  if (lockFailure) {
+    // Rollback: release any locks we DID manage to get
+    for (const lock of acquiredLocks) {
+      await memory
+        .releaseGapLock(lock, AgentType.MERGER)
+        .catch((e) => logger.warn(`[Merger] Rollback: Failed to release lock for ${lock}:`, e));
+    }
+
     await emitTaskEvent({
       source: AgentType.MERGER,
       agentId: AgentType.MERGER,
       userId,
       task: task || '',
-      response: overSizeMsg,
+      response: `FAILED: Could not acquire all required gap locks. Another agent is working on them.`,
       traceId,
       sessionId,
       initiatorId,
       depth,
     });
-    return overSizeMsg;
+    return;
   }
 
-  // 3. Process the merging task
   try {
+    // 2. Guard: reject oversized patch payloads before sending to LLM context window
+    const patchJson = JSON.stringify(patches, null, 2);
+    const patchSizeBytes = Buffer.byteLength(patchJson, 'utf8');
+    if (patchSizeBytes > MAX_PATCH_SIZE_BYTES) {
+      const overSizeMsg = `FAILED: Patch payload too large for LLM reconciliation (${(patchSizeBytes / 1024).toFixed(1)} KB > ${(MAX_PATCH_SIZE_BYTES / 1024).toFixed(0)} KB).`;
+      logger.error(`[Merger] ${overSizeMsg}`);
+      await emitTaskEvent({
+        source: AgentType.MERGER,
+        agentId: AgentType.MERGER,
+        userId,
+        task: task || '',
+        response: overSizeMsg,
+        traceId,
+        sessionId,
+        initiatorId,
+        depth,
+      });
+      return overSizeMsg;
+    }
+
+    // 3. Process the merging task
     const conflictContext =
       failedPatches.length > 0
         ? `\n\nCONFLICTS DETECTED by procedural merger:\n${JSON.stringify(failedPatches, null, 2)}`
@@ -104,9 +148,11 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
           traceId: traceId ?? '',
           initiatorId: AgentType.MERGER,
           sessionId: sessionId ?? '',
-          gapIds: [],
+          gapIds,
         });
-        logger.info(`[Merger] Deployment triggered for LLM-merged result.`);
+        logger.info(
+          `[Merger] Deployment triggered for LLM-merged result (gaps: ${gapIds.join(', ') || 'none'}).`
+        );
       } catch (deployError) {
         logger.error(`[Merger] Failed to trigger deployment:`, deployError);
       }
@@ -145,5 +191,14 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
     });
 
     return AGENT_ERRORS.PROCESS_FAILURE;
+  } finally {
+    // Release all acquired gap locks
+    for (const gapId of acquiredLocks) {
+      try {
+        await memory.releaseGapLock(gapId, AgentType.MERGER);
+      } catch (e) {
+        logger.warn(`[Merger] Failed to release lock for gap ${gapId}:`, e);
+      }
+    }
   }
 };

@@ -257,7 +257,7 @@ export const writeToCollaboration: ITool = {
 
     if (traceId) {
       await addTraceStep(traceId, 'root', {
-        type: TraceType.COUNCIL_REVIEW, // Or add a more generic COLLABORATION_MESSAGE type if needed
+        type: TraceType.COLLABORATION_MESSAGE,
         content: {
           collaborationId,
           agentId,

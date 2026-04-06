@@ -18,6 +18,7 @@ export const TOOLS = {
   queryStats: 'queryStats',
   discoverSkills: 'discoverSkills',
   installSkill: 'installSkill',
+  uninstallSkill: 'uninstallSkill',
   saveMemory: 'saveMemory',
   seekClarification: 'seekClarification',
   provideClarification: 'provideClarification',

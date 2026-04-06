@@ -1,11 +1,11 @@
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
 import { SSTResource } from '../types/system';
 import { SYSTEM } from '../constants';
 import { logger } from '../logger';
+import { getDocClient } from '../utils/ddb-client';
 
-const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+const db = getDocClient();
 const typedResource = Resource as unknown as SSTResource;
 
 /**
@@ -113,9 +113,13 @@ export async function incrementDeployCount(today: string, limit: number): Promis
  * Uses a conditional write to prevent the counter from going negative,
  * which would silently grant extra deploy budget beyond the configured limit.
  *
+ * On day rollover: attempts to reset the counter to 0 for the new day
+ * instead of silently returning, ensuring the reward is not lost.
+ *
  * @returns A promise that resolves when the count is rewarded.
  */
 export async function rewardDeployLimit(): Promise<void> {
+  const today = new Date().toISOString().split('T')[0];
   try {
     await db.send(
       new UpdateCommand({
@@ -125,14 +129,37 @@ export async function rewardDeployLimit(): Promise<void> {
           timestamp: 0,
         },
         UpdateExpression: 'SET #count = #count - :one',
-        ConditionExpression: '#count > :zero',
+        ConditionExpression: '#count > :zero AND lastReset = :today',
         ExpressionAttributeNames: { '#count': 'count' },
-        ExpressionAttributeValues: { ':one': 1, ':zero': 0 },
+        ExpressionAttributeValues: { ':one': 1, ':zero': 0, ':today': today },
       })
     );
   } catch (error: unknown) {
     if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
-      logger.info('rewardDeployLimit: count already at 0, skipping decrement.');
+      // Day may have changed — try to reset counter to 0 for the new day
+      try {
+        await db.send(
+          new UpdateCommand({
+            TableName: typedResource.MemoryTable.name,
+            Key: {
+              userId: SYSTEM.DEPLOY_STATS_KEY ?? 'SYSTEM#DEPLOY_STATS',
+              timestamp: 0,
+            },
+            UpdateExpression: 'SET #count = :zero, lastReset = :today',
+            ConditionExpression: 'attribute_not_exists(lastReset) OR lastReset <> :today',
+            ExpressionAttributeNames: { '#count': 'count' },
+            ExpressionAttributeValues: { ':zero': 0, ':today': today },
+          })
+        );
+        logger.info('rewardDeployLimit: day changed, reset counter to 0 for new day.');
+      } catch (resetError: unknown) {
+        if (resetError instanceof Error && resetError.name === 'ConditionalCheckFailedException') {
+          // A concurrent call already reset the counter — no action needed
+          logger.info('rewardDeployLimit: day already reset by concurrent call.');
+        } else {
+          throw resetError;
+        }
+      }
       return;
     }
     throw error;

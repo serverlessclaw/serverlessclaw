@@ -13,7 +13,9 @@ const { mockSend, mockDdbSend } = vi.hoisted(() => ({
 }));
 
 vi.mock('@aws-sdk/client-eventbridge', () => ({
-  EventBridgeClient: vi.fn().mockImplementation(() => ({ send: mockSend })),
+  EventBridgeClient: vi.fn().mockImplementation(function (this: any) {
+    this.send = mockSend;
+  }),
   PutEventsCommand: vi.fn().mockImplementation(function (this: any, args) {
     this.input = args;
     return this;
@@ -37,7 +39,7 @@ vi.mock('@aws-sdk/lib-dynamodb', () => ({
 }));
 
 vi.mock('../lib/logger', () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
 vi.mock('../lib/utils/bus', () => ({

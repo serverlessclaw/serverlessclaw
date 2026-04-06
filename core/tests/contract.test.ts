@@ -23,6 +23,8 @@ import {
   CODER_TASK_COMPLETED_SCHEMA,
   TASK_CANCELLED_SCHEMA,
   HANDOFF_SCHEMA,
+  ESCALATION_LEVEL_TIMEOUT_SCHEMA,
+  ESCALATION_COMPLETED_SCHEMA,
 } from '../lib/schema/events';
 
 describe('Event Contract Verification', () => {
@@ -706,6 +708,69 @@ describe('Event Contract Verification', () => {
       for (const taskType of agentTaskTypes) {
         expect(EVENT_SCHEMA_MAP[taskType]).toBeDefined();
       }
+    });
+  });
+
+  describe('ESCALATION_LEVEL_TIMEOUT_SCHEMA', () => {
+    it('should validate a correct escalation timeout event', () => {
+      const payload = {
+        traceId: 'trace-001',
+        agentId: 'coder',
+        userId: 'user-123',
+        currentLevel: 2,
+        policyId: 'policy-001',
+      };
+      expect(() => ESCALATION_LEVEL_TIMEOUT_SCHEMA.parse(payload)).not.toThrow();
+    });
+
+    it('should fail if traceId is missing', () => {
+      const payload = { agentId: 'coder', currentLevel: 1, policyId: 'policy-001' };
+      expect(() => ESCALATION_LEVEL_TIMEOUT_SCHEMA.parse(payload)).toThrow();
+    });
+  });
+
+  describe('ESCALATION_COMPLETED_SCHEMA', () => {
+    it('should validate a correct escalation completed event', () => {
+      const payload = {
+        traceId: 'trace-001',
+        agentId: 'coder',
+        userId: 'user-123',
+        outcome: 'resolved',
+      };
+      expect(() => ESCALATION_COMPLETED_SCHEMA.parse(payload)).not.toThrow();
+    });
+
+    it('should fail if outcome is invalid', () => {
+      const payload = {
+        traceId: 'trace-001',
+        agentId: 'coder',
+        userId: 'user-123',
+        outcome: 'invalid_outcome',
+      };
+      expect(() => ESCALATION_COMPLETED_SCHEMA.parse(payload)).toThrow();
+    });
+  });
+
+  describe('CHUNK_SCHEMA', () => {
+    it('should validate a correct chunk event', () => {
+      const payload = { content: 'streaming chunk content' };
+      expect(() => EVENT_SCHEMA_MAP[EventType.CHUNK as string].parse(payload)).not.toThrow();
+    });
+
+    it('should fail if content is missing', () => {
+      expect(() => EVENT_SCHEMA_MAP[EventType.CHUNK as string].parse({})).toThrow();
+    });
+  });
+
+  describe('HEALTH_ALERT_SCHEMA', () => {
+    it('should validate a correct health alert event', () => {
+      const payload = {
+        ...common,
+        component: 'BuildMonitor',
+        issue: 'Build failed',
+        severity: 'high',
+      };
+      expect(() => EVENT_SCHEMA_MAP[EventType.HEALTH_ALERT as string].parse(payload)).not.toThrow();
     });
   });
 });

@@ -28,11 +28,11 @@ vi.mock('../constants', () => ({
 }));
 
 vi.mock('../session/session-state', () => ({
-  SessionStateManager: vi.fn().mockImplementation(() => ({
-    getPendingMessages: (...args: unknown[]) => mockGetPendingMessages(...args),
-    clearPendingMessages: (...args: unknown[]) => mockClearPendingMessages(...args),
-    renewProcessing: (...args: unknown[]) => mockRenewProcessing(...args),
-  })),
+  SessionStateManager: vi.fn().mockImplementation(function (this: any) {
+    this.getPendingMessages = (...args: unknown[]) => mockGetPendingMessages(...args);
+    this.clearPendingMessages = (...args: unknown[]) => mockClearPendingMessages(...args);
+    this.renewProcessing = (...args: unknown[]) => mockRenewProcessing(...args);
+  }),
 }));
 
 vi.mock('../../handlers/events/cancellation-handler', () => ({

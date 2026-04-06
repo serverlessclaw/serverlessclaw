@@ -26,6 +26,7 @@ vi.mock('../lib/logger', () => ({
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
+    debug: vi.fn(),
   },
 }));
 
@@ -49,33 +50,7 @@ vi.mock('../lib/utils/typed-emit', () => ({
   emitTaskCompleted: mockEmitTaskCompleted,
 }));
 
-// 4. Mock agent context, config, and tools
-const { mockGetAgentContext, mockLoadAgentConfig, mockGetAgentTools } = vi.hoisted(() => ({
-  mockGetAgentContext: vi.fn().mockResolvedValue({
-    memory: {
-      addMemory: vi.fn().mockResolvedValue(1),
-      searchInsights: vi.fn().mockResolvedValue({ items: [] }),
-    },
-    provider: {},
-  }),
-  mockLoadAgentConfig: vi.fn().mockImplementation(async (agentId: string) => ({
-    systemPrompt: `${agentId} system prompt`,
-    tools: ['tool1', 'tool2'],
-  })),
-  mockGetAgentTools: vi.fn().mockResolvedValue(['tool1', 'tool2', 'tool3']),
-}));
-
-vi.mock('../lib/utils/agent-helpers', async (importOriginal) => {
-  const actual = await importOriginal<any>();
-  return {
-    ...actual,
-    getAgentContext: mockGetAgentContext,
-    loadAgentConfig: mockLoadAgentConfig,
-    getAgentTools: mockGetAgentTools,
-  };
-});
-
-// 5. Mock Agent
+// 4. Mock Agent process, init and config (stub `initAgent` to avoid touching SST/Dynamo)
 const { mockAgentProcess } = vi.hoisted(() => ({
   mockAgentProcess: vi.fn().mockResolvedValue({
     responseText: 'Research synthesis complete',
@@ -83,6 +58,36 @@ const { mockAgentProcess } = vi.hoisted(() => ({
   }),
 }));
 
+const { mockInitAgent, mockLoadAgentConfig, mockGetAgentTools } = vi.hoisted(() => {
+  const memoryMock = {
+    addMemory: vi.fn().mockResolvedValue(1),
+    searchInsights: vi.fn().mockResolvedValue({ items: [] }),
+  } as any;
+
+  return {
+    mockInitAgent: vi.fn().mockResolvedValue({
+      memory: memoryMock,
+      agent: { process: mockAgentProcess },
+    }),
+    mockLoadAgentConfig: vi.fn().mockImplementation(async (agentId: string) => ({
+      systemPrompt: `${agentId} system prompt`,
+      tools: ['tool1', 'tool2'],
+    })),
+    mockGetAgentTools: vi.fn().mockResolvedValue(['tool1', 'tool2', 'tool3']),
+  };
+});
+
+vi.mock('../lib/utils/agent-helpers', async (importOriginal) => {
+  const actual = await importOriginal<any>();
+  return {
+    ...actual,
+    initAgent: mockInitAgent,
+    loadAgentConfig: mockLoadAgentConfig,
+    getAgentTools: mockGetAgentTools,
+  };
+});
+
+// 5. Mock Agent class (uses mockAgentProcess defined above)
 vi.mock('../lib/agent', () => {
   return {
     Agent: vi.fn().mockImplementation(function () {
@@ -184,16 +189,19 @@ describe('Swarm Recursive Flow Integration', () => {
         originalPlan: 'Research Auth0 vs Cognito',
       });
 
-      await handleResearchTask({
-        userId: 'user-1',
-        taskId: 'task-1',
-        task: 'Research Auth0 vs Cognito',
-        metadata: {},
-        traceId: 'trace-1',
-        initiatorId: AgentType.STRATEGIC_PLANNER,
-        depth: 0,
-        sessionId: 'session-1',
-      });
+      await handleResearchTask(
+        {
+          userId: 'user-1',
+          taskId: 'task-1',
+          task: 'Research Auth0 vs Cognito',
+          metadata: {},
+          traceId: 'trace-1',
+          initiatorId: AgentType.STRATEGIC_PLANNER,
+          depth: 0,
+          sessionId: 'session-1',
+        },
+        {} as any
+      );
 
       expect(mockEmitTypedEvent).toHaveBeenCalledWith(
         AgentType.RESEARCHER,
@@ -304,18 +312,26 @@ describe('Swarm Recursive Flow Integration', () => {
         originalPlan: 'Deep research',
       });
 
-      await handleResearchTask({
-        userId: 'user-1',
-        taskId: 'task-1',
-        task: 'Deep research task',
-        metadata: {},
-        traceId: 'trace-1',
-        initiatorId: AgentType.RESEARCHER,
-        depth: 2,
-        sessionId: 'session-1',
-      });
+      await handleResearchTask(
+        {
+          userId: 'user-1',
+          taskId: 'task-1',
+          task: 'Deep research task',
+          metadata: {},
+          traceId: 'trace-1',
+          initiatorId: AgentType.RESEARCHER,
+          depth: 2,
+          sessionId: 'session-1',
+        },
+        {} as any
+      );
 
-      expect(mockEmitTypedEvent).not.toHaveBeenCalled();
+      // Ensure no PARALLEL_TASK_DISPATCH was emitted (task executed locally)
+      expect(mockEmitTypedEvent).not.toHaveBeenCalledWith(
+        AgentType.RESEARCHER,
+        EventType.PARALLEL_TASK_DISPATCH,
+        expect.anything()
+      );
       expect(mockAgentProcess).toHaveBeenCalled();
     });
   });

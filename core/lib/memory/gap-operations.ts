@@ -145,6 +145,53 @@ export async function setGap(
 }
 
 /**
+ * Retrieves a specific capability gap by its ID.
+ *
+ * @param base - The base memory provider instance.
+ * @param gapId - The unique identifier for the gap.
+ * @returns A promise resolving to the MemoryInsight representing the gap, or null if not found.
+ */
+export async function getGap(
+  base: BaseMemoryProvider,
+  gapId: string
+): Promise<MemoryInsight | null> {
+  const normalizedId = normalizeGapId(gapId);
+  const pk = getGapIdPK(normalizedId);
+  const sk = getGapTimestamp(normalizedId);
+
+  // 1. Try targeted lookup if we have a valid timestamp
+  if (sk > 0) {
+    try {
+      const items = await base.queryItems({
+        KeyConditionExpression: 'userId = :pk AND #ts = :ts',
+        ExpressionAttributeNames: { '#ts': 'timestamp' },
+        ExpressionAttributeValues: { ':pk': pk, ':ts': sk },
+      });
+      if (items.length > 0) {
+        return {
+          id: items[0].userId as string,
+          timestamp: items[0].timestamp as number,
+          content: items[0].content as string,
+          metadata: (items[0].metadata as InsightMetadata) || {},
+        };
+      }
+    } catch (e) {
+      logger.warn(`Direct gap lookup failed for ${normalizedId}, falling back to search:`, e);
+    }
+  }
+
+  // 2. Fallback: Search across all active gap statuses
+  const allStatuses = [GapStatus.OPEN, GapStatus.PLANNED, GapStatus.PROGRESS, GapStatus.DEPLOYED];
+  for (const s of allStatuses) {
+    const gaps = await getAllGaps(base, s);
+    const target = gaps.find((g) => normalizeGapId(g.id) === normalizedId);
+    if (target) return target;
+  }
+
+  return null;
+}
+
+/**
  * Atomically increments the attempt counter on a capability gap and returns the new count.
  * Used by the self-healing loop to cap infinite reopen/redeploy cycles.
  *

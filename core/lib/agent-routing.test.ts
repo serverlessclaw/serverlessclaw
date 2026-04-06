@@ -7,7 +7,7 @@ vi.mock('./metrics/token-usage', () => ({
 }));
 
 vi.mock('./logger', () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
 import { AgentRouter } from './agent-routing';

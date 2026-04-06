@@ -163,7 +163,8 @@ export class AgentEmitter {
     options?: Array<{ label: string; value: string; type?: ButtonType }>,
     initiatorId: string = 'orchestrator',
     thoughtDelta?: string,
-    ui_blocks?: Message['ui_blocks']
+    ui_blocks?: Message['ui_blocks'],
+    attachments?: Message['attachments']
   ): Promise<void> {
     try {
       const agentId = this.config?.id ?? 'unknown';
@@ -214,6 +215,7 @@ export class AgentEmitter {
         agentName: agentName ?? this.config?.name ?? 'SuperClaw',
         thought: thoughtDelta,
         ui_blocks,
+        attachments,
       });
     } catch (e) {
       // Don't let chunk emission failures block the main loop

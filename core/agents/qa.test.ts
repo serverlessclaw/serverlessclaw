@@ -2,6 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handler } from './qa';
 import { GapStatus, EvolutionMode } from '../lib/types/index';
 
+vi.mock('./prompts/index', () => ({
+  QA_SYSTEM_PROMPT: `QA System Prompt Content
+  UNVERIFIED
+  Mandatory Mechanical Verification
+  You MUST call at least TWO verification tools before forming any verdict:
+  1. 'validateCode'
+  2. 'read_file'
+  3. 'checkHealth'
+  4. 'runTests'`,
+}));
+
 vi.mock('../lib/utils/agent-helpers', () => ({
   extractPayload: vi.fn((event: any) => event.detail || event),
   extractBaseUserId: vi.fn((userId: string) => userId.replace('CONV#', '').split('#')[0]),
@@ -214,7 +225,7 @@ describe('QA Agent — REOPEN cap and HITL escalation', () => {
     );
 
     // Prompt must instruct QA to run mechanical checks first
-    expect(capturedPrompt).toMatch(/STEP 1/i);
+    expect(capturedPrompt).toMatch(/mechanical verification/i);
     expect(capturedPrompt).toMatch(/mandatory|must/i);
     expect(capturedPrompt).toMatch(/validateCode|read_file|listFiles|checkHealth/i);
     // Coder response is clearly labelled as unverified

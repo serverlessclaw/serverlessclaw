@@ -9,10 +9,15 @@ import { SkillRegistry } from '../../lib/skills';
 import { logger } from '../../lib/logger';
 
 /**
- * Lazy-load memory.
+ * Lazy-load memory with instance reuse.
  */
-function getMemory() {
-  return new DynamoMemory();
+let cachedMemory: DynamoMemory | undefined;
+
+function getMemory(): DynamoMemory {
+  if (!cachedMemory) {
+    cachedMemory = new DynamoMemory();
+  }
+  return cachedMemory;
 }
 
 /**
@@ -57,8 +62,26 @@ export const installSkill = {
  */
 export const uninstallSkill = {
   ...schema.uninstallSkill,
-  execute: async (args: Record<string, unknown>): Promise<string> => {
+  requiredPermissions: ['config:update'],
+  execute: async (
+    args: Record<string, unknown>,
+    context?: { userId?: string }
+  ): Promise<string> => {
     const { skillName, agentId } = args as { skillName: string; agentId: string };
+
+    // RBAC Check
+    if (context?.userId) {
+      const { BaseMemoryProvider } = await import('../../lib/memory/base');
+      const { IdentityManager, UserRole } = await import('../../lib/session/identity');
+      const identity = new IdentityManager(new BaseMemoryProvider());
+      const user = await identity.getUser(context.userId);
+
+      if (!user || (user.role !== UserRole.OWNER && user.role !== UserRole.ADMIN)) {
+        logger.warn(`Unauthorized uninstallSkill attempt by ${context.userId} on ${agentId}`);
+        return 'FAILED: Unauthorized. Only OWNER or ADMIN can uninstall skills.';
+      }
+    }
+
     try {
       const { ConfigManager } = await import('../../lib/registry/config');
       const toolsKey = `${agentId}_tools`;
@@ -120,7 +143,7 @@ export const recallKnowledge = {
 
     // Track hits asynchronously to not block the agent's tool return
     Promise.all(results.map((r) => memory.recordMemoryHit(r.id, r.timestamp))).catch((e) =>
-      console.warn('Failed to track memory hits:', e)
+      logger.warn('Failed to track memory hits:', e)
     );
 
     return results
@@ -226,8 +249,9 @@ export const reportGap = {
       });
 
       return `Successfully recorded new gap: [${gapId}] ${content}`;
-    } catch {
-      return `Failed to report gap`;
+    } catch (error) {
+      logger.error('Failed to report gap:', error);
+      return `Failed to report gap: ${formatErrorMessage(error)}`;
     }
   },
 };
@@ -371,14 +395,20 @@ export const deleteTraces = {
       const docClient = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
       if (traceId === 'all') {
+        const MAX_DELETE_LIMIT = 500;
         let deletedCount = 0;
         let lastKey: Record<string, unknown> | undefined;
         do {
+          if (deletedCount >= MAX_DELETE_LIMIT) {
+            logger.warn('deleteTraces: Hit maximum delete limit', { limit: MAX_DELETE_LIMIT });
+            break;
+          }
           const scanRes = await docClient.send(
             new ScanCommand({ TableName: tableName, ExclusiveStartKey: lastKey, Limit: 50 })
           );
           if (scanRes.Items && scanRes.Items.length > 0) {
             for (let i = 0; i < scanRes.Items.length; i += 25) {
+              if (deletedCount >= MAX_DELETE_LIMIT) break;
               const batch = scanRes.Items.slice(i, i + 25);
               await docClient.send(
                 new BatchWriteCommand({
@@ -393,8 +423,8 @@ export const deleteTraces = {
             }
           }
           lastKey = scanRes.LastEvaluatedKey;
-        } while (lastKey);
-        return `Successfully purged all traces. ${deletedCount} nodes deleted.`;
+        } while (lastKey && deletedCount < MAX_DELETE_LIMIT);
+        return `Successfully purged traces. ${deletedCount} nodes deleted (limit: ${MAX_DELETE_LIMIT}).`;
       }
 
       const { Items } = await docClient.send(

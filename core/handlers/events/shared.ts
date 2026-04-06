@@ -168,11 +168,13 @@ export async function processEventWithAgent(
   });
 
   let responseText = '';
+  const attachments: Attachment[] = [];
+
   // resultAttachments from agent.stream are not directly returned as a single array,
   // they are usually added to memory or yielded in chunks if the provider/executor supports it.
-  // In our current Agent.stream implementation, attachments are persistent in memory.
   for await (const chunk of stream) {
     if (chunk.content) responseText += chunk.content;
+    if (chunk.attachments) attachments.push(...chunk.attachments);
   }
 
   const isPaused = isTaskPaused(responseText);
@@ -180,7 +182,7 @@ export async function processEventWithAgent(
   // 1. Notify user (unless it's a background pause/continuation)
   if (!isPaused && responseText.trim().length > 0) {
     const finalMessage = options.formatResponse
-      ? options.formatResponse(responseText, [])
+      ? options.formatResponse(responseText, attachments)
       : responseText;
 
     const messageId = agentId === 'superclaw' ? options.traceId : `${options.traceId}-${agentId}`;
@@ -192,7 +194,7 @@ export async function processEventWithAgent(
       undefined,
       options.sessionId,
       'SuperClaw',
-      [],
+      attachments,
       messageId
     );
   }
@@ -210,6 +212,7 @@ export async function processEventWithAgent(
       agentId,
       task: taskContent,
       response: responseText,
+      attachments,
       traceId: options.traceId,
       taskId: options.taskId ?? options.traceId,
       initiatorId: options.initiatorId,
@@ -221,5 +224,19 @@ export async function processEventWithAgent(
     });
   }
 
-  return { responseText, attachments: [] };
+  return { responseText, attachments };
+}
+
+/**
+ * Report an internal health issue to the system monitor.
+ */
+export async function reportHealthIssue(params: {
+  component: string;
+  issue: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  userId: string;
+  traceId?: string;
+  context?: Record<string, unknown>;
+}): Promise<void> {
+  await emitEvent('events.shared', EventType.SYSTEM_HEALTH_REPORT, params);
 }

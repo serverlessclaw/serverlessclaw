@@ -25,6 +25,8 @@ export const BASE_EVENT_SCHEMA = z.object({
   depth: z.number().default(0),
   sessionId: z.string().optional(),
   timestamp: z.number().default(() => Date.now()),
+  tokenBudget: z.number().optional(),
+  costLimit: z.number().optional(),
 });
 
 /**
@@ -227,7 +229,6 @@ export const RESEARCH_TASK_METADATA = z
   .object({
     researchMode: z.enum(['evolution', 'domain']).default('domain'),
     depth: z.number().default(2),
-    tokenBudget: z.number().optional(),
     timeBudgetMs: z.number().optional(),
     parallel: z.boolean().default(false),
   })
@@ -320,6 +321,26 @@ export const HANDOFF_SCHEMA = BASE_EVENT_SCHEMA.extend({
   handoffType: z.enum(['approval', 'clarification', 'escalation']),
   message: z.string().optional(),
   expiresAt: z.number().optional(),
+});
+
+/** Schema for escalation level timeout events from the scheduler. */
+export const ESCALATION_LEVEL_TIMEOUT_SCHEMA = z.object({
+  traceId: z.string(),
+  agentId: z.string(),
+  userId: z.string(),
+  question: z.string().optional(),
+  originalTask: z.string().optional(),
+  currentLevel: z.number(),
+  policyId: z.string(),
+});
+
+/** Schema for escalation completed events. */
+export const ESCALATION_COMPLETED_SCHEMA = z.object({
+  traceId: z.string(),
+  agentId: z.string(),
+  userId: z.string(),
+  outcome: z.enum(['resolved', 'escalated_to_human', 'abandoned']),
+  resolution: z.string().optional(),
 });
 
 // Zod-inferred types for metadata schemas
@@ -418,6 +439,8 @@ export const EVENT_SCHEMA_MAP = {
   [EventType.RESEARCH_TASK as string]: TASK_EVENT_SCHEMA,
   [EventType.MERGER_TASK as string]: TASK_EVENT_SCHEMA,
   [EventType.COGNITIVE_HEALTH_CHECK as string]: TASK_EVENT_SCHEMA,
+  [EventType.ESCALATION_LEVEL_TIMEOUT as string]: ESCALATION_LEVEL_TIMEOUT_SCHEMA,
+  [EventType.ESCALATION_COMPLETED as string]: ESCALATION_COMPLETED_SCHEMA,
 } as const;
 
 /** Keys of the EVENT_SCHEMA_MAP (for type-safe event type lookups). */

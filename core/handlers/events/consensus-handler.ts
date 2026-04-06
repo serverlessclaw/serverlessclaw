@@ -55,7 +55,7 @@ export async function handleConsensus(
           TableName: tableName,
           Key: { userId: `CONSENSUS#${requestId}`, timestamp: 0 },
           UpdateExpression:
-            'SET proposal = :prop, initiatorId = :init, participants = :parts, mode = :mode, votes = :empty_list, status = :status, createdAt = :now',
+            'SET proposal = :prop, initiatorId = :init, participants = :parts, mode = :mode, votes = :empty_list, status = :status, createdAt = :now, expiresAt = :ttl',
           ExpressionAttributeValues: {
             ':prop': proposal,
             ':init': initiatorId,
@@ -64,6 +64,7 @@ export async function handleConsensus(
             ':empty_list': [],
             ':status': 'PENDING',
             ':now': Date.now(),
+            ':ttl': Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60, // 7 days
           },
         })
       );
@@ -173,5 +174,6 @@ export async function handleConsensus(
     }
   } catch (error) {
     logger.error('[Consensus] Error handling consensus event:', error);
+    throw error;
   }
 }

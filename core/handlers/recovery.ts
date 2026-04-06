@@ -32,8 +32,24 @@ const MAX_RECOVERY_ATTEMPTS = CONFIG_DEFAULTS.MAX_RECOVERY_ATTEMPTS.code;
  * @returns A promise that resolves when the recovery check is complete.
  */
 export const handler = async (_event?: { detail: Record<string, unknown> }): Promise<void> => {
-  const healthUrl = `${typedResource.WebhookApi.url}/health`;
-  logger.info(`Dead Man's Switch checking health at: ${healthUrl}`);
+  const baseUrl = typedResource.WebhookApi.url;
+  const healthPaths = ['/health', '/', '/healthcheck'];
+  let lastHttpError: Error | undefined;
+
+  for (const path of healthPaths) {
+    const healthUrl = `${baseUrl}${path}`;
+    logger.info(`Dead Man's Switch checking health at: ${healthUrl}`);
+
+    try {
+      const response = await fetch(healthUrl, { method: 'GET', signal: AbortSignal.timeout(5000) });
+      if (response.ok) {
+        break;
+      }
+    } catch (error) {
+      lastHttpError = error instanceof Error ? error : new Error(String(error));
+      logger.debug(`Health check failed for ${path}: ${lastHttpError.message}`);
+    }
+  }
 
   try {
     const healthResult = await checkCognitiveHealth();
@@ -106,7 +122,7 @@ export const handler = async (_event?: { detail: Record<string, unknown> }): Pro
         initiatorId: 'DeadManSwitch',
         depth: 0,
         timestamp: Date.now(),
-        message: `🚨 *CRITICAL SYSTEM FAILURE*: Automatic recovery has failed after ${attemptCount} attempts. Manual intervention required immediately. Health Check: ${healthUrl}`,
+        message: `🚨 *CRITICAL SYSTEM FAILURE*: Automatic recovery has failed after ${attemptCount} attempts. Manual intervention required immediately.`,
         agentName: 'DeadManSwitch',
         memoryContexts: [],
         attachments: [],

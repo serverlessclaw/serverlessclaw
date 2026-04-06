@@ -9,6 +9,7 @@ import { MemoryInsight, InsightMetadata, InsightCategory } from '../types/memory
 import { RetentionManager } from './tiering';
 import type { BaseMemoryProvider } from './base';
 import { filterPII } from '../utils/pii';
+import { logger } from '../logger';
 import {
   createMetadata,
   normalizeTags,
@@ -63,7 +64,7 @@ async function findSimilarMemory(
       if (similarity > 0.6) return item;
     }
   } catch (error) {
-    console.warn('Similarity check failed:', error);
+    logger.warn('Similarity check failed', { error });
   }
   return null;
 }
@@ -107,7 +108,7 @@ async function addRecord(
     });
   } catch (error) {
     // Registry update failure is non-fatal for memory persistence
-    console.warn('Memory registry update failed:', error);
+    logger.warn('Memory registry update failed', { error });
   }
 
   // 3. Insert flattened record
@@ -142,7 +143,7 @@ export async function recordMemoryHit(
       ConditionExpression: 'attribute_exists(userId)',
     });
   } catch (e) {
-    console.warn(`Failed to record memory hit for ${userId}@${timestamp}`, e);
+    logger.warn(`Failed to record memory hit for ${userId}@${timestamp}`, e);
   }
 }
 

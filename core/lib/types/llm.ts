@@ -267,6 +267,10 @@ export interface MessageChunk {
     total_tokens?: number;
   };
   /**
+   * Optional attachments (images, files) during streaming.
+   */
+  attachments?: Message['attachments'];
+  /**
    * Optional dynamic UI blocks during streaming.
    */
   ui_blocks?: Message['ui_blocks'];

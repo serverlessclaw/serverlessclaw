@@ -906,7 +906,7 @@ describe('BuildMonitor — Outer error handler', () => {
     vi.clearAllMocks();
   });
 
-  it('should catch and log errors when CodeBuild client throws', async () => {
+  it('should catch, log, and re-throw errors when CodeBuild client throws', async () => {
     const { logger } = await import('../lib/logger');
     const errorSpy = vi.spyOn(logger, 'error');
 
@@ -921,15 +921,26 @@ describe('BuildMonitor — Outer error handler', () => {
       },
     };
 
-    await handler(event as any);
-
+    await expect(handler(event as any)).rejects.toThrow('CodeBuild service unavailable');
     expect(errorSpy).toHaveBeenCalledWith('Error in BuildMonitor:', expect.any(Error));
   });
 
-  it('should catch and log errors when DynamoDB query throws', async () => {
+  it('should catch, log, and re-throw errors when DynamoDB query throws', async () => {
     const { logger } = await import('../lib/logger');
     const errorSpy = vi.spyOn(logger, 'error');
 
+    cbMock.on(BatchGetBuildsCommand).resolves({
+      builds: [
+        {
+          environment: {
+            environmentVariables: [],
+            type: 'LINUX_CONTAINER',
+            image: 'aws/codebuild/standard:7.0',
+            computeType: 'BUILD_GENERAL1_SMALL',
+          },
+        },
+      ],
+    });
     ddbMock.on(QueryCommand).rejects(new Error('DynamoDB connection timeout'));
 
     const { handler } = await import('./monitor');
@@ -941,8 +952,7 @@ describe('BuildMonitor — Outer error handler', () => {
       },
     };
 
-    await handler(event as any);
-
+    await expect(handler(event as any)).rejects.toThrow('DynamoDB connection timeout');
     expect(errorSpy).toHaveBeenCalledWith('Error in BuildMonitor:', expect.any(Error));
   });
 });

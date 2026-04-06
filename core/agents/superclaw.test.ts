@@ -38,20 +38,26 @@ vi.mock('../lib/safety/safety-config-manager', () => ({
 }));
 
 describe('SuperClaw', () => {
+  let superclaw: SuperClaw;
+  let memory: any;
+  let provider: any;
+  let tools: any;
+
+  beforeEach(() => {
+    memory = {};
+    provider = {};
+    tools = [];
+    superclaw = new SuperClaw(memory, provider, tools);
+  });
+
   describe('constructor', () => {
     it('initializes with custom system prompt if provided', () => {
-      const memory = {} as any;
-      const provider = {} as any;
-      const tools = [] as any;
       const config = { id: 'test', name: 'Test', systemPrompt: 'Custom Prompt', enabled: true };
       const agent = new SuperClaw(memory, provider, tools, config);
       expect(agent.systemPrompt).toBe('Custom Prompt');
     });
 
     it('initializes with default system prompt if not provided', () => {
-      const memory = {} as any;
-      const provider = {} as any;
-      const tools = [] as any;
       const agent = new SuperClaw(memory, provider, tools);
       expect(agent.systemPrompt).toContain('SUPERCLAW');
     });
@@ -84,11 +90,6 @@ describe('SuperClaw', () => {
   });
 
   describe('Safety Tiers and Engine', () => {
-    beforeEach(() => {
-      // Clear violations for each test
-      SuperClaw.getSafetyEngine().clearViolations();
-    });
-
     describe('requiresApproval', () => {
       it('sandbox requires approval for code changes', async () => {
         const config = {
@@ -98,7 +99,7 @@ describe('SuperClaw', () => {
           enabled: true,
           safetyTier: SafetyTier.SANDBOX,
         };
-        expect(await SuperClaw.requiresApproval(config, 'code_change')).toBe(true);
+        expect(await superclaw.requiresApproval(config, 'code_change')).toBe(true);
       });
 
       it('autonomous does NOT require approval for code changes', async () => {
@@ -109,7 +110,7 @@ describe('SuperClaw', () => {
           enabled: true,
           safetyTier: SafetyTier.AUTONOMOUS,
         };
-        expect(await SuperClaw.requiresApproval(config, 'code_change')).toBe(false);
+        expect(await superclaw.requiresApproval(config, 'code_change')).toBe(false);
       });
     });
 
@@ -122,7 +123,7 @@ describe('SuperClaw', () => {
           enabled: true,
           safetyTier: SafetyTier.SANDBOX,
         };
-        const result = await SuperClaw.evaluateAction(config, 'code_change');
+        const result = await superclaw.evaluateAction(config, 'code_change');
         expect(result.allowed).toBe(true);
         expect(result.requiresApproval).toBe(true);
         expect(result.appliedPolicy).toBe('sandbox_code_change_approval');
@@ -131,7 +132,7 @@ describe('SuperClaw', () => {
 
     describe('Safety Configuration', () => {
       it('configures safety policy', async () => {
-        SuperClaw.configureSafetyPolicy(SafetyTier.SANDBOX, { requireCodeApproval: false });
+        superclaw.configureSafetyPolicy(SafetyTier.SANDBOX, { requireCodeApproval: false });
         const config = {
           id: 'test',
           name: 'Test',
@@ -140,15 +141,11 @@ describe('SuperClaw', () => {
           safetyTier: SafetyTier.SANDBOX,
         };
         // We need to wait for the engine to pick up the updated policy
-        // Since it's a static engine, this might affect other tests
-        expect(await SuperClaw.requiresApproval(config, 'code_change')).toBe(false);
-
-        // Reset policy
-        SuperClaw.configureSafetyPolicy(SafetyTier.SANDBOX, { requireCodeApproval: true });
+        expect(await superclaw.requiresApproval(config, 'code_change')).toBe(false);
       });
 
       it('sets tool safety override', async () => {
-        SuperClaw.setToolSafetyOverride({
+        superclaw.setToolSafetyOverride({
           toolName: 'sensitive_tool',
           requireApproval: true,
         });
@@ -161,7 +158,7 @@ describe('SuperClaw', () => {
           safetyTier: SafetyTier.AUTONOMOUS,
         };
 
-        const result = await SuperClaw.evaluateAction(config, 'mcp_tool', {
+        const result = await superclaw.evaluateAction(config, 'mcp_tool', {
           toolName: 'sensitive_tool',
         });
         expect(result.requiresApproval).toBe(true);
@@ -179,13 +176,13 @@ describe('SuperClaw', () => {
           safetyTier: SafetyTier.SANDBOX,
         };
 
-        await SuperClaw.evaluateAction(config, 'unknown_action');
+        await superclaw.evaluateAction(config, 'unknown_action');
 
-        const violations = SuperClaw.getSafetyViolations();
+        const violations = superclaw.getSafetyViolations();
         expect(violations.length).toBeGreaterThan(0);
         expect(violations[0].action).toBe('unknown_action');
 
-        const stats = SuperClaw.getSafetyStats();
+        const stats = superclaw.getSafetyStats();
         expect(stats.totalViolations).toBeGreaterThan(0);
         expect(stats.approvalRequired).toBeGreaterThan(0);
       });

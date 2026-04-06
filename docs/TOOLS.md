@@ -307,35 +307,3 @@ checkReputation({ agentId: "coder" })
 ```
 
 Returns: Composite score, success rate, tasks completed/failed, average latency, and last active timestamp.
-
----
-
-## 📊 Agent Reputation System (April 2026)
-
-The `checkReputation` tool provides visibility into agent reliability by surfacing rolling 7-day performance metrics.
-
-### Scoring Weights
-
-The composite score (0-1) is calculated as:
-
-```
-Score = (successRate × 0.6) + (latencyComponent × 0.25) + (recencyComponent × 0.15)
-```
-
-| Component    | Weight | Calculation                                               |
-| ------------ | ------ | --------------------------------------------------------- |
-| Success Rate | 60%    | `tasksCompleted / totalTasks`                             |
-| Latency      | 25%    | `max(0, 1 - avgLatencyMs / 15000)` (5s baseline, 15s cap) |
-| Recency      | 15%    | `max(0, 1 - hoursSinceActive / 24)` (decays over 24h)     |
-
-### Update Trigger
-
-Reputation is automatically updated on every `TASK_COMPLETED` or `TASK_FAILED` event via `core/handlers/events/task-result-handler.ts`. The rolling window resets after 7 days of inactivity.
-
-### Usage
-
-```
-checkReputation({ agentId: "coder" })
-```
-
-Returns: Composite score, success rate, tasks completed/failed, average latency, and last active timestamp.

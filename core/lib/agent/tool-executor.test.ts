@@ -18,7 +18,9 @@ vi.mock('../registry', () => ({
 
 const mockAddStep = vi.fn();
 vi.mock('../tracer', () => ({
-  ClawTracer: vi.fn().mockImplementation(() => ({ addStep: mockAddStep })),
+  ClawTracer: vi.fn().mockImplementation(function (this: any) {
+    this.addStep = mockAddStep;
+  }),
 }));
 
 vi.mock('../constants', () => ({

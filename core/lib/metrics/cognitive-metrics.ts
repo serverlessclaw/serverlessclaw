@@ -201,7 +201,7 @@ export class DegradationDetector {
     // Check task completion rate
     if (metrics.taskCompletionRate < this.config.thresholds.minCompletionRate) {
       anomalies.push({
-        id: `anomaly_${now}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `anomaly_${now}_${Math.random().toString(36).slice(2, 11)}`,
         type: AnomalyType.TASK_FAILURE_SPIKE,
         severity:
           metrics.taskCompletionRate < 0.5 ? AnomalySeverity.CRITICAL : AnomalySeverity.HIGH,
@@ -216,7 +216,7 @@ export class DegradationDetector {
     // Check error rate
     if (metrics.errorRate > this.config.thresholds.maxErrorRate) {
       anomalies.push({
-        id: `anomaly_${now}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `anomaly_${now}_${Math.random().toString(36).slice(2, 11)}`,
         type: AnomalyType.TASK_FAILURE_SPIKE,
         severity: metrics.errorRate > 0.5 ? AnomalySeverity.CRITICAL : AnomalySeverity.HIGH,
         agentId,
@@ -230,7 +230,7 @@ export class DegradationDetector {
     // Check reasoning coherence
     if (metrics.reasoningCoherence < this.config.thresholds.minCoherence) {
       anomalies.push({
-        id: `anomaly_${now}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `anomaly_${now}_${Math.random().toString(36).slice(2, 11)}`,
         type: AnomalyType.REASONING_DEGRADATION,
         severity:
           metrics.reasoningCoherence < 3 ? AnomalySeverity.CRITICAL : AnomalySeverity.MEDIUM,
@@ -245,8 +245,8 @@ export class DegradationDetector {
     // Check memory miss rate
     if (metrics.memoryMissRate > this.config.thresholds.maxMissRate) {
       anomalies.push({
-        id: `anomaly_${now}_${Math.random().toString(36).substr(2, 9)}`,
-        type: AnomalyType.MEMORY_FRAGMENTATION, // Keep type for now to avoid breaking enum consumers
+        id: `anomaly_${now}_${Math.random().toString(36).slice(2, 11)}`,
+        type: AnomalyType.MEMORY_MISS,
         severity: metrics.memoryMissRate > 0.8 ? AnomalySeverity.HIGH : AnomalySeverity.MEDIUM,
         agentId,
         detectedAt: now,
@@ -262,7 +262,7 @@ export class DegradationDetector {
       metrics.tokenEfficiency < 0.5
     ) {
       anomalies.push({
-        id: `anomaly_${now}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `anomaly_${now}_${Math.random().toString(36).slice(2, 11)}`,
         type: AnomalyType.TOKEN_OVERUSE,
         severity: AnomalySeverity.MEDIUM,
         agentId,
@@ -279,7 +279,7 @@ export class DegradationDetector {
       metrics.avgTaskLatencyMs > this.config.thresholds.maxAvgLatencyMs
     ) {
       anomalies.push({
-        id: `anomaly_${now}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `anomaly_${now}_${Math.random().toString(36).slice(2, 11)}`,
         type: AnomalyType.LATENCY_ANOMALY,
         severity:
           metrics.avgTaskLatencyMs > this.config.thresholds.maxAvgLatencyMs * 2
@@ -300,7 +300,7 @@ export class DegradationDetector {
       pivotRate > this.config.thresholds.maxPivotRate
     ) {
       anomalies.push({
-        id: `anomaly_${now}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `anomaly_${now}_${Math.random().toString(36).slice(2, 11)}`,
         type: AnomalyType.COGNITIVE_LOOP,
         severity:
           pivotRate > this.config.thresholds.maxPivotRate * 1.5
@@ -316,6 +316,23 @@ export class DegradationDetector {
         },
         suggestion: 'Review agent prompts for ambiguity or consider task decomposition',
       });
+    }
+
+    // Check memory fragmentation
+    if (metrics.memoryHealth?.fragmentationScore !== undefined) {
+      const fragScore = metrics.memoryHealth.fragmentationScore;
+      if (fragScore > 0.7) {
+        anomalies.push({
+          id: `anomaly_${now}_${Math.random().toString(36).slice(2, 11)}`,
+          type: AnomalyType.MEMORY_FRAGMENTATION,
+          severity: fragScore > 0.9 ? AnomalySeverity.HIGH : AnomalySeverity.MEDIUM,
+          agentId,
+          detectedAt: now,
+          description: `Memory fragmentation score: ${(fragScore * 100).toFixed(0)}% — consider consolidation`,
+          triggerMetrics: { memoryFragmentationScore: fragScore },
+          suggestion: 'Review memory tier distribution and consolidate overlapping categories',
+        });
+      }
     }
 
     return anomalies;

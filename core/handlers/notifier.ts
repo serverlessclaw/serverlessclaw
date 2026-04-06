@@ -98,53 +98,49 @@ async function sendToCollaboration(
   attachments?: Attachment[],
   options?: { label: string; value: string }[]
 ): Promise<void> {
-  try {
-    const { getCollaboration } = await import('../lib/memory/collaboration-operations');
-    const { getWorkspace, getHumanMembersWithChannels } =
-      await import('../lib/memory/workspace-operations');
+  const { getCollaboration } = await import('../lib/memory/collaboration-operations');
+  const { getWorkspace, getHumanMembersWithChannels } =
+    await import('../lib/memory/workspace-operations');
 
-    const collaboration = await getCollaboration(memory, collaborationId);
-    if (!collaboration) {
-      logger.warn(`[NOTIFIER] Collaboration not found: ${collaborationId}`);
-      return;
-    }
+  const collaboration = await getCollaboration(memory, collaborationId);
+  if (!collaboration) {
+    logger.warn(`[NOTIFIER] Collaboration not found: ${collaborationId}`);
+    return;
+  }
 
-    const deliveryPromises: Promise<void>[] = [];
+  const deliveryPromises: Promise<void>[] = [];
 
-    // 1. Get human participants explicitly listed in collaboration
-    const humanParticipants = collaboration.participants.filter((p) => p.type === 'human');
+  // 1. Get human participants explicitly listed in collaboration
+  const humanParticipants = collaboration.participants.filter((p) => p.type === 'human');
 
-    // 2. If collaboration is in a workspace, get channels from workspace metadata
-    if (collaboration.workspaceId) {
-      const workspace = await getWorkspace(collaboration.workspaceId);
-      if (workspace) {
-        const humanMembers = getHumanMembersWithChannels(workspace);
-        for (const hp of humanParticipants) {
-          const member = humanMembers.find((m) => m.memberId === hp.id);
-          if (member) {
-            for (const channel of member.channels) {
-              if (!channel.enabled) continue;
-              deliveryPromises.push(
-                sendToChannel(channel.platform, channel.identifier, message, attachments, options)
-              );
-            }
+  // 2. If collaboration is in a workspace, get channels from workspace metadata
+  if (collaboration.workspaceId) {
+    const workspace = await getWorkspace(collaboration.workspaceId);
+    if (workspace) {
+      const humanMembers = getHumanMembersWithChannels(workspace);
+      for (const hp of humanParticipants) {
+        const member = humanMembers.find((m) => m.memberId === hp.id);
+        if (member) {
+          for (const channel of member.channels) {
+            if (!channel.enabled) continue;
+            deliveryPromises.push(
+              sendToChannel(channel.platform, channel.identifier, message, attachments, options)
+            );
           }
         }
       }
-    } else {
-      // 3. Fallback: If not in workspace, we assume human ID is a Telegram ID (legacy/simple)
-      for (const hp of humanParticipants) {
-        const isTelegramChatId = /^\d+$/.test(hp.id);
-        if (isTelegramChatId) {
-          deliveryPromises.push(sendToChannel('telegram', hp.id, message, attachments, options));
-        }
+    }
+  } else {
+    // 3. Fallback: If not in workspace, we assume human ID is a Telegram ID (legacy/simple)
+    for (const hp of humanParticipants) {
+      const isTelegramChatId = /^\d+$/.test(hp.id);
+      if (isTelegramChatId) {
+        deliveryPromises.push(sendToChannel('telegram', hp.id, message, attachments, options));
       }
     }
-
-    await Promise.allSettled(deliveryPromises);
-  } catch (err) {
-    logger.error(`[NOTIFIER] Collaboration fan-out failed for ${collaborationId}:`, err);
   }
+
+  await Promise.all(deliveryPromises);
 }
 
 /**
@@ -156,31 +152,27 @@ async function sendToWorkspace(
   attachments?: Attachment[],
   options?: { label: string; value: string }[]
 ): Promise<void> {
-  try {
-    const { getWorkspace, getHumanMembersWithChannels } =
-      await import('../lib/memory/workspace-operations');
-    const workspace = await getWorkspace(workspaceId);
-    if (!workspace) {
-      logger.warn(`[NOTIFIER] Workspace not found: ${workspaceId}`);
-      return;
-    }
-
-    const humans = getHumanMembersWithChannels(workspace);
-    const deliveryPromises: Promise<void>[] = [];
-
-    for (const human of humans) {
-      for (const channel of human.channels) {
-        if (!channel.enabled) continue;
-        deliveryPromises.push(
-          sendToChannel(channel.platform, channel.identifier, message, attachments, options)
-        );
-      }
-    }
-
-    await Promise.allSettled(deliveryPromises);
-  } catch (err) {
-    logger.error(`[NOTIFIER] Workspace fan-out failed for ${workspaceId}:`, err);
+  const { getWorkspace, getHumanMembersWithChannels } =
+    await import('../lib/memory/workspace-operations');
+  const workspace = await getWorkspace(workspaceId);
+  if (!workspace) {
+    logger.warn(`[NOTIFIER] Workspace not found: ${workspaceId}`);
+    return;
   }
+
+  const humans = getHumanMembersWithChannels(workspace);
+  const deliveryPromises: Promise<void>[] = [];
+
+  for (const human of humans) {
+    for (const channel of human.channels) {
+      if (!channel.enabled) continue;
+      deliveryPromises.push(
+        sendToChannel(channel.platform, channel.identifier, message, attachments, options)
+      );
+    }
+  }
+
+  await Promise.allSettled(deliveryPromises);
 }
 
 /**
@@ -208,22 +200,36 @@ async function sendToChannel(
   attachments?: Attachment[],
   options?: { label: string; value: string }[]
 ): Promise<void> {
-  try {
-    switch (platform.toLowerCase()) {
-      case 'telegram':
-        await deliverTelegram(identifier, message, attachments, options);
-        break;
-      case 'discord':
-        await deliverDiscord(identifier, message, attachments, options);
-        break;
-      case 'slack':
-        await deliverSlack(identifier, message, attachments, options);
-        break;
-      default:
-        logger.warn(`[NOTIFIER] Unsupported platform: ${platform}`);
+  switch (platform.toLowerCase()) {
+    case 'telegram':
+      await deliverTelegram(identifier, message, attachments, options);
+      break;
+    case 'discord':
+      await deliverDiscord(identifier, message, attachments, options);
+      break;
+    case 'slack':
+      await deliverSlack(identifier, message, attachments, options);
+      break;
+    default:
+      logger.warn(`[NOTIFIER] Unsupported platform: ${platform}`);
+  }
+}
+
+/**
+ * Validates the fetch response and throws on specific retryable or fatal errors.
+ * 429 (Rate Limit) and 401 (Auth Failure) should trigger retries or visibility.
+ */
+async function validateResponse(response: Response, platform: string): Promise<void> {
+  if (!response.ok) {
+    const status = response.status;
+    const body = await response.text().catch(() => 'No body');
+    const errorMsg = `[NOTIFIER] ${platform} API error (${status}): ${body}`;
+
+    if (status === 429 || status === 401 || status >= 500) {
+      throw new Error(errorMsg);
+    } else {
+      logger.error(errorMsg);
     }
-  } catch (err) {
-    logger.error(`[NOTIFIER] Delivery failed for ${platform} (${identifier}):`, err);
   }
 }
 
@@ -245,7 +251,7 @@ async function deliverTelegram(
       const method = attachment.type === AttachmentType.IMAGE ? 'sendPhoto' : 'sendDocument';
       const bodyKey = attachment.type === AttachmentType.IMAGE ? 'photo' : 'document';
 
-      await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+      const response = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -259,10 +265,12 @@ async function deliverTelegram(
               }
             : undefined,
         }),
+        signal: AbortSignal.timeout(10000),
       });
+      await validateResponse(response, 'Telegram');
     }
   } else {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -275,7 +283,9 @@ async function deliverTelegram(
             }
           : undefined,
       }),
+      signal: AbortSignal.timeout(10000),
     });
+    await validateResponse(response, 'Telegram');
   }
 }
 
@@ -314,7 +324,7 @@ async function deliverDiscord(
       ]
     : undefined;
 
-  await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+  const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
     method: 'POST',
     headers: {
       Authorization: `Bot ${token}`,
@@ -325,7 +335,9 @@ async function deliverDiscord(
       embeds: embeds?.length ? embeds : undefined,
       components,
     }),
+    signal: AbortSignal.timeout(10000),
   });
+  await validateResponse(response, 'Discord');
 }
 
 /**
@@ -372,13 +384,13 @@ async function deliverSlack(
           type: 'button',
           text: { type: 'plain_text', text: o.label },
           value: o.value,
-          action_id: `act_${Math.random().toString(36).substring(7)}`,
+          action_id: `act_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         })
       ),
     });
   }
 
-  await fetch('https://slack.com/api/chat.postMessage', {
+  const response = await fetch('https://slack.com/api/chat.postMessage', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -388,12 +400,19 @@ async function deliverSlack(
       channel: channelId,
       blocks,
     }),
+    signal: AbortSignal.timeout(10000),
   });
+  await validateResponse(response, 'Slack');
 }
 
 /**
  * Escapes special characters for Telegram HTML parse mode.
  */
 function escapeHtml(text: string): string {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }

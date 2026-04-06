@@ -1,28 +1,22 @@
-import { TASK_EVENT_SCHEMA } from '../../lib/schema/events';
-import { AgentType } from '../../lib/types/index';
-import { logger } from '../../lib/logger';
 import { Context } from 'aws-lambda';
-import { processEventWithAgent } from './shared';
+import { AgentEvent } from '../../lib/types/agent';
 
+/**
+ * Facilitator Agent Handler Wrapper.
+ * Forwards the event to the standalone Facilitator agent in core/agents.
+ *
+ * @param eventDetail - The event detail.
+ * @param context - The AWS Lambda context.
+ */
 export async function handleFacilitatorTask(
   eventDetail: Record<string, unknown>,
   context: Context
 ): Promise<void> {
-  const { userId, task, traceId, sessionId, initiatorId, attachments } =
-    TASK_EVENT_SCHEMA.parse(eventDetail);
+  const { handler } = await import('../../agents/facilitator');
+  const event = {
+    detail: eventDetail as Record<string, unknown>,
+    source: 'agent.facilitator',
+  } as unknown as AgentEvent;
 
-  logger.info(`Handling facilitator task for user: ${userId}`, {
-    traceId,
-    sessionId,
-  });
-
-  await processEventWithAgent(userId, AgentType.FACILITATOR, task, {
-    context,
-    traceId,
-    sessionId,
-    initiatorId,
-    attachments,
-    handlerTitle: 'FACILITATOR_TASK',
-    outboundHandlerName: 'facilitator-handler',
-  });
+  await handler(event, context);
 }

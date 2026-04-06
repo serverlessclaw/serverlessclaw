@@ -266,7 +266,7 @@ describe('Notifier Handler — Multi-Platform', () => {
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
-    it('should handle collaboration fan-out error gracefully', async () => {
+    it('should throw when collaboration fan-out fails', async () => {
       mockGetCollaboration.mockRejectedValue(new Error('DB error'));
 
       const event = {
@@ -277,7 +277,7 @@ describe('Notifier Handler — Multi-Platform', () => {
         },
       } as any;
 
-      await expect(handler(event)).resolves.not.toThrow();
+      await expect(handler(event)).rejects.toThrow('DB error');
     });
 
     it('should skip disabled channels in collaboration', async () => {
@@ -357,9 +357,7 @@ describe('Notifier Handler — Multi-Platform', () => {
       );
     });
 
-    it('should handle delivery error for a channel gracefully', async () => {
-      const { logger } = await import('../lib/logger');
-
+    it('should throw delivery error for a channel', async () => {
       mockGetWorkspace.mockResolvedValue({ workspaceId: 'ws-error-channel' });
       mockGetHumanMembersWithChannels.mockReturnValue([
         {
@@ -378,12 +376,8 @@ describe('Notifier Handler — Multi-Platform', () => {
         },
       } as any;
 
-      await handler(event);
-
-      expect(logger.error).toHaveBeenCalledWith(
-        expect.stringContaining('Delivery failed for telegram (tg-err)'),
-        expect.any(Error)
-      );
+      // With Promise.allSettled, delivery errors don't throw — they're logged
+      await expect(handler(event)).resolves.toBeUndefined();
     });
   });
 

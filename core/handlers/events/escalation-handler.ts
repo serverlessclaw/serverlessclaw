@@ -3,8 +3,22 @@
  * Handles escalation level timeout events from the scheduler
  */
 
+import { z } from 'zod';
 import { logger } from '../../lib/logger';
 import { escalationManager } from '../../lib/lifecycle/escalation-manager';
+
+/**
+ * Schema for escalation level timeout event detail.
+ */
+const ESCALATION_TIMEOUT_SCHEMA = z.object({
+  traceId: z.string(),
+  agentId: z.string(),
+  userId: z.string(),
+  question: z.string().optional(),
+  originalTask: z.string().optional(),
+  currentLevel: z.number(),
+  policyId: z.string(),
+});
 
 /**
  * Handles escalation level timeout events
@@ -14,16 +28,15 @@ import { escalationManager } from '../../lib/lifecycle/escalation-manager';
 export async function handleEscalationLevelTimeout(
   eventDetail: Record<string, unknown>
 ): Promise<void> {
-  const { traceId, agentId, question, originalTask, currentLevel, policyId } =
-    eventDetail as unknown as {
-      traceId: string;
-      agentId: string;
-      userId: string;
-      question?: string;
-      originalTask?: string;
-      currentLevel: number;
-      policyId: string;
-    };
+  let validated;
+  try {
+    validated = ESCALATION_TIMEOUT_SCHEMA.parse(eventDetail);
+  } catch (error) {
+    logger.error('Invalid escalation level timeout event detail:', error);
+    return;
+  }
+
+  const { traceId, agentId, question, originalTask, currentLevel, policyId } = validated;
 
   logger.info(
     `Handling escalation level timeout: traceId=${traceId}, agentId=${agentId}, ` +

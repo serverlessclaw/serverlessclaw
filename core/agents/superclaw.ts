@@ -16,19 +16,13 @@ export { SUPERCLAW_SYSTEM_PROMPT };
  */
 export class SuperClaw extends Agent {
   /**
-   * Shared SafetyEngine instance for granular safety evaluation.
+   * SafetyEngine instance for granular safety evaluation.
    */
-  private static safetyEngine: SafetyEngine = new SafetyEngine();
+  public readonly safetyEngine: SafetyEngine;
 
   constructor(memory: IMemory, provider: IProvider, tools: ITool[], config?: IAgentConfig) {
     super(memory, provider, tools, config?.systemPrompt || SUPERCLAW_SYSTEM_PROMPT, config);
-  }
-
-  /**
-   * Get the SafetyEngine instance for external configuration.
-   */
-  static getSafetyEngine(): SafetyEngine {
-    return SuperClaw.safetyEngine;
+    this.safetyEngine = new SafetyEngine();
   }
 
   /**
@@ -59,7 +53,7 @@ export class SuperClaw extends Agent {
    * @param context - Optional context including tool name, resource path, etc.
    * @returns Whether approval is required.
    */
-  static async requiresApproval(
+  async requiresApproval(
     agentConfig: IAgentConfig | undefined,
     actionType: 'code_change' | 'deployment' | 'file_operation' | 'shell_command' | 'mcp_tool',
     context?: {
@@ -69,7 +63,7 @@ export class SuperClaw extends Agent {
       userId?: string;
     }
   ): Promise<boolean> {
-    const result = await SuperClaw.safetyEngine.evaluateAction(agentConfig, actionType, context);
+    const result = await this.safetyEngine.evaluateAction(agentConfig, actionType, context);
     return result.requiresApproval;
   }
 
@@ -81,7 +75,7 @@ export class SuperClaw extends Agent {
    * @param context - Optional context including tool name, resource path, etc.
    * @returns Detailed safety evaluation result.
    */
-  static async evaluateAction(
+  async evaluateAction(
     agentConfig: IAgentConfig | undefined,
     actionType: string,
     context?: {
@@ -91,7 +85,7 @@ export class SuperClaw extends Agent {
       userId?: string;
     }
   ) {
-    return SuperClaw.safetyEngine.evaluateAction(agentConfig, actionType, context);
+    return this.safetyEngine.evaluateAction(agentConfig, actionType, context);
   }
 
   /**
@@ -100,8 +94,8 @@ export class SuperClaw extends Agent {
    * @param tier - The safety tier to configure.
    * @param policy - Partial policy updates.
    */
-  static configureSafetyPolicy(tier: SafetyTier, policy: Partial<SafetyPolicy>): void {
-    SuperClaw.safetyEngine.updatePolicy(tier, policy);
+  configureSafetyPolicy(tier: SafetyTier, policy: Partial<SafetyPolicy>): void {
+    this.safetyEngine.updatePolicy(tier, policy);
   }
 
   /**
@@ -109,8 +103,8 @@ export class SuperClaw extends Agent {
    *
    * @param override - The tool safety override configuration.
    */
-  static setToolSafetyOverride(override: ToolSafetyOverride): void {
-    SuperClaw.safetyEngine.setToolOverride(override);
+  setToolSafetyOverride(override: ToolSafetyOverride): void {
+    this.safetyEngine.setToolOverride(override);
   }
 
   /**
@@ -119,8 +113,8 @@ export class SuperClaw extends Agent {
    * @param limit - Maximum number of violations to return.
    * @returns Array of safety violations.
    */
-  static getSafetyViolations(limit?: number) {
-    return SuperClaw.safetyEngine.getViolations(limit);
+  getSafetyViolations(limit?: number) {
+    return this.safetyEngine.getViolations(limit);
   }
 
   /**
@@ -128,7 +122,7 @@ export class SuperClaw extends Agent {
    *
    * @returns Safety statistics including violation counts by tier and action.
    */
-  static getSafetyStats() {
-    return SuperClaw.safetyEngine.getStats();
+  getSafetyStats() {
+    return this.safetyEngine.getStats();
   }
 }

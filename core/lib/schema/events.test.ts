@@ -1448,7 +1448,7 @@ describe('EVENT_SCHEMA_MAP', () => {
   });
 
   it('should have correct number of entries', () => {
-    expect(Object.keys(EVENT_SCHEMA_MAP)).toHaveLength(36);
+    expect(Object.keys(EVENT_SCHEMA_MAP)).toHaveLength(38);
   });
 
   it('should validate data through schema retrieved from map', () => {

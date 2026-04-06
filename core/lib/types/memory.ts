@@ -142,7 +142,11 @@ export interface IKnowledgeStore {
   /** Updates the distilled long-term memory facts for a user. */
   updateDistilledMemory(userId: string, facts: string): Promise<void>;
   /** Adds a tactical lesson learned during an agent's task execution. */
-  addLesson(userId: string, lesson: string, metadata?: InsightMetadata): Promise<void>;
+  addLesson(
+    userId: string,
+    lesson: string,
+    metadata?: Partial<InsightMetadata> & { tags?: string[] }
+  ): Promise<void>;
   /** Retrieves a set of recent tactical lessons for a user. */
   getLessons(userId: string): Promise<string[]>;
   /** Records a failure pattern for future cross-referencing. */
@@ -164,7 +168,7 @@ export interface IKnowledgeStore {
     userId: string,
     timestamp: number,
     content?: string,
-    metadata?: Partial<InsightMetadata>
+    metadata?: Partial<InsightMetadata> & { tags?: string[] }
   ): Promise<void>;
 }
 
@@ -188,6 +192,8 @@ export interface IGapManager {
   releaseGapLock(gapId: string, agentId: string): Promise<void>;
   /** Checks if a gap is currently locked and returns the lock holder info. */
   getGapLock(gapId: string): Promise<{ content: string; expiresAt: number } | null>;
+  /** Retrieves a specific capability gap by its ID. */
+  getGap(gapId: string): Promise<MemoryInsight | null>;
   /** Updates metadata fields (impact, priority, etc.) on a specific gap. */
   updateGapMetadata(gapId: string, metadata: Partial<InsightMetadata>): Promise<void>;
   /** Records a failed strategic plan so the swarm learns anti-patterns. */
@@ -223,7 +229,7 @@ export interface IMemory extends IHistoryStore, IKnowledgeStore, IGapManager {
     scopeId: string,
     category: InsightCategory | string,
     content: string,
-    metadata?: Partial<InsightMetadata> & { orgId?: string }
+    metadata?: Partial<InsightMetadata> & { orgId?: string; tags?: string[] }
   ): Promise<number>;
 
   /** Updates the metadata (priority, impact, etc.) for a specific recorded insight. */

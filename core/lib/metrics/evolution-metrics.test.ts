@@ -18,6 +18,7 @@ vi.mock('./metrics', () => ({
 vi.mock('../logger', () => ({
   logger: {
     warn: vi.fn(),
+    debug: vi.fn(),
   },
 }));
 

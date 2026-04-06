@@ -58,6 +58,7 @@ vi.mock('@aws-sdk/lib-dynamodb', () => ({
 // 4. Mock Logger
 vi.mock('../../lib/logger', () => ({
   logger: {
+    debug: vi.fn(),
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
@@ -93,6 +94,11 @@ const { mockAddTraceStep } = vi.hoisted(() => ({
 
 vi.mock('../../lib/utils/trace-helper', () => ({
   addTraceStep: mockAddTraceStep,
+}));
+
+// 8. Mock shared handler utilities used by dynamic imports in the handler
+vi.mock('./shared', () => ({
+  reportHealthIssue: vi.fn().mockResolvedValue(undefined),
 }));
 
 // 8. Mock parallel aggregator
@@ -338,16 +344,26 @@ describe('parallel-handler', () => {
       );
     });
 
-    it('marks aggregator as failed when barrier timeout scheduling fails', async () => {
+    it('reports health issue but proceeds when barrier timeout scheduling fails', async () => {
+      const { reportHealthIssue } = await import('./shared');
       mockScheduleOneShotTimeout.mockRejectedValue(new Error('Scheduler unavailable'));
 
       await handleParallelDispatch(baseEvent as any);
 
-      expect(mockAggregatorMarkAsCompleted).toHaveBeenCalledWith('user-123', 'trace-abc', 'failed');
-      expect(mockEmitTypedEvent).toHaveBeenCalledWith(
+      // Should NOT mark aggregator as failed anymore (non-terminal)
+      expect(mockAggregatorMarkAsCompleted).not.toHaveBeenCalled();
+      expect(mockEmitTypedEvent).not.toHaveBeenCalledWith(
         'events.handler',
         expect.anything(),
         expect.objectContaining({ overallStatus: 'failed' })
+      );
+
+      // Should report health issue
+      expect(reportHealthIssue).toHaveBeenCalledWith(
+        expect.objectContaining({
+          component: 'ParallelHandler',
+          severity: 'high',
+        })
       );
     });
 
@@ -473,16 +489,16 @@ describe('parallel-handler', () => {
 
       await handleParallelDispatch(dagEvent as any);
 
-      // Should mark aggregator as failed
-      expect(mockAggregatorMarkAsCompleted).toHaveBeenCalledWith(
-        'user-123',
-        'trace-dag-timeout-fail',
-        'failed'
-      );
-      expect(mockEmitTypedEvent).toHaveBeenCalledWith(
-        'events.handler',
-        expect.anything(),
-        expect.objectContaining({ overallStatus: 'failed' })
+      // Should NOT mark aggregator as failed (non-terminal)
+      expect(mockAggregatorMarkAsCompleted).not.toHaveBeenCalled();
+
+      // Should report health issue
+      const { reportHealthIssue } = await import('./shared');
+      expect(reportHealthIssue).toHaveBeenCalledWith(
+        expect.objectContaining({
+          component: 'ParallelHandler',
+          severity: 'high',
+        })
       );
     });
   });

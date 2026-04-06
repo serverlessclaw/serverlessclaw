@@ -54,10 +54,7 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
   const isTextMode = config?.defaultCommunicationMode === 'text';
   const shouldSpeakDirectly = isSocial || isTextMode;
 
-  // 3. Execution & Streaming
-  let finalResponseText = '';
-  let finalAttachments: Attachment[] | undefined = undefined;
-
+  // 2. Build Process Options (context, streaming, communication mode)
   const processOptions = buildProcessOptions({
     isContinuation,
     isIsolated: true,
@@ -71,12 +68,20 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
     communicationMode: config?.defaultCommunicationMode,
   });
 
+  // 3. Execution & Streaming
+  let finalResponseText = '';
+  let finalAttachments: Attachment[] | undefined = undefined;
+
   if (shouldSpeakDirectly) {
     logger.info(`Agent Runner [${agentId}] starting stream for direct communication...`);
     const stream = agent.stream(userId, task, processOptions);
     for await (const chunk of stream) {
       if (chunk.content) {
         finalResponseText += chunk.content;
+      }
+      if (chunk.attachments) {
+        finalAttachments = finalAttachments ?? [];
+        finalAttachments.push(...chunk.attachments);
       }
     }
   } else {

@@ -8,7 +8,7 @@ vi.mock('@aws-sdk/lib-dynamodb', () => import('../__mocks__/dynamodb'));
 vi.mock('@aws-sdk/client-lambda', () => import('../__mocks__/lambda'));
 
 vi.mock('../lib/logger', () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
 vi.mock('sst', () => ({

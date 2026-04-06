@@ -20,6 +20,7 @@ export enum TraceType {
   CONTINUATION = 'continuation',
   COLLABORATION_STARTED = 'collaboration_started',
   COLLABORATION_COMPLETED = 'collaboration_completed',
+  COLLABORATION_MESSAGE = 'collaboration_message',
   // System Events
   CIRCUIT_BREAKER = 'circuit_breaker',
   CANCELLATION = 'cancellation',

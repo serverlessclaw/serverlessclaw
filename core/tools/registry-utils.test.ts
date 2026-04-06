@@ -16,9 +16,9 @@ const mockTOOLS = {
   localTool2: { name: 'localTool2', description: 'desc2', parameters: {} } as ITool,
 };
 
-const mockWarmupManager = vi.fn().mockImplementation(() => ({
-  smartWarmup: vi.fn().mockResolvedValue(undefined),
-}));
+const mockWarmupManager = vi.fn().mockImplementation(function (this: any) {
+  this.smartWarmup = vi.fn().mockResolvedValue(undefined);
+});
 
 vi.mock('../lib/registry', () => ({
   AgentRegistry: mockAgentRegistry,
@@ -41,6 +41,7 @@ vi.mock('../lib/logger', () => ({
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
+    debug: vi.fn(),
   },
 }));
 

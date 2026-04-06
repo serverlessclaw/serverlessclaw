@@ -2,6 +2,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handler } from './critic';
 import type { CriticVerdict, ReviewMode } from './critic/schema';
 
+vi.mock('./prompts/index', () => ({
+  CRITIC_SYSTEM_PROMPT: `CRITIC System Prompt Content
+  SECURITY review
+  - Injection vulnerabilities
+  - Authentication/authorization bypass
+  PERFORMANCE review
+  - Lambda cold start impact
+  - Memory usage and timeout risks
+  ARCHITECTURAL review
+  - Design coherence
+  - Blast radius of changes`,
+}));
+
 // ============================================================================
 // Mock Setup
 // ============================================================================

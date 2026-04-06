@@ -12,7 +12,7 @@ vi.mock('@aws-sdk/client-iot-data-plane', () => ({
 }));
 
 vi.mock('../logger', () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
 describe('publishToRealtime', () => {

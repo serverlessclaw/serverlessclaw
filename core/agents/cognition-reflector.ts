@@ -239,7 +239,7 @@ export const handler = async (
                 ...(await memory.getAllGaps(GapStatus.OPEN)),
                 ...(await memory.getAllGaps(GapStatus.PLANNED)),
               ];
-              existing = allGaps.find((g) => normalizeGapId(g.id) === normalizedId);
+              existing = allGaps.find((g: any) => normalizeGapId(g.id) === normalizedId);
             }
 
             if (existing) {

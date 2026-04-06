@@ -86,12 +86,17 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
     const originalTask = buildMeta?.task;
     const traceId = buildMeta?.traceId || getEnv('TRACE_ID');
 
-    let gapIds: string[] = gapsMeta?.content ? JSON.parse(gapsMeta.content) : [];
+    let gapIds: string[] = [];
+    if (gapsMeta?.content) {
+      const parsed = JSON.parse(gapsMeta.content);
+      gapIds = Array.isArray(parsed) ? parsed : [];
+    }
     if (gapIds.length === 0) {
       const gapIdsEnv = getEnv('GAP_IDS');
       if (gapIdsEnv) {
         try {
-          gapIds = JSON.parse(gapIdsEnv);
+          const parsed = JSON.parse(gapIdsEnv);
+          gapIds = Array.isArray(parsed) ? parsed : [];
         } catch (e) {
           logger.warn('Failed to parse GAP_IDS from environment variables:', e);
         }
@@ -332,5 +337,19 @@ export const handler = async (event: { detail: Record<string, unknown> }): Promi
     }
   } catch (error) {
     logger.error('Error in BuildMonitor:', error);
+    await reportHealthIssue({
+      component: 'BuildMonitor',
+      issue: `Unhandled error processing build ${buildId}: ${error instanceof Error ? error.message : String(error)}`,
+      severity: 'high',
+      userId: 'SYSTEM',
+      traceId: (event.detail?.traceId as string) ?? 'unknown',
+      context: {
+        buildId,
+        status,
+        projectName,
+        error: error instanceof Error ? error.stack : String(error),
+      },
+    });
+    throw error;
   }
 };

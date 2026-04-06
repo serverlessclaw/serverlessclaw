@@ -196,6 +196,7 @@ export interface ProcessOptionsParams {
   context?: import('aws-lambda').Context;
   responseFormat?: import('../types/index').ResponseFormat;
   communicationMode?: 'json' | 'text';
+  taskTimeoutMs?: number;
 }
 
 /**
@@ -219,6 +220,7 @@ export function buildProcessOptions(params: ProcessOptionsParams): AgentProcessO
     context: params.context,
     responseFormat: params.responseFormat,
     communicationMode: params.communicationMode,
+    taskTimeoutMs: params.taskTimeoutMs,
   };
 }
 

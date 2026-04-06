@@ -5,14 +5,14 @@ import {
   QueryCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
-import { SSTResource } from './types/system';
-import { TraceSource } from './types/agent';
+import { SSTResource } from '../types/system';
+import { TraceSource } from '../types/agent';
 import { v4 as uuidv4 } from 'uuid';
-import { TRACE_STATUS, TIME } from './constants';
-import { logger } from './logger';
-import { filterPIIFromObject } from './utils/pii';
-import { getDocClient } from './utils/ddb-client';
-import type { TraceStep, Trace } from './tracer/types';
+import { TRACE_STATUS, TIME } from '../constants';
+import { logger } from '../logger';
+import { filterPIIFromObject } from '../utils/pii';
+import { getDocClient } from '../utils/ddb-client';
+import type { TraceStep, Trace } from './types';
 
 // Removed local doc client management in favor of shared utility
 
@@ -72,7 +72,7 @@ export class ClawTracer {
    * @returns A promise that resolves to the trace ID.
    */
   async startTrace(initialContext: Record<string, unknown>): Promise<string> {
-    const { AgentRegistry } = await import('./registry');
+    const { AgentRegistry } = await import('../registry');
     const days = await AgentRegistry.getRetentionDays('TRACES_DAYS');
     const expiresAt = Math.floor(Date.now() / TIME.MS_PER_SECOND) + days * TIME.SECONDS_IN_DAY;
 

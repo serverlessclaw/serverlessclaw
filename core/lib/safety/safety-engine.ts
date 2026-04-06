@@ -17,13 +17,12 @@ import { logger } from '../logger';
 import type { BaseMemoryProvider } from '../memory/base';
 import { SafetyRateLimiter, ToolSafetyOverride } from './safety-limiter';
 import { SafetyConfigManager } from './safety-config-manager';
-import { DEFAULT_POLICIES } from './safety-config';
 
 /**
  * Safety Engine for evaluating actions against granular policies.
  */
 export class SafetyEngine {
-  private policies: Map<SafetyTier, SafetyPolicy>;
+  private policies: Map<SafetyTier, Partial<SafetyPolicy>>;
   private toolOverrides: Map<string, ToolSafetyOverride>;
   private violations: SafetyViolation[] = [];
   private limiter: SafetyRateLimiter;
@@ -41,13 +40,7 @@ export class SafetyEngine {
     if (customPolicies) {
       for (const [tier, overrides] of Object.entries(customPolicies)) {
         if (overrides) {
-          this.policies.set(
-            tier as SafetyTier,
-            {
-              ...DEFAULT_POLICIES[tier as SafetyTier],
-              ...overrides,
-            } as SafetyPolicy
-          );
+          this.policies.set(tier as SafetyTier, overrides);
         }
       }
     }
@@ -636,11 +629,9 @@ export class SafetyEngine {
    * Update policy for a specific tier.
    */
   updatePolicy(tier: SafetyTier, updates: Partial<SafetyPolicy>): void {
-    const existing = this.policies.get(tier) || DEFAULT_POLICIES[tier];
-    if (existing) {
-      this.policies.set(tier, { ...existing, ...updates } as SafetyPolicy);
-      logger.info('Safety policy updated', { tier, updates });
-    }
+    const existing = this.policies.get(tier) || {};
+    this.policies.set(tier, { ...existing, ...updates });
+    logger.info('Safety policy updated', { tier, updates });
   }
 
   /**

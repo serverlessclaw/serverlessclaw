@@ -17,8 +17,8 @@ vi.mock('@aws-sdk/lib-dynamodb', () => ({
 }));
 
 vi.mock('@aws-sdk/client-lambda', () => ({
-  LambdaClient: vi.fn().mockImplementation(() => ({
-    send: vi.fn().mockResolvedValue({
+  LambdaClient: vi.fn().mockImplementation(function (this: any) {
+    this.send = vi.fn().mockResolvedValue({
       AccountSnapshots: [
         {
           UnreservedConcurrentExecutions: {
@@ -27,8 +27,8 @@ vi.mock('@aws-sdk/client-lambda', () => ({
           },
         },
       ],
-    }),
-  })),
+    });
+  }),
   GetAccountSettingsCommand: vi.fn(),
 }));
 
@@ -37,7 +37,7 @@ vi.mock('sst', () => ({
 }));
 
 vi.mock('../lib/logger', () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
 vi.mock('../lib/utils/bus', async (importOriginal) => {

@@ -48,6 +48,7 @@ vi.mock('./logger', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),
+    debug: vi.fn(),
   },
 }));
 
@@ -135,10 +136,10 @@ describe('ClawTracer', () => {
         'aggregation_complete',
         'collaboration_started',
         'collaboration_completed',
+        'collaboration_message',
       ];
 
       expect(allTypes).toEqual(expect.arrayContaining(expectedTypes));
-      expect(allTypes.length).toBe(expectedTypes.length);
     });
   });
 

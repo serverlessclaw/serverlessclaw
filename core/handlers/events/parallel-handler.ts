@@ -226,26 +226,17 @@ export async function handleParallelDispatch(
         `Scheduled DAG barrier timeout for ${timeoutId}: ${new Date(targetTime).toISOString()}`
       );
     } catch (error) {
-      logger.error(`Failed to schedule DAG barrier timeout for ${timeoutId}:`, error);
+      logger.error(`[SAFE_MODE] Failed to schedule DAG barrier timeout for ${timeoutId}:`, error);
 
-      // Mark aggregator as failed to prevent hanging barriers
-      await aggregator.markAsCompleted(userId, safeTraceId, 'failed');
-
-      const { emitTypedEvent } = await import('../../lib/utils/typed-emit');
-      await emitTypedEvent('events.handler', EventType.PARALLEL_TASK_COMPLETED, {
+      // Non-terminal fallback: Report health issue but proceed since tasks were dispatched
+      const { reportHealthIssue } = await import('./shared');
+      await reportHealthIssue({
+        component: 'ParallelHandler',
+        issue: `Failed to schedule barrier timeout for ${safeTraceId}: ${error instanceof Error ? error.message : String(error)}`,
+        severity: 'high',
         userId,
-        sessionId,
         traceId: safeTraceId,
-        taskId: safeTraceId,
-        initiatorId: initiatorId ?? 'parallel-dispatcher',
-        depth,
-        overallStatus: 'failed',
-        results: [],
-        taskCount: tasks.length,
-        completedCount: 0,
-        elapsedMs: 0,
-        aggregationType,
-        aggregationPrompt,
+        context: { timeoutId, targetTime, taskCount: tasks.length },
       });
     }
 
@@ -315,29 +306,21 @@ export async function handleParallelDispatch(
       `Scheduled parallel barrier timeout for ${timeoutId}: ${new Date(targetTime).toISOString()}`
     );
   } catch (error) {
-    logger.error(`Failed to schedule parallel barrier timeout for ${timeoutId}:`, error);
+    logger.error(
+      `[SAFE_MODE] Failed to schedule parallel barrier timeout for ${timeoutId}:`,
+      error
+    );
 
-    // Mark aggregator as failed to prevent hanging barriers
-    await aggregator.markAsCompleted(userId, safeTraceId, 'failed');
-
-    // Emit a completion event to notify orchestrator of failure
-    const { emitTypedEvent } = await import('../../lib/utils/typed-emit');
-    await emitTypedEvent('events.handler', EventType.PARALLEL_TASK_COMPLETED, {
+    // Non-terminal fallback: Report health issue but proceed since tasks were dispatched
+    const { reportHealthIssue } = await import('./shared');
+    await reportHealthIssue({
+      component: 'ParallelHandler',
+      issue: `Failed to schedule barrier timeout for ${safeTraceId}: ${error instanceof Error ? error.message : String(error)}`,
+      severity: 'high',
       userId,
-      sessionId,
       traceId: safeTraceId,
-      taskId: safeTraceId,
-      initiatorId: initiatorId ?? 'parallel-dispatcher',
-      depth,
-      overallStatus: 'failed',
-      results: [],
-      taskCount: tasks.length,
-      completedCount: 0,
-      elapsedMs: 0,
-      aggregationType,
-      aggregationPrompt,
+      context: { timeoutId, targetTime, taskCount: tasks.length },
     });
-    return;
   }
 
   // Trace: Barrier waiting for sub-agents

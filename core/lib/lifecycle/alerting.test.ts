@@ -8,8 +8,8 @@ vi.mock('../types/agent', () => ({
   EventType: { OUTBOUND_MESSAGE: 'outbound_message' },
 }));
 
-vi.mock('./logger', () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+vi.mock('../logger', () => ({
+  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
 import { Alerting } from './alerting';

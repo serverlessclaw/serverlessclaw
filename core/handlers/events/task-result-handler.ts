@@ -277,25 +277,21 @@ export async function handleTaskResult(
 
                 if (marked) {
                   const finalState = await aggregator.getState(userId, traceId);
-                  await emitTypedEvent(
-                    'events.handler',
-                    EventType.PARALLEL_TASK_COMPLETED as unknown as EventType,
-                    {
-                      userId,
-                      sessionId: currentState.sessionId,
-                      traceId,
-                      taskId: traceId,
-                      initiatorId: currentState.initiatorId,
-                      depth,
-                      overallStatus,
-                      results: finalState?.results ?? [],
-                      taskCount: currentState.taskCount,
-                      completedCount: summary.completed,
-                      elapsedMs: 0,
-                      aggregationType: currentState.aggregationType,
-                      aggregationPrompt: currentState.aggregationPrompt,
-                    }
-                  );
+                  await emitTypedEvent('events.handler', EventType.PARALLEL_TASK_COMPLETED, {
+                    userId,
+                    sessionId: currentState.sessionId,
+                    traceId,
+                    taskId: traceId,
+                    initiatorId: currentState.initiatorId,
+                    depth,
+                    overallStatus,
+                    results: finalState?.results ?? [],
+                    taskCount: currentState.taskCount,
+                    completedCount: summary.completed,
+                    elapsedMs: 0,
+                    aggregationType: currentState.aggregationType,
+                    aggregationPrompt: currentState.aggregationPrompt,
+                  });
                 }
               }
             }
@@ -345,25 +341,21 @@ export async function handleTaskResult(
 
         if (marked) {
           const { emitTypedEvent } = await import('../../lib/utils/typed-emit');
-          await emitTypedEvent(
-            'events.handler',
-            EventType.PARALLEL_TASK_COMPLETED as unknown as EventType,
-            {
-              userId,
-              sessionId: aggregateState.sessionId,
-              traceId,
-              taskId: traceId, // Use traceId as taskId for the aggregate event
-              initiatorId: aggregateState.initiatorId,
-              depth: depth,
-              overallStatus,
-              results: aggregateState.results,
-              taskCount: aggregateState.taskCount,
-              completedCount: aggregateState.results.length,
-              elapsedMs: 0,
-              aggregationType: aggregateState.aggregationType,
-              aggregationPrompt: aggregateState.aggregationPrompt,
-            }
-          );
+          await emitTypedEvent('events.handler', EventType.PARALLEL_TASK_COMPLETED, {
+            userId,
+            sessionId: aggregateState.sessionId,
+            traceId,
+            taskId: traceId, // Use traceId as taskId for the aggregate event
+            initiatorId: aggregateState.initiatorId,
+            depth: depth,
+            overallStatus,
+            results: aggregateState.results,
+            taskCount: aggregateState.taskCount,
+            completedCount: aggregateState.results.length,
+            elapsedMs: 0,
+            aggregationType: aggregateState.aggregationType,
+            aggregationPrompt: aggregateState.aggregationPrompt,
+          });
         } else {
           logger.info(`Parallel dispatch ${traceId} already marked as completed, skipping event.`);
         }

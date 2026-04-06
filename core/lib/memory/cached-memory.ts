@@ -565,6 +565,10 @@ export class CachedMemory implements IMemory {
     return this.underlying.getGapLock(gapId);
   }
 
+  async getGap(gapId: string): Promise<MemoryInsight | null> {
+    return this.underlying.getGap(gapId);
+  }
+
   async updateGapMetadata(gapId: string, metadata: Partial<InsightMetadata>): Promise<void> {
     await this.underlying.updateGapMetadata(gapId, metadata);
     // Invalidate gaps cache since metadata changed

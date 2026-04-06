@@ -28,6 +28,7 @@ export enum AnomalySeverity {
 export enum AnomalyType {
   REASONING_DEGRADATION = 'reasoning_degradation',
   MEMORY_FRAGMENTATION = 'memory_fragmentation',
+  MEMORY_MISS = 'memory_miss',
   TASK_FAILURE_SPIKE = 'task_failure_spike',
   LATENCY_ANOMALY = 'latency_anomaly',
   TOKEN_OVERUSE = 'token_overuse',
@@ -88,6 +89,17 @@ export interface AggregatedMetrics {
   totalClarifications: number;
   /** Number of self-correction events. */
   totalSelfCorrections: number;
+  /** Memory health analysis (optional, populated when available). */
+  memoryHealth?: {
+    /** Total memory items. */
+    totalItems: number;
+    /** Fragmentation score (0-1, lower is better). */
+    fragmentationScore: number;
+    /** Staleness score (0-1, lower is better). */
+    stalenessScore: number;
+    /** Coverage score (0-1, higher is better). */
+    coverageScore: number;
+  };
 }
 
 /**

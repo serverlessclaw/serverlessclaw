@@ -6,6 +6,7 @@ import { logger } from '../logger';
 vi.mock('../logger', () => ({
   logger: {
     info: vi.fn(),
+    debug: vi.fn(),
   },
 }));
 

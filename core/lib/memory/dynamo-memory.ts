@@ -371,6 +371,13 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   }
 
   /**
+   * Retrieves a specific capability gap by its ID.
+   */
+  async getGap(gapId: string): Promise<MemoryInsight | null> {
+    return GapOps.getGap(this, gapId);
+  }
+
+  /**
    * Updates metadata fields (impact, priority, etc.) on a specific gap.
    */
   async updateGapMetadata(gapId: string, metadata: Partial<InsightMetadata>): Promise<void> {

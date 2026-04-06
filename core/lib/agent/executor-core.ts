@@ -222,6 +222,7 @@ export class ExecutorCore {
     }
 
     let iterations = 0;
+    const attachments: NonNullable<Message['attachments']> = [];
     const usage: ExecutorUsage = {
       totalInputTokens: 0,
       totalOutputTokens: 0,
@@ -232,9 +233,14 @@ export class ExecutorCore {
     const loopStartTime = Date.now();
 
     while (iterations < maxIterations) {
-      const errorResult = await this.performPreLoopChecks(messages, [], options, loopStartTime);
+      const errorResult = await this.performPreLoopChecks(
+        messages,
+        attachments,
+        options,
+        loopStartTime
+      );
       if (errorResult) {
-        yield { content: errorResult.responseText };
+        yield { content: errorResult.responseText, attachments: errorResult.attachments };
         break;
       }
 
@@ -351,11 +357,12 @@ export class ExecutorCore {
         yield { content: ackMsg };
       }
 
+      const attachmentsBefore = attachments.length;
       const toolResult = await ToolExecutor.executeToolCalls(
         toolCalls,
         this.tools,
         messages,
-        [],
+        attachments,
         {
           traceId: options.traceId,
           nodeId: options.nodeId,
@@ -374,6 +381,27 @@ export class ExecutorCore {
         tracer,
         approvedToolCalls
       );
+
+      // Yield new attachments if any
+      if (attachments.length > attachmentsBefore) {
+        const newAttachments = attachments.slice(attachmentsBefore);
+        if (emitter) {
+          emitter.emitChunk(
+            userId,
+            sessionId,
+            traceId,
+            undefined,
+            this.agentName,
+            false,
+            undefined,
+            options.currentInitiator,
+            undefined,
+            undefined,
+            newAttachments
+          );
+        }
+        yield { attachments: newAttachments } as MessageChunk;
+      }
 
       // If we have ui_blocks in stream, we should probably emit them
       if (toolResult.ui_blocks && toolResult.ui_blocks.length > 0 && emitter) {

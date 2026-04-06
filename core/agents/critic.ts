@@ -15,6 +15,7 @@ import {
 import { emitTaskEvent } from '../lib/utils/agent-helpers/event-emitter';
 import { parseStructuredResponse } from '../lib/utils/agent-helpers/llm-utils';
 import { CriticVerdictSchema, type CriticVerdict, type ReviewMode } from './critic/schema';
+import { CRITIC_SYSTEM_PROMPT } from './prompts';
 
 /**
  * Critic Agent handler. Performs independent peer review of strategic plans
@@ -71,7 +72,9 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
   }
 
   // 2. Build review prompt based on mode
-  const reviewPrompt = buildReviewPrompt(task || '', reviewMode, planId);
+  const reviewPrompt = CRITIC_SYSTEM_PROMPT.replace('{{PLAN_ID}}', planId)
+    .replace('{{REVIEW_MODE}}', reviewMode)
+    .replace('{{STRATEGIC_PLAN}}', task || '');
 
   // 3. Process the review with structured JSON output
   const { responseText: rawResponse, attachments: resultAttachments } = await agent.process(
@@ -180,72 +183,3 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
 
   return JSON.stringify(verdict);
 };
-
-/**
- * Builds the review prompt based on the review mode.
- */
-function buildReviewPrompt(plan: string, reviewMode: ReviewMode, planId: string): string {
-  const modeInstructions: Record<ReviewMode, string> = {
-    security: `
-      You are conducting a SECURITY review of the following strategic plan.
-      
-      Focus on:
-      - Injection vulnerabilities (SQL, command, XSS)
-      - Authentication/authorization bypass risks
-      - Data exposure and PII leakage
-      - Hardcoded secrets or credentials
-      - Overly permissive IAM policies
-      - Missing input validation
-      
-      Red flags: Unsanitized inputs, missing auth checks, plaintext secrets, 
-      overly broad IAM permissions, CORS misconfigurations.
-    `,
-    performance: `
-      You are conducting a PERFORMANCE review of the following strategic plan.
-      
-      Focus on:
-      - Lambda cold start impact
-      - Memory usage and timeout risks
-      - Database query efficiency (N+1, missing indexes)
-      - Unbounded loops or recursive operations
-      - Excessive API calls or network round-trips
-      - Cost implications of the change
-      
-      Red flags: Synchronous blocking calls, missing pagination, 
-      unbounded recursion, excessive Lambda invocations, no caching strategy.
-    `,
-    architect: `
-      You are conducting an ARCHITECTURAL review of the following strategic plan.
-      
-      Focus on:
-      - Design coherence with existing patterns
-      - Dependency risks and coupling
-      - Blast radius of changes
-      - Maintainability and testability
-      - Breaking changes without migration paths
-      - Error handling completeness
-      
-      Red flags: Circular dependencies, tight coupling, missing error handling,
-      breaking API contracts, no rollback strategy, complex state management.
-    `,
-  };
-
-  return `
-    [COUNCIL_REVIEW]
-    Plan ID: ${planId}
-    Review Mode: ${reviewMode}
-    
-    ${modeInstructions[reviewMode]}
-    
-    STRATEGIC_PLAN TO REVIEW:
-    ${plan}
-    
-    INSTRUCTIONS:
-    1. Read the plan carefully
-    2. Use filesystem_read_file to inspect any referenced files
-    3. Apply your review mode's criteria
-    4. Return a JSON verdict with findings
-    
-    Remember: When in doubt, REJECT. A false positive is better than a critical bug.
-  `;
-}
