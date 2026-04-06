@@ -189,8 +189,8 @@ importers:
         specifier: ^3.1010.0
         version: 3.1024.0(@aws-sdk/client-dynamodb@3.1024.0)
       '@aws/run-mcp-servers-with-aws-lambda':
-        specifier: ^0.1.0
-        version: 0.1.6(zod@4.3.6)
+        specifier: ^0.5.0
+        version: 0.5.13(zod@4.3.6)
       '@modelcontextprotocol/sdk':
         specifier: ^1.27.1
         version: 1.29.0(zod@4.3.6)
@@ -684,6 +684,11 @@ packages:
     resolution: {integrity: sha512-c7ZSIXrESxHKx2Mcopgd8AlzZgoXMr20fkx5ViPWPOLBvmyhw9VwJx/Govg8Ef/IhEon5R9l53Z8fdYSEmp6VA==}
     engines: {node: '>=20.0.0'}
 
+  '@aws-sdk/protocol-http@3.374.0':
+    resolution: {integrity: sha512-9WpRUbINdGroV3HiZZIBoJvL2ndoWk39OfwxWs2otxByppJZNN14bg/lvCx5e8ggHUti7IBk5rb0nqQZ4m05pg==}
+    engines: {node: '>=14.0.0'}
+    deprecated: This package has moved to @smithy/protocol-http
+
   '@aws-sdk/region-config-resolver@3.972.10':
     resolution: {integrity: sha512-1dq9ToC6e070QvnVhhbAs3bb5r6cQ10gTVc6cyRV5uvQe7P138TV2uG2i6+Yok4bAkVAcx5AqkTEBUvWEtBlsQ==}
     engines: {node: '>=20.0.0'}
@@ -754,8 +759,8 @@ packages:
     resolution: {integrity: sha512-iY8yvjE0y651BixKNPgmv1WrQc+GZ142sb0z4gYnChDDY2YqI4P/jsSopBWrKfAt7LOJAkOXt7rC/hms+WclQQ==}
     engines: {node: '>=18.0.0'}
 
-  '@aws/run-mcp-servers-with-aws-lambda@0.1.6':
-    resolution: {integrity: sha512-LRytMq0dwoxJ41FSd3jk79IEtmlmhdB+XcJ3zzOQD+jYpgBwyCC1BIf4nMJdq1rJHU6zHCs0x0SNh6HBuPu6vg==}
+  '@aws/run-mcp-servers-with-aws-lambda@0.5.13':
+    resolution: {integrity: sha512-EHeibtPYQMg1VqjDGcTligxeX6t5YqEfpyPZQ7unTpBt0AAY16xXWwwHfVh+yMK8ykvjBLd4s8e2mbRZGiDZ8A==}
     engines: {node: '>=18'}
 
   '@babel/code-frame@7.29.0':
@@ -1814,6 +1819,10 @@ packages:
     resolution: {integrity: sha512-jqve46eYU1v7pZ5BM+fmkbq3DerkSluPr5EhvOcHxygxzD05ByDRppRwRPPpFrsFo5yDtCYLKu+kreHKVrvc7A==}
     engines: {node: '>=18.0.0'}
 
+  '@smithy/protocol-http@1.2.0':
+    resolution: {integrity: sha512-GfGfruksi3nXdFok5RhgtOnWe5f6BndzYfmEXISD+5gAGdayFGpjWu5pIqIweTudMtse20bGbc+7MFZXT1Tb8Q==}
+    engines: {node: '>=14.0.0'}
+
   '@smithy/protocol-http@5.3.12':
     resolution: {integrity: sha512-fit0GZK9I1xoRlR4jXmbLhoN0OdEpa96ul8M65XdmXnxXkuMxM0Y8HDT0Fh0Xb4I85MBvBClOzgSrV1X2s1Hxw==}
     engines: {node: '>=18.0.0'}
@@ -1841,6 +1850,10 @@ packages:
   '@smithy/smithy-client@4.12.8':
     resolution: {integrity: sha512-aJaAX7vHe5i66smoSSID7t4rKY08PbD8EBU7DOloixvhOozfYWdcSYE4l6/tjkZ0vBZhGjheWzB2mh31sLgCMA==}
     engines: {node: '>=18.0.0'}
+
+  '@smithy/types@1.2.0':
+    resolution: {integrity: sha512-z1r00TvBqF3dh4aHhya7nz1HhvCg4TRmw51fjMrh5do3h+ngSstt/yKlNbHeb9QxJmFbmN8KEVSWgb1bRvfEoA==}
+    engines: {node: '>=14.0.0'}
 
   '@smithy/types@4.13.1':
     resolution: {integrity: sha512-787F3yzE2UiJIQ+wYW1CVg2odHjmaWLGksnKQHUrK/lYZSEcy1msuLVvxaR/sI2/aDe9U+TBuLsXnr3vod1g0g==}
@@ -7311,6 +7324,11 @@ snapshots:
     transitivePeerDependencies:
       - aws-crt
 
+  '@aws-sdk/protocol-http@3.374.0':
+    dependencies:
+      '@smithy/protocol-http': 1.2.0
+      tslib: 2.8.1
+
   '@aws-sdk/region-config-resolver@3.972.10':
     dependencies:
       '@aws-sdk/types': 3.973.6
@@ -7426,11 +7444,15 @@ snapshots:
 
   '@aws/lambda-invoke-store@0.2.4': {}
 
-  '@aws/run-mcp-servers-with-aws-lambda@0.1.6(zod@4.3.6)':
+  '@aws/run-mcp-servers-with-aws-lambda@0.5.13(zod@4.3.6)':
     dependencies:
+      '@aws-crypto/sha256-js': 5.2.0
       '@aws-sdk/client-lambda': 3.1024.0
+      '@aws-sdk/credential-provider-node': 3.972.29
+      '@aws-sdk/protocol-http': 3.374.0
+      '@aws-sdk/types': 3.973.6
       '@modelcontextprotocol/sdk': 1.29.0(zod@4.3.6)
-      '@types/aws-lambda': 8.10.161
+      '@smithy/signature-v4': 5.3.12
       winston: 3.19.0
     transitivePeerDependencies:
       - '@cfworker/json-schema'
@@ -8367,6 +8389,11 @@ snapshots:
       '@smithy/types': 4.13.1
       tslib: 2.8.1
 
+  '@smithy/protocol-http@1.2.0':
+    dependencies:
+      '@smithy/types': 1.2.0
+      tslib: 2.8.1
+
   '@smithy/protocol-http@5.3.12':
     dependencies:
       '@smithy/types': 4.13.1
@@ -8411,6 +8438,10 @@ snapshots:
       '@smithy/protocol-http': 5.3.12
       '@smithy/types': 4.13.1
       '@smithy/util-stream': 4.5.21
+      tslib: 2.8.1
+
+  '@smithy/types@1.2.0':
+    dependencies:
       tslib: 2.8.1
 
   '@smithy/types@4.13.1':
