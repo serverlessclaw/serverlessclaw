@@ -49,7 +49,7 @@ export interface IToolDefinition {
   /** Optional Zod schema for runtime validation and defaulting of arguments. */
   argSchema?: import('zod').ZodSchema;
   /** The type of tool. */
-  type?: ToolType;
+  type: ToolType;
   /** Optional resource connections this tool utilizes (used for topology discovery). */
   connectionProfile?: string[];
   /** Optional ID for OpenAI Managed Connectors (e.g., connector_googledrive). */

@@ -1,4 +1,4 @@
-import { IToolDefinition } from '../../lib/types/index';
+import { IToolDefinition, ToolType } from '../../lib/types/index';
 
 /**
  * Collaboration Domain Tool Definitions
@@ -7,6 +7,7 @@ import { IToolDefinition } from '../../lib/types/index';
 export const collaborationSchema: Record<string, IToolDefinition> = {
   // Collaboration Sessions (from collaboration.ts)
   createCollaboration: {
+    type: ToolType.FUNCTION,
     name: 'createCollaboration',
     description:
       'Creates a new collaboration session for multi-party agent-agent or agent-human collaboration. Returns a collaborationId that can be used to share context.',
@@ -36,6 +37,7 @@ export const collaborationSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['memory'],
   },
   joinCollaboration: {
+    type: ToolType.FUNCTION,
     name: 'joinCollaboration',
     description: 'Joins an existing collaboration to access its shared session context.',
     parameters: {
@@ -49,6 +51,7 @@ export const collaborationSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['memory'],
   },
   getCollaborationContext: {
+    type: ToolType.FUNCTION,
     name: 'getCollaborationContext',
     description: 'Gets the shared session context (conversation history) for a collaboration.',
     parameters: {
@@ -63,6 +66,7 @@ export const collaborationSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['memory'],
   },
   writeToCollaboration: {
+    type: ToolType.FUNCTION,
     name: 'writeToCollaboration',
     description: 'Writes a message to the shared collaboration session.',
     parameters: {
@@ -78,6 +82,7 @@ export const collaborationSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['memory'],
   },
   listMyCollaborations: {
+    type: ToolType.FUNCTION,
     name: 'listMyCollaborations',
     description: 'Lists all collaborations that the current agent is a participant of.',
     parameters: {
@@ -89,6 +94,7 @@ export const collaborationSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['memory'],
   },
   closeCollaboration: {
+    type: ToolType.FUNCTION,
     name: 'closeCollaboration',
     description: 'Closes a collaboration session, marking it as finished.',
     parameters: {
@@ -104,6 +110,7 @@ export const collaborationSchema: Record<string, IToolDefinition> = {
 
   // Clarification (from clarification.ts)
   seekClarification: {
+    type: ToolType.FUNCTION,
     name: 'seekClarification',
     description: 'Pauses the current agent and requests clarification from the initiator.',
     parameters: {
@@ -117,6 +124,7 @@ export const collaborationSchema: Record<string, IToolDefinition> = {
     },
   },
   provideClarification: {
+    type: ToolType.FUNCTION,
     name: 'provideClarification',
     description: 'Provides an answer to a clarification request, resuming the target agent.',
     parameters: {
@@ -136,6 +144,7 @@ export const collaborationSchema: Record<string, IToolDefinition> = {
 
   // Workspace (from system.ts)
   createWorkspace: {
+    type: ToolType.FUNCTION,
     name: 'createWorkspace',
     description: 'Creates a new workspace for multi-human multi-agent collaboration.',
     parameters: {
@@ -152,6 +161,7 @@ export const collaborationSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['config'],
   },
   inviteMember: {
+    type: ToolType.FUNCTION,
     name: 'inviteMember',
     description: 'Invites a human or agent member to an existing workspace.',
     parameters: {
@@ -174,6 +184,7 @@ export const collaborationSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['config'],
   },
   updateMemberRole: {
+    type: ToolType.FUNCTION,
     name: 'updateMemberRole',
     description: "Updates a member's role within a workspace.",
     parameters: {
@@ -194,6 +205,7 @@ export const collaborationSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['config'],
   },
   removeMember: {
+    type: ToolType.FUNCTION,
     name: 'removeMember',
     description: 'Removes a member from a workspace.',
     parameters: {
@@ -209,6 +221,7 @@ export const collaborationSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['config'],
   },
   getWorkspace: {
+    type: ToolType.FUNCTION,
     name: 'getWorkspace',
     description: 'Retrieves workspace details including all members and their roles.',
     parameters: {
@@ -222,6 +235,7 @@ export const collaborationSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['config'],
   },
   listWorkspaces: {
+    type: ToolType.FUNCTION,
     name: 'listWorkspaces',
     description: 'Lists all workspace IDs in the system.',
     parameters: {
@@ -235,6 +249,7 @@ export const collaborationSchema: Record<string, IToolDefinition> = {
 
   // Messaging (from messaging.ts)
   broadcastMessage: {
+    type: ToolType.FUNCTION,
     name: 'broadcastMessage',
     description: 'Broadcasts a message to all active agents or sessions.',
     parameters: {
@@ -248,6 +263,7 @@ export const collaborationSchema: Record<string, IToolDefinition> = {
     },
   },
   sendMessage: {
+    type: ToolType.FUNCTION,
     name: 'sendMessage',
     description: 'Sends a direct message to a specific user on a specific session.',
     parameters: {
@@ -263,6 +279,7 @@ export const collaborationSchema: Record<string, IToolDefinition> = {
     },
   },
   getMessages: {
+    type: ToolType.FUNCTION,
     name: 'getMessages',
     description: 'Retrieves messages from a specific conversation or session.',
     parameters: {

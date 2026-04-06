@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { IToolDefinition, LLMProvider } from '../../lib/types/index';
+import { IToolDefinition, ToolType, LLMProvider } from '../../lib/types/index';
 
 /**
  * Knowledge Domain Tool Definitions
@@ -8,6 +8,7 @@ import { IToolDefinition, LLMProvider } from '../../lib/types/index';
 export const knowledgeSchema: Record<string, IToolDefinition> = {
   // Agent Management (from agent.ts)
   dispatchTask: {
+    type: ToolType.FUNCTION,
     name: 'dispatchTask',
     description: 'Dispatches a specialized task to a sub-agent.',
     parameters: {
@@ -30,6 +31,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['bus'],
   },
   manageAgentTools: {
+    type: ToolType.FUNCTION,
     name: 'manageAgentTools',
     description: 'Updates the active toolset for a specific agent.',
     parameters: {
@@ -51,6 +53,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['bus'],
   },
   listAgents: {
+    type: ToolType.FUNCTION,
     name: 'listAgents',
     description: 'Lists all available specialized agents in the system and their capabilities.',
     parameters: {
@@ -62,6 +65,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['bus'],
   },
   createAgent: {
+    type: ToolType.FUNCTION,
     name: 'createAgent',
     description: 'Registers a new agent in the system. Cannot override backbone agents.',
     parameters: {
@@ -98,6 +102,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['config'],
   },
   deleteAgent: {
+    type: ToolType.FUNCTION,
     name: 'deleteAgent',
     description:
       'Removes a non-backbone agent from the registry. Backbone agents cannot be deleted.',
@@ -115,6 +120,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['config'],
   },
   syncAgentRegistry: {
+    type: ToolType.FUNCTION,
     name: 'syncAgentRegistry',
     description:
       'Synchronizes the agent registry by refreshing backbone configs and discovering topology.',
@@ -129,6 +135,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
 
   // Storage & Memory (from knowledge.ts)
   recallKnowledge: {
+    type: ToolType.FUNCTION,
     name: 'recallKnowledge',
     description:
       "Searches the agent's long-term memory for relevant facts, lessons, or capability gaps.",
@@ -191,6 +198,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['memory'],
   },
   saveMemory: {
+    type: ToolType.FUNCTION,
     name: 'saveMemory',
     description:
       'Saves project knowledge (facts, conclusions, user preferences) into the system memory.',
@@ -238,6 +246,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['memory'],
   },
   reportGap: {
+    type: ToolType.FUNCTION,
     name: 'reportGap',
     description: 'Records a new capability gap or system limitation into the evolution pipeline.',
     parameters: {
@@ -273,6 +282,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['config'],
   },
   manageGap: {
+    type: ToolType.FUNCTION,
     name: 'manageGap',
     description: 'Updates or lists capability gaps in the system.',
     parameters: {
@@ -296,6 +306,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['config'],
   },
   pruneMemory: {
+    type: ToolType.FUNCTION,
     name: 'pruneMemory',
     description:
       'Permanently deletes a specific memory item from the neural reserve. Use this to remove stale, incorrect, or redundant information.',
@@ -317,6 +328,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     },
   },
   discoverSkills: {
+    type: ToolType.FUNCTION,
     name: 'discoverSkills',
     description: 'Searches the project for matching skill definitions.',
     parameters: {
@@ -329,6 +341,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     },
   },
   installSkill: {
+    type: ToolType.FUNCTION,
     name: 'installSkill',
     description: 'Installs a specific discovered skill for an agent.',
     parameters: {
@@ -342,6 +355,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     },
   },
   uninstallSkill: {
+    type: ToolType.FUNCTION,
     name: 'uninstallSkill',
     description: 'Removes a previously installed skill from an agent.',
     parameters: {
@@ -355,6 +369,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     },
   },
   prioritizeMemory: {
+    type: ToolType.FUNCTION,
     name: 'prioritizeMemory',
     description:
       'Adjusts the priority, urgency, and impact scores of a memory insight or capability gap.',
@@ -391,6 +406,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['memory'],
   },
   deleteTraces: {
+    type: ToolType.FUNCTION,
     name: 'deleteTraces',
     description:
       'Deletes execution traces. Pass "all" to purge all traces, or a specific trace ID to delete one.',
@@ -408,6 +424,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['trace'],
   },
   refineMemory: {
+    type: ToolType.FUNCTION,
     name: 'refineMemory',
     description:
       'Updates or corrects an existing memory item. Use this when you have new information that refines a previous conclusion or lesson.',
@@ -445,6 +462,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['memory'],
   },
   forceReleaseLock: {
+    type: ToolType.FUNCTION,
     name: 'forceReleaseLock',
     description: 'Force-releases a distributed session lock by deleting it from memory.',
     parameters: {
@@ -457,6 +475,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     },
   },
   technicalResearch: {
+    type: ToolType.FUNCTION,
     name: 'technicalResearch',
     description:
       'Dispatches a technical research task. Supports single-step discovery or parallel multi-agent exploration.',
@@ -488,6 +507,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['bus'],
   },
   requestResearch: {
+    type: ToolType.FUNCTION,
     name: 'requestResearch',
     description:
       'Dispatches a technical research mission to the Researcher Agent. The current agent execution will pause until research is completed.',
@@ -512,6 +532,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
 
   // MCP (from mcp.ts)
   registerMCPServer: {
+    type: ToolType.FUNCTION,
     name: 'registerMCPServer',
     description: 'Registers a new Model Context Protocol (MCP) server for dynamic tool discovery.',
     parameters: {
@@ -535,6 +556,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     },
   },
   unregisterMCPServer: {
+    type: ToolType.FUNCTION,
     name: 'unregisterMCPServer',
     description: 'Removes an MCP server and all its associated tools from the system.',
     parameters: {
@@ -550,6 +572,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     },
   },
   getMcpConfig: {
+    type: ToolType.FUNCTION,
     name: 'getMcpConfig',
     description: 'Retrieves the current Model Context Protocol (MCP) servers configuration.',
     parameters: {
@@ -561,6 +584,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
 
   // Runtime Config (from config.ts)
   checkConfig: {
+    type: ToolType.FUNCTION,
     name: 'checkConfig',
     description:
       'Retrieves the current runtime configuration, including active LLM provider and model.',
@@ -572,6 +596,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     },
   },
   setSystemConfig: {
+    type: ToolType.FUNCTION,
     name: 'setSystemConfig',
     description: 'Updates a system-wide configuration value in the ConfigTable.',
     parameters: {
@@ -591,6 +616,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     },
   },
   listSystemConfigs: {
+    type: ToolType.FUNCTION,
     name: 'listSystemConfigs',
     description: 'Lists all available runtime configuration keys and their current values.',
     parameters: {
@@ -603,6 +629,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
 
   // Metadata (from metadata.ts)
   getSystemConfigMetadata: {
+    type: ToolType.FUNCTION,
     name: 'getSystemConfigMetadata',
     description:
       'Retrieves technical documentation, implications, and risks for all system configuration keys.',
@@ -614,6 +641,7 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     },
   },
   inspectTrace: {
+    type: ToolType.FUNCTION,
     name: 'inspectTrace',
     description: 'Retrieves the full execution trace for a given trace ID.',
     parameters: {

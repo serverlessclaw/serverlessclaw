@@ -3,9 +3,8 @@ import { ReasoningProfile } from '../lib/types/llm';
 import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
 import {
-  extractPayload,
   extractBaseUserId,
-  validatePayload,
+  validateEventPayload,
   buildProcessOptions,
   initAgent,
 } from '../lib/utils/agent-helpers';
@@ -27,13 +26,19 @@ import { RESEARCH_TASK_METADATA } from '../lib/schema/events';
 export const handler = async (event: AgentEvent, context: Context): Promise<string | undefined> => {
   logger.info('Researcher Agent received task:', JSON.stringify(event, null, 2));
 
-  const payload = extractPayload<AgentPayload>(event);
-  const { userId, task, metadata, traceId, sessionId, isContinuation, initiatorId, depth } =
-    payload;
-
-  if (!validatePayload({ userId, task: task || '' }, ['userId', 'task'])) {
-    return;
-  }
+  const payload = validateEventPayload<AgentPayload>(event, `${AgentType.RESEARCHER}_task` as any);
+  const {
+    userId,
+    task,
+    metadata,
+    traceId,
+    sessionId,
+    isContinuation,
+    initiatorId,
+    depth,
+    tokenBudget,
+    costLimit,
+  } = payload;
 
   const baseUserId = extractBaseUserId(userId);
   const isAggregation = task?.includes('[AGGREGATED_RESULTS]');
@@ -118,6 +123,8 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
     context,
     taskTimeoutMs: timeBudgetMs,
     profile: ReasoningProfile.THINKING,
+    tokenBudget,
+    costLimit,
   });
 
   const startTime = Date.now();

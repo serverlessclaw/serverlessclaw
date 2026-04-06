@@ -33,6 +33,7 @@ export class SkillRegistry {
         name: tool.name,
         description: tool.description,
         parameters: tool.parameters,
+        type: tool.type,
       }));
   }
 

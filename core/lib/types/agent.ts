@@ -102,11 +102,11 @@ export interface IAgentConfig {
   /** Localized system prompts */
   systemPrompts?: { en: string; cn: string };
   /** Detailed description of the agent's purpose. */
-  description?: string;
+  description: string;
   /** Categorization for orchestration gating. */
-  category?: AgentCategory;
+  category: AgentCategory;
   /** Icon name for UI representation. */
-  icon?: string;
+  icon: string;
   /** Specific LLM model ID override. */
   model?: string;
   /** Preferred reasoning profile (FAST, STANDARD, THINKING, DEEP). */
@@ -114,7 +114,7 @@ export interface IAgentConfig {
   /** Specific LLM provider name override. */
   provider?: string;
   /** List of tool names assigned to this agent. */
-  tools?: string[];
+  tools: string[];
   /** Whether the agent is currently active. */
   enabled: boolean;
   /** Whether this is a hardcoded system agent (cannot be deleted). */

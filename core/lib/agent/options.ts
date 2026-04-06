@@ -73,4 +73,14 @@ export interface AgentProcessOptions {
     sessionId?: string;
     agentId?: string;
   };
+  /**
+   * Maximum number of tokens the agent can consume in a single task.
+   * If set, the executor will enforce this limit and stop if exceeded.
+   */
+  tokenBudget?: number;
+  /**
+   * Maximum cost (in USD) allowed for this task.
+   * If set, the executor will track costs and stop if exceeded.
+   */
+  costLimit?: number;
 }

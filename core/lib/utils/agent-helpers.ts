@@ -18,6 +18,7 @@ import {
   LOCALE_INSTRUCTIONS,
 } from '../constants';
 import { AgentProcessOptions } from '../agent/options';
+import { EVENT_SCHEMA_MAP } from '../schema/events';
 
 import { normalizeBaseUserId } from './normalize';
 
@@ -197,6 +198,8 @@ export interface ProcessOptionsParams {
   responseFormat?: import('../types/index').ResponseFormat;
   communicationMode?: 'json' | 'text';
   taskTimeoutMs?: number;
+  tokenBudget?: number;
+  costLimit?: number;
 }
 
 /**
@@ -221,6 +224,8 @@ export function buildProcessOptions(params: ProcessOptionsParams): AgentProcessO
     responseFormat: params.responseFormat,
     communicationMode: params.communicationMode,
     taskTimeoutMs: params.taskTimeoutMs,
+    tokenBudget: params.tokenBudget,
+    costLimit: params.costLimit,
   };
 }
 
@@ -247,6 +252,37 @@ export function validatePayload(
     }
   }
   return true;
+}
+
+/**
+ * Validate an event payload against a registered schema in EVENT_SCHEMA_MAP.
+ * This provides fail-fast runtime validation with Zod schemas.
+ *
+ * @param event - The EventBridge event or direct payload.
+ * @param schemaKey - The key to lookup in EVENT_SCHEMA_MAP (e.g., `${AgentType.RESEARCHER}_task`).
+ * @returns The validated and typed payload.
+ * @throws Error if validation fails.
+ */
+export function validateEventPayload<T extends object>(
+  event: { detail?: T } | T,
+  schemaKey: string
+): T {
+  const payload = extractPayload<T>(event);
+  const schema = EVENT_SCHEMA_MAP[schemaKey as keyof typeof EVENT_SCHEMA_MAP];
+
+  if (!schema) {
+    logger.warn(`No schema found for key "${schemaKey}", falling back to basic extraction`);
+    return payload;
+  }
+
+  try {
+    return schema.parse(payload) as T;
+  } catch (error) {
+    logger.error(`Event validation failed for schema "${schemaKey}":`, error);
+    throw new Error(
+      `Event validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+  }
 }
 
 /**

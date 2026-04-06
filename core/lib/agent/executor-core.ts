@@ -84,11 +84,12 @@ export class ExecutorCore {
         messages,
         attachments,
         options,
-        loopStartTime
+        loopStartTime,
+        usage
       );
       if (errorResult) return { ...errorResult, attachments };
 
-      const aiResponse = await this.callLLM(messages, options);
+      const aiResponse = await this.callLLM(messages, options, usage);
       lastAiResponse = aiResponse;
       this.updateUsage(usage, aiResponse, options.activeProvider);
 
@@ -237,7 +238,8 @@ export class ExecutorCore {
         messages,
         attachments,
         options,
-        loopStartTime
+        loopStartTime,
+        usage
       );
       if (errorResult) {
         yield { content: errorResult.responseText, attachments: errorResult.attachments };
@@ -253,6 +255,17 @@ export class ExecutorCore {
         options.activeModel
       );
 
+      let effectiveMaxTokens = options.maxTokens;
+      if (options.tokenBudget && usage) {
+        const remaining = options.tokenBudget - usage.total_tokens;
+        if (remaining > 0 && remaining < (effectiveMaxTokens ?? Infinity)) {
+          effectiveMaxTokens = Math.min(effectiveMaxTokens ?? remaining, remaining);
+          logger.info(
+            `[${this.agentId}] Clamping stream maxTokens to remaining budget: ${effectiveMaxTokens}`
+          );
+        }
+      }
+
       const stream = this.provider.stream(
         messages,
         this.tools,
@@ -261,7 +274,7 @@ export class ExecutorCore {
         options.activeProvider,
         options.responseFormat,
         options.temperature,
-        options.maxTokens,
+        effectiveMaxTokens,
         options.topP,
         options.stopSequences
       );
@@ -457,7 +470,8 @@ export class ExecutorCore {
     messages: Message[],
     attachments: NonNullable<Message['attachments']>,
     options: ExecutorOptions,
-    startTime: number
+    startTime: number,
+    currentUsage?: ExecutorUsage
   ): Promise<LoopResult | null> {
     const cancellationMsg = await ExecutorHelper.checkCancellation(options.taskId);
     if (cancellationMsg) {
@@ -477,6 +491,11 @@ export class ExecutorCore {
       };
     }
 
+    const budgetResult = this.checkBudgetEnforcement(options, currentUsage);
+    if (budgetResult) {
+      return budgetResult;
+    }
+
     await this.manageContext(messages, options.activeModel, options.activeProvider);
 
     if (options.sessionId && options.sessionStateManager) {
@@ -493,10 +512,69 @@ export class ExecutorCore {
     return null;
   }
 
-  private async callLLM(messages: Message[], options: ExecutorOptions): Promise<Message> {
+  private checkBudgetEnforcement(
+    options: ExecutorOptions,
+    currentUsage?: ExecutorUsage
+  ): LoopResult | null {
+    const { tokenBudget, costLimit } = options;
+
+    if (!tokenBudget && !costLimit) {
+      return null;
+    }
+
+    const consumedTokens = currentUsage?.total_tokens ?? 0;
+
+    if (tokenBudget && consumedTokens >= tokenBudget) {
+      logger.warn(`[${this.agentId}] Token budget exceeded: ${consumedTokens}/${tokenBudget}`);
+      return {
+        responseText: '[BUDGET_EXCEEDED] Token budget limit reached. Task terminated.',
+        paused: true,
+        pauseMessage: 'TOKEN_BUDGET_EXCEEDED',
+        usage: currentUsage,
+      };
+    }
+
+    if (costLimit && currentUsage) {
+      const estimatedCost = this.estimateCost(currentUsage);
+      if (estimatedCost >= costLimit) {
+        logger.warn(
+          `[${this.agentId}] Cost limit exceeded: $${estimatedCost.toFixed(4)}/$${costLimit}`
+        );
+        return {
+          responseText: '[BUDGET_EXCEEDED] Cost limit reached. Task terminated.',
+          paused: true,
+          pauseMessage: 'COST_LIMIT_EXCEEDED',
+          usage: currentUsage,
+        };
+      }
+    }
+
+    return null;
+  }
+
+  private estimateCost(usage: ExecutorUsage): number {
+    const inputCost = (usage.totalInputTokens / 1_000_000) * 15;
+    const outputCost = (usage.totalOutputTokens / 1_000_000) * 75;
+    return inputCost + outputCost;
+  }
+
+  private async callLLM(
+    messages: Message[],
+    options: ExecutorOptions,
+    currentUsage?: ExecutorUsage
+  ): Promise<Message> {
     const { activeModel, activeProfile } = options;
     const capabilities = await this.provider.getCapabilities(activeModel);
     const normalizedProfile = normalizeProfile(activeProfile, capabilities, activeModel);
+
+    let maxTokens = options.maxTokens;
+    if (options.tokenBudget && currentUsage) {
+      const remaining = options.tokenBudget - currentUsage.total_tokens;
+      if (remaining > 0 && remaining < (maxTokens ?? Infinity)) {
+        maxTokens = Math.min(maxTokens ?? remaining, remaining);
+        logger.info(`[${this.agentId}] Clamping maxTokens to remaining budget: ${maxTokens}`);
+      }
+    }
 
     return this.provider.call(
       messages,
@@ -506,7 +584,7 @@ export class ExecutorCore {
       options.activeProvider,
       capabilities.supportsStructuredOutput ? options.responseFormat : undefined,
       options.temperature,
-      options.maxTokens,
+      maxTokens,
       options.topP,
       options.stopSequences
     );

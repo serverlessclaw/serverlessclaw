@@ -327,6 +327,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     icon: 'Activity',
     enabled: true,
     isBackbone: true,
+    tools: [],
     connectionProfile: [
       ConnectionProfile.BUS,
       ConnectionProfile.CONFIG,
@@ -343,6 +344,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     icon: 'ShieldCheck',
     enabled: true,
     isBackbone: true,
+    tools: [],
     connectionProfile: [ConnectionProfile.DEPLOYER, ConnectionProfile.MEMORY_TABLE],
   },
   [AgentType.RESEARCHER]: {

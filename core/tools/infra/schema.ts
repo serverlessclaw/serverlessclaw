@@ -1,4 +1,4 @@
-import { IToolDefinition } from '../../lib/types/index';
+import { IToolDefinition, ToolType } from '../../lib/types/index';
 import { AgentStatus, AgentType } from '../../lib/types/agent';
 
 /**
@@ -8,6 +8,7 @@ import { AgentStatus, AgentType } from '../../lib/types/agent';
 export const infraSchema: Record<string, IToolDefinition> = {
   // Deployment (from deployment.ts)
   stageChanges: {
+    type: ToolType.FUNCTION,
     name: 'stageChanges',
     description:
       'Compresses modified files into a ZIP and uploads to the S3 staging bucket for CodeBuild.',
@@ -24,6 +25,7 @@ export const infraSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['storage'],
   },
   generatePatch: {
+    type: ToolType.FUNCTION,
     name: 'generatePatch',
     description:
       'Generates a git diff patch of all uncommitted changes. Use this instead of stageChanges when working in parallel with other agents to avoid S3 staging conflicts.',
@@ -39,6 +41,7 @@ export const infraSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['storage'],
   },
   triggerDeployment: {
+    type: ToolType.FUNCTION,
     name: 'triggerDeployment',
     description: 'Triggers an autonomous self-deployment of the agent infrastructure.',
     parameters: {
@@ -53,6 +56,7 @@ export const infraSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['codebuild'],
   },
   triggerInfraRebuild: {
+    type: ToolType.FUNCTION,
     name: 'triggerInfraRebuild',
     description: 'Triggers a full infrastructure rebuild via CodeBuild.',
     parameters: {
@@ -69,6 +73,7 @@ export const infraSchema: Record<string, IToolDefinition> = {
 
   // Rollback (from rollback.ts)
   triggerRollback: {
+    type: ToolType.FUNCTION,
     name: 'triggerRollback',
     description: 'Trigger an emergency rollback by reverting the last commit and redeploying.',
     parameters: {
@@ -84,6 +89,7 @@ export const infraSchema: Record<string, IToolDefinition> = {
 
   // Scheduler (from scheduler.ts)
   scheduleGoal: {
+    type: ToolType.FUNCTION,
     name: 'scheduleGoal',
     description: 'Proactively schedules a future task or recurring "wake-up" heartbeat.',
     parameters: {
@@ -101,6 +107,7 @@ export const infraSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['scheduler'],
   },
   cancelGoal: {
+    type: ToolType.FUNCTION,
     name: 'cancelGoal',
     description: 'Cancels and removes a previously scheduled proactive goal.',
     parameters: {
@@ -114,6 +121,7 @@ export const infraSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['scheduler'],
   },
   listGoals: {
+    type: ToolType.FUNCTION,
     name: 'listGoals',
     description: 'Lists all currently active proactive goals and scheduled heartbeats.',
     parameters: {
@@ -129,6 +137,7 @@ export const infraSchema: Record<string, IToolDefinition> = {
 
   // Orchestration (from orchestration.ts)
   triggerBatchEvolution: {
+    type: ToolType.FUNCTION,
     name: 'triggerBatchEvolution',
     description: 'Triggers evolution for multiple capability gaps at once.',
     parameters: {
@@ -142,6 +151,7 @@ export const infraSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['bus'],
   },
   signalOrchestration: {
+    type: ToolType.FUNCTION,
     name: 'signalOrchestration',
     description:
       'Emits a high-level orchestration signal to decide the next step in a task lifecycle.',
@@ -167,6 +177,7 @@ export const infraSchema: Record<string, IToolDefinition> = {
     },
   },
   requestConsensus: {
+    type: ToolType.FUNCTION,
     name: 'requestConsensus',
     description: 'Requests swarm consensus from multiple agents on a proposal.',
     parameters: {
@@ -183,6 +194,7 @@ export const infraSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['bus'],
   },
   voteOnProposal: {
+    type: ToolType.FUNCTION,
     name: 'voteOnProposal',
     description: 'Submits a vote on an active consensus proposal.',
     parameters: {
@@ -200,6 +212,7 @@ export const infraSchema: Record<string, IToolDefinition> = {
 
   // Topology (from system.ts / topology-discovery.ts)
   inspectTopology: {
+    type: ToolType.FUNCTION,
     name: 'inspectTopology',
     description:
       'Returns a structured map of the entire system (agents, infrastructure, and connections).',
@@ -212,6 +225,7 @@ export const infraSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['config'],
   },
   discoverPeers: {
+    type: ToolType.FUNCTION,
     name: 'discoverPeers',
     description: 'Discovers available peer agents in the swarm for dynamic topology construction.',
     parameters: {
@@ -227,6 +241,7 @@ export const infraSchema: Record<string, IToolDefinition> = {
     connectionProfile: ['config'],
   },
   registerPeer: {
+    type: ToolType.FUNCTION,
     name: 'registerPeer',
     description: 'Registers a peer connection in the swarm topology.',
     parameters: {

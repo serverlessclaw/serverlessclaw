@@ -107,6 +107,10 @@ export interface ExecutorFeatureOptions {
   topP?: number;
   /** Stop sequences for generation. */
   stopSequences?: string[];
+  /** Maximum token budget for this task. */
+  tokenBudget?: number;
+  /** Maximum cost limit (USD) for this task. */
+  costLimit?: number;
 }
 
 /** Combined executor options: core (required) + features (optional). */

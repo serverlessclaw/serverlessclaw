@@ -62,7 +62,7 @@ export interface Message {
   /** The role of the message sender. */
   role: MessageRole;
   /** The textual content of the message. */
-  content?: string;
+  content: string;
   /** Optional intermediate reasoning content (e.g. <thought> tags). */
   thought?: string;
   /** Optional tool calls requested by the assistant. */

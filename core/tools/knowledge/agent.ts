@@ -4,6 +4,7 @@ import { emitEvent } from '../../lib/utils/bus';
 import { formatErrorMessage } from '../../lib/utils/error';
 import { BACKBONE_REGISTRY } from '../../lib/backbone';
 import { LLMProvider, MiniMaxModel } from '../../lib/types/llm';
+import { AgentCategory } from '../../lib/types/agent';
 
 /**
  * Lists all registered agents and their current status.
@@ -169,6 +170,9 @@ export const createAgent = {
       const config = {
         id: agentId,
         name,
+        description: `Custom agent: ${name}`,
+        category: AgentCategory.SOCIAL,
+        icon: 'User',
         systemPrompt,
         enabled: enabled ?? true,
         isBackbone: false,

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { ITool, JsonSchema } from '../types/index';
+import { ITool, ToolType, JsonSchema } from '../types/index';
 import { checkFileSecurity } from '../utils/fs-security';
 import { logger } from '../logger';
 import { MCPClientManager } from './client-manager';
@@ -31,6 +31,7 @@ export class MCPToolMapper {
         name: toolName,
         description: mcpTool.description ?? `Tool from ${serverName} server.`,
         parameters,
+        type: ToolType.MCP,
         execute: async (toolArgs: Record<string, unknown>) => {
           if (isFilesystemTool) {
             const filePath = (toolArgs.path ||
@@ -100,6 +101,7 @@ export class MCPToolMapper {
         name: toolName,
         description: mcpTool.description ?? `Tool from ${serverName} server.`,
         parameters,
+        type: ToolType.MCP,
         execute: async (toolArgs: Record<string, unknown>) => {
           if (isFilesystemTool) {
             const filePath = (toolArgs.path ||
