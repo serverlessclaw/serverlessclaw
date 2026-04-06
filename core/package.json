@@ -27,7 +27,7 @@
     "@aws-sdk/lib-dynamodb": "^3.1010.0",
     "@aws/run-mcp-servers-with-aws-lambda": "^0.5.0",
     "@modelcontextprotocol/sdk": "^1.27.1",
-    "@openai/agents-core": "^0.7.0",
+    "@openai/agents-core": "^0.8.0",
     "archiver": "^7.0.1",
     "openai": "^6.31.0",
     "uuid": "^13.0.0",

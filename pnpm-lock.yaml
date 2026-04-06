@@ -195,8 +195,8 @@ importers:
         specifier: ^1.27.1
         version: 1.29.0(zod@4.3.6)
       '@openai/agents-core':
-        specifier: ^0.7.0
-        version: 0.7.2(ws@8.20.0)(zod@4.3.6)
+        specifier: ^0.8.0
+        version: 0.8.2(ws@8.20.0)(zod@4.3.6)
       archiver:
         specifier: ^7.0.1
         version: 7.0.1
@@ -247,8 +247,8 @@ importers:
         specifier: ^12.10.1
         version: 12.10.2(@types/react@19.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       lucide-react:
-        specifier: ^0.577.0
-        version: 0.577.0(react@19.1.0)
+        specifier: ^1.0.0
+        version: 1.7.0(react@19.1.0)
       mqtt:
         specifier: ^5.15.0
         version: 5.15.1
@@ -1558,8 +1558,8 @@ packages:
     resolution: {integrity: sha512-nn5ozdjYQpUCZlWGuxcJY/KpxkWQs4DcbMCmKojjyrYDEAGy4Ce19NN4v5MduafTwJlbKc99UA8YhSVqq9yPZA==}
     engines: {node: '>=12.4.0'}
 
-  '@openai/agents-core@0.7.2':
-    resolution: {integrity: sha512-q+o0JrsaGz1b0GZf3omsq/27VRU2pixzACVtp4jXhzFV2XyXjqbzpT1vmS4H7wJZozSCOfaLTm65CcHCuLafXA==}
+  '@openai/agents-core@0.8.2':
+    resolution: {integrity: sha512-oxp8XmdFcZwturpfWzqpW/2doNJ75FHwYDfZdBxfSK4Q2vmwLsx9wNPmU67i8dubWUXmIzOSXNUCbdL6+iLNlg==}
     peerDependencies:
       zod: ^4.0.0
     peerDependenciesMeta:
@@ -4308,8 +4308,8 @@ packages:
     resolution: {integrity: sha512-Jo6dJ04CmSjuznwJSS3pUeWmd/H0ffTlkXXgwZi+eq1UCmqQwCh+eLsYOYCwY991i2Fah4h1BEMCx4qThGbsiA==}
     engines: {node: '>=10'}
 
-  lucide-react@0.577.0:
-    resolution: {integrity: sha512-4LjoFv2eEPwYDPg/CUdBJQSDfPyzXCRrVW1X7jrx/trgxnxkHFjnVZINbzvzxjN70dxychOfg+FTYwBiS3pQ5A==}
+  lucide-react@1.7.0:
+    resolution: {integrity: sha512-yI7BeItCLZJTXikmK4KNUGCKoGzSvbKlfCvw44bU4fXAL6v3gYS4uHD1jzsLkfwODYwI6Drw5Tu9Z5ulDe0TSg==}
     peerDependencies:
       react: 19.1.0
 
@@ -8076,7 +8076,7 @@ snapshots:
 
   '@nolyfill/is-core-module@1.0.39': {}
 
-  '@openai/agents-core@0.7.2(ws@8.20.0)(zod@4.3.6)':
+  '@openai/agents-core@0.8.2(ws@8.20.0)(zod@4.3.6)':
     dependencies:
       debug: 4.4.3
       openai: 6.33.0(ws@8.20.0)(zod@4.3.6)
@@ -11186,7 +11186,7 @@ snapshots:
     dependencies:
       yallist: 4.0.0
 
-  lucide-react@0.577.0(react@19.1.0):
+  lucide-react@1.7.0(react@19.1.0):
     dependencies:
       react: 19.1.0
 

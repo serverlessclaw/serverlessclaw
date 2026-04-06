@@ -26,7 +26,7 @@
     "@claw/core": "workspace:*",
     "@opennextjs/aws": "3.9.16",
     "@xyflow/react": "^12.10.1",
-    "lucide-react": "^0.577.0",
+    "lucide-react": "^1.0.0",
     "mqtt": "^5.15.0",
     "next": "16.2.2",
     "react": "19.1.0",

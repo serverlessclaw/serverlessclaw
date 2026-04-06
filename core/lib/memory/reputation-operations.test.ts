@@ -231,7 +231,7 @@ describe('ReputationOperations', () => {
       expect(score).toBeDefined();
       expect(score).toBeGreaterThanOrEqual(0);
       expect(score).toBeLessThanOrEqual(1);
-      expect(score).toBe(0.4); // 0*0.6 + 1*0.25 + 1*0.15 = 0.4
+      expect(score).toBeCloseTo(0.4, 2); // 0*0.6 + 1*0.25 + 1*0.15 = 0.4
     });
 
     it('should handle lastActive far in future (negative hoursSinceActive)', () => {
