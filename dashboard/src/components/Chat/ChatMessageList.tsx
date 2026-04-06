@@ -470,7 +470,7 @@ export function ChatMessageList({
         className="flex-1 overflow-y-auto p-4 pt-12 space-y-3 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/[0.02] via-transparent to-transparent custom-scrollbar"
       >
         {filteredMessages.length === 0 && !isLoading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-white/80 px-8 pt-12">
+          <div className="flex-1 flex flex-col items-center justify-center text-white/80 px-8 min-h-0">
             <Terminal size={48} className="mb-4 opacity-10" />
             <Typography variant="h3" weight="normal" color="white" className="opacity-80">
               {msgSearchQuery
