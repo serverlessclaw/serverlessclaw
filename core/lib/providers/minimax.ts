@@ -139,6 +139,8 @@ export class MiniMaxProvider implements IProvider {
       role: MessageRole.ASSISTANT,
       content: textContent || undefined,
       tool_calls: tool_calls.length > 0 ? tool_calls : undefined,
+      traceId: messages[0]?.traceId ?? 'unknown-trace',
+      messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       usage: response.usage
         ? {
             prompt_tokens: response.usage.input_tokens,

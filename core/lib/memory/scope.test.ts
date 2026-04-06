@@ -42,7 +42,12 @@ describe('Agent Memory Scoping', () => {
     } as unknown as IMemory;
 
     mockProvider = {
-      call: vi.fn().mockResolvedValue({ role: MessageRole.ASSISTANT, content: 'Hello' }),
+      call: vi.fn().mockResolvedValue({
+        role: MessageRole.ASSISTANT,
+        content: 'Hello',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      }),
       getCapabilities: vi.fn().mockResolvedValue({
         supportedReasoningProfiles: [ReasoningProfile.STANDARD],
         supportedAttachmentTypes: [AttachmentType.IMAGE, AttachmentType.FILE],

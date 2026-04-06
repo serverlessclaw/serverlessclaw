@@ -42,7 +42,11 @@ describe('BedrockProvider', () => {
     });
 
     // Test DEEP profile
-    await provider.call([{ role: MessageRole.USER, content: 'test' }], [], ReasoningProfile.DEEP);
+    await provider.call(
+      [{ role: MessageRole.USER, content: 'test', traceId: 'test-trace', messageId: 'test-msg' }],
+      [],
+      ReasoningProfile.DEEP
+    );
 
     expect(ConverseCommand).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -54,7 +58,11 @@ describe('BedrockProvider', () => {
 
     // Test FAST profile (thinking should be disabled)
     vi.clearAllMocks();
-    await provider.call([{ role: MessageRole.USER, content: 'test' }], [], ReasoningProfile.FAST);
+    await provider.call(
+      [{ role: MessageRole.USER, content: 'test', traceId: 'test-trace', messageId: 'test-msg' }],
+      [],
+      ReasoningProfile.FAST
+    );
 
     expect(ConverseCommand).toHaveBeenCalledWith(
       expect.not.objectContaining({
@@ -109,7 +117,12 @@ describe('BedrockProvider', () => {
     });
 
     const messages = [
-      { role: MessageRole.USER, content: 'call tool' },
+      {
+        role: MessageRole.USER,
+        content: 'call tool',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      },
       {
         role: MessageRole.ASSISTANT,
         content: '',
@@ -154,7 +167,7 @@ describe('BedrockProvider', () => {
     };
 
     await provider.call(
-      [{ role: MessageRole.USER, content: 'test' }],
+      [{ role: MessageRole.USER, content: 'test', traceId: 'test-trace', messageId: 'test-msg' }],
       [],
       undefined,
       undefined,

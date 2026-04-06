@@ -329,6 +329,8 @@ export class OpenRouterProvider implements IProvider {
       content: msg.content ?? '',
       thought,
       tool_calls: msg.tool_calls,
+      traceId: messages[0]?.traceId ?? 'unknown-trace',
+      messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       usage: data.usage
         ? {
             prompt_tokens: data.usage.prompt_tokens ?? 0,

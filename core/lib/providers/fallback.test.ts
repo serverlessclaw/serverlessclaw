@@ -69,7 +69,7 @@ describe('FallbackProvider', () => {
       });
 
       const result = await provider.call(
-        [{ role: 'user' as any, content: 'hello' }],
+        [{ role: 'user' as any, content: 'hello', traceId: 't1', messageId: 'm1' }],
         [],
         ReasoningProfile.STANDARD
       );
@@ -91,7 +91,7 @@ describe('FallbackProvider', () => {
       });
 
       const result = await provider.call(
-        [{ role: 'user' as any, content: 'hello' }],
+        [{ role: 'user' as any, content: 'hello', traceId: 't1', messageId: 'm1' }],
         [],
         ReasoningProfile.STANDARD
       );
@@ -113,7 +113,11 @@ describe('FallbackProvider', () => {
       });
 
       await expect(
-        provider.call([{ role: 'user' as any, content: 'hello' }], [], ReasoningProfile.STANDARD)
+        provider.call(
+          [{ role: 'user' as any, content: 'hello', traceId: 't1', messageId: 'm1' }],
+          [],
+          ReasoningProfile.STANDARD
+        )
       ).rejects.toThrow('All LLM providers failed');
     });
 
@@ -124,7 +128,7 @@ describe('FallbackProvider', () => {
       });
 
       const result = await provider.call(
-        [{ role: 'user' as any, content: 'hello' }],
+        [{ role: 'user' as any, content: 'hello', traceId: 't1', messageId: 'm1' }],
         [],
         ReasoningProfile.STANDARD,
         undefined,
@@ -149,11 +153,12 @@ describe('FallbackProvider', () => {
       });
 
       // First two calls should try primary then fallback
-      await provider.call([], [], ReasoningProfile.STANDARD);
-      await provider.call([], [], ReasoningProfile.STANDARD);
+      const mockMsg = [{ role: 'user' as any, content: 'hi', traceId: 't1', messageId: 'm1' }];
+      await provider.call(mockMsg, [], ReasoningProfile.STANDARD);
+      await provider.call(mockMsg, [], ReasoningProfile.STANDARD);
 
       // Third call should skip primary entirely (circuit open)
-      await provider.call([], [], ReasoningProfile.STANDARD);
+      await provider.call(mockMsg, [], ReasoningProfile.STANDARD);
 
       const status = provider.getHealthStatus();
       expect(status[LLMProvider.OPENAI].healthy).toBe(false);
@@ -169,7 +174,7 @@ describe('FallbackProvider', () => {
 
       const chunks: any[] = [];
       for await (const chunk of provider.stream(
-        [{ role: 'user' as any, content: 'hello' }],
+        [{ role: 'user' as any, content: 'hello', traceId: 't1', messageId: 'm1' }],
         [],
         ReasoningProfile.STANDARD
       )) {
@@ -202,7 +207,7 @@ describe('FallbackProvider', () => {
 
       const chunks: any[] = [];
       for await (const chunk of provider.stream(
-        [{ role: 'user' as any, content: 'hello' }],
+        [{ role: 'user' as any, content: 'hello', traceId: 't1', messageId: 'm1' }],
         [],
         ReasoningProfile.STANDARD
       )) {
@@ -239,7 +244,11 @@ describe('FallbackProvider', () => {
 
       // Trigger circuit open
       try {
-        await provider.call([], [], ReasoningProfile.STANDARD);
+        await provider.call(
+          [{ role: 'user' as any, content: 'hi', traceId: 't1', messageId: 'm1' }],
+          [],
+          ReasoningProfile.STANDARD
+        );
       } catch {
         /* expected: all providers fail */
       }

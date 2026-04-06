@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { IToolDefinition, ToolType } from '../../lib/types/index';
 import { LLMProvider } from '../../lib/types/llm';
 
@@ -9,6 +10,12 @@ export const systemSchema: Record<string, IToolDefinition> = {
   // File System (from fs.ts)
   runShellCommand: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
+    connectionProfile: [],
+    connector_id: '',
+    auth: { type: 'api_key', resource_id: '' },
+    requiresApproval: false,
+    requiredPermissions: [],
     name: 'runShellCommand',
     description: 'Executes a shell command in the agent environment.',
     parameters: {
@@ -23,6 +30,12 @@ export const systemSchema: Record<string, IToolDefinition> = {
   },
   runTests: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
+    connectionProfile: [],
+    connector_id: '',
+    auth: { type: 'api_key', resource_id: '' },
+    requiresApproval: false,
+    requiredPermissions: [],
     name: 'runTests',
     description: 'Runs the project unit tests to verify changes.',
     parameters: {
@@ -36,6 +49,12 @@ export const systemSchema: Record<string, IToolDefinition> = {
   // Git (from git.ts)
   triggerTrunkSync: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
+    connectionProfile: [],
+    connector_id: '',
+    auth: { type: 'api_key', resource_id: '' },
+    requiresApproval: false,
+    requiredPermissions: [],
     name: 'triggerTrunkSync',
     description: 'Triggers a CI/CD job to sync with the origin main branch.',
     parameters: {
@@ -51,6 +70,12 @@ export const systemSchema: Record<string, IToolDefinition> = {
   // Health (from health.ts / health-check.ts)
   checkHealth: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
+    connectionProfile: [],
+    connector_id: '',
+    auth: { type: 'api_key', resource_id: '' },
+    requiresApproval: false,
+    requiredPermissions: [],
     name: 'checkHealth',
     description: 'Performs a comprehensive system-wide health and connectivity check.',
     parameters: {
@@ -63,6 +88,12 @@ export const systemSchema: Record<string, IToolDefinition> = {
   },
   runCognitiveHealthCheck: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
+    connectionProfile: [],
+    connector_id: '',
+    auth: { type: 'api_key', resource_id: '' },
+    requiresApproval: false,
+    requiredPermissions: [],
     name: 'runCognitiveHealthCheck',
     description:
       'Runs a deep cognitive health check on agents, analyzing reasoning quality, memory health, and detecting anomalies.',
@@ -87,6 +118,12 @@ export const systemSchema: Record<string, IToolDefinition> = {
   // Debug (from debug.ts)
   debugAgent: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
+    connectionProfile: [],
+    connector_id: '',
+    auth: { type: 'api_key', resource_id: '' },
+    requiresApproval: false,
+    requiredPermissions: [],
     name: 'debugAgent',
     description: 'Enables advanced debugging and logging for a specific agent.',
     parameters: {
@@ -103,6 +140,12 @@ export const systemSchema: Record<string, IToolDefinition> = {
   // Validation (from validation.ts)
   validateCode: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
+    connectionProfile: [],
+    connector_id: '',
+    auth: { type: 'api_key', resource_id: '' },
+    requiresApproval: false,
+    requiredPermissions: [],
     name: 'validateCode',
     description: 'Runs type checking and linting.',
     parameters: {
@@ -116,6 +159,12 @@ export const systemSchema: Record<string, IToolDefinition> = {
   // System Config (moved from main index / system index)
   switchModel: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
+    connectionProfile: [],
+    connector_id: '',
+    auth: { type: 'api_key', resource_id: '' },
+    requiresApproval: false,
+    requiredPermissions: [],
     name: 'switchModel',
     description: 'Switch the active LLM provider and model at runtime.',
     parameters: {
@@ -135,10 +184,15 @@ export const systemSchema: Record<string, IToolDefinition> = {
       required: ['provider', 'model'],
       additionalProperties: false,
     },
-    connectionProfile: ['system'],
   },
   checkReputation: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
+    connectionProfile: [],
+    connector_id: '',
+    auth: { type: 'api_key', resource_id: '' },
+    requiresApproval: false,
+    requiredPermissions: [],
     name: 'checkReputation',
     description:
       "Retrieves an agent's rolling 7-day performance reputation metrics (success rate, latency, score).",
@@ -153,12 +207,17 @@ export const systemSchema: Record<string, IToolDefinition> = {
       required: ['agentId'],
       additionalProperties: false,
     },
-    connectionProfile: ['memory'],
   },
 
   // UI & Interaction (from ui.ts)
   renderComponent: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
+    connectionProfile: [],
+    connector_id: '',
+    auth: { type: 'api_key', resource_id: '' },
+    requiresApproval: false,
+    requiredPermissions: [],
     name: 'renderComponent',
     description:
       'Renders a specialized UI component in the dashboard to provide structured information or enable interactive operations.',
@@ -204,6 +263,12 @@ export const systemSchema: Record<string, IToolDefinition> = {
   },
   navigateTo: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
+    connectionProfile: [],
+    connector_id: '',
+    auth: { type: 'api_key', resource_id: '' },
+    requiresApproval: false,
+    requiredPermissions: [],
     name: 'navigateTo',
     description:
       'Navigates the user to a specific path in the dashboard. STRICTLY restricted to SuperClaw.',
@@ -231,6 +296,12 @@ export const systemSchema: Record<string, IToolDefinition> = {
   },
   uiAction: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
+    connectionProfile: [],
+    connector_id: '',
+    auth: { type: 'api_key', resource_id: '' },
+    requiresApproval: false,
+    requiredPermissions: [],
     name: 'uiAction',
     description: 'Triggers a specific UI event or state change in the current dashboard view.',
     parameters: {

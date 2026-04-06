@@ -127,6 +127,7 @@ export const handler = async (_event?: { detail: Record<string, unknown> }): Pro
         memoryContexts: [],
         attachments: [],
         metadata: {},
+        sessionId: `recovery-${Date.now()}`,
       };
 
       await emitEvent(

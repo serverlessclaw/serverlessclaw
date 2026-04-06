@@ -51,6 +51,8 @@ export class ExecutorCore {
           role: MessageRole.TOOL,
           tool_call_id: callId,
           content: `USER_REJECTED_EXECUTION: ${reason || 'User rejected this tool execution.'}`,
+          traceId: options.traceId,
+          messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         });
       }
     } else if (userText?.startsWith('TOOL_CLARIFICATION:')) {
@@ -61,6 +63,8 @@ export class ExecutorCore {
           role: MessageRole.TOOL,
           tool_call_id: callId,
           content: `USER_CLARIFICATION: ${comment}`,
+          traceId: options.traceId,
+          messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         });
       }
     }
@@ -208,6 +212,8 @@ export class ExecutorCore {
           role: MessageRole.TOOL,
           tool_call_id: callId,
           content: `USER_REJECTED_EXECUTION: ${reason || 'User rejected this tool execution.'}`,
+          traceId: options.traceId,
+          messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         });
       }
     } else if (userText?.startsWith('TOOL_CLARIFICATION:')) {
@@ -218,6 +224,8 @@ export class ExecutorCore {
           role: MessageRole.TOOL,
           tool_call_id: callId,
           content: `USER_CLARIFICATION: ${comment}`,
+          traceId: options.traceId,
+          messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         });
       }
     }
@@ -505,7 +513,8 @@ export class ExecutorCore {
         options.sessionId,
         this.agentId,
         this.lastInjectedMessageTimestamp,
-        options.sessionStateManager
+        options.sessionStateManager,
+        options.traceId
       );
     }
 
@@ -691,7 +700,13 @@ export class ExecutorCore {
         return { content: `\n\n${approvalMsg}`, options: opts as NonNullable<Message['options']> };
       }
     }
-    messages.push({ role: MessageRole.ASSISTANT, content: '', tool_calls: toolCalls });
+    messages.push({
+      role: MessageRole.ASSISTANT,
+      content: '',
+      tool_calls: toolCalls,
+      traceId: options.traceId,
+      messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+    });
     return null;
   }
 

@@ -50,7 +50,14 @@ describe('AgentExecutor - Session Injection', () => {
     const pendingMsg = { id: 'p1', content: 'Urgent update', timestamp: Date.now() + 1000 };
     vi.mocked(mockSessionStateManager.getPendingMessages).mockResolvedValueOnce([pendingMsg]);
 
-    const messages = [{ role: MessageRole.USER, content: 'Initial task' }];
+    const messages = [
+      {
+        role: MessageRole.USER,
+        content: 'Initial task',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      },
+    ];
 
     await executor.runLoop(messages, {
       activeModel: 'gpt-4',
@@ -92,7 +99,14 @@ describe('AgentExecutor - Session Injection', () => {
     const oldMsg = { id: 'old-1', content: 'Old news', timestamp: Date.now() - 10000 };
     vi.mocked(mockSessionStateManager.getPendingMessages).mockResolvedValueOnce([oldMsg]);
 
-    const messages = [{ role: MessageRole.USER, content: 'Initial task' }];
+    const messages = [
+      {
+        role: MessageRole.USER,
+        content: 'Initial task',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      },
+    ];
 
     await executor.runLoop(messages, {
       activeModel: 'gpt-4',
@@ -139,7 +153,14 @@ describe('AgentExecutor - Session Injection', () => {
       })
       .mockResolvedValueOnce({ content: 'final' });
 
-    const messages = [{ role: MessageRole.USER, content: 'Initial task' }];
+    const messages = [
+      {
+        role: MessageRole.USER,
+        content: 'Initial task',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      },
+    ];
 
     await executor.runLoop(messages, {
       activeModel: 'gpt-4',

@@ -242,6 +242,8 @@ export async function postProcessPlan(
         role: MessageRole.ASSISTANT,
         content: `### COUNCIL REVIEW REQUEST: ${planId}\n\n**Strategic Plan:**\n${plan}\n\n**Context:**\nImpact: ${gapImpact} | Risk: ${gapRisk} | Complexity: ${gapComplexity}\n\nPlease provide your expert feedback and verdict (APPROVED/REJECTED/CONDITIONAL).`,
         agentName: AgentType.STRATEGIC_PLANNER,
+        traceId,
+        messageId: `council-${planId}-${Date.now()}`,
       });
 
       const { emitTypedEvent } = await import('../../lib/utils/typed-emit');

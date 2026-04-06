@@ -63,9 +63,9 @@ export interface Message {
   role: MessageRole;
   /** The textual content of the message. */
   content: string;
-  /** Optional intermediate reasoning content (e.g. <thought> tags). */
+  /** Intermediate reasoning content (e.g. <thought> tags). Defaults to empty string. */
   thought?: string;
-  /** Optional tool calls requested by the assistant. */
+  /** Tool calls requested by the assistant. Defaults to []. */
   tool_calls?: ToolCall[];
   /** The ID of the tool call this message is responding to (if role is TOOL). */
   tool_call_id?: string;
@@ -73,12 +73,12 @@ export interface Message {
   name?: string;
   /** Optional human-readable name of the agent that generated this message. */
   agentName?: string;
-  /** Link to the isolated mechanical monologue for this message */
-  traceId?: string;
-  /** Optional unique identifier for the message (used for streaming reconciliation). */
-  messageId?: string;
+  /** Required link to the isolated mechanical monologue for this message */
+  traceId: string;
+  /** Required unique identifier for the message (used for streaming reconciliation). */
+  messageId: string;
   /**
-   * Optional attachments (images, files) associated with the message.
+   * Attachments (images, files) associated with the message. Defaults to [].
    */
   attachments?: Array<{
     type: AttachmentType;
@@ -128,19 +128,6 @@ export interface Message {
       payload?: Record<string, unknown>;
     }>;
   }>;
-}
-
-/**
- * A stricter message type intended for gradual tightening/migrations.
- *
- * - Requires `messageId` and `traceId` to be present.
- * - Other fields are inherited from `Message`.
- */
-export interface StrictMessage extends Message {
-  /** Required unique identifier for streaming/reconciliation. */
-  messageId: string;
-  /** Required trace id linking to mechanical monologue. */
-  traceId: string;
 }
 
 /**

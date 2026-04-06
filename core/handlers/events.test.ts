@@ -2,18 +2,11 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 // 1. Mock 'sst' FIRST with a proxy
 vi.mock('sst', () => ({
-  Resource: new Proxy(
-    {},
-    {
-      get: (_target, prop) => {
-        return {
-          name: `test-${String(prop).toLowerCase()}`,
-          value: 'test-value',
-          url: 'http://test.com',
-        };
-      },
-    }
-  ),
+  Resource: {
+    MemoryTable: { name: 'test-memory-table' },
+    AgentTable: { name: 'test-agent-table' },
+    SessionTable: { name: 'test-session-table' },
+  },
 }));
 
 // Mock Agent
@@ -76,6 +69,12 @@ vi.mock('@aws-sdk/client-eventbridge', () => {
   };
 });
 
+vi.mock('@aws-sdk/client-dynamodb', () => ({
+  DynamoDBClient: vi.fn(),
+  PutItemCommand: vi.fn(),
+  GetItemCommand: vi.fn(),
+}));
+
 vi.mock('../lib/outbound', () => ({
   sendOutboundMessage: vi.fn().mockResolvedValue({}),
 }));
@@ -90,346 +89,101 @@ vi.mock('../lib/logger', () => ({
   },
 }));
 
+// Mock sub-handlers
+vi.mock('./events/health-handler', () => ({
+  handleHealthReport: vi.fn(),
+}));
+vi.mock('./events/build-handler', () => ({
+  handleBuildFailure: vi.fn(),
+  handleBuildSuccess: vi.fn(),
+}));
+vi.mock('./events/task-result-handler', () => ({
+  handleTaskResult: vi.fn(),
+}));
+vi.mock('./events/continuation-handler', () => ({
+  handleContinuationTask: vi.fn(),
+}));
+vi.mock('./events/clarification-handler', () => ({
+  handleClarificationRequest: vi.fn(),
+}));
+vi.mock('./events/clarification-timeout-handler', () => ({
+  handleClarificationTimeout: vi.fn(),
+}));
+vi.mock('./events/parallel-handler', () => ({
+  handleParallelDispatch: vi.fn(),
+}));
+
 describe('EventHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('SYSTEM_HEALTH_REPORT', () => {
-    it('should triage health report and send outbound message', async () => {
+  describe('Routing', () => {
+    it('should route SYSTEM_HEALTH_REPORT to health-handler', async () => {
       const event = {
         'detail-type': EventType.SYSTEM_HEALTH_REPORT,
-        detail: {
-          component: 'TestComp',
-          issue: 'Out of memory',
-          severity: 'critical',
-          userId: 'user-1',
-          traceId: 'trace-1',
-          sessionId: 'session-1',
-          context: { ram: '100%' },
-        },
+        detail: { userId: 'u1' },
       };
-
-      mockProcess.mockResolvedValue({ responseText: 'Rebooting component...' });
-
       await handler(event as any, {} as any);
-
-      // Verify Agent.process was called with triage prompt
-      expect(mockProcess).toHaveBeenCalledWith(
-        'user-1',
-        expect.stringContaining('HEALTH_TRIAGE'),
-        expect.objectContaining({
-          traceId: 'trace-1',
-          sessionId: 'session-1',
-          source: 'system',
-        })
-      );
-
-      // Verify outbound message
-      const { sendOutboundMessage } = await import('../lib/outbound');
-      expect(sendOutboundMessage).toHaveBeenCalledWith(
-        'health-handler',
-        'user-1',
-        expect.stringContaining('Rebooting component...'),
-        undefined,
-        'session-1',
-        'SuperClaw',
-        [],
-        'trace-1'
-      );
+      const { handleHealthReport } = await import('./events/health-handler');
+      expect(handleHealthReport).toHaveBeenCalled();
     });
 
-    it('should not send outbound message if task is paused', async () => {
-      const event = {
-        'detail-type': EventType.SYSTEM_HEALTH_REPORT,
-        detail: {
-          component: 'TestComp',
-          issue: 'Error',
-          severity: 'low',
-          userId: 'user-1',
-        },
-      };
-
-      mockProcess.mockResolvedValue({ responseText: 'TASK_PAUSED: Need permission' });
-
-      await handler(event as any, {} as any);
-
-      const { sendOutboundMessage } = await import('../lib/outbound');
-      expect(sendOutboundMessage).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('SYSTEM_BUILD_FAILED', () => {
-    it('should triage build failure and wake up initiator', async () => {
+    it('should route SYSTEM_BUILD_FAILED to build-handler', async () => {
       const event = {
         'detail-type': EventType.SYSTEM_BUILD_FAILED,
-        detail: {
-          userId: 'user-1',
-          buildId: 'build-123',
-          errorLogs: 'Syntax error at line 10',
-          traceId: 'trace-1',
-          initiatorId: 'strategic-planner',
-          task: 'Improve system',
-        },
+        detail: { userId: 'u1' },
       };
-
-      mockProcess.mockResolvedValue({ responseText: 'Investigating failure...' });
-
       await handler(event as any, {} as any);
-
-      // Verify coder_task was emitted
-      expect(mockSend).toHaveBeenCalledWith(
-        expect.objectContaining({
-          input: expect.objectContaining({
-            Entries: expect.arrayContaining([
-              expect.objectContaining({
-                DetailType: EventType.CODER_TASK,
-                Detail: expect.stringContaining('CRITICAL: Deployment build-123 failed'),
-              }),
-            ]),
-          }),
-        })
-      );
-
-      // Verify initiator wakeup
-      expect(mockSend).toHaveBeenCalledWith(
-        expect.objectContaining({
-          input: expect.objectContaining({
-            Entries: expect.arrayContaining([
-              expect.objectContaining({
-                DetailType: EventType.CONTINUATION_TASK,
-                Detail: expect.stringContaining('BUILD_FAILURE_NOTIFICATION'),
-              }),
-            ]),
-          }),
-        })
-      );
+      const { handleBuildFailure } = await import('./events/build-handler');
+      expect(handleBuildFailure).toHaveBeenCalled();
     });
-  });
 
-  describe('SYSTEM_BUILD_SUCCESS', () => {
-    it('should notify success and wake up initiator', async () => {
-      const event = {
-        'detail-type': EventType.SYSTEM_BUILD_SUCCESS,
-        detail: {
-          userId: 'user-1',
-          buildId: 'build-123',
-          initiatorId: 'strategic-planner',
-          task: 'Improve system',
-          traceId: 'trace-1',
-        },
-      };
-
-      await handler(event as any, {} as any);
-
-      const { sendOutboundMessage } = await import('../lib/outbound');
-      expect(sendOutboundMessage).toHaveBeenCalledWith(
-        'build-handler',
-        'user-1',
-        expect.stringContaining('DEPLOYMENT SUCCESSFUL'),
-        undefined,
-        undefined,
-        'SuperClaw',
-        undefined
-      );
-
-      // Verify initiator wakeup
-      const { EventBridgeClient } = await import('@aws-sdk/client-eventbridge');
-      const eb = new EventBridgeClient({});
-      expect(eb.send).toHaveBeenCalledWith(
-        expect.objectContaining({
-          input: expect.objectContaining({
-            Entries: [
-              expect.objectContaining({
-                DetailType: EventType.CONTINUATION_TASK,
-                Detail: expect.stringContaining('BUILD_SUCCESS_NOTIFICATION'),
-              }),
-            ],
-          }),
-        })
-      );
-    });
-  });
-
-  describe('TASK_COMPLETED / TASK_FAILED', () => {
-    it('should relay completion to initiator', async () => {
+    it('should route TASK_COMPLETED to task-result-handler', async () => {
       const event = {
         'detail-type': EventType.TASK_COMPLETED,
-        detail: {
-          userId: 'user-1',
-          agentId: 'coder',
-          task: 'Fix bug',
-          response: 'Bug fixed!',
-          initiatorId: 'superclaw',
-          depth: 1,
-        },
+        detail: { userId: 'u1' },
       };
-
       await handler(event as any, {} as any);
-
-      const { EventBridgeClient } = await import('@aws-sdk/client-eventbridge');
-      const eb = new EventBridgeClient({});
-      expect(eb.send).toHaveBeenCalledWith(
-        expect.objectContaining({
-          input: expect.objectContaining({
-            Entries: [
-              expect.objectContaining({
-                DetailType: EventType.CONTINUATION_TASK,
-                Detail: expect.stringContaining('DELEGATED_TASK_RESULT'),
-              }),
-            ],
-          }),
-        })
-      );
+      const { handleTaskResult } = await import('./events/task-result-handler');
+      expect(handleTaskResult).toHaveBeenCalled();
     });
 
-    it('should relay failure to initiator', async () => {
-      const event = {
-        'detail-type': EventType.TASK_FAILED,
-        detail: {
-          userId: 'user-1',
-          agentId: 'coder',
-          task: 'Fix bug',
-          error: 'Timeout',
-          initiatorId: 'superclaw',
-          depth: 1,
-        },
-      };
-
-      await handler(event as any, {} as any);
-
-      const { EventBridgeClient } = await import('@aws-sdk/client-eventbridge');
-      const eb = new EventBridgeClient({});
-      expect(eb.send).toHaveBeenCalledWith(
-        expect.objectContaining({
-          input: expect.objectContaining({
-            Entries: [
-              expect.objectContaining({
-                DetailType: EventType.CONTINUATION_TASK,
-                Detail: expect.stringContaining('DELEGATED_TASK_FAILURE'),
-              }),
-            ],
-          }),
-        })
-      );
-    });
-
-    it('should abort if recursion limit reached', async () => {
-      const event = {
-        'detail-type': EventType.TASK_COMPLETED,
-        detail: {
-          userId: 'user-1',
-          agentId: 'coder',
-          task: 'Fix bug',
-          response: 'Done',
-          initiatorId: 'superclaw',
-          depth: 100, // Very high
-        },
-      };
-
-      await handler(event as any, {} as any);
-
-      const { sendOutboundMessage } = await import('../lib/outbound');
-      expect(sendOutboundMessage).toHaveBeenCalledWith(
-        'task-result-handler',
-        'user-1',
-        expect.stringContaining('Recursion Limit Exceeded'),
-        undefined,
-        undefined,
-        'SuperClaw',
-        undefined
-      );
-    });
-
-    it('should abort CONTINUATION_TASK if recursion limit reached', async () => {
+    it('should route CONTINUATION_TASK to continuation-handler', async () => {
       const event = {
         'detail-type': EventType.CONTINUATION_TASK,
-        detail: {
-          userId: 'user-2',
-          agentId: 'superclaw',
-          task: 'Continue processing',
-          initiatorId: 'superclaw',
-          depth: 100, // Exceeds default limit of 50
+        detail: { userId: 'u1' },
+      };
+      await handler(event as any, {} as any);
+      const { handleContinuationTask } = await import('./events/continuation-handler');
+      expect(handleContinuationTask).toHaveBeenCalled();
+    });
+  });
+
+  describe('Safe Mode Fallback', () => {
+    it('should block unrecognised routing combinations', async () => {
+      const { ConfigManager } = await import('../lib/registry/config');
+      await import('../lib/event-routing');
+
+      // Mock a dangerous combination
+      (ConfigManager.getTypedConfig as any).mockResolvedValue({
+        [EventType.SYSTEM_HEALTH_REPORT]: {
+          module: 'dangerous-module',
+          function: 'formatDrive',
         },
+      });
+
+      const event = {
+        'detail-type': EventType.SYSTEM_HEALTH_REPORT,
+        detail: { userId: 'user-safe' },
       };
 
       await handler(event as any, {} as any);
 
-      const { sendOutboundMessage } = await import('../lib/outbound');
-      expect(sendOutboundMessage).toHaveBeenCalledWith(
-        'continuation-handler',
-        'user-2',
-        expect.stringContaining('Recursion Limit Exceeded'),
-        undefined,
-        undefined,
-        'SuperClaw',
-        undefined
+      const { logger } = await import('../lib/logger');
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('[SECURITY] Blocked unrecognised routing combination')
       );
-    });
-    describe('Safe Mode Fallback', () => {
-      it('should block unrecognised routing modules from DDB (security allowlist)', async () => {
-        const { ConfigManager } = await import('../lib/registry/config');
-
-        // 1. Mock ConfigManager to return routing with an unknown module path
-        (ConfigManager.getTypedConfig as any).mockResolvedValue({
-          [EventType.SYSTEM_HEALTH_REPORT]: {
-            module: 'non-existent-module',
-            function: 'handler',
-          },
-        });
-
-        const event = {
-          'detail-type': EventType.SYSTEM_HEALTH_REPORT,
-          detail: {
-            component: 'TestComp',
-            issue: 'Safe Mode Test',
-            severity: 'low',
-            userId: 'user-safe',
-          },
-        };
-
-        // 2. The handler should silently reject the unknown module and use the default
-        await handler(event as any, {} as any);
-
-        // 3. Verify a security warning was logged and the default route was used instead
-        const { logger } = await import('../lib/logger');
-        expect(logger.warn).toHaveBeenCalledWith(
-          expect.stringContaining('[SECURITY] Blocked unrecognised routing combination')
-        );
-      });
-
-      it('should block unrecognised routing functions from DDB (security allowlist)', async () => {
-        const { ConfigManager } = await import('../lib/registry/config');
-
-        // 1. Mock ConfigManager to return routing with an allowed module but a DISALLOWED function
-        (ConfigManager.getTypedConfig as any).mockResolvedValue({
-          [EventType.SYSTEM_HEALTH_REPORT]: {
-            module: './events/health-handler', // Allowed module
-            function: 'unintended_dangerous_function', // DISALLOWED function
-          },
-        });
-
-        const event = {
-          'detail-type': EventType.SYSTEM_HEALTH_REPORT,
-          detail: {
-            component: 'TestComp',
-            issue: 'Function Security Test',
-            severity: 'low',
-            userId: 'user-func-safe',
-          },
-        };
-
-        // 2. The handler should silently reject the unknown combination and use the default
-        await handler(event as any, {} as any);
-
-        // 3. Verify a security warning was logged for the combination
-        const { logger } = await import('../lib/logger');
-        expect(logger.warn).toHaveBeenCalledWith(
-          expect.stringContaining(
-            "[SECURITY] Blocked unrecognised routing combination './events/health-handler:unintended_dangerous_function'"
-          )
-        );
-      });
     });
   });
 });

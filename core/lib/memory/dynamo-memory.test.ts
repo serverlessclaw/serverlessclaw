@@ -47,7 +47,12 @@ describe('DynamoMemory Retention', () => {
     const now = Date.now();
     vi.setSystemTime(now);
 
-    await memory.addMessage('user-1', { role: MessageRole.USER, content: 'hi' });
+    await memory.addMessage('user-1', {
+      role: MessageRole.USER,
+      content: 'hi',
+      traceId: 'test-trace',
+      messageId: 'test-msg',
+    });
 
     const calls = ddbMock.commandCalls(PutCommand);
     expect(calls).toHaveLength(1);

@@ -75,7 +75,12 @@ export class ContextManager {
     // when getManagedContext is called mid-loop with an already managed array.
     const cleanHistory = history.filter((msg) => msg.role !== MessageRole.SYSTEM);
 
-    const systemMessage: Message = { role: MessageRole.SYSTEM, content: systemPrompt };
+    const systemMessage: Message = {
+      role: MessageRole.SYSTEM,
+      content: systemPrompt,
+      traceId: 'system-context-trace',
+      messageId: `msg-system-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+    };
     const systemTokens = this.estimateTokens([systemMessage]);
 
     const safetyBudget = Math.floor(contextLimit * safetyMargin);
@@ -89,6 +94,8 @@ export class ContextManager {
       ? {
           role: MessageRole.SYSTEM,
           content: `[PREVIOUS_HISTORY_SUMMARY]: ${summary}\n\nThe above is a summary of earlier parts of this conversation.`,
+          traceId: 'system-context-trace',
+          messageId: `msg-summary-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         }
       : null;
 
@@ -100,7 +107,14 @@ export class ContextManager {
     if (compressedBudget > summaryTokens + 50) {
       const keyFacts = this.extractKeyFacts(cleanHistory);
       for (const fact of keyFacts) {
-        const factToken = this.estimateTokens([{ role: MessageRole.SYSTEM, content: fact }]);
+        const factToken = this.estimateTokens([
+          {
+            role: MessageRole.SYSTEM,
+            content: fact,
+            traceId: 'system-context-trace',
+            messageId: `msg-fact-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          },
+        ]);
         if (compressedTokens + factToken <= compressedBudget) {
           compressedFactLines.push(fact);
           compressedTokens += factToken;
@@ -117,6 +131,8 @@ export class ContextManager {
         content: `[KEY_FACTS]:\n${compressedFactLines.map((f) => `• ${f}`).join('\n')}${
           summaryMessage ? `\n\n${summaryMessage.content}` : ''
         }`,
+        traceId: 'system-context-trace',
+        messageId: `msg-compressed-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       };
     } else if (summaryMessage) {
       compressedMessage = summaryMessage;
@@ -348,7 +364,14 @@ export class ContextManager {
 
     try {
       const response = await provider.call(
-        [{ role: MessageRole.SYSTEM, content: summarizationPrompt }],
+        [
+          {
+            role: MessageRole.SYSTEM,
+            content: summarizationPrompt,
+            traceId: 'system-summarize-trace',
+            messageId: `msg-summarize-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          },
+        ],
         [],
         ReasoningProfile.FAST
       );

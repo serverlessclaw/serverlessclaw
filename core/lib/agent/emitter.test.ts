@@ -58,10 +58,17 @@ describe('AgentEmitter', () => {
     const baseArgs = {
       isIsolated: false,
       userId: 'user1',
-      history: Array(25).fill({ role: MessageRole.USER, content: 'msg' }),
+      history: Array(25).fill({
+        role: MessageRole.USER,
+        content: 'msg',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      }),
       userText: 'hello',
       traceId: 'trace1',
-      messages: [{ role: MessageRole.USER, content: 'msg' }],
+      messages: [
+        { role: MessageRole.USER, content: 'msg', traceId: 'test-trace', messageId: 'test-msg' },
+      ],
       responseText: 'response',
       nodeId: 'node1',
       parentId: undefined as string | undefined,
@@ -122,7 +129,7 @@ describe('AgentEmitter', () => {
       await emitter.considerReflection(
         false,
         baseArgs.userId,
-        [{ role: MessageRole.USER, content: 'msg' }],
+        [{ role: MessageRole.USER, content: 'msg', traceId: 'test-trace', messageId: 'test-msg' }],
         'please remember this',
         baseArgs.traceId,
         baseArgs.messages,
@@ -139,7 +146,7 @@ describe('AgentEmitter', () => {
       await emitter.considerReflection(
         false,
         baseArgs.userId,
-        [{ role: MessageRole.USER, content: 'msg' }],
+        [{ role: MessageRole.USER, content: 'msg', traceId: 'test-trace', messageId: 'test-msg' }],
         'I want to learn something',
         baseArgs.traceId,
         baseArgs.messages,
@@ -175,7 +182,7 @@ describe('AgentEmitter', () => {
       await emitter.considerReflection(
         false,
         baseArgs.userId,
-        [{ role: MessageRole.USER, content: 'msg' }],
+        [{ role: MessageRole.USER, content: 'msg', traceId: 'test-trace', messageId: 'test-msg' }],
         'hello',
         baseArgs.traceId,
         baseArgs.messages,

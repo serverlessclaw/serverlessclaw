@@ -108,12 +108,20 @@ export function capEffort(requested: string, max?: string): string {
  * Deduplicates empty response handling across all provider implementations.
  *
  * @param providerName - The name of the provider.
+ * @param traceId - Optional trace ID for the message.
+ * @param messageId - Optional unique ID for the message.
  * @returns A standardized empty response message.
  */
-export function createEmptyResponse(providerName: string): Message {
+export function createEmptyResponse(
+  providerName: string,
+  traceId: string = 'system-empty-trace',
+  messageId: string = `msg-${Date.now()}`
+): Message {
   return {
     role: MessageRole.ASSISTANT,
     content: `Empty response from ${providerName}.`,
+    traceId,
+    messageId,
   };
 }
 

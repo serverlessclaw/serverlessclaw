@@ -18,23 +18,15 @@ export const ATTACHMENT_SCHEMA = z.object({
 export const BASE_EVENT_SCHEMA = z.object({
   source: z.string().default('unknown'),
   userId: z.string().default('SYSTEM'),
-  traceId: z.string().optional(),
+  traceId: z.string().default(() => `t-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`),
   taskId: z.string().default(() => `task-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`),
   agentId: z.string().optional(),
   initiatorId: z.string().default('orchestrator'),
   depth: z.number().default(0),
-  sessionId: z.string().optional(),
+  sessionId: z.string().default('default-session'),
   timestamp: z.number().default(() => Date.now()),
   tokenBudget: z.number().optional(),
   costLimit: z.number().optional(),
-});
-
-/**
- * Strict version of BASE_EVENT_SCHEMA that requires traceId and sessionId.
- */
-export const STRICT_BASE_EVENT_SCHEMA = BASE_EVENT_SCHEMA.extend({
-  traceId: z.string(),
-  sessionId: z.string(),
 });
 
 /**

@@ -48,26 +48,10 @@ export type EventRoutingTable = Record<string, EventRoutingEntry>;
  */
 export interface AgentEvent {
   /** The structured detail of the event. */
-  detail?: AgentPayload;
+  detail: AgentPayload; // required: events must carry payload
   /** The source of the event (e.g., 'core.superclaw'). */
-  source?: string;
+  source: string; // tightened: source should always be known
 }
-
-/**
- * A stricter version of the base event payload that requires traceId and sessionId.
- * Used for handlers that must maintain strict context propagation.
- */
-export interface StrictBaseEvent extends BaseEvent {
-  /** Required unique identifier for the execution trace. */
-  traceId: string;
-  /** Required unique identifier for the user session. */
-  sessionId: string;
-}
-
-/**
- * Strict version of the AgentPayload that requires traceId and sessionId.
- */
-export type StrictAgentPayload = Omit<AgentPayload, 'traceId' | 'sessionId'> & StrictBaseEvent;
 
 /**
  * Categorization of agents to guide orchestration.
@@ -118,11 +102,11 @@ export interface IAgentConfig {
   /** Localized system prompts */
   systemPrompts?: { en: string; cn: string };
   /** Detailed description of the agent's purpose. */
-  description: string;
+  description?: string;
   /** Categorization for orchestration gating. */
-  category: AgentCategory;
+  category?: AgentCategory;
   /** Icon name for UI representation. */
-  icon: string;
+  icon?: string;
   /** Specific LLM model ID override. */
   model?: string;
   /** Preferred reasoning profile (FAST, STANDARD, THINKING, DEEP). */
@@ -130,7 +114,7 @@ export interface IAgentConfig {
   /** Specific LLM provider name override. */
   provider?: string;
   /** List of tool names assigned to this agent. */
-  tools: string[];
+  tools?: string[];
   /** Whether the agent is currently active. */
   enabled: boolean;
   /** Whether this is a hardcoded system agent (cannot be deleted). */

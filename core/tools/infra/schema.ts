@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { IToolDefinition, ToolType } from '../../lib/types/index';
 import { AgentStatus, AgentType } from '../../lib/types/agent';
 
@@ -9,6 +10,7 @@ export const infraSchema: Record<string, IToolDefinition> = {
   // Deployment (from deployment.ts)
   stageChanges: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
     name: 'stageChanges',
     description:
       'Compresses modified files into a ZIP and uploads to the S3 staging bucket for CodeBuild.',
@@ -23,9 +25,12 @@ export const infraSchema: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
     connectionProfile: ['storage'],
+    requiresApproval: false,
+    requiredPermissions: [],
   },
   generatePatch: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
     name: 'generatePatch',
     description:
       'Generates a git diff patch of all uncommitted changes. Use this instead of stageChanges when working in parallel with other agents to avoid S3 staging conflicts.',
@@ -39,9 +44,12 @@ export const infraSchema: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
     connectionProfile: ['storage'],
+    requiresApproval: false,
+    requiredPermissions: [],
   },
   triggerDeployment: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
     name: 'triggerDeployment',
     description: 'Triggers an autonomous self-deployment of the agent infrastructure.',
     parameters: {
@@ -54,9 +62,12 @@ export const infraSchema: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
     connectionProfile: ['codebuild'],
+    requiresApproval: false,
+    requiredPermissions: [],
   },
   triggerInfraRebuild: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
     name: 'triggerInfraRebuild',
     description: 'Triggers a full infrastructure rebuild via CodeBuild.',
     parameters: {
@@ -69,11 +80,13 @@ export const infraSchema: Record<string, IToolDefinition> = {
     },
     requiresApproval: true,
     connectionProfile: ['codebuild'],
+    requiredPermissions: [],
   },
 
   // Rollback (from rollback.ts)
   triggerRollback: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
     name: 'triggerRollback',
     description: 'Trigger an emergency rollback by reverting the last commit and redeploying.',
     parameters: {
@@ -85,11 +98,14 @@ export const infraSchema: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
     connectionProfile: ['codebuild'],
+    requiresApproval: false,
+    requiredPermissions: [],
   },
 
   // Scheduler (from scheduler.ts)
   scheduleGoal: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
     name: 'scheduleGoal',
     description: 'Proactively schedules a future task or recurring "wake-up" heartbeat.',
     parameters: {
@@ -105,9 +121,12 @@ export const infraSchema: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
     connectionProfile: ['scheduler'],
+    requiresApproval: false,
+    requiredPermissions: [],
   },
   cancelGoal: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
     name: 'cancelGoal',
     description: 'Cancels and removes a previously scheduled proactive goal.',
     parameters: {
@@ -119,9 +138,12 @@ export const infraSchema: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
     connectionProfile: ['scheduler'],
+    requiresApproval: false,
+    requiredPermissions: [],
   },
   listGoals: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
     name: 'listGoals',
     description: 'Lists all currently active proactive goals and scheduled heartbeats.',
     parameters: {
@@ -133,11 +155,14 @@ export const infraSchema: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
     connectionProfile: ['scheduler'],
+    requiresApproval: false,
+    requiredPermissions: [],
   },
 
   // Orchestration (from orchestration.ts)
   triggerBatchEvolution: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
     name: 'triggerBatchEvolution',
     description: 'Triggers evolution for multiple capability gaps at once.',
     parameters: {
@@ -149,9 +174,17 @@ export const infraSchema: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
     connectionProfile: ['bus'],
+    requiresApproval: false,
+    requiredPermissions: [],
   },
   signalOrchestration: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
+    connectionProfile: [],
+    connector_id: '',
+    auth: { type: 'api_key', resource_id: '' },
+    requiresApproval: false,
+    requiredPermissions: [],
     name: 'signalOrchestration',
     description:
       'Emits a high-level orchestration signal to decide the next step in a task lifecycle.',
@@ -178,6 +211,7 @@ export const infraSchema: Record<string, IToolDefinition> = {
   },
   requestConsensus: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
     name: 'requestConsensus',
     description: 'Requests swarm consensus from multiple agents on a proposal.',
     parameters: {
@@ -192,9 +226,12 @@ export const infraSchema: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
     connectionProfile: ['bus'],
+    requiresApproval: false,
+    requiredPermissions: [],
   },
   voteOnProposal: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
     name: 'voteOnProposal',
     description: 'Submits a vote on an active consensus proposal.',
     parameters: {
@@ -208,11 +245,14 @@ export const infraSchema: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
     connectionProfile: ['bus'],
+    requiresApproval: false,
+    requiredPermissions: [],
   },
 
   // Topology (from system.ts / topology-discovery.ts)
   inspectTopology: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
     name: 'inspectTopology',
     description:
       'Returns a structured map of the entire system (agents, infrastructure, and connections).',
@@ -223,9 +263,12 @@ export const infraSchema: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
     connectionProfile: ['config'],
+    requiresApproval: false,
+    requiredPermissions: [],
   },
   discoverPeers: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
     name: 'discoverPeers',
     description: 'Discovers available peer agents in the swarm for dynamic topology construction.',
     parameters: {
@@ -239,9 +282,12 @@ export const infraSchema: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
     connectionProfile: ['config'],
+    requiresApproval: false,
+    requiredPermissions: [],
   },
   registerPeer: {
     type: ToolType.FUNCTION,
+    argSchema: z.any(),
     name: 'registerPeer',
     description: 'Registers a peer connection in the swarm topology.',
     parameters: {
@@ -256,5 +302,7 @@ export const infraSchema: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
     connectionProfile: ['config'],
+    requiresApproval: false,
+    requiredPermissions: [],
   },
 };

@@ -40,7 +40,7 @@ describe('OpenAIProvider.stream', () => {
 
     const chunks = [];
     const stream = provider.stream(
-      [{ role: 'user' as any, content: 'hi' }],
+      [{ role: 'user' as any, content: 'hi', traceId: 't1', messageId: 'm1' }],
       [],
       ReasoningProfile.STANDARD
     );
@@ -65,7 +65,7 @@ describe('OpenAIProvider.stream', () => {
 
     const chunks = [];
     const stream = provider.stream(
-      [{ role: 'user' as any, content: 'hi' }],
+      [{ role: 'user' as any, content: 'hi', traceId: 't1', messageId: 'm1' }],
       [],
       ReasoningProfile.STANDARD
     );

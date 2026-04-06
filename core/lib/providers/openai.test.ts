@@ -75,6 +75,9 @@ describe('OpenAIProvider', () => {
         type: ToolType.FUNCTION,
         parameters: { type: 'object' as const, properties: {} },
         execute: async () => 'done',
+        connectionProfile: [],
+        requiresApproval: false,
+        requiredPermissions: [],
       },
       {
         name: 'code_interpreter',
@@ -82,10 +85,16 @@ describe('OpenAIProvider', () => {
         type: ToolType.CODE_INTERPRETER,
         parameters: { type: 'object' as const, properties: {} },
         execute: async () => 'done',
+        connectionProfile: [],
+        requiresApproval: false,
+        requiredPermissions: [],
       },
     ];
 
-    await provider.call([{ role: MessageRole.USER, content: 'test' }], tools);
+    await provider.call(
+      [{ role: MessageRole.USER, content: 'test', traceId: 'test-trace', messageId: 'test-msg' }],
+      tools
+    );
 
     expect(mockCreateResponse).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -111,10 +120,23 @@ describe('OpenAIProvider', () => {
         type: ToolType.MCP,
         parameters: { type: 'object' as const, properties: {} },
         execute: async () => 'done',
+        connectionProfile: [],
+        requiresApproval: false,
+        requiredPermissions: [],
       },
     ];
 
-    await provider.call([{ role: MessageRole.USER, content: 'list my files' }], tools);
+    await provider.call(
+      [
+        {
+          role: MessageRole.USER,
+          content: 'list my files',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
+      ],
+      tools
+    );
 
     expect(mockCreateResponse).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -139,6 +161,8 @@ describe('OpenAIProvider', () => {
       {
         role: MessageRole.USER,
         content: 'Check this file',
+        traceId: 't1',
+        messageId: 'm1',
         attachments: [
           {
             type: AttachmentType.FILE,
@@ -182,6 +206,8 @@ describe('OpenAIProvider', () => {
       {
         role: MessageRole.USER,
         content: 'What is this?',
+        traceId: 't1',
+        messageId: 'm1',
         attachments: [
           {
             type: AttachmentType.IMAGE,
@@ -228,7 +254,7 @@ describe('OpenAIProvider', () => {
     };
 
     await provider.call(
-      [{ role: MessageRole.USER, content: 'test' }],
+      [{ role: MessageRole.USER, content: 'test', traceId: 'test-trace', messageId: 'test-msg' }],
       [],
       undefined,
       undefined,
@@ -262,7 +288,11 @@ describe('OpenAIProvider', () => {
 
     // Mini model should support xhigh based on current code
     provider = new OpenAIProvider('gpt-5.4-mini');
-    await provider.call([{ role: MessageRole.USER, content: 'test' }], [], ReasoningProfile.DEEP);
+    await provider.call(
+      [{ role: MessageRole.USER, content: 'test', traceId: 'test-trace', messageId: 'test-msg' }],
+      [],
+      ReasoningProfile.DEEP
+    );
 
     expect(mockCreateResponse).toHaveBeenCalledWith(
       expect.objectContaining({

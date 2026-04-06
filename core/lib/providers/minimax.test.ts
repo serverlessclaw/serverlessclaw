@@ -45,8 +45,13 @@ describe('MiniMaxProvider', () => {
     });
 
     const messages: Message[] = [
-      { role: MessageRole.SYSTEM, content: 'You are a helpful assistant' },
-      { role: MessageRole.USER, content: 'Hi' },
+      {
+        role: MessageRole.SYSTEM,
+        content: 'You are a helpful assistant',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      },
+      { role: MessageRole.USER, content: 'Hi', traceId: 'test-trace', messageId: 'test-msg' },
     ];
 
     const response = await provider.call(messages);
@@ -79,10 +84,23 @@ describe('MiniMaxProvider', () => {
         type: ToolType.FUNCTION,
         parameters: { type: 'object', properties: { location: { type: 'string' } } },
         execute: async () => 'sunny',
+        connectionProfile: [],
+        requiresApproval: false,
+        requiredPermissions: [],
       },
     ];
 
-    await provider.call([{ role: MessageRole.USER, content: 'Weather in Tokyo' }], tools);
+    await provider.call(
+      [
+        {
+          role: MessageRole.USER,
+          content: 'Weather in Tokyo',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
+      ],
+      tools
+    );
 
     expect(mockCreateMessage).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -105,7 +123,9 @@ describe('MiniMaxProvider', () => {
       ],
     });
 
-    const response = await provider.call([{ role: MessageRole.USER, content: 'test' }]);
+    const response = await provider.call([
+      { role: MessageRole.USER, content: 'test', traceId: 'test-trace', messageId: 'test-msg' },
+    ]);
 
     expect(response.content).toBe('Hello!');
   });
@@ -119,6 +139,8 @@ describe('MiniMaxProvider', () => {
       {
         role: MessageRole.ASSISTANT,
         content: 'I will help',
+        traceId: 't1',
+        messageId: 'm1',
         tool_calls: [
           {
             id: 'call_1',
@@ -161,6 +183,8 @@ describe('MiniMaxProvider', () => {
         role: MessageRole.TOOL,
         content: 'Tool output',
         tool_call_id: 'call_1',
+        traceId: 't1',
+        messageId: 'm1',
       },
     ];
 
@@ -189,7 +213,11 @@ describe('MiniMaxProvider', () => {
       content: [{ type: 'text', text: 'Hi' }],
     });
 
-    await provider.call([{ role: MessageRole.USER, content: 'test' }], [], ReasoningProfile.DEEP);
+    await provider.call(
+      [{ role: MessageRole.USER, content: 'test', traceId: 'test-trace', messageId: 'test-msg' }],
+      [],
+      ReasoningProfile.DEEP
+    );
 
     expect(mockCreateMessage).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -215,7 +243,14 @@ describe('MiniMaxProvider', () => {
       usage: { input_tokens: 50, output_tokens: 100 },
     });
 
-    const response = await provider.call([{ role: MessageRole.USER, content: 'save this' }]);
+    const response = await provider.call([
+      {
+        role: MessageRole.USER,
+        content: 'save this',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      },
+    ]);
 
     expect(response.tool_calls).toBeDefined();
     expect(response.tool_calls?.[0]).toEqual({
@@ -242,7 +277,14 @@ describe('MiniMaxProvider', () => {
       ],
     });
 
-    const response = await provider.call([{ role: MessageRole.USER, content: 'save this' }]);
+    const response = await provider.call([
+      {
+        role: MessageRole.USER,
+        content: 'save this',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      },
+    ]);
 
     expect(response.content).toBe('I will save that for you.');
     expect(response.tool_calls?.[0].function.name).toBe('save_memory');
@@ -273,7 +315,14 @@ describe('MiniMaxProvider', () => {
     };
 
     await provider.call(
-      [{ role: MessageRole.USER, content: 'extract person' }],
+      [
+        {
+          role: MessageRole.USER,
+          content: 'extract person',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
+      ],
       [],
       ReasoningProfile.STANDARD,
       undefined,
@@ -302,7 +351,9 @@ describe('MiniMaxProvider', () => {
       content: [{ type: 'text', text: 'Hello' }],
     });
 
-    await provider.call([{ role: MessageRole.USER, content: 'hi' }]);
+    await provider.call([
+      { role: MessageRole.USER, content: 'hi', traceId: 'test-trace', messageId: 'test-msg' },
+    ]);
 
     const callArgs = mockCreateMessage.mock.calls[0][0];
     expect(callArgs.output_config).toBeUndefined();

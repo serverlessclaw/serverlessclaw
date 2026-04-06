@@ -256,9 +256,10 @@ To evolve the system with a new specialized node:
 To ensure coordination doesn't break as we add more agents, follow a **Contract-First** development pattern:
 
 1. **Define Schema**: Add or update the `zod` schema in `core/lib/schema/events.ts` for any new event types or field changes.
-2. **Update Types**: Ensure `core/lib/types/agent.ts` matches the schema.
-3. **Add Contract Test**: Add a test case to `core/tests/contract.test.ts` to verify your new event pattern.
-4. **Verify Handler**: Ensure your agent's handler uses `.parse()` and the correct schema to validate incoming `eventDetail`.
+2. **Standard Defaults**: `BASE_EVENT_SCHEMA` now automatically generates `traceId`, `taskId`, and `timestamp` if not provided. It also defaults `sessionId` to `default-session`. Send only what is unique to your event.
+3. **Update Types**: Ensure `core/lib/types/agent.ts` matches the schema.
+4. **Add Contract Test**: Add a test case to `core/tests/contract.test.ts` to verify your new event pattern.
+5. **Verify Handler**: Ensure your agent's handler uses `.parse()` and the correct schema to validate incoming `eventDetail`.
 
 // turbo
 
@@ -489,6 +490,7 @@ To maintain the high technical integrity of the swarm, all contributors (both hu
 
 3. **Schema Integrity**:
    - Always update `core/lib/schema/` and `core/lib/types/` before implementing logic.
+   - Leverage `BASE_EVENT_SCHEMA` defaults for `traceId`, `taskId`, and `sessionId` to reduce boilerplate.
    - Use strict typing and avoid `any` wherever possible.
 
 4. **Telemetry & Audit**:

@@ -30,7 +30,10 @@ describe('OpenRouterProvider', () => {
         }),
     });
 
-    await provider.call([{ role: MessageRole.USER, content: 'test' }], []);
+    await provider.call(
+      [{ role: MessageRole.USER, content: 'test', traceId: 'test-trace', messageId: 'test-msg' }],
+      []
+    );
 
     const fetchArgs = mockFetch.mock.calls[0];
     const body = JSON.parse(fetchArgs[1].body);
@@ -39,7 +42,7 @@ describe('OpenRouterProvider', () => {
     expect(body).toEqual(
       expect.objectContaining({
         model: 'zhipu/glm-5',
-        messages: [{ role: 'user', content: 'test' }],
+        messages: [{ role: 'user', content: 'test', traceId: 'test-trace', messageId: 'test-msg' }],
       })
     );
   });
@@ -65,7 +68,7 @@ describe('OpenRouterProvider', () => {
     };
 
     await provider.call(
-      [{ role: MessageRole.USER, content: 'test' }],
+      [{ role: MessageRole.USER, content: 'test', traceId: 'test-trace', messageId: 'test-msg' }],
       [],
       undefined,
       undefined,
@@ -100,7 +103,7 @@ describe('OpenRouterProvider', () => {
     };
 
     await provider.call(
-      [{ role: MessageRole.USER, content: 'test' }],
+      [{ role: MessageRole.USER, content: 'test', traceId: 'test-trace', messageId: 'test-msg' }],
       [],
       undefined,
       undefined,
@@ -130,10 +133,16 @@ describe('OpenRouterProvider', () => {
         type: ToolType.FUNCTION,
         parameters: { type: 'object' as const, properties: {} },
         execute: async () => 'done',
+        connectionProfile: [],
+        requiresApproval: false,
+        requiredPermissions: [],
       },
     ];
 
-    await provider.call([{ role: MessageRole.USER, content: 'test' }], tools);
+    await provider.call(
+      [{ role: MessageRole.USER, content: 'test', traceId: 'test-trace', messageId: 'test-msg' }],
+      tools
+    );
 
     const fetchArgs = mockFetch.mock.calls[0];
     const body = JSON.parse(fetchArgs[1].body);
@@ -163,10 +172,23 @@ describe('OpenRouterProvider', () => {
         description: 'search',
         parameters: { type: 'object' as const, properties: {} },
         execute: async () => 'done',
+        connectionProfile: [],
+        requiresApproval: false,
+        requiredPermissions: [],
       },
     ];
 
-    await provider.call([{ role: MessageRole.USER, content: 'search something' }], tools);
+    await provider.call(
+      [
+        {
+          role: MessageRole.USER,
+          content: 'search something',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
+      ],
+      tools
+    );
 
     const fetchArgs = mockFetch.mock.calls[0];
     const body = JSON.parse(fetchArgs[1].body);
@@ -190,7 +212,10 @@ describe('OpenRouterProvider', () => {
         }),
     });
 
-    await provider.call([{ role: MessageRole.USER, content: 'test' }], []);
+    await provider.call(
+      [{ role: MessageRole.USER, content: 'test', traceId: 'test-trace', messageId: 'test-msg' }],
+      []
+    );
 
     const fetchArgs = mockFetch.mock.calls[0];
     const body = JSON.parse(fetchArgs[1].body);

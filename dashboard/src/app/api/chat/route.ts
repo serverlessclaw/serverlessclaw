@@ -149,18 +149,20 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     // Persist error to history if we have sessionId
     try {
-      const { sessionId } = await req.clone().json();
-      if (sessionId) {
-        const { DynamoMemory, CachedMemory } = await import('@claw/core/lib/memory');
-        const { MessageRole } = await import('@claw/core/lib/types');
-        const memory = new CachedMemory(new DynamoMemory());
-        const userId = getUserId(req);
-        const storageId = `CONV#${userId}#${sessionId}`;
-        await memory.addMessage(storageId, {
-          role: MessageRole.ASSISTANT,
-          content: AGENT_ERRORS.PROCESS_FAILURE,
-        });
-      }
+        const { sessionId, traceId: clientTraceId } = await req.clone().json();
+        if (sessionId) {
+          const { DynamoMemory, CachedMemory } = await import('@claw/core/lib/memory');
+          const { MessageRole } = await import('@claw/core/lib/types');
+          const memory = new CachedMemory(new DynamoMemory());
+          const userId = getUserId(req);
+          const storageId = `CONV#${userId}#${sessionId}`;
+          await memory.addMessage(storageId, {
+            role: MessageRole.ASSISTANT,
+            content: AGENT_ERRORS.PROCESS_FAILURE,
+            traceId: clientTraceId || `error-${Date.now()}`,
+            messageId: `err-${Math.random().toString(36).substring(2, 9)}`,
+          });
+        }
     } catch (e) {
       console.error('Failed to persist error message:', e);
     }

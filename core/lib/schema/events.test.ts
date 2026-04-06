@@ -100,9 +100,9 @@ describe('BASE_EVENT_SCHEMA', () => {
     expect(result.userId).toBe('SYSTEM');
   });
 
-  it('should make traceId optional', () => {
+  it('should provide default traceId', () => {
     const result = BASE_EVENT_SCHEMA.parse({});
-    expect(result.traceId).toBeUndefined();
+    expect(result.traceId).toMatch(/^t-\d+-[a-z0-9]+$/);
   });
 
   it('should generate unique taskId values by default', () => {
@@ -118,9 +118,9 @@ describe('BASE_EVENT_SCHEMA', () => {
     expect(result.depth).toBe(0);
   });
 
-  it('should accept optional sessionId', () => {
+  it('should provide default sessionId', () => {
     const result = BASE_EVENT_SCHEMA.parse({});
-    expect(result.sessionId).toBeUndefined();
+    expect(result.sessionId).toBe('default-session');
   });
 
   it('should accept optional agentId', () => {

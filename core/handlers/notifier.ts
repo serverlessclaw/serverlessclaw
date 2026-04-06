@@ -13,6 +13,8 @@ interface NotifierEvent {
     message: string;
     memoryContexts?: string[];
     sessionId?: string;
+    traceId?: string;
+    messageId?: string;
     agentName?: string;
     attachments?: Attachment[];
     options?: {
@@ -72,6 +74,8 @@ export const handler = async (event: NotifierEvent): Promise<void> => {
         agentName: agentName,
         attachments: attachments,
         options: options,
+        traceId: payload.traceId ?? `notif-${Date.now()}`,
+        messageId: payload.messageId ?? payload.traceId ?? `notif-${Date.now()}`,
       });
     } catch (e) {
       logger.error(`Failed to sync context to ${contextId}:`, e);

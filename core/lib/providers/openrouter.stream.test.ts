@@ -49,7 +49,10 @@ describe('OpenRouterProvider.stream', () => {
     });
 
     const chunks: any[] = [];
-    const stream = provider.stream([{ role: MessageRole.USER, content: 'hi' }], []);
+    const stream = provider.stream(
+      [{ role: MessageRole.USER, content: 'hi', traceId: 'test-trace', messageId: 'test-msg' }],
+      []
+    );
 
     for await (const chunk of stream) {
       chunks.push(chunk);
@@ -74,7 +77,10 @@ describe('OpenRouterProvider.stream', () => {
     });
 
     const chunks: any[] = [];
-    const stream = provider.stream([{ role: MessageRole.USER, content: 'think' }], []);
+    const stream = provider.stream(
+      [{ role: MessageRole.USER, content: 'think', traceId: 'test-trace', messageId: 'test-msg' }],
+      []
+    );
 
     for await (const chunk of stream) {
       chunks.push(chunk);
@@ -97,7 +103,10 @@ describe('OpenRouterProvider.stream', () => {
     });
 
     const chunks: any[] = [];
-    const stream = provider.stream([{ role: MessageRole.USER, content: 'test' }], []);
+    const stream = provider.stream(
+      [{ role: MessageRole.USER, content: 'test', traceId: 'test-trace', messageId: 'test-msg' }],
+      []
+    );
 
     for await (const chunk of stream) {
       chunks.push(chunk);
@@ -120,7 +129,10 @@ describe('OpenRouterProvider.stream', () => {
     });
 
     const chunks: any[] = [];
-    const stream = provider.stream([{ role: MessageRole.USER, content: 'do it' }], []);
+    const stream = provider.stream(
+      [{ role: MessageRole.USER, content: 'do it', traceId: 'test-trace', messageId: 'test-msg' }],
+      []
+    );
 
     for await (const chunk of stream) {
       chunks.push(chunk);
@@ -144,7 +156,10 @@ describe('OpenRouterProvider.stream', () => {
     });
 
     const chunks: any[] = [];
-    const stream = provider.stream([{ role: MessageRole.USER, content: 'hi' }], []);
+    const stream = provider.stream(
+      [{ role: MessageRole.USER, content: 'hi', traceId: 'test-trace', messageId: 'test-msg' }],
+      []
+    );
 
     for await (const chunk of stream) {
       chunks.push(chunk);
@@ -159,7 +174,10 @@ describe('OpenRouterProvider.stream', () => {
     mockFetch.mockRejectedValue(new Error('Network error'));
 
     const chunks: any[] = [];
-    const stream = provider.stream([{ role: MessageRole.USER, content: 'test' }], []);
+    const stream = provider.stream(
+      [{ role: MessageRole.USER, content: 'test', traceId: 'test-trace', messageId: 'test-msg' }],
+      []
+    );
 
     for await (const chunk of stream) {
       chunks.push(chunk);
@@ -177,7 +195,10 @@ describe('OpenRouterProvider.stream', () => {
     });
 
     const chunks: any[] = [];
-    const stream = provider.stream([{ role: MessageRole.USER, content: 'test' }], []);
+    const stream = provider.stream(
+      [{ role: MessageRole.USER, content: 'test', traceId: 'test-trace', messageId: 'test-msg' }],
+      []
+    );
 
     for await (const chunk of stream) {
       chunks.push(chunk);
@@ -193,7 +214,10 @@ describe('OpenRouterProvider.stream', () => {
       body: createSSEStream(['data: [DONE]']),
     });
 
-    const stream = provider.stream([{ role: MessageRole.USER, content: 'test' }], []);
+    const stream = provider.stream(
+      [{ role: MessageRole.USER, content: 'test', traceId: 'test-trace', messageId: 'test-msg' }],
+      []
+    );
 
     for await (const _chunk of stream) {
       // drain

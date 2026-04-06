@@ -33,6 +33,9 @@ describe('Tool Schema Validation', () => {
         required: ['requiredProp'],
         additionalProperties: false,
       },
+      connectionProfile: [],
+      requiresApproval: false,
+      requiredPermissions: [],
     };
     const errors = validateToolSchema(validTool);
     expect(errors).toHaveLength(0);
@@ -50,6 +53,9 @@ describe('Tool Schema Validation', () => {
         },
         required: ['foo'],
       },
+      connectionProfile: [],
+      requiresApproval: false,
+      requiredPermissions: [],
     };
     const errors = validateToolSchema(invalidTool);
     expect(errors).toContain(

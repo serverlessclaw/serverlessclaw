@@ -2,17 +2,9 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 // 1. Mock 'sst'
 vi.mock('sst', () => ({
-  Resource: new Proxy(
-    {},
-    {
-      get: (_target, prop) => {
-        return {
-          name: `test-${String(prop).toLowerCase()}`,
-          value: 'test-value',
-        };
-      },
-    }
-  ),
+  Resource: {
+    MemoryTable: { name: 'test-memory-table' },
+  },
 }));
 
 // 2. Mock AgentBus / EventBridge
@@ -354,14 +346,13 @@ describe('task-result-handler (parallel aggregator guard)', () => {
       task: 'Quick fix',
       response: 'Fixed',
       initiatorId: 'superclaw',
-      depth: 1,
     };
 
     await handleTaskResult(eventDetail, EventType.TASK_COMPLETED);
 
-    // No traceId 14 no aggregator calls at all
-    expect(mockGetState).not.toHaveBeenCalled();
-    expect(mockAddResult).not.toHaveBeenCalled();
+    // Now that traceId has a default in the schema (t-...), it's always present.
+    // We check that it's called with a generated trace ID.
+    expect(mockGetState).toHaveBeenCalledWith('user-123', expect.stringMatching(/^t-\d+-/));
   });
 });
 
@@ -391,7 +382,7 @@ describe('task-result-handler (DynamoDB idempotency for cold-start dedup)', () =
     expect(mockDdbSend).toHaveBeenCalledWith(
       expect.objectContaining({
         input: expect.objectContaining({
-          TableName: 'test-memorytable',
+          TableName: 'test-memory-table',
           Item: expect.objectContaining({
             userId: 'IDEMPOTENCY#task_result:evt-idempotent-001',
             type: 'IDEMPOTENCY',

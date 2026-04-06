@@ -61,7 +61,12 @@ describe('session-operations', () => {
 
   describe('addMessage', () => {
     it('should add a message with tiered retention', async () => {
-      const message = { role: MessageRole.USER, content: 'Hello' };
+      const message = {
+        role: MessageRole.USER,
+        content: 'Hello',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      };
       await addMessage(mockBase, 'user123', message);
 
       expect(mockBase.putItem).toHaveBeenCalledWith(
@@ -77,7 +82,12 @@ describe('session-operations', () => {
     });
 
     it('should filter PII from message', async () => {
-      const message = { role: MessageRole.USER, content: 'My email is test@example.com' };
+      const message = {
+        role: MessageRole.USER,
+        content: 'My email is test@example.com',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      };
       await addMessage(mockBase, 'user123', message);
 
       expect(mockBase.putItem).toHaveBeenCalled();

@@ -44,6 +44,8 @@ describe('Schema-Type Drift Detection', () => {
       const inferred: AgentPayloadInferred = {
         source: 'unknown',
         userId: 'user-1',
+        traceId: 'trace-1',
+        sessionId: 'session-1',
         taskId: 'task-1',
         initiatorId: 'orchestrator',
         depth: 0,
@@ -60,7 +62,8 @@ describe('Schema-Type Drift Detection', () => {
         source: inferred.source,
         timestamp: inferred.timestamp,
         userId: inferred.userId,
-        traceId: inferred.traceId ?? '',
+        traceId: inferred.traceId,
+        sessionId: inferred.sessionId,
         taskId: inferred.taskId,
         initiatorId: inferred.initiatorId,
         depth: inferred.depth,
@@ -81,6 +84,8 @@ describe('Schema-Type Drift Detection', () => {
       const inferred: TaskEventPayload = {
         source: 'unknown',
         userId: 'user-1',
+        traceId: 'trace-1',
+        sessionId: 'session-1',
         taskId: 'task-1',
         initiatorId: 'orchestrator',
         depth: 0,
@@ -92,7 +97,8 @@ describe('Schema-Type Drift Detection', () => {
         source: inferred.source,
         timestamp: inferred.timestamp,
         userId: inferred.userId,
-        traceId: inferred.traceId ?? '',
+        traceId: inferred.traceId,
+        sessionId: inferred.sessionId,
         taskId: inferred.taskId,
         initiatorId: inferred.initiatorId,
         depth: inferred.depth,
@@ -106,6 +112,8 @@ describe('Schema-Type Drift Detection', () => {
       const inferred: BuildEventPayload = {
         source: 'unknown',
         userId: 'user-1',
+        traceId: 'trace-1',
+        sessionId: 'session-1',
         taskId: 'task-1',
         initiatorId: 'orchestrator',
         depth: 0,
@@ -117,7 +125,8 @@ describe('Schema-Type Drift Detection', () => {
         source: inferred.source,
         timestamp: inferred.timestamp,
         userId: inferred.userId,
-        traceId: inferred.traceId ?? '',
+        traceId: inferred.traceId,
+        sessionId: inferred.sessionId,
         taskId: inferred.taskId,
         initiatorId: inferred.initiatorId,
         depth: inferred.depth,
@@ -132,6 +141,8 @@ describe('Schema-Type Drift Detection', () => {
       const inferred: CompletionEventPayload = {
         source: 'unknown',
         userId: 'user-1',
+        traceId: 'trace-1',
+        sessionId: 'session-1',
         taskId: 'task-1',
         initiatorId: 'orchestrator',
         depth: 0,
@@ -148,7 +159,8 @@ describe('Schema-Type Drift Detection', () => {
         source: inferred.source,
         timestamp: inferred.timestamp,
         userId: inferred.userId,
-        traceId: inferred.traceId ?? '',
+        traceId: inferred.traceId,
+        sessionId: inferred.sessionId,
         taskId: inferred.taskId,
         initiatorId: inferred.initiatorId,
         depth: inferred.depth,
@@ -170,6 +182,8 @@ describe('Schema-Type Drift Detection', () => {
       const inferred: FailureEventPayload = {
         source: 'unknown',
         userId: 'user-1',
+        traceId: 'trace-1',
+        sessionId: 'session-1',
         taskId: 'task-1',
         initiatorId: 'orchestrator',
         depth: 0,
@@ -186,7 +200,8 @@ describe('Schema-Type Drift Detection', () => {
         source: inferred.source,
         timestamp: inferred.timestamp,
         userId: inferred.userId,
-        traceId: inferred.traceId ?? '',
+        traceId: inferred.traceId,
+        sessionId: inferred.sessionId,
         taskId: inferred.taskId,
         initiatorId: inferred.initiatorId,
         depth: inferred.depth,
@@ -205,6 +220,8 @@ describe('Schema-Type Drift Detection', () => {
       const inferred: HealthReportEventPayload = {
         source: 'unknown',
         userId: 'user-1',
+        traceId: 'trace-1',
+        sessionId: 'session-1',
         taskId: 'task-1',
         initiatorId: 'orchestrator',
         depth: 0,
@@ -218,7 +235,8 @@ describe('Schema-Type Drift Detection', () => {
         source: inferred.source,
         timestamp: inferred.timestamp,
         userId: inferred.userId,
-        traceId: inferred.traceId ?? '',
+        traceId: inferred.traceId,
+        sessionId: inferred.sessionId,
         taskId: inferred.taskId,
         initiatorId: inferred.initiatorId,
         depth: inferred.depth,
@@ -233,7 +251,11 @@ describe('Schema-Type Drift Detection', () => {
 
   describe('Schema default guarantees (runtime behavior matches expectations)', () => {
     it('BASE_EVENT_SCHEMA should provide defaults for source, initiatorId, depth, timestamp', () => {
-      const parsed = BASE_EVENT_SCHEMA.parse({ userId: 'test-user' });
+      const parsed = BASE_EVENT_SCHEMA.parse({
+        userId: 'test-user',
+        traceId: 't1',
+        sessionId: 's1',
+      });
 
       expect(parsed.source).toBe('unknown');
       expect(parsed.initiatorId).toBe('orchestrator');
@@ -244,7 +266,11 @@ describe('Schema-Type Drift Detection', () => {
     });
 
     it('AGENT_PAYLOAD_SCHEMA should provide defaults for task, metadata, attachments, isContinuation', () => {
-      const parsed = AGENT_PAYLOAD_SCHEMA.parse({ userId: 'test-user' });
+      const parsed = AGENT_PAYLOAD_SCHEMA.parse({
+        userId: 'test-user',
+        traceId: 't1',
+        sessionId: 's1',
+      });
 
       expect(parsed.task).toBe('');
       expect(parsed.metadata).toEqual({});
@@ -255,6 +281,8 @@ describe('Schema-Type Drift Detection', () => {
     it('COMPLETION_EVENT_SCHEMA should provide defaults for agentId, task, attachments, userNotified', () => {
       const parsed = COMPLETION_EVENT_SCHEMA.parse({
         userId: 'test-user',
+        traceId: 't1',
+        sessionId: 's1',
         response: 'Done',
       });
 
@@ -267,6 +295,8 @@ describe('Schema-Type Drift Detection', () => {
     it('FAILURE_EVENT_SCHEMA should provide defaults for agentId, task, userNotified', () => {
       const parsed = FAILURE_EVENT_SCHEMA.parse({
         userId: 'test-user',
+        traceId: 't1',
+        sessionId: 's1',
         error: 'Something failed',
       });
 
@@ -278,6 +308,8 @@ describe('Schema-Type Drift Detection', () => {
     it('OUTBOUND_MESSAGE_EVENT_SCHEMA should provide defaults for agentName, memoryContexts, attachments', () => {
       const parsed = OUTBOUND_MESSAGE_EVENT_SCHEMA.parse({
         userId: 'test-user',
+        traceId: 't1',
+        sessionId: 's1',
         message: 'Hello',
       });
 

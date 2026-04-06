@@ -31,7 +31,8 @@ export class ExecutorHelper {
     sessionId: string,
     agentId: string,
     lastInjectedMessageTimestamp: number,
-    sessionStateManager: import('../session/session-state').SessionStateManager
+    sessionStateManager: import('../session/session-state').SessionStateManager,
+    traceId: string
   ): Promise<number> {
     const pendingMessages = await sessionStateManager.getPendingMessages(sessionId);
     const newMessages = pendingMessages.filter((m) => m.timestamp > lastInjectedMessageTimestamp);
@@ -47,6 +48,8 @@ export class ExecutorHelper {
       messages.push({
         role: MessageRole.USER,
         content: pendingContent,
+        traceId,
+        messageId: `msg-injected-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       });
 
       for (const m of newMessages) {

@@ -11,17 +11,21 @@ export const renderComponent: ITool = {
     // The executor will capture the tool call and include it in the response as ui_blocks.
     return {
       text: `UI Component '${args.componentType}' rendered successfully.`,
+      images: [],
+      metadata: {},
       ui_blocks: [
         {
           id: `ui_${Date.now()}`,
           componentType: String(args.componentType),
           props: (args.props as Record<string, unknown>) || {},
-          actions: (args.actions as Array<Record<string, unknown>> | undefined)?.map((a) => ({
-            id: String(a.id),
-            label: String(a.label),
-            type: (a.type as 'primary' | 'secondary' | 'danger') || 'secondary',
-            payload: a.payload as Record<string, unknown> | undefined,
-          })),
+          actions: (args.actions as Array<Record<string, unknown>> | undefined)?.length
+            ? (args.actions as Array<Record<string, unknown>>).map((a) => ({
+                id: String(a.id),
+                label: String(a.label),
+                type: (a.type as 'primary' | 'secondary' | 'danger') || 'secondary',
+                payload: a.payload as Record<string, unknown> | undefined,
+              }))
+            : undefined,
         },
       ],
     };
@@ -45,6 +49,8 @@ export const navigateTo: ITool = {
         mode === 'auto'
           ? `Initiating automatic navigation to ${path}...`
           : `Navigation button to ${path} presented to user.`,
+      images: [],
+      metadata: {},
       ui_blocks: [
         {
           id: `nav_${Date.now()}`,
@@ -88,6 +94,8 @@ export const uiAction: ITool = {
 
     return {
       text: `UI Action '${action}' triggered for target '${target}'.`,
+      images: [],
+      metadata: {},
       ui_blocks: [
         {
           id: `act_${Date.now()}`,

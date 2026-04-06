@@ -70,7 +70,12 @@ describe('Agent Trace Propagation', () => {
     } as unknown as IMemory;
 
     mockProvider = {
-      call: vi.fn().mockResolvedValue({ role: MessageRole.ASSISTANT, content: 'Hello' }),
+      call: vi.fn().mockResolvedValue({
+        role: MessageRole.ASSISTANT,
+        content: 'Hello',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      }),
       getCapabilities: vi.fn().mockResolvedValue({
         supportedReasoningProfiles: [ReasoningProfile.STANDARD],
         supportedAttachmentTypes: [AttachmentType.IMAGE, AttachmentType.FILE],
@@ -98,6 +103,9 @@ describe('Agent Trace Propagation', () => {
         additionalProperties: false,
       },
       execute: vi.fn().mockResolvedValue('Tool result'),
+      connectionProfile: [],
+      requiresApproval: false,
+      requiredPermissions: [],
     };
 
     mockProvider.call = vi
@@ -113,7 +121,12 @@ describe('Agent Trace Propagation', () => {
           },
         ],
       })
-      .mockResolvedValueOnce({ role: MessageRole.ASSISTANT, content: 'Final response' });
+      .mockResolvedValueOnce({
+        role: MessageRole.ASSISTANT,
+        content: 'Final response',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      });
 
     // Set specific IDs for this test
     mockGetTraceId.mockReturnValue('trace-123');
@@ -163,7 +176,11 @@ describe('Agent Trace Propagation', () => {
         text: 'Result text',
         images: ['base64-image-data'],
         metadata: { foo: 'bar' },
+        ui_blocks: [],
       }),
+      connectionProfile: [],
+      requiresApproval: false,
+      requiredPermissions: [],
     };
 
     mockProvider.call = vi
@@ -179,7 +196,12 @@ describe('Agent Trace Propagation', () => {
           },
         ],
       })
-      .mockResolvedValueOnce({ role: MessageRole.ASSISTANT, content: 'Done' });
+      .mockResolvedValueOnce({
+        role: MessageRole.ASSISTANT,
+        content: 'Done',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      });
 
     const agent = new Agent(mockMemory, mockProvider, [mockTool], 'System', {
       id: 'test',
@@ -216,7 +238,12 @@ describe('Agent Trace Propagation', () => {
           },
         ],
       })
-      .mockResolvedValueOnce({ role: MessageRole.ASSISTANT, content: 'Calculated' });
+      .mockResolvedValueOnce({
+        role: MessageRole.ASSISTANT,
+        content: 'Calculated',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      });
 
     // No tools provided to agent, but provider requests code_interpreter
     const agent = new Agent(mockMemory, mockProvider, [], 'System', {
@@ -257,9 +284,12 @@ describe('Agent Trace Propagation', () => {
   it('should handle and persist attachments in process', async () => {
     const attachments = [{ type: AttachmentType.IMAGE, base64: 'data', name: 'test.png' }];
 
-    mockProvider.call = vi
-      .fn()
-      .mockResolvedValue({ role: MessageRole.ASSISTANT, content: 'I see it' });
+    mockProvider.call = vi.fn().mockResolvedValue({
+      role: MessageRole.ASSISTANT,
+      content: 'I see it',
+      traceId: 'test-trace',
+      messageId: 'test-msg',
+    });
 
     const agent = new Agent(mockMemory, mockProvider, [], 'System', {
       id: 'test',
@@ -307,9 +337,12 @@ describe('Agent Trace Propagation', () => {
 
   describe('Dual-Mode Communication', () => {
     it('should use text mode by default when not specified', async () => {
-      mockProvider.call = vi
-        .fn()
-        .mockResolvedValue({ role: MessageRole.ASSISTANT, content: 'Hello human' });
+      mockProvider.call = vi.fn().mockResolvedValue({
+        role: MessageRole.ASSISTANT,
+        content: 'Hello human',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      });
 
       const agent = new Agent(mockMemory, mockProvider, [], 'System prompt', {
         id: 'test-agent',
@@ -346,9 +379,12 @@ describe('Agent Trace Propagation', () => {
         status: 'SUCCESS',
         message: 'Task completed successfully',
       });
-      mockProvider.call = vi
-        .fn()
-        .mockResolvedValue({ role: MessageRole.ASSISTANT, content: jsonOutput });
+      mockProvider.call = vi.fn().mockResolvedValue({
+        role: MessageRole.ASSISTANT,
+        content: jsonOutput,
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      });
 
       // Mock capabilities to support structured output
       mockProvider.getCapabilities = vi.fn().mockResolvedValue({
@@ -401,9 +437,12 @@ describe('Agent Trace Propagation', () => {
         status: 'SUCCESS',
         plan: 'New strategy designed.',
       });
-      mockProvider.call = vi
-        .fn()
-        .mockResolvedValue({ role: MessageRole.ASSISTANT, content: jsonOutput });
+      mockProvider.call = vi.fn().mockResolvedValue({
+        role: MessageRole.ASSISTANT,
+        content: jsonOutput,
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      });
 
       mockProvider.getCapabilities = vi.fn().mockResolvedValue({
         supportedReasoningProfiles: ['standard'],

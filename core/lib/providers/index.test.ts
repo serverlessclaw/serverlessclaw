@@ -120,14 +120,23 @@ describe('ProviderManager', () => {
         call: mockCall,
       } as any);
 
-      await pm.call([{ role: MessageRole.USER, content: 'hello' }]);
+      await pm.call([
+        { role: MessageRole.USER, content: 'hello', traceId: 'test-trace', messageId: 'test-msg' },
+      ]);
 
       expect(ProviderManager.getActiveProvider).toHaveBeenCalledWith(
         'bedrock',
         'anthropic.claude-3-haiku-20240307-v1:0'
       );
       expect(mockCall).toHaveBeenCalledWith(
-        [{ role: MessageRole.USER, content: 'hello' }],
+        [
+          {
+            role: MessageRole.USER,
+            content: 'hello',
+            traceId: 'test-trace',
+            messageId: 'test-msg',
+          },
+        ],
         undefined,
         'standard',
         'anthropic.claude-3-haiku-20240307-v1:0',
@@ -149,9 +158,16 @@ describe('ProviderManager', () => {
 
       const hugeMessage = 'a'.repeat(450000);
 
-      await expect(pm.call([{ role: MessageRole.USER, content: hugeMessage }])).rejects.toThrow(
-        /TokenBudgetExceeded/
-      );
+      await expect(
+        pm.call([
+          {
+            role: MessageRole.USER,
+            content: hugeMessage,
+            traceId: 'test-trace',
+            messageId: 'test-msg',
+          },
+        ])
+      ).rejects.toThrow(/TokenBudgetExceeded/);
     });
 
     it('should not route to Haiku when provider is explicitly set', async () => {
@@ -164,7 +180,14 @@ describe('ProviderManager', () => {
       } as any);
 
       await pm.call(
-        [{ role: MessageRole.USER, content: 'hello' }],
+        [
+          {
+            role: MessageRole.USER,
+            content: 'hello',
+            traceId: 'test-trace',
+            messageId: 'test-msg',
+          },
+        ],
         undefined,
         undefined,
         undefined,
@@ -183,7 +206,19 @@ describe('ProviderManager', () => {
         call: mockCall,
       } as any);
 
-      await pm.call([{ role: MessageRole.USER, content: 'hello' }], undefined, undefined, 'gpt-4');
+      await pm.call(
+        [
+          {
+            role: MessageRole.USER,
+            content: 'hello',
+            traceId: 'test-trace',
+            messageId: 'test-msg',
+          },
+        ],
+        undefined,
+        undefined,
+        'gpt-4'
+      );
 
       expect(ProviderManager.getActiveProvider).toHaveBeenCalledWith(undefined, 'gpt-4');
     });
@@ -199,7 +234,14 @@ describe('ProviderManager', () => {
 
       const hugeMessage = 'a'.repeat(450000);
 
-      const stream = pm.stream([{ role: MessageRole.USER, content: hugeMessage }]);
+      const stream = pm.stream([
+        {
+          role: MessageRole.USER,
+          content: hugeMessage,
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
+      ]);
       await expect(async () => {
         for await (const _ of stream) {
           // no-op
@@ -219,7 +261,9 @@ describe('ProviderManager', () => {
       } as any);
 
       const pm = new ProviderManager();
-      const messages = [{ role: MessageRole.USER, content: 'hi' }];
+      const messages = [
+        { role: MessageRole.USER, content: 'hi', traceId: 'test-trace', messageId: 'test-msg' },
+      ];
 
       for await (const _ of pm.stream(messages)) {
         // consume the async iterable

@@ -127,6 +127,8 @@ describe('Backend API Integration', () => {
         {
           role: MessageRole.USER,
           content: 'See attached file',
+          traceId: 't1',
+          messageId: 'm1',
           attachments: [
             {
               type: AttachmentType.FILE,
@@ -151,6 +153,8 @@ describe('Backend API Integration', () => {
       {
         role: MessageRole.USER,
         content: 'See attached file',
+        traceId: 't1',
+        messageId: 'm1',
         attachments: [
           {
             type: AttachmentType.FILE,

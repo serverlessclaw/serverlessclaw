@@ -52,6 +52,8 @@ export class ToolExecutor {
           tool_call_id: toolCall.id,
           name: toolCall.function.name,
           content: 'EXECUTED_BY_PROVIDER',
+          traceId: execContext.traceId,
+          messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         });
         continue;
       }
@@ -100,6 +102,8 @@ export class ToolExecutor {
             tool_call_id: toolCall.id,
             name: toolCall.function.name,
             content: `FAILED: Unauthorized. You do not have the required permissions (${tool.requiredPermissions.join(', ')}) to execute this tool.`,
+            traceId: execContext.traceId,
+            messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
           });
           continue;
         }
@@ -141,6 +145,8 @@ export class ToolExecutor {
             tool_call_id: toolCall.id,
             name: toolCall.function.name,
             content: `FAILED: Argument validation error: ${schemaError instanceof Error ? schemaError.message : String(schemaError)}`,
+            traceId: execContext.traceId,
+            messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
           });
           continue;
         }
@@ -220,6 +226,8 @@ export class ToolExecutor {
         tool_call_id: toolCall.id,
         name: toolCall.function.name,
         content: resultText,
+        traceId: execContext.traceId,
+        messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       });
 
       // 6. Pause Signaling

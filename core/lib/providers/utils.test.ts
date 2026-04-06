@@ -24,6 +24,9 @@ describe('transformToolsToOpenAI', () => {
           },
         },
         execute: async () => 'result',
+        connectionProfile: [],
+        requiresApproval: false,
+        requiredPermissions: [],
       },
     ];
 
@@ -54,6 +57,9 @@ describe('transformToolsToOpenAI', () => {
         type: ToolType.FUNCTION,
         parameters: { type: 'object' as const, properties: {} },
         execute: async () => 'result',
+        connectionProfile: [],
+        requiresApproval: false,
+        requiredPermissions: [],
       } as ITool,
       {
         name: 'some_image',
@@ -61,6 +67,9 @@ describe('transformToolsToOpenAI', () => {
         description: 'An image tool',
         parameters: { type: 'object', properties: {} },
         execute: async () => 'result',
+        connectionProfile: [],
+        requiresApproval: false,
+        requiredPermissions: [],
       } as unknown as ITool,
     ];
 

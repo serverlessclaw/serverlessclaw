@@ -26,7 +26,7 @@ import { RESEARCH_TASK_METADATA } from '../lib/schema/events';
 export const handler = async (event: AgentEvent, context: Context): Promise<string | undefined> => {
   logger.info('Researcher Agent received task:', JSON.stringify(event, null, 2));
 
-  const payload = validateEventPayload<AgentPayload>(event, `${AgentType.RESEARCHER}_task` as any);
+  const payload = validateEventPayload<AgentPayload>(event, `${AgentType.RESEARCHER}_task`);
   const {
     userId,
     task,

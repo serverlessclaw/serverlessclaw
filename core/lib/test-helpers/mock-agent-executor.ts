@@ -52,6 +52,8 @@ export function createMockRunLoop(
         role: 'tool' as const,
         content: `Mock result for ${tc.function.name}`,
         tool_call_id: tc.id,
+        traceId: (toolCallResponse as any).traceId ?? 'mock-trace',
+        messageId: `msg-mock-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       }));
       messages.push(...toolResults);
 

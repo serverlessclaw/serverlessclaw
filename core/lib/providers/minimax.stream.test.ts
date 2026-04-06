@@ -43,7 +43,7 @@ describe('MiniMaxProvider.stream', () => {
 
     const chunks = [];
     const stream = provider.stream(
-      [{ role: MessageRole.USER, content: 'hi' }],
+      [{ role: MessageRole.USER, content: 'hi', traceId: 'test-trace', messageId: 'test-msg' }],
       [],
       ReasoningProfile.STANDARD
     );
@@ -80,7 +80,7 @@ describe('MiniMaxProvider.stream', () => {
 
     const chunks = [];
     const stream = provider.stream(
-      [{ role: MessageRole.USER, content: 'do it' }],
+      [{ role: MessageRole.USER, content: 'do it', traceId: 'test-trace', messageId: 'test-msg' }],
       [],
       ReasoningProfile.STANDARD
     );
@@ -117,7 +117,14 @@ describe('MiniMaxProvider.stream', () => {
     };
 
     const stream = provider.stream(
-      [{ role: MessageRole.USER, content: 'extract' }],
+      [
+        {
+          role: MessageRole.USER,
+          content: 'extract',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
+      ],
       [],
       ReasoningProfile.STANDARD,
       undefined,

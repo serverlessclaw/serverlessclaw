@@ -212,7 +212,7 @@ export class BaseMemoryProvider {
       ScanIndexForward: true, // Oldest first
     });
 
-    return items.map((item) => ({
+    return (items || []).map((item) => ({
       role: item.role as MessageRole,
       content: (item.content as string) ?? '',
       thought: item.thought as string | undefined,
@@ -221,7 +221,8 @@ export class BaseMemoryProvider {
       tool_call_id: item.tool_call_id as string | undefined,
       name: item.name as string | undefined,
       agentName: item.agentName as string | undefined,
-      traceId: item.traceId as string | undefined,
+      traceId: (item.traceId as string) || `legacy-${item.timestamp || Date.now()}`,
+      messageId: (item.messageId as string) || `msg-legacy-${item.timestamp || Date.now()}`,
     }));
   }
 

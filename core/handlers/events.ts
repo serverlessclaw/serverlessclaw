@@ -77,10 +77,8 @@ export async function handler(
       let handlerModule;
       try {
         // 1. Try to import from configured module (DDB or Fallback)
-        const cleanModulePath = routing.module.startsWith('./')
-          ? routing.module.substring(2)
-          : routing.module;
-        handlerModule = await import(`./${cleanModulePath}`);
+        const moduleName = routing.module.split('/').pop();
+        handlerModule = await import(`./events/${moduleName}.ts`);
       } catch (importError) {
         logger.error(
           `[SAFE_MODE] Import failed for ${routing.module}. Attempting recovery...`,
@@ -92,13 +90,11 @@ export async function handler(
           const fallback = DEFAULT_EVENT_ROUTING[detailType];
           if (fallback) {
             logger.info(`[SAFE_MODE] Recovering via default routing for ${detailType}`);
-            const cleanFallbackPath = fallback.module.startsWith('./')
-              ? fallback.module.substring(2)
-              : fallback.module;
+            const fallbackModuleName = fallback.module.split('/').pop();
             try {
-              handlerModule = await import(`./${cleanFallbackPath}`);
+              handlerModule = await import(`./events/${fallbackModuleName}.ts`);
             } catch (fallbackError) {
-              const fallbackErrorMsg = `[SAFE_MODE] Critical fallback import failed for ${cleanFallbackPath}: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`;
+              const fallbackErrorMsg = `[SAFE_MODE] Critical fallback import failed for ${fallbackModuleName}: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`;
               logger.error(fallbackErrorMsg);
               throw new Error(fallbackErrorMsg);
             }

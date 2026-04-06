@@ -36,7 +36,8 @@ function createTool(overrides: Partial<any> = {}) {
     execute: overrides.execute ?? vi.fn().mockResolvedValue('success'),
     requiresApproval: overrides.requiresApproval ?? false,
     argSchema: overrides.argSchema,
-    requiredPermissions: overrides.requiredPermissions,
+    requiredPermissions: overrides.requiredPermissions ?? [],
+    connectionProfile: overrides.connectionProfile ?? [],
   };
 }
 
@@ -62,6 +63,7 @@ function createExecContext(overrides: Partial<any> = {}) {
     userId: 'user1',
     mainConversationId: 'conv1',
     userText: 'run test',
+    sessionId: 'session1',
     ...overrides,
   };
 }

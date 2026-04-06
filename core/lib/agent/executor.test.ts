@@ -357,11 +357,15 @@ describe('AgentExecutor', () => {
       await executor.runLoop(messages, options);
 
       expect(messages).toHaveLength(1);
-      expect(messages[0]).toEqual({
-        role: MessageRole.TOOL,
-        tool_call_id: 'call-123',
-        content: 'USER_REJECTED_EXECUTION: User changed their mind',
-      });
+      expect(messages[0]).toEqual(
+        expect.objectContaining({
+          role: MessageRole.TOOL,
+          tool_call_id: 'call-123',
+          content: 'USER_REJECTED_EXECUTION: User changed their mind',
+          traceId: 'trace-123',
+          messageId: expect.any(String),
+        })
+      );
     });
 
     it('should handle TOOL_CLARIFICATION signal', async () => {
@@ -380,11 +384,15 @@ describe('AgentExecutor', () => {
       await executor.runLoop(messages, options);
 
       expect(messages).toHaveLength(1);
-      expect(messages[0]).toEqual({
-        role: MessageRole.TOOL,
-        tool_call_id: 'call-456',
-        content: 'USER_CLARIFICATION: Please use the staging environment',
-      });
+      expect(messages[0]).toEqual(
+        expect.objectContaining({
+          role: MessageRole.TOOL,
+          tool_call_id: 'call-456',
+          content: 'USER_CLARIFICATION: Please use the staging environment',
+          traceId: 'trace-123',
+          messageId: expect.any(String),
+        })
+      );
     });
 
     it('should handle signals without extra text', async () => {
@@ -461,6 +469,8 @@ describe('AgentExecutor', () => {
     const messages: Message[] = Array.from({ length: 10 }, (_, i) => ({
       role: i % 2 === 0 ? MessageRole.USER : MessageRole.ASSISTANT,
       content: longContent,
+      traceId: 't1',
+      messageId: `m${i}`,
     }));
 
     const executor = new AgentExecutor(

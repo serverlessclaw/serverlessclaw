@@ -275,6 +275,8 @@ export class OpenAIProvider implements IProvider {
         content,
         thought,
         tool_calls: toolCalls.length > 0 ? toolCalls : undefined,
+        traceId: messages[0]?.traceId ?? 'unknown-trace', // propagate or fallback
+        messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         usage: response.usage
           ? {
               prompt_tokens: response.usage.prompt_tokens ?? 0,

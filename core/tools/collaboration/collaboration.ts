@@ -235,6 +235,8 @@ export const writeToCollaboration: ITool = {
       role: role === 'user' ? MessageRole.USER : MessageRole.ASSISTANT,
       content,
       agentName: agentId,
+      traceId: traceId ?? `collab-${collaborationId}`,
+      messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
     });
 
     // Notify human participants via Notifier fan-out (Phase B2)

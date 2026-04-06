@@ -8,10 +8,10 @@ import { AgentEvent } from '../../lib/types/agent';
  * @param eventDetail - The event detail.
  * @param context - The AWS Lambda context.
  */
-export async function handleFacilitatorTask(
+export const handleFacilitatorTask = async (
   eventDetail: Record<string, unknown>,
   context: Context
-): Promise<void> {
+): Promise<void> => {
   const { handler } = await import('../../agents/facilitator');
   const event = {
     detail: eventDetail as Record<string, unknown>,
@@ -19,4 +19,4 @@ export async function handleFacilitatorTask(
   } as unknown as AgentEvent;
 
   await handler(event, context);
-}
+};

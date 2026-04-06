@@ -190,6 +190,8 @@ export class Agent {
         content: userText,
         attachments: incomingAttachments,
         pageContext,
+        traceId,
+        messageId: traceId,
       });
 
       const { AgentExecutor, AGENT_DEFAULTS } = await import('./agent/executor');
@@ -443,6 +445,8 @@ export class Agent {
       content: userText,
       attachments: incomingAttachments,
       pageContext,
+      traceId,
+      messageId: traceId,
     });
 
     const executor = new (await import('./agent/executor')).AgentExecutor(

@@ -60,7 +60,7 @@ describe('BedrockProvider.stream', () => {
 
     const chunks = [];
     const stream = provider.stream(
-      [{ role: MessageRole.USER, content: 'hi' }],
+      [{ role: MessageRole.USER, content: 'hi', traceId: 'test-trace', messageId: 'test-msg' }],
       [],
       ReasoningProfile.STANDARD
     );
@@ -109,7 +109,7 @@ describe('BedrockProvider.stream', () => {
 
     const chunks = [];
     const stream = provider.stream(
-      [{ role: MessageRole.USER, content: 'do it' }],
+      [{ role: MessageRole.USER, content: 'do it', traceId: 'test-trace', messageId: 'test-msg' }],
       [],
       ReasoningProfile.STANDARD
     );
@@ -135,7 +135,7 @@ describe('BedrockProvider.stream', () => {
 
     const chunks = [];
     const stream = provider.stream(
-      [{ role: MessageRole.USER, content: 'test' }],
+      [{ role: MessageRole.USER, content: 'test', traceId: 'test-trace', messageId: 'test-msg' }],
       [],
       ReasoningProfile.DEEP
     );
@@ -157,7 +157,7 @@ describe('BedrockProvider.stream', () => {
     mockSend.mockRejectedValue(new Error('Network error'));
 
     const stream = provider.stream(
-      [{ role: MessageRole.USER, content: 'test' }],
+      [{ role: MessageRole.USER, content: 'test', traceId: 'test-trace', messageId: 'test-msg' }],
       [],
       ReasoningProfile.STANDARD
     );

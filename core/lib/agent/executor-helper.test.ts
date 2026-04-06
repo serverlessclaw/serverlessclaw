@@ -89,7 +89,8 @@ describe('ExecutorHelper', () => {
         'session1',
         'agent1',
         1000,
-        mockStateManager
+        mockStateManager,
+        'trace-123'
       );
       expect(result).toBe(1000);
       expect(messages).toHaveLength(0);
@@ -109,7 +110,8 @@ describe('ExecutorHelper', () => {
         'session1',
         'agent1',
         1000,
-        mockStateManager
+        mockStateManager,
+        'trace-123'
       );
       expect(result).toBe(3000);
       expect(messages).toHaveLength(1);
@@ -132,7 +134,8 @@ describe('ExecutorHelper', () => {
         'session1',
         'agent1',
         1000,
-        mockStateManager
+        mockStateManager,
+        'trace-123'
       );
       expect(messages[0].content).not.toContain('old');
       expect(messages[0].content).toContain('new');
@@ -156,7 +159,8 @@ describe('ExecutorHelper', () => {
         'session1',
         'agent1',
         1000,
-        mockStateManager
+        mockStateManager,
+        'trace-123'
       );
       expect(attachments).toHaveLength(1);
     });

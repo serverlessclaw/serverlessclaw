@@ -41,8 +41,13 @@ vi.mock('./agent/context-manager', () => ({
   ContextManager: {
     getManagedContext: vi.fn().mockImplementation((_history, _summary, contextPrompt, _limit) => ({
       messages: [
-        { role: MessageRole.SYSTEM, content: contextPrompt },
-        { role: MessageRole.USER, content: 'Hello' },
+        {
+          role: MessageRole.SYSTEM,
+          content: contextPrompt,
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
+        { role: MessageRole.USER, content: 'Hello', traceId: 'test-trace', messageId: 'test-msg' },
       ],
     })),
     needsSummarization: vi.fn().mockResolvedValue(false),
@@ -165,7 +170,14 @@ describe('Agent.stream()', () => {
     (mockProvider.stream as ReturnType<typeof vi.fn>).mockReturnValue(mockStream());
 
     // Mock history with one existing message
-    const existingHistory = [{ role: MessageRole.USER, content: 'Previous message' }];
+    const existingHistory = [
+      {
+        role: MessageRole.USER,
+        content: 'Previous message',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      },
+    ];
     vi.mocked(mockMemory.getHistory).mockResolvedValue(existingHistory);
 
     const agent = new Agent(mockMemory, mockProvider, [], 'System', {

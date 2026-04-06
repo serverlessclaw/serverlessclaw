@@ -48,7 +48,12 @@ describe('Agent Memory Recall Regression', () => {
     } as unknown as IMemory;
 
     mockProvider = {
-      call: vi.fn().mockResolvedValue({ role: MessageRole.ASSISTANT, content: 'Response' }),
+      call: vi.fn().mockResolvedValue({
+        role: MessageRole.ASSISTANT,
+        content: 'Response',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      }),
       stream: vi.fn().mockImplementation(async function* () {
         yield { type: 'chunk', content: 'Response' };
       }),

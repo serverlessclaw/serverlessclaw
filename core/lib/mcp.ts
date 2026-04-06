@@ -135,6 +135,9 @@ export class MCPBridge {
             parameters: config.parameters ?? { type: 'object' as const, properties: {} },
             connector_id: config.connector_id,
             type: ToolType.MCP,
+            connectionProfile: [],
+            requiresApproval: false,
+            requiredPermissions: [],
             execute: async () => `Managed tool (${name}) executed autonomously by provider.`,
           },
         ];
@@ -148,6 +151,9 @@ export class MCPBridge {
             description: `MCP server: ${name} (Connect to see tools)`,
             parameters: { type: 'object' as const, properties: {} },
             type: ToolType.MCP,
+            connectionProfile: [],
+            requiresApproval: false,
+            requiredPermissions: [],
             execute: async () => `MCP server ${name} placeholder`,
           },
         ];

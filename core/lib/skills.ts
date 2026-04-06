@@ -33,7 +33,13 @@ export class SkillRegistry {
         name: tool.name,
         description: tool.description,
         parameters: tool.parameters,
+        argSchema: (tool as any).argSchema,
         type: tool.type,
+        connectionProfile: (tool as any).connectionProfile,
+        connector_id: (tool as any).connector_id,
+        auth: (tool as any).auth,
+        requiresApproval: (tool as any).requiresApproval,
+        requiredPermissions: (tool as any).requiredPermissions,
       }));
   }
 

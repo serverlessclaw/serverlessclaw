@@ -91,6 +91,8 @@ describe('Provider Attachments Mapping', () => {
         {
           role: MessageRole.USER,
           content: 'Look at this',
+          traceId: 't1',
+          messageId: 'm1',
           attachments: [
             { type: AttachmentType.IMAGE, base64: 'imgdata', mimeType: 'image/png' },
             {
@@ -140,6 +142,8 @@ describe('Provider Attachments Mapping', () => {
         {
           role: MessageRole.USER,
           content: 'OpenRouter check',
+          traceId: 't1',
+          messageId: 'm1',
           attachments: [
             { type: AttachmentType.IMAGE, base64: 'imgdata', mimeType: 'image/png' },
             {
@@ -177,6 +181,8 @@ describe('Provider Attachments Mapping', () => {
         {
           role: MessageRole.USER,
           content: 'Bedrock check',
+          traceId: 't1',
+          messageId: 'm1',
           attachments: [
             { type: AttachmentType.IMAGE, base64: 'imgdata', mimeType: 'image/png' },
             {

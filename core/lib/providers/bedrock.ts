@@ -377,6 +377,8 @@ export class BedrockProvider implements IProvider {
               arguments: JSON.stringify(c.toolUse!.input),
             },
           })),
+        traceId: messages[0]?.traceId ?? 'unknown-trace',
+        messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         usage: response.usage
           ? {
               prompt_tokens: response.usage.inputTokens ?? 0,
@@ -384,7 +386,7 @@ export class BedrockProvider implements IProvider {
               total_tokens: response.usage.totalTokens ?? 0,
             }
           : undefined,
-      } as Message;
+      };
     }
 
     throw new Error('Bedrock provider call failed: No output message in response');

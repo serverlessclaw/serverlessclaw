@@ -46,23 +46,23 @@ export interface IToolDefinition {
   description: string;
   /** Schema defining the arguments expected by the tool. */
   parameters: JsonSchema;
-  /** Optional Zod schema for runtime validation and defaulting of arguments. */
-  argSchema?: import('zod').ZodSchema;
+  /** Zod schema for runtime validation and defaulting of arguments. */
+  argSchema?: import('zod').ZodSchema; // optional: for runtime validation
   /** The type of tool. */
   type: ToolType;
-  /** Optional resource connections this tool utilizes (used for topology discovery). */
-  connectionProfile?: string[];
-  /** Optional ID for OpenAI Managed Connectors (e.g., connector_googledrive). */
+  /** Resource connections this tool utilizes (used for topology discovery). */
+  connectionProfile: string[];
+  /** ID for OpenAI Managed Connectors (e.g., connector_googledrive). */
   connector_id?: string;
-  /** Optional authentication context for managed connectors. */
+  /** Authentication context for managed connectors. */
   auth?: {
     type: 'oauth' | 'api_key' | string;
     resource_id?: string;
   };
   /** Whether this tool requires manual human approval before execution. */
-  requiresApproval?: boolean;
+  requiresApproval: boolean;
   /** Required RBAC permissions to execute this tool. */
-  requiredPermissions?: string[];
+  requiredPermissions: string[];
 }
 
 /**
@@ -71,14 +71,14 @@ export interface IToolDefinition {
 export interface ToolResult {
   /** Textual output (required). */
   text: string;
-  /** Optional base64 encoded images (for plots, screenshots). */
-  images?: string[];
-  /** Optional file references or metadata. */
-  metadata?: Record<string, unknown>;
+  /** List of base64 encoded images (for plots, screenshots). Defaults to []. */
+  images: string[];
+  /** File references or metadata. Defaults to {}. */
+  metadata: Record<string, unknown>;
   /**
-   * Optional dynamic UI blocks returned by the tool.
+   * Dynamic UI blocks returned by the tool. Defaults to [].
    */
-  ui_blocks?: Array<{
+  ui_blocks: Array<{
     id: string;
     componentType: string;
     props: Record<string, unknown>;

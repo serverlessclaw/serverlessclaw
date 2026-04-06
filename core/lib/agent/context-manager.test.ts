@@ -25,8 +25,13 @@ describe('ContextManager', () => {
   describe('estimateTokens', () => {
     it('should estimate tokens based on character count', () => {
       const messages: Message[] = [
-        { role: MessageRole.USER, content: 'Hello' },
-        { role: MessageRole.ASSISTANT, content: 'Hi there!' },
+        { role: MessageRole.USER, content: 'Hello', traceId: 'test-trace', messageId: 'test-msg' },
+        {
+          role: MessageRole.ASSISTANT,
+          content: 'Hi there!',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
       ];
       expect(ContextManager.estimateTokens(messages)).toBe(5);
     });
@@ -37,13 +42,22 @@ describe('ContextManager', () => {
           role: MessageRole.ASSISTANT,
           content: '',
           tool_calls: [{ id: '1', type: 'function', function: { name: 'test', arguments: '{}' } }],
+          traceId: 'test-trace',
+          messageId: 'test-msg',
         },
       ];
       expect(ContextManager.estimateTokens(messages)).toBeGreaterThan(0);
     });
 
     it('should accept custom charsPerToken', () => {
-      const messages: Message[] = [{ role: MessageRole.USER, content: 'Hello world!' }];
+      const messages: Message[] = [
+        {
+          role: MessageRole.USER,
+          content: 'Hello world!',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
+      ];
       expect(ContextManager.estimateTokens(messages, 4)).toBe(3);
       expect(ContextManager.estimateTokens(messages, 2)).toBe(6);
     });
@@ -51,19 +65,34 @@ describe('ContextManager', () => {
 
   describe('scoreMessagePriority', () => {
     it('should handle zero totalMessages safely without returning NaN', () => {
-      const msg = { role: MessageRole.USER, content: 'Test' } as Message;
+      const msg = {
+        role: MessageRole.USER,
+        content: 'Test',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      } as Message;
       const score = ContextManager.scoreMessagePriority(msg, 0, 0);
       expect(score).not.toBeNaN();
     });
 
     it('should assign highest priority to system messages', () => {
-      const msg = { role: MessageRole.SYSTEM, content: 'You are an agent.' } as Message;
+      const msg = {
+        role: MessageRole.SYSTEM,
+        content: 'You are an agent.',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      } as Message;
       const score = ContextManager.scoreMessagePriority(msg, 5, 20);
       expect(score).toBeGreaterThan(0.9);
     });
 
     it('should assign higher priority to tool errors than tool successes', () => {
-      const errorMsg = { role: MessageRole.TOOL, content: 'Error: ENOENT no such file' } as Message;
+      const errorMsg = {
+        role: MessageRole.TOOL,
+        content: 'Error: ENOENT no such file',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      } as Message;
       const successMsg = {
         role: MessageRole.TOOL,
         content: 'File created successfully at /tmp/out.log',
@@ -74,23 +103,48 @@ describe('ContextManager', () => {
     });
 
     it('should assign higher priority to user messages than assistant messages', () => {
-      const userMsg = { role: MessageRole.USER, content: 'Deploy to production' } as Message;
-      const assistantMsg = { role: MessageRole.ASSISTANT, content: 'I am thinking...' } as Message;
+      const userMsg = {
+        role: MessageRole.USER,
+        content: 'Deploy to production',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      } as Message;
+      const assistantMsg = {
+        role: MessageRole.ASSISTANT,
+        content: 'I am thinking...',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      } as Message;
       const userScore = ContextManager.scoreMessagePriority(userMsg, 5, 20);
       const assistantScore = ContextManager.scoreMessagePriority(assistantMsg, 5, 20);
       expect(userScore).toBeGreaterThan(assistantScore);
     });
 
     it('should apply recency bonus favoring newer messages', () => {
-      const msg = { role: MessageRole.USER, content: 'Deploy now' } as Message;
+      const msg = {
+        role: MessageRole.USER,
+        content: 'Deploy now',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      } as Message;
       const recentScore = ContextManager.scoreMessagePriority(msg, 19, 20);
       const oldScore = ContextManager.scoreMessagePriority(msg, 1, 20);
       expect(recentScore).toBeGreaterThan(oldScore);
     });
 
     it('should penalize very long messages', () => {
-      const shortMsg = { role: MessageRole.USER, content: 'Deploy' } as Message;
-      const longMsg = { role: MessageRole.USER, content: 'A'.repeat(5000) } as Message;
+      const shortMsg = {
+        role: MessageRole.USER,
+        content: 'Deploy',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      } as Message;
+      const longMsg = {
+        role: MessageRole.USER,
+        content: 'A'.repeat(5000),
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      } as Message;
       const shortScore = ContextManager.scoreMessagePriority(shortMsg, 5, 20);
       const longScore = ContextManager.scoreMessagePriority(longMsg, 5, 20);
       expect(shortScore).toBeGreaterThan(longScore);
@@ -103,6 +157,8 @@ describe('ContextManager', () => {
         {
           role: MessageRole.TOOL,
           content: 'Updated file "/src/app.ts"',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
         },
       ];
       const facts = ContextManager.extractKeyFacts(messages);
@@ -114,6 +170,8 @@ describe('ContextManager', () => {
         {
           role: MessageRole.TOOL,
           content: 'Created file at ./core/agent/deployment.ts successfully.',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
         },
       ];
       const facts = ContextManager.extractKeyFacts(messages);
@@ -125,6 +183,8 @@ describe('ContextManager', () => {
         {
           role: MessageRole.TOOL,
           content: 'Build failed: Error: Cannot find module ./utils in /src/index.ts',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
         },
       ];
       const facts = ContextManager.extractKeyFacts(messages);
@@ -136,6 +196,8 @@ describe('ContextManager', () => {
         {
           role: MessageRole.ASSISTANT,
           content: 'Deployed commit a1b2c3d4e5f67890abcdef1234567890 successfully.',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
         },
       ];
       const facts = ContextManager.extractKeyFacts(messages);
@@ -147,6 +209,8 @@ describe('ContextManager', () => {
         {
           role: MessageRole.TOOL,
           content: 'BUILD SUCCESS at commit abc1234 — artifacts deployed to s3://bucket',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
         },
       ];
       const facts = ContextManager.extractKeyFacts(messages);
@@ -158,6 +222,8 @@ describe('ContextManager', () => {
         {
           role: MessageRole.ASSISTANT,
           content: 'decision: proceeding with blue-green deployment strategy.',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
         },
       ];
       const facts = ContextManager.extractKeyFacts(messages);
@@ -166,8 +232,18 @@ describe('ContextManager', () => {
 
     it('should return empty array when no facts are present', () => {
       const messages: Message[] = [
-        { role: MessageRole.USER, content: 'Hello, how are you?' },
-        { role: MessageRole.ASSISTANT, content: 'I am doing well, thank you!' },
+        {
+          role: MessageRole.USER,
+          content: 'Hello, how are you?',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
+        {
+          role: MessageRole.ASSISTANT,
+          content: 'I am doing well, thank you!',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
       ];
       expect(ContextManager.extractKeyFacts(messages)).toHaveLength(0);
     });
@@ -177,6 +253,8 @@ describe('ContextManager', () => {
         {
           role: MessageRole.TOOL,
           content: 'Updated file at /src/index.ts\nUpdated file at /src/index.ts',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
         },
       ];
       const facts = ContextManager.extractKeyFacts(messages);
@@ -188,6 +266,8 @@ describe('ContextManager', () => {
       const messages = Array.from({ length: 30 }, (_, i) => ({
         role: MessageRole.TOOL,
         content: `Error: failure ${i} at /src/file${i}.ts`,
+        traceId: 'test-trace',
+        messageId: 'test-msg',
       })) as Message[];
       const facts = ContextManager.extractKeyFacts(messages);
       expect(facts.length).toBeLessThanOrEqual(20);
@@ -197,8 +277,18 @@ describe('ContextManager', () => {
   describe('getManagedContext', () => {
     it('should filter out existing system messages from input history', async () => {
       const history: Message[] = [
-        { role: MessageRole.SYSTEM, content: 'Old system prompt' },
-        { role: MessageRole.USER, content: 'User message' },
+        {
+          role: MessageRole.SYSTEM,
+          content: 'Old system prompt',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
+        {
+          role: MessageRole.USER,
+          content: 'User message',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
       ];
       const managed = await ContextManager.getManagedContext(
         history,
@@ -213,13 +303,27 @@ describe('ContextManager', () => {
 
     it('should group ASSISTANT messages with tool_calls and subsequent TOOL messages', async () => {
       const history: Message[] = [
-        { role: MessageRole.USER, content: 'Do something' },
+        {
+          role: MessageRole.USER,
+          content: 'Do something',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
         {
           role: MessageRole.ASSISTANT,
           content: '',
           tool_calls: [{ id: '1', type: 'function', function: { name: 't1', arguments: '{}' } }],
+          traceId: 'test-trace',
+          messageId: 'test-msg',
         },
-        { role: MessageRole.TOOL, tool_call_id: '1', name: 't1', content: 'Result 1' },
+        {
+          role: MessageRole.TOOL,
+          tool_call_id: '1',
+          name: 't1',
+          content: 'Result 1',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
       ];
 
       const managed = await ContextManager.getManagedContext(history, null, 'Sys', 100000);
@@ -231,9 +335,24 @@ describe('ContextManager', () => {
 
     it('should return recent messages that fit the limit', async () => {
       const history: Message[] = [
-        { role: MessageRole.USER, content: 'Old message 1' },
-        { role: MessageRole.ASSISTANT, content: 'Old message 2' },
-        { role: MessageRole.USER, content: 'New message' },
+        {
+          role: MessageRole.USER,
+          content: 'Old message 1',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
+        {
+          role: MessageRole.ASSISTANT,
+          content: 'Old message 2',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
+        {
+          role: MessageRole.USER,
+          content: 'New message',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
       ];
       const limit = 100000;
       const managed = await ContextManager.getManagedContext(history, null, 'System prompt', limit);
@@ -254,7 +373,7 @@ describe('ContextManager', () => {
 
     it('should include tierBreakdown metadata', async () => {
       const managed = await ContextManager.getManagedContext(
-        [{ role: MessageRole.USER, content: 'Test' }],
+        [{ role: MessageRole.USER, content: 'Test', traceId: 'test-trace', messageId: 'test-msg' }],
         null,
         'System prompt',
         100000
@@ -268,10 +387,30 @@ describe('ContextManager', () => {
 
     it('should prioritize tool errors over trivial assistant messages', async () => {
       const history: Message[] = [
-        { role: MessageRole.ASSISTANT, content: 'I am thinking about this...' },
-        { role: MessageRole.ASSISTANT, content: 'Let me check the logs.' },
-        { role: MessageRole.USER, content: 'Old request' },
-        { role: MessageRole.TOOL, content: 'Error: ENOENT /tmp/cache.json not found' },
+        {
+          role: MessageRole.ASSISTANT,
+          content: 'I am thinking about this...',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
+        {
+          role: MessageRole.ASSISTANT,
+          content: 'Let me check the logs.',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
+        {
+          role: MessageRole.USER,
+          content: 'Old request',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
+        {
+          role: MessageRole.TOOL,
+          content: 'Error: ENOENT /tmp/cache.json not found',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
       ];
       const limit = 100000;
       const managed = await ContextManager.getManagedContext(history, null, 'System', limit);
@@ -286,6 +425,8 @@ describe('ContextManager', () => {
       const history = Array.from({ length: 10 }, (_, i) => ({
         role: MessageRole.USER,
         content: `Message ${i}: ${'x'.repeat(100)}`,
+        traceId: 'test-trace',
+        messageId: 'test-msg',
       })) as Message[];
       const managed = await ContextManager.getManagedContext(history, null, 'System', 1000, {
         summaryRatio: 0.5,
@@ -296,7 +437,12 @@ describe('ContextManager', () => {
     });
 
     it('should apply provider-specific toolResultPriority', () => {
-      const msg = { role: MessageRole.TOOL, content: 'Success' } as Message;
+      const msg = {
+        role: MessageRole.TOOL,
+        content: 'Success',
+        traceId: 'test-trace',
+        messageId: 'test-msg',
+      } as Message;
 
       // Default strategy: toolResultPriority = normal
       const defaultScore = ContextManager.scoreMessagePriority(msg, 5, 20);
@@ -317,17 +463,33 @@ describe('ContextManager', () => {
   describe('needsSummarization', () => {
     it('should return true if history exceeds trigger ratio', async () => {
       const longMessage = 'A'.repeat(9000);
-      const history: Message[] = [{ role: MessageRole.USER, content: longMessage }];
+      const history: Message[] = [
+        {
+          role: MessageRole.USER,
+          content: longMessage,
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
+      ];
       expect(await ContextManager.needsSummarization(history, 2000)).toBe(true);
     });
 
     it('should return false if history is below trigger ratio', async () => {
-      const history: Message[] = [{ role: MessageRole.USER, content: 'Hello' }];
+      const history: Message[] = [
+        { role: MessageRole.USER, content: 'Hello', traceId: 'test-trace', messageId: 'test-msg' },
+      ];
       expect(await ContextManager.needsSummarization(history, 10000)).toBe(false);
     });
 
     it('should respect custom trigger ratio', async () => {
-      const history: Message[] = [{ role: MessageRole.USER, content: 'A'.repeat(7500) }];
+      const history: Message[] = [
+        {
+          role: MessageRole.USER,
+          content: 'A'.repeat(7500),
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
+      ];
       expect(await ContextManager.needsSummarization(history, 5000, 0.4)).toBe(true);
       expect(await ContextManager.needsSummarization(history, 5000, 0.6)).toBe(false);
     });
@@ -347,7 +509,7 @@ describe('ContextManager', () => {
       };
 
       await ContextManager.summarize(mockMemory as any, 'user1', mockProvider as any, [
-        { role: MessageRole.USER, content: 'hello' },
+        { role: MessageRole.USER, content: 'hello', traceId: 'test-trace', messageId: 'test-msg' },
       ]);
 
       expect(mockMemory.updateSummary).toHaveBeenCalledWith('user1', 'new summary content');
@@ -363,7 +525,7 @@ describe('ContextManager', () => {
       };
 
       await ContextManager.summarize(mockMemory as any, 'user1', mockProvider as any, [
-        { role: MessageRole.USER, content: 'hello' },
+        { role: MessageRole.USER, content: 'hello', traceId: 'test-trace', messageId: 'test-msg' },
       ]);
 
       expect(mockMemory.updateSummary).not.toHaveBeenCalled();
@@ -379,7 +541,7 @@ describe('ContextManager', () => {
       };
 
       await ContextManager.summarize(mockMemory as any, 'user1', mockProvider as any, [
-        { role: MessageRole.USER, content: 'msg' },
+        { role: MessageRole.USER, content: 'msg', traceId: 'test-trace', messageId: 'test-msg' },
       ]);
 
       const callArgs = mockProvider.call.mock.calls[0];
@@ -396,7 +558,12 @@ describe('ContextManager', () => {
         call: vi.fn().mockResolvedValue({ content: 'summary', usage: undefined }),
       };
       const history: Message[] = [
-        { role: MessageRole.TOOL, content: 'Error: something failed at /src/file.ts' },
+        {
+          role: MessageRole.TOOL,
+          content: 'Error: something failed at /src/file.ts',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
       ];
 
       await ContextManager.summarize(mockMemory as any, 'user1', mockProvider as any, history);
@@ -461,6 +628,8 @@ describe('ContextManager', () => {
       const history: Message[] = Array.from({ length: 50 }, (_, i) => ({
         role: MessageRole.TOOL,
         content: `Error: failure ${i} at /src/file${i}.ts`,
+        traceId: 'test-trace',
+        messageId: 'test-msg',
       })) as Message[];
 
       const managed = await ContextManager.getManagedContext(history, null, 'System', 500, {

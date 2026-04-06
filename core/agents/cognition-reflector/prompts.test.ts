@@ -80,8 +80,13 @@ describe('buildReflectionPrompt', () => {
     });
 
     const conversation: Message[] = [
-      { role: MessageRole.USER, content: 'Build me a dashboard' },
-      { role: MessageRole.ASSISTANT, content: 'I created the dashboard component' },
+      { role: MessageRole.USER, content: 'Build me a dashboard', traceId: 't1', messageId: 'm1' },
+      {
+        role: MessageRole.ASSISTANT,
+        content: 'I created the dashboard component',
+        traceId: 't1',
+        messageId: 'm2',
+      },
     ];
     const traceContext = 'TRACE: agent=coder, duration=5s';
     const deployedGaps = [{ id: 'GAP#001', content: 'Missing chart library' }];
@@ -167,8 +172,8 @@ describe('buildReflectionPrompt', () => {
       const { buildReflectionPrompt } = await import('./prompts');
       const memory = createMockMemory();
       const conversation: Message[] = [
-        { role: MessageRole.USER, content: 'Hello' },
-        { role: MessageRole.ASSISTANT, content: 'Hi there' },
+        { role: MessageRole.USER, content: 'Hello', traceId: 't1', messageId: 'm1' },
+        { role: MessageRole.ASSISTANT, content: 'Hi there', traceId: 't1', messageId: 'm2' },
       ];
 
       const result = await buildReflectionPrompt(memory, 'user-1', conversation, '', [], []);
@@ -184,6 +189,8 @@ describe('buildReflectionPrompt', () => {
         {
           role: MessageRole.ASSISTANT,
           content: '',
+          traceId: 't1',
+          messageId: 'm1',
           tool_calls: [
             { id: 'call-1', type: 'function', function: { name: 'search', arguments: '{}' } },
           ],
@@ -209,10 +216,15 @@ describe('buildReflectionPrompt', () => {
       const { buildReflectionPrompt } = await import('./prompts');
       const memory = createMockMemory();
       const conversation: Message[] = [
-        { role: MessageRole.USER, content: 'First question' },
-        { role: MessageRole.ASSISTANT, content: 'First answer' },
-        { role: MessageRole.USER, content: 'Follow up' },
-        { role: MessageRole.ASSISTANT, content: 'Follow up answer' },
+        { role: MessageRole.USER, content: 'First question', traceId: 't1', messageId: 'm1' },
+        { role: MessageRole.ASSISTANT, content: 'First answer', traceId: 't1', messageId: 'm2' },
+        { role: MessageRole.USER, content: 'Follow up', traceId: 't1', messageId: 'm3' },
+        {
+          role: MessageRole.ASSISTANT,
+          content: 'Follow up answer',
+          traceId: 't1',
+          messageId: 'm4',
+        },
       ];
 
       const result = await buildReflectionPrompt(memory, 'user-1', conversation, '', [], []);
@@ -444,8 +456,8 @@ describe('buildReflectionPrompt', () => {
       const { buildReflectionPrompt } = await import('./prompts');
       const memory = createMockMemory();
       const conversation: Message[] = [
-        { role: MessageRole.USER, content: '' },
-        { role: MessageRole.ASSISTANT, content: '' },
+        { role: MessageRole.USER, content: '', traceId: 't1', messageId: 'm1' },
+        { role: MessageRole.ASSISTANT, content: '', traceId: 't1', messageId: 'm2' },
       ];
 
       const result = await buildReflectionPrompt(memory, 'user-1', conversation, '', [], []);

@@ -71,6 +71,8 @@ describe('Multi-Modal Integration', () => {
     mockProvider.call.mockResolvedValue({
       role: MessageRole.ASSISTANT,
       content: 'I see a cat in the image.',
+      traceId: 'test-trace-id',
+      messageId: 'test-msg-id',
     });
 
     const attachments = [

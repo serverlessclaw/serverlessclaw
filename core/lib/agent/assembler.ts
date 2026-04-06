@@ -140,8 +140,8 @@ export class AgentAssembler {
     contextPrompt += globalLessonsBlock;
     contextPrompt += `\n\n${AgentContext.getIdentityBlock(
       config,
-      activeModel ?? SYSTEM.DEFAULT_MODEL,
-      activeProvider ?? SYSTEM.DEFAULT_PROVIDER,
+      activeModel,
+      activeProvider,
       activeProfile,
       depth
     )}`;
@@ -160,7 +160,11 @@ export class AgentAssembler {
     const currentMessage: Message = {
       role: MessageRole.USER,
       content: userText,
-      attachments: incomingAttachments,
+      attachments: incomingAttachments ?? [],
+      traceId: pageContext?.traceId ?? 'unknown',
+      messageId: pageContext?.agentId ?? `msg-${Date.now()}`, // Fallback if no pageContext
+      thought: '',
+      tool_calls: [],
     };
 
     const fullHistory = [...history, currentMessage];

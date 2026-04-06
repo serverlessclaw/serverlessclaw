@@ -142,6 +142,8 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
           role: MessageRole.ASSISTANT,
           content: `**CRITIC VERDICT: ${verdict.verdict}**\n\nMode: ${verdict.reviewMode}\nConfidence: ${verdict.confidence}\nSummary: ${verdict.summary}\n\nFindings: ${JSON.stringify(verdict.findings, null, 2)}`,
           agentName: AgentType.CRITIC,
+          traceId,
+          messageId: `critic-${planId}-${Date.now()}`,
         });
         logger.info(`[CRITIC] Verdict shared in collaboration ${collaborationId}`);
       }
