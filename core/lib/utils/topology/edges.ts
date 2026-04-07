@@ -94,24 +94,25 @@ export async function mapToolToResources(toolName: string): Promise<string[]> {
   if (!toolName) return [];
   const toolDefinitions = await getTools();
   const tool = toolDefinitions[toolName];
+  const lowerName = toolName.toLowerCase();
 
   if (!tool || !tool.connectionProfile) {
-    if (toolName === 'sendMessage') return [INFRA_NODE_ID.NOTIFIER];
+    if (lowerName === 'sendmessage') return [INFRA_NODE_ID.NOTIFIER];
     // Agents use both S3 buckets depending on the task (Deployment vs Knowledge)
-    if (toolName.startsWith('ast_')) return ['ast'];
-    if (toolName.startsWith('git_')) return ['git'];
-    if (toolName.startsWith('filesystem_')) return ['filesystem'];
-    if (toolName.startsWith('google-search_')) return ['google-search'];
-    if (toolName.startsWith('puppeteer_')) return ['puppeteer'];
-    if (toolName.startsWith('fetch_')) return ['fetch'];
-    if (toolName.startsWith('aws_')) return ['aws'];
-    if (toolName.startsWith('aws-s3_')) return ['aws-s3'];
-    if (toolName.includes('memory') || toolName.includes('kv')) return ['memory'];
-    if (toolName.includes('config')) return ['config'];
-    if (toolName.includes('trace') || toolName.includes('history')) return ['trace'];
-    if (toolName.includes('search') || toolName.includes('vector')) return ['search'];
-    if (toolName.includes('knowledge') || toolName.includes('rag')) return ['knowledge'];
-    if (toolName.includes('deploy') || toolName.includes('build')) return ['codebuild'];
+    if (lowerName.startsWith('ast_')) return ['ast'];
+    if (lowerName.startsWith('git_')) return ['git'];
+    if (lowerName.startsWith('filesystem_')) return ['filesystem'];
+    if (lowerName.startsWith('google-search_')) return ['google-search'];
+    if (lowerName.startsWith('puppeteer_')) return ['puppeteer'];
+    if (lowerName.startsWith('fetch_')) return ['fetch'];
+    if (lowerName.startsWith('aws_')) return ['aws'];
+    if (lowerName.startsWith('aws-s3_')) return ['aws-s3'];
+    if (lowerName.includes('memory') || lowerName.includes('kv')) return ['memory'];
+    if (lowerName.includes('config')) return ['config'];
+    if (lowerName.includes('trace') || lowerName.includes('history')) return ['trace'];
+    if (lowerName.includes('search') || lowerName.includes('vector')) return ['search'];
+    if (lowerName.includes('knowledge') || lowerName.includes('rag')) return ['knowledge'];
+    if (lowerName.includes('deploy') || lowerName.includes('build')) return ['codebuild'];
     return [];
   }
 

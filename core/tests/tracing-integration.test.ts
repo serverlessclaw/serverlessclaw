@@ -129,6 +129,10 @@ vi.mock('../lib/utils/agent-helpers/event-emitter', () => ({
   emitTaskEvent: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('../tools/registry-utils', () => ({
+  getAgentTools: vi.fn().mockResolvedValue([]),
+}));
+
 vi.mock('../lib/utils/typed-emit', () => ({
   emitTypedEvent: vi.fn().mockResolvedValue(undefined),
 }));

@@ -57,6 +57,22 @@ vi.mock('sst', () => ({
   },
 }));
 
+// Mock S3
+vi.mock('@aws-sdk/client-s3', () => ({
+  S3Client: class {
+    send = vi.fn().mockResolvedValue({ Buckets: [] });
+  },
+  ListBucketsCommand: class {},
+}));
+
+// Mock Lambda
+vi.mock('@aws-sdk/client-lambda', () => ({
+  LambdaClient: class {
+    send = vi.fn().mockResolvedValue({ Functions: [] });
+  },
+  ListFunctionsCommand: class {},
+}));
+
 // Mock agent prompts to break dependency chains (preventing DynamoDB imports)
 vi.mock('../agents/superclaw', () => ({ SUPERCLAW_SYSTEM_PROMPT: 'test' }));
 vi.mock('../agents/coder', () => ({ CODER_SYSTEM_PROMPT: 'test' }));
