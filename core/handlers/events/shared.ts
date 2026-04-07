@@ -209,9 +209,22 @@ export async function processEventWithAgent(
 
     // resultAttachments from agent.stream are not directly returned as a single array,
     // they are usually added to memory or yielded in chunks if the provider/executor supports it.
+    const isValidAttachment = (rawAtt: unknown): rawAtt is Attachment => {
+      if (!rawAtt || typeof rawAtt !== 'object') return false;
+      const a = rawAtt as Record<string, unknown>;
+      if (typeof a.url === 'string' && a.url.length > 0) return true;
+      if (typeof a.base64 === 'string' && a.base64.length > 0) return true;
+      return false;
+    };
+
     for await (const chunk of stream) {
       if (chunk.content) responseText += chunk.content;
-      if (chunk.attachments) attachments.push(...chunk.attachments);
+      if (chunk.attachments && Array.isArray(chunk.attachments)) {
+        for (const rawAtt of chunk.attachments) {
+          if (isValidAttachment(rawAtt)) attachments.push(rawAtt as Attachment);
+          else logger.warn('[EVENTS.SHARED] Skipping invalid stream attachment');
+        }
+      }
     }
 
     const isPaused = isTaskPaused(responseText);

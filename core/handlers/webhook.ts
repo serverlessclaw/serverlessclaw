@@ -1,7 +1,7 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
 import { sendOutboundMessage } from '../lib/outbound';
 import { logger } from '../lib/logger';
-import { TraceSource, AgentType, Attachment } from '../lib/types/agent';
+import { TraceSource, AgentType, Attachment, isValidAttachment } from '../lib/types/agent';
 import { TelegramAdapter } from '../adapters/input/telegram';
 
 /**
@@ -74,7 +74,14 @@ export const handler = async (
 
   // Process Media/Attachments via Adapter
   const messageWithMedia = await telegramAdapter.processMedia(inbound);
-  const attachments = messageWithMedia.attachments as Attachment[];
+  const rawAttachments = messageWithMedia.attachments ?? [];
+  const attachments: Attachment[] = [];
+  if (Array.isArray(rawAttachments)) {
+    for (const rawAtt of rawAttachments) {
+      if (isValidAttachment(rawAtt)) attachments.push(rawAtt as Attachment);
+      else logger.warn('[WEBHOOK] Dropping invalid attachment from adapter');
+    }
+  }
 
   // Lazy load dependencies to reduce initial context budget
   logger.info('[WEBHOOK] Lazy loading deps...');

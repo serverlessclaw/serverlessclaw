@@ -71,23 +71,42 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
   // 3. Execution & Streaming
   let finalResponseText = '';
   let finalAttachments: Attachment[] | undefined = undefined;
+  const isValidAttachment = (rawAtt: unknown): rawAtt is Attachment => {
+    if (!rawAtt || typeof rawAtt !== 'object') return false;
+    const a = rawAtt as Record<string, unknown>;
+    if (typeof a.url === 'string' && a.url.length > 0) return true;
+    if (typeof a.base64 === 'string' && a.base64.length > 0) return true;
+    return false;
+  };
 
   if (shouldSpeakDirectly) {
     logger.info(`Agent Runner [${agentId}] starting stream for direct communication...`);
     const stream = agent.stream(userId, task, processOptions);
+
     for await (const chunk of stream) {
       if (chunk.content) {
         finalResponseText += chunk.content;
       }
-      if (chunk.attachments) {
+      if (chunk.attachments && Array.isArray(chunk.attachments)) {
         finalAttachments = finalAttachments ?? [];
-        finalAttachments.push(...chunk.attachments);
+        for (const rawAtt of chunk.attachments) {
+          if (isValidAttachment(rawAtt)) finalAttachments.push(rawAtt as Attachment);
+          else logger.warn('[AGENT_RUNNER] Skipping invalid chunk attachment');
+        }
       }
     }
   } else {
     const processResult = await agent.process(userId, task, processOptions);
     finalResponseText = processResult.responseText;
-    finalAttachments = processResult.attachments;
+    if (processResult.attachments && Array.isArray(processResult.attachments)) {
+      finalAttachments = [];
+      for (const rawAtt of processResult.attachments) {
+        if (isValidAttachment(rawAtt)) finalAttachments.push(rawAtt as Attachment);
+        else logger.warn('[AGENT_RUNNER] Skipping invalid processResult attachment');
+      }
+    } else {
+      finalAttachments = processResult.attachments;
+    }
 
     // Swarm Self-Organization: Decompose high-level plans into parallel sub-tasks
     // This allows orchestrators like SuperClaw to automatically fan-out complex instructions.

@@ -14,8 +14,9 @@ import type {
   ProactiveHeartbeatPayloadInferred,
 } from '../schema/events';
 
-import { Attachment } from './llm';
+import { Attachment, isValidAttachment } from './llm';
 
+export { isValidAttachment };
 export type { Attachment };
 export type BaseEvent = BaseEventPayload;
 export type AgentPayload = AgentPayloadInferred;

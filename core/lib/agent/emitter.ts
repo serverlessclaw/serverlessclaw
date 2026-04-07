@@ -10,7 +10,7 @@ import {
   ButtonType,
 } from '../types/index';
 import { AgentRegistry } from '../registry';
-import { SSTResource } from '../types/index';
+import { SSTResource, isValidAttachment } from '../types/index';
 import { AGENT_DEFAULTS } from './executor';
 import { parseConfigInt } from '../providers/utils';
 
@@ -125,6 +125,17 @@ export class AgentEmitter {
     metadata: ContinuationMetadata = {}
   ): Promise<void> {
     try {
+      let safeAttachments: ContinuationMetadata['attachments'] | undefined = undefined;
+      if (metadata.attachments && Array.isArray(metadata.attachments)) {
+        safeAttachments = [];
+        for (const rawAtt of metadata.attachments) {
+          if (isValidAttachment(rawAtt))
+            safeAttachments.push(
+              rawAtt as NonNullable<ContinuationMetadata['attachments']>[number]
+            );
+          else logger.warn('[EMITTER] Skipping invalid continuation attachment');
+        }
+      }
       await this.eventbridge.send(
         new PutEventsCommand({
           Entries: [
@@ -142,7 +153,7 @@ export class AgentEmitter {
                 initiatorId: metadata.initiatorId,
                 depth: (metadata.depth ?? 0) + 1,
                 sessionId: metadata.sessionId,
-                attachments: metadata.attachments,
+                attachments: safeAttachments,
               }),
               EventBusName: typedResource.AgentBus.name,
             },
@@ -208,6 +219,17 @@ export class AgentEmitter {
 
       const { publishToRealtime } = await import('../utils/realtime');
 
+      let safeAttachments: Message['attachments'] | undefined = undefined;
+      if (attachments && Array.isArray(attachments)) {
+        safeAttachments = [];
+        for (const rawAtt of attachments) {
+          if (isValidAttachment(rawAtt))
+            safeAttachments.push(rawAtt as NonNullable<Message['attachments']>[number]);
+          else logger.warn('[EMITTER] Skipping invalid realtime attachment');
+        }
+        if (safeAttachments.length === 0) safeAttachments = undefined;
+      }
+
       await publishToRealtime(topic, {
         'detail-type': EventType.CHUNK,
         userId: baseUserId,
@@ -220,7 +242,7 @@ export class AgentEmitter {
         agentName: agentName ?? this.config?.name ?? 'SuperClaw',
         thought: thoughtDelta,
         ui_blocks,
-        attachments,
+        attachments: safeAttachments,
       });
     } catch (e) {
       // Don't let chunk emission failures block the main loop

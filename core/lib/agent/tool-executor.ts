@@ -1,4 +1,12 @@
-import { ToolCall, ITool, Message, MessageRole, ToolResult, AttachmentType } from '../types/index';
+import {
+  ToolCall,
+  ITool,
+  Message,
+  MessageRole,
+  ToolResult,
+  AttachmentType,
+  isValidAttachment,
+} from '../types/index';
 import { logger } from '../logger';
 import { AgentRegistry } from '../registry';
 import { ClawTracer } from '../tracer';
@@ -186,7 +194,14 @@ export class ToolExecutor {
           ui_blocks.push(...res.ui_blocks);
         }
         if (res.metadata?.attachments && Array.isArray(res.metadata.attachments)) {
-          attachments.push(...(res.metadata.attachments as NonNullable<Message['attachments']>));
+          const metaAttachments = res.metadata.attachments as unknown[];
+          for (const rawAtt of metaAttachments) {
+            if (isValidAttachment(rawAtt)) {
+              attachments.push(rawAtt as NonNullable<Message['attachments']>[number]);
+            } else {
+              logger.warn(`[EXECUTOR] Skipping invalid attachment from tool ${tool.name}`);
+            }
+          }
         }
       }
 

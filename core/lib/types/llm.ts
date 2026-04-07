@@ -54,6 +54,17 @@ export type Attachment = {
 } & ({ url: string; base64?: string } | { base64: string; url?: string });
 
 /**
+ * Type guard to check if an unknown object is a valid Attachment.
+ */
+export const isValidAttachment = (rawAtt: unknown): rawAtt is Attachment => {
+  if (!rawAtt || typeof rawAtt !== 'object') return false;
+  const a = rawAtt as Record<string, unknown>;
+  if (typeof a.url === 'string' && a.url.length > 0) return true;
+  if (typeof a.base64 === 'string' && a.base64.length > 0) return true;
+  return false;
+};
+
+/**
  * UI button/option types for interactive agent signals.
  */
 export enum ButtonType {
