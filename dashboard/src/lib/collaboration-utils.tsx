@@ -13,8 +13,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 
-export interface TaskNodeData {
-  [key: string]: any;
+export interface TaskNodeData extends Record<string, unknown> {
   label: string;
   taskId: string;
   agentId: string;
@@ -25,7 +24,7 @@ export interface TaskNodeData {
   startedAt?: number;
   completedAt?: number;
   latency?: number;
-  }
+}
 export interface AgentActivity {
   agentId: string;
   agentName: string;
@@ -64,7 +63,7 @@ export const getStatusIcon = (status: string) => {
     case 'ready':
       return <AlertCircle size={12} className="text-orange-500" />;
     default:
-      return <Clock size={12} className="text-white/40" />;
+      return <Clock size={12} className="text-muted-foreground/40" />;
   }
 };
 
@@ -81,6 +80,6 @@ export const getStatusColor = (status: string) => {
     case 'ready':
       return 'border-orange-500/50 bg-orange-500/5';
     default:
-      return 'border-white/20 bg-white/5';
+      return 'border-border bg-foreground/5';
   }
 };

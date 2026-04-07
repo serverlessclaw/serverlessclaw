@@ -88,7 +88,7 @@ type TaskNode = Node<TaskNodeData>;
 type DagStatusNode = Node<{ completed: number; total: number; failed: number; ready: number; pending: number }>;
 type InitiatorNode = Node<{ initiatorId: string; initialQuery: string }>;
 type AggregatorNode = Node<{ type: string }>;
-type AgentActivityNode = Node<{ agentId: string; activeTasks: any[] }>;
+type AgentActivityNode = Node<{ agentId: string; activeTasks: unknown[] }>;
 
 export const nodeTypes = {
   taskNode: ({ data }: NodeProps<TaskNode>) => {
@@ -227,12 +227,12 @@ export const nodeTypes = {
     <div className="flex flex-col items-center gap-2">
       <div
         className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all ${
-          data.activeTasks.length > 0
+          (data.activeTasks as unknown[]).length > 0
             ? 'border-purple-400 bg-purple-400/10 animate-pulse shadow-[0_0_15px_color-mix(in srgb, #a855f7 30%, transparent)]'
             : 'border-border bg-foreground/5'
         }`}
       >
-        <Bot size={20} className={data.activeTasks.length > 0 ? 'text-purple-400' : 'text-muted-foreground'} />
+        <Bot size={20} className={(data.activeTasks as unknown[]).length > 0 ? 'text-purple-400' : 'text-muted-foreground'} />
       </div>
       <div className="px-2 py-0.5 bg-background border border-border rounded text-[8px] font-black uppercase tracking-widest text-foreground/70">
         {data.agentId}

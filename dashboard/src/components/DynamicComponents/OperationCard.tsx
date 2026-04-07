@@ -9,7 +9,7 @@ import { DynamicComponent } from '../Chat/types';
 
 interface OperationCardProps {
   component: DynamicComponent;
-  onAction?: (actionId: string, payload?: any) => void;
+  onAction?: (actionId: string, payload?: Record<string, unknown>) => void;
 }
 
 /**
@@ -26,7 +26,7 @@ export default function OperationCard({ component, onAction }: OperationCardProp
   return (
     <Card
       variant="glass"
-      className="border-cyber-green/30 bg-cyber-green/[0.02] shadow-[0_0_20px_rgba(0,255,163,0.05)] overflow-hidden"
+      className="border-cyber-green/30 bg-cyber-green/[0.02] shadow-[0_0_20px_color-mix(in_srgb,var(--cyber-green)_5%,transparent)] overflow-hidden"
       padding="none"
     >
       {/* Header */}
@@ -38,8 +38,8 @@ export default function OperationCard({ component, onAction }: OperationCardProp
           </Typography>
         </div>
         {status && (
-          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/40 border border-cyber-green/20">
-            <div className={`w-1.5 h-1.5 rounded-full ${status === 'active' ? 'bg-cyber-green animate-pulse' : 'bg-white/40'}`} />
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-cyber-green/20">
+            <div className={`w-1.5 h-1.5 rounded-full ${status === 'active' ? 'bg-cyber-green animate-pulse' : 'bg-muted-foreground/40'}`} />
             <Typography variant="mono" className="text-[9px] uppercase font-bold text-cyber-green/80">
               {status}
             </Typography>
@@ -50,7 +50,7 @@ export default function OperationCard({ component, onAction }: OperationCardProp
       {/* Content */}
       <div className="p-4 space-y-4">
         {description && (
-          <Typography variant="body" className="text-xs text-white/80 leading-relaxed">
+          <Typography variant="body" className="text-xs text-foreground/80 leading-relaxed">
             {description}
           </Typography>
         )}
@@ -58,8 +58,8 @@ export default function OperationCard({ component, onAction }: OperationCardProp
         {details && (
           <div className="space-y-2">
             {Object.entries(details).map(([key, value]) => (
-              <div key={key} className="flex items-center justify-between py-1 border-b border-white/5">
-                <Typography variant="mono" className="text-[10px] text-white/40 uppercase">
+              <div key={key} className="flex items-center justify-between py-1 border-b border-border">
+                <Typography variant="mono" className="text-[10px] text-muted-foreground uppercase">
                   {key.replace(/_/g, ' ')}
                 </Typography>
                 <Typography variant="mono" className="text-[10px] text-cyber-green/90 font-bold">
@@ -73,14 +73,14 @@ export default function OperationCard({ component, onAction }: OperationCardProp
 
       {/* Actions */}
       {actions && actions.length > 0 && (
-        <div className="p-3 bg-black/40 border-t border-cyber-green/10 flex flex-wrap gap-2">
+        <div className="p-3 bg-foreground/5 border-t border-cyber-green/10 flex flex-wrap gap-2">
           {actions.map((action) => (
             <Button
               key={action.id}
               variant={action.type === 'primary' ? 'primary' : action.type === 'danger' ? 'danger' : 'outline'}
               size="sm"
               className="!py-1.5 !px-3 text-[10px] font-mono tracking-wider uppercase border-cyber-green/20"
-              onClick={() => onAction?.(action.id, action.payload)}
+              onClick={() => onAction?.(action.id, action.payload as Record<string, unknown>)}
             >
               {action.label}
             </Button>

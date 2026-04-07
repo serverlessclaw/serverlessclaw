@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { MessageSquare, X, Minimize2, Maximize2, Activity } from 'lucide-react';
 import Button from '@/components/ui/Button';
@@ -43,11 +43,9 @@ export default function ChatBubble() {
 
   const {
     messages,
-    setMessages,
     sendMessage,
     handleFiles,
     attachments,
-    setAttachments,
     removeAttachment,
   } = useChatMessages(
     activeSessionId,
@@ -98,7 +96,7 @@ export default function ChatBubble() {
           padding="none"
         >
           {/* Header */}
-          <div className="p-4 border-b border-white/10 bg-black/40 flex items-center justify-between">
+          <div className="p-4 border-b border-border bg-card flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-cyber-green animate-pulse" />
               <Typography variant="h3" weight="bold" className="text-sm uppercase tracking-wider">
@@ -111,9 +109,9 @@ export default function ChatBubble() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setAttachContext(!attachContext)}
-                  icon={<Activity size={14} className={attachContext ? 'text-cyber-green' : 'text-white/20'} />}
+                  icon={<Activity size={14} className={attachContext ? 'text-cyber-green' : 'text-foreground/20'} />}
                   title={attachContext ? 'Page context attached' : 'Attach page context'}
-                  className="hover:bg-white/5"
+                  className="hover:bg-foreground/5"
                 />
               )}
               <Button
@@ -134,7 +132,7 @@ export default function ChatBubble() {
           </div>
 
           {/* Messages Area */}
-          <div className="flex-1 overflow-hidden relative bg-[radial-gradient(circle_at_top_right,_rgba(0,255,163,0.05)_0%,_transparent_70%)]">
+          <div className="flex-1 overflow-hidden relative bg-[radial-gradient(circle_at_top_right,color-mix(in_srgb,var(--cyber-green)_5%,transparent)_0%,_transparent_70%)]">
             <ChatMessageList
               messages={messages}
               isLoading={isLoading}
@@ -144,7 +142,7 @@ export default function ChatBubble() {
           </div>
 
           {/* Input Area */}
-          <div className="p-4 border-t border-white/10 bg-black/40">
+          <div className="p-4 border-t border-border bg-card">
             <ChatInput
               input={input}
               setInput={setInput}
@@ -163,13 +161,13 @@ export default function ChatBubble() {
       {isOpen && isMinimized && (
         <button
           onClick={toggleMinimized}
-          className="bg-black/80 backdrop-blur-md border border-cyber-green/30 px-4 py-2 rounded-lg flex items-center gap-3 shadow-lg hover:border-cyber-green transition-all group"
+          className="bg-background/80 backdrop-blur-md border border-cyber-green/30 px-4 py-2 rounded-lg flex items-center gap-3 shadow-lg hover:border-cyber-green transition-all group"
         >
           <div className="w-2 h-2 rounded-full bg-cyber-green animate-pulse" />
           <Typography variant="caption" weight="bold" className="uppercase tracking-widest text-[10px]">
             SuperClaw Active
           </Typography>
-          <Maximize2 size={14} className="text-white/40 group-hover:text-white" />
+          <Maximize2 size={14} className="text-foreground/40 group-hover:text-foreground" />
         </button>
       )}
 
@@ -177,7 +175,7 @@ export default function ChatBubble() {
       {!isOpen && (
         <button
           onClick={toggleOpen}
-          className="w-14 h-14 rounded-full bg-cyber-green text-black flex items-center justify-center shadow-[0_0_20px_rgba(0,255,163,0.4)] hover:scale-110 transition-transform group relative"
+          className="w-14 h-14 rounded-full bg-cyber-green text-black flex items-center justify-center shadow-[0_0_20px_color-mix(in_srgb,var(--cyber-green)_40%,transparent)] hover:scale-110 transition-transform group relative"
           aria-label="Open Chat"
         >
           <div className="absolute inset-0 rounded-full bg-cyber-green animate-ping opacity-20" />

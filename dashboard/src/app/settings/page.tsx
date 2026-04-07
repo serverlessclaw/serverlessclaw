@@ -9,8 +9,6 @@ import Typography from '@/components/ui/Typography';
 import { SYSTEM } from '@claw/core/lib/constants';
 import { EvolutionMode } from '@claw/core/lib/types/agent';
 import SettingsClient from './SettingsClient';
-import en from '../../../messages/en.json';
-import cn from '../../../messages/cn.json';
 
 async function getConfig() {
   try {
@@ -356,8 +354,6 @@ async function triggerRebuild() {
 
 export default async function SettingsPage() {
   const config = await getConfig();
-  const messages = config.activeLocale === 'cn' ? cn : en;
-  const t = (key: string) => (messages as Record<string, string>)[key] ?? key;
 
   return (
     <main className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-blue/5 via-transparent to-transparent">
