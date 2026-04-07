@@ -112,3 +112,69 @@ export const uiAction: ITool = {
     };
   },
 };
+
+/**
+ * Tool for agents to render a code diff/patch in the dashboard.
+ */
+export const renderCodeDiff: ITool = {
+  ...schema.renderCodeDiff,
+  execute: async (args: Record<string, unknown>): Promise<ToolResult> => {
+    return {
+      text: `Code diff for '${args.fileName}' rendered successfully.`,
+      images: [],
+      metadata: {},
+      ui_blocks: [
+        {
+          id: `diff_${Date.now()}`,
+          componentType: 'code-diff',
+          props: {
+            fileName: args.fileName,
+            language: args.language,
+            description: args.description,
+            lines: args.lines,
+          },
+          actions: (args.actions as Array<Record<string, unknown>> | undefined)?.length
+            ? (args.actions as Array<Record<string, unknown>>).map((a) => ({
+                id: String(a.id),
+                label: String(a.label),
+                type: (a.type as 'primary' | 'secondary' | 'danger') || 'secondary',
+                payload: a.payload as Record<string, unknown> | undefined,
+              }))
+            : undefined,
+        },
+      ],
+    };
+  },
+};
+
+/**
+ * Tool for agents to render a strategic plan editor.
+ */
+export const renderPlanEditor: ITool = {
+  ...schema.renderPlanEditor,
+  execute: async (args: Record<string, unknown>): Promise<ToolResult> => {
+    return {
+      text: `Plan editor for '${args.planId}' rendered successfully.`,
+      images: [],
+      metadata: {},
+      ui_blocks: [
+        {
+          id: `plan_${Date.now()}`,
+          componentType: 'plan-editor',
+          props: {
+            planId: args.planId,
+            content: args.content,
+          },
+          actions: (args.actions as Array<Record<string, unknown>> | undefined)?.length
+            ? (args.actions as Array<Record<string, unknown>>).map((a) => ({
+                id: String(a.id),
+                label: String(a.label),
+                type: (a.type as 'primary' | 'secondary' | 'danger') || 'secondary',
+                payload: a.payload as Record<string, unknown> | undefined,
+              }))
+            : undefined,
+        },
+      ],
+    };
+  },
+};

@@ -59,6 +59,8 @@
 | `renderComponent`         | Renders a specialized UI component in the dashboard session                                     |     —      |        —         |
 | `navigateTo`              | Navigates the user to a dashboard path (SuperClaw ONLY)                                         |     ✅     |        —         |
 | `uiAction`                | Triggers a specific UI event or state change (modal, sidebar, etc.)                             |     —      |        —         |
+| `renderCodeDiff`          | Renders a code diff/patch component for code review and interaction                             |     —      |        —         |
+| `renderPlanEditor`        | Renders an interactive JSON editor for strategic plan review and modification                   |     —      |        —         |
 
 ---
 

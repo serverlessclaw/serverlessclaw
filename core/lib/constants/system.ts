@@ -81,6 +81,9 @@ export const CONFIG_KEYS = {
   MAX_TOOL_ITERATIONS: 'max_tool_iterations',
   RECURSION_LIMIT: 'recursion_limit',
   SELECTIVE_DISCOVERY_MODE: 'selective_discovery_mode',
+  UI_THEME: 'ui_theme',
+  UI_SIDEBAR_STATE: 'ui_sidebar_state',
+  UI_LAYOUT: 'ui_layout',
 } as const;
 
 /**

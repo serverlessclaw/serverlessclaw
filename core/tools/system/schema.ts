@@ -325,4 +325,151 @@ export const systemSchema: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
   },
+
+  renderCodeDiff: {
+    type: ToolType.FUNCTION,
+    argSchema: z.any(),
+    connectionProfile: [],
+    connector_id: '',
+    auth: { type: 'api_key', resource_id: '' },
+    requiresApproval: false,
+    requiredPermissions: [],
+    name: 'renderCodeDiff',
+    description:
+      'Renders a code diff/patch component in the dashboard for code review and interaction.',
+    parameters: {
+      type: 'object',
+      properties: {
+        fileName: { type: 'string', description: 'The name of the file being changed.' },
+        language: { type: 'string', description: 'The programming language of the file.' },
+        description: { type: 'string', description: 'A short description of the changes.' },
+        lines: {
+          type: 'array',
+          description: 'The list of diff lines to display.',
+          items: {
+            type: 'object',
+            properties: {
+              type: { type: 'string', enum: ['added', 'removed', 'context'] },
+              content: { type: 'string' },
+              lineNumber: { type: 'number' },
+            },
+            required: ['type', 'content'],
+          },
+        },
+        actions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              label: { type: 'string' },
+              type: { type: 'string', enum: ['primary', 'secondary', 'danger'] },
+              payload: { type: 'object' },
+            },
+            required: ['id', 'label'],
+          },
+        },
+      },
+      required: ['fileName', 'lines'],
+      additionalProperties: false,
+    },
+  },
+
+  renderPlanEditor: {
+    type: ToolType.FUNCTION,
+    argSchema: z.any(),
+    connectionProfile: [],
+    connector_id: '',
+    auth: { type: 'api_key', resource_id: '' },
+    requiresApproval: false,
+    requiredPermissions: [],
+    name: 'renderPlanEditor',
+    description:
+      'Renders an interactive JSON editor for strategic plans, allowing users to tweak plans before approval.',
+    parameters: {
+      type: 'object',
+      properties: {
+        planId: { type: 'string', description: 'The unique ID of the plan.' },
+        content: { type: 'object', description: 'The JSON content of the plan.' },
+        actions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              label: { type: 'string' },
+              type: { type: 'string', enum: ['primary', 'secondary', 'danger'] },
+              payload: { type: 'object' },
+            },
+            required: ['id', 'label'],
+          },
+        },
+      },
+      required: ['planId', 'content'],
+      additionalProperties: false,
+    },
+  },
+
+  setSystemConfig: {
+    type: ToolType.FUNCTION,
+    argSchema: z.any(),
+    connectionProfile: [],
+    connector_id: '',
+    auth: { type: 'api_key', resource_id: '' },
+    requiresApproval: true,
+    requiredPermissions: ['admin'],
+    name: 'setSystemConfig',
+    description:
+      'Updates a global system configuration in DynamoDB (e.g., UI theme, model settings).',
+    parameters: {
+      type: 'object',
+      properties: {
+        key: {
+          type: 'string',
+          description: 'The unique configuration key (e.g., "ui_theme", "active_model").',
+        },
+        value: { type: 'object', description: 'The new value for the configuration.' },
+        description: { type: 'string', description: 'Reason for the change for audit logging.' },
+      },
+      required: ['key', 'value'],
+      additionalProperties: false,
+    },
+  },
+
+  getSystemConfig: {
+    type: ToolType.FUNCTION,
+    argSchema: z.any(),
+    connectionProfile: [],
+    connector_id: '',
+    auth: { type: 'api_key', resource_id: '' },
+    requiresApproval: false,
+    requiredPermissions: [],
+    name: 'getSystemConfig',
+    description: 'Retrieves a global system configuration value from DynamoDB.',
+    parameters: {
+      type: 'object',
+      properties: {
+        key: { type: 'string', description: 'The unique configuration key to retrieve.' },
+      },
+      required: ['key'],
+      additionalProperties: false,
+    },
+  },
+
+  listSystemConfigs: {
+    type: ToolType.FUNCTION,
+    argSchema: z.any(),
+    connectionProfile: [],
+    connector_id: '',
+    auth: { type: 'api_key', resource_id: '' },
+    requiresApproval: false,
+    requiredPermissions: [],
+    name: 'listSystemConfigs',
+    description: 'Lists all available configuration keys and their current values (use sparingly).',
+    parameters: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+  },
 };

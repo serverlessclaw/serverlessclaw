@@ -90,7 +90,9 @@ define load_env
 			unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN; \
 		fi; \
 	fi; \
-	if [ -n "$$CODEBUILD_BUILD_ID" ]; then \
+	if [ "$(ENV)" = "local" ]; then \
+		$(call log_info,Local dev — using AWS_PROFILE: $$AWS_PROFILE for initial authentication); \
+	elif [ -n "$$CODEBUILD_BUILD_ID" ]; then \
 		unset AWS_PROFILE; \
 		$(call log_info,CI environment detected — using service role credentials); \
 	elif [ -z "$$AWS_PROFILE" ]; then \

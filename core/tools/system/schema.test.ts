@@ -15,6 +15,11 @@ describe('System Domain Tool Schemas', () => {
     'renderComponent',
     'navigateTo',
     'uiAction',
+    'renderCodeDiff',
+    'renderPlanEditor',
+    'setSystemConfig',
+    'getSystemConfig',
+    'listSystemConfigs',
   ];
 
   it('should export all expected tool definitions', () => {

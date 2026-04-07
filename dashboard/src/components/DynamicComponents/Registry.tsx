@@ -6,6 +6,8 @@ import OperationCard from './OperationCard';
 import UICommand from './UICommand';
 import StatusFlow from './StatusFlow';
 import ResourcePreview from './ResourcePreview';
+import CodeDiff from './CodeDiff';
+import PlanEditor from './PlanEditor';
 
 interface RegistryProps {
   component: DynamicComponent;
@@ -30,6 +32,14 @@ export function DynamicComponentRegistry({ component, onAction }: RegistryProps)
 
     case 'resource-preview':
       return <ResourcePreview component={component} onAction={onAction} />;
+
+    case 'code-diff':
+    case 'patch-view':
+      return <CodeDiff component={component} onAction={onAction} />;
+
+    case 'plan-editor':
+    case 'strategy-editor':
+      return <PlanEditor component={component} onAction={onAction} />;
     
     default:
       return (

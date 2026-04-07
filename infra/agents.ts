@@ -251,7 +251,6 @@ export function createAgents(
     environment: { ...agentEnv, MULTIPLEXER_TIER: 'high' },
     memory: AGENT_CONFIG.memory.LARGE,
     timeout: AGENT_CONFIG.timeout.MAX,
-    storage: '10 GB',
     logging: { retention: LOG_RETENTION_PERIOD },
   });
 
