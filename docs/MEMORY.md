@@ -172,6 +172,8 @@ The memory system exports operations for each tier. These are available via `cor
 | `writeToCollaboration(sessionId, message)`  | Write to shared context      | Conversation |
 | `getCollaborationContext(sessionId)`        | Retrieve shared history      | Conversation |
 | `closeCollaboration(sessionId)`             | End collaboration session    | Conversation |
+| `updateCollaborationActivity(id)`           | Refresh activity timestamp   | Conversation |
+| `findStaleCollaborations(timeout)`          | Find timed-out sessions      | Conversation |
 
 ### Reputation Operations (`reputation-operations.ts`)
 

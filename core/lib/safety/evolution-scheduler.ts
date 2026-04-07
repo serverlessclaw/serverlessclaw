@@ -1,0 +1,173 @@
+/**
+ * Evolution Scheduler for Class C pending actions.
+ * Tracks actions that require human approval and triggers proactive evolution after a timeout.
+ */
+import { logger } from '../logger';
+import { BaseMemoryProvider } from '../memory/base';
+import { EventType } from '../types/agent';
+import { emitTypedEvent } from '../utils/typed-emit';
+
+const EVOLUTION_PREFIX = 'EVOLUTION#PENDING#';
+
+export interface PendingEvolution {
+  actionId: string;
+  agentId: string;
+  action: string;
+  reason: string;
+  resource?: string;
+  traceId?: string;
+  userId?: string;
+  createdAt: number;
+  expiresAt: number; // The "Evolutionary Timeout" timestamp
+  status: 'pending' | 'triggered' | 'approved' | 'rejected';
+}
+
+export class EvolutionScheduler {
+  private base?: BaseMemoryProvider;
+
+  constructor(base?: BaseMemoryProvider) {
+    this.base = base;
+  }
+
+  /**
+   * Schedule a Class C action for proactive evolution.
+   */
+  async scheduleAction(params: {
+    agentId: string;
+    action: string;
+    reason: string;
+    timeoutMs: number;
+    resource?: string;
+    traceId?: string;
+    userId?: string;
+  }): Promise<string | undefined> {
+    if (!this.base) {
+      logger.warn('[EVOLUTION] No memory provider available, skipping scheduling.');
+      return undefined;
+    }
+    const actionId = `eve_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const now = Date.now();
+
+    const pending: PendingEvolution = {
+      actionId,
+      agentId: params.agentId,
+      action: params.action,
+      reason: params.reason,
+      resource: params.resource,
+      traceId: params.traceId,
+      userId: params.userId,
+      createdAt: now,
+      expiresAt: now + params.timeoutMs,
+      status: 'pending',
+    };
+
+    await this.base.putItem({
+      ...pending,
+      userId: `${EVOLUTION_PREFIX}${actionId}`,
+      timestamp: 0,
+      type: 'PENDING_EVOLUTION',
+    });
+
+    logger.info(
+      `[EVOLUTION] Scheduled Class C action ${actionId} for proactive evolution in ${params.timeoutMs}ms`
+    );
+    return actionId;
+  }
+
+  /**
+   * Finds all pending actions that have timed out and triggers them.
+   */
+  async triggerTimedOutActions(): Promise<number> {
+    if (!this.base) {
+      logger.warn('[EVOLUTION] No memory provider available, skipping trigger.');
+      return 0;
+    }
+    const now = Date.now();
+
+    // Scan pending evolutions
+    // In a real implementation, this would be a GSI query for 'pending' status + expiresAt range.
+    const items = await this.base.queryItems({
+      FilterExpression: '#status = :pending AND expiresAt <= :now',
+      ExpressionAttributeNames: { '#status': 'status' },
+      ExpressionAttributeValues: {
+        ':pending': 'pending',
+        ':now': now,
+      },
+    });
+
+    const toTrigger = items as unknown as PendingEvolution[];
+    let count = 0;
+
+    for (const action of toTrigger) {
+      try {
+        await this.triggerProactiveEvolution(action);
+        count++;
+      } catch (error) {
+        logger.error(`[EVOLUTION] Failed to trigger action ${action.actionId}:`, error);
+      }
+    }
+
+    return count;
+  }
+
+  /**
+   * Emit the proactive evolution event and mark as triggered.
+   */
+  private async triggerProactiveEvolution(action: PendingEvolution): Promise<void> {
+    logger.info(
+      `[EVOLUTION] Triggering proactive evolution for ${action.actionId} (Timeout reached)`
+    );
+
+    await emitTypedEvent('evolution.scheduler', EventType.STRATEGIC_TIE_BREAK, {
+      userId: action.userId || 'SYSTEM',
+      agentId: action.agentId,
+      task: `Proactive evolution for: ${action.action} (Reason: ${action.reason})`,
+      traceId: action.traceId,
+      sessionId: action.traceId,
+      metadata: {
+        actionId: action.actionId,
+        proactive: true,
+        originalAction: action.action,
+        resource: action.resource,
+      },
+    });
+
+    // Update status to triggered
+    action.status = 'triggered';
+    if (this.base) {
+      await this.base.putItem({
+        ...action,
+        userId: `${EVOLUTION_PREFIX}${action.actionId}`,
+        timestamp: 0,
+        type: 'PENDING_EVOLUTION',
+      });
+    }
+  }
+
+  /**
+   * Handle human approval/rejection.
+   */
+  async updateStatus(actionId: string, status: 'approved' | 'rejected'): Promise<void> {
+    if (!this.base) return;
+    const items = await this.base.queryItems({
+      KeyConditionExpression: 'userId = :userId AND #timestamp = :zero',
+      ExpressionAttributeNames: { '#timestamp': 'timestamp' },
+      ExpressionAttributeValues: {
+        ':userId': `${EVOLUTION_PREFIX}${actionId}`,
+        ':zero': 0,
+      },
+    });
+
+    if (items.length === 0) return;
+
+    const action = items[0] as unknown as PendingEvolution;
+    action.status = status;
+
+    await this.base.putItem({
+      ...action,
+      userId: `${EVOLUTION_PREFIX}${actionId}`,
+      timestamp: 0,
+      type: 'PENDING_EVOLUTION',
+    });
+  }
+}

@@ -250,6 +250,10 @@ export enum EventType {
   PARALLEL_TASK_COMPLETED = 'parallel_task_completed',
   /** Parallel task barrier timeout - straggler tasks should be marked as timed out. */
   PARALLEL_BARRIER_TIMEOUT = 'parallel_barrier_timeout',
+  /** Signal that a specific task in a DAG execution has completed. */
+  DAG_TASK_COMPLETED = 'dag_task_completed',
+  /** Signal that a specific task in a DAG execution has failed. */
+  DAG_TASK_FAILED = 'dag_task_failed',
   /** Real-time message chunk for streaming responses. */
   CHUNK = 'chunk',
   /** Request for peer review by the Critic Agent (Council of Agents). */

@@ -513,4 +513,13 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   ): Promise<void> {
     return CollaborationOps.closeCollaboration(this, collaborationId, actorId, actorType);
   }
+
+  /**
+   * Finds collaborations that have timed out and require automated tie-break.
+   */
+  async findStaleCollaborations(
+    defaultTimeoutMs: number
+  ): Promise<import('../types/collaboration').Collaboration[]> {
+    return CollaborationOps.findStaleCollaborations(this, defaultTimeoutMs);
+  }
 }

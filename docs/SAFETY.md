@@ -238,6 +238,28 @@ const stats = SuperClaw.getSafetyStats();
 
 ---
 
+## Proactive Evolution Scheduling (Class C Actions)
+
+Certain actions are classified as **Class C** (highly sensitive changes) and require proactive evolution instead of immediate execution.
+
+### Class C Action Types:
+
+- `iam_change`: Modifications to IAM roles, policies, or permissions.
+- `infra_topology`: Changes to infrastructure architecture or connections.
+- `memory_retention`: Alterations to TTL or archival policies.
+- `security_guardrail`: Modifications to safety policies or protected files.
+- `code_change`: Structural changes that pass quality gates but impact core logic.
+
+### Scheduling Lifecycle:
+
+1.  **Detection**: The `SafetyEngine` identifies an action as Class C.
+2.  **Scheduling**: The `EvolutionScheduler` records the action in DynamoDB (`PLAN#evolution`).
+3.  **Queueing**: The action is held for a 1-hour cooling period to allow manual human audit.
+4.  **Maintenance**: The `MaintenanceHandler` (running every 5 minutes) scans for matured evolution tasks.
+5.  **Execution**: If no human rejection is received, the task is dispatched as `PROACTIVE_EVOLUTION`.
+
+---
+
 ## Recursion Safety Detail
 
 To prevent infinite loops during autonomous multi-agent coordination, Serverless Claw enforces a strict **Recursion Depth Limit**.

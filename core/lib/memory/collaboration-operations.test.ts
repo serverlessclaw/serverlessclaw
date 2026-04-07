@@ -228,6 +228,7 @@ describe('addCollaborationParticipant', () => {
       participants: [{ type: 'agent', id: 'owner-1', role: 'owner', joinedAt: MOCK_NOW }],
       createdAt: MOCK_NOW,
       updatedAt: MOCK_NOW,
+      lastActivityAt: MOCK_NOW,
       status: 'active',
     };
     base.queryItems.mockResolvedValue([collab]);
@@ -285,6 +286,7 @@ describe('addCollaborationParticipant', () => {
       ],
       createdAt: MOCK_NOW,
       updatedAt: MOCK_NOW,
+      lastActivityAt: MOCK_NOW,
       status: 'active',
     };
     base.queryItems.mockResolvedValue([collab]);
@@ -309,6 +311,7 @@ describe('addCollaborationParticipant', () => {
       participants: [{ type: 'agent', id: 'owner-1', role: 'owner', joinedAt: MOCK_NOW }],
       createdAt: MOCK_NOW,
       updatedAt: MOCK_NOW,
+      lastActivityAt: MOCK_NOW,
       status: 'active',
     };
     base.queryItems.mockResolvedValue([collab]);
@@ -371,6 +374,7 @@ describe('checkCollaborationAccess', () => {
     ],
     createdAt: MOCK_NOW,
     updatedAt: MOCK_NOW,
+    lastActivityAt: MOCK_NOW,
     status: 'active',
   };
 
@@ -526,6 +530,7 @@ describe('closeCollaboration', () => {
       participants: [{ type: 'agent', id: 'owner-1', role: 'owner', joinedAt: MOCK_NOW }],
       createdAt: MOCK_NOW,
       updatedAt: MOCK_NOW,
+      lastActivityAt: MOCK_NOW,
       status: 'active',
     };
     base.queryItems.mockResolvedValue([collab]);
@@ -562,6 +567,7 @@ describe('closeCollaboration', () => {
       ],
       createdAt: MOCK_NOW,
       updatedAt: MOCK_NOW,
+      lastActivityAt: MOCK_NOW,
       status: 'active',
     };
     base.queryItems.mockResolvedValue([collab]);
@@ -582,6 +588,7 @@ describe('closeCollaboration', () => {
       participants: [{ type: 'agent', id: 'owner-1', role: 'owner', joinedAt: MOCK_NOW }],
       createdAt: MOCK_NOW,
       updatedAt: MOCK_NOW,
+      lastActivityAt: MOCK_NOW,
       status: 'active',
     };
     base.queryItems.mockResolvedValue([collab]);
@@ -602,6 +609,7 @@ describe('closeCollaboration', () => {
       participants: [{ type: 'agent', id: 'owner-1', role: 'owner', joinedAt: MOCK_NOW }],
       createdAt: MOCK_NOW,
       updatedAt: MOCK_NOW,
+      lastActivityAt: MOCK_NOW,
       status: 'active',
     };
     base.queryItems.mockResolvedValue([collab]);
@@ -646,6 +654,7 @@ describe('edge cases', () => {
       participants: [{ type: 'agent', id: 'user-1', role: 'owner', joinedAt: MOCK_NOW }],
       createdAt: MOCK_NOW,
       updatedAt: MOCK_NOW,
+      lastActivityAt: MOCK_NOW,
       status: 'active',
     };
     base.queryItems.mockResolvedValue([collab]);
@@ -675,6 +684,7 @@ describe('edge cases', () => {
       participants: [{ type: 'agent', id: 'owner-1', role: 'owner', joinedAt: MOCK_NOW }],
       createdAt: MOCK_NOW,
       updatedAt: MOCK_NOW,
+      lastActivityAt: MOCK_NOW,
       status: 'active',
     };
     base.queryItems.mockResolvedValue([collab]);

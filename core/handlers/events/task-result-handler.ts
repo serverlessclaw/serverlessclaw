@@ -1,6 +1,4 @@
 import { EventType, AgentType } from '../../lib/types/index';
-import { DAGExecutionState } from '../../lib/types/dag';
-import type { ParallelTaskDefinition } from '../../lib/agent/schema';
 import { COMPLETION_EVENT_SCHEMA, FAILURE_EVENT_SCHEMA } from '../../lib/schema/events';
 import { getRecursionLimit, handleRecursionLimitExceeded, wakeupInitiator } from './shared';
 import { LRUSet } from '../../lib/utils/lru';
@@ -153,173 +151,24 @@ export async function handleTaskResult(
   }
 
   // 3. Parallel Dispatch Aggregation & DAG Execution
-  // Check if this result is part of a parallel dispatch BEFORE waking the initiator.
-  // For parallel tasks, only the PARALLEL_TASK_COMPLETED aggregate event should wake the initiator.
   if (traceId) {
-    const [{ aggregator }, { ConfigManager }] = await Promise.all([
+    const [{ aggregator }, { ConfigManager }, { emitTypedEvent }] = await Promise.all([
       import('../../lib/agent/parallel-aggregator'),
       import('../../lib/registry/config'),
+      import('../../lib/utils/typed-emit'),
     ]);
 
-    // Guard: check if parallel state exists before attempting to add result.
-    // Non-parallel tasks have a traceId but no parallel tracking record.
     const existingState = await aggregator.getState(userId, traceId);
     if (!existingState) {
       logger.info(`No parallel dispatch state for traceId ${traceId}, skipping aggregation.`);
     } else {
-      // Check if this is a DAG execution with dependencies
       const metadata = existingState.metadata as Record<string, unknown> | undefined;
       const isDagExecution = metadata?.hasDependencies === true;
+      const taskId = (eventDetail.taskId as string) ?? agentId;
 
-      if (isDagExecution) {
-        // Handle DAG task completion
-        const taskId = (eventDetail.taskId as string) ?? agentId;
-        logger.info(`DAG task ${taskId} completed. Checking for dependent tasks.`);
-
-        const [dagExecutor, { emitTypedEvent }, { EVENT_SCHEMA_MAP }] = await Promise.all([
-          import('../../lib/agent/dag-executor'),
-          import('../../lib/utils/typed-emit'),
-          import('../../lib/schema/events'),
-        ]);
-
-        // Add result incrementally
-        await aggregator.addResult(userId, traceId, {
-          taskId,
-          agentId,
-          status: isFailure ? 'failed' : 'success',
-          result: response,
-          durationMs: 0,
-          patch: (eventDetail.metadata as Record<string, unknown>)?.patch as string | undefined,
-        });
-
-        // OCC loop for DAG state update
-        const MAX_RETRIES = 5;
-        let attempt = 0;
-        let success = false;
-
-        while (attempt < MAX_RETRIES && !success) {
-          attempt++;
-          const currentState = await aggregator.getState(userId, traceId);
-          if (!currentState) break;
-
-          const currentMetadata = currentState.metadata ?? {};
-          let dagState = currentMetadata.dagState as DAGExecutionState | undefined;
-
-          if (!dagState) {
-            logger.warn(`No DAG state found for traceId ${traceId}, reconstructing from tasks.`);
-            const tasks = (currentMetadata.tasks as ParallelTaskDefinition[]) ?? [];
-            dagState = dagExecutor.buildDependencyGraph(tasks);
-
-            const completedTaskIds = new Set(
-              ((currentMetadata.taskResults as Array<{ taskId: string; status: string }>) || [])
-                .filter((r) => r.status === 'success')
-                .map((r) => r.taskId)
-            );
-            for (const taskId of completedTaskIds) {
-              dagExecutor.completeTask(dagState, taskId, 'Reconstructed from completed tasks');
-            }
-          }
-
-          // Deep copy DAG state to prevent reference mutations across retries
-          const newDagState = JSON.parse(JSON.stringify(dagState)) as DAGExecutionState;
-
-          if (isFailure) {
-            dagExecutor.failTask(newDagState, taskId, response as string);
-          } else {
-            dagExecutor.completeTask(newDagState, taskId, response);
-          }
-
-          const readyTasks = dagExecutor.getReadyTasks(newDagState);
-          const expectedVersion = currentState.version ?? 1;
-
-          const updateSuccess = await aggregator.updateDagState(
-            userId,
-            traceId,
-            newDagState,
-            expectedVersion
-          );
-
-          if (updateSuccess) {
-            success = true;
-
-            // Dispatch ready tasks
-            if (readyTasks.length > 0) {
-              logger.info(
-                `DAG: Dispatching ${readyTasks.length} dependent tasks after ${taskId} completion.`
-              );
-              await Promise.all(
-                readyTasks.map(async (task) => {
-                  const enrichedTask = dagExecutor.createTaskWithDependencyContext(
-                    task,
-                    newDagState.outputs as Record<string, unknown>
-                  );
-
-                  let detailType: string = `${task.agentId}_task`;
-                  if (!EVENT_SCHEMA_MAP[detailType as EventType]) {
-                    detailType = EventType.CODER_TASK;
-                  }
-
-                  await emitTypedEvent('agent.dag', detailType as EventType, {
-                    userId: userId as string,
-                    taskId: task.taskId,
-                    task: enrichedTask,
-                    metadata: { ...task.metadata, parallelDispatchId: traceId, dagExecution: true },
-                    traceId,
-                    initiatorId: currentState.initiatorId ?? 'dag-executor',
-                    depth: (depth ?? 0) + 1,
-                    sessionId: currentState.sessionId,
-                  });
-                })
-              );
-            }
-
-            // Check if DAG execution is complete
-            if (dagExecutor.isExecutionComplete(newDagState)) {
-              const summary = dagExecutor.getExecutionSummary(newDagState);
-              logger.info(
-                `DAG execution complete for ${traceId}: ${summary.completed} completed, ${summary.failed} failed.`
-              );
-
-              if (summary.pending === 0 && summary.ready === 0) {
-                const overallStatus = summary.failed > 0 ? 'partial' : 'success';
-                const marked = await aggregator.markAsCompleted(userId, traceId, overallStatus);
-
-                if (marked) {
-                  const finalState = await aggregator.getState(userId, traceId);
-                  await emitTypedEvent('events.handler', EventType.PARALLEL_TASK_COMPLETED, {
-                    userId,
-                    sessionId: currentState.sessionId,
-                    traceId,
-                    taskId: traceId,
-                    initiatorId: currentState.initiatorId,
-                    depth,
-                    overallStatus,
-                    results: finalState?.results ?? [],
-                    taskCount: currentState.taskCount,
-                    completedCount: summary.completed,
-                    elapsedMs: 0,
-                    aggregationType: currentState.aggregationType,
-                    aggregationPrompt: currentState.aggregationPrompt,
-                  });
-                }
-              }
-            }
-          } else {
-            logger.warn(`DAG state update collision for ${traceId}, retrying (attempt ${attempt})`);
-            await new Promise((resolve) => setTimeout(resolve, Math.random() * 200 + 100));
-          }
-        }
-
-        if (!success) {
-          logger.error(`Failed to update DAG state for ${traceId} after ${MAX_RETRIES} attempts`);
-        }
-
-        return;
-      }
-
-      // Standard parallel dispatch (non-DAG)
+      // Add result incrementally (handles sharding automatically)
       const aggregateState = await aggregator.addResult(userId, traceId, {
-        taskId: (eventDetail.taskId as string) ?? agentId,
+        taskId,
         agentId,
         status: isFailure ? 'failed' : 'success',
         result: response,
@@ -327,6 +176,26 @@ export async function handleTaskResult(
         patch: (eventDetail.metadata as Record<string, unknown>)?.patch as string | undefined,
       });
 
+      if (isDagExecution) {
+        logger.info(`DAG task ${taskId} completed. Triggering DAG Supervisor.`);
+        await emitTypedEvent(
+          'events.handler',
+          isFailure ? EventType.DAG_TASK_FAILED : EventType.DAG_TASK_COMPLETED,
+          {
+            userId,
+            traceId,
+            taskId,
+            agentId,
+            response,
+            error: isFailure ? response : undefined,
+            sessionId,
+            depth,
+          }
+        );
+        return;
+      }
+
+      // Standard parallel dispatch (non-DAG)
       if (aggregateState?.isComplete) {
         logger.info(`Parallel dispatch ${traceId} complete! Emitting aggregated results.`);
 
@@ -339,38 +208,27 @@ export async function handleTaskResult(
         const overallStatus =
           successRate === 1 ? 'success' : successRate >= threshold ? 'partial' : 'failed';
 
-        if (overallStatus === 'partial') {
-          logger.info(
-            `[Aggregation] Partial success accepted for traceId ${traceId} (Rate: ${successRate}). Proceeding to synthesis.`
-          );
-        }
-
-        // Atomic completion check to prevent double-firing with timeout handler
+        // Atomic completion check to prevent double-firing
         const marked = await aggregator.markAsCompleted(userId, traceId, overallStatus);
 
         if (marked) {
-          const { emitTypedEvent } = await import('../../lib/utils/typed-emit');
           await emitTypedEvent('events.handler', EventType.PARALLEL_TASK_COMPLETED, {
             userId,
             sessionId: aggregateState.sessionId,
             traceId,
-            taskId: traceId, // Use traceId as taskId for the aggregate event
+            taskId: traceId,
             initiatorId: aggregateState.initiatorId,
-            depth: depth,
+            depth,
             overallStatus,
             results: aggregateState.results,
             taskCount: aggregateState.taskCount,
             completedCount: aggregateState.results.length,
-            elapsedMs: 0,
+            elapsedMs: Date.now() - (existingState.createdAt || Date.now()),
             aggregationType: aggregateState.aggregationType,
             aggregationPrompt: aggregateState.aggregationPrompt,
           });
-        } else {
-          logger.info(`Parallel dispatch ${traceId} already marked as completed, skipping event.`);
         }
       }
-
-      // For parallel tasks, don't wake the initiator (PARALLEL_TASK_COMPLETED handles it)
       return;
     }
   }

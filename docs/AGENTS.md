@@ -11,37 +11,38 @@ We distinguish between **Autonomous Agents** (LLM-powered decision-makers) and *
 
 ### 1. Autonomous Agents (LLM-Powered)
 
-| Agent                   | Host (Multiplexer) | Responsibilities                                                                |
-| ----------------------- | ------------------ | ------------------------------------------------------------------------------- |
-| **SuperClaw**           | `Webhook Handler`  | **Nimble Orchestrator**. User Proxy, Delegation, UI Navigation (Skeleton tools) |
-| **Coder Agent**         | `High-Power`       | Writes code, runs pre-flight checks, validates deployments                      |
-| **Researcher**          | `High-Power`       | Deep technical exploration, library analysis, and pattern discovery             |
-| **Strategic Planner**   | `High-Power`       | **Technical Auditor**. Infra management, Agent Registry CRUD, Evolution plans   |
-| **QA Auditor**          | `Standard`         | Verifies satisfaction of deployed changes                                       |
-| **Facilitator**         | `Standard`         | **Session Moderator**. Multi-party collaboration, Session lifecycle management  |
-| **Critic Agent**        | `Light`            | Peer review for Council of Agents (security/performance/architect)              |
-| **Cognition Reflector** | `Light`            | **Knowledge Custodian**. Fact extraction, Memory hygiene, Trace maintenance     |
-| **Merger Agent**        | `Light`            | Structural code reconciliation for parallel evolution tasks                     |
-| **Agent Runner**        | `Agent Runner`     | Generic runner for any user-defined agent                                       |
+| Agent                   | Host (Multiplexer) | Responsibilities                                                                                                |
+| ----------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------- |
+| **SuperClaw**           | `Webhook Handler`  | **Nimble Orchestrator**. User Proxy, Delegation, UI Navigation (Skeleton tools)                                 |
+| **Coder Agent**         | `High-Power`       | Writes code, runs pre-flight checks, validates deployments                                                      |
+| **Researcher**          | `High-Power`       | Deep technical exploration, library analysis, and pattern discovery                                             |
+| **Strategic Planner**   | `High-Power`       | **Technical Auditor**. Infra management, Agent Registry CRUD, Evolution plans                                   |
+| **QA Auditor**          | `Standard`         | Verifies satisfaction of deployed changes                                                                       |
+| **Facilitator**         | `Standard`         | **Session Moderator**. Multi-party collaboration, Session lifecycle management, Conflict resolution (Tie-break) |
+| **Critic Agent**        | `Light`            | Peer review for Council of Agents (security/performance/architect)                                              |
+| **Cognition Reflector** | `Light`            | **Knowledge Custodian**. Fact extraction, Memory hygiene, Trace maintenance                                     |
+| **Merger Agent**        | `Light`            | Structural code reconciliation for parallel evolution tasks                                                     |
+| **Agent Runner**        | `Agent Runner`     | Generic runner for any user-defined agent                                                                       |
 
 ### 2. System Handlers (Logic-Powered)
 
-| Component                | Runtime                                        | Trigger                                   | Responsibilities                                              |
-| ------------------------ | ---------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------- |
-| **Build Monitor**        | `core/handlers/monitor.ts`                     | CodeBuild Event                           | Observes builds, updates gap status, circuit breaking         |
-| **Dead Man's Switch**    | `core/handlers/recovery.ts`                    | EventBridge Schedule (`rate(15 minutes)`) | Deep health checks and emergency rollback orchestration       |
-| **Event Handler**        | `core/handlers/events.ts`                      | AgentBus System Events                    | Routes build/health/result/continuation/clarification signals |
-| **Notifier**             | `core/handlers/notifier.ts`                    | AgentBus Event                            | Formats and sends messages to Telegram/Slack                  |
-| **Real-time Bridge**     | `core/handlers/bridge.ts`                      | AgentBus Event                            | Bridges EventBridge signals to AWS IoT Core (MQTT)            |
-| **Parallel Handler**     | `core/handlers/events/parallel-handler.ts`     | `PARALLEL_TASK_DISPATCH`                  | Handles fan-out to multiple agents with barrier timeout       |
-| **Cancellation Handler** | `core/handlers/events/cancellation-handler.ts` | `TASK_CANCELLED`                          | Manages DynamoDB-backed task cancellation flags               |
-| **Deployer**             | AWS CodeBuild                                  | `buildspec.yml`                           | Runs `make deploy ENV=$SST_STAGE` in isolated environment     |
-| **Agent Runner**         | `core/handlers/agent-runner.ts`                | Swarm markers (`### Goal:`, `### Step:`)  | Dispatches parallel tasks from mission decomposition          |
-| **DLQ Handler**          | `core/handlers/dlq-handler.ts`                 | Dead Letter Queue                         | Processes failed events with retry limits (max 3)             |
-| **Heartbeat**            | `core/handlers/heartbeat.ts`                   | EventBridge Schedule                      | Proactive warmup and scheduled task activation                |
-| **Concurrency Monitor**  | `core/handlers/concurrency-monitor.ts`         | AgentBus Event                            | Monitors system concurrency and enforces limits               |
-| **Webhook Handler**      | `core/handlers/webhook.ts`                     | HTTP API Gateway                          | Entry point for user requests, intent detection               |
-| **Health Handler**       | `core/handlers/health.ts`                      | EventBridge Schedule                      | System health checks and status reporting                     |
+| Component                | Runtime                                        | Trigger                                   | Responsibilities                                                  |
+| ------------------------ | ---------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------- |
+| **Build Monitor**        | `core/handlers/monitor.ts`                     | CodeBuild Event                           | Observes builds, updates gap status, circuit breaking             |
+| **Dead Man's Switch**    | `core/handlers/recovery.ts`                    | EventBridge Schedule (`rate(15 minutes)`) | Deep health checks and emergency rollback orchestration           |
+| **Event Handler**        | `core/handlers/events.ts`                      | AgentBus System Events                    | Routes build/health/result/continuation/clarification signals     |
+| **Notifier**             | `core/handlers/notifier.ts`                    | AgentBus Event                            | Formats and sends messages to Telegram/Slack                      |
+| **Real-time Bridge**     | `core/handlers/bridge.ts`                      | AgentBus Event                            | Bridges EventBridge signals to AWS IoT Core (MQTT)                |
+| **Parallel Handler**     | `core/handlers/events/parallel-handler.ts`     | `PARALLEL_TASK_DISPATCH`                  | Handles fan-out to multiple agents with barrier timeout           |
+| **Cancellation Handler** | `core/handlers/events/cancellation-handler.ts` | `TASK_CANCELLED`                          | Manages DynamoDB-backed task cancellation flags                   |
+| **Deployer**             | AWS CodeBuild                                  | `buildspec.yml`                           | Runs `make deploy ENV=$SST_STAGE` in isolated environment         |
+| **Agent Runner**         | `core/handlers/agent-runner.ts`                | Swarm markers (`### Goal:`, `### Step:`)  | Dispatches parallel tasks from mission decomposition              |
+| **DLQ Handler**          | `core/handlers/dlq-handler.ts`                 | Dead Letter Queue                         | Processes failed events with retry limits (max 3)                 |
+| **Heartbeat**            | `core/handlers/heartbeat.ts`                   | EventBridge Schedule                      | Proactive warmup and scheduled task activation                    |
+| **Maintenance**          | `core/handlers/maintenance.ts`                 | EventBridge Schedule (`rate(5 minutes)`)  | Automated cleanup of stale collaborations and scheduled evolution |
+| **Concurrency Monitor**  | `core/handlers/concurrency-monitor.ts`         | AgentBus Event                            | Monitors system concurrency and enforces limits                   |
+| **Webhook Handler**      | `core/handlers/webhook.ts`                     | HTTP API Gateway                          | Entry point for user requests, intent detection                   |
+| **Health Handler**       | `core/handlers/health.ts`                      | EventBridge Schedule                      | System health checks and status reporting                         |
 
 ### 3. Structural Merger Agent (Evolution)
 
@@ -324,6 +325,9 @@ npx vitest core/tests/contract.test.ts
 | `CONSENSUS_REACHED`        | Facilitator       | Consensus has been reached                      |
 | `HANDOFF`                  | Agent             | Human participant takes control                 |
 | `STRATEGIC_TIE_BREAK`      | Facilitator       | Tie-break performed after timeout               |
+| `PROACTIVE_EVOLUTION`      | SafetyEngine      | Scheduled evolution for Class C actions         |
+| `DAG_TASK_COMPLETED`       | Worker            | Signal that a specific task in a DAG is done    |
+| `DAG_TASK_FAILED`          | Worker            | Signal that a specific task in a DAG failed     |
 | `REPORT_BACK`              | Agent             | Retroactive report after autonomous action      |
 
 ### 🔄 Coordination & Concurrency Flow

@@ -39,6 +39,8 @@ describe('event-routing', () => {
       EventType.EVOLUTION_PLAN,
       EventType.REFLECT_TASK,
       EventType.MERGER_TASK,
+      EventType.DAG_TASK_COMPLETED,
+      EventType.DAG_TASK_FAILED,
       'facilitator_task',
       'critic_task',
       'qa_task',
@@ -91,6 +93,7 @@ describe('event-routing', () => {
         'cognitive-health-handler',
         'strategic-tie-break-handler',
         'report-back-handler',
+        'dag-supervisor-handler',
         'agent-multiplexer',
       ];
 

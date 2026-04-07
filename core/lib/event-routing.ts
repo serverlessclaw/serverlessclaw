@@ -51,6 +51,14 @@ export const DEFAULT_EVENT_ROUTING: EventRoutingTable = {
     module: './events/parallel-task-completed-handler',
     function: 'handleParallelTaskCompleted',
   },
+  [EventType.DAG_TASK_COMPLETED]: {
+    module: './events/dag-supervisor-handler',
+    function: 'handleDagStep',
+  },
+  [EventType.DAG_TASK_FAILED]: {
+    module: './events/dag-supervisor-handler',
+    function: 'handleDagStep',
+  },
   [EventType.TASK_CANCELLED]: {
     module: './events/cancellation-handler',
     function: 'handleTaskCancellation',

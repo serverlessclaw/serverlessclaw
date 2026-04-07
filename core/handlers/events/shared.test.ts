@@ -100,6 +100,29 @@ vi.mock('../../lib/types/agent', () => ({
   Attachment: {},
 }));
 
+const { mockAcquireProcessing, mockReleaseProcessing, mockRenewProcessing, mockAddPendingMessage } =
+  vi.hoisted(() => ({
+    mockAcquireProcessing: vi.fn().mockResolvedValue(true),
+    mockReleaseProcessing: vi.fn().mockResolvedValue(undefined),
+    mockRenewProcessing: vi.fn().mockResolvedValue(true),
+    mockAddPendingMessage: vi.fn().mockResolvedValue(undefined),
+  }));
+
+vi.mock('../../lib/session/session-state', () => ({
+  SessionStateManager: class {
+    acquireProcessing = mockAcquireProcessing;
+    releaseProcessing = mockReleaseProcessing;
+    renewProcessing = mockRenewProcessing;
+    addPendingMessage = mockAddPendingMessage;
+  },
+}));
+
+vi.stubGlobal(
+  'setInterval',
+  vi.fn((cb) => cb())
+); // Immediate execution for testing
+vi.stubGlobal('clearInterval', vi.fn());
+
 vi.mock('../../lib/types/tool', () => ({
   ITool: {},
 }));
@@ -343,6 +366,46 @@ describe('shared event utilities', () => {
       });
 
       expect(emitTypedEvent).not.toHaveBeenCalled();
+    });
+
+    it('should start heartbeat interval when sessionId is provided', async () => {
+      const mockStream = async function* () {
+        yield { content: 'done' };
+      };
+      (mockAgentStream as any).mockReturnValue(mockStream());
+      mockAcquireProcessing.mockResolvedValue(true);
+
+      await processEventWithAgent('user1', 'test-agent', 'task', {
+        context: {} as any,
+        sessionId: 'session-heartbeat',
+        handlerTitle: 'TEST',
+        outboundHandlerName: 'test-handler',
+      });
+
+      expect(mockRenewProcessing).toHaveBeenCalledWith(
+        'session-heartbeat',
+        expect.stringContaining('test-agent')
+      );
+      expect(global.clearInterval).toHaveBeenCalled();
+    });
+
+    it('should queue message and return early when session is busy', async () => {
+      mockAcquireProcessing.mockResolvedValueOnce(false);
+
+      const result = await processEventWithAgent('user1', 'test-agent', 'task content', {
+        context: {} as any,
+        sessionId: 'session-busy',
+        handlerTitle: 'BUSY_TEST',
+        outboundHandlerName: 'test-handler',
+      });
+
+      expect(mockAddPendingMessage).toHaveBeenCalledWith(
+        'session-busy',
+        'BUSY_TEST: task content',
+        undefined
+      );
+      expect(result.responseText).toContain('[QUEUED]');
+      expect(mockAgentStream).not.toHaveBeenCalled();
     });
   });
 });

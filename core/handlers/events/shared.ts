@@ -188,6 +188,27 @@ export async function processEventWithAgent(
 
   try {
     const startTime = Date.now();
+
+    // Start heartbeat to renew lock (B3: Real-time Shared Awareness)
+    let heartbeatInterval: ReturnType<typeof setInterval> | undefined;
+    if (options.sessionId) {
+      heartbeatInterval = setInterval(async () => {
+        try {
+          const renewed = await sessionStateManager.renewProcessing(
+            options.sessionId!,
+            `event-handler-${agentId}`
+          );
+          if (!renewed) {
+            logger.warn(
+              `[${options.handlerTitle}] Failed to renew lock for ${options.sessionId}. Lock may have been stolen or expired.`
+            );
+          }
+        } catch (err) {
+          logger.error(`[${options.handlerTitle}] Heartbeat error for ${options.sessionId}:`, err);
+        }
+      }, 60000); // Renew every 60 seconds
+    }
+
     const stream = agent.stream(userId, `${options.handlerTitle}: ${taskContent}`, {
       context: options.context,
       isContinuation: options.isContinuation,
@@ -217,14 +238,18 @@ export async function processEventWithAgent(
       return false;
     };
 
-    for await (const chunk of stream) {
-      if (chunk.content) responseText += chunk.content;
-      if (chunk.attachments && Array.isArray(chunk.attachments)) {
-        for (const rawAtt of chunk.attachments) {
-          if (isValidAttachment(rawAtt)) attachments.push(rawAtt as Attachment);
-          else logger.warn('[EVENTS.SHARED] Skipping invalid stream attachment');
+    try {
+      for await (const chunk of stream) {
+        if (chunk.content) responseText += chunk.content;
+        if (chunk.attachments && Array.isArray(chunk.attachments)) {
+          for (const rawAtt of chunk.attachments) {
+            if (isValidAttachment(rawAtt)) attachments.push(rawAtt as Attachment);
+            else logger.warn('[EVENTS.SHARED] Skipping invalid stream attachment');
+          }
         }
       }
+    } finally {
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
     }
 
     const isPaused = isTaskPaused(responseText);

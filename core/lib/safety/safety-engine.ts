@@ -17,6 +17,8 @@ import { logger } from '../logger';
 import type { BaseMemoryProvider } from '../memory/base';
 import { SafetyRateLimiter, ToolSafetyOverride } from './safety-limiter';
 import { SafetyConfigManager } from './safety-config-manager';
+import { EvolutionScheduler } from './evolution-scheduler';
+import { CONFIG_DEFAULTS } from '../config/config-defaults';
 
 /**
  * Safety Engine for evaluating actions against granular policies.
@@ -26,6 +28,7 @@ export class SafetyEngine {
   private toolOverrides: Map<string, ToolSafetyOverride>;
   private violations: SafetyViolation[] = [];
   private limiter: SafetyRateLimiter;
+  private evolutionScheduler: EvolutionScheduler;
 
   constructor(
     customPolicies?: Partial<Record<SafetyTier, Partial<SafetyPolicy>>>,
@@ -35,6 +38,7 @@ export class SafetyEngine {
     this.policies = new Map();
     this.toolOverrides = new Map();
     this.limiter = new SafetyRateLimiter(base);
+    this.evolutionScheduler = new EvolutionScheduler(base!);
 
     // Apply custom policy overrides if provided at construction
     if (customPolicies) {
@@ -147,6 +151,20 @@ export class SafetyEngine {
       ...context,
       agentId: agentConfig?.id,
     });
+
+    // If action requires approval and is Class C, schedule for proactive evolution
+    if (approvalResult.requiresApproval && this.isClassCAction(action)) {
+      await this.evolutionScheduler.scheduleAction({
+        agentId: agentConfig?.id ?? 'unknown',
+        action,
+        reason: approvalResult.reason ?? 'Class C action requiring approval',
+        timeoutMs: CONFIG_DEFAULTS.EVOLUTIONARY_TIMEOUT_MS.code,
+        resource: context?.resource,
+        traceId: context?.traceId,
+        userId: context?.userId,
+      });
+    }
+
     if (!approvalResult.allowed || approvalResult.requiresApproval) {
       return approvalResult;
     }
@@ -162,6 +180,23 @@ export class SafetyEngine {
       requiresApproval: false,
       appliedPolicy: `${tier}_default`,
     };
+  }
+
+  /**
+   * Determine if an action is Class C (sensitive change).
+   * Class C changes involve IAM, infra, retention, or security guardrails.
+   */
+  private isClassCAction(action: string): boolean {
+    const classCActions = [
+      'iam_change',
+      'infra_topology',
+      'memory_retention',
+      'tool_permission',
+      'deployment',
+      'security_guardrail',
+      'code_change', // Code changes that pass quality gates can be Class B or C; here we treat them as evolution candidates
+    ];
+    return classCActions.includes(action);
   }
 
   /**

@@ -320,11 +320,42 @@ Agents communicate asynchronously using **AWS EventBridge (The AgentBus)**. This
           |         |                                              |
           +---------+-----> [ EVENT_HANDLER_ROUTER ] --------------+
                     (build/continuation/task-result/parallel)
+                    (STRATEGIC_TIE_BREAK / PROACTIVE_EVOLUTION)
+                    (DAG_TASK_COMPLETED / DAG_TASK_FAILED)
+                    (DAG_SUPERVISOR_HANDLER)
                     (signalOrchestration routes)
                     (Recursion Guard + Trace Propagation)
 ````
 
 - **Pattern**: Standardized events (`CODER_TASK`, `EVOLUTION_PLAN`, `TASK_COMPLETED`, `TASK_FAILED`, `PARALLEL_TASK_DISPATCH`, `TASK_CANCELLED`) flow through the Bus.
+- **DAG Supervisor**: A specialized `DAG_SUPERVISOR_HANDLER` manages dependency-aware parallel workflows. It processes `DAG_TASK_COMPLETED` signals to update the central graph state and dispatch the next set of ready tasks, ensuring efficient, non-blocking execution of complex plans.
+
+---
+
+## 🔒 Distributed Locking & Reliability
+
+Serverless Claw implements multiple layers of coordination and storage reliability to handle high-concurrency agentic workflows in a stateless environment.
+
+### 1. Lock Heartbeat Mechanism
+
+To prevent session "dead zones" caused by crashed or timed-out Lambda processes, the system uses a **Heartbeat-enabled Leasing** model for session locks.
+
+- **Dynamic Renewal**: While an agent is processing, a background heartbeat periodically (every 60s) renews the session lock in DynamoDB.
+- **Crash Recovery**: If an execution environment fails, the heartbeat stops, and the lock naturally expires within a few minutes, allowing the session to remain responsive to new signals without manual intervention.
+
+### 2. Result Sharding (Aggregation Scaling)
+
+To overcome DynamoDB's 400KB item size limit during large-scale parallel fan-outs (e.g., researching hundreds of topics simultaneously), the `ParallelAggregator` implements **Automatic Sharding**.
+
+- **Spill-to-Shard**: When the main aggregation record approaches the size limit, new results are "spilled" into separate DynamoDB items (`PARALLEL_SHARD#`).
+- **Transparent Merging**: The system automatically fetches and merges these shards when retrieving the overall state, allowing for virtually unlimited scaling of parallel agent results.
+
+### 3. Session Concurrency & Queuing
+
+The `SessionStateManager` ensures that only one agent is modifying a session's "brain" at any given time.
+
+- **Atomic Acquisition**: Uses DynamoDB conditional updates to ensure mutually exclusive access.
+- **Intelligent Queuing**: If a session is busy when a new message arrives, the message is durably queued in `pendingMessages`, ensuring no user or system signal is lost during heavy processing.
 - **Strategic Coordination**: Initiator agents use the `signalOrchestration` tool to provide deterministic logic when sub-agents report completion or failure. This tool acts as the state-machine for complex, multi-turn goals.
 - **Atomic Trunk Sync**: The system follows a "Verification-First" sync model. Code lands in the trunk (Git) only after the `QA Auditor` has successfully verified the live environment and called `triggerTrunkSync`.
 - **Relay Loop**: When a sub-agent emits `TASK_COMPLETED` or `TASK_FAILED`, the `EventHandler` routes it back to the `initiatorId` as a `CONTINUATION_TASK`.

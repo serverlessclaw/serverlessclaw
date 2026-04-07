@@ -66,7 +66,9 @@ export async function createCollaboration(
     participants,
     createdAt: now,
     updatedAt: now,
+    lastActivityAt: now,
     expiresAt: input.ttlDays ? now + input.ttlDays * 24 * 60 * 60 * 1000 : undefined,
+    timeoutMs: input.timeoutMs,
     status: 'active',
     tags: input.tags,
     workspaceId: input.workspaceId,
@@ -139,6 +141,7 @@ export async function addCollaborationParticipant(
     joinedAt: now,
   });
   collaboration.updatedAt = now;
+  collaboration.lastActivityAt = now;
 
   // Update collaboration
   await base.putItem({
@@ -265,6 +268,7 @@ export async function closeCollaboration(
 
   collaboration.status = 'closed';
   collaboration.updatedAt = Date.now();
+  collaboration.lastActivityAt = Date.now();
 
   await base.putItem({
     userId: `${COLLAB_PREFIX}${collaborationId}`,
@@ -274,4 +278,50 @@ export async function closeCollaboration(
   });
 
   logger.info(`Collaboration ${collaborationId} closed by ${actorType}:${actorId}`);
+}
+
+/**
+ * Updates the last activity timestamp for a collaboration
+ */
+export async function updateCollaborationActivity(
+  base: BaseMemoryProvider,
+  collaborationId: string
+): Promise<void> {
+  const collaboration = await getCollaboration(base, collaborationId);
+  if (!collaboration) return;
+
+  collaboration.lastActivityAt = Date.now();
+  collaboration.updatedAt = Date.now();
+
+  await base.putItem({
+    userId: `${COLLAB_PREFIX}${collaborationId}`,
+    timestamp: 0,
+    type: 'COLLABORATION',
+    ...collaboration,
+  });
+}
+
+/**
+ * Finds collaborations that have timed out based on their custom timeoutMs.
+ * If no custom timeout is set, it uses the system default TIE_BREAK_TIMEOUT_MS.
+ */
+export async function findStaleCollaborations(
+  base: BaseMemoryProvider,
+  defaultTimeoutMs: number
+): Promise<Collaboration[]> {
+  const now = Date.now();
+
+  // Note: For a production scale, we would use a GSI with lastActivityAt.
+  // For this sandbox implementaiton, we'll scan (limited to active collaborations prefix).
+  // In a real AWS setup, you'd use a scheduled Lambda + GSI query.
+  const allActive = await base.queryItems({
+    FilterExpression: '#status = :active',
+    ExpressionAttributeNames: { '#status': 'status' },
+    ExpressionAttributeValues: { ':active': 'active' },
+  });
+
+  return (allActive as unknown as Collaboration[]).filter((c) => {
+    const timeout = c.timeoutMs || defaultTimeoutMs;
+    return now - c.lastActivityAt > timeout;
+  });
 }

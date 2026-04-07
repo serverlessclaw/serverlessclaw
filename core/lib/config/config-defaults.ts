@@ -313,12 +313,28 @@ export const CONFIG_DEFAULTS = {
     description: 'Whether multi-level escalation is enabled for clarification requests.',
   },
 
-  /** Whether protocol fallback (JSON -> Text) is enabled. Default: true */
+  /** Automatic fallback to Text mode when JSON communication fails. Default: true */
   PROTOCOL_FALLBACK_ENABLED: {
     code: true,
     hotSwappable: true,
     configKey: 'protocol_fallback_enabled',
     description: 'Automatic fallback to Text mode when JSON communication fails.',
+  },
+
+  /** Event-Driven Evolutionary Timeout for Class C changes. Default: 1800000 (30 min) */
+  EVOLUTIONARY_TIMEOUT_MS: {
+    code: 1800000,
+    hotSwappable: true,
+    configKey: 'evolutionary_timeout_ms',
+    description: 'Timeout for Class C infrastructure changes before proactive evolution.',
+  },
+
+  /** Event-Driven Conflict Resolution (Tie-break) Timeout. Default: 900000 (15 min) */
+  TIE_BREAK_TIMEOUT_MS: {
+    code: 900000,
+    hotSwappable: true,
+    configKey: 'tie_break_timeout_ms',
+    description: 'Timeout for multi-party collaboration conflicts before strategic tie-break.',
   },
 } as const;
 

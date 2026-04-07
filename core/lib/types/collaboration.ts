@@ -30,7 +30,9 @@ export interface Collaboration {
   // Lifecycle
   createdAt: number;
   updatedAt: number;
+  lastActivityAt: number;
   expiresAt?: number;
+  timeoutMs?: number; // Custom timeout for conflict resolution
   status: 'active' | 'closed' | 'archived';
 
   // Metadata
@@ -43,6 +45,7 @@ export interface CreateCollaborationInput {
   description?: string;
   sessionId?: string; // Optional, auto-generated if not provided
   ttlDays?: number;
+  timeoutMs?: number;
   tags?: string[];
   initialParticipants?: Array<{
     type: ParticipantType;
