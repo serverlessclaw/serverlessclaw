@@ -29,12 +29,24 @@ export const handler = async (
         ttlSeconds: 900, // 15 minutes
       });
 
+      const heavyWeightServers = ['puppeteer', 'ast'];
+      const allServers = Object.keys(serverArns);
+      const priorityServers = heavyWeightServers.filter((s) => allServers.includes(s));
+      const otherServers = allServers.filter((s) => !heavyWeightServers.includes(s));
+
       warmupManager
         .smartWarmup({
-          servers: Object.keys(serverArns),
+          servers: priorityServers,
           agents: Object.keys(agentArns),
           intent: 'webhook-received',
           warmedBy: 'webhook',
+        })
+        .then(() => {
+          return warmupManager.smartWarmup({
+            servers: otherServers,
+            intent: 'webhook-background',
+            warmedBy: 'webhook',
+          });
         })
         .catch((err) => logger.warn('[WEBHOOK] Smart warmup error:', err));
     } catch (err) {
