@@ -193,7 +193,7 @@ export const nodeTypes = {
         </div>
         <div className="p-2 bg-background/40 rounded border border-cyber-blue/10">
           <Typography variant="body" className="text-[10px] italic text-cyber-blue/80 line-clamp-2">
-            "{data.initialQuery}"
+            &ldquo;{data.initialQuery}&rdquo;
           </Typography>
         </div>
       </div>
