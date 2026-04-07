@@ -80,6 +80,8 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
           subTaskId: sub.subTaskId,
           planId: sub.planId,
         },
+        tokenBudget: tokenBudget ? Math.floor(tokenBudget / decomposed.subTasks.length) : undefined,
+        costLimit: costLimit ? costLimit / decomposed.subTasks.length : undefined,
       }));
 
       try {
@@ -97,12 +99,15 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
           initiatorId: AgentType.RESEARCHER,
           depth: (depth ?? 0) + 1,
           sessionId,
+          tokenBudget,
+          costLimit,
         });
 
         // Return a PAUSED signal
         return `TASK_PAUSED: Decomposed research goal into ${decomposed.subTasks.length} parallel sub-tasks.`;
       } catch (dispatchError) {
         logger.error(`[RESEARCHER] Failed to dispatch parallel tasks:`, dispatchError);
+        return `TASK_FAILED: Parallel dispatch failed. Falling back to local execution.`;
       }
     }
   }

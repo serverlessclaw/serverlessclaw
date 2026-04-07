@@ -145,4 +145,110 @@ export class ExecutorHelper {
     
     Please review the planned action and reply with "Approve" or use the button below to proceed. (Call ID: ${callId})`;
   }
+
+  /**
+   * Checks for token or cost budget exhaustion.
+   *
+   * @param totalTokens - Current cumulative token usage.
+   * @param tokenBudget - Maximum tokens allowed for the entire task.
+   * @param costLimit - Maximum cost allowed for the entire task (USD).
+   * @param activeProvider - The LLM provider name for cost estimation.
+   * @param activeModel - The LLM model ID for cost estimation.
+   * @returns A pause/failure result if budget is exceeded, a warning if approaching limit, null otherwise.
+   */
+  static checkBudgets(
+    totalTokens: number,
+    tokenBudget?: number,
+    costLimit?: number,
+    activeProvider?: string,
+    activeModel?: string
+  ): {
+    responseText: string;
+    paused?: boolean;
+    pauseMessage?: string;
+    isWarning?: boolean;
+  } | null {
+    const SOFT_LIMIT_THRESHOLD = 0.8;
+
+    if (tokenBudget && tokenBudget > 0) {
+      const usageRatio = totalTokens / tokenBudget;
+
+      if (totalTokens > tokenBudget) {
+        const budgetExceededMsg = `[BUDGET_EXCEEDED] Token budget of ${tokenBudget} exceeded. Current usage: ${totalTokens}. Stopping execution to prevent runaway costs.`;
+        logger.warn(budgetExceededMsg);
+        return {
+          responseText: budgetExceededMsg,
+          paused: false,
+        };
+      }
+
+      if (usageRatio >= SOFT_LIMIT_THRESHOLD) {
+        const warningMsg = `[BUDGET_WARNING] Token usage at ${Math.round(usageRatio * 100)}% of budget (${totalTokens}/${tokenBudget}). Wrapping up soon.`;
+        logger.warn(warningMsg);
+        return {
+          responseText: warningMsg,
+          paused: false,
+          isWarning: true,
+        };
+      }
+    }
+
+    if (costLimit && costLimit > 0 && activeProvider && activeModel) {
+      const estimatedCost = ExecutorHelper.estimateCost(totalTokens, activeProvider, activeModel);
+      if (estimatedCost > costLimit) {
+        const costExceededMsg = `[COST_LIMIT_EXCEEDED] Cost limit of $${costLimit.toFixed(2)} exceeded. Estimated cost: $${estimatedCost.toFixed(2)}. Stopping execution.`;
+        logger.warn(costExceededMsg);
+        return {
+          responseText: costExceededMsg,
+          paused: false,
+        };
+      }
+
+      const costRatio = estimatedCost / costLimit;
+      if (costRatio >= SOFT_LIMIT_THRESHOLD) {
+        const costWarningMsg = `[COST_WARNING] Cost at ${Math.round(costRatio * 100)}% of limit ($${estimatedCost.toFixed(2)}/$${costLimit.toFixed(2)}). Wrapping up soon.`;
+        logger.warn(costWarningMsg);
+        return {
+          responseText: costWarningMsg,
+          paused: false,
+          isWarning: true,
+        };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Estimates USD cost for token usage based on provider/model pricing.
+   * Uses conservative default rates when exact pricing is unavailable.
+   */
+  private static estimateCost(totalTokens: number, provider: string, model: string): number {
+    const pricing: Record<string, Record<string, { input: number; output: number }>> = {
+      openai: {
+        'gpt-4o': { input: 2.5 / 1_000_000, output: 10 / 1_000_000 },
+        'gpt-4o-mini': { input: 0.15 / 1_000_000, output: 0.6 / 1_000_000 },
+        o3: { input: 10 / 1_000_000, output: 40 / 1_000_000 },
+        'o3-mini': { input: 1.1 / 1_000_000, output: 4.4 / 1_000_000 },
+      },
+      anthropic: {
+        'claude-sonnet-4-20250514': { input: 3 / 1_000_000, output: 15 / 1_000_000 },
+        'claude-opus-4-20250514': { input: 15 / 1_000_000, output: 75 / 1_000_000 },
+        'claude-haiku-3-5-20241022': { input: 0.8 / 1_000_000, output: 4 / 1_000_000 },
+      },
+      google: {
+        'gemini-2.5-pro': { input: 1.25 / 1_000_000, output: 10 / 1_000_000 },
+        'gemini-2.5-flash': { input: 0.15 / 1_000_000, output: 0.6 / 1_000_000 },
+      },
+    };
+
+    const modelPricing = pricing[provider]?.[model];
+    if (modelPricing) {
+      const avgRate = (modelPricing.input + modelPricing.output) / 2;
+      return totalTokens * avgRate;
+    }
+
+    const DEFAULT_RATE_PER_MILLION = 3;
+    return totalTokens * (DEFAULT_RATE_PER_MILLION / 1_000_000);
+  }
 }

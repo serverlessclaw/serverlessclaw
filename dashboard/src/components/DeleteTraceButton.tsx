@@ -39,7 +39,7 @@ export default function DeleteTraceButton({ traceId }: DeleteTraceButtonProps) {
       variant="ghost"
       size="sm"
       onClick={handleDelete}
-      className="opacity-0 group-hover:opacity-40 hover:!opacity-100 text-white transition-all hover:text-red-500 z-10 p-2"
+      className="opacity-0 group-hover:opacity-40 hover:!opacity-100 text-foreground transition-all hover:text-red-500 z-10 p-2"
       icon={<Trash2 size={16} />}
       title="Delete Trace"
     />

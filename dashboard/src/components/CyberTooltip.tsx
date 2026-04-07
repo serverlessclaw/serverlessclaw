@@ -30,22 +30,22 @@ export default function CyberTooltip({
       onMouseEnter={() => setIsVisible(true)}
       onMouseLeave={() => setIsVisible(false)}
     >
-      <Info size={12} className="text-white/40 hover:text-white/80 transition-colors cursor-help" />
+      <Info size={12} className="text-muted-foreground hover:text-foreground/80 transition-colors cursor-help" />
 
       {isVisible && (
         <div
-          className={`absolute z-50 w-64 p-3 bg-black/90 border border-white/20 rounded shadow-2xl text-[10px] leading-relaxed text-white/90 backdrop-blur-md animate-in fade-in zoom-in duration-200 ${positionClasses[position]}`}
+          className={`absolute z-50 w-64 p-3 bg-background/90 border border-border rounded shadow-2xl text-[10px] leading-relaxed text-foreground/90 backdrop-blur-md animate-in fade-in zoom-in duration-200 ${positionClasses[position]}`}
         >
           {content}
           <div
-            className="absolute w-2 h-2 bg-black border-r border-b border-white/20 rotate-45"
+            className="absolute w-2 h-2 bg-background border-r border-b border-border rotate-45"
             style={{
               ...(position === 'top'
                 ? {
                     bottom: '-5px',
                     left: 'calc(50% - 4px)',
-                    borderRight: '1px solid rgba(255,255,255,0.2)',
-                    borderBottom: '1px solid rgba(255,255,255,0.2)',
+                    borderRight: '1px solid hsl(var(--border))',
+                    borderBottom: '1px solid hsl(var(--border))',
                     borderLeft: 'none',
                     borderTop: 'none',
                   }
@@ -54,8 +54,8 @@ export default function CyberTooltip({
                 ? {
                     top: '-5px',
                     left: 'calc(50% - 4px)',
-                    borderLeft: '1px solid rgba(255,255,255,0.2)',
-                    borderTop: '1px solid rgba(255,255,255,0.2)',
+                    borderLeft: '1px solid hsl(var(--border))',
+                    borderTop: '1px solid hsl(var(--border))',
                     borderRight: 'none',
                     borderBottom: 'none',
                   }

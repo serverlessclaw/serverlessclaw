@@ -31,6 +31,8 @@
   "SYSTEM_ONLINE": "LINK_ESTABLISHED",
   "SETTINGS": "Settings",
   "LANGUAGE": "Language",
+  "THEME": "Theme",
+
   "ENGLISH": "English",
   "CHINESE": "Chinese (中文)",
   "SAVE": "Save Settings",

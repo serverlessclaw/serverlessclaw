@@ -58,7 +58,7 @@ export default function StatusFlow({ component, onAction }: StatusFlowProps) {
               {/* Connector Line */}
               {!isLast && (
                 <div 
-                  className={`absolute left-2.5 top-6 w-0.5 h-6 ${isCompleted ? 'bg-cyber-green/40' : 'bg-white/10'}`} 
+                  className={`absolute left-2.5 top-6 w-0.5 h-6 ${isCompleted ? 'bg-cyber-green/40' : 'bg-foreground/10'}`} 
                 />
               )}
 
@@ -71,7 +71,7 @@ export default function StatusFlow({ component, onAction }: StatusFlowProps) {
                 ) : isActive ? (
                   <Activity size={20} className="text-cyber-green animate-pulse" />
                 ) : (
-                  <Circle size={20} className="text-white/20" />
+                  <Circle size={20} className="text-foreground/20" />
                 )}
               </div>
 
@@ -80,12 +80,12 @@ export default function StatusFlow({ component, onAction }: StatusFlowProps) {
                 <Typography 
                   variant="mono" 
                   weight="bold" 
-                  className={`text-[11px] uppercase tracking-wider ${isActive ? 'text-cyber-green' : isCompleted ? 'text-white/80' : 'text-white/40'}`}
+                  className={`text-[11px] uppercase tracking-wider ${isActive ? 'text-cyber-green' : isCompleted ? 'text-foreground/80' : 'text-muted-foreground'}`}
                 >
                   {step.label}
                 </Typography>
                 {step.description && (
-                  <Typography variant="body" className="text-[10px] text-white/40 italic leading-tight mt-0.5">
+                  <Typography variant="body" className="text-[10px] text-muted-foreground italic leading-tight mt-0.5">
                     {step.description}
                   </Typography>
                 )}
@@ -97,12 +97,12 @@ export default function StatusFlow({ component, onAction }: StatusFlowProps) {
 
       {/* Footer Actions */}
       {component.actions && component.actions.length > 0 && (
-         <div className="px-4 py-3 bg-black/40 border-t border-cyber-green/10 flex flex-wrap gap-2">
+         <div className="px-4 py-3 bg-card border-t border-cyber-green/10 flex flex-wrap gap-2">
             {component.actions.map((action) => (
               <button
                 key={action.id}
                 onClick={() => onAction?.(action.id, action.payload)}
-                className="px-3 py-1 bg-white/5 hover:bg-white/10 border border-white/20 rounded text-[10px] font-mono text-white/60 transition-colors uppercase"
+                className="px-3 py-1 bg-foreground/5 hover:bg-foreground/10 border border-border rounded text-[10px] font-mono text-foreground/60 transition-colors uppercase"
               >
                 {action.label}
               </button>

@@ -1,213 +1,252 @@
+'use client';
+
 import React from 'react';
-import { Handle, Position } from '@xyflow/react';
-import { User, Bot } from 'lucide-react';
+import { Handle, Position, NodeProps, Node } from '@xyflow/react';
 import {
-  AgentActivity,
-  TaskNodeData,
-  getAgentIcon,
-  getStatusIcon,
-  getStatusColor,
-} from '@/lib/collaboration-utils';
+  Zap,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  Clock,
+  User,
+  Activity,
+  Bot,
+  Terminal,
+  LucideIcon,
+} from 'lucide-react';
+import Typography from '@/components/ui/Typography';
+import { TaskNodeData } from '@/lib/collaboration-utils';
+
+interface StatusConfigItem {
+  color: string;
+  bg: string;
+  border: string;
+  icon: LucideIcon;
+  label: string;
+  animate?: string;
+}
+
+const statusConfig: Record<string, StatusConfigItem> = {
+  pending: {
+    color: 'text-muted-foreground',
+    bg: 'bg-foreground/5',
+    border: 'border-border',
+    icon: Clock,
+    label: 'PENDING',
+  },
+  ready: {
+    color: 'text-cyber-blue',
+    bg: 'bg-cyber-blue/10',
+    border: 'border-cyber-blue/30',
+    icon: Activity,
+    label: 'READY',
+  },
+  running: {
+    color: 'text-purple-400',
+    bg: 'bg-purple-400/10',
+    border: 'border-purple-400/30',
+    icon: Loader2,
+    label: 'RUNNING',
+    animate: 'animate-spin',
+  },
+  completed: {
+    color: 'text-cyber-green',
+    bg: 'bg-cyber-green/10',
+    border: 'border-cyber-green/30',
+    icon: CheckCircle2,
+    label: 'COMPLETED',
+  },
+  failed: {
+    color: 'text-red-500',
+    bg: 'bg-red-500/10',
+    border: 'border-red-500/30',
+    icon: XCircle,
+    label: 'FAILED',
+  },
+};
+
+const NodeContainer: React.FC<{
+  children: React.ReactNode;
+  className?: string;
+  glowColor?: string;
+}> = ({ children, className, glowColor }) => (
+  <div
+    className={`px-4 py-3 rounded-lg border-2 backdrop-blur-xl transition-all ${className}`}
+    style={
+      glowColor
+        ? {
+            boxShadow: `0 0 20px ${glowColor}`,
+          }
+        : undefined
+    }
+  >
+    {children}
+  </div>
+);
+
+type TaskNode = Node<TaskNodeData>;
+type DagStatusNode = Node<{ completed: number; total: number; failed: number; ready: number; pending: number }>;
+type InitiatorNode = Node<{ initiatorId: string; initialQuery: string }>;
+type AggregatorNode = Node<{ type: string }>;
+type AgentActivityNode = Node<{ agentId: string; activeTasks: any[] }>;
 
 export const nodeTypes = {
-  initiatorNode: ({
-    data,
-  }: {
-    data: {
-      initiatorId: string;
-      sessionId?: string;
-      traceId: string;
-      initialQuery?: string;
-    };
-  }) => (
-    <div className="relative group transition-all duration-300 z-10 hover:z-50">
-      <div className="px-4 py-3 shadow-lg rounded-md bg-black border border-cyan-500/50 min-w-[220px] max-w-[300px] relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-16 h-16 bg-cyan-500/5 rounded-full blur-xl -mr-8 -mt-8"></div>
-        <div className="flex items-start gap-3">
-          <div className="p-2 rounded-sm shrink-0 bg-cyan-500/10 text-cyan-400 mt-1">
-            <User size={16} />
-          </div>
-          <div className="overflow-hidden">
-            <div className="text-[10px] font-bold uppercase tracking-tighter truncate text-cyan-400 mb-1">
-              {data.initiatorId || 'System'}
-            </div>
-            {data.initialQuery ? (
-              <div className="text-xs font-medium text-white/90 leading-tight italic line-clamp-3">
-                &quot;{data.initialQuery}&quot;
-              </div>
-            ) : (
-              <div className="text-sm font-bold text-white/90 break-words leading-tight">
-                Root Initiator
-              </div>
-            )}
-            <div className="flex items-center gap-2 mt-2 opacity-40">
-              <div className="text-[8px] font-mono uppercase tracking-widest text-white">
-                ID: {data.traceId.substring(0, 8)}
-              </div>
-              {data.sessionId && (
-                <div className="text-[8px] font-mono text-white/60 truncate">
-                  • {data.sessionId.substring(0, 8)}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        <Handle
-          type="source"
-          position={Position.Bottom}
-          className="!bg-cyan-500/50 !border-none !w-2 !h-2"
-        />
-      </div>
-    </div>
-  ),
-  aggregatorNode: ({ data }: { data: { type: string; traceId: string } }) => (
-    <div className="relative group transition-all duration-300 z-10 hover:z-50">
-      <div className="px-4 py-3 shadow-lg rounded-md bg-black border border-fuchsia-500/50 min-w-[200px] relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-16 h-16 bg-fuchsia-500/5 rounded-full blur-xl -mr-8 -mt-8"></div>
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-sm shrink-0 bg-fuchsia-500/10 text-fuchsia-400">
-            <Bot size={16} />
-          </div>
-          <div className="overflow-hidden">
-            <div className="text-[10px] font-bold uppercase tracking-tighter truncate text-fuchsia-400">
-              AGGREGATOR
-            </div>
-            <div className="text-sm font-bold text-white/90 break-words leading-tight">
-              SuperClaw Orchestrator
-            </div>
-            <div className="text-[9px] text-white/50 mt-1">
-              Strategy: {data.type || 'COMBINE'}
-            </div>
-          </div>
-        </div>
-        <Handle
-          type="target"
-          position={Position.Top}
-          className="!bg-fuchsia-500/50 !border-none !w-2 !h-2"
-        />
-      </div>
-    </div>
-  ),
-  agentActivity: ({ data }: { data: AgentActivity }) => (
-    <div className="relative group transition-all duration-300 z-10 hover:z-50">
-      <div className="px-4 py-3 shadow-lg rounded-md bg-black border border-purple-500/50 min-w-[200px] relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-16 h-16 bg-purple-500/5 rounded-full blur-xl -mr-8 -mt-8"></div>
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-sm shrink-0 bg-purple-500/10 text-purple-400">
-            {getAgentIcon(data.agentId)}
-          </div>
-          <div className="overflow-hidden">
-            <div className="text-[10px] font-bold uppercase tracking-tighter truncate text-purple-400">
-              NEURAL_WORKER
-            </div>
-            <div className="text-sm font-bold text-white/90 break-words leading-tight">
-              {data.agentName}
-            </div>
-            <div className="text-[9px] text-white/50 mt-1">
-              {data.activeTasks.length} active • {data.completedCount} done • {data.failedCount}{' '}
-              failed
-            </div>
-          </div>
-        </div>
-        <Handle
-          type="target"
-          position={Position.Top}
-          className="!bg-purple-500/50 !border-none !w-2 !h-2"
-        />
-        <Handle
-          type="source"
-          position={Position.Bottom}
-          className="!bg-purple-500/50 !border-none !w-2 !h-2"
-        />
-      </div>
-    </div>
-  ),
-  taskNode: ({ data }: { data: TaskNodeData }) => (
-    <div className="relative group transition-all duration-300 z-10 hover:z-50">
-      <div
-        className={`px-3 py-2 shadow-lg rounded-md border min-w-[180px] max-w-[220px] relative overflow-hidden ${getStatusColor(data.status)}`}
+  taskNode: ({ data }: NodeProps<TaskNode>) => {
+    const config = statusConfig[data.status] || statusConfig.pending;
+    const Icon = config.icon;
+
+    return (
+      <NodeContainer
+        className={`${config.bg} ${config.border} min-w-[200px] group hover:scale-105 transition-transform`}
+        glowColor={data.status === 'running' ? 'color-mix(in srgb, #a855f7 10%, transparent)' : undefined}
       >
-        <div className="flex items-center gap-2">
-          {getStatusIcon(data.status)}
-          <div className="overflow-hidden flex-1">
-            <div className="text-[9px] font-bold uppercase tracking-tighter truncate text-white/60">
-              {data.taskId}
-            </div>
-            <div className="text-xs font-medium text-white/90 break-words leading-tight truncate">
-              {data.task.length > 40 ? data.task.substring(0, 40) + '...' : data.task}
-            </div>
-          </div>
-        </div>
-        {data.dependsOn && data.dependsOn.length > 0 && (
-          <div className="mt-1 text-[8px] text-white/40">
-            Depends on: {data.dependsOn.join(', ')}
-          </div>
-        )}
         <Handle
           type="target"
           position={Position.Top}
-          className="!bg-white/30 !border-none !w-2 !h-2"
+          className="!bg-foreground/20 !border-none !w-1.5 !h-1.5"
         />
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Icon size={14} className={`${config.color} ${config.animate || ''}`} />
+              <Typography variant="mono" weight="black" className="text-[10px] tracking-widest">
+                {data.taskId}
+              </Typography>
+            </div>
+            <span
+              className={`text-[8px] font-black px-1.5 py-0.5 rounded ${config.bg} ${config.color} border ${config.border}`}
+            >
+              {config.label}
+            </span>
+          </div>
+          <Typography variant="body" className="text-[11px] leading-snug line-clamp-2 text-foreground/80">
+            {data.task}
+          </Typography>
+          <div className="mt-1 pt-2 border-t border-border flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Bot size={10} className="text-muted-foreground" />
+              <span className="text-[9px] font-bold text-muted-foreground uppercase truncate max-w-[80px]">
+                {data.agentId}
+              </span>
+            </div>
+            {data.latency && (
+              <span className="text-[9px] font-mono text-muted-foreground">
+                {data.latency.toFixed(0)}ms
+              </span>
+            )}
+          </div>
+        </div>
         <Handle
           type="source"
           position={Position.Bottom}
-          className="!bg-white/30 !border-none !w-2 !h-2"
+          className="!bg-foreground/20 !border-none !w-1.5 !h-1.5"
         />
+      </NodeContainer>
+    );
+  },
+
+  dagStatus: ({ data }: NodeProps<DagStatusNode>) => (
+    <NodeContainer className="bg-background/80 border-border min-w-[180px] shadow-2xl">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2 pb-2 border-b border-border">
+          <Zap size={16} className="text-cyber-green" />
+          <Typography variant="caption" weight="black" className="tracking-widest text-[10px]">
+            NEURAL_EXECUTION_FLOW
+          </Typography>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col">
+            <span className="text-[8px] text-muted-foreground uppercase font-black">Success</span>
+            <span className="text-lg font-mono font-black text-cyber-green">
+              {data.completed}/{data.total}
+            </span>
+          </div>
+          <div className="flex flex-col items-end text-right">
+            <span className="text-[8px] text-muted-foreground uppercase font-black">Active</span>
+            <span className="text-lg font-mono font-black text-purple-400">
+              {data.ready + (data.total - data.completed - data.failed - data.ready - data.pending)}
+            </span>
+          </div>
+        </div>
+        <div className="w-full h-1 bg-foreground/5 rounded-full overflow-hidden flex">
+          <div
+            className="h-full bg-cyber-green transition-all duration-500"
+            style={{ width: `${(data.completed / data.total) * 100}%` }}
+          />
+          <div
+            className="h-full bg-red-500 transition-all duration-500"
+            style={{ width: `${(data.failed / data.total) * 100}%` }}
+          />
+        </div>
       </div>
-    </div>
+    </NodeContainer>
   ),
-  dagStatus: ({
-    data,
-  }: {
-    data: {
-      completed: number;
-      failed: number;
-      pending: number;
-      ready: number;
-      total: number;
-      traceId?: string;
-    };
-  }) => (
-    <div className="relative group transition-all duration-300 z-10 hover:z-50">
-      <div className="px-4 py-3 shadow-lg rounded-md bg-black border border-cyber-green/30 min-w-[160px] relative overflow-hidden">
-        <div className="absolute inset-0 bg-cyber-green/5 animate-pulse"></div>
-        <div className="text-[8px] font-bold text-cyber-green uppercase tracking-[0.3em] mb-2 relative z-10">
-          DAG STATUS {data.traceId ? `[${data.traceId.substring(0, 8)}]` : ''}
+
+  initiatorNode: ({ data }: NodeProps<InitiatorNode>) => (
+    <NodeContainer className="bg-cyber-blue/5 border-cyber-blue/30 min-w-[220px]">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <User size={14} className="text-cyber-blue" />
+          <Typography variant="mono" weight="black" className="text-[10px] text-cyber-blue tracking-widest uppercase">
+            Initiator: {data.initiatorId}
+          </Typography>
         </div>
-        <div className="grid grid-cols-2 gap-2 text-[10px] relative z-10">
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-cyber-green"></div>
-            <span className="text-white/70">Running:</span>
-            <span className="text-cyber-green font-bold">{data.ready}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
-            <span className="text-white/70">Pending:</span>
-            <span className="text-yellow-500 font-bold">{data.pending}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-cyber-blue"></div>
-            <span className="text-white/70">Done:</span>
-            <span className="text-cyber-blue font-bold">{data.completed}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-red-500"></div>
-            <span className="text-white/70">Failed:</span>
-            <span className="text-red-500 font-bold">{data.failed}</span>
-          </div>
+        <div className="p-2 bg-background/40 rounded border border-cyber-blue/10">
+          <Typography variant="body" className="text-[10px] italic text-cyber-blue/80 line-clamp-2">
+            "{data.initialQuery}"
+          </Typography>
         </div>
-        <div className="mt-2 text-[9px] text-white/50 relative z-10">Total: {data.total} tasks</div>
-        <Handle
-          type="target"
-          position={Position.Top}
-          className="!bg-cyber-green/50 !border-none !w-2 !h-2"
-        />
-        <Handle
-          type="source"
-          position={Position.Bottom}
-          className="!bg-cyber-green/50 !border-none !w-2 !h-2"
-        />
       </div>
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="!bg-cyber-blue/50 !border-none !w-2 !h-2"
+      />
+    </NodeContainer>
+  ),
+
+  aggregatorNode: ({ data }: NodeProps<AggregatorNode>) => (
+    <NodeContainer className="bg-foreground/5 border-border min-w-[150px] flex items-center justify-center py-4">
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="!bg-foreground/20 !border-none !w-2 !h-2"
+      />
+      <div className="flex flex-col items-center gap-2">
+        <div className="w-8 h-8 rounded-full bg-foreground/5 flex items-center justify-center border border-border">
+          <Terminal size={14} className="text-muted-foreground" />
+        </div>
+        <Typography variant="mono" weight="black" className="text-[9px] tracking-[0.2em] text-muted-foreground">
+          RESULT_AGGREGATOR ({data.type})
+        </Typography>
+      </div>
+    </NodeContainer>
+  ),
+
+  agentActivity: ({ data }: NodeProps<AgentActivityNode>) => (
+    <div className="flex flex-col items-center gap-2">
+      <div
+        className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all ${
+          data.activeTasks.length > 0
+            ? 'border-purple-400 bg-purple-400/10 animate-pulse shadow-[0_0_15px_color-mix(in srgb, #a855f7 30%, transparent)]'
+            : 'border-border bg-foreground/5'
+        }`}
+      >
+        <Bot size={20} className={data.activeTasks.length > 0 ? 'text-purple-400' : 'text-muted-foreground'} />
+      </div>
+      <div className="px-2 py-0.5 bg-background border border-border rounded text-[8px] font-black uppercase tracking-widest text-foreground/70">
+        {data.agentId}
+      </div>
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="!bg-cyber-green/50 !border-none !w-2 !h-2"
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="!bg-cyber-green/50 !border-none !w-2 !h-2"
+      />
     </div>
   ),
 };

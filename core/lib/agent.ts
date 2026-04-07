@@ -101,6 +101,9 @@ export class Agent {
       approvedToolCalls,
       ignoreHandoff = false,
       pageContext,
+      tokenBudget = this.config?.tokenBudget,
+      costLimit = this.config?.costLimit,
+      priorTokenUsage,
     } = options;
 
     const responseFormat =
@@ -170,7 +173,7 @@ export class Agent {
         baseUserId,
         storageId,
         userText,
-        incomingAttachments ?? [],
+        (incomingAttachments as Attachment[]) ?? [],
         {
           isIsolated,
           depth,
@@ -188,7 +191,7 @@ export class Agent {
       await this.memory.addMessage(storageId, {
         role: MessageRole.USER,
         content: userText,
-        attachments: incomingAttachments,
+        attachments: incomingAttachments as Attachment[],
         pageContext,
         traceId,
         messageId: traceId,
@@ -247,6 +250,9 @@ export class Agent {
         timeoutBehavior,
         sessionStateManager,
         approvedToolCalls,
+        tokenBudget,
+        costLimit,
+        priorTokenUsage,
       });
 
       if (!process.env.VITEST && loopUsage) {
@@ -311,6 +317,12 @@ export class Agent {
             sessionId,
             nodeId: nodeId ?? 'unknown',
             parentId: parentId ?? 'unknown',
+            priorInputTokens: loopUsage?.totalInputTokens ?? 0,
+            priorOutputTokens: loopUsage?.totalOutputTokens ?? 0,
+            priorTotalTokens:
+              (loopUsage?.totalInputTokens ?? 0) + (loopUsage?.totalOutputTokens ?? 0),
+            tokenBudget,
+            costLimit,
           });
         }
       } else {
@@ -366,6 +378,9 @@ export class Agent {
       approvedToolCalls,
       ignoreHandoff = false,
       pageContext,
+      tokenBudget = this.config?.tokenBudget,
+      costLimit = this.config?.costLimit,
+      priorTokenUsage,
     } = options;
 
     const responseFormat =
@@ -428,7 +443,7 @@ export class Agent {
       baseUserId,
       storageId,
       userText,
-      incomingAttachments ?? [],
+      (incomingAttachments as Attachment[]) ?? [],
       {
         isIsolated,
         depth,
@@ -443,7 +458,7 @@ export class Agent {
     await this.memory.addMessage(storageId, {
       role: MessageRole.USER,
       content: userText,
-      attachments: incomingAttachments,
+      attachments: incomingAttachments as Attachment[],
       pageContext,
       traceId,
       messageId: traceId,
@@ -485,6 +500,9 @@ export class Agent {
       timeoutBehavior,
       sessionStateManager,
       approvedToolCalls,
+      tokenBudget,
+      costLimit,
+      priorTokenUsage,
     });
     let fullContent = '';
     let fullThought = '';

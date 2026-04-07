@@ -1,4 +1,4 @@
-import { ToolCall, Message, ReasoningProfile } from '../types/index';
+import { ToolCall, Message, ReasoningProfile, ButtonType } from '../types/index';
 import { ClawTracer } from '../tracer';
 import { Context as LambdaContext } from 'aws-lambda';
 
@@ -25,17 +25,17 @@ export interface ExecutorUsage {
   toolCallCount: number;
   durationMs: number;
 }
-
 export interface LoopResult {
   responseText: string;
   paused?: boolean;
   asyncWait?: boolean;
   pauseMessage?: string;
+  isWarning?: boolean;
   attachments?: NonNullable<Message['attachments']>;
   thought?: string;
   tool_calls?: ToolCall[];
   ui_blocks?: Message['ui_blocks'];
-  options?: Array<{ label: string; value: string; type?: string }>;
+  options?: Array<{ label: string; value: string; type?: ButtonType }>;
   usage?: ExecutorUsage;
 }
 
@@ -111,6 +111,12 @@ export interface ExecutorFeatureOptions {
   tokenBudget?: number;
   /** Maximum cost limit (USD) for this task. */
   costLimit?: number;
+  /** Cumulative token usage from prior continuation invocations. */
+  priorTokenUsage?: {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  };
 }
 
 /** Combined executor options: core (required) + features (optional). */

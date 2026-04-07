@@ -1,5 +1,6 @@
 import { emitEvent, EventPriority } from './utils/bus';
-import { EventType, Attachment } from './types/agent';
+import { EventType } from './types/agent';
+import { Attachment } from './types/llm';
 import { extractBaseUserId } from './utils/agent-helpers';
 
 /**

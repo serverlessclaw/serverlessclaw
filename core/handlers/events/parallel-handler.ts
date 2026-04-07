@@ -24,6 +24,8 @@ export interface ParallelTaskEvent {
   barrierTimeoutMs?: number;
   aggregationType?: ParallelDispatchParams['aggregationType'];
   aggregationPrompt?: ParallelDispatchParams['aggregationPrompt'];
+  tokenBudget?: number;
+  costLimit?: number;
 }
 
 const DEFAULT_BARRIER_TIMEOUT_MS = TIME.MS_PER_MINUTE * 5;
@@ -42,6 +44,8 @@ export async function handleParallelDispatch(
     sessionId,
     aggregationType,
     aggregationPrompt,
+    tokenBudget,
+    costLimit,
   } = event.detail;
 
   const timeoutMs =
@@ -172,9 +176,20 @@ export async function handleParallelDispatch(
 
     // Dispatch ready tasks (A6: with error boundary)
     const dagDispatchErrors: Array<{ taskId: string; error: string }> = [];
+    const perTaskBudget = tokenBudget ? Math.floor(tokenBudget / tasks.length) : undefined;
+    const perTaskCost = costLimit ? costLimit / tasks.length : undefined;
     for (const task of readyTasks) {
       try {
-        await dispatchTask(task, safeTraceId, initiatorId, depth, sessionId, userId);
+        await dispatchTask(
+          task,
+          safeTraceId,
+          initiatorId,
+          depth,
+          sessionId,
+          userId,
+          perTaskBudget,
+          perTaskCost
+        );
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
         logger.error(`Failed to dispatch DAG task ${task.taskId}:`, error);
@@ -258,9 +273,20 @@ export async function handleParallelDispatch(
   // Standard parallel execution (no dependencies)
   // A6: Wrap each dispatch in try/catch to prevent partial failures
   const dispatchErrors: Array<{ taskId: string; error: string }> = [];
+  const perTaskBudget = tokenBudget ? Math.floor(tokenBudget / tasks.length) : undefined;
+  const perTaskCost = costLimit ? costLimit / tasks.length : undefined;
   for (const task of tasks) {
     try {
-      await dispatchTask(task, safeTraceId, initiatorId, depth, sessionId, userId);
+      await dispatchTask(
+        task,
+        safeTraceId,
+        initiatorId,
+        depth,
+        sessionId,
+        userId,
+        perTaskBudget,
+        perTaskCost
+      );
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.error(`Failed to dispatch parallel task ${task.taskId}:`, error);
@@ -349,7 +375,9 @@ async function dispatchTask(
   initiatorId: string | undefined,
   depth: number | undefined,
   sessionId: string | undefined,
-  userId: string
+  userId: string,
+  tokenBudget?: number,
+  costLimit?: number
 ): Promise<void> {
   const { emitTypedEvent } = await import('../../lib/utils/typed-emit');
 
@@ -370,5 +398,7 @@ async function dispatchTask(
     initiatorId: initiatorId ?? 'parallel-dispatcher',
     depth: (depth ?? 0) + 1,
     sessionId,
+    tokenBudget,
+    costLimit,
   });
 }

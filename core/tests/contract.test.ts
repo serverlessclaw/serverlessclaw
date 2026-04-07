@@ -450,7 +450,7 @@ describe('Event Contract Verification', () => {
 
     it('should default to empty object', () => {
       const result = PLANNER_TASK_METADATA.parse({});
-      expect(result).toEqual({});
+      expect(result).toEqual({ gapId: null, category: null, priority: null });
     });
   });
 

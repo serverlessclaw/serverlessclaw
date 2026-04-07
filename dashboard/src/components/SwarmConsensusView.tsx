@@ -35,7 +35,7 @@ export default function SwarmConsensusView({ requests }: { requests: ConsensusRe
         return (
           <div
             key={req.id}
-            className="bg-[#0A0A0B] border border-white/10 rounded-2xl p-6 lg:p-8 space-y-6 shadow-2xl relative overflow-hidden"
+            className="bg-background border border-border rounded-2xl p-6 lg:p-8 space-y-6 shadow-2xl relative overflow-hidden"
           >
             {/* Status Indicator */}
             <div
@@ -53,7 +53,7 @@ export default function SwarmConsensusView({ requests }: { requests: ConsensusRe
                 <div className="flex items-center gap-3 mb-2">
                   <Badge
                     variant="outline"
-                    className="text-[10px] border-white/10 uppercase tracking-widest text-white/40"
+                    className="text-[10px] border-border uppercase tracking-widest text-muted-foreground"
                   >
                     ID: {req.id}
                   </Badge>
@@ -64,12 +64,12 @@ export default function SwarmConsensusView({ requests }: { requests: ConsensusRe
                 <Typography variant="h3" uppercase glow>
                   {req.title}
                 </Typography>
-                <Typography variant="body" color="muted" className="text-white/60 leading-relaxed">
+                <Typography variant="body" color="muted" className="text-muted-foreground leading-relaxed">
                   {req.description}
                 </Typography>
               </div>
 
-              <div className="bg-white/5 border border-white/10 p-6 rounded-2xl min-w-[240px] text-center space-y-4">
+              <div className="bg-foreground/5 border border-border p-6 rounded-2xl min-w-[240px] text-center space-y-4">
                 <Typography variant="mono" className="text-xs uppercase tracking-widest opacity-40">
                   Voting Progress
                 </Typography>
@@ -82,7 +82,7 @@ export default function SwarmConsensusView({ requests }: { requests: ConsensusRe
                       stroke="currentColor"
                       strokeWidth="8"
                       fill="transparent"
-                      className="text-white/5"
+                      className="text-foreground/5"
                     />
                     <circle
                       cx="64"
@@ -106,7 +106,7 @@ export default function SwarmConsensusView({ requests }: { requests: ConsensusRe
                     </Typography>
                   </div>
                 </div>
-                <div className="flex justify-center gap-4 border-t border-white/5 pt-4">
+                <div className="flex justify-center gap-4 border-t border-foreground/5 pt-4">
                   <div className="text-center">
                     <Typography variant="h3" className="text-cyber-green">
                       {yesVotes}
@@ -144,11 +144,11 @@ export default function SwarmConsensusView({ requests }: { requests: ConsensusRe
                 {req.votes.map((vote) => (
                   <div
                     key={vote.agentId}
-                    className="bg-white/[0.03] border border-white/5 p-4 rounded-xl hover:bg-white/[0.06] transition-all group"
+                    className="bg-foreground/[0.03] border border-border p-4 rounded-xl hover:bg-foreground/[0.06] transition-all group"
                   >
                     <div className="flex justify-between items-center mb-3">
                       <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-white/5 rounded text-white/40 group-hover:text-cyber-blue transition-colors">
+                        <div className="p-1.5 bg-foreground/5 rounded text-muted-foreground group-hover:text-cyber-blue transition-colors">
                           <UserCheck size={14} />
                         </div>
                         <Typography
@@ -166,11 +166,11 @@ export default function SwarmConsensusView({ requests }: { requests: ConsensusRe
                     </div>
                     <Typography
                       variant="body"
-                      className="text-[11px] text-white/40 italic line-clamp-2 min-h-[32px]"
+                      className="text-[11px] text-muted-foreground italic line-clamp-2 min-h-[32px]"
                     >
                       &quot;{vote.reason || 'No reasoning provided.'}&quot;
                     </Typography>
-                    <div className="mt-3 flex items-center gap-2 border-t border-white/5 pt-3">
+                    <div className="mt-3 flex items-center gap-2 border-t border-foreground/5 pt-3">
                       <ShieldCheck size={10} className="text-cyber-blue/40" />
                       <Typography
                         variant="mono"
@@ -188,10 +188,10 @@ export default function SwarmConsensusView({ requests }: { requests: ConsensusRe
       })}
 
       {requests.length === 0 && (
-        <div className="py-32 flex flex-col items-center justify-center text-center space-y-6 bg-white/[0.01] border border-dashed border-white/10 rounded-2xl animate-in fade-in zoom-in duration-700">
+        <div className="py-32 flex flex-col items-center justify-center text-center space-y-6 bg-foreground/[0.01] border border-dashed border-border rounded-2xl animate-in fade-in zoom-in duration-700">
           <div className="relative">
             <div className="absolute inset-0 bg-cyber-blue/20 blur-2xl rounded-full animate-pulse"></div>
-            <div className="relative bg-black/40 border border-cyber-blue/30 p-6 rounded-full">
+            <div className="relative bg-card border border-cyber-blue/30 p-6 rounded-full">
               <Vote size={48} className="text-cyber-blue/60" />
             </div>
           </div>
@@ -212,7 +212,7 @@ export default function SwarmConsensusView({ requests }: { requests: ConsensusRe
             size="sm"
             onClick={() => window.location.reload()}
             icon={<RefreshCw size={14} />}
-            className="text-[10px] uppercase font-black border-white/10"
+            className="text-[10px] uppercase font-black border-border"
           >
             Refresh Matrix
           </Button>

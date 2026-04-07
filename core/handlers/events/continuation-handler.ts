@@ -24,6 +24,9 @@ export async function handleContinuationTask(
     depth,
     initiatorId,
     attachments,
+    tokenBudget,
+    costLimit,
+    metadata,
   } = TASK_EVENT_SCHEMA.parse(eventDetail);
 
   const currentDepth = depth ?? 1;
@@ -44,10 +47,19 @@ export async function handleContinuationTask(
     return;
   }
 
+  const priorTokenUsage = metadata?.priorTotalTokens
+    ? {
+        inputTokens: ((metadata as Record<string, unknown>).priorInputTokens as number) ?? 0,
+        outputTokens: ((metadata as Record<string, unknown>).priorOutputTokens as number) ?? 0,
+        totalTokens: ((metadata as Record<string, unknown>).priorTotalTokens as number) ?? 0,
+      }
+    : undefined;
+
   const targetAgentId = agentId ?? AgentType.SUPERCLAW;
   logger.info(`Handling continuation task for agent ${targetAgentId}, user:`, userId, {
     traceId,
     sessionId,
+    priorTokens: priorTokenUsage?.totalTokens ?? 0,
   });
 
   await processEventWithAgent(userId, targetAgentId, task, {
@@ -57,8 +69,11 @@ export async function handleContinuationTask(
     sessionId,
     depth,
     initiatorId,
-    attachments,
-    handlerTitle: 'CONTINUATION_NOTIFICATION', // Or as needed
+    attachments: attachments as any,
+    tokenBudget,
+    costLimit,
+    priorTokenUsage,
+    handlerTitle: 'CONTINUATION_NOTIFICATION',
     outboundHandlerName: 'continuation-handler',
   });
 }

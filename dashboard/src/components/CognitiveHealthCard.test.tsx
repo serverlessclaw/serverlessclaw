@@ -109,7 +109,7 @@ describe('CognitiveHealthCard', () => {
   it('should apply correct gauge color for high score (>=80)', () => {
     render(<CognitiveHealthCard {...defaultProps} score={85} />);
     const scoreElement = screen.getByText('85');
-    expect(scoreElement).toHaveStyle({ color: '#00ffa3' });
+    expect(scoreElement).toHaveStyle({ color: 'var(--cyber-green)' });
   });
 
   it('should apply correct gauge color for medium score (60-79)', () => {

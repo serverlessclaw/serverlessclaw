@@ -18,13 +18,14 @@ describe('Card Component', () => {
   it('applies solid variant', () => {
     render(<Card variant="solid">Solid</Card>);
     const card = screen.getByText('Solid').closest('div');
-    expect(card!.className).toContain('bg-black/40');
+    expect(card!.className).toContain('bg-card');
+    expect(card!.className).toContain('border-border');
   });
 
   it('applies outline variant', () => {
     render(<Card variant="outline">Outline</Card>);
     const card = screen.getByText('Outline').closest('div');
-    expect(card!.className).toContain('border-white/10');
+    expect(card!.className).toContain('border-border');
   });
 
   it('applies md padding by default', () => {

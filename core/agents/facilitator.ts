@@ -1,4 +1,4 @@
-import { AgentType, AgentEvent, AgentPayload } from '../lib/types/agent';
+import { AgentType, AgentEvent, AgentPayload, Attachment } from '../lib/types/agent';
 import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
 import { extractPayload, extractBaseUserId, validatePayload } from '../lib/utils/agent-helpers';
@@ -38,7 +38,7 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
         sessionId,
         initiatorId,
         depth,
-        attachments,
+        attachments: attachments as Attachment[],
         handlerTitle: 'FACILITATOR_TASK',
         outboundHandlerName: 'facilitator-handler',
       }

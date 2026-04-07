@@ -28,7 +28,10 @@ import {
 
 describe('ATTACHMENT_SCHEMA', () => {
   it('should validate a minimal valid attachment', () => {
-    const result = ATTACHMENT_SCHEMA.parse({ type: AttachmentType.IMAGE });
+    const result = ATTACHMENT_SCHEMA.parse({
+      type: AttachmentType.IMAGE,
+      url: 'https://example.com/pic.png',
+    });
     expect(result.type).toBe(AttachmentType.IMAGE);
   });
 
@@ -53,13 +56,23 @@ describe('ATTACHMENT_SCHEMA', () => {
   });
 
   it('should accept IMAGE attachment type', () => {
-    const result = ATTACHMENT_SCHEMA.parse({ type: AttachmentType.IMAGE });
+    const result = ATTACHMENT_SCHEMA.parse({
+      type: AttachmentType.IMAGE,
+      url: 'https://example.com/pic.png',
+    });
     expect(result.type).toBe('image');
   });
 
   it('should accept FILE attachment type', () => {
-    const result = ATTACHMENT_SCHEMA.parse({ type: AttachmentType.FILE });
+    const result = ATTACHMENT_SCHEMA.parse({
+      type: AttachmentType.FILE,
+      base64: 'data:text/plain;base64,SGVsbG8=',
+    });
     expect(result.type).toBe('file');
+  });
+
+  it('should reject attachment missing both url and base64', () => {
+    expect(() => ATTACHMENT_SCHEMA.parse({ type: AttachmentType.FILE })).toThrow();
   });
 });
 
@@ -214,7 +227,9 @@ describe('TASK_EVENT_SCHEMA', () => {
       task: 'Implement feature X',
       isContinuation: true,
       metadata: { branch: 'main' },
-      attachments: [{ type: AttachmentType.FILE, name: 'spec.md' }],
+      attachments: [
+        { type: AttachmentType.FILE, url: 'https://example.com/spec.md', name: 'spec.md' },
+      ],
     };
     const result = TASK_EVENT_SCHEMA.parse(input);
     expect(result).toEqual(input);
@@ -395,7 +410,9 @@ describe('OUTBOUND_MESSAGE_EVENT_SCHEMA', () => {
       message: 'Build succeeded',
       agentName: 'BuildBot',
       memoryContexts: ['ctx-1', 'ctx-2'],
-      attachments: [{ type: AttachmentType.FILE, name: 'log.txt' }],
+      attachments: [
+        { type: AttachmentType.FILE, url: 'https://example.com/log.txt', name: 'log.txt' },
+      ],
       metadata: { channel: 'slack' },
     };
     const result = OUTBOUND_MESSAGE_EVENT_SCHEMA.parse(input);
@@ -937,22 +954,22 @@ describe('CODER_TASK_METADATA', () => {
 
   it('should make buildId optional', () => {
     const result = CODER_TASK_METADATA.parse({});
-    expect(result.buildId).toBeUndefined();
+    expect(result.buildId).toBeNull();
   });
 
   it('should make targetFile optional', () => {
     const result = CODER_TASK_METADATA.parse({});
-    expect(result.targetFile).toBeUndefined();
+    expect(result.targetFile).toBeNull();
   });
 
   it('should make branch optional', () => {
     const result = CODER_TASK_METADATA.parse({});
-    expect(result.branch).toBeUndefined();
+    expect(result.branch).toBeNull();
   });
 
   it('should have top-level default returning gapIds only', () => {
     const result = CODER_TASK_METADATA.parse(undefined);
-    expect(result).toEqual({ gapIds: [] });
+    expect(result).toEqual({ gapIds: [], buildId: null, targetFile: null, branch: null });
   });
 });
 
@@ -979,24 +996,24 @@ describe('QA_AUDIT_METADATA', () => {
 
   it('should make buildId optional', () => {
     const result = QA_AUDIT_METADATA.parse({});
-    expect(result.buildId).toBeUndefined();
+    expect(result.buildId).toBeNull();
   });
 
   it('should make deploymentUrl optional', () => {
     const result = QA_AUDIT_METADATA.parse({});
-    expect(result.deploymentUrl).toBeUndefined();
+    expect(result.deploymentUrl).toBeNull();
   });
 
   it('should have top-level default', () => {
     const result = QA_AUDIT_METADATA.parse(undefined);
-    expect(result).toEqual({ gapIds: [] });
+    expect(result).toEqual({ gapIds: [], buildId: null, deploymentUrl: null });
   });
 });
 
 describe('PLANNER_TASK_METADATA', () => {
   it('should validate with empty input using defaults', () => {
     const result = PLANNER_TASK_METADATA.parse({});
-    expect(result).toEqual({});
+    expect(result).toEqual({ gapId: null, category: null, priority: null });
   });
 
   it('should validate with all fields', () => {
@@ -1011,22 +1028,22 @@ describe('PLANNER_TASK_METADATA', () => {
 
   it('should make gapId optional', () => {
     const result = PLANNER_TASK_METADATA.parse({});
-    expect(result.gapId).toBeUndefined();
+    expect(result.gapId).toBeNull();
   });
 
   it('should make category optional', () => {
     const result = PLANNER_TASK_METADATA.parse({});
-    expect(result.category).toBeUndefined();
+    expect(result.category).toBeNull();
   });
 
   it('should make priority optional', () => {
     const result = PLANNER_TASK_METADATA.parse({});
-    expect(result.priority).toBeUndefined();
+    expect(result.priority).toBeNull();
   });
 
   it('should have top-level default returning empty object', () => {
     const result = PLANNER_TASK_METADATA.parse(undefined);
-    expect(result).toEqual({});
+    expect(result).toEqual({ gapId: null, category: null, priority: null });
   });
 });
 
@@ -1053,17 +1070,17 @@ describe('BUILD_TASK_METADATA', () => {
 
   it('should make buildId optional', () => {
     const result = BUILD_TASK_METADATA.parse({});
-    expect(result.buildId).toBeUndefined();
+    expect(result.buildId).toBeNull();
   });
 
   it('should make projectName optional', () => {
     const result = BUILD_TASK_METADATA.parse({});
-    expect(result.projectName).toBeUndefined();
+    expect(result.projectName).toBeNull();
   });
 
   it('should have top-level default', () => {
     const result = BUILD_TASK_METADATA.parse(undefined);
-    expect(result).toEqual({ gapIds: [] });
+    expect(result).toEqual({ gapIds: [], buildId: null, projectName: null });
   });
 });
 
@@ -1095,17 +1112,17 @@ describe('CLARIFICATION_TASK_METADATA', () => {
 
   it('should make question optional', () => {
     const result = CLARIFICATION_TASK_METADATA.parse({});
-    expect(result.question).toBeUndefined();
+    expect(result.question).toBeNull();
   });
 
   it('should make originalTask optional', () => {
     const result = CLARIFICATION_TASK_METADATA.parse({});
-    expect(result.originalTask).toBeUndefined();
+    expect(result.originalTask).toBeNull();
   });
 
   it('should have top-level default returning retryCount 0', () => {
     const result = CLARIFICATION_TASK_METADATA.parse(undefined);
-    expect(result).toEqual({ retryCount: 0 });
+    expect(result).toEqual({ question: null, originalTask: null, retryCount: 0 });
   });
 });
 

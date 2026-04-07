@@ -19,12 +19,16 @@ import {
   BrainCircuit,
   Building2,
   Vote,
+  Sun,
+  Moon,
+  Monitor,
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { ROUTES } from '@/lib/constants';
 import { useTranslations } from '@/components/Providers/TranslationsProvider';
+import { useTheme } from 'next-themes';
 import Typography from '@/components/ui/Typography';
 import Button from '@/components/ui/Button';
 
@@ -37,6 +41,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const { t, locale, setLocale } = useTranslations();
+  const { theme, setTheme } = useTheme();
 
   // Close sidebar on navigation to improve mobile UX
   useEffect(() => {
@@ -77,7 +82,7 @@ export default function Sidebar() {
   return (
     <>
       {/* Mobile Header - Visible only on small screens */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 border-b border-white/10 bg-black/80 backdrop-blur-md z-40 px-6 flex items-center justify-between">
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 border-b border-border bg-background/80 backdrop-blur-md z-40 px-6 flex items-center justify-between">
         <Link href={ROUTES.HOME} className="flex items-center gap-3 group shrink-0">
           <div className="relative w-8 h-8 flex-shrink-0 rounded-sm overflow-hidden group-hover:scale-105 transition-transform">
             <Image
@@ -97,7 +102,7 @@ export default function Sidebar() {
           size="sm"
           onClick={() => setIsOpen(!isOpen)}
           aria-label="Toggle navigation"
-          className="p-2 h-auto text-white"
+          className="p-2 h-auto text-foreground"
           icon={isOpen ? <X size={24} /> : <Menu size={24} />}
         />
       </div>
@@ -105,7 +110,7 @@ export default function Sidebar() {
       {/* Mobile Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 bg-background/60 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setIsOpen(false)}
         />
       )}
@@ -113,7 +118,7 @@ export default function Sidebar() {
       {/* Sidebar Container */}
       <aside
         className={`
-        fixed inset-y-0 left-0 z-50 w-72 lg:w-64 border-r border-white/10 flex flex-col p-6 space-y-6 bg-[#0d0d0d] lg:bg-black/20 shrink-0 transition-transform duration-300 lg:relative lg:translate-x-0
+        fixed inset-y-0 left-0 z-50 w-72 lg:w-64 border-r border-border flex flex-col p-6 space-y-6 bg-background lg:bg-background/20 shrink-0 transition-transform duration-300 lg:relative lg:translate-x-0
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}
       >
@@ -137,7 +142,7 @@ export default function Sidebar() {
               variant="ghost"
               size="sm"
               onClick={() => setIsOpen(false)}
-              className="p-1 text-white h-auto"
+              className="p-1 text-foreground h-auto"
               icon={<X size={20} />}
             />
           </div>
@@ -149,7 +154,7 @@ export default function Sidebar() {
               return (
                 <div
                   key={idx}
-                  className={`text-white/40 px-2 text-[9px] tracking-[0.2em] font-black mb-1 ${idx !== 0 ? 'pt-3' : ''} uppercase`}
+                  className={`text-muted-foreground px-2 text-[9px] tracking-[0.2em] font-black mb-1 ${idx !== 0 ? 'pt-3' : ''} uppercase`}
                 >
                   {item.label}
                 </div>
@@ -171,7 +176,7 @@ export default function Sidebar() {
                 className={`flex items-center justify-between gap-3 px-3 py-1.5 rounded transition-all group ${
                   isActive
                     ? 'bg-cyber-green/10 text-cyber-green border-l-2 border-cyber-green'
-                    : 'text-white/70 hover:bg-white/5 hover:text-white'
+                    : 'text-foreground/70 hover:bg-foreground/5 hover:text-foreground'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -181,7 +186,7 @@ export default function Sidebar() {
                       className={
                         isActive
                           ? 'text-cyber-green'
-                          : 'text-white/40 group-hover:text-white/100'
+                          : 'text-muted-foreground group-hover:text-foreground'
                       }
                     />
                   )}
@@ -199,16 +204,16 @@ export default function Sidebar() {
           })}
         </nav>
 
-        <div className="block pt-6 border-t border-white/5 space-y-4">
+        <div className="block pt-6 border-t border-border space-y-4">
           <Link
             href={ROUTES.SYSTEM_PULSE}
             className="block group/status"
           >
-            <div className="bg-white/5 rounded p-3 group-hover/status:bg-white/10 transition-colors cursor-pointer">
+            <div className="bg-foreground/5 rounded p-3 group-hover/status:bg-foreground/10 transition-colors cursor-pointer">
               <Typography
                 variant="mono"
                 weight="bold"
-                className="text-[10px] text-white/90 tracking-wider uppercase"
+                className="text-[10px] text-foreground/90 tracking-wider uppercase"
               >
                 {t('SYSTEM_STATUS')}
               </Typography>
@@ -228,24 +233,55 @@ export default function Sidebar() {
             </div>
           </Link>
 
-          <div className="flex items-center justify-between px-1 pb-2">
-            <Typography variant="caption" className="text-white/50 text-[10px] uppercase tracking-wider font-mono">
-              {t('LANGUAGE')}
-            </Typography>
-            <div className="flex gap-2 text-[10px] font-mono">
-              <button
-                onClick={(e) => { e.preventDefault(); setLocale('en'); }}
-                className={`transition-colors ${locale === 'en' ? 'text-white font-bold' : 'text-white/40 hover:text-white/70'}`}
-              >
-                EN
-              </button>
-              <span className="text-white/20">|</span>
-              <button
-                onClick={(e) => { e.preventDefault(); setLocale('cn'); }}
-                className={`transition-colors ${locale === 'cn' ? 'text-white font-bold' : 'text-white/40 hover:text-white/70'}`}
-              >
-                中文
-              </button>
+          <div className="flex flex-col gap-3 px-1 pb-2">
+            <div className="flex items-center justify-between">
+              <Typography variant="caption" className="text-muted-foreground text-[10px] uppercase tracking-wider font-mono">
+                {t('LANGUAGE')}
+              </Typography>
+              <div className="flex gap-2 text-[10px] font-mono">
+                <button
+                  onClick={(e) => { e.preventDefault(); setLocale('en'); }}
+                  className={`transition-colors ${locale === 'en' ? 'text-foreground font-bold' : 'text-muted-foreground hover:text-foreground/70'}`}
+                >
+                  EN
+                </button>
+                <span className="text-foreground/20">|</span>
+                <button
+                  onClick={(e) => { e.preventDefault(); setLocale('cn'); }}
+                  className={`transition-colors ${locale === 'cn' ? 'text-foreground font-bold' : 'text-muted-foreground hover:text-foreground/70'}`}
+                >
+                  中文
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Typography variant="caption" className="text-muted-foreground text-[10px] uppercase tracking-wider font-mono">
+                {t('THEME')}
+              </Typography>
+              <div className="flex gap-3 text-muted-foreground">
+                <button
+                  onClick={() => setTheme('light')}
+                  className={`p-1 rounded hover:bg-foreground/5 transition-colors ${theme === 'light' ? 'text-cyber-green' : ''}`}
+                  title="Light Mode"
+                >
+                  <Sun size={12} />
+                </button>
+                <button
+                  onClick={() => setTheme('dark')}
+                  className={`p-1 rounded hover:bg-foreground/5 transition-colors ${theme === 'dark' ? 'text-cyber-green' : ''}`}
+                  title="Dark Mode"
+                >
+                  <Moon size={12} />
+                </button>
+                <button
+                  onClick={() => setTheme('system')}
+                  className={`p-1 rounded hover:bg-foreground/5 transition-colors ${theme === 'system' ? 'text-cyber-green' : ''}`}
+                  title="System Theme"
+                >
+                  <Monitor size={12} />
+                </button>
+              </div>
             </div>
           </div>
         </div>

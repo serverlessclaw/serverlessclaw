@@ -415,12 +415,17 @@ export function useChatMessages(
     setAttachments((prev) => [...prev, ...newAttachments]);
   };
 
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
   return {
     messages,
     setMessages,
     attachments,
     setAttachments,
     handleFiles,
+    removeAttachment,
     fetchHistory,
     sendMessage,
     updateAssistantResponse,

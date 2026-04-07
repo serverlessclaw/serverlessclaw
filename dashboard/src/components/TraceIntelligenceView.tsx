@@ -198,7 +198,7 @@ export default function TraceIntelligenceView({
     <div key={trace.traceId} className="relative group">
       <Link
         href={`/trace/${trace.traceId}?t=${trace.timestamp}`}
-        className="glass-card p-4 hover:bg-white/[0.05] transition-all cursor-pointer block cyber-border relative overflow-hidden"
+        className="glass-card p-4 hover:bg-foreground/[0.05] transition-all cursor-pointer block cyber-border relative overflow-hidden"
       >
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
           <div className="flex items-start md:items-center gap-3 lg:gap-4">
@@ -216,11 +216,11 @@ export default function TraceIntelligenceView({
             <div className="text-[10px] font-bold px-1.5 py-0.5 rounded border border-cyber-blue/20 text-cyber-blue/80 uppercase">
               {trace.source ?? 'UNKNOWN'}
             </div>
-            <div className="text-sm font-medium text-white/90 truncate max-w-[200px] md:max-w-md">
+            <div className="text-sm font-medium text-foreground/90 truncate max-w-[200px] md:max-w-md">
               {trace.initialContext?.userText ?? 'System Task'}
             </div>
           </div>
-          <div className="flex items-center justify-between md:justify-end gap-3 md:gap-6 text-[11px] text-white/90 pr-14">
+          <div className="flex items-center justify-between md:justify-end gap-3 md:gap-6 text-[11px] text-foreground/90 pr-14">
             {(trace.totalTokens ?? 0) > 0 && (
               <div className="flex items-center gap-1.5 text-cyber-green/70 font-mono">
                 <Zap size={12} /> {trace.totalTokens}{' '}
@@ -242,7 +242,7 @@ export default function TraceIntelligenceView({
             {trace.toolsUsed.map((tool: string, i: number) => (
               <span
                 key={i}
-                className="text-[8px] px-1.5 py-0.5 rounded bg-white/5 border border-white/5 text-white/40 uppercase tracking-tighter"
+                className="text-[8px] px-1.5 py-0.5 rounded bg-foreground/5 border border-border text-muted-foreground uppercase tracking-tighter"
               >
                 {tool}
               </span>
@@ -290,7 +290,7 @@ export default function TraceIntelligenceView({
         ].map((stat, i) => (
           <div
             key={i}
-            className="glass-card p-4 flex flex-col items-center justify-center border-white/5"
+            className="glass-card p-4 flex flex-col items-center justify-center border-border"
           >
             <stat.icon size={20} className={`${stat.color} mb-2 opacity-80`} />
             <Typography variant="mono" className="text-xl font-black">
@@ -308,8 +308,8 @@ export default function TraceIntelligenceView({
       </div>
 
       {/* Tabs & Filters */}
-      <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-6 border-b border-white/5 pb-6 max-w-full overflow-hidden">
-        <div className="flex p-1 bg-white/5 rounded-xl border border-white/10 w-full 2xl:w-auto overflow-x-auto">
+      <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-6 border-b border-border pb-6 max-w-full overflow-hidden">
+        <div className="flex p-1 bg-foreground/5 rounded-xl border border-border w-full 2xl:w-auto overflow-x-auto">
           {[
             { id: 'live', label: t('LIVE'), icon: Activity },
             { id: 'timeline', label: t('TIMELINE'), icon: Clock },
@@ -324,9 +324,9 @@ export default function TraceIntelligenceView({
               className={`flex-1 2xl:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-[10px] md:text-[11px] font-bold uppercase tracking-wider transition-all duration-300 ${
                 activeTab === tab.id
                   ? tab.id === 'live'
-                    ? 'bg-cyber-green/10 text-cyber-green border border-cyber-green/20 shadow-[0_0_15px_rgba(0,255,136,0.1)]'
-                    : 'bg-cyber-blue/10 text-cyber-blue border border-cyber-blue/20 shadow-[0_0_15px_rgba(0,240,255,0.1)]'
-                  : 'text-white/40 hover:text-white/60 hover:bg-white/5'
+                    ? 'bg-cyber-green/10 text-cyber-green border border-cyber-green/20 shadow-[0_0_15px_color-mix(in_srgb,var(--cyber-green)_10%,transparent)]'
+                    : 'bg-cyber-blue/10 text-cyber-blue border border-cyber-blue/20 shadow-[0_0_15px_color-mix(in_srgb,var(--cyber-blue)_10%,transparent)]'
+                  : 'text-muted-foreground hover:text-foreground/60 hover:bg-foreground/5'
               }`}
             >
               <tab.icon
@@ -346,14 +346,14 @@ export default function TraceIntelligenceView({
           <div className="relative group flex-1 md:flex-none">
             <Search
               size={14}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-cyber-blue transition-colors"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 group-focus-within:text-cyber-blue transition-colors"
             />
             <input
               type="text"
               placeholder={t('FILTER_NEURAL_PATHS')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-xs text-white placeholder:text-white/20 focus:outline-none focus:border-cyber-blue/50 w-full md:w-48 lg:w-64 transition-all"
+              className="bg-foreground/5 border border-border rounded-lg pl-10 pr-4 py-2 text-xs text-foreground placeholder:text-foreground/20 focus:outline-none focus:border-cyber-blue/50 w-full md:w-48 lg:w-64 transition-all"
             />
           </div>
 
@@ -362,7 +362,7 @@ export default function TraceIntelligenceView({
             onChange={(e) =>
               setStatusFilter(e.target.value as 'all' | 'completed' | 'started' | 'error')
             }
-            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] font-bold uppercase text-white/70 focus:outline-none focus:border-cyber-blue/50 flex-1 md:flex-none min-w-[100px]"
+            className="bg-foreground/5 border border-border rounded-lg px-3 py-2 text-[10px] font-bold uppercase text-muted-foreground focus:outline-none focus:border-cyber-blue/50 flex-1 md:flex-none min-w-[100px]"
           >
             <option value="all">{t('STATUS_ALL')}</option>
             <option value="completed">{t('STATUS_COMPLETED')}</option>
@@ -373,7 +373,7 @@ export default function TraceIntelligenceView({
           <select
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value)}
-            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] font-bold uppercase text-white/70 focus:outline-none focus:border-cyber-blue/50 flex-1 md:flex-none min-w-[100px]"
+            className="bg-foreground/5 border border-border rounded-lg px-3 py-2 text-[10px] font-bold uppercase text-muted-foreground focus:outline-none focus:border-cyber-blue/50 flex-1 md:flex-none min-w-[100px]"
           >
             <option value="all">All Sources</option>
             <option value="telegram">Telegram</option>
@@ -384,7 +384,7 @@ export default function TraceIntelligenceView({
           <select
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value as 'all' | '24h' | '7d')}
-            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] font-bold uppercase text-white/70 focus:outline-none focus:border-cyber-blue/50 flex-1 md:flex-none min-w-[100px]"
+            className="bg-foreground/5 border border-border rounded-lg px-3 py-2 text-[10px] font-bold uppercase text-muted-foreground focus:outline-none focus:border-cyber-blue/50 flex-1 md:flex-none min-w-[100px]"
           >
             <option value="all">All Time</option>
             <option value="24h">Last 24h</option>
@@ -396,12 +396,12 @@ export default function TraceIntelligenceView({
       {/* Content Rendering */}
       <div className="space-y-6">
         {activeTab === 'live' ? (
-          <div className="glass-card border-white/5 overflow-hidden flex flex-col">
-            <div className="px-6 py-3 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
-              <div className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-[0.2em] text-white/70">
+          <div className="glass-card border-border overflow-hidden flex flex-col">
+            <div className="px-6 py-3 border-b border-border bg-foreground/[0.02] flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-[0.2em] text-muted-foreground">
                 <Zap size={12} className="text-cyber-green" /> Live Agent Dispatches
               </div>
-              <div className="flex items-center gap-4 text-[9px] text-white/40">
+              <div className="flex items-center gap-4 text-[9px] text-muted-foreground">
                 <div className="flex items-center gap-1.5">
                   <div className="w-2 h-2 rounded-full bg-cyber-green animate-pulse"></div> RUNNING
                 </div>
@@ -430,7 +430,7 @@ export default function TraceIntelligenceView({
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => setExpandedGroup(null)}
-                  className="p-2 rounded-full hover:bg-white/5 text-white/40 hover:text-white transition-colors border border-white/5"
+                  className="p-2 rounded-full hover:bg-foreground/5 text-muted-foreground hover:text-foreground transition-colors border border-border"
                 >
                   <ChevronRight size={18} className="rotate-180" />
                 </button>
@@ -459,29 +459,29 @@ export default function TraceIntelligenceView({
             </div>
           </div>
         ) : (
-          <div className="glass-card overflow-hidden border-white/5">
+          <div className="glass-card overflow-hidden border-border">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-white/5 bg-white/[0.02]">
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40">
+                  <tr className="border-b border-border bg-foreground/[0.02]">
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                       {t('NEURAL_GROUP')}
                     </th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40 text-center">
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-center">
                       {t('TRACES')}
                     </th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40 text-center">
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-center">
                       {t('RESOURCES')}
                     </th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40 text-center">
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-center">
                       {t('STATUS')}
                     </th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40 text-right">
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-right">
                       {t('ACTION')}
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-border">
                   {(groupedData as Array<[string, Trace[]]>).map(([groupName, groupTraces]) => {
                     const totalTokens = groupTraces.reduce(
                       (acc, t) => acc + (t.totalTokens || 0),
@@ -490,12 +490,12 @@ export default function TraceIntelligenceView({
                     const errorCount = groupTraces.filter((t) => t.status === 'error').length;
 
                     return (
-                      <tr key={groupName} className="hover:bg-white/[0.02] transition-colors group">
+                      <tr key={groupName} className="hover:bg-foreground/[0.02] transition-colors group">
                         <td className="px-6 py-4">
                           <Typography
                             variant="mono"
                             weight="bold"
-                            className="text-xs text-white/90 truncate max-w-[300px]"
+                            className="text-xs text-foreground/90 truncate max-w-[300px]"
                           >
                             {groupName}
                           </Typography>
@@ -524,7 +524,7 @@ export default function TraceIntelligenceView({
                         <td className="px-6 py-4 text-right">
                           <button
                             onClick={() => setExpandedGroup(groupName)}
-                            className="text-[10px] font-black uppercase tracking-widest text-cyber-blue hover:text-white transition-colors bg-cyber-blue/5 hover:bg-cyber-blue/20 px-3 py-1.5 rounded border border-cyber-blue/20"
+                            className="text-[10px] font-black uppercase tracking-widest text-cyber-blue hover:text-foreground transition-colors bg-cyber-blue/5 hover:bg-cyber-blue/20 px-3 py-1.5 rounded border border-cyber-blue/20"
                           >
                             {t('EXPLORE')}
                           </button>
@@ -550,7 +550,7 @@ export default function TraceIntelligenceView({
         )}
 
         {activeTab !== 'live' && groupedData.length === 0 && (
-          <div className="h-40 flex flex-col items-center justify-center text-white/50 border border-dashed border-white/10 rounded-lg bg-white/[0.02]">
+          <div className="h-40 flex flex-col items-center justify-center text-muted-foreground border border-dashed border-border rounded-lg bg-foreground/[0.02]">
             <Terminal size={32} className="mb-3 opacity-20 animate-pulse" />
             <p className="text-[10px] tracking-[0.2em] font-bold">{t('NO_TRACES_FOUND')}</p>
           </div>

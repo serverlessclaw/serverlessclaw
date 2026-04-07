@@ -57,12 +57,18 @@ export const triggerBatchEvolution = {
 export const signalOrchestration = {
   ...schema.signalOrchestration,
   execute: async (args: Record<string, unknown>): Promise<string> => {
-    const { status, reasoning, nextStep, targetAgentId } = args as {
-      status: AgentStatus;
-      reasoning: string;
-      nextStep?: string;
-      targetAgentId?: AgentType;
-    };
+    const { status, reasoning, nextStep, targetAgentId, emit, userId, traceId, sessionId, depth } =
+      args as {
+        status: AgentStatus;
+        reasoning: string;
+        nextStep?: string;
+        targetAgentId?: AgentType;
+        emit?: boolean;
+        userId?: string;
+        traceId?: string;
+        sessionId?: string;
+        depth?: number;
+      };
 
     logger.info(`[ORCHESTRATION] Emitting Signal: ${status} | Target: ${targetAgentId ?? 'N/A'}`);
     logger.info(`[ORCHESTRATION] Reasoning: ${reasoning}`);
@@ -70,6 +76,27 @@ export const signalOrchestration = {
     let report = `ORCHESTRATION_SIGNAL_EMITTED: ${status}.\n\nReasoning: ${reasoning}`;
     if (nextStep) report += `\n\nNext Step: ${nextStep}`;
     if (targetAgentId) report += `\nTarget Agent: ${targetAgentId}`;
+
+    if (emit && targetAgentId) {
+      try {
+        const { emitTypedEvent } = await import('../../lib/utils/typed-emit');
+        const { EventType } = await import('../../lib/types/agent');
+
+        await emitTypedEvent('tool.orchestration', EventType.ORCHESTRATION_SIGNAL, {
+          userId: userId || 'SYSTEM',
+          agentId: targetAgentId,
+          status,
+          reasoning,
+          nextStep,
+          traceId,
+          sessionId,
+          depth: (depth ?? 0) + 1,
+        });
+        report += '\n\n[EVENT_EMITTED]: Signal dispatched to the EventBus.';
+      } catch (error) {
+        report += `\n\n[EMIT_FAILED]: ${formatErrorMessage(error)}`;
+      }
+    }
 
     return report;
   },

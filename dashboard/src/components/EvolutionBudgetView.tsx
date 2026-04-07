@@ -12,7 +12,7 @@ export default function EvolutionBudgetView({ budgets }: { budgets: TrackBudget[
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div className="bg-white/5 border border-white/10 p-6 rounded-2xl relative overflow-hidden group">
+      <div className="bg-foreground/5 border border-border p-6 rounded-2xl relative overflow-hidden group">
         <div className="absolute -right-4 -top-4 w-20 h-20 bg-cyber-blue/10 rounded-full blur-2xl group-hover:bg-cyber-blue/20 transition-all" />
         <div className="flex items-center gap-4 mb-4">
           <div className="p-3 bg-cyber-blue/10 rounded-xl text-cyber-blue">
@@ -20,7 +20,7 @@ export default function EvolutionBudgetView({ budgets }: { budgets: TrackBudget[
           </div>
           <Typography
             variant="mono"
-            className="text-xs uppercase tracking-widest text-white/40 font-bold"
+            className="text-xs uppercase tracking-widest text-muted-foreground font-bold"
           >
             TOTAL_ALLOCATED
           </Typography>
@@ -30,7 +30,7 @@ export default function EvolutionBudgetView({ budgets }: { budgets: TrackBudget[
         </Typography>
       </div>
 
-      <div className="bg-white/5 border border-white/10 p-6 rounded-2xl relative overflow-hidden group">
+      <div className="bg-foreground/5 border border-border p-6 rounded-2xl relative overflow-hidden group">
         <div className="absolute -right-4 -top-4 w-20 h-20 bg-cyber-green/10 rounded-full blur-2xl group-hover:bg-cyber-green/20 transition-all" />
         <div className="flex items-center gap-4 mb-4">
           <div className="p-3 bg-cyber-green/10 rounded-xl text-cyber-green">
@@ -38,7 +38,7 @@ export default function EvolutionBudgetView({ budgets }: { budgets: TrackBudget[
           </div>
           <Typography
             variant="mono"
-            className="text-xs uppercase tracking-widest text-white/40 font-bold"
+            className="text-xs uppercase tracking-widest text-muted-foreground font-bold"
           >
             TOTAL_SPENT
           </Typography>
@@ -48,7 +48,7 @@ export default function EvolutionBudgetView({ budgets }: { budgets: TrackBudget[
         </Typography>
       </div>
 
-      <div className="bg-white/5 border border-white/10 p-6 rounded-2xl relative overflow-hidden group">
+      <div className="bg-foreground/5 border border-border p-6 rounded-2xl relative overflow-hidden group">
         <div className="absolute -right-4 -top-4 w-20 h-20 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-all" />
         <div className="flex items-center gap-4 mb-4">
           <div className="p-3 bg-amber-500/10 rounded-xl text-amber-500">
@@ -56,7 +56,7 @@ export default function EvolutionBudgetView({ budgets }: { budgets: TrackBudget[
           </div>
           <Typography
             variant="mono"
-            className="text-xs uppercase tracking-widest text-white/40 font-bold"
+            className="text-xs uppercase tracking-widest text-muted-foreground font-bold"
           >
             BUDGET_UTILIZATION
           </Typography>

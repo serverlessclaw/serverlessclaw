@@ -29,6 +29,11 @@ export type ContinuationMetadata = {
     name?: string;
     mimeType?: string;
   }>;
+  priorInputTokens?: number;
+  priorOutputTokens?: number;
+  priorTotalTokens?: number;
+  tokenBudget?: number;
+  costLimit?: number;
 };
 
 /**

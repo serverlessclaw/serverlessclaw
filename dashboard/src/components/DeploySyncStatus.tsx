@@ -56,7 +56,7 @@ export default function DeploySyncStatus() {
         {syncs.map((sync) => (
           <div
             key={sync.buildId}
-            className="bg-white/5 border border-white/10 p-4 rounded-lg flex items-center justify-between hover:border-white/20 transition-colors"
+            className="bg-foreground/5 border border-border p-4 rounded-lg flex items-center justify-between hover:border-foreground/20 transition-colors"
           >
             <div className="flex items-center gap-4">
               <div

@@ -327,9 +327,9 @@ export default function CollaborationCanvas() {
   };
 
   return (
-    <div className="h-full w-full bg-[#050505] rounded-lg border border-white/5 relative overflow-hidden">
+    <div className="h-full w-full bg-background rounded-lg border border-border relative overflow-hidden">
       {loading ? (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20 backdrop-blur-sm">
+        <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-20 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-4">
             <RefreshCw size={32} className="text-purple-500 animate-spin" />
             <div className="text-xs font-bold text-purple-500 animate-pulse tracking-[0.3em]">

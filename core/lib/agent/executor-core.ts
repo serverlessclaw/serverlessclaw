@@ -74,10 +74,15 @@ export class ExecutorCore {
     const attachments: NonNullable<Message['attachments']> = [];
     const ui_blocks: NonNullable<Message['ui_blocks']> = [];
     let lastAiResponse: Message | undefined;
+    const priorUsage = options.priorTokenUsage ?? {
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+    };
     const usage: ExecutorUsage = {
-      totalInputTokens: 0,
-      totalOutputTokens: 0,
-      total_tokens: 0,
+      totalInputTokens: priorUsage.inputTokens,
+      totalOutputTokens: priorUsage.outputTokens,
+      total_tokens: priorUsage.totalTokens,
       toolCallCount: 0,
       durationMs: 0,
     };
@@ -96,6 +101,11 @@ export class ExecutorCore {
       const aiResponse = await this.callLLM(messages, options, usage);
       lastAiResponse = aiResponse;
       this.updateUsage(usage, aiResponse, options.activeProvider);
+
+      const postCallBudget = this.checkBudgetEnforcement(options, usage);
+      if (postCallBudget && !postCallBudget.isWarning) {
+        return { ...postCallBudget, attachments };
+      }
 
       await options.tracer.addStep({
         type: TRACE_TYPES.LLM_RESPONSE,
@@ -232,10 +242,15 @@ export class ExecutorCore {
 
     let iterations = 0;
     const attachments: NonNullable<Message['attachments']> = [];
+    const priorUsage = options.priorTokenUsage ?? {
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+    };
     const usage: ExecutorUsage = {
-      totalInputTokens: 0,
-      totalOutputTokens: 0,
-      total_tokens: 0,
+      totalInputTokens: priorUsage.inputTokens,
+      totalOutputTokens: priorUsage.outputTokens,
+      total_tokens: priorUsage.totalTokens,
       toolCallCount: 0,
       durationMs: 0,
     };
@@ -525,34 +540,63 @@ export class ExecutorCore {
     options: ExecutorOptions,
     currentUsage?: ExecutorUsage
   ): LoopResult | null {
-    const { tokenBudget, costLimit } = options;
+    const { tokenBudget, costLimit, activeProvider, activeModel } = options;
 
     if (!tokenBudget && !costLimit) {
       return null;
     }
 
     const consumedTokens = currentUsage?.total_tokens ?? 0;
+    const SOFT_LIMIT_THRESHOLD = 0.8;
 
-    if (tokenBudget && consumedTokens >= tokenBudget) {
-      logger.warn(`[${this.agentId}] Token budget exceeded: ${consumedTokens}/${tokenBudget}`);
-      return {
-        responseText: '[BUDGET_EXCEEDED] Token budget limit reached. Task terminated.',
-        paused: true,
-        pauseMessage: 'TOKEN_BUDGET_EXCEEDED',
-        usage: currentUsage,
-      };
+    if (tokenBudget && tokenBudget > 0) {
+      const usageRatio = consumedTokens / tokenBudget;
+
+      if (consumedTokens > tokenBudget) {
+        logger.warn(`[${this.agentId}] Token budget exceeded: ${consumedTokens}/${tokenBudget}`);
+        return {
+          responseText: `[BUDGET_EXCEEDED] Token budget of ${tokenBudget} exceeded. Current usage: ${consumedTokens}. Stopping execution.`,
+          paused: false,
+          usage: currentUsage,
+        };
+      }
+
+      if (usageRatio >= SOFT_LIMIT_THRESHOLD) {
+        logger.warn(
+          `[${this.agentId}] Token budget at ${Math.round(usageRatio * 100)}%: ${consumedTokens}/${tokenBudget}`
+        );
+        return {
+          responseText: `[BUDGET_WARNING] Token usage at ${Math.round(usageRatio * 100)}% of budget (${consumedTokens}/${tokenBudget}). Wrapping up soon.`,
+          paused: false,
+          isWarning: true,
+          usage: currentUsage,
+        };
+      }
     }
 
-    if (costLimit && currentUsage) {
-      const estimatedCost = this.estimateCost(currentUsage);
-      if (estimatedCost >= costLimit) {
+    if (costLimit && costLimit > 0 && currentUsage) {
+      const estimatedCost = this.estimateCost(currentUsage, activeProvider, activeModel);
+      const costRatio = estimatedCost / costLimit;
+
+      if (estimatedCost > costLimit) {
         logger.warn(
           `[${this.agentId}] Cost limit exceeded: $${estimatedCost.toFixed(4)}/$${costLimit}`
         );
         return {
-          responseText: '[BUDGET_EXCEEDED] Cost limit reached. Task terminated.',
-          paused: true,
-          pauseMessage: 'COST_LIMIT_EXCEEDED',
+          responseText: `[COST_LIMIT_EXCEEDED] Cost limit of $${costLimit.toFixed(2)} exceeded. Estimated: $${estimatedCost.toFixed(2)}. Stopping execution.`,
+          paused: false,
+          usage: currentUsage,
+        };
+      }
+
+      if (costRatio >= SOFT_LIMIT_THRESHOLD) {
+        logger.warn(
+          `[${this.agentId}] Cost at ${Math.round(costRatio * 100)}%: $${estimatedCost.toFixed(4)}/$${costLimit}`
+        );
+        return {
+          responseText: `[COST_WARNING] Cost at ${Math.round(costRatio * 100)}% of limit ($${estimatedCost.toFixed(2)}/$${costLimit.toFixed(2)}). Wrapping up soon.`,
+          paused: false,
+          isWarning: true,
           usage: currentUsage,
         };
       }
@@ -561,10 +605,37 @@ export class ExecutorCore {
     return null;
   }
 
-  private estimateCost(usage: ExecutorUsage): number {
-    const inputCost = (usage.totalInputTokens / 1_000_000) * 15;
-    const outputCost = (usage.totalOutputTokens / 1_000_000) * 75;
-    return inputCost + outputCost;
+  private estimateCost(usage: ExecutorUsage, provider?: string, model?: string): number {
+    const pricing: Record<string, Record<string, { input: number; output: number }>> = {
+      openai: {
+        'gpt-4o': { input: 2.5 / 1_000_000, output: 10 / 1_000_000 },
+        'gpt-4o-mini': { input: 0.15 / 1_000_000, output: 0.6 / 1_000_000 },
+        o3: { input: 10 / 1_000_000, output: 40 / 1_000_000 },
+        'o3-mini': { input: 1.1 / 1_000_000, output: 4.4 / 1_000_000 },
+      },
+      anthropic: {
+        'claude-sonnet-4-20250514': { input: 3 / 1_000_000, output: 15 / 1_000_000 },
+        'claude-opus-4-20250514': { input: 15 / 1_000_000, output: 75 / 1_000_000 },
+        'claude-haiku-3-5-20241022': { input: 0.8 / 1_000_000, output: 4 / 1_000_000 },
+      },
+      google: {
+        'gemini-2.5-pro': { input: 1.25 / 1_000_000, output: 10 / 1_000_000 },
+        'gemini-2.5-flash': { input: 0.15 / 1_000_000, output: 0.6 / 1_000_000 },
+      },
+    };
+
+    const modelPricing = pricing[provider ?? '']?.[model ?? ''];
+    if (modelPricing) {
+      return (
+        usage.totalInputTokens * modelPricing.input + usage.totalOutputTokens * modelPricing.output
+      );
+    }
+
+    const DEFAULT_INPUT_RATE = 3 / 1_000_000;
+    const DEFAULT_OUTPUT_RATE = 15 / 1_000_000;
+    return (
+      usage.totalInputTokens * DEFAULT_INPUT_RATE + usage.totalOutputTokens * DEFAULT_OUTPUT_RATE
+    );
   }
 
   private async callLLM(

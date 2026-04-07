@@ -10,7 +10,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="space-y-1">
         {label && (
-          <label className="block text-[10px] uppercase tracking-widest font-bold text-white/40">
+          <label className="block text-[10px] uppercase tracking-widest font-bold text-muted-foreground">
             {label}
           </label>
         )}
@@ -18,8 +18,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           {...props}
           ref={ref}
           className={`
-          w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5
-          text-white text-sm placeholder:text-white/30
+          w-full bg-foreground/5 border border-border rounded-lg px-4 py-2.5
+          text-foreground text-sm placeholder:text-foreground/30
           focus:outline-none focus:border-cyber-blue/50 focus:ring-1 focus:ring-cyber-blue/20
           transition-all
           ${error ? 'border-red-500/50' : ''}

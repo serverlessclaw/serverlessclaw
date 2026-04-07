@@ -362,9 +362,9 @@ function PathVisualizerContent({ trace }: PathVisualizerProps) {
   }, [trace, setNodes, setEdges, fitView]);
 
   return (
-    <div className="h-[600px] w-full bg-black/40 rounded-lg border border-white/5 relative group overflow-hidden cyber-border">
+    <div className="h-[600px] w-full bg-background/40 rounded-lg border border-border relative group overflow-hidden cyber-border">
       <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-        <div className="text-[10px] text-cyber-green/60 font-mono tracking-widest bg-black/80 px-2 py-1 border border-cyber-green/30">
+        <div className="text-[10px] text-cyber-green/60 font-mono tracking-widest bg-background/80 px-2 py-1 border border-cyber-green/30">
           TRACE VISUALIZER
         </div>
       </div>
@@ -383,7 +383,7 @@ function PathVisualizerContent({ trace }: PathVisualizerProps) {
         <Background color={VISUALIZER_CONFIG.COLORS.BACKGROUND_GRID} gap={20} />
         <Controls
           showInteractive={false}
-          className="!bg-black/80 !border-white/10 !fill-cyber-green"
+          className="!bg-background/80 !border-border !fill-cyber-green"
         />
       </ReactFlow>
 

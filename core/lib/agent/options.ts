@@ -83,4 +83,12 @@ export interface AgentProcessOptions {
    * If set, the executor will track costs and stop if exceeded.
    */
   costLimit?: number;
+  /**
+   * Cumulative token usage from prior continuation invocations.
+   */
+  priorTokenUsage?: {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  };
 }

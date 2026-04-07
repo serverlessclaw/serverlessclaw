@@ -85,7 +85,7 @@ describe('CyberConfirm Component', () => {
       <CyberConfirm isOpen={true} onConfirm={vi.fn()} onCancel={onCancel} title="T" message="M" />
     );
 
-    const backdrop = document.querySelector('.bg-black\\/80');
+    const backdrop = document.querySelector('.bg-background\\/80');
     if (backdrop) await user.click(backdrop as HTMLElement);
     expect(onCancel).toHaveBeenCalled();
   });

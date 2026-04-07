@@ -34,7 +34,7 @@ export default function HealthTrendChart({ currentScore }: HealthTrendChartProps
     .join(' ');
 
   return (
-    <Card variant="glass" padding="lg" className="border-white/5 bg-black/40">
+    <Card variant="glass" padding="lg" className="border-border bg-background/40">
       <Typography
         variant="caption"
         weight="black"
@@ -45,7 +45,7 @@ export default function HealthTrendChart({ currentScore }: HealthTrendChartProps
         7-Day Cognitive Stability Trend
       </Typography>
 
-      <div className="relative h-[160px] w-full">
+      <div className="relative h-[160px] w-full text-foreground">
         <svg
           viewBox={`0 0 ${width} ${height + padding * 2}`}
           className="w-full h-full overflow-visible"
@@ -60,14 +60,14 @@ export default function HealthTrendChart({ currentScore }: HealthTrendChartProps
                   y1={y}
                   x2={width - padding}
                   y2={y}
-                  stroke="white"
+                  stroke="currentColor"
                   strokeOpacity="0.05"
                   strokeDasharray="4 4"
                 />
                 <text
                   x="0"
                   y={y}
-                  fill="white"
+                  fill="currentColor"
                   fillOpacity="0.2"
                   fontSize="8"
                   fontFamily="monospace"
@@ -120,7 +120,7 @@ export default function HealthTrendChart({ currentScore }: HealthTrendChartProps
                 <text
                   x={x}
                   y={height + padding + 15}
-                  fill="white"
+                  fill="currentColor"
                   fillOpacity="0.4"
                   fontSize="10"
                   fontFamily="monospace"

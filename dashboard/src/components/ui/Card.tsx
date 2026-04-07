@@ -16,8 +16,8 @@ const Card: React.FC<CardProps> = ({
 }) => {
   const variantStyles = {
     glass: 'glass-card backdrop-blur-md',
-    solid: 'bg-black/40 border border-white/5',
-    outline: 'border border-white/10 bg-transparent',
+    solid: 'bg-card border border-border',
+    outline: 'border border-border bg-transparent',
   }[variant];
 
   const paddingStyles = {

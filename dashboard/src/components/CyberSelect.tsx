@@ -62,8 +62,8 @@ export default function CyberSelect({
         size={size}
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={`w-full justify-between font-mono bg-black/40
-          ${disabled ? 'opacity-50 cursor-not-allowed border-white/10' : `cursor-pointer hover:bg-${THEME.COLORS.INTEL}/5 hover:shadow-[0_0_10px_rgba(0,224,255,0.1)]`}
+        className={`w-full justify-between font-mono bg-background/40
+          ${disabled ? 'opacity-50 cursor-not-allowed border-border' : `cursor-pointer hover:bg-${THEME.COLORS.INTEL}/5 hover:shadow-[0_0_10px_rgba(0,224,255,0.1)]`}
           ${isOpen ? `border-${THEME.COLORS.PRIMARY} shadow-[0_0_15px_rgba(0,255,163,0.2)]` : `border-${THEME.COLORS.INTEL}/30`}
         `}
         icon={
@@ -73,18 +73,18 @@ export default function CyberSelect({
           />
         }
       >
-        <span className={`${!selectedOption ? 'text-white/30' : 'text-white/100'} truncate`}>
+        <span className={`${!selectedOption ? 'text-muted-foreground/50' : 'text-foreground'} truncate`}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
       </Button>
 
       {isOpen && (
         <div
-          className={`absolute z-50 w-full mt-1 bg-black border border-${THEME.COLORS.INTEL}/30 rounded shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_20px_rgba(0,224,255,0.1)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200`}
+          className={`absolute z-50 w-full mt-1 bg-background border border-${THEME.COLORS.INTEL}/30 rounded shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_20px_rgba(0,224,255,0.1)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200`}
         >
           <div className="max-h-60 overflow-y-auto custom-scrollbar">
             {options.length === 0 ? (
-              <div className="px-3 py-2 text-[10px] text-white/30 italic tracking-widest">
+              <div className="px-3 py-2 text-[10px] text-muted-foreground/50 italic tracking-widest">
                 No options available
               </div>
             ) : (
@@ -97,7 +97,7 @@ export default function CyberSelect({
                     setIsOpen(false);
                   }}
                   className={`w-full text-left px-3 py-2 text-xs cursor-pointer transition-colors font-mono
-                    ${option.value === value ? `bg-${THEME.COLORS.INTEL}/20 text-${THEME.COLORS.INTEL} border-l-2 border-${THEME.COLORS.INTEL}` : 'text-white/70 hover:bg-white/5 hover:text-white'}
+                    ${option.value === value ? `bg-${THEME.COLORS.INTEL}/20 text-${THEME.COLORS.INTEL} border-l-2 border-${THEME.COLORS.INTEL}` : 'text-foreground/70 hover:bg-foreground/5 hover:text-foreground'}
                   `}
                 >
                   {option.label}

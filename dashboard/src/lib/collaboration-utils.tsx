@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 
 export interface TaskNodeData {
+  [key: string]: any;
   label: string;
   taskId: string;
   agentId: string;
@@ -23,8 +24,8 @@ export interface TaskNodeData {
   result?: string;
   startedAt?: number;
   completedAt?: number;
-}
-
+  latency?: number;
+  }
 export interface AgentActivity {
   agentId: string;
   agentName: string;

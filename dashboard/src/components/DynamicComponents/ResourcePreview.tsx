@@ -50,7 +50,7 @@ export default function ResourcePreview({ component, onAction }: ResourcePreview
         <div className="flex items-center gap-2">
            <Typography 
              variant="mono" 
-             className="text-[9px] uppercase font-bold text-white/40"
+             className="text-[9px] uppercase font-bold text-muted-foreground"
            >
              {props.status || 'READY'}
            </Typography>
@@ -60,11 +60,11 @@ export default function ResourcePreview({ component, onAction }: ResourcePreview
       {/* Main Info */}
       <div className="p-4 space-y-4">
         <div className="space-y-1">
-          <Typography variant="mono" weight="bold" className="text-xs text-white truncate max-w-full">
+          <Typography variant="mono" weight="bold" className="text-xs text-foreground truncate max-w-full">
             {props.resourceId}
           </Typography>
           {props.description && (
-             <Typography variant="body" className="text-[10px] text-white/60 italic leading-tight">
+             <Typography variant="body" className="text-[10px] text-foreground/60 italic leading-tight">
                 {props.description}
              </Typography>
           )}
@@ -72,10 +72,10 @@ export default function ResourcePreview({ component, onAction }: ResourcePreview
 
         {/* Metrics Grid */}
         {props.metrics && Object.keys(props.metrics).length > 0 && (
-           <div className="grid grid-cols-2 gap-4 pt-2 border-t border-white/5">
+           <div className="grid grid-cols-2 gap-4 pt-2 border-t border-border">
               {Object.entries(props.metrics).map(([key, value]) => (
                 <div key={key} className="flex flex-col gap-0.5">
-                   <Typography variant="mono" className="text-[9px] uppercase text-white/30 tracking-wider">
+                   <Typography variant="mono" className="text-[9px] uppercase text-muted-foreground/50 tracking-wider">
                       {key}
                    </Typography>
                    <Typography variant="mono" weight="bold" className="text-[11px] text-cyber-green">
@@ -88,18 +88,18 @@ export default function ResourcePreview({ component, onAction }: ResourcePreview
       </div>
 
       {/* Footer Actions */}
-      <div className="px-4 py-3 bg-black/40 border-t border-cyber-green/10 flex items-center justify-between">
+      <div className="px-4 py-3 bg-card border-t border-cyber-green/10 flex items-center justify-between">
          <div className="flex gap-2">
             {component.actions?.map((action) => (
               <button
                 key={action.id}
                 onClick={() => onAction?.(action.id, action.payload)}
-                className="px-3 py-1 bg-white/5 hover:bg-cyber-green/20 border border-white/10 rounded text-[9px] font-mono text-white/60 transition-colors uppercase"
+                className="px-3 py-1 bg-foreground/5 hover:bg-cyber-green/20 border border-border rounded text-[9px] font-mono text-foreground/60 transition-colors uppercase"
               >
                 {action.label}
               </button>
             )) || (
-              <button className="px-3 py-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded text-[9px] font-mono text-white/40 transition-colors uppercase flex items-center gap-1.5 cursor-not-allowed">
+              <button className="px-3 py-1 bg-foreground/5 hover:bg-foreground/10 border border-border rounded text-[9px] font-mono text-muted-foreground transition-colors uppercase flex items-center gap-1.5 cursor-not-allowed">
                  View Console <ExternalLink size={10} />
               </button>
             )}

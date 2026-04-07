@@ -29,11 +29,13 @@ export interface SessionState {
 
 export class SessionStateManager {
   private docClient: DynamoDBDocumentClient;
-  private tableName: string;
 
   constructor(docClient?: DynamoDBDocumentClient) {
     this.docClient = docClient ?? defaultDocClient;
-    this.tableName = typedResource.MemoryTable.name;
+  }
+
+  private get tableName(): string {
+    return typedResource?.MemoryTable?.name ?? 'MemoryTable';
   }
 
   private getKey(sessionId: string): string {

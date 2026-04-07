@@ -4,11 +4,27 @@
 @theme {
   --color-cyber-green: var(--cyber-green);
   --color-cyber-blue: var(--cyber-blue);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card-bg);
+  --color-border: var(--card-border);
+  --color-muted-foreground: var(--muted);
   --font-sans: var(--font-inter), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), monospace;
 }
 
 :root {
+  --background: #ffffff;
+  --foreground: #0a0a0a;
+  --cyber-green: #00bf7a; /* Darker green for light mode contrast */
+  --cyber-blue: #0099ad; /* Darker blue for light mode contrast */
+  --card-bg: rgba(0, 0, 0, 0.03);
+  --card-border: rgba(0, 0, 0, 0.1);
+  --muted: rgba(0, 0, 0, 0.6);
+  --border: rgba(0, 0, 0, 0.1);
+}
+
+.dark {
   --background: #0a0a0a;
   --foreground: #ededed;
   --cyber-green: #00ffa3;
@@ -16,6 +32,7 @@
   --card-bg: rgba(255, 255, 255, 0.03);
   --card-border: rgba(255, 255, 255, 0.1);
   --muted: rgba(255, 255, 255, 0.6);
+  --border: rgba(255, 255, 255, 0.1);
 }
 
 body {
@@ -33,107 +50,111 @@ body {
 }
 
 .glow-text {
+  text-shadow: 0 0 10px rgba(0, 255, 163, 0.3);
+}
+
+.dark .glow-text {
   text-shadow: 0 0 10px rgba(0, 255, 163, 0.5);
 }
 
 .cyber-border {
-  border-left: 2px solid var(--color-cyber-green);
+  border-left: 2px solid var(--cyber-green);
 }
 
 /* Custom Utilities for Dynamic Theme Colors */
 .bg-cyber-green {
-  background-color: var(--color-cyber-green);
+  background-color: var(--cyber-green);
 }
 .bg-cyber-green\/5 {
-  background-color: rgba(0, 255, 163, 0.05);
+  background-color: color-mix(in srgb, var(--cyber-green) 5%, transparent);
 }
 .bg-cyber-green\/10 {
-  background-color: rgba(0, 255, 163, 0.1);
+  background-color: color-mix(in srgb, var(--cyber-green) 10%, transparent);
 }
 .bg-cyber-green\/20 {
-  background-color: rgba(0, 255, 163, 0.2);
+  background-color: color-mix(in srgb, var(--cyber-green) 20%, transparent);
 }
 .bg-cyber-green\/60 {
-  background-color: rgba(0, 255, 163, 0.6);
+  background-color: color-mix(in srgb, var(--cyber-green) 60%, transparent);
 }
 .text-cyber-green {
-  color: var(--color-cyber-green);
+  color: var(--cyber-green);
 }
 .text-cyber-green\/90 {
-  color: rgba(0, 255, 163, 0.9);
+  color: color-mix(in srgb, var(--cyber-green) 90%, transparent);
 }
 .border-cyber-green {
-  border-color: var(--color-cyber-green);
+  border-color: var(--cyber-green);
 }
 .border-cyber-green\/10 {
-  border-color: rgba(0, 255, 163, 0.1);
+  border-color: color-mix(in srgb, var(--cyber-green) 10%, transparent);
 }
 .border-cyber-green\/20 {
-  border-color: rgba(0, 255, 163, 0.2);
+  border-color: color-mix(in srgb, var(--cyber-green) 20%, transparent);
 }
 .border-cyber-green\/30 {
-  border-color: rgba(0, 255, 163, 0.3);
+  border-color: color-mix(in srgb, var(--cyber-green) 30%, transparent);
 }
 .border-l-2 {
   border-left-width: 2px;
 }
 .border-l-cyber-green {
-  border-left-color: var(--color-cyber-green);
+  border-left-color: var(--cyber-green);
 }
 .border-l-cyber-blue {
-  border-left-color: var(--color-cyber-blue);
+  border-left-color: var(--cyber-blue);
 }
 .group:hover .group-hover\:text-cyber-green {
-  color: var(--color-cyber-green);
+  color: var(--cyber-green);
 }
 .hover\:text-cyber-green:hover {
-  color: var(--color-cyber-green);
+  color: var(--cyber-green);
 }
 .hover\:bg-cyber-green\/5:hover {
-  background-color: rgba(0, 255, 163, 0.05);
+  background-color: color-mix(in srgb, var(--cyber-green) 5%, transparent);
 }
 .hover\:border-cyber-green\/50:hover {
-  border-color: rgba(0, 255, 163, 0.5);
+  border-color: color-mix(in srgb, var(--cyber-green) 50%, transparent);
 }
 
 .bg-cyber-blue {
-  background-color: var(--color-cyber-blue);
+  background-color: var(--cyber-blue);
 }
 .bg-cyber-blue\/5 {
-  background-color: rgba(0, 224, 255, 0.05);
+  background-color: color-mix(in srgb, var(--cyber-blue) 5%, transparent);
 }
 .bg-cyber-blue\/10 {
-  background-color: rgba(0, 224, 255, 0.1);
+  background-color: color-mix(in srgb, var(--cyber-blue) 10%, transparent);
 }
 .bg-cyber-blue\/20 {
-  background-color: rgba(0, 224, 255, 0.2);
+  background-color: color-mix(in srgb, var(--cyber-blue) 20%, transparent);
 }
 .bg-cyber-blue\/\[0\.02\] {
-  background-color: rgba(0, 224, 255, 0.02);
+  background-color: color-mix(in srgb, var(--cyber-blue) 2%, transparent);
 }
 .text-cyber-blue {
-  color: var(--color-cyber-blue);
+  color: var(--cyber-blue);
 }
 .border-cyber-blue {
-  border-color: var(--color-cyber-blue);
+  border-color: var(--cyber-blue);
 }
 .border-cyber-blue\/10 {
-  border-color: rgba(0, 224, 255, 0.1);
+  border-color: color-mix(in srgb, var(--cyber-blue) 10%, transparent);
 }
 .border-cyber-blue\/30 {
-  border-color: rgba(0, 224, 255, 0.3);
+  border-color: color-mix(in srgb, var(--cyber-blue) 30%, transparent);
 }
 .border-cyber-blue\/40 {
-  border-color: rgba(0, 224, 255, 0.4);
+  border-color: color-mix(in srgb, var(--cyber-blue) 40%, transparent);
 }
 .hover\:bg-cyber-blue\/5:hover {
-  background-color: rgba(0, 224, 255, 0.05);
+  background-color: color-mix(in srgb, var(--cyber-blue) 5%, transparent);
 }
 .hover\:border-cyber-blue\/40:hover {
-  border-color: rgba(0, 224, 255, 0.4);
+  border-color: color-mix(in srgb, var(--cyber-blue) 40%, transparent);
 }
 .hover\:border-cyber-blue\/50:hover {
-  border-color: rgba(0, 224, 255, 0.5);
+  border-color: color-mix(in srgb, var(--cyber-blue) 50%, transparent);
 }
 
 .bg-purple-400 {
@@ -217,11 +238,11 @@ body {
 
 /* Peer-checked states for the toggle */
 .peer:checked ~ .peer-checked\:bg-cyber-green\/40 {
-  background-color: rgba(0, 255, 163, 0.4);
+  background-color: color-mix(in srgb, var(--cyber-green) 40%, transparent);
 }
 
 .peer:checked ~ .peer-checked\:after\:bg-cyber-green::after {
-  background-color: var(--color-cyber-green);
+  background-color: var(--cyber-green);
 }
 
 .peer:checked ~ .peer-checked\:after\:toggle-move::after {
@@ -250,20 +271,28 @@ body {
 
 /* Custom Cyber Toasts */
 .cyber-toast {
-  background: rgba(5, 5, 5, 0.9) !important;
-  border: 1px solid rgba(0, 224, 255, 0.3) !important;
+  background: var(--background) !important;
+  border: 1px solid var(--border) !important;
   backdrop-filter: blur(12px) !important;
-  color: white !important;
+  color: var(--foreground) !important;
   font-family: var(--font-mono) !important;
   border-radius: 2px !important;
   box-shadow:
-    0 0 30px rgba(0, 0, 0, 0.5),
-    inset 0 0 10px rgba(0, 224, 255, 0.1) !important;
+    0 0 30px rgba(0, 0, 0, 0.1),
+    inset 0 0 10px rgba(0, 224, 255, 0.05) !important;
   padding: 16px !important;
   font-size: 11px !important;
   font-weight: 700 !important;
   letter-spacing: 0.1em !important;
   text-transform: uppercase !important;
+}
+
+.dark .cyber-toast {
+  background: rgba(5, 5, 5, 0.9) !important;
+  border: 1px solid rgba(0, 224, 255, 0.3) !important;
+  box-shadow:
+    0 0 30px rgba(0, 0, 0, 0.5),
+    inset 0 0 10px rgba(0, 224, 255, 0.1) !important;
 }
 
 .cyber-toast-success {
@@ -275,7 +304,7 @@ body {
 }
 
 .cyber-toast-description {
-  color: rgba(255, 255, 255, 0.4) !important;
+  color: var(--muted) !important;
   font-size: 9px !important;
   font-weight: 400 !important;
   margin-top: 4px !important;

@@ -44,6 +44,16 @@ export enum AttachmentType {
 }
 
 /**
+ * Shared attachment shape used across messages and events.
+ * Enforces that at least one payload source is present.
+ */
+export type Attachment = {
+  type: AttachmentType;
+  name?: string;
+  mimeType?: string;
+} & ({ url: string; base64?: string } | { base64: string; url?: string });
+
+/**
  * UI button/option types for interactive agent signals.
  */
 export enum ButtonType {
@@ -80,13 +90,7 @@ export interface Message {
   /**
    * Attachments (images, files) associated with the message. Defaults to [].
    */
-  attachments?: Array<{
-    type: AttachmentType;
-    url?: string;
-    base64?: string;
-    name?: string;
-    mimeType?: string;
-  }>;
+  attachments?: Attachment[];
   /**
    * Optional usage statistics (tokens) for the message (usually only for ASSISTANT).
    */
@@ -128,6 +132,68 @@ export interface Message {
       payload?: Record<string, unknown>;
     }>;
   }>;
+}
+
+/**
+ * Factory function to create a Message with sensible defaults for optional fields.
+ */
+export function createMessage(params: {
+  role: MessageRole;
+  content: string;
+  traceId: string;
+  messageId: string;
+  thought?: string;
+  tool_calls?: ToolCall[];
+  tool_call_id?: string;
+  name?: string;
+  agentName?: string;
+  attachments?: Attachment[];
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens?: number;
+  };
+  options?: Array<{
+    label: string;
+    value: string;
+    type?: ButtonType;
+  }>;
+  pageContext?: {
+    url: string;
+    title?: string;
+    data?: Record<string, unknown>;
+    traceId?: string;
+    sessionId?: string;
+    agentId?: string;
+  };
+  ui_blocks?: Array<{
+    id: string;
+    componentType: string;
+    props: Record<string, unknown>;
+    actions?: Array<{
+      id: string;
+      label: string;
+      type: 'primary' | 'secondary' | 'danger';
+      payload?: Record<string, unknown>;
+    }>;
+  }>;
+}): Message {
+  return {
+    role: params.role,
+    content: params.content,
+    thought: params.thought ?? '',
+    tool_calls: params.tool_calls ?? [],
+    tool_call_id: params.tool_call_id,
+    name: params.name,
+    agentName: params.agentName,
+    traceId: params.traceId,
+    messageId: params.messageId,
+    attachments: params.attachments ?? [],
+    usage: params.usage,
+    options: params.options ?? [],
+    pageContext: params.pageContext,
+    ui_blocks: params.ui_blocks ?? [],
+  };
 }
 
 /**

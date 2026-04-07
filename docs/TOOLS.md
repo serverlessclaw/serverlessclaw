@@ -45,7 +45,7 @@
 | `switchModel`             | Hot-swaps the LLM provider or model for the current agent                                       |     —      |        ✅        |
 | `cancelGoal`              | Cancels a scheduled proactive goal or task                                                      |     —      |        ✅        |
 | `listSchedules`           | Lists all active proactive goals and scheduled tasks                                            |     —      |        —         |
-| `signalOrchestration`     | Deterministic signal to move a goal to the next state                                           |     —      |        ✅        |
+| `signalOrchestration`     | Deterministic signal to move a goal to the next state (supports active `emit` for EventBridge) |     —      |        ✅        |
 | `voteOnProposal`          | Submits a vote for an active consensus proposal                                                 |     —      |        ✅        |
 | `checkReputation`         | Retrieves an agent's rolling 7-day performance metrics (success rate, latency, score)           |     —      |        —         |
 | `mcp-filesystem-*`        | MCP-driven file operations (read/write/list/search)                                             |     ✅     |        —         |

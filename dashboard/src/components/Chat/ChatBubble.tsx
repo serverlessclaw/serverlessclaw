@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import { MessageSquare, X, Minimize2, Maximize2, Activity } from 'lucide-react';
 import Button from '@/components/ui/Button';
@@ -11,6 +11,7 @@ import { ChatInput } from './ChatInput';
 import { useChatConnection } from './useChatConnection';
 import { useChatMessages } from './useChatMessages';
 import { usePageContext } from '@/components/Providers/PageContextProvider';
+import { PageContextData } from './types';
 
 /**
  * Global Chat Bubble component that floats on all pages.
@@ -27,8 +28,10 @@ export default function ChatBubble() {
   const isPostInFlight = useRef<boolean>(false);
   const activeSessionRef = useRef<string>('');
   const scrollRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Input state management (mimicking ChatContent)
   const [input, setInput] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // --- Hooks ---
   const { seenMessageIds, fetchSessions } = useChatConnection(
@@ -40,10 +43,12 @@ export default function ChatBubble() {
 
   const {
     messages,
+    setMessages,
     sendMessage,
     handleFiles,
     attachments,
     setAttachments,
+    removeAttachment,
   } = useChatMessages(
     activeSessionId,
     setActiveSessionId,
@@ -72,19 +77,15 @@ export default function ChatBubble() {
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() && attachments.length === 0) return;
-    sendMessage(input, attachContext && pageContext ? pageContext : undefined);
+    
+    sendMessage(input, attachContext ? (pageContext || undefined) as PageContextData : undefined);
     setInput('');
   };
 
-  const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length > 0) {
-      handleFiles(files);
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      handleFiles(Array.from(e.target.files));
     }
-  };
-
-  const onRemoveAttachment = (index: number) => {
-    setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -93,7 +94,7 @@ export default function ChatBubble() {
       {isOpen && !isMinimized && (
         <Card
           variant="glass"
-          className="w-[550px] h-[750px] flex flex-col shadow-2xl border-cyber-green/30 animate-in fade-in slide-in-from-bottom-4 duration-300 overflow-hidden"
+          className="w-[400px] h-[600px] flex flex-col shadow-2xl border-cyber-green/30 animate-in fade-in slide-in-from-bottom-4 duration-300 overflow-hidden"
           padding="none"
         >
           {/* Header */}
@@ -150,9 +151,9 @@ export default function ChatBubble() {
               onSend={handleSendMessage}
               isLoading={isLoading}
               attachments={attachments}
-              onRemoveAttachment={onRemoveAttachment}
+              onRemoveAttachment={removeAttachment}
               fileInputRef={fileInputRef}
-              onFileSelect={onFileSelect}
+              onFileSelect={handleFileSelect}
             />
           </div>
         </Card>

@@ -20,7 +20,7 @@ export const HandoffPanel: React.FC<HandoffPanelProps> = ({
   onSubmit,
 }) => {
   return (
-    <div className="absolute bottom-6 right-6 z-30 w-[360px] bg-[#0a0a0a] border border-orange-500/50 rounded-xl shadow-[0_0_30px_rgba(249,115,22,0.2)] overflow-hidden">
+    <div className="absolute bottom-6 right-6 z-30 w-[360px] bg-background border border-orange-500/50 rounded-xl shadow-[0_0_30px_color-mix(in_srgb,theme(colors.orange.500)_20%,transparent)] overflow-hidden">
       <div className="px-4 py-3 bg-orange-500/10 border-b border-orange-500/20 flex items-center gap-3">
         <div className="p-1.5 bg-orange-500/20 rounded">
           <User size={14} className="text-orange-400" />
@@ -33,7 +33,7 @@ export const HandoffPanel: React.FC<HandoffPanelProps> = ({
           >
             Human Input Required
           </Typography>
-          <Typography variant="mono" className="text-[9px] text-white/40 mt-0.5">
+          <Typography variant="mono" className="text-[9px] text-muted-foreground mt-0.5">
             Agent escalated task for review
           </Typography>
         </div>
@@ -41,42 +41,42 @@ export const HandoffPanel: React.FC<HandoffPanelProps> = ({
 
       {handoffData && (
         <div className="p-4 space-y-3">
-          <div className="bg-white/5 rounded-lg p-3 space-y-2">
+          <div className="bg-foreground/5 rounded-lg p-3 space-y-2">
             <div className="flex items-center gap-2">
-              <Typography variant="mono" className="text-[9px] text-white/40 uppercase">
+              <Typography variant="mono" className="text-[9px] text-muted-foreground uppercase">
                 Task ID:
               </Typography>
-              <Typography variant="mono" className="text-[10px] text-white/80">
+              <Typography variant="mono" className="text-[10px] text-foreground/80">
                 {handoffData.taskId}
               </Typography>
             </div>
             <div className="flex items-center gap-2">
-              <Typography variant="mono" className="text-[9px] text-white/40 uppercase">
+              <Typography variant="mono" className="text-[9px] text-muted-foreground uppercase">
                 Agent:
               </Typography>
-              <Typography variant="mono" className="text-[10px] text-white/80">
+              <Typography variant="mono" className="text-[10px] text-foreground/80">
                 {handoffData.agentId}
               </Typography>
             </div>
             <div>
-              <Typography variant="mono" className="text-[9px] text-white/40 uppercase mb-1">
+              <Typography variant="mono" className="text-[9px] text-muted-foreground uppercase mb-1">
                 Reason:
               </Typography>
-              <Typography variant="body" className="text-[11px] text-white/70 italic">
+              <Typography variant="body" className="text-[11px] text-foreground/70 italic">
                 &quot;{handoffData.reason}&quot;
               </Typography>
             </div>
           </div>
 
           <div>
-            <Typography variant="mono" className="text-[9px] text-white/40 uppercase mb-2">
+            <Typography variant="mono" className="text-[9px] text-muted-foreground uppercase mb-2">
               Your Response:
             </Typography>
             <textarea
               value={handoffResponse}
               onChange={(e) => setHandoffResponse(e.target.value)}
               placeholder="Provide guidance or approve/reject the agent's request..."
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-orange-500/50 resize-none h-20"
+              className="w-full bg-foreground/5 border border-border rounded-lg px-3 py-2 text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-orange-500/50 resize-none h-20"
             />
           </div>
 
@@ -114,7 +114,7 @@ export const HandoffPanel: React.FC<HandoffPanelProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              className="text-[10px] text-white/30 hover:text-white/60 h-auto py-1"
+              className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground h-auto py-1"
               icon={<Send size={10} />}
               onClick={() => onSubmit(true)}
               disabled={submittingResponse}

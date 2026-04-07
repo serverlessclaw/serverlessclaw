@@ -204,6 +204,10 @@ export const infraSchema: Record<string, IToolDefinition> = {
         reasoning: { type: 'string' },
         nextStep: { type: 'string' },
         targetAgentId: { type: 'string', enum: Object.values(AgentType) },
+        emit: {
+          type: 'boolean',
+          description: 'Whether to emit this signal to the EventBus for automated transition.',
+        },
       },
       required: ['status', 'reasoning', 'nextStep', 'targetAgentId'],
       additionalProperties: false,

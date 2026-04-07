@@ -31,9 +31,9 @@ function severityVariant(severity: string) {
 }
 
 function gaugeColor(score: number) {
-  if (score >= 80) return { stroke: '#00ffa3', glow: 'rgba(0, 255, 163, 0.3)' };
-  if (score >= 60) return { stroke: '#f59e0b', glow: 'rgba(245, 158, 11, 0.3)' };
-  return { stroke: '#ef4444', glow: 'rgba(239, 68, 68, 0.3)' };
+  if (score >= 80) return { stroke: 'var(--cyber-green)', glow: 'color-mix(in srgb, var(--cyber-green) 30%, transparent)' };
+  if (score >= 60) return { stroke: '#f59e0b', glow: 'color-mix(in srgb, #f59e0b 30%, transparent)' };
+  return { stroke: '#ef4444', glow: 'color-mix(in srgb, #ef4444 30%, transparent)' };
 }
 
 export default function CognitiveHealthCard({
@@ -53,7 +53,7 @@ export default function CognitiveHealthCard({
   const { stroke, glow } = gaugeColor(score);
 
   return (
-    <Card variant="glass" padding="lg" className="border-white/10 bg-black/40 space-y-4">
+    <Card variant="glass" padding="lg" className="border-border bg-card space-y-4">
       <div className="flex items-center justify-between">
         <Typography variant="caption" weight="bold" className="tracking-[0.15em] truncate">
           {agentId}
@@ -72,8 +72,9 @@ export default function CognitiveHealthCard({
             cy={size / 2}
             r={radius}
             fill="none"
-            stroke="rgba(255,255,255,0.05)"
+            stroke="currentColor"
             strokeWidth={strokeWidth}
+            className="text-foreground/5"
           />
           <circle
             cx={size / 2}
@@ -100,25 +101,25 @@ export default function CognitiveHealthCard({
 
       <div className="space-y-2">
         <div className="flex justify-between text-[10px]">
-          <span className="text-white/50 uppercase tracking-wider">Task Completion</span>
-          <span className="font-mono text-white/90">{(taskCompletionRate * 100).toFixed(1)}%</span>
+          <span className="text-muted-foreground uppercase tracking-wider">Task Completion</span>
+          <span className="font-mono text-foreground/90">{(taskCompletionRate * 100).toFixed(1)}%</span>
         </div>
         <div className="flex justify-between text-[10px]">
-          <span className="text-white/50 uppercase tracking-wider">Reasoning Coherence</span>
-          <span className="font-mono text-white/90">{reasoningCoherence.toFixed(1)}/10</span>
+          <span className="text-muted-foreground uppercase tracking-wider">Reasoning Coherence</span>
+          <span className="font-mono text-foreground/90">{reasoningCoherence.toFixed(1)}/10</span>
         </div>
         <div className="flex justify-between text-[10px]">
-          <span className="text-white/50 uppercase tracking-wider">Error Rate</span>
-          <span className="font-mono text-white/90">{(errorRate * 100).toFixed(1)}%</span>
+          <span className="text-muted-foreground uppercase tracking-wider">Error Rate</span>
+          <span className="font-mono text-foreground/90">{(errorRate * 100).toFixed(1)}%</span>
         </div>
         <div className="flex justify-between text-[10px]">
-          <span className="text-white/50 uppercase tracking-wider">Memory Fragmentation</span>
-          <span className="font-mono text-white/90">{(memoryFragmentation * 100).toFixed(1)}%</span>
+          <span className="text-muted-foreground uppercase tracking-wider">Memory Fragmentation</span>
+          <span className="font-mono text-foreground/90">{(memoryFragmentation * 100).toFixed(1)}%</span>
         </div>
       </div>
 
       {anomalies.length > 0 && (
-        <div className="space-y-2 pt-2 border-t border-white/5">
+        <div className="space-y-2 pt-2 border-t border-border">
           <Typography
             variant="mono"
             color="muted"
@@ -134,7 +135,7 @@ export default function CognitiveHealthCard({
               >
                 {a.severity}
               </Badge>
-              <span className="text-[10px] text-white/60 leading-tight">{a.message}</span>
+              <span className="text-[10px] text-muted-foreground leading-tight">{a.message}</span>
             </div>
           ))}
         </div>

@@ -200,6 +200,11 @@ export interface ProcessOptionsParams {
   taskTimeoutMs?: number;
   tokenBudget?: number;
   costLimit?: number;
+  priorTokenUsage?: {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  };
 }
 
 /**
@@ -226,6 +231,7 @@ export function buildProcessOptions(params: ProcessOptionsParams): AgentProcessO
     taskTimeoutMs: params.taskTimeoutMs,
     tokenBudget: params.tokenBudget,
     costLimit: params.costLimit,
+    priorTokenUsage: params.priorTokenUsage,
   };
 }
 

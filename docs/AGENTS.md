@@ -267,18 +267,43 @@ To ensure coordination doesn't break as we add more agents, follow a **Contract-
 npx vitest core/tests/contract.test.ts
 ```
 
-```text
- Initiator (Planner)       decomposePlan()        AgentBus (EB)        Coder Agent (xN)         Trace DAG (DDB)
-        |                      |                      |                      |                      |
-        +-- (1) decompose ---->|                      |                      |                      |
-        |                      +-- (2) CODER_TASK --->|                      |                      |
-        |                      +-- (2) CODER_TASK --->|                      |                      |
-        |                      +-- (2) CODER_TASK --->|                      |                      |
-        |                      |                      |                      |                      |
-        |                      |    [ALL COMPLETE]    |                      |                      |
-        |<-- (3) CONTINUATION--+                      |                      |                      |
-        |    (aggregated results) |                      |                      |                      |
+### 🌊 Backbone Event Roster (Signals)
+
+| Event Type             | SourceAgent | Trigger                                            |
+| ---------------------- | ----------- | -------------------------------------------------- |
+| `DELEGATION_TASK`      | SuperClaw   | User request delegated to specialized agent        |
+| `CONTINUATION_TASK`    | Worker      | Sub-task completion reporting back to initiator    |
+| `ORCHESTRATION_SIGNAL` | Any         | Active state-machine signal (via `signalOrch`)     |
+| `TASK_COMPLETED`       | Worker      | Atomic task success signal                         |
+| `TASK_FAILED`          | Worker      | Atomic task failure signal                         |
+
+### 🔄 Coordination & Concurrency Flow
+
+When an agent is triggered via the AgentBus, it follows this robust execution lifecycle to prevent race conditions during multi-agent reasoning:
+
+```mermaid
+sequenceDiagram
+    participant EB as AgentBus (EventBridge)
+    participant H as shared.ts (processEventWithAgent)
+    participant SM as SessionStateManager (DynamoDB)
+    participant A as Agent (Reasoning Cycle)
+
+    EB->>H: Dispatch Event (e.g., DELEGATION_TASK)
+    H->>SM: acquireProcessing(sessionId)
+    alt Lock Acquired
+        SM-->>H: Success
+        H->>A: Execute Reasoning Loop
+        A->>H: Task Result
+        H->>SM: releaseProcessing(sessionId)
+    else Lock Busy
+        SM-->>H: Failure (Session Locked)
+        H->>SM: addPendingMessage(sessionId, task)
+        Note over H,SM: Task will be picked up in next turn
+    end
+    H-->>EB: Ack
 ```
+
+---
 
 ### DAG-Based Dependencies
 

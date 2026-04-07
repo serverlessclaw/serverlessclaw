@@ -9,18 +9,19 @@ import { DynamicComponent } from '../Chat/types';
 
 interface OperationCardProps {
   component: DynamicComponent;
-  onAction?: (actionId: string, payload?: unknown) => void;
+  onAction?: (actionId: string, payload?: any) => void;
 }
 
 /**
  * A generic operational card that can display structured info and action buttons.
  */
 export default function OperationCard({ component, onAction }: OperationCardProps) {
-  const props = component.props as Record<string, unknown>;
+  const { props, actions } = component;
+
   const title = typeof props.title === 'string' ? props.title : 'Agent Operation';
   const status = typeof props.status === 'string' ? props.status : undefined;
   const description = typeof props.description === 'string' ? props.description : undefined;
-  const actions = component.actions;
+  const details = props.details && typeof props.details === 'object' ? (props.details as Record<string, unknown>) : undefined;
 
   return (
     <Card
@@ -33,14 +34,14 @@ export default function OperationCard({ component, onAction }: OperationCardProp
         <div className="flex items-center gap-2">
           <Bot size={16} className="text-cyber-green" />
           <Typography variant="caption" weight="black" className="uppercase tracking-widest text-[10px]">
-            {String(title)}
+            {title}
           </Typography>
         </div>
         {status && (
           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/40 border border-cyber-green/20">
             <div className={`w-1.5 h-1.5 rounded-full ${status === 'active' ? 'bg-cyber-green animate-pulse' : 'bg-white/40'}`} />
             <Typography variant="mono" className="text-[9px] uppercase font-bold text-cyber-green/80">
-              {String(status)}
+              {status}
             </Typography>
           </div>
         )}
@@ -50,18 +51,18 @@ export default function OperationCard({ component, onAction }: OperationCardProp
       <div className="p-4 space-y-4">
         {description && (
           <Typography variant="body" className="text-xs text-white/80 leading-relaxed">
-            {String(description)}
+            {description}
           </Typography>
         )}
 
-        {!!props.details && typeof props.details === 'object' && props.details !== null && (
+        {details && (
           <div className="space-y-2">
-            {Object.entries(props.details as Record<string, unknown>).map(([key, value]) => (
+            {Object.entries(details).map(([key, value]) => (
               <div key={key} className="flex items-center justify-between py-1 border-b border-white/5">
                 <Typography variant="mono" className="text-[10px] text-white/40 uppercase">
-                  {key}
+                  {key.replace(/_/g, ' ')}
                 </Typography>
-                <Typography variant="mono" className="text-[10px] text-cyber-green">
+                <Typography variant="mono" className="text-[10px] text-cyber-green/90 font-bold">
                   {String(value)}
                 </Typography>
               </div>

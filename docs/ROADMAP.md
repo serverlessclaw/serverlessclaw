@@ -46,6 +46,7 @@ Our goal: the most customizable, cost-effective, and self-evolving personal AI a
 
 - [x] **Claw-Trace**: Built-in tracing engine logging to DynamoDB.
 - [x] **Claw-Monitor Dashboard**: Next.js 16 (Canary) + Tailwind v4 UI.
+- [x] **Adaptive UI**: Full Dark/Light theme support with semantic variables.
 - [x] **Milestone 1: High-Fidelity Tracing**: Trace detail views with raw prompt/response/payload inspection.
 - [x] **Milestone 2: Neural Path Visualizer**: XYFlow integration for branching agent logic diagrams.
 - [x] **Resilience Hub**: Dedicated views for self-healing logs and Dead Man's Switch status.

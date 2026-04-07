@@ -92,6 +92,35 @@ export interface ToolResult {
 }
 
 /**
+ * Creates a new ToolResult with default values for optional fields.
+ */
+export function createToolResult(
+  text: string,
+  options: {
+    images?: string[];
+    metadata?: Record<string, unknown>;
+    ui_blocks?: Array<{
+      id: string;
+      componentType: string;
+      props: Record<string, unknown>;
+      actions?: Array<{
+        id: string;
+        label: string;
+        type: 'primary' | 'secondary' | 'danger';
+        payload?: Record<string, unknown>;
+      }>;
+    }>;
+  } = {}
+): ToolResult {
+  return {
+    text,
+    images: options.images ?? [],
+    metadata: options.metadata ?? {},
+    ui_blocks: options.ui_blocks ?? [],
+  };
+}
+
+/**
  * Full tool implementation including its metadata and execution logic.
  */
 export interface ITool extends IToolDefinition {

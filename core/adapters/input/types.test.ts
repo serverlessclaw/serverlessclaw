@@ -29,16 +29,12 @@ describe('AttachmentSchema', () => {
     expect(result.base64).toBe('data:image/png;base64,abc123');
   });
 
-  it('validates minimal attachment (only type)', () => {
+  it('rejects minimal attachment with only type', () => {
     const input = {
       type: AttachmentType.FILE,
     };
 
-    const result = AttachmentSchema.parse(input);
-
-    expect(result.type).toBe(AttachmentType.FILE);
-    expect(result.url).toBeUndefined();
-    expect(result.base64).toBeUndefined();
+    expect(() => AttachmentSchema.parse(input)).toThrow();
   });
 
   it('rejects invalid URL', () => {
@@ -54,7 +50,7 @@ describe('AttachmentSchema', () => {
     const types = [AttachmentType.IMAGE, AttachmentType.FILE];
 
     for (const type of types) {
-      const input = { type };
+      const input = { type, url: 'https://example.com/file.bin' };
       const result = AttachmentSchema.parse(input);
       expect(result.type).toBe(type);
     }

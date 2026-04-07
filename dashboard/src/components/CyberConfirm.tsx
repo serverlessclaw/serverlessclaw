@@ -60,10 +60,10 @@ export default function CyberConfirm({
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onCancel} />
+      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onCancel} />
 
       <div
-        className={`relative w-full max-w-sm bg-[#0a0a0a] ${styles.border} border rounded-lg p-6 space-y-5 shadow-xl overflow-hidden`}
+        className={`relative w-full max-w-sm bg-background ${styles.border} border rounded-lg p-6 space-y-5 shadow-xl overflow-hidden`}
       >
         <div className="flex flex-col items-center text-center space-y-3">
           <div

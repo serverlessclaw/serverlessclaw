@@ -4,13 +4,17 @@ import { HealthSeverity, ParallelTaskStatus } from '../types/constants';
 import { EventType, AgentType } from '../types/index';
 import { normalizeBaseUserId } from '../utils/normalize';
 
-export const ATTACHMENT_SCHEMA = z.object({
-  type: z.nativeEnum(AttachmentType),
-  url: z.string().optional(),
-  base64: z.string().optional(),
-  name: z.string().optional(),
-  mimeType: z.string().optional(),
-});
+export const ATTACHMENT_SCHEMA = z
+  .object({
+    type: z.nativeEnum(AttachmentType),
+    url: z.string().optional(),
+    base64: z.string().optional(),
+    name: z.string().optional(),
+    mimeType: z.string().optional(),
+  })
+  .refine((attachment) => Boolean(attachment.url || attachment.base64), {
+    message: 'Attachment must include either url or base64 payload',
+  });
 
 /**
  * Base schema for all event payloads.
@@ -25,8 +29,15 @@ export const BASE_EVENT_SCHEMA = z.object({
   depth: z.number().default(0),
   sessionId: z.string().default('default-session'),
   timestamp: z.number().default(() => Date.now()),
-  tokenBudget: z.number().optional(),
-  costLimit: z.number().optional(),
+  tokenBudget: z.number().min(0).optional(),
+  costLimit: z.number().min(0).optional(),
+  priorTokenUsage: z
+    .object({
+      inputTokens: z.number().default(0),
+      outputTokens: z.number().default(0),
+      totalTokens: z.number().default(0),
+    })
+    .optional(),
 });
 
 /**
@@ -183,47 +194,47 @@ export const PARALLEL_TASK_COMPLETED_EVENT_SCHEMA = BASE_EVENT_SCHEMA.extend({
 export const CODER_TASK_METADATA = z
   .object({
     gapIds: z.array(z.string()).default([]),
-    buildId: z.string().optional(),
-    targetFile: z.string().optional(),
-    branch: z.string().optional(),
+    buildId: z.string().nullable().default(null),
+    targetFile: z.string().nullable().default(null),
+    branch: z.string().nullable().default(null),
   })
-  .default({ gapIds: [] });
+  .default({ gapIds: [], buildId: null, targetFile: null, branch: null });
 
 /** Metadata schema for QA audit tasks. */
 export const QA_AUDIT_METADATA = z
   .object({
     gapIds: z.array(z.string()).default([]),
-    buildId: z.string().optional(),
-    deploymentUrl: z.string().optional(),
+    buildId: z.string().nullable().default(null),
+    deploymentUrl: z.string().nullable().default(null),
   })
-  .default({ gapIds: [] });
+  .default({ gapIds: [], buildId: null, deploymentUrl: null });
 
 /** Metadata schema for Strategic Planner tasks. */
 export const PLANNER_TASK_METADATA = z
   .object({
-    gapId: z.string().optional(),
-    category: z.string().optional(),
-    priority: z.number().optional(),
+    gapId: z.string().nullable().default(null),
+    category: z.string().nullable().default(null),
+    priority: z.number().nullable().default(null),
   })
-  .default({});
+  .default({ gapId: null, category: null, priority: null });
 
 /** Metadata schema for build-related tasks. */
 export const BUILD_TASK_METADATA = z
   .object({
     gapIds: z.array(z.string()).default([]),
-    buildId: z.string().optional(),
-    projectName: z.string().optional(),
+    buildId: z.string().nullable().default(null),
+    projectName: z.string().nullable().default(null),
   })
-  .default({ gapIds: [] });
+  .default({ gapIds: [], buildId: null, projectName: null });
 
 /** Metadata schema for clarification requests. */
 export const CLARIFICATION_TASK_METADATA = z
   .object({
-    question: z.string().optional(),
-    originalTask: z.string().optional(),
+    question: z.string().nullable().default(null),
+    originalTask: z.string().nullable().default(null),
     retryCount: z.number().default(0),
   })
-  .default({ retryCount: 0 });
+  .default({ question: null, originalTask: null, retryCount: 0 });
 /** Metadata schema for research tasks. */
 export const RESEARCH_TASK_METADATA = z
   .object({
@@ -445,3 +456,15 @@ export const EVENT_SCHEMA_MAP = {
 
 /** Keys of the EVENT_SCHEMA_MAP (for type-safe event type lookups). */
 export type SchemaEventType = keyof typeof EVENT_SCHEMA_MAP;
+
+/** Agent task event type strings (for use with validateEventPayload). */
+export const AGENT_TASK_EVENT_TYPES = [
+  `${AgentType.STRATEGIC_PLANNER}_task`,
+  `${AgentType.COGNITION_REFLECTOR}_task`,
+  `${AgentType.QA}_task`,
+  `${AgentType.CRITIC}_task`,
+  `${AgentType.FACILITATOR}_task`,
+  `${AgentType.RESEARCHER}_task`,
+] as const;
+
+export type AgentTaskEventType = (typeof AGENT_TASK_EVENT_TYPES)[number];

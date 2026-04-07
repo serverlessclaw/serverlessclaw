@@ -364,10 +364,10 @@ export default async function SettingsPage() {
       <header className="flex flex-col lg:flex-row lg:justify-between lg:items-end border-b border-white/5 pb-6 gap-6">
         <div>
           <Typography variant="h2" color="white" glow uppercase>
-            {t('SETTINGS_CONFIG')}
+            System Configuration
           </Typography>
           <Typography variant="body" color="muted" className="mt-2 block">
-            {t('SETTINGS_DESCRIPTION')}
+            Manage your global agent settings, API keys, and system preferences.
           </Typography>
         </div>
       </header>

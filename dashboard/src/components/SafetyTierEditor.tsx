@@ -59,8 +59,8 @@ export default function SafetyTierEditor({ currentTier, onTierChange }: SafetyTi
             padding="lg"
             className={`border-2 transition-all cursor-pointer ${
               isActive
-                ? 'border-[var(--cyber-blue)]/40 shadow-[0_0_20px_rgba(0,191,255,0.08)]'
-                : 'border-white/5 hover:border-white/10'
+                ? 'border-cyber-blue/40 shadow-[0_0_20px_color-mix(in_srgb,var(--cyber-blue)_8%,transparent)]'
+                : 'border-border hover:border-foreground/10'
             }`}
             onClick={() => onTierChange(tier.id)}
           >
@@ -68,8 +68,8 @@ export default function SafetyTierEditor({ currentTier, onTierChange }: SafetyTi
               <div
                 className={`w-10 h-10 rounded flex items-center justify-center ${
                   isActive
-                    ? 'bg-[var(--cyber-blue)]/10 text-[var(--cyber-blue)]'
-                    : 'bg-white/5 text-white/30'
+                    ? 'bg-cyber-blue/10 text-cyber-blue'
+                    : 'bg-foreground/5 text-muted-foreground/50'
                 }`}
               >
                 {isActive ? <ShieldCheck size={20} /> : <ShieldAlert size={20} />}
@@ -78,7 +78,7 @@ export default function SafetyTierEditor({ currentTier, onTierChange }: SafetyTi
                 <Typography
                   variant="caption"
                   weight="bold"
-                  className={`tracking-[0.15em] ${isActive ? 'text-[var(--cyber-blue)]' : 'text-white/70'}`}
+                  className={`tracking-[0.15em] ${isActive ? 'text-cyber-blue' : 'text-foreground/70'}`}
                 >
                   {tier.label}
                 </Typography>
@@ -99,8 +99,8 @@ export default function SafetyTierEditor({ currentTier, onTierChange }: SafetyTi
                 </Typography>
                 {tier.allows.map((item, i) => (
                   <div key={i} className="flex items-center gap-2 py-0.5">
-                    <Check size={10} className="text-[var(--cyber-green)] shrink-0" />
-                    <span className="text-[10px] text-white/60">{item}</span>
+                    <Check size={10} className="text-cyber-green shrink-0" />
+                    <span className="text-[10px] text-foreground/60">{item}</span>
                   </div>
                 ))}
               </div>
@@ -115,17 +115,17 @@ export default function SafetyTierEditor({ currentTier, onTierChange }: SafetyTi
                 {tier.blocks.map((item, i) => (
                   <div key={i} className="flex items-center gap-2 py-0.5">
                     <X size={10} className="text-red-400 shrink-0" />
-                    <span className="text-[10px] text-white/60">{item}</span>
+                    <span className="text-[10px] text-foreground/60">{item}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {isActive && (
-              <div className="mt-4 pt-3 border-t border-[var(--cyber-blue)]/10">
+              <div className="mt-4 pt-3 border-t border-cyber-blue/10">
                 <Typography
                   variant="mono"
-                  className="text-[var(--cyber-blue)] text-[9px] tracking-widest uppercase"
+                  className="text-cyber-blue text-[9px] tracking-widest uppercase"
                 >
                   Active Tier
                 </Typography>

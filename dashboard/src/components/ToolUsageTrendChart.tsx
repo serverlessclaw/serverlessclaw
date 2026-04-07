@@ -40,7 +40,7 @@ export default function ToolUsageTrendChart({
   const chartHeight = height - padding * 2;
 
   return (
-    <Card variant="glass" padding="lg" className="border-white/5 bg-black/40">
+    <Card variant="glass" padding="lg" className="border-border bg-card">
       <Typography
         variant="caption"
         weight="black"
@@ -58,7 +58,7 @@ export default function ToolUsageTrendChart({
               className="w-2 h-2 rounded-full"
               style={{ backgroundColor: tool.color ?? COLORS[i % COLORS.length] }}
             />
-            <span className="text-white/60 uppercase">{tool.name}</span>
+            <span className="text-muted-foreground uppercase">{tool.name}</span>
           </div>
         ))}
       </div>
@@ -74,14 +74,14 @@ export default function ToolUsageTrendChart({
                   y1={y}
                   x2={width - padding}
                   y2={y}
-                  stroke="white"
+                  stroke="currentColor"
                   strokeOpacity="0.05"
                   strokeDasharray="4 4"
                 />
                 <text
                   x={padding - 5}
                   y={y}
-                  fill="white"
+                  fill="currentColor"
                   fillOpacity="0.2"
                   fontSize="8"
                   fontFamily="monospace"
@@ -101,7 +101,7 @@ export default function ToolUsageTrendChart({
                 key={day}
                 x={x}
                 y={height - 2}
-                fill="white"
+                fill="currentColor"
                 fillOpacity="0.3"
                 fontSize="9"
                 fontFamily="monospace"

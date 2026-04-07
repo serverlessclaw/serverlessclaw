@@ -8,6 +8,7 @@ import { TraceSource, Attachment } from '../../lib/types/index';
 import { Context } from 'aws-lambda';
 import { parseConfigInt } from '../../lib/providers/utils';
 import { isTaskPaused } from '../../lib/utils/agent-helpers';
+import { SessionStateManager } from '../../lib/session/session-state';
 
 /**
  * Wake up the initiator agent when a delegated task or system event completes.
@@ -137,6 +138,13 @@ export async function processEventWithAgent(
     handlerTitle: string;
     outboundHandlerName: string;
     formatResponse?: (responseText: string, attachments: Attachment[]) => string;
+    tokenBudget?: number;
+    costLimit?: number;
+    priorTokenUsage?: {
+      inputTokens: number;
+      outputTokens: number;
+      totalTokens: number;
+    };
   }
 ): Promise<{ responseText: string; attachments: Attachment[] }> {
   // Heavy SDK dependencies loaded lazily to keep this module's static import depth low.
@@ -154,77 +162,111 @@ export async function processEventWithAgent(
   const agentTools = await loadAgentTools(agentId);
   const agent = new Agent(memory, provider, agentTools, config.systemPrompt, config);
 
-  const startTime = Date.now();
-  const stream = agent.stream(userId, `${options.handlerTitle}: ${taskContent}`, {
-    context: options.context,
-    isContinuation: options.isContinuation,
-    traceId: options.traceId,
-    taskId: options.taskId,
-    sessionId: options.sessionId,
-    depth: options.depth,
-    initiatorId: options.initiatorId,
-    attachments: options.attachments,
-    source: TraceSource.SYSTEM,
-  });
-
-  let responseText = '';
-  const attachments: Attachment[] = [];
-
-  // resultAttachments from agent.stream are not directly returned as a single array,
-  // they are usually added to memory or yielded in chunks if the provider/executor supports it.
-  for await (const chunk of stream) {
-    if (chunk.content) responseText += chunk.content;
-    if (chunk.attachments) attachments.push(...chunk.attachments);
-  }
-
-  const isPaused = isTaskPaused(responseText);
-
-  // 1. Notify user (unless it's a background pause/continuation)
-  if (!isPaused && responseText.trim().length > 0) {
-    const finalMessage = options.formatResponse
-      ? options.formatResponse(responseText, attachments)
-      : responseText;
-
-    const messageId = agentId === 'superclaw' ? options.traceId : `${options.traceId}-${agentId}`;
-
-    await sendOutboundMessage(
-      options.outboundHandlerName,
-      userId,
-      finalMessage,
-      undefined,
+  // 0. Concurrency Control (Phase B3: Real-time Shared Awareness)
+  const sessionStateManager = new SessionStateManager();
+  if (options.sessionId) {
+    const lockAcquired = await sessionStateManager.acquireProcessing(
       options.sessionId,
-      'SuperClaw',
-      attachments,
-      messageId
+      `event-handler-${agentId}`
     );
+
+    if (!lockAcquired) {
+      logger.info(
+        `[${options.handlerTitle}] Session ${options.sessionId} busy. Queueing task for ${agentId}.`
+      );
+      await sessionStateManager.addPendingMessage(
+        options.sessionId,
+        `${options.handlerTitle}: ${taskContent}`,
+        options.attachments
+      );
+      return {
+        responseText: `[QUEUED] Session busy. Task added to pending queue for ${agentId}.`,
+        attachments: [],
+      };
+    }
   }
 
-  // 2. Notify initiator if it's another agent (Closing the completion gap)
-  if (
-    !isPaused &&
-    options.initiatorId &&
-    options.initiatorId !== 'orchestrator' &&
-    options.initiatorId !== userId
-  ) {
-    const { emitTypedEvent } = await import('../../lib/utils/typed-emit');
-    await emitTypedEvent(agentId, EventType.TASK_COMPLETED, {
-      userId,
-      agentId,
-      task: taskContent,
-      response: responseText,
-      attachments,
+  try {
+    const startTime = Date.now();
+    const stream = agent.stream(userId, `${options.handlerTitle}: ${taskContent}`, {
+      context: options.context,
+      isContinuation: options.isContinuation,
       traceId: options.traceId,
-      taskId: options.taskId ?? options.traceId,
-      initiatorId: options.initiatorId,
-      depth: (options.depth ?? 0) + 1,
+      taskId: options.taskId,
       sessionId: options.sessionId,
-      metadata: {
-        durationMs: Date.now() - startTime,
-      },
+      depth: options.depth,
+      initiatorId: options.initiatorId,
+      attachments: options.attachments,
+      source: TraceSource.SYSTEM,
+      sessionStateManager,
+      tokenBudget: options.tokenBudget,
+      costLimit: options.costLimit,
+      priorTokenUsage: options.priorTokenUsage,
     });
-  }
 
-  return { responseText, attachments };
+    let responseText = '';
+    const attachments: Attachment[] = [];
+
+    // resultAttachments from agent.stream are not directly returned as a single array,
+    // they are usually added to memory or yielded in chunks if the provider/executor supports it.
+    for await (const chunk of stream) {
+      if (chunk.content) responseText += chunk.content;
+      if (chunk.attachments) attachments.push(...chunk.attachments);
+    }
+
+    const isPaused = isTaskPaused(responseText);
+
+    // 1. Notify user (unless it's a background pause/continuation)
+    if (!isPaused && responseText.trim().length > 0) {
+      const finalMessage = options.formatResponse
+        ? options.formatResponse(responseText, attachments)
+        : responseText;
+
+      const messageId = agentId === 'superclaw' ? options.traceId : `${options.traceId}-${agentId}`;
+
+      await sendOutboundMessage(
+        options.outboundHandlerName,
+        userId,
+        finalMessage,
+        undefined,
+        options.sessionId,
+        'SuperClaw',
+        attachments,
+        messageId
+      );
+    }
+
+    // 2. Notify initiator if it's another agent (Closing the completion gap)
+    if (
+      !isPaused &&
+      options.initiatorId &&
+      options.initiatorId !== 'orchestrator' &&
+      options.initiatorId !== userId
+    ) {
+      const { emitTypedEvent } = await import('../../lib/utils/typed-emit');
+      await emitTypedEvent(agentId, EventType.TASK_COMPLETED, {
+        userId,
+        agentId,
+        task: taskContent,
+        response: responseText,
+        attachments,
+        traceId: options.traceId,
+        taskId: options.taskId ?? options.traceId,
+        initiatorId: options.initiatorId,
+        depth: (options.depth ?? 0) + 1,
+        sessionId: options.sessionId,
+        metadata: {
+          durationMs: Date.now() - startTime,
+        },
+      });
+    }
+
+    return { responseText, attachments };
+  } finally {
+    if (options.sessionId) {
+      await sessionStateManager.releaseProcessing(options.sessionId);
+    }
+  }
 }
 
 /**

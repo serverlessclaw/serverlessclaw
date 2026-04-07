@@ -3,7 +3,6 @@
  * Core type definitions for the agent swarm, including events, payloads, and lifecycle states.
  */
 import type {
-  AttachmentPayload,
   BaseEventPayload,
   AgentPayloadInferred,
   TaskEventPayload,
@@ -15,7 +14,9 @@ import type {
   ProactiveHeartbeatPayloadInferred,
 } from '../schema/events';
 
-export type Attachment = AttachmentPayload;
+import { Attachment } from './llm';
+
+export type { Attachment };
 export type BaseEvent = BaseEventPayload;
 export type AgentPayload = AgentPayloadInferred;
 export type TaskEvent = TaskEventPayload;
@@ -147,6 +148,10 @@ export interface IAgentConfig {
   safetyTier?: SafetyTier;
   /** Whether the agent starts in "Nimble" mode (suppresses MCP tools until JIT installation). */
   discoveryMode?: boolean;
+  /** Token budget constraint for this agent. */
+  tokenBudget?: number;
+  /** Maximum cost allowed for this agent (USD). */
+  costLimit?: number;
 }
 
 /**
@@ -272,6 +277,8 @@ export enum EventType {
   RESEARCH_TASK = 'research_task',
   /** Request for AST-aware patch reconciliation by Merger Agent. */
   MERGER_TASK = 'merger_task',
+  /** High-level orchestration signal for automated state transitions. */
+  ORCHESTRATION_SIGNAL = 'orchestration_signal',
 }
 
 /**

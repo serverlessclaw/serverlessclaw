@@ -163,8 +163,8 @@ describe('SafetyTierEditor', () => {
     const cards = screen.getAllByTestId('card');
     const sandboxCard = cards[0];
 
-    expect(sandboxCard).toHaveClass('border-[var(--cyber-blue)]/40');
-    expect(sandboxCard).toHaveClass('shadow-[0_0_20px_rgba(0,191,255,0.08)]');
+    expect(sandboxCard).toHaveClass('border-cyber-blue/40');
+    expect(sandboxCard).toHaveClass('shadow-[0_0_20px_color-mix(in_srgb,var(--cyber-blue)_8%,transparent)]');
   });
 
   it('should apply correct styling for inactive tier card', () => {
@@ -173,8 +173,8 @@ describe('SafetyTierEditor', () => {
     const cards = screen.getAllByTestId('card');
     const autonomousCard = cards[1];
 
-    expect(autonomousCard).toHaveClass('border-white/5');
-    expect(autonomousCard).toHaveClass('hover:border-white/10');
+    expect(autonomousCard).toHaveClass('border-border');
+    expect(autonomousCard).toHaveClass('hover:border-foreground/10');
   });
 
   it('should have correct grid layout', () => {
