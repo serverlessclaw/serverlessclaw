@@ -10,6 +10,8 @@
   "prCreation": "immediate",
   "rebaseConflictedPrs": true,
   "rebaseWhen": "behind-base-branch",
+  "requireStatusChecks": true,
+  "requiredStatusChecks": ["quality-gate *"],
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
