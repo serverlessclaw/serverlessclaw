@@ -6,6 +6,7 @@
   "prConcurrentLimit": 0,
   "prHourlyLimit": 0,
   "dependencyDashboard": true,
+  "prNotebookFooter": "",
   "automerge": true,
   "platformAutomerge": true,
   "prCreation": "immediate",
@@ -13,6 +14,9 @@
   "rebaseWhen": "behind-base-branch",
   "requireStatusChecks": true,
   "requiredStatusChecks": ["quality-gate *"],
+  "major": {
+    "automerge": false
+  },
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
