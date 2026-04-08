@@ -5,6 +5,7 @@
   "timezone": "Australia/Sydney",
   "prConcurrentLimit": 0,
   "prHourlyLimit": 0,
+  "dependencyDashboard": true,
   "automerge": true,
   "platformAutomerge": true,
   "prCreation": "immediate",
@@ -15,7 +16,6 @@
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
-      "dependencyDashboard": true,
       "automerge": true,
       "automergeType": "pr"
     },
