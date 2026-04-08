@@ -1,3 +1,5 @@
+import { SYSTEM } from '../core/lib/constants/system';
+
 interface DeployerContext {
   stagingBucket: sst.aws.Bucket;
   githubToken?: sst.Secret;
@@ -75,9 +77,12 @@ export function createDeployer(ctx: DeployerContext) {
     }),
   });
 
+  const githubRepo = process.env.GITHUB_REPO || SYSTEM.DEFAULT_GITHUB_REPO;
   const envVars = [
     { name: 'SST_STAGE', value: $app.stage },
     { name: 'STAGING_BUCKET_NAME', value: stagingBucket.name },
+    { name: 'GITHUB_REPO', value: githubRepo },
+    { name: 'TRUNK_SYNC_ENABLED', value: process.env.TRUNK_SYNC_ENABLED || 'false' },
   ];
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -100,7 +105,7 @@ export function createDeployer(ctx: DeployerContext) {
     },
     source: {
       type: 'GITHUB',
-      location: 'https://github.com/serverlessclaw/serverlessclaw.git',
+      location: `https://github.com/${githubRepo}.git`,
       buildspec: 'buildspec.yml',
     },
   });

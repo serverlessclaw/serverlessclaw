@@ -60,8 +60,8 @@ export class SlackAdapter implements InputAdapter {
   }
 
   parse(raw: unknown): InboundMessage {
-    let body: any;
-    let headers: Record<string, string> = {};
+    let body: Record<string, unknown>;
+    let headers: Record<string, string>;
 
     if (typeof raw === 'object' && raw !== null && 'body' in raw) {
       const event = raw as { body?: string; headers?: Record<string, string> };
@@ -74,14 +74,15 @@ export class SlackAdapter implements InputAdapter {
 
       // Verify signature
       const signature = headers['x-slack-signature'] || headers['X-Slack-Signature'];
-      const timestamp = headers['x-slack-request-timestamp'] || headers['X-Slack-Request-Timestamp'];
+      const timestamp =
+        headers['x-slack-request-timestamp'] || headers['X-Slack-Request-Timestamp'];
       if (this.signingSecret && signature && timestamp) {
         if (!this.verifySignature(event.body || '', timestamp, signature)) {
           throw new Error('Invalid Slack signature');
         }
       }
     } else {
-      body = raw;
+      body = raw as Record<string, unknown>;
     }
 
     // Handle Slack URL verification challenge
@@ -90,9 +91,9 @@ export class SlackAdapter implements InputAdapter {
         source: this.source,
         userId: 'slack-system',
         sessionId: 'slack-system',
-        text: body.challenge || '',
+        text: (body.challenge as string) || '',
         attachments: [],
-        metadata: { isChallenge: true, challenge: body.challenge },
+        metadata: { isChallenge: true, challenge: body.challenge as string },
         timestamp: new Date().toISOString(),
       };
     }

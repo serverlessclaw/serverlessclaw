@@ -8,9 +8,9 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint .",
-    "test": "vitest run",
-    "test-silent": "vitest run --reporter=dot --config ../vitest.config.ts",
-    "test-coverage": "vitest run --coverage --config ../vitest.config.ts",
+    "test": "vitest run --config ./vitest.config.ts",
+    "test-silent": "vitest run --reporter=dot --config ./vitest.config.ts",
+    "test-coverage": "vitest run --coverage --config ./vitest.config.ts",
     "type-check": "tsc --noEmit",
     "format-check": "prettier --check . --ignore-path ../.prettierignore",
     "aiready": "aiready scan"

@@ -19,10 +19,11 @@ const s3Client = new S3Client({});
 export const stageChanges = {
   ...schema.stageChanges,
   execute: async (args: Record<string, unknown>): Promise<string> => {
-    const { modifiedFiles, sessionId, skipValidation } = args as {
+    const { modifiedFiles, sessionId, skipValidation, traceId } = args as {
       modifiedFiles: string[];
       sessionId: string;
       skipValidation: boolean;
+      traceId?: string;
     };
 
     try {
@@ -85,14 +86,17 @@ export const stageChanges = {
         output.on('close', async () => {
           try {
             const fileBuffer = await fs.readFile(zipPath);
+            const zipKey = traceId ? `staged_${traceId}.zip` : STORAGE.STAGING_ZIP;
             await s3Client.send(
               new PutObjectCommand({
                 Bucket: stagingBucket,
-                Key: STORAGE.STAGING_ZIP,
+                Key: zipKey,
                 Body: fileBuffer,
               })
             );
-            resolve(`SUCCESS: ${finalFiles.length} files staged for deployment. (DoD Verified)`);
+            resolve(
+              `SUCCESS: ${finalFiles.length} files staged for deployment. (DoD Verified) Staging Key: ${zipKey}`
+            );
           } catch (error) {
             resolve(`FAILED_TO_UPLOAD: ${formatErrorMessage(error)}`);
           } finally {
@@ -186,6 +190,7 @@ export const triggerDeployment = {
       task,
       gapIds,
       deployType = 'autonomous',
+      stagingKey,
     } = args as {
       reason: string;
       userId: string;
@@ -195,6 +200,7 @@ export const triggerDeployment = {
       task?: string;
       gapIds?: string[];
       deployType?: 'autonomous' | 'emergency';
+      stagingKey?: string;
     };
 
     const { getCircuitBreaker } = await import('../../lib/safety/circuit-breaker');
@@ -274,6 +280,12 @@ export const triggerDeployment = {
       logger.info(`Triggering deployment for reason: ${reason}${warning}`);
 
       const envOverrides = [{ name: 'DEPLOY_REASON', value: reason }];
+      if (stagingKey) {
+        envOverrides.push({ name: 'STAGING_ZIP_KEY', value: stagingKey });
+      } else if (traceId) {
+        envOverrides.push({ name: 'STAGING_ZIP_KEY', value: `staged_${traceId}.zip` });
+      }
+
       if (gapIds && gapIds.length > 0) {
         envOverrides.push({ name: 'GAP_IDS', value: JSON.stringify(gapIds) });
       }

@@ -72,7 +72,20 @@ export class TelegramAdapter implements InputAdapter {
   }
 
   parse(raw: unknown): InboundMessage {
-    const result = TELEGRAM_UPDATE_SCHEMA.safeParse(raw);
+    let body: unknown;
+
+    if (typeof raw === 'object' && raw !== null && 'body' in raw) {
+      const event = raw as { body?: string };
+      try {
+        body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
+      } catch {
+        throw new Error('Invalid JSON in Telegram event body');
+      }
+    } else {
+      body = raw;
+    }
+
+    const result = TELEGRAM_UPDATE_SCHEMA.safeParse(body);
     if (!result.success) {
       logger.error('Telegram schema validation failed:', result.error.format());
       throw new Error(`Invalid Telegram update format: ${result.error.message}`);

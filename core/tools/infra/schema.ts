@@ -13,7 +13,7 @@ export const infraSchema: Record<string, IToolDefinition> = {
     argSchema: z.any(),
     name: 'stageChanges',
     description:
-      'Compresses modified files into a ZIP and uploads to the S3 staging bucket for CodeBuild.',
+      'Compresses modified files into a ZIP and uploads to a unique S3 staging path for CodeBuild. Returns the staging key.',
     parameters: {
       type: 'object',
       properties: {
@@ -57,6 +57,10 @@ export const infraSchema: Record<string, IToolDefinition> = {
       properties: {
         reason: { type: 'string' },
         gapIds: { type: 'array', items: { type: 'string' } },
+        stagingKey: {
+          type: 'string',
+          description: 'Optional: Specific staging ZIP key returned by stageChanges.',
+        },
       },
       required: ['reason', 'gapIds'],
       additionalProperties: false,

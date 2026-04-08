@@ -8,7 +8,7 @@ import {
   isValidAttachment,
   GapStatus,
 } from '../lib/types/agent';
-import { TelegramAdapter } from '../adapters/input/telegram';
+import { InputAdapter } from '../adapters/input/types';
 
 /**
  * Main entry point for webhooks (Telegram and other platforms).
@@ -73,25 +73,29 @@ export const handler = async (
   const source = identifySource(event);
   logger.info(`[WEBHOOK] Identified source: ${source}`);
 
-  let adapter: any;
+  let adapter: InputAdapter;
   switch (source) {
-    case 'github':
+    case 'github': {
       const { GitHubAdapter } = await import('../adapters/input/github');
       adapter = new GitHubAdapter();
       break;
-    case 'slack':
+    }
+    case 'slack': {
       const { SlackAdapter } = await import('../adapters/input/slack');
       adapter = new SlackAdapter();
       break;
-    case 'jira':
+    }
+    case 'jira': {
       const { JiraAdapter } = await import('../adapters/input/jira');
       adapter = new JiraAdapter();
       break;
+    }
     case 'telegram':
-    default:
+    default: {
       const { TelegramAdapter } = await import('../adapters/input/telegram');
       adapter = new TelegramAdapter();
       break;
+    }
   }
 
   let inbound;
@@ -99,7 +103,7 @@ export const handler = async (
     if (!event.body) throw new Error('Missing event body');
     // Pass the entire event object so adapters can access headers/query params for verification
     inbound = adapter.parse(event);
-    
+
     // Handle Slack URL verification challenge immediately
     if (source === 'slack' && inbound.metadata.isChallenge) {
       logger.info('[WEBHOOK] Responding to Slack URL verification challenge');
@@ -128,7 +132,7 @@ export const handler = async (
   );
 
   // Process Media/Attachments via Adapter
-  let attachments: Attachment[] = [];
+  const attachments: Attachment[] = [];
   if (adapter.processMedia) {
     const messageWithMedia = await adapter.processMedia(inbound);
     const rawAttachments = messageWithMedia.attachments ?? [];
@@ -319,7 +323,11 @@ function identifySource(event: APIGatewayProxyEventV2): string {
   }
 
   // 2. Slack: X-Slack-Signature header or challenge in body
-  if (headers['x-slack-signature'] || headers['X-Slack-Signature'] || body.type === 'url_verification') {
+  if (
+    headers['x-slack-signature'] ||
+    headers['X-Slack-Signature'] ||
+    body.type === 'url_verification'
+  ) {
     return 'slack';
   }
 

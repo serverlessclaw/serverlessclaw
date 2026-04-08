@@ -47,16 +47,14 @@ describe('SlackAdapter', () => {
 
   it('should verify signature correctly', () => {
     const timestamp = '1234567890';
-    const body = '{"type":"url_verification"}';
-    
     // We need a real HMAC-SHA256 for this test or mock it
     // For simplicity in this test, let's just ensure it calls the right logic
     // or use a pre-calculated signature if possible.
-    
+
     // Mock Date.now to matches the timestamp (within 5 mins)
     vi.setSystemTime(new Date(parseInt(timestamp, 10) * 1000 + 1000));
 
-    // This is hard to test without exact HMAC logic, so we'll trust the implementation 
+    // This is hard to test without exact HMAC logic, so we'll trust the implementation
     // or test the logic that calls it.
   });
 });

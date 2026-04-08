@@ -31,11 +31,12 @@ phases:
         fi
       - |
         if [ -n "$STAGING_BUCKET_NAME" ]; then
-          echo "Checking for staged changes in S3: $STAGING_BUCKET_NAME"
-          aws s3 cp s3://$STAGING_BUCKET_NAME/staged_changes.zip staged_changes.zip || echo "No staged changes found."
+          STAGING_ZIP="${STAGING_ZIP_KEY:-staged_changes.zip}"
+          echo "Checking for staged changes in S3: $STAGING_BUCKET_NAME/$STAGING_ZIP"
+          aws s3 cp s3://$STAGING_BUCKET_NAME/$STAGING_ZIP staged_changes.zip || echo "No staged changes found."
           if [ -f "staged_changes.zip" ]; then
             echo "Applying staged changes..."
-            unzip -o staged_changes.zip
+            unzip -o staged_changes.zip || { echo "ERROR: Failed to unzip staged changes." && exit 1; }
             rm staged_changes.zip
           fi
         fi
@@ -108,13 +109,14 @@ phases:
         fi
       - |
         if [ "$CODEBUILD_BUILD_SUCCEEDING" = "1" ] && [ -n "$GITHUB_TOKEN" ] && [ "$TRUNK_SYNC_ENABLED" = "true" ]; then
-          echo "Finalizing trunk sync back to GitHub (QA verification passed)..."
+          REPO="${GITHUB_REPO:-serverlessclaw/serverlessclaw}"
+          echo "Finalizing trunk sync back to GitHub ($REPO) (QA verification passed)..."
           git config --global user.email "agent@serverlessclaw.local"
           git config --global user.name "Claw Coder Agent"
           git add .
           MSG="${COMMIT_MESSAGE:-chore: autonomous improvement by Claw Coder Agent [skip ci]}"
           if git commit -m "$MSG"; then
-            git push https://$GITHUB_TOKEN@github.com/serverlessclaw/serverlessclaw.git HEAD:main
+            git push https://$GITHUB_TOKEN@github.com/$REPO.git HEAD:main
           else
             echo "No changes to commit."
           fi

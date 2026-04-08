@@ -30,6 +30,7 @@ export const SYSTEM = {
     ROUTER: 'router',
     BUS: 'bus',
   },
+  DEFAULT_GITHUB_REPO: 'serverlessclaw/serverlessclaw',
 } as const;
 
 /**

@@ -101,6 +101,19 @@ When you send a message, **SuperClaw** receives it, develops a plan with the **S
 
 ---
 
+## 🌐 The Agentic Ecosystem
+
+ServerlessClaw is an organism made of specialized interacting repositories. While the Mother Hub (this repo) is the **Brain**, other repositories provide sensory, motor, and nervous connections:
+
+| Repository | Role | Component |
+| :--- | :--- | :--- |
+| **[cli](https://github.com/serverlessclaw/cli)** | **The Nerve** | **The Synapse**: Connects the Brain to remote Spokes/Clients. |
+| **[integration-github](https://github.com/serverlessclaw/serverlessclaw-integration-github)** | **Sensor** | **The Eyes**: Observes codebases, PRs, and Issue logs. |
+| **[integration-slack](https://github.com/serverlessclaw/serverlessclaw-integration-slack)** | **Interface** | **The Voice**: Communicates with users and reports health. |
+| **[integration-jira](https://github.com/serverlessclaw/serverlessclaw-integration-jira)** | **Adapter** | **The Hands**: Operates within enterprise project structures. |
+
+---
+
 ## ⚡️ Quick Start (AWS-Native)
 
 Deploy your first autonomous swarm in 5 minutes.
