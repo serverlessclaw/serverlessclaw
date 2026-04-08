@@ -15,6 +15,7 @@
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "dependencyDashboard": true,
       "automerge": true,
       "automergeType": "pr"
     },
