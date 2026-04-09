@@ -5,8 +5,10 @@ import { Download } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { toast } from 'sonner';
 
+import { Trace } from '@/lib/types/ui';
+
 interface ExportTracesButtonProps {
-  traces: Record<string, unknown>[];
+  traces: Trace[];
 }
 
 export default function ExportTracesButton({ traces }: ExportTracesButtonProps) {

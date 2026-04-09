@@ -67,7 +67,9 @@ describe('useRealtime end-to-end handshake', () => {
     const client = (globalThis as any).__LAST_MQTT_CLIENT;
 
     // Simulate 'connect' lifecycle event
-    client._events['connect'] && client._events['connect']();
+    if (client._events['connect']) {
+      (client._events['connect'] as () => void)();
+    }
 
     // Expect subscriptions to include the default user and supplied workspace topic
     await waitFor(() => {
@@ -77,7 +79,12 @@ describe('useRealtime end-to-end handshake', () => {
 
     // Simulate an incoming MQTT message and ensure our handler receives it
     const payload = Buffer.from(JSON.stringify({ 'detail-type': 'REPL', detail: { msg: 'hello' } }));
-    client._events['message'] && client._events['message']('users/integration-user/signal', payload);
+    if (client._events['message']) {
+      (client._events['message'] as (topic: string, payload: Buffer) => void)(
+        'users/integration-user/signal',
+        payload
+      );
+    }
 
     await waitFor(() => {
       expect(onMessage).toHaveBeenCalledWith(
