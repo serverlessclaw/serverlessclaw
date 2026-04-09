@@ -57,7 +57,7 @@ export function useRealtime({
             token = `${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
             localStorage.setItem(tokenKey, token);
           }
-        } catch (e) {
+        } catch {
           // localStorage may be unavailable in some test environments; fall back to a generated token
           token = token || `${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
         }
