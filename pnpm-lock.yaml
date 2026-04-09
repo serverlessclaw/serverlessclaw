@@ -59,13 +59,13 @@ importers:
         version: 0.15.26(eslint@10.2.0(jiti@2.6.1))(typescript@6.0.2)
       '@aws-sdk/client-cloudfront':
         specifier: ^3.1024.0
-        version: 3.1026.0
+        version: 3.1027.0
       '@aws-sdk/client-lambda':
         specifier: ^3.1024.0
-        version: 3.1026.0
+        version: 3.1027.0
       '@aws-sdk/client-s3':
         specifier: ^3.1024.0
-        version: 3.1026.0
+        version: 3.1027.0
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.2.0(jiti@2.6.1))
@@ -180,40 +180,40 @@ importers:
         version: 0.82.0(zod@4.3.6)
       '@aws-sdk/client-bedrock-runtime':
         specifier: ^3.1010.0
-        version: 3.1026.0
+        version: 3.1027.0
       '@aws-sdk/client-cloudwatch':
         specifier: ^3.1014.0
-        version: 3.1026.0
+        version: 3.1027.0
       '@aws-sdk/client-cloudwatch-logs':
         specifier: ^3.1009.0
-        version: 3.1026.0
+        version: 3.1027.0
       '@aws-sdk/client-codebuild':
         specifier: ^3.1010.0
-        version: 3.1026.0
+        version: 3.1027.0
       '@aws-sdk/client-dynamodb':
         specifier: ^3.1009.0
-        version: 3.1026.0
+        version: 3.1027.0
       '@aws-sdk/client-eventbridge':
         specifier: ^3.1010.0
-        version: 3.1026.0
+        version: 3.1027.0
       '@aws-sdk/client-iot':
         specifier: ^3.1019.0
-        version: 3.1026.0
+        version: 3.1027.0
       '@aws-sdk/client-iot-data-plane':
         specifier: ^3.1009.0
-        version: 3.1026.0
+        version: 3.1027.0
       '@aws-sdk/client-lambda':
         specifier: ^3.1014.0
-        version: 3.1026.0
+        version: 3.1027.0
       '@aws-sdk/client-s3':
         specifier: ^3.1010.0
-        version: 3.1026.0
+        version: 3.1027.0
       '@aws-sdk/client-scheduler':
         specifier: ^3.1010.0
-        version: 3.1026.0
+        version: 3.1027.0
       '@aws-sdk/lib-dynamodb':
         specifier: ^3.1010.0
-        version: 3.1026.0(@aws-sdk/client-dynamodb@3.1026.0)
+        version: 3.1027.0(@aws-sdk/client-dynamodb@3.1027.0)
       '@aws/run-mcp-servers-with-aws-lambda':
         specifier: ^0.5.0
         version: 0.5.13(zod@4.3.6)
@@ -253,16 +253,16 @@ importers:
     dependencies:
       '@aws-sdk/client-codebuild':
         specifier: ^3.1004.0
-        version: 3.1026.0
+        version: 3.1027.0
       '@aws-sdk/client-dynamodb':
         specifier: ^3.1004.0
-        version: 3.1026.0
+        version: 3.1027.0
       '@aws-sdk/client-scheduler':
         specifier: ^3.1004.0
-        version: 3.1026.0
+        version: 3.1027.0
       '@aws-sdk/lib-dynamodb':
         specifier: ^3.1004.0
-        version: 3.1026.0(@aws-sdk/client-dynamodb@3.1026.0)
+        version: 3.1027.0(@aws-sdk/client-dynamodb@3.1027.0)
       '@opennextjs/aws':
         specifier: 3.9.16
         version: 3.9.16(next@16.2.2(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))
@@ -533,68 +533,68 @@ packages:
   '@aws-crypto/util@5.2.0':
     resolution: {integrity: sha512-4RkU9EsI6ZpBve5fseQlGNUWKMa1RLPQ1dnjnQoe07ldfIzcsGb5hC5W0Dm7u423KWzawlrpbjXBrXCEv9zazQ==}
 
-  '@aws-sdk/client-bedrock-runtime@3.1026.0':
-    resolution: {integrity: sha512-emaNVysHfMotugEkXuEnt/O5nsYtcTuu+18eFzs/zKsSVfWy1En2G2x0He8bVHUNWwiTMku88zr7VdR8p742bg==}
+  '@aws-sdk/client-bedrock-runtime@3.1027.0':
+    resolution: {integrity: sha512-Qcda5Z5Vb3LPVt7zNycEiiAo9Blk0JpEPJwz/sUBJby6/0zvTlo+/FIXlwYZ3TJHSgKCYiCaBqAB0WRlWDfLfQ==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/client-cloudfront@3.1026.0':
-    resolution: {integrity: sha512-rGHATV/wPBpkGFzOcoAdnKl+oCIg/T5Swt6B9GHbz0tdVvjiv74uAnjHQpJh41+ZQQ/a9TGUmuEAKGgpyuj4Cw==}
+  '@aws-sdk/client-cloudfront@3.1027.0':
+    resolution: {integrity: sha512-bAto48tQqKiuf6PZ4vvrq9slO94EKn50iIq2YgcCc4yUlNRTdX0Zh4YTM2y7Di3lTAHcwvQF3+oivXr8KPRegw==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/client-cloudfront@3.984.0':
     resolution: {integrity: sha512-couDuDLpJtoeWne/nYyJ+I+5ntBVdNgBVRTCoDaXuVV7OC3u/wz5Ps0+GogspEwMLEFoOJ8t691h3YXQtnpQTw==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/client-cloudwatch-logs@3.1026.0':
-    resolution: {integrity: sha512-8vJl3meqh1QQwmJc+PDCvptw0ekX+H7wXog8syIdCK4fgLsT9jq9aTfJi3HL2z2hkUyKrnRBuVRfleVbZmnpkQ==}
+  '@aws-sdk/client-cloudwatch-logs@3.1027.0':
+    resolution: {integrity: sha512-rz4SW35VSL3gEHM7NNjL6rYLXvvk7p7BjoGu5wcc0dT37hEmRgNzDUbzFUspGkLqXpzZzfFEKvI6KkXBYB0PIw==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/client-cloudwatch@3.1026.0':
-    resolution: {integrity: sha512-iOPmoe9c+w27NKmFSJvA9POPIf3OzW2yZ4SvMFcaejaJn8KEF+kdwaLEDDUjoYm/HJx+dfB1sG5qEugk3ldVbA==}
+  '@aws-sdk/client-cloudwatch@3.1027.0':
+    resolution: {integrity: sha512-nnQ3DsPizIplHE74zJXIHzixAniW9LL0e9hhqf6WcTVSWlSrR6ooqmrS/Ju9mZKFYyYmSbq6dubk42sb7Rom0w==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/client-codebuild@3.1026.0':
-    resolution: {integrity: sha512-pigsbwEsNth9bhDJfrPSSBY1WJJST9JfmtcOE2kwghUZpmlE6B/3tymh+A8YlKOcQYbdaaeZCqlnSG3C+a6oKw==}
+  '@aws-sdk/client-codebuild@3.1027.0':
+    resolution: {integrity: sha512-FgFQ6jw8yrPshfQM7YrFMlvxKLQdcXig6TsqvsZ6flbBCembg3dCKZaGBosjAYf0Ih70chVd+jCNOS5+jMrv+w==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/client-dynamodb@3.1026.0':
-    resolution: {integrity: sha512-IcguKvv47nFTH14AxrHFmF86hV35HA0KNEbKXMdWZav5leLfd/nkG28UP/tGht70NTOKQ6+oVlsmSSRbyubm3A==}
+  '@aws-sdk/client-dynamodb@3.1027.0':
+    resolution: {integrity: sha512-tB+4nzxpfvUA7ZgIu/FaYFS9WPnRIf5KNVIuJnxxm5JXXx6nOnmcmHjsbFH9W9uye6AH2HcQtgSqZlKd8dR+IQ==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/client-dynamodb@3.984.0':
     resolution: {integrity: sha512-8/Oft9MWQtbG6p9f8eY5fsKC2CcO5YVDlwive8eUYS9mEbgnyQxm68OyH26WvsSTykQ9QkIbR+fOG56RsIBODw==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/client-eventbridge@3.1026.0':
-    resolution: {integrity: sha512-lKutPrfyZOKH/1B5nNCpWWlicmeQl6Pj3lWbg9FLd3L7rC6lnjLN9PP2QfjB4dWy27y+8gkjXp5bmhOLoa5PrA==}
+  '@aws-sdk/client-eventbridge@3.1027.0':
+    resolution: {integrity: sha512-EM9pQKqjyolPJUVxXmz4ZMbsiFLMv6Rw+/EhSEfhoJ3sjrG/W99SvHjOuhHbiZoVM8La5uk0jYGOFW6WGtX/bQ==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/client-iot-data-plane@3.1026.0':
-    resolution: {integrity: sha512-4P4Ol3gUwuC6vEgoCZmOSXRn+IwT5duOy4VdjYu7C6ix4ZALHkxk9lnKgQQyYaoUtmqd2wKFesMIJBO3QLIC1Q==}
+  '@aws-sdk/client-iot-data-plane@3.1027.0':
+    resolution: {integrity: sha512-wQ1IcEXHdknHPOD0DyYKemUqrH9IkhfAURP17eyEJwJhUXhYp+To9Km3gCqXkJEzbhCqdWcvyoik9oqk09VsRA==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/client-iot@3.1026.0':
-    resolution: {integrity: sha512-JQp3KB1DkvT0tHQWFDdWm3WlT9xUnjhEsnM9IXjQMz6+up43j8GiCES8P126iIhBUAO/bBXpN7wuDZ+ivwLT8w==}
+  '@aws-sdk/client-iot@3.1027.0':
+    resolution: {integrity: sha512-n1gYSMheBHANrzYna65xsU8pw+vy8Ij4HTxYC4ARmcSG0lUL/wk7rWWYVFJJk/EFUeM2jU9ugrOsjkvHAaQPYw==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/client-lambda@3.1026.0':
-    resolution: {integrity: sha512-JjSAWJ73BSDxFjWTibpU5VHrPZzRkVOsrjSZFVzugSDHMEXXOOkJsQurhFeqku5Kd2auOJozV7X/sfv2O7Lk4A==}
+  '@aws-sdk/client-lambda@3.1027.0':
+    resolution: {integrity: sha512-uH/IlmRMDPidrtDDP6Au7uAbqsOCgTTvJuyS5FpheEUMG6VEdkRnKrMDZ34YX4rk1L9w2KcSZzK7DItHj3vKIg==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/client-lambda@3.984.0':
     resolution: {integrity: sha512-kqwNBIGNxGVhINwgN/UQfdsQkaMjbu9PFV2EhATWouV+RT60uMjK9JENgLDwbgJmEVbbnPsh9HaZ5KKwPSdiDg==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/client-s3@3.1026.0':
-    resolution: {integrity: sha512-tMP+s641FLSXdJazvYvuf38F7suWWv+wagTvShykPTffuFpBj5J9f7Rw0eKsauBcsjPSntiwBz9Gm0Tlh+cKfQ==}
+  '@aws-sdk/client-s3@3.1027.0':
+    resolution: {integrity: sha512-g6kaFE/pW0Tsoq/BYg8PfXa1hIZQBmyoKtmJTgcbdyzYWiOOu8vj4PZUE2kS8myita6avaY8Ama5IodHJ39lPA==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/client-s3@3.984.0':
     resolution: {integrity: sha512-7ny2Slr93Y+QniuluvcfWwyDi32zWQfznynL56Tk0vVh7bWrvS/odm8WP2nInKicRVNipcJHY2YInur6Q/9V0A==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/client-scheduler@3.1026.0':
-    resolution: {integrity: sha512-3Fp6czXaa3xYOS1UfSmwDMPbZKvxQhwg/lWrBnFNLQ78sQhNfpt4C4ljIXpQIH4HlX+DUun8Hs5yQ7ANI3BcxA==}
+  '@aws-sdk/client-scheduler@3.1027.0':
+    resolution: {integrity: sha512-3TBrXH0qaEvK17PjkoF0ut/pw7y+y5S5ciKsgM3nY+PSia3BvzG/o0r9b0yh+do7Il1Z+h6v5ulYJAdmD3RYYQ==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/client-sqs@3.984.0':
@@ -685,11 +685,11 @@ packages:
     resolution: {integrity: sha512-2Pi1kD0MDkMAxDHqvpi/hKMs9hXUYbj2GLEjCwy+0jzfLChAsF50SUYnOeTI+RztA+Ic4pnLAdB03f1e8nggxQ==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/lib-dynamodb@3.1026.0':
-    resolution: {integrity: sha512-cM4Ueigue372gdnqPCiVt0lWLI8xUZyYkJ3SLIQKxRcQHUYnT+hMEUoEdgjZQ6zwL345vQOa09iwCFxnAgLV1w==}
+  '@aws-sdk/lib-dynamodb@3.1027.0':
+    resolution: {integrity: sha512-YOgLnzMOYHaZj+XstObbRDDrQSDr8n+xFMNAGX28fF2H9aUKilQGG5z8Jjk0t0HbCI1kJR4fULMFjAnFERfDFQ==}
     engines: {node: '>=20.0.0'}
     peerDependencies:
-      '@aws-sdk/client-dynamodb': ^3.1026.0
+      '@aws-sdk/client-dynamodb': ^3.1027.0
 
   '@aws-sdk/middleware-bucket-endpoint@3.972.9':
     resolution: {integrity: sha512-COToYKgquDyligbcAep7ygs48RK+mwe/IYprq4+TSrVFzNOYmzWvHf6werpnKV5VYpRiwdn+Wa5ZXkPqLVwcTg==}
@@ -774,6 +774,10 @@ packages:
 
   '@aws-sdk/token-providers@3.1026.0':
     resolution: {integrity: sha512-Ieq/HiRrbEtrYP387Nes0XlR7H1pJiJOZKv+QyQzMYpvTiDs0VKy2ZB3E2Zf+aFovWmeE7lRE4lXyF7dYM6GgA==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/token-providers@3.1027.0':
+    resolution: {integrity: sha512-mI3Jm14cM5sNKc7aNX3cqJe/rFQ2Zzx7x5W8WUtxj2lVxcH2RGYhqI3hK9nnImY6Ec5MeGXCVPjl/q6Mz5HmSA==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/types@3.973.6':
@@ -3765,8 +3769,8 @@ packages:
   fast-xml-builder@1.1.4:
     resolution: {integrity: sha512-f2jhpN4Eccy0/Uz9csxh3Nu6q4ErKxf0XIsasomfOihuSUa3/xw6w8dnOtCDgEItQFJG8KyXPzQXzcODDrrbOg==}
 
-  fast-xml-parser@5.5.10:
-    resolution: {integrity: sha512-go2J2xODMc32hT+4Xr/bBGXMaIoiCwrwp2mMtAvKyvEFW6S/v5Gn2pBmE4nvbwNjGhpcAiOwEv7R6/GZ6XRa9w==}
+  fast-xml-parser@5.5.11:
+    resolution: {integrity: sha512-QL0eb0YbSTVWF6tTf1+LEMSgtCEjBYPpnAjoLC8SscESlAjXEIRJ7cHtLG0pLeDFaZLa4VKZLArtA/60ZS7vyA==}
     hasBin: true
 
   fastq@1.20.1:
@@ -6349,7 +6353,7 @@ snapshots:
       '@smithy/util-utf8': 2.3.0
       tslib: 2.8.1
 
-  '@aws-sdk/client-bedrock-runtime@3.1026.0':
+  '@aws-sdk/client-bedrock-runtime@3.1027.0':
     dependencies:
       '@aws-crypto/sha256-browser': 5.2.0
       '@aws-crypto/sha256-js': 5.2.0
@@ -6363,7 +6367,7 @@ snapshots:
       '@aws-sdk/middleware-user-agent': 3.972.29
       '@aws-sdk/middleware-websocket': 3.972.15
       '@aws-sdk/region-config-resolver': 3.972.11
-      '@aws-sdk/token-providers': 3.1026.0
+      '@aws-sdk/token-providers': 3.1027.0
       '@aws-sdk/types': 3.973.7
       '@aws-sdk/util-endpoints': 3.996.6
       '@aws-sdk/util-user-agent-browser': 3.972.9
@@ -6401,7 +6405,7 @@ snapshots:
     transitivePeerDependencies:
       - aws-crt
 
-  '@aws-sdk/client-cloudfront@3.1026.0':
+  '@aws-sdk/client-cloudfront@3.1027.0':
     dependencies:
       '@aws-crypto/sha256-browser': 5.2.0
       '@aws-crypto/sha256-js': 5.2.0
@@ -6493,7 +6497,7 @@ snapshots:
     transitivePeerDependencies:
       - aws-crt
 
-  '@aws-sdk/client-cloudwatch-logs@3.1026.0':
+  '@aws-sdk/client-cloudwatch-logs@3.1027.0':
     dependencies:
       '@aws-crypto/sha256-browser': 5.2.0
       '@aws-crypto/sha256-js': 5.2.0
@@ -6540,7 +6544,7 @@ snapshots:
     transitivePeerDependencies:
       - aws-crt
 
-  '@aws-sdk/client-cloudwatch@3.1026.0':
+  '@aws-sdk/client-cloudwatch@3.1027.0':
     dependencies:
       '@aws-crypto/sha256-browser': 5.2.0
       '@aws-crypto/sha256-js': 5.2.0
@@ -6586,7 +6590,7 @@ snapshots:
     transitivePeerDependencies:
       - aws-crt
 
-  '@aws-sdk/client-codebuild@3.1026.0':
+  '@aws-sdk/client-codebuild@3.1027.0':
     dependencies:
       '@aws-crypto/sha256-browser': 5.2.0
       '@aws-crypto/sha256-js': 5.2.0
@@ -6630,7 +6634,7 @@ snapshots:
     transitivePeerDependencies:
       - aws-crt
 
-  '@aws-sdk/client-dynamodb@3.1026.0':
+  '@aws-sdk/client-dynamodb@3.1027.0':
     dependencies:
       '@aws-crypto/sha256-browser': 5.2.0
       '@aws-crypto/sha256-js': 5.2.0
@@ -6724,7 +6728,7 @@ snapshots:
     transitivePeerDependencies:
       - aws-crt
 
-  '@aws-sdk/client-eventbridge@3.1026.0':
+  '@aws-sdk/client-eventbridge@3.1027.0':
     dependencies:
       '@aws-crypto/sha256-browser': 5.2.0
       '@aws-crypto/sha256-js': 5.2.0
@@ -6769,7 +6773,7 @@ snapshots:
     transitivePeerDependencies:
       - aws-crt
 
-  '@aws-sdk/client-iot-data-plane@3.1026.0':
+  '@aws-sdk/client-iot-data-plane@3.1027.0':
     dependencies:
       '@aws-crypto/sha256-browser': 5.2.0
       '@aws-crypto/sha256-js': 5.2.0
@@ -6814,7 +6818,7 @@ snapshots:
     transitivePeerDependencies:
       - aws-crt
 
-  '@aws-sdk/client-iot@3.1026.0':
+  '@aws-sdk/client-iot@3.1027.0':
     dependencies:
       '@aws-crypto/sha256-browser': 5.2.0
       '@aws-crypto/sha256-js': 5.2.0
@@ -6858,7 +6862,7 @@ snapshots:
     transitivePeerDependencies:
       - aws-crt
 
-  '@aws-sdk/client-lambda@3.1026.0':
+  '@aws-sdk/client-lambda@3.1027.0':
     dependencies:
       '@aws-crypto/sha256-browser': 5.2.0
       '@aws-crypto/sha256-js': 5.2.0
@@ -6956,7 +6960,7 @@ snapshots:
     transitivePeerDependencies:
       - aws-crt
 
-  '@aws-sdk/client-s3@3.1026.0':
+  '@aws-sdk/client-s3@3.1027.0':
     dependencies:
       '@aws-crypto/sha1-browser': 5.2.0
       '@aws-crypto/sha256-browser': 5.2.0
@@ -7076,7 +7080,7 @@ snapshots:
     transitivePeerDependencies:
       - aws-crt
 
-  '@aws-sdk/client-scheduler@3.1026.0':
+  '@aws-sdk/client-scheduler@3.1027.0':
     dependencies:
       '@aws-crypto/sha256-browser': 5.2.0
       '@aws-crypto/sha256-js': 5.2.0
@@ -7416,11 +7420,11 @@ snapshots:
       '@smithy/types': 4.14.0
       tslib: 2.8.1
 
-  '@aws-sdk/lib-dynamodb@3.1026.0(@aws-sdk/client-dynamodb@3.1026.0)':
+  '@aws-sdk/lib-dynamodb@3.1027.0(@aws-sdk/client-dynamodb@3.1027.0)':
     dependencies:
-      '@aws-sdk/client-dynamodb': 3.1026.0
+      '@aws-sdk/client-dynamodb': 3.1027.0
       '@aws-sdk/core': 3.973.27
-      '@aws-sdk/util-dynamodb': 3.996.2(@aws-sdk/client-dynamodb@3.1026.0)
+      '@aws-sdk/util-dynamodb': 3.996.2(@aws-sdk/client-dynamodb@3.1027.0)
       '@smithy/core': 3.23.14
       '@smithy/smithy-client': 4.12.9
       '@smithy/types': 4.14.0
@@ -7659,6 +7663,18 @@ snapshots:
     transitivePeerDependencies:
       - aws-crt
 
+  '@aws-sdk/token-providers@3.1027.0':
+    dependencies:
+      '@aws-sdk/core': 3.973.27
+      '@aws-sdk/nested-clients': 3.996.19
+      '@aws-sdk/types': 3.973.7
+      '@smithy/property-provider': 4.2.13
+      '@smithy/shared-ini-file-loader': 4.4.8
+      '@smithy/types': 4.14.0
+      tslib: 2.8.1
+    transitivePeerDependencies:
+      - aws-crt
+
   '@aws-sdk/types@3.973.6':
     dependencies:
       '@smithy/types': 4.14.0
@@ -7673,9 +7689,9 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1026.0)':
+  '@aws-sdk/util-dynamodb@3.996.2(@aws-sdk/client-dynamodb@3.1027.0)':
     dependencies:
-      '@aws-sdk/client-dynamodb': 3.1026.0
+      '@aws-sdk/client-dynamodb': 3.1027.0
       tslib: 2.8.1
 
   '@aws-sdk/util-endpoints@3.984.0':
@@ -7724,7 +7740,7 @@ snapshots:
   '@aws-sdk/xml-builder@3.972.17':
     dependencies:
       '@smithy/types': 4.14.0
-      fast-xml-parser: 5.5.10
+      fast-xml-parser: 5.5.11
       tslib: 2.8.1
 
   '@aws/lambda-invoke-store@0.2.4': {}
@@ -7732,7 +7748,7 @@ snapshots:
   '@aws/run-mcp-servers-with-aws-lambda@0.5.13(zod@4.3.6)':
     dependencies:
       '@aws-crypto/sha256-js': 5.2.0
-      '@aws-sdk/client-lambda': 3.1026.0
+      '@aws-sdk/client-lambda': 3.1027.0
       '@aws-sdk/credential-provider-node': 3.972.29
       '@aws-sdk/protocol-http': 3.374.0
       '@aws-sdk/types': 3.973.6
@@ -10850,7 +10866,7 @@ snapshots:
     dependencies:
       path-expression-matcher: 1.4.0
 
-  fast-xml-parser@5.5.10:
+  fast-xml-parser@5.5.11:
     dependencies:
       fast-xml-builder: 1.1.4
       path-expression-matcher: 1.4.0
@@ -11308,7 +11324,7 @@ snapshots:
 
   jest-worker@27.5.1:
     dependencies:
-      '@types/node': 25.5.2
+      '@types/node': 24.12.2
       merge-stream: 2.0.0
       supports-color: 8.1.1
 
