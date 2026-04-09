@@ -17,6 +17,7 @@
   "rebaseConflictedPrs": true,
   "rebaseWhen": "behind-base-branch",
   "semanticCommits": "enabled",
+  "ignoreTests": false,
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
