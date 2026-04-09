@@ -37,7 +37,6 @@ export function createDeployer(ctx: DeployerContext) {
           Action: [
             'cloudformation:*',
             's3:*',
-            'iam:*',
             'lambda:*',
             'apigateway:*',
             'route53:*',
@@ -51,8 +50,13 @@ export function createDeployer(ctx: DeployerContext) {
             'codebuild:*',
             'kms:*',
             'iot:*',
+            // Tightened IAM for deployment (must pass roles for agents)
+            'iam:PassRole',
+            'iam:GetRole',
+            'iam:ListRolePolicies',
+            'iam:GetRolePolicy',
           ],
-          Resource: '*', // Still somewhat broad but restricted by service
+          Resource: '*',
           Condition: {
             StringEquals: {
               'aws:ResourceTag/sst:app': $app.name,
@@ -60,11 +64,10 @@ export function createDeployer(ctx: DeployerContext) {
             },
           },
         },
-        // Exceptions for resources that don't always support tagging or are global
+        // Exception: IAM management and global listing
         {
           Effect: 'Allow',
           Action: [
-            'iam:PassRole',
             'iam:CreateServiceLinkedRole',
             'route53:ListHostedZones',
             'acm:ListCertificates',

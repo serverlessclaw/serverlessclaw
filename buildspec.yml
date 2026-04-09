@@ -78,7 +78,12 @@ phases:
 
           echo "Running Tier 3 verification (Health + E2E) in parallel..."
           make test-tier-3 URL=$API_URL > /tmp/ci-logs/test-tier-3.log 2>&1
-        fi
+          TEST_TIER_3_EXIT=$?
+          if [ $TEST_TIER_3_EXIT -ne 0 ]; then
+            echo "ERROR: Tier 3 verification failed. Blocking trunk sync."
+            npx tsx scripts/ci/generate-manifest.ts /tmp/ci-logs .
+            exit 1
+          fi
       - |
         if [ "$CODEBUILD_BUILD_SUCCEEDING" = "1" ] && [ "$SYNC_ONLY" != "true" ]; then
           echo "Running release-minimum blocking checks (tests + security + docs)..."

@@ -171,7 +171,8 @@ describe('JiraAdapter', () => {
   });
 
   it('should verify valid secret in query', () => {
-    expect(adapter.verifySecret({}, { secret: secret })).toBe(true);
+    // Query-based secret support has been removed for security (don't allow secrets in URLs)
+    expect(adapter.verifySecret({}, { secret: secret })).toBe(false);
   });
 
   it('should reject invalid secret', () => {

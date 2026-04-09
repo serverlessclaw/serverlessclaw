@@ -49,7 +49,8 @@ describe('SlackAdapter', () => {
   it('should verify signature correctly', () => {
     // Pre-computed HMAC-SHA256 signature for testing
     const body = '{"type":"event_callback"}';
-    const timestamp = '1234567890';
+    // Use a live timestamp so the anti-replay window check passes in tests
+    const timestamp = Math.floor(Date.now() / 1000).toString();
     const sigBaseString = `v0:${timestamp}:${body}`;
     const expectedSig = `v0=${createHmac('sha256', signingSecret)
       .update(sigBaseString)

@@ -520,7 +520,7 @@ export function createAgents(
   const bridge = new sst.aws.Function('RealtimeBridge', {
     handler: 'core/handlers/bridge.handler',
     dev: liveInLocalOnly,
-    link: [ctx.realtime!, bus],
+    link: [...(ctx.realtime ? [ctx.realtime] : []), bus],
     permissions: basePermissions,
     architecture: LAMBDA_ARCHITECTURE,
     nodejs: { loader: NODEJS_LOADERS },

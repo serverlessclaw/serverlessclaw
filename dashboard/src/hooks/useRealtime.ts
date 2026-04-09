@@ -47,15 +47,30 @@ export function useRealtime({
           ? config.realtime.url
           : `${config.realtime.url}/mqtt`;
 
+        // Ensure we send an auth token expected by the IoT custom authorizer.
+        // Persist a lightweight client token in localStorage when available so reconnects reuse it.
+        let token: string | null = null;
+        try {
+          const tokenKey = 'sc_realtime_token';
+          token = localStorage.getItem(tokenKey);
+          if (!token) {
+            token = `${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+            localStorage.setItem(tokenKey, token);
+          }
+        } catch (e) {
+          // localStorage may be unavailable in some test environments; fall back to a generated token
+          token = token || `${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+        }
+
         const mqttUrl = config.realtime.authorizer
-          ? `${baseUrl}?x-amz-customauthorizer-name=${config.realtime.authorizer}`
-          : baseUrl;
+          ? `${baseUrl}?x-amz-customauthorizer-name=${config.realtime.authorizer}&token=${encodeURIComponent(
+              token
+            )}`
+          : `${baseUrl}?token=${encodeURIComponent(token)}`;
 
         const client = mqtt.connect(mqttUrl, {
           protocol: 'wss',
           clientId: `dashboard-${Math.random().toString(16).slice(2, 10)}`,
-          username: 'dashboardUser',
-          password: 'auth-token',
           clean: true,
           connectTimeout: 30000,
           reconnectPeriod: 5000,

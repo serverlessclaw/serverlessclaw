@@ -14,16 +14,43 @@ ClawCenter uses **AWS IoT Core** to provide low-latency, bi-directional communic
 
 | Channel Type | Endpoint (MQTT Topic) | Purpose |
 | :--- | :--- | :--- |
-| **Agent Chunks** | `user/{userId}/chunks` | Streaming text fragments from agents |
-| **System Signals** | `user/{userId}/signals` | Deployment status and health alerts |
-| **Trace Updates** | `user/{userId}/traces` | Real-time DAG execution updates |
+| **Agent Chunks** | `users/{userId}/chunks` | Streaming text fragments from agents |
+| **System Signals** | `users/{userId}/signal` | Deployment status and health alerts and per-session signals |
+| **Trace Updates** | `users/{userId}/traces` | Real-time DAG execution updates |
+
+#### Topic Taxonomy (application namespaces)
+
+The realtime Bridge and publisher code use these application-level topic namespaces which the IoT custom authorizer grants access to:
+
+- `users/{userId}/...` (primary per-user channel, includes `signal`, `chunks`, `sessions/{sessionId}/signal`, `traces`, etc.)
+- `workspaces/{workspaceId}/signal`
+- `collaborations/{collaborationId}/signal`
+- `system/metrics` (global system telemetry)
+
+These topics are used by the `RealtimeBridge` implementation which routes EventBridge events into the appropriate MQTT topic (see core/handlers/bridge.ts).
 
 #### Signal Flow
 
 1. **Backend**: A Lambda agent emits a signal to the `AgentBus`.
 2. **Bridge**: The `Real-time Bridge` handler captures the event.
 3. **IoT**: The Bridge publishes the event to the user's MQTT topic.
-4. **Browser**: The dashboard (via `useMQTT` hook) receives and renders the signal.
+4. **Browser**: The dashboard (via `useRealtime` hook) receives and renders the signal.
+
+---
+
+#### Realtime Auth Contract
+
+The dashboard connects to AWS IoT using a WebSocket `wss://.../mqtt` URL returned by the config API. Connection details are exposed by the server via the dashboard config endpoint (`/api/config`) and consumed by the client `useRealtime` hook.
+
+- Connection URL: the client connects to the WebSocket path at the `realtime.url` value and appends query parameters:
+	- `x-amz-customauthorizer-name=<AuthorizerName>` — *optional*; included when the IoT custom authorizer name is provided by the config API.
+	- `token=<clientToken>` — **required** by the custom authorizer. The dashboard will generate and persist a short, non-sensitive client token in browser `localStorage` under the key `sc_realtime_token` so reconnects reuse the same token.
+
+- Token constraints: the custom authorizer requires a token string (server-side logic expects at least 10 characters). The token is not a credential with IAM rights; it is a lightweight client identifier used by the custom authorizer for session scoping.
+
+- Implementation notes: The `useRealtime` hook constructs the full `mqtt.connect(...)` WebSocket URL (adds the authorizer name when present and the `token` query param), uses `protocol: 'wss'` and a generated `clientId`, and manages default subscriptions to `users/{userId}/#`.
+
+- Important: do **not** rely on HTTP Basic username/password placeholders for IoT WebSocket auth — the correct contract is the query-parameter `token` (and optional custom authorizer name) as implemented by `useRealtime` and validated by `core/handlers/realtime-auth.ts`.
 
 ---
 

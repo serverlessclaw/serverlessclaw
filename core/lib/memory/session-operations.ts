@@ -149,7 +149,7 @@ export async function saveConversationMeta(
       timestamp: stableSortKey,
     },
     UpdateExpression:
-      'SET sessionId = :sessionId, #tp = :type, expiresAt = :exp, title = :title, content = :content, isPinned = :pinned, updatedAt = :now',
+      'SET sessionId = :sessionId, #tp = :type, expiresAt = :exp, title = :title, content = :content, isPinned = :pinned, updatedAt = :now, updatedAtNumeric = :now',
     ExpressionAttributeNames: {
       '#tp': 'type',
     },

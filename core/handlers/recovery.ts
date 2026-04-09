@@ -115,13 +115,16 @@ export const handler = async (_event?: { detail: Record<string, unknown> }): Pro
   try {
     const healthResult = await checkCognitiveHealth();
 
+    // Combine cognitive health with HTTP reachability for a single overall health flag
+    const overallOk = healthResult.ok && httpHealthy;
+
     await db.send(
       new PutCommand({
         TableName: typedResource.MemoryTable.name,
         Item: {
           userId: `${MEMORY_KEYS.HEALTH_PREFIX}${Date.now()}`,
           timestamp: Date.now(),
-          ok: healthResult.ok,
+          ok: overallOk,
           summary: healthResult.summary,
           details: healthResult.results,
           httpHealthy,

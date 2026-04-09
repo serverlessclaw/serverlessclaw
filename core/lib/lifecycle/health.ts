@@ -11,11 +11,11 @@ import { emitEvent, EventPriority } from '../utils/bus';
 import { formatErrorMessage } from '../utils/error';
 import { ProviderManager } from '../providers';
 
-// Default clients for backward compatibility - can be overridden for testing
-const defaultEventBridge = new EventBridgeClient({});
-const defaultDynamoDbDoc = DynamoDBDocumentClient.from(new DynamoDBClient({}));
-const defaultS3 = new S3Client({});
-const defaultIot = new IoTClient({});
+// Default clients for backward compatibility - lazy initialized to avoid issues in tests
+let defaultEventBridge: EventBridgeClient | undefined;
+let defaultDynamoDbDoc: DynamoDBDocumentClient | undefined;
+let defaultS3: S3Client | undefined;
+let defaultIot: IoTClient | undefined;
 
 // Allow tests to inject custom clients
 let injectedEventBridge: EventBridgeClient | undefined;
@@ -54,19 +54,27 @@ export function setIotClient(client: IoTClient): void {
 }
 
 function getEventBridgeClient(): EventBridgeClient {
-  return injectedEventBridge ?? defaultEventBridge;
+  if (injectedEventBridge) return injectedEventBridge;
+  if (!defaultEventBridge) defaultEventBridge = new EventBridgeClient({});
+  return defaultEventBridge;
 }
 
 function getDynamoDbClient(): DynamoDBDocumentClient {
-  return injectedDynamoDbDoc ?? defaultDynamoDbDoc;
+  if (injectedDynamoDbDoc) return injectedDynamoDbDoc;
+  if (!defaultDynamoDbDoc) defaultDynamoDbDoc = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+  return defaultDynamoDbDoc;
 }
 
 function getS3Client(): S3Client {
-  return injectedS3 ?? defaultS3;
+  if (injectedS3) return injectedS3;
+  if (!defaultS3) defaultS3 = new S3Client({});
+  return defaultS3;
 }
 
 function getIotClient(): IoTClient {
-  return injectedIot ?? defaultIot;
+  if (injectedIot) return injectedIot;
+  if (!defaultIot) defaultIot = new IoTClient({});
+  return defaultIot;
 }
 
 export interface HealthIssue {

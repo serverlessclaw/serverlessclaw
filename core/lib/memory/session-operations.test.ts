@@ -94,6 +94,24 @@ describe('session-operations', () => {
     });
   });
 
+  describe('saveConversationMeta', () => {
+    it('should save session meta with updatedAtNumeric', async () => {
+      await saveConversationMeta(mockBase, 'user123', 'sess_123', {
+        title: 'My Session',
+        lastMessage: 'Content',
+      });
+
+      expect(mockBase.updateItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          UpdateExpression: expect.stringContaining('updatedAtNumeric = :now'),
+          ExpressionAttributeValues: expect.objectContaining({
+            ':now': expect.any(Number),
+          }),
+        })
+      );
+    });
+  });
+
   describe('deleteConversation', () => {
     it('should delete existing conversation', async () => {
       const now = Date.now();

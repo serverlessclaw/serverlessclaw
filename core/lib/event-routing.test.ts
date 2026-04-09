@@ -34,16 +34,8 @@ describe('event-routing', () => {
       EventType.COGNITIVE_HEALTH_CHECK,
       EventType.STRATEGIC_TIE_BREAK,
       EventType.REPORT_BACK,
-      EventType.RESEARCH_TASK,
-      EventType.CODER_TASK,
-      EventType.EVOLUTION_PLAN,
-      EventType.REFLECT_TASK,
-      EventType.MERGER_TASK,
       EventType.DAG_TASK_COMPLETED,
       EventType.DAG_TASK_FAILED,
-      'facilitator_task',
-      'critic_task',
-      'qa_task',
     ];
 
     it.each(REQUIRED_EVENT_TYPES)('should have routing entry for %s', (eventType) => {
@@ -249,6 +241,14 @@ describe('event-routing', () => {
       EventType.HANDOFF,
       EventType.HEALTH_ALERT,
       EventType.CHUNK,
+      EventType.RESEARCH_TASK,
+      EventType.CODER_TASK,
+      EventType.EVOLUTION_PLAN,
+      EventType.REFLECT_TASK,
+      EventType.MERGER_TASK,
+      EventType.FACILITATOR_TASK,
+      EventType.CRITIC_TASK,
+      EventType.QA_TASK,
     ];
 
     it('should document which event types are intentionally not routed', () => {
