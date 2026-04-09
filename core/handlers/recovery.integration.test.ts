@@ -45,6 +45,16 @@ vi.mock('sst', () => ({
   },
 }));
 
+const healthMocks = vi.hoisted(() => ({
+  checkCognitiveHealth: vi.fn(),
+  reportHealthIssue: vi.fn(),
+}));
+
+vi.mock('../lib/lifecycle/health', () => ({
+  checkCognitiveHealth: healthMocks.checkCognitiveHealth,
+  reportHealthIssue: healthMocks.reportHealthIssue,
+}));
+
 vi.mock('../lib/logger', () => ({
   logger: {
     info: vi.fn(),
@@ -66,6 +76,12 @@ describe('Recovery Switch Integration', () => {
   });
 
   it('should execute full recovery flow: health check fail -> lock -> LKG -> CodeBuild rollback', async () => {
+    healthMocks.checkCognitiveHealth.mockResolvedValue({
+      ok: false,
+      timestamp: Date.now(),
+      results: {},
+      summary: 'Critical failure',
+    });
     memoryMocks.getLatestLKGHash.mockResolvedValue('abc12345');
     ddbMock.on(PutCommand).resolves({});
     codeBuildMock.on(StartBuildCommand).resolves({ build: { id: 'recovery-build-1' } });
@@ -96,6 +112,12 @@ describe('Recovery Switch Integration', () => {
 
   it('should persist health result to DynamoDB before checking status', async () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 });
+    healthMocks.checkCognitiveHealth.mockResolvedValue({
+      ok: false,
+      timestamp: Date.now(),
+      results: {},
+      summary: 'Failure recorded',
+    });
     memoryMocks.incrementRecoveryAttemptCount.mockResolvedValue(1);
     memoryMocks.getLatestLKGHash.mockResolvedValue('def67890');
     ddbMock.on(PutCommand).resolves({});

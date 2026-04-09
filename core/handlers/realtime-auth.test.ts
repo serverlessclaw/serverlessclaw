@@ -44,11 +44,24 @@ describe('Realtime Auth Handler', () => {
     expect(connectStatement.Resource).toContain(response.principalId);
 
     const pubRecvStatement = policy.Statement.find(
-      (s: any) => Array.isArray(s.Action) && s.Action.includes('iot:Publish')
+      (s: any) =>
+        Array.isArray(s.Action) &&
+        s.Action.includes('iot:Publish') &&
+        (typeof s.Resource === 'string'
+          ? s.Resource.includes(response.principalId)
+          : Array.isArray(s.Resource) &&
+            s.Resource.some((r: string) => r.includes(response.principalId)))
     );
-    expect(pubRecvStatement.Resource).toContain(response.principalId);
+    expect(pubRecvStatement).toBeDefined();
 
-    const subStatement = policy.Statement.find((s: any) => s.Action === 'iot:Subscribe');
-    expect(subStatement.Resource).toContain(response.principalId);
+    const subStatement = policy.Statement.find(
+      (s: any) =>
+        s.Action === 'iot:Subscribe' &&
+        (typeof s.Resource === 'string'
+          ? s.Resource.includes(response.principalId)
+          : Array.isArray(s.Resource) &&
+            s.Resource.some((r: string) => r.includes(response.principalId)))
+    );
+    expect(subStatement).toBeDefined();
   });
 });
