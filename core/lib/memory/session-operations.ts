@@ -139,7 +139,7 @@ export async function saveConversationMeta(
       h ^= BigInt(sessionId.charCodeAt(i));
       h = (h * BigInt('0x100000001b3')) & BigInt('0xffffffffffffffff');
     }
-    // Use full 64-bit hash as string for Sort Key to eliminate collision risk in DynamoDB String Sort Key
+    // Use full 64-bit hash as string for Sort Key to minimize collision risk in DynamoDB String Sort Key
     stableSortKey = h.toString();
   }
 

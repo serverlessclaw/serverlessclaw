@@ -3,7 +3,7 @@ export {
   checkToolHealth,
   checkCognitiveHealth,
   setEventBridgeClient,
-  setDynamoDbClient,
+  setDynamoDbDocClient,
   setS3Client,
   setIotClient,
   reportHealthIssue,

@@ -97,9 +97,9 @@ export const CONFIG_DEFAULTS = {
     description: 'Days to retain agent execution traces.',
   },
 
-  /** TTL for messages (days). Default: 7 */
+  /** TTL for messages (days). Default: 30 */
   MESSAGE_RETENTION_DAYS: {
-    code: 7,
+    code: 30,
     hotSwappable: false,
     configKey: null,
     description: 'Days to retain conversation messages.',

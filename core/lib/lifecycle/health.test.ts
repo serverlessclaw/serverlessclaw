@@ -7,7 +7,7 @@ import {
   reportHealthIssue,
   runDeepHealthCheck,
   setEventBridgeClient,
-  setDynamoDbClient,
+  setDynamoDbDocClient,
   setS3Client,
   setIotClient,
 } from './health';
@@ -82,7 +82,7 @@ describe('Cognitive Health Probes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setEventBridgeClient(mockEB);
-    setDynamoDbClient(mockDB);
+    setDynamoDbDocClient(mockDB);
     setS3Client(mockS3);
     setIotClient(mockIot);
   });

@@ -1,5 +1,6 @@
 import { EventBridgeClient, ListEventBusesCommand } from '@aws-sdk/client-eventbridge';
 import { DynamoDBClient, GetItemCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { S3Client, ListBucketsCommand } from '@aws-sdk/client-s3';
 import { IoTClient, DescribeEndpointCommand } from '@aws-sdk/client-iot';
 import { Resource } from 'sst';
@@ -12,13 +13,13 @@ import { ProviderManager } from '../providers';
 
 // Default clients for backward compatibility - can be overridden for testing
 const defaultEventBridge = new EventBridgeClient({});
-const defaultDynamodb = new DynamoDBClient({});
+const defaultDynamoDbDoc = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const defaultS3 = new S3Client({});
 const defaultIot = new IoTClient({});
 
 // Allow tests to inject custom clients
 let injectedEventBridge: EventBridgeClient | undefined;
-let injectedDynamodb: DynamoDBClient | undefined;
+let injectedDynamoDbDoc: DynamoDBDocumentClient | undefined;
 let injectedS3: S3Client | undefined;
 let injectedIot: IoTClient | undefined;
 
@@ -31,11 +32,11 @@ export function setEventBridgeClient(client: EventBridgeClient): void {
 }
 
 /**
- * Sets a custom DynamoDB client for testing purposes.
- * @param client - The DynamoDB client to use
+ * Sets a custom DynamoDB Document Client for testing purposes.
+ * @param client - The DynamoDB Document Client to use
  */
-export function setDynamoDbClient(client: DynamoDBClient): void {
-  injectedDynamodb = client;
+export function setDynamoDbDocClient(client: DynamoDBDocumentClient): void {
+  injectedDynamoDbDoc = client;
 }
 
 /**
@@ -56,8 +57,8 @@ function getEventBridgeClient(): EventBridgeClient {
   return injectedEventBridge ?? defaultEventBridge;
 }
 
-function getDynamoDbClient(): DynamoDBClient {
-  return injectedDynamodb ?? defaultDynamodb;
+function getDynamoDbClient(): DynamoDBDocumentClient {
+  return injectedDynamoDbDoc ?? defaultDynamoDbDoc;
 }
 
 function getS3Client(): S3Client {
@@ -91,8 +92,128 @@ export interface CognitiveHealthResult {
     bus: ProbeResult;
     tools: ProbeResult;
     providers: ProbeResult;
+    coherence?: CoherenceResult;
   };
   summary: string;
+}
+
+export interface CoherenceResult {
+  ok: boolean;
+  traceCount: number;
+  avgStepCount: number;
+  stepDeviation: number;
+  errorRate: number;
+  anomalyScore: number;
+  issues: string[];
+}
+
+/**
+ * Checks reasoning coherence from recent traces by analyzing step patterns.
+ */
+export async function checkTraceCoherence(): Promise<CoherenceResult> {
+  const typedResource = Resource as unknown as SSTResource;
+  const now = Date.now();
+  const recentWindow = now - 30 * 60 * 1000; // Last 30 minutes
+  const issues: string[] = [];
+
+  try {
+    const scanResult = await getDynamoDbClient().send(
+      new ScanCommand({
+        TableName: typedResource.TraceTable.name,
+        FilterExpression: 'timestamp > :recentWindow',
+        ExpressionAttributeValues: {
+          ':recentWindow': Math.floor(recentWindow / 1000),
+        } as Record<string, unknown>,
+        Limit: 100,
+      })
+    );
+
+    const traces = (scanResult.Items ?? []) as Record<string, unknown>[];
+    const traceCount = traces.length;
+
+    if (traceCount === 0) {
+      return {
+        ok: true,
+        traceCount: 0,
+        avgStepCount: 0,
+        stepDeviation: 0,
+        errorRate: 0,
+        anomalyScore: 0,
+        issues: [],
+      };
+    }
+
+    const stepCounts: number[] = [];
+    let errors = 0;
+    let totalSteps = 0;
+
+    for (const trace of traces) {
+      const steps = (trace.steps as unknown[]) ?? [];
+      stepCounts.push(steps.length);
+      totalSteps += steps.length;
+
+      const status = trace.status as string;
+      if (status === 'failed' || status === 'error') {
+        errors++;
+      }
+
+      const endTime = trace.endTime as number | undefined;
+      if (endTime) {
+        const duration = endTime - (trace.timestamp as number);
+        if (duration > 300000) {
+          issues.push(
+            `Trace ${trace.traceId} exceeded 5min timeout (${Math.round(duration / 1000)}s)`
+          );
+        }
+      }
+    }
+
+    const avgStepCount = totalSteps / traceCount;
+    const variance =
+      stepCounts.reduce((sum, count) => sum + Math.pow(count - avgStepCount, 2), 0) / traceCount;
+    const stepDeviation = Math.sqrt(variance);
+    const errorRate = errors / traceCount;
+
+    const anomalyScore = Math.min(
+      (stepDeviation / Math.max(avgStepCount, 1)) * 0.4 + errorRate * 0.6,
+      1.0
+    );
+
+    if (errorRate > 0.3) {
+      issues.push(`High error rate: ${(errorRate * 100).toFixed(1)}%`);
+    }
+    if (stepDeviation > avgStepCount * 0.5) {
+      issues.push(
+        `High step count variance: std dev ${stepDeviation.toFixed(1)} vs avg ${avgStepCount.toFixed(1)}`
+      );
+    }
+    if (anomalyScore > 0.5) {
+      issues.push(`Anomaly detected: score ${(anomalyScore * 100).toFixed(1)}%`);
+    }
+
+    const ok = issues.length === 0 && errorRate < 0.3 && anomalyScore < 0.5;
+
+    return {
+      ok,
+      traceCount,
+      avgStepCount: Math.round(avgStepCount * 10) / 10,
+      stepDeviation: Math.round(stepDeviation * 10) / 10,
+      errorRate: Math.round(errorRate * 1000) / 1000,
+      anomalyScore: Math.round(anomalyScore * 1000) / 1000,
+      issues,
+    };
+  } catch (error) {
+    logger.warn('[Health] Failed to check trace coherence:', error);
+    return {
+      ok: false,
+      traceCount: 0,
+      avgStepCount: 0,
+      stepDeviation: 0,
+      errorRate: 1.0,
+      anomalyScore: 1.0,
+      issues: [`Failed to query traces: ${formatErrorMessage(error)}`],
+    };
+  }
 }
 
 /**
@@ -251,28 +372,37 @@ export async function checkProviderHealth(): Promise<ProbeResult> {
 export async function checkCognitiveHealth(): Promise<CognitiveHealthResult> {
   logger.info('[Health] Starting deep cognitive health check...');
 
-  const [bus, tools, providers] = await Promise.all([
+  const [bus, tools, providers, coherence] = await Promise.all([
     checkAgentBus(),
     checkToolHealth(),
     checkProviderHealth(),
+    checkTraceCoherence(),
   ]);
 
   const ok = bus.ok && tools.ok && providers.ok;
   const timestamp = Date.now();
 
   let summary = 'System cognitive health is optimal.';
+  const failures: string[] = [];
+
   if (!ok) {
-    const failures = [];
     if (!bus.ok) failures.push('AgentBus');
     if (!tools.ok) failures.push('Core Tools');
     if (!providers.ok) failures.push('LLM Providers');
+  }
+
+  if (coherence && !coherence.ok) {
+    failures.push(`TraceCoherence (${coherence.issues.length} issues)`);
+  }
+
+  if (failures.length > 0) {
     summary = `Cognitive degradation detected in: ${failures.join(', ')}.`;
   }
 
   return {
     ok,
     timestamp,
-    results: { bus, tools, providers },
+    results: { bus, tools, providers, coherence },
     summary,
   };
 }

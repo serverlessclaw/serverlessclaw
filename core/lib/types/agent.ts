@@ -344,6 +344,14 @@ export enum EventType {
   RESEARCH_TASK = 'research_task',
   /** Request for AST-aware patch reconciliation by Merger Agent. */
   MERGER_TASK = 'merger_task',
+  /** Request for facilitation of multi-agent coordination and consensus. */
+  FACILITATOR_TASK = 'facilitator_task',
+  /** Request for QA verification and test execution. */
+  QA_TASK = 'qa_task',
+  /** Request for cognitive reflection and context distillation. */
+  COGNITION_REFLECTOR_TASK = 'cognition_reflector_task',
+  /** Request for strategic planning and roadmap generation. */
+  STRATEGIC_PLANNER_TASK = 'strategic_planner_task',
   /** High-level orchestration signal for automated state transitions. */
   ORCHESTRATION_SIGNAL = 'orchestration_signal',
   /** Event emitted when a strategic tie-break is performed after a timeout. */

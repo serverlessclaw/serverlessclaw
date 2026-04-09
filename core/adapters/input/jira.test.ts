@@ -34,8 +34,8 @@ describe('JiraAdapter', () => {
       expect(adapter.verifySecret({ 'x-jira-webhook-secret': secret }, {})).toBe(true);
     });
 
-    it('should verify secret from query', () => {
-      expect(adapter.verifySecret({}, { secret: secret })).toBe(true);
+    it('should return false for missing secret in header', () => {
+      expect(adapter.verifySecret({}, {})).toBe(false);
     });
 
     it('should return true if no secret configured', () => {

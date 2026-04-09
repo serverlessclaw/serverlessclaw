@@ -1,4 +1,4 @@
-import { EventType, AgentType } from '../core/lib/types/agent';
+import { EventType } from '../core/lib/types/agent';
 import {
   SharedContext,
   getValidSecrets,
@@ -260,8 +260,7 @@ export function createAgents(
         EventType.CODER_TASK,
         EventType.RESEARCH_TASK,
         EventType.EVOLUTION_PLAN,
-        'strategic-planner_task',
-        `${AgentType.RESEARCHER}_task`,
+        EventType.STRATEGIC_PLANNER_TASK,
       ],
     },
     transform: { target: { deadLetterConfig: dlq ? { arn: dlq.arn } : undefined } },
@@ -286,9 +285,8 @@ export function createAgents(
       detailType: [
         EventType.CODER_TASK_COMPLETED, // QA trigger
         EventType.SYSTEM_BUILD_SUCCESS, // QA trigger
-        'qa_task',
-        'facilitator_task',
-        `${AgentType.QA}_task`,
+        EventType.QA_TASK,
+        EventType.FACILITATOR_TASK,
       ],
     },
     transform: { target: { deadLetterConfig: dlq ? { arn: dlq.arn } : undefined } },
@@ -314,8 +312,7 @@ export function createAgents(
         EventType.REFLECT_TASK,
         EventType.CRITIC_TASK,
         EventType.MERGER_TASK,
-        'critic_task',
-        'cognition-reflector_task',
+        EventType.COGNITION_REFLECTOR_TASK,
       ],
     },
     transform: { target: { deadLetterConfig: dlq ? { arn: dlq.arn } : undefined } },

@@ -53,11 +53,10 @@ export const handler = async (
       handlerPath = '../agents/researcher';
       break;
     case EventType.CRITIC_TASK:
-    case 'critic_task':
       targetAgent = AgentType.CRITIC;
       handlerPath = '../agents/critic';
       break;
-    case 'facilitator_task':
+    case EventType.FACILITATOR_TASK:
       targetAgent = AgentType.FACILITATOR;
       handlerPath = '../agents/facilitator';
       break;
@@ -65,19 +64,19 @@ export const handler = async (
       targetAgent = AgentType.MERGER;
       handlerPath = '../agents/merger';
       break;
-    case 'qa_task':
+    case EventType.QA_TASK:
     case EventType.CODER_TASK_COMPLETED: // QA often triggers on coder completion
     case EventType.SYSTEM_BUILD_SUCCESS: // QA also triggers on build success
       targetAgent = AgentType.QA;
       handlerPath = '../agents/qa';
       break;
     case EventType.EVOLUTION_PLAN:
-    case 'strategic-planner_task':
+    case EventType.STRATEGIC_PLANNER_TASK:
       targetAgent = AgentType.STRATEGIC_PLANNER;
       handlerPath = '../agents/strategic-planner';
       break;
     case EventType.REFLECT_TASK:
-    case 'cognition-reflector_task':
+    case EventType.COGNITION_REFLECTOR_TASK:
       targetAgent = AgentType.COGNITION_REFLECTOR;
       handlerPath = '../agents/cognition-reflector';
       break;

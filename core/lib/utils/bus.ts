@@ -302,6 +302,16 @@ export async function emitEvent(
           await sleep(backoff);
           continue;
         }
+        // Final attempt also failed — store in DLQ and return failure
+        await storeInDLQ(source, type as string, detail, {
+          retryCount: attempt,
+          maxRetries,
+          lastError: `EventBridge FailedEntryCount=${result.FailedEntryCount}`,
+          errorCategory: ErrorCategory.UNKNOWN,
+          priority,
+          correlationId,
+        });
+        return { success: false, reason: 'DLQ' };
       }
 
       if (idempotencyKey) {
@@ -386,21 +396,28 @@ export async function getDlqEntries(limit = 50): Promise<DlqEntry[]> {
 
 /**
  * Retries an entry from DLQ and deletes it on success.
+ * Purges the original entry first to prevent accumulation on repeated failures.
+ * Uses an idempotency key to protect against concurrent retry calls.
  */
 export async function retryDlqEntry(entry: DlqEntry): Promise<boolean> {
   try {
+    // Purge the original entry first to prevent accumulation of duplicate failures
+    await purgeDlqEntry(entry);
+
     const detail = JSON.parse(entry.detail);
+
+    // Use a stable idempotency key to protect against concurrent retries of the same entry
+    const idempotencyKey = `dlq-retry:${entry.userId}:${entry.timestamp}`;
+
     const result = await emitEvent(entry.source, entry.detailType, detail, {
       priority: entry.priority as EventPriority,
       correlationId: entry.correlationId,
       maxRetries: 2,
+      idempotencyKey,
     });
 
-    if (result.success) {
-      await purgeDlqEntry(entry);
-      return true;
-    }
-    return false;
+    return result.success;
+    // If emitEvent fails, it will write to DLQ again with a new key — that new entry is the correct survivor
   } catch (error) {
     logger.error('Failed to retry DLQ entry:', error);
     return false;
@@ -433,7 +450,16 @@ export async function emitEventWithIdempotency(
   detail: Record<string, unknown>,
   options: Omit<EventOptions, 'idempotencyKey'> = {}
 ): Promise<{ success: boolean; eventId?: string; reason?: string }> {
-  const idempotencyKey = `${source}:${type}:${detail.sessionId ?? 'global'}:${detail.traceId ?? Date.now()}`;
+  // Require traceId for stable, deterministic idempotency key
+  if (!detail.traceId) {
+    const error =
+      '[emitEventWithIdempotency] traceId is required on detail for a stable, deterministic idempotency key. ' +
+      'If you have no traceId, use emitEvent() with explicit idempotencyKey or accept no dedup.';
+    logger.error(error);
+    throw new Error(error);
+  }
+
+  const idempotencyKey = `${source}:${type}:${detail.sessionId ?? 'global'}:${detail.traceId}`;
 
   return emitEvent(source, type, detail, {
     ...options,

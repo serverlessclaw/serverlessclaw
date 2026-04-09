@@ -1,4 +1,4 @@
-import { createHmac } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { z } from 'zod';
 import { InputAdapter, InboundMessage } from './types';
 import { logger } from '../../lib/logger';
@@ -56,7 +56,17 @@ export class SlackAdapter implements InputAdapter {
     const hmac = createHmac('sha256', this.signingSecret);
     const mySignature = `v0=${hmac.update(sigBaseString).digest('hex')}`;
 
-    return mySignature === signature;
+    try {
+      const mySignatureBuf = Buffer.from(mySignature, 'utf8');
+      const signatureBuf = Buffer.from(signature, 'utf8');
+      return (
+        mySignatureBuf.length === signatureBuf.length &&
+        timingSafeEqual(mySignatureBuf, signatureBuf)
+      );
+    } catch {
+      logger.error('Error comparing signatures using timingSafeEqual');
+      return false;
+    }
   }
 
   parse(raw: unknown): InboundMessage {

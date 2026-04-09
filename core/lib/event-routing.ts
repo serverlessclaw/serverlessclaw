@@ -2,6 +2,12 @@ import { EventType, EventRoutingTable } from './types/agent';
 
 /**
  * Hardcoded fallback for event routing if DynamoDB is unavailable or key is missing.
+ *
+ * NOTE: Agent task events (CODER_TASK, RESEARCH_TASK, EVOLUTION_PLAN, REFLECT_TASK,
+ * MERGER_TASK, CRITIC_TASK, facilitator_task, qa_task) are intentionally excluded here.
+ * These events are routed directly to their respective multiplexer Lambdas via
+ * EventBridge subscriptions (infra/agents.ts), not through the events.ts Lambda.
+ * Including them here would create a confusing fallback path with no handler.
  */
 export const DEFAULT_EVENT_ROUTING: EventRoutingTable = {
   [EventType.SYSTEM_BUILD_FAILED]: {
@@ -91,38 +97,5 @@ export const DEFAULT_EVENT_ROUTING: EventRoutingTable = {
   [EventType.REPORT_BACK]: {
     module: './events/report-back-handler',
     function: 'handleReportBack',
-  },
-  [EventType.RESEARCH_TASK]: {
-    module: 'agent-multiplexer',
-    function: 'handler',
-  },
-  facilitator_task: {
-    module: 'agent-multiplexer',
-    function: 'handler',
-    passContext: true,
-  },
-  critic_task: {
-    module: 'agent-multiplexer',
-    function: 'handler',
-  },
-  [EventType.CODER_TASK]: {
-    module: 'agent-multiplexer',
-    function: 'handler',
-  },
-  [EventType.EVOLUTION_PLAN]: {
-    module: 'agent-multiplexer',
-    function: 'handler',
-  },
-  [EventType.REFLECT_TASK]: {
-    module: 'agent-multiplexer',
-    function: 'handler',
-  },
-  [EventType.MERGER_TASK]: {
-    module: 'agent-multiplexer',
-    function: 'handler',
-  },
-  qa_task: {
-    module: 'agent-multiplexer',
-    function: 'handler',
   },
 };

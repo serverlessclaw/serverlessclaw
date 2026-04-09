@@ -1,4 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
+import { createHmac } from 'crypto';
 import { SlackAdapter } from './slack';
 
 describe('SlackAdapter', () => {
@@ -46,15 +47,21 @@ describe('SlackAdapter', () => {
   });
 
   it('should verify signature correctly', () => {
+    // Pre-computed HMAC-SHA256 signature for testing
+    const body = '{"type":"event_callback"}';
     const timestamp = '1234567890';
-    // We need a real HMAC-SHA256 for this test or mock it
-    // For simplicity in this test, let's just ensure it calls the right logic
-    // or use a pre-calculated signature if possible.
+    const sigBaseString = `v0:${timestamp}:${body}`;
+    const expectedSig = `v0=${createHmac('sha256', signingSecret)
+      .update(sigBaseString)
+      .digest('hex')}`;
 
-    // Mock Date.now to matches the timestamp (within 5 mins)
-    vi.setSystemTime(new Date(parseInt(timestamp, 10) * 1000 + 1000));
+    // Valid signature should pass
+    expect(adapter.verifySignature(body, timestamp, expectedSig)).toBe(true);
 
-    // This is hard to test without exact HMAC logic, so we'll trust the implementation
-    // or test the logic that calls it.
+    // Invalid signature should fail
+    expect(adapter.verifySignature(body, timestamp, 'v0=invalid')).toBe(false);
+
+    // Signature with different length should fail
+    expect(adapter.verifySignature(body, timestamp, 'v0=abc')).toBe(false);
   });
 });

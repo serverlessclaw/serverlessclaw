@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'crypto';
 import { z } from 'zod';
 import { InputAdapter, InboundMessage } from './types';
 import { IssueTrackerAction } from '../actions';
@@ -84,24 +85,31 @@ export class JiraAdapter implements InputAdapter, IssueTrackerAction {
   }
 
   /**
-   * Verifies the Jira webhook secret.
-   * Jira often uses a secret as a query parameter or a custom header.
+   * Verifies the Jira webhook secret using timing-safe comparison.
+   * Only accepts secrets in the X-Jira-Webhook-Secret header.
+   * Query parameters are not supported as they leak credentials into access logs.
    */
-  verifySecret(headers: Record<string, string>, query: Record<string, string>): boolean {
+  verifySecret(headers: Record<string, string>, _query: Record<string, string>): boolean {
     if (!this.webhookSecret) {
       logger.warn('Jira webhook secret not configured, skipping verification');
       return true;
     }
 
     const secretFromHeader = headers['x-jira-webhook-secret'] || headers['X-Jira-Webhook-Secret'];
-    const secretFromQuery = query['secret'];
 
-    if (secretFromHeader === this.webhookSecret || secretFromQuery === this.webhookSecret) {
-      return true;
+    if (!secretFromHeader) {
+      logger.error('Missing Jira webhook secret in header');
+      return false;
     }
 
-    logger.error('Jira webhook secret verification failed');
-    return false;
+    try {
+      const providedBuf = Buffer.from(secretFromHeader, 'utf8');
+      const expectedBuf = Buffer.from(this.webhookSecret, 'utf8');
+      return providedBuf.length === expectedBuf.length && timingSafeEqual(providedBuf, expectedBuf);
+    } catch (error) {
+      logger.error('Error comparing Jira webhook secrets:', error);
+      return false;
+    }
   }
 
   parse(raw: unknown): InboundMessage {

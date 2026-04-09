@@ -1,6 +1,11 @@
 import { CodeBuildClient, StartBuildCommand } from '@aws-sdk/client-codebuild';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import {
+  DynamoDBDocumentClient,
+  PutCommand,
+  DeleteCommand,
+  ScanCommand,
+} from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
 import { logger } from '../lib/logger';
 import { SSTResource } from '../lib/types/system';
@@ -25,6 +30,59 @@ const RECOVERY_LOCK_OWNER = 'recovery-handler';
 // TTL slightly longer than the Dead Man's Switch schedule (15 min) to guarantee one-at-a-time.
 const RECOVERY_LOCK_TTL_SECONDS = CONFIG_DEFAULTS.RECOVERY_LOCK_TTL_SECONDS.code;
 const MAX_RECOVERY_ATTEMPTS = CONFIG_DEFAULTS.MAX_RECOVERY_ATTEMPTS.code;
+const STALE_LOCK_THRESHOLD_MS = 60 * 60 * 1000; // 60 minutes
+
+/**
+ * Cleans up orphaned gap locks that have expired.
+ * Locks are considered orphaned if they've been expired for more than STALE_LOCK_THRESHOLD_MS.
+ */
+async function cleanupStaleGapLocks(): Promise<number> {
+  const now = Date.now();
+  const staleThreshold = Math.floor((now - STALE_LOCK_THRESHOLD_MS) / 1000);
+  let deletedCount = 0;
+  let lastEvaluatedKey: Record<string, unknown> | undefined;
+
+  do {
+    const scanResult = await db.send(
+      new ScanCommand({
+        TableName: typedResource.MemoryTable.name,
+        FilterExpression: 'begins_with(userId, :lockPrefix) AND expiresAt < :staleThreshold',
+        ExpressionAttributeValues: {
+          ':lockPrefix': MEMORY_KEYS.GAP_LOCK_PREFIX,
+          ':staleThreshold': staleThreshold,
+        },
+        ExclusiveStartKey: lastEvaluatedKey,
+      })
+    );
+
+    if (scanResult.Items) {
+      for (const item of scanResult.Items) {
+        try {
+          await db.send(
+            new DeleteCommand({
+              TableName: typedResource.MemoryTable.name,
+              Key: {
+                userId: (item.userId as string) || '',
+                timestamp: String((item.timestamp as string) || '0'),
+              },
+            })
+          );
+          deletedCount++;
+        } catch (deleteError) {
+          logger.warn(`Failed to delete stale gap lock:`, deleteError);
+        }
+      }
+    }
+
+    lastEvaluatedKey = scanResult.LastEvaluatedKey as Record<string, unknown> | undefined;
+  } while (lastEvaluatedKey);
+
+  if (deletedCount > 0) {
+    logger.info(`Cleaned up ${deletedCount} stale gap locks`);
+  }
+
+  return deletedCount;
+}
 
 /**
  * Performs a health check on the system and triggers an emergency recovery (rollback) if unhealthy.
@@ -74,6 +132,8 @@ export const handler = async (_event?: { detail: Record<string, unknown> }): Pro
 
     if (httpHealthy && healthResult.ok) {
       logger.info('System is healthy (HTTP and Cognitive Checks PASSED). No action needed.');
+
+      await cleanupStaleGapLocks();
       return;
     }
 

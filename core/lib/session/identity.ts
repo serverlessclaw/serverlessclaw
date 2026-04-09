@@ -168,6 +168,8 @@ export interface AccessControlEntry {
   resourceType: 'agent' | 'workspace' | 'config' | 'trace';
   /** Resource ID. */
   resourceId: string;
+  /** Parent resource ID for inheritance (e.g., workspace ID for nested resources). */
+  parentId?: string;
   /** Allowed roles. */
   allowedRoles: UserRole[];
   /** Specific user IDs with access (overrides role). */
@@ -293,7 +295,26 @@ export class IdentityManager {
         return true;
       }
       // Check if user's role is allowed
-      return entry.allowedRoles.includes(user.role);
+      if (entry.allowedRoles.includes(user.role)) {
+        return true;
+      }
+
+      // Check hierarchical inheritance - if parent resource is accessible, inherit permission
+      if (entry.parentId) {
+        const parentEntry = await this.getAccessControlEntry('workspace', entry.parentId);
+        if (parentEntry) {
+          if (parentEntry.allowedUserIds?.includes(userId)) {
+            return true;
+          }
+          if (parentEntry.allowedRoles.includes(user.role)) {
+            return true;
+          }
+        }
+        // Also check workspace membership
+        if (user.workspaceIds.includes(entry.parentId)) {
+          return true;
+        }
+      }
     }
 
     // Default: check workspace membership for workspace resources
@@ -459,6 +480,7 @@ export class IdentityManager {
         type: 'ACCESS_CONTROL',
         resourceType: entry.resourceType,
         resourceId: entry.resourceId,
+        parentId: entry.parentId,
         allowedRoles: entry.allowedRoles,
         allowedUserIds: entry.allowedUserIds,
         updatedAt: Date.now(),
@@ -612,6 +634,7 @@ export class IdentityManager {
         return {
           resourceType: item.resourceType as 'agent' | 'workspace' | 'config' | 'trace',
           resourceId: item.resourceId as string,
+          parentId: item.parentId as string | undefined,
           allowedRoles: item.allowedRoles as UserRole[],
           allowedUserIds: item.allowedUserIds as string[] | undefined,
         };
