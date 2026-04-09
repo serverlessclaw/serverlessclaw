@@ -6,11 +6,17 @@
   "prConcurrentLimit": 0,
   "prHourlyLimit": 0,
   "dependencyDashboard": true,
+  "dependencyDashboardRecreateClosed": true,
+  "dependencyDashboardTitle": "Renovate Dependency Dashboard",
+  "dependencyDashboardHeader": "This is the central dashboard for all dependency updates.",
   "automerge": true,
   "platformAutomerge": true,
+  "automergeType": "pr",
+  "automergeStrategy": "squash",
   "prCreation": "immediate",
   "rebaseConflictedPrs": true,
   "rebaseWhen": "behind-base-branch",
+  "semanticCommits": "enabled",
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
