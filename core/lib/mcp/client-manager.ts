@@ -15,11 +15,31 @@ export class MCPClientManager {
   private static connecting: Map<string, Promise<Client>> = new Map();
 
   static getClient(name: string): Client | undefined {
-    return this.clients.get(name);
+    // Check for exact match or cwd-prefixed match
+    const client = this.clients.get(name);
+    if (client) return client;
+
+    // Fallback: check if there's any client for this name (though usually connect() is used)
+    for (const [key, val] of this.clients.entries()) {
+      if (key.startsWith(`${name}:`)) return val;
+    }
+    return undefined;
   }
 
   static deleteClient(name: string): void {
-    this.clients.delete(name);
+    // Delete all clients starting with this name (handles name:cwd keys)
+    for (const key of Array.from(this.clients.keys())) {
+      if (key === name || key.startsWith(`${name}:`)) {
+        const client = this.clients.get(key);
+        client?.close().catch(() => {});
+        this.clients.delete(key);
+      }
+    }
+    for (const key of Array.from(this.connecting.keys())) {
+      if (key === name || key.startsWith(`${name}:`)) {
+        this.connecting.delete(key);
+      }
+    }
   }
 
   private static failureCounts: Map<string, { count: number; lastFailure: number }> = new Map();
@@ -38,11 +58,16 @@ export class MCPClientManager {
     connectionString: string,
     env?: Record<string, string>
   ): Promise<Client> {
-    let client = this.clients.get(serverName);
+    const isLocal =
+      !connectionString.startsWith('http') && !connectionString.startsWith('arn:aws:lambda:');
+    const cwd = process.cwd();
+    const cacheKey = isLocal ? `${serverName}:${cwd}` : serverName;
+
+    let client = this.clients.get(cacheKey);
     if (client) return client;
 
     // 1. Check in-memory connecting map IMMEDIATELY (no await before this)
-    let connectingPromise = this.connecting.get(serverName);
+    let connectingPromise = this.connecting.get(cacheKey);
     if (connectingPromise) {
       return await connectingPromise;
     }
@@ -207,16 +232,16 @@ export class MCPClientManager {
     })();
 
     // 3. Register the promise IMMEDIATELY after creation
-    this.connecting.set(serverName, connectingPromise);
+    this.connecting.set(cacheKey, connectingPromise);
 
     try {
       client = await connectingPromise;
       if (client) {
-        this.clients.set(serverName, client);
+        this.clients.set(cacheKey, client);
       }
       return client;
     } finally {
-      this.connecting.delete(serverName);
+      this.connecting.delete(cacheKey);
     }
   }
 
@@ -271,7 +296,8 @@ class LambdaInvokeTransport {
           throw new Error(`MCP server returned error: ${payload.body}`);
         }
         if (this.onmessage) {
-          this.onmessage(payload.body);
+          const body = typeof payload.body === 'string' ? JSON.parse(payload.body) : payload.body;
+          this.onmessage(body);
         }
       }
     } catch (error) {

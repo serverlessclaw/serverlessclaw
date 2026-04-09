@@ -10,47 +10,9 @@ import Typography from '@/components/ui/Typography';
 import Badge from '@/components/ui/Badge';
 import TraceIntelligenceView from '@/components/TraceIntelligenceView';
 import ExportTracesButton from '@/components/ExportTracesButton';
+import { getTraces } from '@/lib/traces';
 
 export const dynamic = 'force-dynamic';
-
-
-async function getTraces(nextToken?: string) {
-  try {
-    const tableName = getResourceName('TraceTable');
-    if (!tableName) {
-      console.warn('TraceTable name is missing from Resources and Environment');
-      return { items: [], nextToken: undefined };
-    }
-    const client = new DynamoDBClient({});
-    const docClient = DynamoDBDocumentClient.from(client);
-
-    const queryRes = await docClient.send(
-      new QueryCommand({
-        TableName: tableName,
-        IndexName: 'SummaryByNode',
-        KeyConditionExpression: 'nodeId = :summary',
-        ExpressionAttributeValues: { ':summary': '__summary__' },
-        Limit: 100,
-        ExclusiveStartKey: decodePaginationToken(nextToken ?? ''),
-        ScanIndexForward: false,
-      })
-    );
-
-    const allItems = (queryRes.Items ?? []).sort((a, b) => {
-      const bTs = Number(b.timestamp);
-      const aTs = Number(a.timestamp);
-      return (Number.isFinite(bTs) ? bTs : 0) - (Number.isFinite(aTs) ? aTs : 0);
-    });
-
-    const filtered = allItems.filter((item) => item.source !== TraceSource.SYSTEM) as Trace[];
-    const encodedNext = encodePaginationToken(queryRes.LastEvaluatedKey);
-
-    return { items: filtered, nextToken: encodedNext };
-  } catch (e) {
-    console.error('Error fetching traces:', e);
-    return { items: [], nextToken: undefined };
-  }
-}
 
 import { LLMProvider, OpenAIModel } from '@claw/core/lib/types/llm';
 

@@ -17,6 +17,14 @@ export const CONFIG_DEFAULTS = {
     description: 'Maximum depth for agent-to-agent delegation to prevent infinite loops.',
   },
 
+  /** Recursion limit for mission-critical workflows. Default: 5 */
+  MISSION_RECURSION_LIMIT: {
+    code: 5,
+    hotSwappable: true,
+    configKey: 'mission_recursion_limit',
+    description: 'Stricter recursion limit for mission-critical workflows (e.g., swarm missions).',
+  },
+
   /** Default daily deployment limit. Default: 5 */
   DEPLOY_LIMIT: {
     code: 5,

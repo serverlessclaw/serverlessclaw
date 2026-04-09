@@ -45,6 +45,16 @@ Rollout steps (detailed)
 aws dynamodb describe-table --table-name TraceTable --query "Table.GlobalSecondaryIndexes[?IndexName=='SummaryByNode']"
 ```
 
+Or use the helper script to both check and optionally wait for the index to become `ACTIVE`:
+
+```bash
+# quick check (no wait)
+TRACE_TABLE=TraceTable node scripts/check-summary-gsi.mjs
+
+# wait up to 10 minutes for the index to become ACTIVE
+TRACE_TABLE=TraceTable node scripts/check-summary-gsi.mjs --wait --timeout=600
+```
+
 1. Run migration script in small dry-run mode. Validate output and confirm expected summary counts for sample traces.
 2. Run migration in throttled batches until finished. Re-run any failed batches.
 3. Enable `TRACE_SUMMARIES_ENABLED=true` in environment (Lambda env / config store) for a small subset of consumers first if possible (canary), then full rollout.

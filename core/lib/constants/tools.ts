@@ -114,6 +114,13 @@ export const PROTECTED_FILES = [
   'core/lib/agent.ts',
   'buildspec.yml',
   'infra/**',
+  // Critical recovery and safety handlers
+  'core/handlers/recovery.ts',
+  'core/lib/safety/circuit-breaker.ts',
+  'core/lib/safety/safety-engine.ts',
+  'core/lib/lock/lock-manager.ts',
+  // Core system handlers
+  'core/handlers/events/index.ts',
 ];
 
 /**

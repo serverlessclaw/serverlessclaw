@@ -1,81 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { ITool, ToolType, JsonSchema } from '../types/index';
-import { z } from 'zod';
 import { checkFileSecurity } from '../utils/fs-security';
 import { logger } from '../logger';
 import { MCPClientManager } from './client-manager';
+import { jsonSchemaToZod } from '../utils/zod-utils';
 
 /**
  * Maps raw MCP tools to ServerlessClaw ITool interface.
  */
 export class MCPToolMapper {
-  static mapTools(serverName: string, client: Client, rawTools: any[]): ITool[] {
-    return rawTools.map((mcpTool) => {
-      const isFilesystemTool =
-        serverName === 'filesystem' || mcpTool.name.startsWith('filesystem_');
-      const toolName = `${serverName}_${mcpTool.name}`;
-
-      const parameters = (mcpTool.inputSchema as JsonSchema) || {
-        type: 'object',
-        properties: {},
-      };
-      if (isFilesystemTool && parameters.type === 'object' && parameters.properties) {
-        parameters.properties.manuallyApproved = {
-          type: 'boolean',
-          description:
-            'Must be true if modifying a protected system file, after explicit human approval.',
-        };
-      }
-
-      return {
-        name: toolName,
-        description: mcpTool.description ?? `Tool from ${serverName} server.`,
-        parameters,
-        argSchema: z.any(),
-        type: ToolType.MCP,
-        connectionProfile: [],
-        connector_id: '',
-        auth: { type: 'api_key', resource_id: '' },
-        requiresApproval: false,
-        requiredPermissions: [],
-        execute: async (toolArgs: Record<string, unknown>) => {
-          if (isFilesystemTool) {
-            const filePath = (toolArgs.path ||
-              toolArgs.path_to_file ||
-              toolArgs.file_path) as string;
-            if (filePath) {
-              const securityError = checkFileSecurity(
-                filePath,
-                toolArgs.manuallyApproved as boolean,
-                `MCP operation (${mcpTool.name})`
-              );
-              if (securityError) return securityError;
-            }
-          }
-
-          try {
-            const { withMCPResilience } = await import('../lifecycle/error-recovery');
-            return await withMCPResilience(toolName, async () => {
-              const result = await client.callTool({
-                name: mcpTool.name,
-                arguments: toolArgs,
-              });
-              return JSON.stringify(result.content);
-            });
-          } catch (execError: unknown) {
-            logger.error(
-              `MCP Tool Execution Error (${serverName}:${mcpTool.name}):`,
-              (execError as Error).message
-            );
-            if (this.isConnectionError(execError)) {
-              MCPClientManager.deleteClient(serverName);
-            }
-            throw execError;
-          }
-        },
-      };
-    });
+  static mapTools(serverName: string, client: Client, rawTools: unknown[]): ITool[] {
+    return rawTools.map((mcpTool) =>
+      this.mapMcpTool(serverName, mcpTool as any, async () => client)
+    );
   }
 
   /**
@@ -84,75 +22,83 @@ export class MCPToolMapper {
    */
   static mapCachedTools(
     serverName: string,
-    rawTools: any[],
+    rawTools: unknown[],
     clientProvider: () => Promise<Client>
   ): ITool[] {
-    return rawTools.map((mcpTool) => {
-      const isFilesystemTool =
-        serverName === 'filesystem' || mcpTool.name.startsWith('filesystem_');
-      const toolName = `${serverName}_${mcpTool.name}`;
+    return rawTools.map((mcpTool) => this.mapMcpTool(serverName, mcpTool as any, clientProvider));
+  }
 
-      const parameters = (mcpTool.inputSchema as JsonSchema) || {
-        type: 'object',
-        properties: {},
+  /**
+   * Core mapping logic shared between live and cached discovery.
+   */
+
+  private static mapMcpTool(
+    serverName: string,
+    mcpTool: any,
+    clientProvider: () => Promise<Client>
+  ): ITool {
+    const isFilesystemTool = serverName === 'filesystem' || mcpTool.name.startsWith('filesystem_');
+    const toolName = `${serverName}_${mcpTool.name}`;
+
+    const parameters = (mcpTool.inputSchema as JsonSchema) || {
+      type: 'object',
+      properties: {},
+    };
+
+    if (isFilesystemTool && parameters.type === 'object' && parameters.properties) {
+      parameters.properties.manuallyApproved = {
+        type: 'boolean',
+        description:
+          'Must be true if modifying a protected system file, after explicit human approval.',
       };
-      if (isFilesystemTool && parameters.type === 'object' && parameters.properties) {
-        parameters.properties.manuallyApproved = {
-          type: 'boolean',
-          description:
-            'Must be true if modifying a protected system file, after explicit human approval.',
-        };
-      }
+    }
 
-      return {
-        name: toolName,
-        description: mcpTool.description ?? `Tool from ${serverName} server.`,
-        parameters,
-        argSchema: z.any(),
-        type: ToolType.MCP,
-        connectionProfile: [],
-        connector_id: '',
-        auth: { type: 'api_key', resource_id: '' },
-        requiresApproval: false,
-        requiredPermissions: [],
-        execute: async (toolArgs: Record<string, unknown>) => {
-          if (isFilesystemTool) {
-            const filePath = (toolArgs.path ||
-              toolArgs.path_to_file ||
-              toolArgs.file_path) as string;
-            if (filePath) {
-              const securityError = checkFileSecurity(
-                filePath,
-                toolArgs.manuallyApproved as boolean,
-                `MCP operation (${mcpTool.name})`
-              );
-              if (securityError) return securityError;
-            }
-          }
-
-          try {
-            const client = await clientProvider();
-            const { withMCPResilience } = await import('../lifecycle/error-recovery');
-            return await withMCPResilience(toolName, async () => {
-              const result = await client.callTool({
-                name: mcpTool.name,
-                arguments: toolArgs,
-              });
-              return JSON.stringify(result.content);
-            });
-          } catch (execError: unknown) {
-            logger.error(
-              `MCP Tool Execution Error (${serverName}:${mcpTool.name}):`,
-              (execError as Error).message
+    return {
+      name: toolName,
+      description: mcpTool.description ?? `Tool from ${serverName} server.`,
+      parameters,
+      argSchema: jsonSchemaToZod(parameters),
+      type: ToolType.MCP,
+      connectionProfile: [],
+      connector_id: '',
+      auth: { type: 'api_key', resource_id: '' },
+      requiresApproval: false,
+      requiredPermissions: [],
+      execute: async (toolArgs: Record<string, unknown>) => {
+        if (isFilesystemTool) {
+          const filePath = (toolArgs.path || toolArgs.path_to_file || toolArgs.file_path) as string;
+          if (filePath) {
+            const securityError = checkFileSecurity(
+              filePath,
+              toolArgs.manuallyApproved as boolean,
+              `MCP operation (${mcpTool.name})`
             );
-            if (this.isConnectionError(execError)) {
-              MCPClientManager.deleteClient(serverName);
-            }
-            throw execError;
+            if (securityError) return securityError;
           }
-        },
-      };
-    });
+        }
+
+        try {
+          const client = await clientProvider();
+          const { withMCPResilience } = await import('../lifecycle/error-recovery');
+          return await withMCPResilience(toolName, async () => {
+            const result = await client.callTool({
+              name: mcpTool.name,
+              arguments: toolArgs,
+            });
+            return JSON.stringify(result.content);
+          });
+        } catch (execError: unknown) {
+          logger.error(
+            `MCP Tool Execution Error (${serverName}:${mcpTool.name}):`,
+            execError instanceof Error ? execError.message : String(execError)
+          );
+          if (this.isConnectionError(execError)) {
+            MCPClientManager.deleteClient(serverName);
+          }
+          throw execError;
+        }
+      },
+    };
   }
 
   /**

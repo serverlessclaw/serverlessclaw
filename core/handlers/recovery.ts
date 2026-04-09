@@ -18,6 +18,7 @@ import { emitEvent } from '../lib/utils/bus';
 import { formatErrorMessage } from '../lib/utils/error';
 import { getCircuitBreaker } from '../lib/safety/circuit-breaker';
 import { CONFIG_DEFAULTS } from '../lib/config/config-defaults';
+import { ConfigManager } from '../lib/registry/config';
 
 const codebuild = new CodeBuildClient({});
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -31,6 +32,26 @@ const RECOVERY_LOCK_OWNER = 'recovery-handler';
 const RECOVERY_LOCK_TTL_SECONDS = CONFIG_DEFAULTS.RECOVERY_LOCK_TTL_SECONDS.code;
 const MAX_RECOVERY_ATTEMPTS = CONFIG_DEFAULTS.MAX_RECOVERY_ATTEMPTS.code;
 const STALE_LOCK_THRESHOLD_MS = 60 * 60 * 1000; // 60 minutes
+
+// Default health check paths
+const DEFAULT_HEALTH_PATHS = ['/health', '/', '/healthcheck'];
+const HEALTH_PATHS_CONFIG_KEY = 'recovery_health_paths';
+
+/**
+ * Get health check paths from config or use defaults.
+ */
+async function getHealthPaths(): Promise<string[]> {
+  try {
+    const configPaths = await ConfigManager.getRawConfig(HEALTH_PATHS_CONFIG_KEY);
+    if (configPaths && Array.isArray(configPaths) && configPaths.length > 0) {
+      logger.info(`Using configured health paths: ${configPaths.join(', ')}`);
+      return configPaths;
+    }
+  } catch (e) {
+    logger.warn('Failed to fetch health paths from config, using defaults:', e);
+  }
+  return DEFAULT_HEALTH_PATHS;
+}
 
 /**
  * Cleans up orphaned gap locks that have expired.
@@ -92,7 +113,7 @@ async function cleanupStaleGapLocks(): Promise<number> {
  */
 export const handler = async (_event?: { detail: Record<string, unknown> }): Promise<void> => {
   const baseUrl = typedResource.WebhookApi.url;
-  const healthPaths = ['/health', '/', '/healthcheck'];
+  const healthPaths = await getHealthPaths();
   let lastHttpError: Error | undefined;
   let httpHealthy = false;
 

@@ -40,6 +40,7 @@ export const DYNAMO_KEYS = {
   AGENTS_CONFIG: 'agents_config',
   DEPLOY_LIMIT: 'deploy_limit',
   RECURSION_LIMIT: 'recursion_limit',
+  MISSION_RECURSION_LIMIT: 'mission_recursion_limit',
   RETENTION_CONFIG: 'retention_config',
   TOOL_USAGE: 'tool_usage_global',
   ACTIVE_PROVIDER: 'active_provider',

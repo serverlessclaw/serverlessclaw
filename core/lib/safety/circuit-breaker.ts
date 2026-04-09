@@ -112,10 +112,11 @@ function pruneOldFailures(failures: FailureEntry[] | undefined, windowMs: number
 export class CircuitBreaker {
   /**
    * Generic retry wrapper for concurrent DynamoDB updates.
-   * Retries up to MAX_RETRIES with randomized backoff on contention.
+   * Retries up to MAX_RETRIES with exponential backoff and jitter on contention.
    */
   private async withRetry<T>(fn: () => Promise<T>): Promise<T> {
     const MAX_RETRIES = 3;
+    const BASE_DELAY_MS = 50;
     let lastError: unknown = null;
 
     for (let i = 0; i < MAX_RETRIES; i++) {
@@ -123,8 +124,16 @@ export class CircuitBreaker {
         return await fn();
       } catch (e: unknown) {
         lastError = e;
-        if (e instanceof Error && e.message.includes('concurrently')) {
-          const delay = Math.random() * 50 * (i + 1);
+        // Only retry on concurrent modification errors
+        if (
+          e instanceof Error &&
+          (e.name === 'ConditionalCheckFailedException' || e.message.includes('concurrently'))
+        ) {
+          // Exponential backoff with jitter: base * 2^i + random(0, base)
+          const delay = BASE_DELAY_MS * Math.pow(2, i) + Math.random() * BASE_DELAY_MS;
+          logger.warn(
+            `Circuit breaker retry ${i + 1}/${MAX_RETRIES} after ${Math.round(delay)}ms due to concurrent modification`
+          );
           await new Promise((resolve) => setTimeout(resolve, delay));
           continue;
         }

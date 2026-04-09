@@ -79,6 +79,29 @@ describe('MCPToolMapper', () => {
       expect(tools[0].description).toBe('Tool from srv server.');
     });
 
+    it('assigns argSchema using jsonSchemaToZod', () => {
+      const client = makeMockClient();
+      const rawTools = [
+        {
+          name: 'tool_a',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              param1: { type: 'string' },
+            },
+            required: ['param1'],
+          },
+        },
+      ];
+
+      const tools = MCPToolMapper.mapTools('srv', client, rawTools);
+      expect(tools[0].argSchema).toBeDefined();
+      // Should validate correctly
+      expect(tools[0].argSchema?.parse({ param1: 'test' })).toEqual({ param1: 'test' });
+      // Should throw on invalid
+      expect(() => tools[0].argSchema?.parse({})).toThrow();
+    });
+
     it('adds manuallyApproved parameter for filesystem tools', () => {
       const client = makeMockClient();
       const rawTools = [

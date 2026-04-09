@@ -11,6 +11,34 @@ import { isTaskPaused } from '../../lib/utils/agent-helpers';
 import { SessionStateManager } from '../../lib/session/session-state';
 
 /**
+ * Event types that indicate mission-critical workflows with stricter recursion limits.
+ * These include DAG/swarm executions and parallel task dispatches.
+ */
+const MISSION_EVENT_TYPES = [
+  EventType.DAG_TASK_COMPLETED,
+  EventType.DAG_TASK_FAILED,
+  EventType.PARALLEL_TASK_DISPATCH,
+  EventType.PARALLEL_TASK_COMPLETED,
+];
+
+/**
+ * Determine if the current event context is mission-critical.
+ * @param eventType - The event type to check
+ * @param metadata - Optional metadata that might indicate mission context
+ */
+export function isMissionContext(eventType?: string, metadata?: Record<string, unknown>): boolean {
+  // Check if event type indicates a mission
+  if (eventType && MISSION_EVENT_TYPES.includes(eventType as EventType)) {
+    return true;
+  }
+  // Check metadata for mission flag
+  if (metadata?.isMission === true) {
+    return true;
+  }
+  return false;
+}
+
+/**
  * Wake up the initiator agent when a delegated task or system event completes.
  *
  * @param userId - The ID of the user.
@@ -59,7 +87,9 @@ export async function wakeupInitiator(
     return;
   }
 
-  const RECURSION_LIMIT = await getRecursionLimit();
+  // Detect mission context and use appropriate recursion limit
+  const missionContext = isMissionContext(eventType as string);
+  const RECURSION_LIMIT = await getRecursionLimit(missionContext);
 
   if (depth >= RECURSION_LIMIT) {
     logger.error(
@@ -89,8 +119,25 @@ export async function wakeupInitiator(
 
 /**
  * Get the recursion limit from config or use default.
+ * @param isMission - Whether this is a mission-critical workflow (uses stricter limit)
  */
-export async function getRecursionLimit(): Promise<number> {
+export async function getRecursionLimit(isMission: boolean = false): Promise<number> {
+  const { CONFIG_DEFAULTS } = await import('../../lib/config/config-defaults');
+
+  // Use mission-specific limit if this is a mission context
+  if (isMission) {
+    try {
+      const missionLimit = await ConfigManager.getRawConfig('mission_recursion_limit');
+      if (missionLimit !== undefined) {
+        return parseConfigInt(missionLimit, CONFIG_DEFAULTS.MISSION_RECURSION_LIMIT.code);
+      }
+    } catch {
+      logger.warn('Failed to fetch mission_recursion_limit from DDB, using default.');
+    }
+    return CONFIG_DEFAULTS.MISSION_RECURSION_LIMIT.code;
+  }
+
+  // General events use the standard limit
   let RECURSION_LIMIT: number = SYSTEM.DEFAULT_RECURSION_LIMIT;
   try {
     const customLimit = await ConfigManager.getRawConfig(DYNAMO_KEYS.RECURSION_LIMIT);
