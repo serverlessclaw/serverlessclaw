@@ -20,7 +20,7 @@
   "dependencies": {
     "@serverlessclaw/core": "workspace:*",
     "@serverlessclaw/integration-github": "workspace:*",
-    "commander": "^12.1.0",
+    "commander": "^14.0.0",
     "execa": "^9.5.2",
     "fs-extra": "^11.3.0"
   },
