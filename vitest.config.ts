@@ -15,6 +15,9 @@ export default defineConfig({
     globals: true,
     include: ['**/*.test.{ts,tsx}'],
     exclude: ['**/node_modules/**', '**/.next/**', '**/.open-next/**', 'e2e/**'],
+    // Increase default test timeout to accommodate larger import/setup times
+    // when running the full monorepo test suite on CI or local machines.
+    timeout: 20000,
     alias: {
       '@': path.resolve(__dirname, './dashboard/src'),
       '@claw/core': path.resolve(__dirname, './core'),
