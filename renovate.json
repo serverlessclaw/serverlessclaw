@@ -6,7 +6,6 @@
   "prConcurrentLimit": 0,
   "prHourlyLimit": 0,
   "dependencyDashboard": true,
-  "dependencyDashboardRecreateClosed": true,
   "dependencyDashboardTitle": "Renovate Dependency Dashboard",
   "dependencyDashboardHeader": "This is the central dashboard for all dependency updates.",
   "automerge": true,
