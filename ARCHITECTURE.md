@@ -91,6 +91,59 @@ The [Health Handler](./core/handlers/health.ts) includes warm state information 
 
 ---
 
+## 🔄 Issue-Driven Sync (IDS) Protocol
+
+The IDS protocol manages the evolutionary synchronization between the **Mother Hub** (ServerlessClaw OSS) and its **Spokes** (Managed instances or Forks).
+
+```text
++--------------+      +--------------+      +--------------+      +--------------+
+|  Spoke Repo  |      |  Nerve CLI/  |      |     Sync     |      |  Mother Hub  |
+|   (GitHub)   |      |   Webhook    |      | Orchestrator |      |    (OSS)     |
++------+-------+      +------+-------+      +------+-------+      +------+-------+
+       |                     |                     |                     |
+       |--- Label Issue ---->|                     |                     |
+       |    (evol-sync)      |                     |                     |
+       |                     |                     |                     |
+       |--- Webhook Event -->|                     |                     |
+       |                     |                     |                     |
+       |                     |----- Trigger ------>|                     |
+       |                     |      Pull           |                     |
+       |                     |                     |                     |
+       |                     |                     |-- Acquire Lock --+  |
+       |                     |                     |                  |  |
+       |                     |                     |<-----------------+  |
+       |                     |                     |                     |
+       |                     |                     |------- Fetch ------>|
+       |                     |                     |      Evolution      |
+       |                     |                     |                     |
+       |                     |                     |<----- Blueprint ----|
+       |                     |                     |       Updates       |
+       |                     |                     |                     |
+       |                     |                     |-- Subtree/Fork --+  |
+       |                     |                     |      Merge       |  |
+       |                     |                     |<-----------------+  |
+       |                     |                     |                     |
+       |                     |   [ If Conflict ]   |                     |
+       |<--------- Post Conflict Report -----------|                     |
+       |                     |                     |                     |
+       |                     |   [ Else Success ]  |                     |
+       |<--------- Confirm Sync (Commit) ----------|                     |
+       |                     |                     |                     |
+       |                     |                     |-- Release Lock --+  |
+       |                     |                     |                  |  |
+       |                     |                     |<-----------------+  |
+       |                     |                     |                     |
+```
+
+### Key Components
+- **Sync Lock**: Prevents repository corruption by ensuring atomic Git operations per prefix (via `FileSystemSyncLock` or DynamoDB).
+- **Merge Policies**: Automated conflict resolution prioritizing the Hub for `core/` logic to maintain canonical alignment.
+- **Contribution Loop**: Spokes promote local innovations back to the Hub via `evolution-contribution` labels, triggering a `subtree push`.
+
+For detailed fork strategies, see [FORK_STRATEGY.md](docs/governance/FORK_STRATEGY.md).
+
+---
+
 ## High-Level System Diagram
 
 ```text

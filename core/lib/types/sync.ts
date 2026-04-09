@@ -22,7 +22,25 @@ export interface SyncOrchestrator {
   verify(options: SyncOptions): Promise<SyncVerification>;
 }
 
+/**
+ * Interface for concurrency locking to prevent repository corruption.
+ */
+export interface SyncLock {
+  acquire(resourceId: string, ttlMs?: number): Promise<boolean>;
+  release(resourceId: string): Promise<void>;
+  isLocked(resourceId: string): Promise<boolean>;
+}
+
 export type SyncMethod = 'subtree' | 'fork';
+
+export interface SyncPolicy {
+  /** Mode for conflict resolution: deterministic or agentic (swarm). */
+  conflictResolution: 'deterministic' | 'agentic';
+  /** Whether to require human approval for pushes (Hub side). */
+  requireApproval: boolean;
+  /** Files or patterns to exclude/abstract during sync (PII/Proprietary). */
+  abstractionFilters?: string[];
+}
 
 export interface SyncOptions {
   hubUrl: string;
@@ -33,6 +51,10 @@ export interface SyncOptions {
   traceId?: string;
   /** Whether to dry-run the sync for validation. */
   dryRun?: boolean;
+  /** Optional lock implementation. */
+  lock?: SyncLock;
+  /** Policy for sync behavior. */
+  policy?: SyncPolicy;
 }
 
 export interface SyncResult {
@@ -41,6 +63,7 @@ export interface SyncResult {
   commitHash?: string;
   conflicts?: SyncConflict[];
   buildId?: string;
+  locked?: boolean;
 }
 
 export interface SyncVerification {

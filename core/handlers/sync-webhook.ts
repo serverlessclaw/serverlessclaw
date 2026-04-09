@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { logger } from '../lib/logger';
 import { GitHubAdapter } from '../adapters/input/github-sensor';
-import { syncOrchestrator } from '../lib/sync/orchestrator';
-import { SyncOptions } from '../lib/types/sync';
+import { syncOrchestrator, fileSystemSyncLock } from '../lib/sync/orchestrator';
+import { SyncOptions, SyncResult } from '../lib/types/sync';
 
 const SyncWebhookPayloadSchema = z.object({
   action: z.string().optional(),
@@ -96,14 +96,15 @@ export class SyncWebhookHandler {
       method: this.config.method || 'subtree',
       commitMessage: `chore: sync from issue #${issue.number}`,
       gapIds: [`issue-${issue.number}`],
+      lock: fileSystemSyncLock,
     };
 
     const verifyResult = await syncOrchestrator.verify(syncOptions);
-    if (!verifyResult.canSyncWithoutConflict) {
+    if (!verifyResult.ok) {
       await this.githubAdapter.addComment({
         repo: repoFullName,
         issueNumber: issue.number,
-        body: `## Sync Check Result\n\n⚠️ Cannot sync: ${verifyResult.message}\n\n---\n*Automated by ServerlessClaw Issue-Driven Sync*`,
+        body: `## Sync Verification Failed\n\n⚠️ ${verifyResult.message}\n\n---\n*Automated by ServerlessClaw Issue-Driven Sync*`,
       });
       return {
         success: false,
@@ -112,32 +113,48 @@ export class SyncWebhookHandler {
       };
     }
 
-    let result;
+    let result: SyncResult;
     if (isContribution) {
       result = await syncOrchestrator.push(syncOptions);
     } else {
       result = await syncOrchestrator.pull(syncOptions);
     }
 
-    if (result.success) {
-      await this.githubAdapter.addComment({
-        repo: repoFullName,
-        issueNumber: issue.number,
-        body: `## Sync Result\n\n✅ ${result.message}${result.commitHash ? `\nCommit: ${result.commitHash}` : ''}\n\n---\n*Automated by ServerlessClaw Issue-Driven Sync*`,
-      });
-    } else {
-      await this.githubAdapter.addComment({
-        repo: repoFullName,
-        issueNumber: issue.number,
-        body: `## Sync Result\n\n❌ ${result.message}\n\n---\n*Automated by ServerlessClaw Issue-Driven Sync*`,
-      });
-    }
+    await this.githubAdapter.addComment({
+      repo: repoFullName,
+      issueNumber: issue.number,
+      body: this.formatSyncResult(result),
+    });
 
     return {
       success: result.success,
       message: result.message,
       issueNumber: issue.number,
     };
+  }
+
+  private formatSyncResult(result: SyncResult): string {
+    const title = result.success ? '✅ Sync Successful' : '❌ Sync Failed';
+    let body = `## ${title}\n\n${result.message}\n`;
+
+    if (result.locked) {
+      body += `\n⚠️ **Resource Locked**: Another synchronization is already in progress. Please wait a few minutes and try again.\n`;
+    }
+
+    if (result.commitHash) {
+      body += `\n**Commit**: \`${result.commitHash}\`\n`;
+    }
+
+    if (result.conflicts && result.conflicts.length > 0) {
+      body += `\n### ⚠️ Conflicts Detected\n\nThe following files require manual resolution:\n\n`;
+      result.conflicts.forEach((c) => {
+        body += `- \`${c.file}\`: ${c.description}\n`;
+      });
+      body += `\n**Instructions**: Please resolve these conflicts locally, commit the changes, and close this issue.\n`;
+    }
+
+    body += `\n---\n*Automated by ServerlessClaw Issue-Driven Sync*`;
+    return body;
   }
 }
 

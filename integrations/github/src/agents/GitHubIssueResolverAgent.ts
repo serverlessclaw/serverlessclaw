@@ -1,5 +1,7 @@
 import { SyncOptions, SyncMethod } from '@serverlessclaw/core/lib/types/sync';
 import { syncOrchestrator } from '@serverlessclaw/core/lib/sync/orchestrator';
+import { GitHubAdapter } from '../adapters/input/github-sensor';
+import { execSync } from 'child_process';
 
 export interface GitHubIssue {
   number: number;
@@ -16,17 +18,22 @@ export interface ResolutionResult {
 
 interface IssueSyncConfig {
   hubUrl: string;
+  hubRepo?: string; // e.g., 'serverlessclaw/serverlessclaw'
   prefix?: string;
   method?: SyncMethod;
 }
 
 export class GitHubIssueResolverAgent {
-  private llm: unknown;
+  private llm: { generate: (prompt: string) => Promise<{ text: () => Promise<string> }> };
   private config: IssueSyncConfig;
+  private githubAdapter: GitHubAdapter;
 
-  constructor(llmProvider: unknown, config: IssueSyncConfig) {
-    this.llm = llmProvider;
+  constructor(llmProvider: any, config: IssueSyncConfig) {
+    this.llm = llmProvider as {
+      generate: (prompt: string) => Promise<{ text: () => Promise<string> }>;
+    };
     this.config = config;
+    this.githubAdapter = new GitHubAdapter();
   }
 
   async resolve(issue: GitHubIssue, workingDir: string): Promise<ResolutionResult> {
@@ -117,30 +124,89 @@ export class GitHubIssueResolverAgent {
     issue: GitHubIssue,
     _workingDir: string
   ): Promise<ResolutionResult> {
-    console.log(`[IssueResolver] Applying evolutionary pattern from Spoke...`);
+    console.log(`[IssueResolver] Generating lightweight evolutionary proposal for Mother Hub...`);
 
-    const options: SyncOptions = {
-      hubUrl: this.config.hubUrl,
-      prefix: this.config.prefix || 'core/',
-      method: this.config.method || 'subtree',
-      commitMessage: `feat: contribute from issue #${issue.number}`,
-      gapIds: [`contrib-${issue.number}`],
-    };
-
-    const pushResult = await syncOrchestrator.push(options);
-
-    if (pushResult.success) {
+    if (!this.config.hubRepo) {
       return {
-        success: true,
-        message: `Contribution pushed. Commit: ${pushResult.commitHash}. Creating hub issue for tracking.`,
-        filesChanged: [],
+        success: false,
+        message: 'Hub repository (hubRepo) not configured. Cannot raise contribution issue.',
       };
     }
 
-    return {
-      success: false,
-      message: `Contribution push requires hub review: ${pushResult.message}`,
-    };
+    if (!this.llm) {
+      return {
+        success: false,
+        message: 'No LLM provider configured for proposal generation',
+      };
+    }
+
+    // 1. Identify what changed in the local 'spoke' relative to the hub
+    const hubRemote = 'hub-origin';
+    const prefix = this.config.prefix || 'core/';
+    let localDiff = '';
+    try {
+      localDiff = execSync(`git diff ${hubRemote}/main...HEAD -- ${prefix}`, {
+        encoding: 'utf-8',
+        maxBuffer: 10 * 1024 * 1024, // 10MB limit
+      });
+    } catch {
+      console.warn('[IssueResolver] Could not get git diff, falling back to issue context only.');
+    }
+
+    // 2. Generate an abstract, non-proprietary proposal using LLM
+    const prompt = `
+      You are an Evolution Facilitator for ServerlessClaw. 
+      A Spoke repository has an innovation or fix tagged as 'evolution-contribution'.
+      
+      Spoke Issue: #${issue.number} - ${issue.title}
+      Description: ${issue.body}
+      
+      Local Diff (if available):
+      ${localDiff.substring(0, 5000)} // Truncated to save tokens
+      
+      TASK:
+      Create a high-level, lightweight "Evolutionary Proposal" for the Mother Hub.
+      - DO NOT include PII, client names, or proprietary 'clawmore' secrets.
+      - Describe the ARCHITECTURAL change or FEATURE.
+      - Keep it concise to minimize token usage.
+      - Focus on the "Why" and the "How (Conceptual)".
+      
+      Format your response as:
+      Title: [PROPOSAL] Short description
+      Body: Detailed but concise blueprint for the Hub owner.
+    `;
+
+    const response = await this.llm.generate(prompt);
+    const proposalText = await response.text();
+
+    const titleMatch = proposalText.match(/Title:\s*(.*)/);
+    const bodyMatch = proposalText.match(/Body:\s*([\s\S]*)/);
+
+    const hubTitle = titleMatch ? titleMatch[1].trim() : `[CONTRIB] ${issue.title}`;
+    const hubBody = bodyMatch
+      ? bodyMatch[1].trim()
+      : `Original Issue: ${issue.title}\n\n${proposalText}`;
+
+    // 3. Create issue on the Mother Hub
+    try {
+      const hubIssue = await this.githubAdapter.createIssue({
+        repo: this.config.hubRepo,
+        title: hubTitle,
+        body: `${hubBody}\n\n---\n*Origin: Spoke Issue #${issue.number}*`,
+        labels: ['evolution-review', 'spoke-contribution'],
+      });
+
+      return {
+        success: true,
+        message: `Evolutionary proposal raised on Mother Hub: ${hubIssue.url}`,
+      };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      return {
+        success: false,
+        message: `Failed to raise proposal on Hub: ${message}`,
+      };
+    }
   }
 
   private async applyAgenticPatch(
@@ -165,9 +231,7 @@ export class GitHubIssueResolverAgent {
       Generate a diff/patch to fix this bug. Return the patch in unified diff format.
     `;
 
-    const response = await (
-      this.llm as { generate: (prompt: string) => Promise<{ text: () => Promise<string> }> }
-    ).generate(prompt);
+    const response = await this.llm.generate(prompt);
     const patchText = await response.text();
 
     console.log(`[IssueResolver] Generated patch (${patchText.length} chars)`);
