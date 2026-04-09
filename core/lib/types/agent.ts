@@ -360,6 +360,8 @@ export enum EventType {
   REPORT_BACK = 'report_back',
   /** User request delegated to specialized agent (from SuperClaw). */
   DELEGATION_TASK = 'delegation_task',
+  /** Trigger for system audit based on code growth threshold or event. */
+  SYSTEM_AUDIT_TRIGGER = 'system_audit_trigger',
 }
 
 /**

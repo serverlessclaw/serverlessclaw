@@ -120,7 +120,7 @@ describe('LockManager', () => {
       expect(mockSend).toHaveBeenCalledWith(expect.any(UpdateCommand));
       const input = mockSend.mock.calls[0][0].input;
       expect(input.UpdateExpression).toContain('REMOVE');
-      expect(input.ConditionExpression).toBe('ownerId = :owner');
+      expect(input.ConditionExpression).toBe('ownerId = :owner AND expiresAt > :now');
     });
 
     it('should return false if release fails conditional check', async () => {

@@ -80,8 +80,8 @@ describe('TelegramAdapter', () => {
       const result = adapter.parse(raw);
 
       expect(result.source).toBe('telegram');
-      expect(result.userId).toBe('non-message-update');
-      expect(result.sessionId).toBe('non-message-update');
+      expect(result.userId).toBe('telegram:callback:67890');
+      expect(result.sessionId).toBe('telegram:callback:67890');
       expect(result.text).toBe('');
       expect(result.attachments).toEqual([]);
       expect(result.metadata.updateId).toBe(67890);
@@ -99,7 +99,7 @@ describe('TelegramAdapter', () => {
 
       const result = adapter.parse(raw);
 
-      expect(result.userId).toBe('non-message-update');
+      expect(result.userId).toBe('telegram:callback:99999');
       expect(result.text).toBe('');
       expect(result.metadata.rawMessage).toBeUndefined();
     });
@@ -123,7 +123,7 @@ describe('TelegramAdapter', () => {
       const raw = { update_id: 12345 };
       const result = adapter.parse(raw);
 
-      expect(result.userId).toBe('non-message-update');
+      expect(result.userId).toBe('telegram:callback:12345');
       expect(result.text).toBe('');
       expect(result.metadata.updateId).toBe(12345);
       expect(result.metadata.rawMessage).toBeUndefined();

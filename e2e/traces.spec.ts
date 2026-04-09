@@ -21,11 +21,10 @@ test.describe('Traces', () => {
 
     // Look for clickable trace items
     const traceItem = page.locator('a[href*="/trace/"], [data-trace-id], tr, li').first();
-    if (await traceItem.isVisible()) {
-      await traceItem.click();
-      // Should navigate to trace detail or show detail view
-      await page.waitForTimeout(1000);
-    }
+    await expect(traceItem).toBeVisible({ timeout: 15000 });
+    await traceItem.click();
+    // Should navigate to trace detail or show detail view
+    await page.waitForLoadState('networkidle');
   });
 
   test('navigation from sidebar to traces works', async ({ page }) => {

@@ -1,6 +1,7 @@
 import { logger } from '../../lib/logger';
 import { emitEvent, EventPriority } from '../../lib/utils/bus';
 import { EventType } from '../../lib/types/agent';
+import { sendOutboundMessage } from '../../lib/outbound';
 
 interface StrategicTieBreakPayload {
   userId: string;
@@ -77,7 +78,27 @@ export async function handleStrategicTieBreak(eventDetail: Record<string, unknow
     { priority: EventPriority.HIGH }
   );
 
-  logger.info(
-    `[TIE_BREAK] Dispatched strategic tie-break (${isHighRisk ? 'DEFERRED' : 'PROCEED_SAFE'}) to ${agentId}`
-  );
+  // Notify user of the strategic tie-break decision
+  const decisionType = isHighRisk ? 'DEFERRED' : 'PROCEED_SAFE';
+  const notificationMessage = isHighRisk
+    ? `⚠️ **Strategic Tie-Break: Task Deferred**\n\nYour task was automatically deferred because it contained high-risk operations that require explicit human approval.\n\nOriginal request: "${originalTask.substring(0, 200)}${originalTask.length > 200 ? '...' : ''}"`
+    : `ℹ️ **Strategic Tie-Break: Task Proceeding with Constraints**\n\nA task conflict was resolved automatically. Your request will proceed with additional safety constraints applied.\n\nTask: "${task.substring(0, 200)}${task.length > 200 ? '...' : ''}"`;
+
+  try {
+    await sendOutboundMessage(
+      'strategic-tie-break-handler',
+      userId,
+      notificationMessage,
+      undefined,
+      sessionId,
+      'SuperClaw',
+      undefined,
+      traceId
+    );
+    logger.info(`[TIE_BREAK] User notified of strategic decision for trace ${traceId}`);
+  } catch (err) {
+    logger.warn(`[TIE_BREAK] Failed to notify user of tie-break decision:`, err);
+  }
+
+  logger.info(`[TIE_BREAK] Dispatched strategic tie-break (${decisionType}) to ${agentId}`);
 }

@@ -32,6 +32,11 @@ export function createStorage() {
     primaryIndex: { hashKey: FIELDS.TRACE_ID, rangeKey: FIELDS.NODE_ID },
     globalIndexes: {
       UserIndex: { hashKey: FIELDS.USER_ID, rangeKey: FIELDS.TIMESTAMP },
+      // Support efficient one-row-per-trace listing by partitioning on nodeId
+      // for the reserved summary rows (nodeId = '__summary__'). Query this
+      // index with nodeId='__summary__' to retrieve trace summaries ordered
+      // by timestamp.
+      SummaryByNode: { hashKey: FIELDS.NODE_ID, rangeKey: FIELDS.TIMESTAMP },
     },
     ttl: 'expiresAt',
   });

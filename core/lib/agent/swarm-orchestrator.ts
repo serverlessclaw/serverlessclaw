@@ -1,7 +1,22 @@
 import { logger } from '../logger';
 import { AgentType, EventType, AgentPayload } from '../types/agent';
-import { SWARM } from '../constants/system';
+import { SWARM, SYSTEM } from '../constants/system';
 import { isTaskPaused } from '../utils/agent-helpers';
+import { ConfigManager } from '../registry/config';
+import { parseConfigInt } from '../providers/utils';
+import { DYNAMO_KEYS } from '../constants';
+
+async function getMaxRecursionDepth(): Promise<number> {
+  try {
+    const custom = await ConfigManager.getRawConfig(DYNAMO_KEYS.RECURSION_LIMIT);
+    if (custom !== undefined) {
+      return parseConfigInt(custom, SYSTEM.DEFAULT_RECURSION_LIMIT);
+    }
+  } catch {
+    // Use default on config fetch error
+  }
+  return SYSTEM.DEFAULT_RECURSION_LIMIT;
+}
 
 /**
  * Options for swarm decomposition.
@@ -69,12 +84,14 @@ export async function handleSwarmDecomposition(
   const isPaused = isTaskPaused(responseText);
   const hasMissionMarkers = responseText.includes('### Goal:') || responseText.includes('### Step');
 
+  const maxDepth = await getMaxRecursionDepth();
+
   // Guard: Only decompose if not paused, not too deep, and contains mission intent
   if (
     !isContinuation &&
     !isAggregation &&
     !isPaused &&
-    depth < SWARM.MAX_RECURSIVE_DEPTH &&
+    depth < maxDepth &&
     (hasMissionMarkers || responseText.length > minLength)
   ) {
     const { decomposePlan } = await import('./decomposer');

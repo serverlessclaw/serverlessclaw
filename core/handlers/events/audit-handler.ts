@@ -1,0 +1,77 @@
+/**
+ * Audit Handler
+ *
+ * Handles SYSTEM_AUDIT_TRIGGER events to run system audits.
+ */
+
+import { logger } from '../../lib/logger';
+import { getConfigValue } from '../../lib/config';
+import { emitEvent } from '../../lib/utils/bus';
+import { AgentType, EventType } from '../../lib/types/agent';
+import { runSystemAudit } from '../../agents/cognition-reflector/audit-protocol';
+import { getAgentContext } from '../../lib/utils/agent-helpers';
+
+export interface AuditTriggerEvent {
+  triggerType: string;
+  metrics?: {
+    previousLOC: number;
+    currentLOC: number;
+    growthPercentage: number;
+    timestamp: number;
+  };
+  timestamp: number;
+  userId?: string;
+  traceId?: string;
+  sessionId?: string;
+}
+
+export async function handleSystemAuditTrigger(
+  event: AuditTriggerEvent,
+  _detailType: string
+): Promise<void> {
+  const auditEnabled = getConfigValue('AUDIT_EVENT_TRIGGERS_ENABLED');
+  if (!auditEnabled) {
+    logger.info('[AuditHandler] Audit triggers disabled, skipping');
+    return;
+  }
+
+  logger.info('[AuditHandler] Received audit trigger:', event.triggerType);
+
+  try {
+    const { memory } = await getAgentContext();
+
+    const triggerType = event.triggerType || 'EVENT_TRIGGER';
+
+    const auditReport = await runSystemAudit(
+      memory as unknown as {
+        getAllGaps(status: unknown): Promise<unknown[]>;
+        getFailurePatterns(userId: string, pattern: string, limit: number): Promise<unknown[]>;
+        set(key: string, value: unknown): Promise<void>;
+      },
+      triggerType,
+      {
+        codeMetrics: event.metrics,
+        userId: event.userId,
+        traceId: event.traceId,
+      }
+    );
+
+    logger.info('[AuditHandler] Audit completed:', auditReport.summary);
+
+    const p0Findings = auditReport.findings.filter(
+      (f: { severity: string }) => f.severity === 'P0'
+    );
+    if (p0Findings.length > 0) {
+      logger.error(`[AuditHandler] P0 findings detected: ${p0Findings.length}`);
+      await emitEvent(AgentType.COGNITION_REFLECTOR, EventType.HEALTH_ALERT, {
+        component: 'AuditSystem',
+        issue: `P0 audit findings: ${p0Findings.map((f: { silo: string }) => f.silo).join(', ')}`,
+        severity: 'critical',
+        auditId: auditReport.auditId,
+        findings: p0Findings,
+      });
+    }
+  } catch (e) {
+    logger.error('[AuditHandler] Failed to run system audit:', e);
+  }
+}

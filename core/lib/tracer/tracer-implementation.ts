@@ -96,6 +96,32 @@ export class ClawTracer {
           ConditionExpression: 'attribute_not_exists(traceId) AND attribute_not_exists(nodeId)',
         })
       );
+      // Optionally maintain a summary item for this trace to support
+      // one-row-per-trace listings in the dashboard. This is behind an
+      // env flag to avoid changing test expectations by default.
+      const summariesEnabled = process.env.TRACE_SUMMARIES_ENABLED === 'true';
+      if (summariesEnabled && this.nodeId === 'root') {
+        try {
+          await this.docClient.send(
+            new PutCommand({
+              TableName: this.getTableName(),
+              Item: {
+                traceId: this.traceId,
+                nodeId: '__summary__',
+                userId: this.userId,
+                source: this.source,
+                agentId: this.agentId,
+                timestamp: this.startTime,
+                status: TRACE_STATUS.STARTED,
+                title: (initialContext as any)?.title ?? (initialContext as any)?.message ?? null,
+                expiresAt,
+              },
+            })
+          );
+        } catch (summErr) {
+          logger.warn(`Failed to create trace summary for ${this.traceId}:`, summErr);
+        }
+      }
     } catch (e: unknown) {
       if (
         e &&
@@ -155,6 +181,26 @@ export class ClawTracer {
         },
       })
     );
+
+    // Update the trace summary's timestamp to reflect recent activity (only
+    // update the one summary row maintained for the root node) when enabled.
+    const summariesEnabled = process.env.TRACE_SUMMARIES_ENABLED === 'true';
+    if (summariesEnabled && this.nodeId === 'root') {
+      try {
+        await this.docClient.send(
+          new UpdateCommand({
+            TableName: this.getTableName(),
+            Key: { traceId: this.traceId, nodeId: '__summary__' },
+            UpdateExpression: 'SET #ts = :ts, lastStepType = :t',
+            ExpressionAttributeNames: { '#ts': 'timestamp' },
+            ExpressionAttributeValues: { ':ts': Date.now(), ':t': step.type },
+          })
+        );
+      } catch (e) {
+        // best-effort - do not fail main flow
+        logger.warn(`Failed to update trace summary timestamp for ${this.traceId}:`, e);
+      }
+    }
   }
 
   /**
@@ -180,6 +226,28 @@ export class ClawTracer {
         },
       })
     );
+
+    // Mark the summary as completed as well (root-only) when enabled.
+    const summariesEnabledEnd = process.env.TRACE_SUMMARIES_ENABLED === 'true';
+    if (summariesEnabledEnd && this.nodeId === 'root') {
+      try {
+        await this.docClient.send(
+          new UpdateCommand({
+            TableName: this.getTableName(),
+            Key: { traceId: this.traceId, nodeId: '__summary__' },
+            UpdateExpression: 'SET #status = :status, #ts = :ts, finalResponse = :resp',
+            ExpressionAttributeNames: { '#status': 'status', '#ts': 'timestamp' },
+            ExpressionAttributeValues: {
+              ':status': TRACE_STATUS.COMPLETED,
+              ':ts': Date.now(),
+              ':resp': finalResponse,
+            },
+          })
+        );
+      } catch (e) {
+        logger.warn(`Failed to update trace summary on end for ${this.traceId}:`, e);
+      }
+    }
   }
 
   /**

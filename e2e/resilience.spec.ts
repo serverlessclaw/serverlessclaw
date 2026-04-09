@@ -9,11 +9,7 @@ test.describe('Resilience & Fault Tolerance (Fault Detector)', () => {
 
     // Look for Gaps in FAILED status
     const failedStatus = page.locator('text=/FAILED|ERROR/i').first();
-    await expect(failedStatus)
-      .toBeVisible({ timeout: 15000 })
-      .catch(() => {
-        console.log('No failed gaps currently in the pipeline');
-      });
+    await expect(failedStatus).toBeVisible({ timeout: 15000 });
   });
 
   test('displays retry control for failed trace nodes', async ({ page }) => {
@@ -21,20 +17,15 @@ test.describe('Resilience & Fault Tolerance (Fault Detector)', () => {
     await page.waitForLoadState('networkidle');
 
     const traceDetail = page.locator('a[href*="/trace/"]').first();
-    if (await traceDetail.isVisible()) {
-      await traceDetail.click();
-      await page.waitForLoadState('networkidle');
+    await expect(traceDetail).toBeVisible({ timeout: 15000 });
+    await traceDetail.click();
+    await page.waitForLoadState('networkidle');
 
-      // Check for retry buttons or error states
-      const retryButton = page.locator(
-        'button:has-text("RETRY"), button:has-text("FIX"), [aria-label="Retry"]'
-      );
-      await expect(retryButton.first())
-        .toBeVisible({ timeout: 5000 })
-        .catch(() => {
-          console.log('No retry controls found on this trace detail');
-        });
-    }
+    // Check for retry buttons or error states
+    const retryButton = page.locator(
+      'button:has-text("RETRY"), button:has-text("FIX"), [aria-label="Retry"]'
+    );
+    await expect(retryButton.first()).toBeVisible({ timeout: 5000 });
   });
 
   test('verifies Cognitive Health alerting state', async ({ page }) => {
@@ -47,8 +38,6 @@ test.describe('Resilience & Fault Tolerance (Fault Detector)', () => {
 
     // Should indicate whether the system is healthy or has "strategic gaps"
     const gapCountStr = page.locator('text=/strategic gap|neural coherence/i').first();
-    if (await gapCountStr.isVisible()) {
-      await expect(gapCountStr).toBeVisible();
-    }
+    await expect(gapCountStr).toBeVisible({ timeout: 5000 });
   });
 });

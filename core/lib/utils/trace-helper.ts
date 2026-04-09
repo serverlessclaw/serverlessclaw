@@ -65,6 +65,24 @@ export async function addTraceStep(
         },
       })
     );
+    // Best-effort update of the trace summary timestamp, but only for root
+    // level nodes to avoid excessive writes when child nodes emit steps.
+    const summariesEnabled = process.env.TRACE_SUMMARIES_ENABLED === 'true';
+    if (summariesEnabled && (!nodeId || nodeId === 'root')) {
+      try {
+        await client.send(
+          new UpdateCommand({
+            TableName: tableName,
+            Key: { traceId, nodeId: '__summary__' },
+            UpdateExpression: 'SET #ts = :ts, lastStepType = :t',
+            ExpressionAttributeNames: { '#ts': 'timestamp' },
+            ExpressionAttributeValues: { ':ts': Date.now(), ':t': step.type },
+          })
+        );
+      } catch (err) {
+        logger.warn(`Failed to update trace summary timestamp for ${traceId}:`, err);
+      }
+    }
   } catch (e) {
     logger.warn(`Failed to add trace step to ${traceId}/${nodeId ?? 'root'}:`, e);
   }
@@ -101,6 +119,23 @@ export async function updateTraceMetadata(
         },
       })
     );
+    // Also merge metadata into summary item (best-effort) only for root.
+    const summariesEnabledMeta = process.env.TRACE_SUMMARIES_ENABLED === 'true';
+    if (summariesEnabledMeta && (!nodeId || nodeId === 'root')) {
+      try {
+        await client.send(
+          new UpdateCommand({
+            TableName: tableName,
+            Key: { traceId, nodeId: '__summary__' },
+            UpdateExpression: 'SET metadata = if_not_exists(metadata, :empty) || :meta, #ts = :ts',
+            ExpressionAttributeNames: { '#ts': 'timestamp' },
+            ExpressionAttributeValues: { ':meta': metadata, ':empty': {}, ':ts': Date.now() },
+          })
+        );
+      } catch (err) {
+        logger.warn(`Failed to update trace summary metadata for ${traceId}:`, err);
+      }
+    }
   } catch (e) {
     logger.warn(`Failed to update trace metadata for ${traceId}/${nodeId ?? 'root'}:`, e);
   }
@@ -135,6 +170,23 @@ export async function updateTraceStatus(
         ExpressionAttributeValues: { ':status': status },
       })
     );
+    // Update the summary status as well (best-effort) only for root nodes.
+    const summariesEnabledStatus = process.env.TRACE_SUMMARIES_ENABLED === 'true';
+    if (summariesEnabledStatus && (!nodeId || nodeId === 'root')) {
+      try {
+        await client.send(
+          new UpdateCommand({
+            TableName: tableName,
+            Key: { traceId, nodeId: '__summary__' },
+            UpdateExpression: 'SET #status = :status, #ts = :ts',
+            ExpressionAttributeNames: { '#status': 'status', '#ts': 'timestamp' },
+            ExpressionAttributeValues: { ':status': status, ':ts': Date.now() },
+          })
+        );
+      } catch (err) {
+        logger.warn(`Failed to update trace summary status for ${traceId}:`, err);
+      }
+    }
   } catch (e) {
     logger.warn(`Failed to update trace status for ${traceId}/${nodeId ?? 'root'}:`, e);
   }

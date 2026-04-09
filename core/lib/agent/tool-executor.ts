@@ -79,7 +79,7 @@ export class ToolExecutor {
 
       // 1.5 RBAC Check
       if (tool.requiredPermissions && tool.requiredPermissions.length > 0) {
-        let hasPermission;
+        let hasPermission = false;
         try {
           const { BaseMemoryProvider } = await import('../memory/base');
           const { IdentityManager } = await import('../session/identity');
@@ -88,12 +88,10 @@ export class ToolExecutor {
           if (!execContext.userId || execContext.userId === 'SYSTEM') {
             hasPermission = true;
           } else {
-            hasPermission = true;
             for (const perm of tool.requiredPermissions) {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Permission enum vs string[]
-              const hasPerm = await identity.hasPermission(execContext.userId, perm as any);
-              if (!hasPerm) {
-                hasPermission = false;
+              hasPermission = await identity.hasPermission(execContext.userId, perm as any);
+              if (!hasPermission) {
                 break;
               }
             }

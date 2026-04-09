@@ -34,6 +34,7 @@ describe('event-routing', () => {
       EventType.COGNITIVE_HEALTH_CHECK,
       EventType.STRATEGIC_TIE_BREAK,
       EventType.REPORT_BACK,
+      EventType.SYSTEM_AUDIT_TRIGGER,
       EventType.DAG_TASK_COMPLETED,
       EventType.DAG_TASK_FAILED,
     ];
@@ -84,6 +85,7 @@ describe('event-routing', () => {
         'consensus-handler',
         'cognitive-health-handler',
         'strategic-tie-break-handler',
+        'audit-handler',
         'report-back-handler',
         'dag-supervisor-handler',
         'agent-multiplexer',

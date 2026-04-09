@@ -336,6 +336,22 @@ export const CONFIG_DEFAULTS = {
     configKey: 'tie_break_timeout_ms',
     description: 'Timeout for multi-party collaboration conflicts before strategic tie-break.',
   },
+
+  /** Code growth threshold that triggers system audit. Default: 0.10 (10%) */
+  AUDIT_CODE_GROWTH_THRESHOLD: {
+    code: 0.1,
+    hotSwappable: true,
+    configKey: 'audit_code_growth_threshold',
+    description: 'Code growth percentage that triggers a system audit.',
+  },
+
+  /** Enable audit triggers after major events. Default: true */
+  AUDIT_EVENT_TRIGGERS_ENABLED: {
+    code: true,
+    hotSwappable: true,
+    configKey: 'audit_event_triggers_enabled',
+    description: 'Enable audit triggers after TRUNK_SYNC, DEPLOYMENT_COMPLETE events.',
+  },
 } as const;
 
 export type ConfigKey = keyof typeof CONFIG_DEFAULTS;

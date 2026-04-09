@@ -115,3 +115,36 @@ export function hasPermission(memberRole: WorkspaceRole, requiredRole: Workspace
 export function workspaceKey(workspaceId: string): string {
   return `WORKSPACE#${workspaceId}`;
 }
+
+/**
+ * User roles from IdentityManager (core identity layer).
+ */
+export type IdentityUserRole = 'owner' | 'admin' | 'member' | 'viewer';
+
+/**
+ * Maps IdentityManager UserRole to WorkspaceRole.
+ * Used when a human user needs workspace-scoped permissions.
+ */
+export function userRoleToWorkspaceRole(userRole: IdentityUserRole): WorkspaceRole {
+  const mapping: Record<IdentityUserRole, WorkspaceRole> = {
+    owner: 'owner',
+    admin: 'admin',
+    member: 'collaborator',
+    viewer: 'observer',
+  };
+  return mapping[userRole] ?? 'observer';
+}
+
+/**
+ * Maps WorkspaceRole to IdentityManager UserRole.
+ * Used when checking workspace permissions for API access.
+ */
+export function workspaceRoleToUserRole(workspaceRole: WorkspaceRole): IdentityUserRole {
+  const mapping: Record<WorkspaceRole, IdentityUserRole> = {
+    owner: 'owner',
+    admin: 'admin',
+    collaborator: 'member',
+    observer: 'viewer',
+  };
+  return mapping[workspaceRole] ?? 'viewer';
+}

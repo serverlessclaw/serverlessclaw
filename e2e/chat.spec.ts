@@ -40,9 +40,7 @@ test.describe('Chat Flow', () => {
       .click();
 
     const executingButton = page.getByText(/EXECUTING|处理中/i);
-    await expect(executingButton)
-      .toBeVisible({ timeout: 2000 })
-      .catch(() => {});
+    await expect(executingButton).toBeVisible({ timeout: 2000 });
   });
 
   test('textarea supports Enter to send', async ({ page }) => {

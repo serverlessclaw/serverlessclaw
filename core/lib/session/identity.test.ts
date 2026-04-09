@@ -172,9 +172,18 @@ describe('IdentityManager', () => {
     });
 
     it('should grant all permissions to OWNER', async () => {
-      await manager.authenticate('admin', 'telegram'); // fallback owner
+      // Manually create an OWNER user in state
+      state.set('WORKSPACE#USER#superadmin', {
+        userId: 'WORKSPACE#USER#superadmin',
+        role: UserRole.OWNER,
+        workspaceIds: [],
+        displayName: 'superadmin',
+        authProvider: 'dashboard',
+        createdAt: Date.now(),
+        lastActiveAt: Date.now(),
+      });
       await manager.authenticate('owner-1', 'telegram');
-      await manager.updateUserRole('owner-1', UserRole.OWNER, 'admin');
+      await manager.updateUserRole('owner-1', UserRole.OWNER, 'superadmin');
 
       const allPermissions = Object.values(Permission);
       for (const perm of allPermissions) {
@@ -183,9 +192,18 @@ describe('IdentityManager', () => {
     });
 
     it('should grant correct permissions to ADMIN', async () => {
-      await manager.authenticate('admin', 'telegram'); // fallback owner
+      // Manually create an OWNER user in state
+      state.set('WORKSPACE#USER#superadmin', {
+        userId: 'WORKSPACE#USER#superadmin',
+        role: UserRole.OWNER,
+        workspaceIds: [],
+        displayName: 'superadmin',
+        authProvider: 'dashboard',
+        createdAt: Date.now(),
+        lastActiveAt: Date.now(),
+      });
       await manager.authenticate('admin-1', 'telegram');
-      await manager.updateUserRole('admin-1', UserRole.ADMIN, 'admin');
+      await manager.updateUserRole('admin-1', UserRole.ADMIN, 'superadmin');
 
       expect(await manager.hasPermission('admin-1', Permission.AGENT_CREATE)).toBe(true);
       expect(await manager.hasPermission('admin-1', Permission.AGENT_DELETE)).toBe(true);
@@ -209,9 +227,15 @@ describe('IdentityManager', () => {
     });
 
     it('should grant read-only permissions to VIEWER', async () => {
-      await manager.authenticate('admin', 'telegram'); // fallback owner
+      // Manually create an OWNER user in state
+      state.set('WORKSPACE#USER#superadmin', {
+        userId: 'WORKSPACE#USER#superadmin',
+        role: UserRole.OWNER,
+        workspaceIds: [],
+        displayName: 'superadmin',
+      });
       await manager.authenticate('viewer-1', 'telegram');
-      await manager.updateUserRole('viewer-1', UserRole.VIEWER, 'admin');
+      await manager.updateUserRole('viewer-1', UserRole.VIEWER, 'superadmin');
 
       expect(await manager.hasPermission('viewer-1', Permission.AGENT_VIEW)).toBe(true);
       expect(await manager.hasPermission('viewer-1', Permission.TASK_VIEW)).toBe(true);
@@ -230,9 +254,15 @@ describe('IdentityManager', () => {
     });
 
     it('should grant OWNER access to all resources', async () => {
-      await manager.authenticate('admin', 'telegram'); // fallback owner
+      // Manually create an OWNER user in state
+      state.set('WORKSPACE#USER#superadmin', {
+        userId: 'WORKSPACE#USER#superadmin',
+        role: UserRole.OWNER,
+        workspaceIds: [],
+        displayName: 'superadmin',
+      });
       await manager.authenticate('owner-1', 'telegram');
-      await manager.updateUserRole('owner-1', UserRole.OWNER, 'admin');
+      await manager.updateUserRole('owner-1', UserRole.OWNER, 'superadmin');
 
       expect(await manager.hasResourceAccess('owner-1', 'agent', 'agent-1')).toBe(true);
       expect(await manager.hasResourceAccess('owner-1', 'workspace', 'ws-1')).toBe(true);
@@ -241,9 +271,15 @@ describe('IdentityManager', () => {
     });
 
     it('should grant ADMIN access to all resources', async () => {
-      await manager.authenticate('admin', 'telegram'); // fallback owner
+      // Manually create an OWNER user in state
+      state.set('WORKSPACE#USER#superadmin', {
+        userId: 'WORKSPACE#USER#superadmin',
+        role: UserRole.OWNER,
+        workspaceIds: [],
+        displayName: 'superadmin',
+      });
       await manager.authenticate('admin-1', 'telegram');
-      await manager.updateUserRole('admin-1', UserRole.ADMIN, 'admin');
+      await manager.updateUserRole('admin-1', UserRole.ADMIN, 'superadmin');
 
       expect(await manager.hasResourceAccess('admin-1', 'agent', 'agent-1')).toBe(true);
       expect(await manager.hasResourceAccess('admin-1', 'workspace', 'ws-1')).toBe(true);
@@ -264,9 +300,15 @@ describe('IdentityManager', () => {
     });
 
     it('should check access control entries for roles', async () => {
-      await manager.authenticate('admin', 'telegram'); // fallback owner
+      // Manually create an OWNER user in state
+      state.set('WORKSPACE#USER#superadmin', {
+        userId: 'WORKSPACE#USER#superadmin',
+        role: UserRole.OWNER,
+        workspaceIds: [],
+        displayName: 'superadmin',
+      });
       await manager.authenticate('admin-1', 'telegram');
-      await manager.updateUserRole('admin-1', UserRole.ADMIN, 'admin');
+      await manager.updateUserRole('admin-1', UserRole.ADMIN, 'superadmin');
 
       const entry: AccessControlEntry = {
         resourceType: 'agent',
@@ -279,9 +321,15 @@ describe('IdentityManager', () => {
     });
 
     it('should deny access if not in allowed roles', async () => {
-      await manager.authenticate('admin', 'telegram'); // fallback owner
+      // Manually create an OWNER user in state
+      state.set('WORKSPACE#USER#superadmin', {
+        userId: 'WORKSPACE#USER#superadmin',
+        role: UserRole.OWNER,
+        workspaceIds: [],
+        displayName: 'superadmin',
+      });
       await manager.authenticate('viewer-1', 'telegram');
-      await manager.updateUserRole('viewer-1', UserRole.VIEWER, 'admin');
+      await manager.updateUserRole('viewer-1', UserRole.VIEWER, 'superadmin');
 
       const entry: AccessControlEntry = {
         resourceType: 'agent',
@@ -311,11 +359,17 @@ describe('IdentityManager', () => {
 
   describe('updateUserRole', () => {
     it('should update user role successfully with authorized caller', async () => {
-      await manager.authenticate('admin', 'telegram'); // fallback owner
+      // Manually create an OWNER user in state
+      state.set('WORKSPACE#USER#superadmin', {
+        userId: 'WORKSPACE#USER#superadmin',
+        role: UserRole.OWNER,
+        workspaceIds: [],
+        displayName: 'superadmin',
+      });
       await manager.authenticate('user-1', 'telegram');
       expect((await manager.getUser('user-1'))?.role).toBe(UserRole.MEMBER);
 
-      const result = await manager.updateUserRole('user-1', UserRole.ADMIN, 'admin');
+      const result = await manager.updateUserRole('user-1', UserRole.ADMIN, 'superadmin');
 
       expect(result).toBe(true);
       expect((await manager.getUser('user-1'))?.role).toBe(UserRole.ADMIN);
@@ -323,22 +377,49 @@ describe('IdentityManager', () => {
     });
 
     it('should return false for non-existent user', async () => {
-      await manager.authenticate('admin', 'telegram');
-      const result = await manager.updateUserRole('non-existent', UserRole.ADMIN, 'admin');
+      // Manually create an OWNER user in state
+      state.set('WORKSPACE#USER#superadmin', {
+        userId: 'WORKSPACE#USER#superadmin',
+        role: UserRole.OWNER,
+        workspaceIds: [],
+        displayName: 'superadmin',
+      });
+      const result = await manager.updateUserRole('non-existent', UserRole.ADMIN, 'superadmin');
 
       expect(result).toBe(false);
     });
 
     it('should persist user to storage', async () => {
-      await manager.authenticate('admin', 'telegram'); // fallback owner
+      // Create the caller in state - this mimics an existing OWNER in the system
+      const superadminKey = 'WORKSPACE#USER#superadmin';
+      state.set(superadminKey, {
+        userId: superadminKey,
+        role: UserRole.OWNER,
+        workspaceIds: [],
+        displayName: 'superadmin',
+        authProvider: 'dashboard',
+        createdAt: Date.now(),
+        lastActiveAt: Date.now(),
+      });
+
+      // Authenticate as user-1 (becomes MEMBER) - this triggers putItem calls
       await manager.authenticate('user-1', 'telegram');
+
+      // Clear the putItem mock to track only the updateUserRole call
       mockBase.putItem.mockClear();
 
-      await manager.updateUserRole('user-1', UserRole.OWNER, 'admin');
+      // Update user-1 to OWNER using superadmin as caller
+      const result = await manager.updateUserRole('user-1', UserRole.OWNER, 'superadmin');
 
+      expect(result).toBe(true);
       expect(mockBase.putItem).toHaveBeenCalled();
-      const savedItem = mockBase.putItem.mock.calls[0][0];
-      expect(savedItem.role).toBe(UserRole.OWNER);
+      // The updateUserRole should call saveUser which calls putItem
+      // Find the call that has the updated role
+      const updateCall = mockBase.putItem.mock.calls.find(
+        (call: any[]) => call[0].role === UserRole.OWNER
+      );
+      expect(updateCall).toBeDefined();
+      expect(updateCall?.[0].role).toBe(UserRole.OWNER);
     });
 
     it('should deny role change when caller is not OWNER or ADMIN', async () => {

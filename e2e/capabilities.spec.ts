@@ -26,8 +26,8 @@ test.describe('Capabilities / Tools & Skills', () => {
     const libraryTab = page.locator('button:has-text("Library"), [role="tab"]:has-text("Library")');
     if (await libraryTab.isVisible()) {
       await libraryTab.click();
-      // Content should change
-      await page.waitForTimeout(500);
+      // Content should change; wait for library header or content
+      await expect(page.locator('text=/Library/i')).toBeVisible({ timeout: 5000 });
     }
   });
 

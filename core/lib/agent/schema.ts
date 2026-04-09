@@ -77,4 +77,6 @@ export interface TaskCancellation {
   taskId: string;
   initiatorId: string;
   reason?: string;
+  sessionId?: string;
+  agentId?: string;
 }

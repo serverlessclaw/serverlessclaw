@@ -53,17 +53,60 @@ export async function cleanupOrphanTraces(): Promise<TraceCleanupResult> {
 
     logger.info(`[TRACE_CLEANUP] Found ${orphanTraces.length} orphan traces`);
 
-    // Delete each orphan trace
+    // Delete each orphan trace (delete entire partition for the traceId so
+    // both node-level items and the per-trace summary row are removed).
     for (const trace of orphanTraces) {
       try {
-        // Delete all nodes for this traceId
-        await docClient.send(
-          new DeleteCommand({
-            TableName: TRACE_TABLE_NAME,
-            Key: { traceId: trace.traceId, nodeId: trace.nodeId },
-          })
-        );
-        result.deleted++;
+        if (trace.nodeId === '__summary__') {
+          // Query for all nodes in this trace and delete them.
+          const nodes = await docClient.send(
+            new QueryCommand({
+              TableName: TRACE_TABLE_NAME,
+              KeyConditionExpression: 'traceId = :tid',
+              ExpressionAttributeValues: { ':tid': trace.traceId },
+              Limit: MAX_ITEMS_TO_SCAN,
+            })
+          );
+          const items = nodes.Items ?? [];
+          for (const node of items) {
+            try {
+              await docClient.send(
+                new DeleteCommand({
+                  TableName: TRACE_TABLE_NAME,
+                  Key: { traceId: node.traceId, nodeId: node.nodeId },
+                })
+              );
+              result.deleted++;
+            } catch (err) {
+              const msg = err instanceof Error ? err.message : String(err);
+              logger.warn(
+                `[TRACE_CLEANUP] Failed to delete node ${node.nodeId} of ${node.traceId}: ${msg}`
+              );
+              result.errors.push(`Failed to delete ${node.traceId}/${node.nodeId}: ${msg}`);
+            }
+          }
+        } else {
+          // Delete the specific node and attempt to remove the summary row as well.
+          await docClient.send(
+            new DeleteCommand({
+              TableName: TRACE_TABLE_NAME,
+              Key: { traceId: trace.traceId, nodeId: trace.nodeId },
+            })
+          );
+          result.deleted++;
+
+          try {
+            await docClient.send(
+              new DeleteCommand({
+                TableName: TRACE_TABLE_NAME,
+                Key: { traceId: trace.traceId, nodeId: '__summary__' },
+              })
+            );
+            result.deleted++;
+          } catch {
+            // summary may not exist; ignore
+          }
+        }
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         logger.warn(`[TRACE_CLEANUP] Failed to delete trace ${trace.traceId}: ${msg}`);

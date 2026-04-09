@@ -2,7 +2,7 @@ import { getResourceName } from '@/lib/sst-utils';
 import { decodePaginationToken, encodePaginationToken } from '@/lib/pagination-utils';
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, ScanCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, QueryCommand, GetCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import DeleteAllTracesButton from '@/components/DeleteAllTracesButton';
 import { TraceSource } from '@claw/core/lib/types/index';
 import Typography from '@/components/ui/Typography';
@@ -23,28 +23,26 @@ async function getTraces(nextToken?: string) {
     const client = new DynamoDBClient({});
     const docClient = DynamoDBDocumentClient.from(client);
 
-    const generalScan = docClient.send(
-      new ScanCommand({
+    const queryRes = await docClient.send(
+      new QueryCommand({
         TableName: tableName,
+        IndexName: 'SummaryByNode',
+        KeyConditionExpression: 'nodeId = :summary',
+        ExpressionAttributeValues: { ':summary': '__summary__' },
         Limit: 100,
         ExclusiveStartKey: decodePaginationToken(nextToken ?? ''),
+        ScanIndexForward: false,
       })
     );
 
-    const scanRes = await generalScan;
-
-    const merged = [...(scanRes.Items ?? [])];
-    const uniqueMap = new Map();
-    merged.forEach((item) => uniqueMap.set(item.traceId, item));
-
-    const allItems = Array.from(uniqueMap.values()).sort((a, b) => {
+    const allItems = ([...((queryRes.Items ?? []) as any[])] as any[]).sort((a, b) => {
       const bTs = Number(b.timestamp);
       const aTs = Number(a.timestamp);
       return (Number.isFinite(bTs) ? bTs : 0) - (Number.isFinite(aTs) ? aTs : 0);
     });
 
     const filtered = allItems.filter((item) => item.source !== TraceSource.SYSTEM);
-    const encodedNext = encodePaginationToken(scanRes.LastEvaluatedKey);
+    const encodedNext = encodePaginationToken(queryRes.LastEvaluatedKey);
 
     return { items: filtered, nextToken: encodedNext };
   } catch (e) {
@@ -99,7 +97,8 @@ async function getSessionTitles() {
     );
 
     const titles: Record<string, string> = {};
-    res.Items?.forEach((item) => {
+    const items = res.Items as Array<{ sessionId?: string; title?: string }> | undefined;
+    items?.forEach((item) => {
       if (item.sessionId) {
         titles[item.sessionId] = item.title ?? 'Untitled Conversation';
       }

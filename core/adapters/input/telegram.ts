@@ -94,16 +94,22 @@ export class TelegramAdapter implements InputAdapter {
     const parsed = result.data;
     if (!parsed.message) {
       // Non-message update (e.g. callback_query, edited_message, etc.)
+      // Use update_id as fallback identifier to avoid session collision
+      const updateId = parsed.update_id ?? 'unknown';
+      const updateType = Object.keys(parsed).find((k) => k !== 'update_id') ?? 'unknown';
+
       // Return a "no-op" message that the handler will interpret as non-actionable
+      // Use composite ID with updateId to avoid collision across different chats/sessions
       return {
         source: this.source,
-        userId: 'non-message-update',
-        sessionId: 'non-message-update',
+        userId: `telegram:callback:${updateId}`,
+        sessionId: `telegram:callback:${updateId}`,
         text: '',
         attachments: [],
         metadata: {
           updateId: parsed.update_id,
-          rawMessage: undefined, // Explicitly undefined to indicate no message
+          updateType,
+          rawMessage: undefined,
         },
         timestamp: new Date().toISOString(),
       };

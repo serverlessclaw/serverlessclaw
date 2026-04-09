@@ -112,3 +112,45 @@ Future reviews should utilize a "Probe and Verify" method rather than a simple p
 - **Dynamic Probes**: `make test` and `npx vitest` for behavioral health.
 - **Holistic Probes**: `npx playwright test` to verify the user-facing reality.
 - **Observational Probes**: Reviewing `Trace Intelligence` in the dashboard to visualize the "creative" paths taken during complex tasks.
+
+---
+
+## ⚙️ Automated Audit Configuration
+
+The system supports automated audits triggered by code growth thresholds or major events.
+
+### Configuration (core/lib/config/config-defaults.ts)
+
+| Config Key                     | Default    | Description                                                        |
+| :----------------------------- | :--------- | :----------------------------------------------------------------- |
+| `audit_code_growth_threshold`  | 0.10 (10%) | Code growth percentage that triggers a system audit                |
+| `audit_event_triggers_enabled` | true       | Enable audit triggers after TRUNK_SYNC, DEPLOYMENT_COMPLETE events |
+
+### Trigger Mechanisms
+
+1. **Code Growth Threshold**: When code growth exceeds 10% (configurable), the Strategic Planner triggers an audit
+2. **Event-Based**: After `TRUNK_SYNC`, `DEPLOYMENT_COMPLETE`, or `MAJOR_SWARM_COMPLETE` events
+3. **Manual**: Invoke with task "system audit" to the Cognition Reflector
+
+### Agent Responsibilities
+
+| Agent                   | Audit Focus                                        |
+| :---------------------- | :------------------------------------------------- |
+| **Strategic Planner**   | Code growth tracking, threshold triggers           |
+| **Cognition Reflector** | Knowledge gaps, memory consistency, trace analysis |
+| **QA Auditor**          | Deployment validation, feature-gap alignment       |
+| **Critic**              | Security, performance, architectural debt          |
+
+### Audit Flow
+
+```
+Code Growth > 10% → Strategic Planner → emit SYSTEM_AUDIT_TRIGGER
+                                              ↓
+                                      Audit Handler
+                                              ↓
+                                    Cognition Reflector
+                                              ↓
+                                    Run audit against 5 silos
+                                              ↓
+                                    Report + P0 alerts
+```

@@ -328,17 +328,11 @@ export class IdentityManager {
 
   /**
    * Get user identity. Loads from storage.
+   * Note: Fallback owner IDs no longer auto-grant OWNER role for security.
+   * They default to MEMBER like all new users. Admin must explicitly promote.
    */
   async getUser(userId: string): Promise<UserIdentity | undefined> {
-    const user = await this.loadUser(userId);
-
-    // Fallback: Check hardcoded IDs for OWNER role
-    if (user && this.FALLBACK_OWNER_IDS.includes(userId) && user.role !== UserRole.OWNER) {
-      user.role = UserRole.OWNER;
-      await this.saveUser(user);
-    }
-
-    return user;
+    return this.loadUser(userId);
   }
 
   /**
@@ -526,6 +520,7 @@ export class IdentityManager {
 
   /**
    * Create new user identity.
+   * New users default to MEMBER role. OWNER role must be explicitly assigned by an existing admin.
    */
   private async createUser(
     userId: string,
@@ -534,7 +529,7 @@ export class IdentityManager {
     const newUser: UserIdentity = {
       userId,
       displayName: userId,
-      role: this.FALLBACK_OWNER_IDS.includes(userId) ? UserRole.OWNER : UserRole.MEMBER,
+      role: UserRole.MEMBER,
       workspaceIds: [],
       authProvider,
       createdAt: Date.now(),

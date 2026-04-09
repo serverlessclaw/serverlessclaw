@@ -113,10 +113,11 @@ export class LockManager {
   }
 
   /**
-   * Explicitly releases a lock if the owner still holds it.
+   * Explicitly releases a lock if the owner still holds it and it hasn't expired.
    */
   async release(lockId: string, ownerId: string, prefix?: string): Promise<boolean> {
     const fullId = this.getFullId(lockId, prefix);
+    const now = Math.floor(Date.now() / 1000);
     try {
       await this.docClient.send(
         new UpdateCommand({
@@ -126,9 +127,10 @@ export class LockManager {
             timestamp: 0,
           },
           UpdateExpression: 'REMOVE ownerId, expiresAt, acquiredAt, lockType, renewedAt',
-          ConditionExpression: 'ownerId = :owner',
+          ConditionExpression: 'ownerId = :owner AND expiresAt > :now',
           ExpressionAttributeValues: {
             ':owner': ownerId,
+            ':now': now,
           },
         })
       );
@@ -136,6 +138,7 @@ export class LockManager {
       return true;
     } catch (error: any) {
       if (error.name === 'ConditionalCheckFailedException') {
+        logger.debug(`Lock [${fullId}] release rejected: owner mismatch or lock already expired.`);
         return false;
       }
       logger.error(`Error releasing lock [${fullId}]:`, error);

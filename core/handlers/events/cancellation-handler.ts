@@ -9,22 +9,27 @@ import { emitEvent, EventPriority } from '../../lib/utils/bus';
 import { EventType } from '../../lib/types/agent';
 import { addTraceStep } from '../../lib/utils/trace-helper';
 import { TRACE_TYPES } from '../../lib/constants';
+import { SessionStateManager } from '../../lib/session/session-state';
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const typedResource = Resource as unknown as SSTResource;
 const CANCEL_PREFIX = 'CANCEL#';
 const PARALLEL_PREFIX = 'PARALLEL#';
+const sessionStateManager = new SessionStateManager();
 
 export async function handleTaskCancellation(
   event: EventBridgeEvent<string, TaskCancellation>
 ): Promise<void> {
-  const { taskId, initiatorId, reason, parallelDispatchId, userId } = event.detail as unknown as {
-    taskId?: string;
-    initiatorId?: string;
-    reason?: string;
-    parallelDispatchId?: string;
-    userId?: string;
-  };
+  const { taskId, initiatorId, reason, parallelDispatchId, userId, sessionId, agentId } =
+    event.detail as unknown as {
+      taskId?: string;
+      initiatorId?: string;
+      reason?: string;
+      parallelDispatchId?: string;
+      userId?: string;
+      sessionId?: string;
+      agentId?: string;
+    };
 
   logger.info(
     `Task cancellation requested: taskId=${taskId}, parallelDispatchId=${parallelDispatchId}, initiatorId=${initiatorId}`
@@ -53,6 +58,16 @@ export async function handleTaskCancellation(
   });
 
   await setCancellationFlag(taskId, initiatorId, reason);
+
+  // Release distributed session lock if sessionId provided
+  if (sessionId && agentId) {
+    try {
+      await sessionStateManager.releaseProcessing(sessionId, agentId);
+      logger.info(`Released session lock for ${sessionId} after task cancellation`);
+    } catch (err) {
+      logger.warn(`Failed to release session lock for ${sessionId}:`, err);
+    }
+  }
 }
 
 async function handleParallelCancellation(

@@ -98,4 +98,8 @@ export const DEFAULT_EVENT_ROUTING: EventRoutingTable = {
     module: './events/report-back-handler',
     function: 'handleReportBack',
   },
+  [EventType.SYSTEM_AUDIT_TRIGGER]: {
+    module: './events/audit-handler',
+    function: 'handleSystemAuditTrigger',
+  },
 };

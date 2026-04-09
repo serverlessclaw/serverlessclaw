@@ -16,6 +16,11 @@ import { validatePlan } from './strategic-planner/validation';
 import { handleCouncilReviewResult } from './strategic-planner/council';
 import { manageProactiveScheduling } from './strategic-planner/scheduler';
 import { isGapInCooldown } from './strategic-planner/evolution';
+import {
+  calculateCodeGrowth,
+  emitAuditEvent,
+  type CodeGrowthMetrics,
+} from './strategic-planner/code-growth';
 
 import { AGENT_ERRORS } from '../lib/constants';
 import { parseStructuredResponse } from '../lib/utils/agent-helpers/llm-utils';
@@ -90,6 +95,25 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
   // ensure the NEXT proactive review is scheduled if not already present.
   if (isProactive) {
     await manageProactiveScheduling(baseUserId, userId);
+  }
+
+  // Code Growth Tracking: Check if audit should be triggered based on code growth
+  const metadataObj = (metadata as unknown as Record<string, unknown>) || {};
+  const currentLOC = (metadataObj.codeLOC as number) || 0;
+  if (currentLOC > 0) {
+    const { shouldTriggerAudit, metrics } = await calculateCodeGrowth(
+      memory as unknown as {
+        get(key: string): Promise<CodeGrowthMetrics | null>;
+        set(key: string, value: unknown): Promise<void>;
+      },
+      currentLOC
+    );
+    if (shouldTriggerAudit) {
+      logger.info(
+        `[PLANNER] Code growth ${(metrics.growthPercentage * 100).toFixed(2)}% exceeds threshold, triggering audit`
+      );
+      await emitAuditEvent(metrics);
+    }
   }
 
   const toolsList = agentTools

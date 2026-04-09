@@ -20,6 +20,7 @@ import { emitEvent } from '../lib/utils/bus';
 import { buildReflectionPrompt, getGapContext } from './cognition-reflector/prompts';
 import type { ReflectorEvent } from './cognition-reflector/types';
 import { ReflectionReportSchema, type ReflectionReport } from './cognition-reflector/schema';
+import { runSystemAudit } from './cognition-reflector/audit-protocol';
 
 /**
  * Reflector Agent handler. Analyzes conversations to extract facts, lessons, and capability gaps.
@@ -84,6 +85,22 @@ export const handler = async (
   // Reflector Agent is a specialized Agent instance
   const config = await loadAgentConfig(AgentType.COGNITION_REFLECTOR);
   const { memory, provider: providerManager } = await getAgentContext();
+
+  // Check if this is a system audit trigger (not a regular conversation reflection)
+  const isAuditTrigger = task && task.toLowerCase().includes('system audit');
+  if (isAuditTrigger) {
+    logger.info('[Reflector] Running system audit per trigger');
+    const auditReport = await runSystemAudit(
+      memory as unknown as {
+        getAllGaps(status: unknown): Promise<unknown[]>;
+        getFailurePatterns(userId: string, pattern: string, limit: number): Promise<unknown[]>;
+        set(key: string, value: unknown): Promise<void>;
+      },
+      'MANUAL_TRIGGER',
+      { userId, traceId, sessionId }
+    );
+    return JSON.stringify(auditReport);
+  }
 
   const agentTools = await (await import('../tools/index')).getAgentTools('cognition-reflector');
   const { Agent } = await import('../lib/agent');

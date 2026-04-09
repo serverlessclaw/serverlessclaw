@@ -55,7 +55,7 @@ describe('TelegramAdapter', () => {
     const raw = { update_id: 12345 };
     const result = adapter.parse(raw);
 
-    expect(result.userId).toBe('non-message-update');
+    expect(result.userId).toBe('telegram:callback:12345');
     expect(result.text).toBe('');
     expect(result.metadata.updateId).toBe(12345);
     expect(result.metadata.rawMessage).toBeUndefined();
