@@ -637,4 +637,23 @@ export class CachedMemory implements IMemory {
     MemoryCaches.search.clear();
     logger.info('All memory caches cleared');
   }
+
+  /**
+   * Invalidates all cache entries for a specific user.
+   * Should be called when user permissions, roles, or workspace memberships change.
+   */
+  invalidateUser(userId: string): void {
+    logger.info(`Invalidating all caches for user: ${userId}`);
+    MemoryCaches.userData.invalidateUser(userId);
+    MemoryCaches.conversation.invalidateUser(userId);
+    MemoryCaches.search.invalidatePattern(new RegExp(`(^|:)${userId}(:|$)`));
+  }
+
+  /**
+   * Invalidates global caches that might contain user-sensitive data.
+   */
+  invalidateGlobalUserCaches(): void {
+    MemoryCaches.global.invalidatePattern(/^gaps:/);
+    MemoryCaches.search.invalidatePattern(/^insights:/);
+  }
 }

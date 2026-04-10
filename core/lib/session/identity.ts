@@ -7,9 +7,15 @@
 
 import { logger } from '../logger';
 import { MEMORY_KEYS, TIME } from '../constants';
+import { generateSessionId } from '../utils/id-generator';
 
 /**
  * User roles for RBAC.
+ * Note: For workspace-scoped roles, see the mapping functions in `../types/workspace`:
+ * - userRoleToWorkspaceRole(): Maps UserRole to WorkspaceRole
+ * - workspaceRoleToUserRole(): Maps WorkspaceRole back to UserRole
+ * The Identity system uses OWNER > ADMIN > MEMBER > VIEWER (system-wide permissions),
+ * while workspaces use owner > admin > collaborator > observer (resource-scoped).
  */
 export enum UserRole {
   /** Full system access. */
@@ -386,18 +392,32 @@ export class IdentityManager {
    */
   async getUserSessions(userId: string): Promise<Session[]> {
     try {
-      const items = await this.base.scanByPrefix(`${MEMORY_KEYS.WORKSPACE_PREFIX}SESSION#`);
-      return items
-        .filter((item) => item.sessionUserId === userId)
-        .map((item) => ({
-          sessionId: (item.userId as string).split('#').pop()!,
-          userId: item.sessionUserId as string,
-          workspaceId: item.workspaceId as string | undefined,
-          startTime: item.startTime as number,
-          lastActivityTime: item.lastActivityTime as number,
-          expiresAt: item.expiresAt as number,
-          metadata: item.metadata as Record<string, unknown> | undefined,
-        }));
+      // P3 Fix: Use TypeTimestampIndex GSI with FilterExpression instead of scanByPrefix
+      // This is still a scan-like operation over the index, but limited to 'SESSION' type items.
+      const result = await this.base.queryItemsPaginated({
+        IndexName: 'TypeTimestampIndex',
+        KeyConditionExpression: '#tp = :type',
+        FilterExpression: 'sessionUserId = :uid',
+        ExpressionAttributeNames: {
+          '#tp': 'type',
+        },
+        ExpressionAttributeValues: {
+          ':type': 'SESSION',
+          ':uid': userId,
+        },
+        Limit: 100,
+        ScanIndexForward: false,
+      });
+
+      return result.items.map((item) => ({
+        sessionId: (item.userId as string).split('#').pop()!,
+        userId: item.sessionUserId as string,
+        workspaceId: item.workspaceId as string | undefined,
+        startTime: item.startTime as number,
+        lastActivityTime: item.lastActivityTime as number,
+        expiresAt: item.expiresAt as number,
+        metadata: item.metadata as Record<string, unknown> | undefined,
+      }));
     } catch (error) {
       logger.error(`Failed to get sessions for user ${userId}:`, error);
       return [];
@@ -567,7 +587,7 @@ export class IdentityManager {
     userId: string,
     metadata?: Record<string, unknown>
   ): Promise<Session> {
-    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const sessionId = generateSessionId();
     const now = Date.now();
     const session: Session = {
       sessionId,
@@ -644,7 +664,9 @@ export class IdentityManager {
   async cleanupExpiredSessions(): Promise<number> {
     const now = Date.now();
     try {
-      const items = await this.base.scanByPrefix(`${MEMORY_KEYS.WORKSPACE_PREFIX}SESSION#`);
+      // P3 Fix: Use TypeTimestampIndex GSI instead of scanByPrefix
+      const { getMemoryByType } = await import('../memory/utils');
+      const items = await getMemoryByType(this.base, 'SESSION', 1000);
       let cleaned = 0;
 
       for (const item of items) {

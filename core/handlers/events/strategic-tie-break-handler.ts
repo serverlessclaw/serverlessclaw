@@ -46,10 +46,10 @@ export async function handleStrategicTieBreak(eventDetail: Record<string, unknow
   let eventType: string;
 
   if (isHighRisk) {
-    // High-risk operation detected - defer instead of executing
-    logger.warn(`[TIE_BREAK] High-risk operation detected in task. Deferring execution.`);
-    finalTask = `STRATEGIC_TIE_BREAK (DEFERRED): The original task contained high-risk operations that require explicit human approval. Task: "${originalTask}". Please create a deferred task requiring human confirmation before proceeding.`;
-    eventType = EventType.CLARIFICATION_REQUEST;
+    // High-risk operation detected - stop execution and fail the task to break the loop
+    logger.warn(`[TIE_BREAK] High-risk operation detected in task. Failing task to prevent infinite loops.`);
+    finalTask = `STRATEGIC_TIE_BREAK (FAILED): The original task contained high-risk operations that require explicit human approval. Task: "${originalTask}". Automated execution has been stopped to ensure system safety. Please re-run the task with explicit parameters if you still wish to proceed.`;
+    eventType = EventType.TASK_FAILED;
   } else if (task.includes('SAFE_MODE') || task.includes('avoid.*high.*risk')) {
     // Task already has safety instructions - proceed with conservative constraints
     finalTask = `${task}\n\n---\n**STRATEGIC CONSTRAINTS APPLIED:**\n- No destructive operations\n- Prefer read-only or low-impact alternatives\n- Log all changes for audit\n- Request clarification if uncertain`;

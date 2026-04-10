@@ -196,7 +196,54 @@ describe('CircuitBreaker', () => {
 
     const proceed = await cb.canProceed('emergency');
     expect(proceed.allowed).toBe(true);
-    expect(proceed.reason).toBe('EMERGENCY_BYPASS');
+    expect(proceed.reason).toBe('EMERGENCY_BYPASS_WITH_RATE_LIMIT');
+  });
+
+  it('should allow emergency deploys when under rate limit but block when exceeded', async () => {
+    const cb = getCircuitBreaker();
+
+    // First 3 should pass
+    for (let i = 0; i < 3; i++) {
+      mockSend.mockResolvedValueOnce({
+        Item: {
+          value: {
+            state: 'closed',
+            failures: [],
+            halfOpenProbes: 0,
+            lastStateChange: Date.now(),
+            version: i + 1,
+            emergencyDeployCount: i,
+            emergencyDeployWindowStart: Date.now(),
+          },
+        },
+      });
+      mockSend.mockResolvedValueOnce({});
+    }
+
+    // 4th should be blocked
+    mockSend.mockResolvedValueOnce({
+      Item: {
+        value: {
+          state: 'closed',
+          failures: [],
+          halfOpenProbes: 0,
+          lastStateChange: Date.now(),
+          version: 4,
+          emergencyDeployCount: 3,
+          emergencyDeployWindowStart: Date.now(),
+        },
+      },
+    });
+
+    for (let i = 0; i < 3; i++) {
+      const proceed = await cb.canProceed('emergency');
+      expect(proceed.allowed).toBe(true);
+      expect(proceed.reason).toBe('EMERGENCY_BYPASS_WITH_RATE_LIMIT');
+    }
+
+    const blocked = await cb.canProceed('emergency');
+    expect(blocked.allowed).toBe(false);
+    expect(blocked.reason).toContain('EMERGENCY_RATE_LIMIT_EXCEEDED');
   });
 
   it('should close after successful probe in half-open state', async () => {

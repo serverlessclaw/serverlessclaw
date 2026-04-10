@@ -25,6 +25,8 @@ export interface CircuitBreakerStateData {
   lastStateChange: number;
   lastFailureTime: number;
   version: number;
+  emergencyDeployCount: number; // Track emergency deploys in current window
+  emergencyDeployWindowStart: number; // Start of current rate limit window
 }
 
 export interface CanProceedResult {
@@ -47,6 +49,8 @@ function freshState(): CircuitBreakerStateData {
     lastStateChange: Date.now(),
     lastFailureTime: 0,
     version: 1,
+    emergencyDeployCount: 0,
+    emergencyDeployWindowStart: Date.now(),
   };
 }
 
@@ -67,6 +71,8 @@ async function loadState(): Promise<CircuitBreakerStateData> {
         lastStateChange: loaded.lastStateChange ?? Date.now(),
         lastFailureTime: loaded.lastFailureTime ?? 0,
         version: loaded.version ?? 1,
+        emergencyDeployCount: loaded.emergencyDeployCount ?? 0,
+        emergencyDeployWindowStart: loaded.emergencyDeployWindowStart ?? Date.now(),
       };
     }
   } catch (e) {
@@ -298,11 +304,38 @@ export class CircuitBreaker {
   ): Promise<CanProceedResult> {
     const state = await loadState();
 
+    // Emergency deployments: apply rate limiting instead of complete bypass
     if (deployType === 'emergency') {
-      logger.warn('Circuit Breaker: Emergency deployment bypass approved (logged).');
+      const now = Date.now();
+      const emergencyWindowMs = 3600000; // 1 hour window
+
+      // Reset window if expired
+      if (now - state.emergencyDeployWindowStart > emergencyWindowMs) {
+        state.emergencyDeployCount = 0;
+        state.emergencyDeployWindowStart = now;
+      }
+
+      // Allow max 3 emergency deployments per hour
+      if (state.emergencyDeployCount >= 3) {
+        logger.warn(
+          `Circuit Breaker: Emergency deployment rate limit exceeded (${state.emergencyDeployCount}/hr)`
+        );
+        return {
+          allowed: false,
+          reason: `EMERGENCY_RATE_LIMIT_EXCEEDED: ${state.emergencyDeployCount}/3 in last hour`,
+          state: state.state,
+          failureCount: state.failures.length,
+        };
+      }
+
+      // Increment counter for this emergency deployment
+      state.emergencyDeployCount += 1;
+      await saveState(state);
+
+      logger.warn('Circuit Breaker: Emergency deployment approved with rate limiting.');
       return {
         allowed: true,
-        reason: 'EMERGENCY_BYPASS',
+        reason: 'EMERGENCY_BYPASS_WITH_RATE_LIMIT',
         state: state.state,
         failureCount: state.failures.length,
       };
@@ -356,6 +389,27 @@ export class CircuitBreaker {
     }
 
     if (state.state === 'half_open') {
+      const halfOpenMax = await (
+        await import('../registry/config')
+      ).ConfigManager.getTypedConfig(
+        'circuit_breaker_half_open_max',
+        CONFIG_DEFAULTS.CIRCUIT_BREAKER_HALF_OPEN_MAX.code
+      );
+
+      // If we've exceeded max probes in half-open state, block further attempts
+      if (state.halfOpenProbes >= halfOpenMax) {
+        return {
+          allowed: false,
+          reason: `HALF_OPEN_PROBES_EXHAUSTED: ${state.halfOpenProbes}/${halfOpenMax} probes used`,
+          state: state.state,
+          failureCount: state.failures.length,
+        };
+      }
+
+      // Increment probe count for each attempt in half-open state
+      state.halfOpenProbes += 1;
+      await saveState(state);
+
       return {
         allowed: true,
         reason: 'HALF_OPEN_PROBE',

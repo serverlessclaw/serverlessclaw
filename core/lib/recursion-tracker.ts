@@ -42,7 +42,7 @@ export async function pushRecursionEntry(
         TableName: process.env.MEMORY_TABLE_NAME ?? 'MemoryTable',
         Item: {
           userId: key,
-          timestamp: '0',
+          timestamp: 0,
           type: 'RECURSION_ENTRY',
           depth,
           sessionId,
@@ -70,7 +70,7 @@ export async function getRecursionDepth(traceId: string): Promise<number> {
     const result = await docClient.send(
       new GetCommand({
         TableName: process.env.MEMORY_TABLE_NAME ?? 'MemoryTable',
-        Key: { userId: key, timestamp: '0' },
+        Key: { userId: key, timestamp: 0 },
       })
     );
 
@@ -96,7 +96,7 @@ export async function clearRecursionStack(traceId: string): Promise<void> {
     await docClient.send(
       new DeleteCommand({
         TableName: process.env.MEMORY_TABLE_NAME ?? 'MemoryTable',
-        Key: { userId: key, timestamp: '0' },
+        Key: { userId: key, timestamp: 0 },
       })
     );
 

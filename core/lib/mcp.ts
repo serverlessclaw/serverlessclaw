@@ -110,9 +110,23 @@ export class MCPBridge {
     const finalConfig = serversConfig ?? {};
     let configUpdated = false;
 
+    // Use environment variables to override default servers with Lambda multiplexer ARNs
+    const serverArns: Record<string, string> = process.env.MCP_SERVER_ARNS
+      ? JSON.parse(process.env.MCP_SERVER_ARNS)
+      : {};
+
     for (const [name, defaultConfig] of Object.entries(defaultServers)) {
       if (!finalConfig[name]) {
-        finalConfig[name] = defaultConfig;
+        // If a Lambda ARN exists for this server, use it as a remote connection
+        if (serverArns[name]) {
+          logger.info(`Configuring default MCP server ${name} as remote Lambda via MCP_SERVER_ARNS`);
+          finalConfig[name] = {
+            type: 'remote',
+            url: serverArns[name],
+          };
+        } else {
+          finalConfig[name] = defaultConfig;
+        }
         configUpdated = true;
       }
     }
@@ -174,6 +188,14 @@ export class MCPBridge {
         return [];
       }
 
+      // Special handling for filesystem: Always attempt local execution if we're in a Lambda with a workspace
+      if (name === 'filesystem' && !!process.env.AWS_LAMBDA_FUNCTION_NAME) {
+        logger.info(
+          `[MCP] Forcing local execution for 'filesystem' server to preserve workspace access.`
+        );
+        connectionString = 'npx -y @modelcontextprotocol/server-filesystem /tmp';
+      }
+
       try {
         return await this.getToolsFromServer(name, connectionString, env);
       } catch (e) {
@@ -191,11 +213,38 @@ export class MCPBridge {
   }
 
   /**
-   * Retrieves tool definitions from cache.
+   * Retrieves tool definitions from all cached MCP server results.
    */
   static async getCachedTools(): Promise<Partial<ITool>[]> {
-    const cached = await AgentRegistry.getRawConfig('mcp_tools_cache');
-    return Array.isArray(cached) ? cached : [];
+    const serversConfig = (await AgentRegistry.getRawConfig('mcp_servers')) as Record<
+      string,
+      string | MCPServerConfig
+    >;
+
+    if (!serversConfig) return [];
+
+    const allCached: any[] = [];
+    const serverNames = Object.keys(serversConfig);
+
+    for (const name of serverNames) {
+      const cacheKey = `mcp_tools_cache_${name}`;
+      const cached = (await AgentRegistry.getRawConfig(cacheKey)) as { tools: any[] } | null;
+      if (cached?.tools && Array.isArray(cached.tools)) {
+        // Map them to include server prefix like in mapTools
+        const mapped = cached.tools.map((t: any) => ({
+          name: `${name}_${t.name}`,
+          description: t.description ?? `Cached tool from ${name} server.`,
+          parameters: t.inputSchema ?? { type: 'object', properties: {} },
+          type: ToolType.MCP,
+          connectionProfile: [],
+          requiresApproval: false,
+          requiredPermissions: [],
+        }));
+        allCached.push(...mapped);
+      }
+    }
+
+    return allCached;
   }
 
   /**

@@ -44,58 +44,40 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
   const baseUserId = extractBaseUserId(userId);
 
   // 1. Discovery & Initialization
-  const { config, memory, agent: qaAgent } = await initAgent(AgentType.QA);
+  const { config, memory } = await initAgent(AgentType.QA);
+  const { LLMJudge } = await import('../lib/verify/judge');
 
-  // Build runtime prompt from markdown base + dynamic context
-  const auditPrompt = QA_SYSTEM_PROMPT.replace(
-    '{{IMPLEMENTATION_RESPONSE}}',
-    implementationResponse || 'No implementation response provided.'
-  ).replace('{{GAP_IDS}}', gapIds.join(', '));
-
-  const { responseText: rawResponse, attachments: resultAttachments } = await qaAgent.process(
-    userId,
-    auditPrompt,
-    {
-      profile: ReasoningProfile.THINKING,
-      isIsolated: true,
-      source: TraceSource.DASHBOARD,
-      initiatorId,
-      depth,
-      traceId,
-      sessionId,
-    }
+  // Perform semantic evaluation using LLM-as-a-Judge
+  const judgeResult = await LLMJudge.evaluate(
+    `Verify and audit the following gaps: ${gapIds.join(', ')}`,
+    implementationResponse || 'No implementation response provided.',
+    [
+      'The code matches the architectural spirit of Serverless Claw (Stateless, AI-Native, Event-Driven).',
+      'The implementation actually solves the identified gaps.',
+      'No new security risks or technical debt were introduced.',
+      'Code is idiomatically complete and follows system-wide conventions.'
+    ],
+    { gapIds, traceId, sessionId }
   );
 
-  logger.info('QA Agent Raw Response:', rawResponse);
+  logger.info('LLM-as-a-Judge Result:', JSON.stringify(judgeResult, null, 2));
 
-  let status = AgentStatus.REOPEN;
-  let auditReport = rawResponse;
+  let status = judgeResult.satisfied ? AgentStatus.SUCCESS : AgentStatus.REOPEN;
+  let auditReport = judgeResult.reasoning;
   let validatedFeedback: import('../lib/schema/orchestration').QAFailureFeedback | null = null;
 
-  try {
-    const jsonContent = rawResponse.replace(/```json\n?|\n?```/g, '').trim();
-    const parsed = JSON.parse(jsonContent);
-    status = parsed.status === AgentStatus.SUCCESS ? AgentStatus.SUCCESS : AgentStatus.REOPEN;
-    auditReport = parsed.auditReport || rawResponse;
-    logger.info(`Parsed QA Result. Status: ${status}`);
-
-    if (status === AgentStatus.REOPEN && parsed.failureType && parsed.issues) {
-      const { QAFailureFeedbackSchema } = await import('../lib/schema/orchestration');
-      const feedbackResult = QAFailureFeedbackSchema.safeParse({
-        failureType: parsed.failureType,
-        issues: parsed.issues,
-      });
-      if (feedbackResult.success) {
-        validatedFeedback = feedbackResult.data;
-        logger.info('QA structured feedback validated successfully.');
-      } else {
-        logger.warn('QA structured feedback failed validation:', feedbackResult.error.flatten());
-        auditReport +=
-          '\n\n⚠️ Structured feedback format was invalid. Issues may not be machine-parseable.';
-      }
-    }
-  } catch (e) {
-    logger.warn('Failed to parse QA structured response, falling back to raw text.', e);
+  if (status === AgentStatus.REOPEN && judgeResult.issues && judgeResult.issues.length > 0) {
+    // Attempt to map issues to structured feedback format if possible
+    validatedFeedback = {
+      failureType: 'LOGIC_ERROR',
+      issues: judgeResult.issues.map(issue => ({
+        file: 'multiple',
+        line: 0,
+        description: issue,
+        expected: 'Requirement satisfied',
+        actual: 'Requirement failed'
+      }))
+    };
   }
 
   const isSatisfied = status === AgentStatus.SUCCESS;

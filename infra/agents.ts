@@ -144,7 +144,11 @@ export function createAgents(
       ? [
           {
             actions: ['lambda:InvokeFunction'],
-            resources: [mcpServers.multiplexer.arn],
+            resources: [
+              mcpServers.multiplexer.arn,
+              mcpServers.browserMultiplexer.arn,
+              mcpServers.devOpsMultiplexer.arn,
+            ],
           },
         ]
       : []),
@@ -218,22 +222,19 @@ export function createAgents(
   const agentEnv = {
     SCHEDULER_ROLE_ARN: schedulerRole.arn,
     HEARTBEAT_HANDLER_ARN: heartbeatHandler.arn,
+    TRACE_SUMMARIES_ENABLED: 'true',
     ...(mcpServers
       ? {
-          MCP_SERVER_ARNS: $util.jsonStringify(
-            Object.fromEntries(
-              [
-                'git',
-                'filesystem',
-                'google-search',
-                'puppeteer',
-                'fetch',
-                'aws',
-                'aws-s3',
-                'ast',
-              ].map((name) => [name, mcpServers.multiplexer.arn])
-            )
-          ),
+          MCP_SERVER_ARNS: $util.jsonStringify({
+            git: mcpServers.multiplexer.arn,
+            filesystem: mcpServers.multiplexer.arn,
+            'google-search': mcpServers.multiplexer.arn,
+            fetch: mcpServers.multiplexer.arn,
+            ast: mcpServers.multiplexer.arn,
+            puppeteer: mcpServers.browserMultiplexer.arn,
+            aws: mcpServers.devOpsMultiplexer.arn,
+            'aws-s3': mcpServers.devOpsMultiplexer.arn,
+          }),
         }
       : {}),
   };
@@ -334,6 +335,7 @@ export function createAgents(
     link: [...baseLink, stagingBucket, deployer, ...(ctx.multiplexer ? [ctx.multiplexer] : [])],
     architecture: LAMBDA_ARCHITECTURE,
     nodejs: { loader: NODEJS_LOADERS },
+    environment: { TRACE_SUMMARIES_ENABLED: 'true' },
     permissions: [
       ...basePermissions,
       {
@@ -564,6 +566,29 @@ export function createAgents(
       retention: LOG_RETENTION_PERIOD,
     },
   });
+
+  // 11. Maintenance Handler (Proactive evolution & Tie-breaks)
+  const maintenanceHandler = new sst.aws.Function('MaintenanceHandler', {
+    handler: 'core/handlers/maintenance.handler',
+    dev: liveInLocalOnly,
+    link: [memoryTable, bus],
+    permissions: basePermissions,
+    architecture: LAMBDA_ARCHITECTURE,
+    nodejs: { loader: NODEJS_LOADERS },
+    memory: AGENT_CONFIG.memory.SMALL,
+    timeout: AGENT_CONFIG.timeout.MEDIUM,
+    logging: {
+      retention: LOG_RETENTION_PERIOD,
+    },
+  });
+
+  // 1-hour Schedule (Maintenance)
+  createScheduledInvocation(
+    'Maintenance',
+    'rate(1 hour)',
+    maintenanceHandler,
+    'Triggers proactive evolution, tie-breaks, and stale gap archival'
+  );
 
   // 1-hour Schedule (Concurrency Monitor)
   createScheduledInvocation(

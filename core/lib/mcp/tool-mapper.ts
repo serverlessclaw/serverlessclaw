@@ -66,14 +66,17 @@ export class MCPToolMapper {
       requiredPermissions: [],
       execute: async (toolArgs: Record<string, unknown>) => {
         if (isFilesystemTool) {
-          const filePath = (toolArgs.path || toolArgs.path_to_file || toolArgs.file_path) as string;
-          if (filePath) {
-            const securityError = checkFileSecurity(
-              filePath,
-              toolArgs.manuallyApproved as boolean,
-              `MCP operation (${mcpTool.name})`
-            );
-            if (securityError) return securityError;
+          const pathArgs = ['path', 'path_to_file', 'file_path', 'source', 'destination', 'dir'];
+          for (const arg of pathArgs) {
+            const filePath = toolArgs[arg] as string;
+            if (filePath) {
+              const securityError = checkFileSecurity(
+                filePath,
+                toolArgs.manuallyApproved as boolean,
+                `MCP operation (${mcpTool.name}) [arg: ${arg}]`
+              );
+              if (securityError) return securityError;
+            }
           }
         }
 

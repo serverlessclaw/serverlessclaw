@@ -200,7 +200,7 @@ describe('getCollaboration', () => {
         KeyConditionExpression: 'userId = :userId AND #timestamp = :zero',
         ExpressionAttributeValues: {
           ':userId': 'COLLAB#collab-1',
-          ':zero': '0',
+          ':zero': 0,
         },
       })
     );

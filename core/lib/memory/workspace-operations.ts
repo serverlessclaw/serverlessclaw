@@ -16,6 +16,7 @@ import type {
   ChannelProfile,
 } from '../types/workspace';
 import { workspaceKey, hasPermission } from '../types/workspace';
+import { generateWorkspaceId } from '../utils/id-generator';
 
 const WORKSPACE_INDEX = 'workspace_index';
 
@@ -25,7 +26,7 @@ const WORKSPACE_INDEX = 'workspace_index';
  * @param input - The workspace creation parameters including owner details.
  */
 export async function createWorkspace(input: CreateWorkspaceInput): Promise<Workspace> {
-  const workspaceId = `ws-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const workspaceId = generateWorkspaceId();
   const now = Date.now();
 
   const owner: WorkspaceMember = {

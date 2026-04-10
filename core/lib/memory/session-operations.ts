@@ -13,6 +13,7 @@ import { filterPIIFromObject } from '../utils/pii';
 import { queryLatestContentByUserId } from './utils';
 import { RETENTION } from '../constants/memory';
 import { logger } from '../logger';
+import { sessionIdToSortKey } from '../utils/id-generator';
 
 /**
  * Appends a new message with tiered retention.
@@ -131,18 +132,7 @@ export async function saveConversationMeta(
     expiresAt = retention.expiresAt;
   }
 
-  let stableSortKey: string;
-  const parsedTimestamp = Number.parseInt(sessionId.split('_')[1] || sessionId, 10);
-  if (!Number.isNaN(parsedTimestamp)) {
-    stableSortKey = String(parsedTimestamp);
-  } else {
-    let h: bigint = BigInt('0xcbf29ce484222325');
-    for (let i = 0; i < sessionId.length; i++) {
-      h ^= BigInt(sessionId.charCodeAt(i));
-      h = (h * BigInt('0x100000001b3')) & BigInt('0xffffffffffffffff');
-    }
-    stableSortKey = h.toString();
-  }
+  let stableSortKey = sessionIdToSortKey(sessionId);
 
   const partitionKey = `SESSIONS#${normalizedUserId}`;
 

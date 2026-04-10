@@ -139,14 +139,19 @@ export class MCPClientManager {
         transport = new SSEClientTransport(new URL(connectionString));
       } else {
         // Local command - use stdio transport
-        const parts = connectionString.split(' ');
-        let command = parts[0];
-        const args = parts.slice(1);
+        // Regex to split by space but keep quoted strings together
+        const parts = connectionString.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
+        if (parts.length === 0) {
+          throw new Error(`Invalid empty connection string for MCP server ${serverName}`);
+        }
+        let command = parts[0].replace(/^"|"$/g, '');
+        const args = parts.slice(1).map(arg => arg.replace(/^"|"$/g, ''));
 
         // Resolve npx full path if needed (especially for Lambda)
         if (command === 'npx') {
           const isLambda = !!process.env.AWS_LAMBDA_FUNCTION_NAME;
-          if (isLambda) {
+          const allowedLocalInLambda = ['filesystem', 'ast'];
+          if (isLambda && !allowedLocalInLambda.includes(serverName)) {
             logger.warn(
               `Cannot spawn local MCP server '${serverName}' using npx in Lambda. Use MCP_HUB_URL for external tools.`
             );
@@ -193,8 +198,9 @@ export class MCPClientManager {
       const hubUrl = process.env.MCP_HUB_URL ?? '';
       const isHub =
         connectionString.startsWith('http') && hubUrl !== '' && connectionString.includes(hubUrl);
-      // Reduce timeout for local MCP servers to prevent dashboard timeouts
-      const connectTimeout = isHub ? 5000 : 30000;
+      // Reduce timeout for local/remote MCP servers to prevent Lambda and dashboard timeouts
+      // 15s allows the application to handle failure before a 30s Lambda timeout
+      const connectTimeout = isHub ? 5000 : 15000;
       let timeoutId: ReturnType<typeof setTimeout>;
       const timeoutPromise = new Promise<never>((_, reject) => {
         timeoutId = setTimeout(

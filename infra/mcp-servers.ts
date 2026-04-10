@@ -8,87 +8,113 @@ import {
 } from './shared';
 
 /**
- * Deploys the Unified MCP Multiplexer Lambda function.
- * This single Lambda handles all MCP server requests, routing them
- * to the appropriate virtual server on-demand.
+ * Deploys Granular MCP Multiplexer Lambda functions.
+ * Splits tools by permission requirements to enforce least privilege.
  */
 
 export interface MCPServerResources {
-  multiplexer: sst.aws.Function;
+  multiplexer: sst.aws.Function; // Primary/General multiplexer
+  browserMultiplexer: sst.aws.Function;
+  devOpsMultiplexer: sst.aws.Function;
 }
 
 /**
- * Creates the Unified MCP Multiplexer Lambda function.
+ * Creates the Granular MCP Multiplexer Lambda functions.
  *
  * @param ctx - The shared infrastructure context.
- * @returns The created MCP multiplexer function.
+ * @returns The created MCP multiplexer functions.
  */
 export function createMCPServers(ctx: SharedContext): MCPServerResources {
   const { memoryTable, configTable, secrets, stagingBucket } = ctx;
   const liveInLocalOnly = $app.stage === 'local' ? undefined : false;
+  const validSecrets = getValidSecrets(secrets);
 
-  // Unified permissions for ALL MCP tools
-  // This role has the union of all necessary permissions for git, aws, s3, etc.
-  const unifiedPermissions = [
-    {
-      actions: ['cloudwatch:PutMetricData'],
-      resources: ['*'],
-    },
-    {
-      // S3 operations for aws-s3 and general media staging
-      actions: ['s3:GetObject', 's3:PutObject', 's3:ListBucket', 's3:DeleteObject'],
-      resources: [stagingBucket.arn, $util.interpolate`${stagingBucket.arn}/*`],
-    },
-    {
-      // AWS DevOps operations
-      actions: [
-        'lambda:GetFunction',
-        'lambda:ListFunctions',
-        'ec2:DescribeInstances',
-        'iam:ListRoles',
-        'codebuild:StartBuild',
-        'codebuild:BatchGetBuilds',
-      ],
-      resources: ['*'],
-    },
-  ];
+  const baseEnv = {
+    PATH: '/var/lang/bin:/usr/local/bin:/usr/bin:/bin:/opt/bin',
+    HOME: '/tmp',
+    NPM_CONFIG_CACHE: '/tmp/npm-cache',
+    XDG_CACHE_HOME: '/tmp/mcp-cache',
+    TRACE_SUMMARIES_ENABLED: 'true',
+  };
 
-  // Base links for the multiplexer
-  const baseLink = [memoryTable, configTable, stagingBucket, ...getValidSecrets(secrets)];
-
-  const multiplexer = new sst.aws.Function('MCPServerMultiplexer', {
+  const commonProps = {
     handler: 'core/mcp-servers/multiplexer.handler',
     dev: liveInLocalOnly,
-    link: baseLink,
-    permissions: unifiedPermissions,
     architecture: LAMBDA_ARCHITECTURE,
     nodejs: { loader: NODEJS_LOADERS },
-    // Provisioned for the "worst case" (Puppeteer/AST) to ensure all tools run smoothly
-    memory: AGENT_CONFIG.memory.MEDIUM_LARGE, // 1024 MB
-    timeout: AGENT_CONFIG.timeout.LONG, // 600 seconds
-    logging: {
-      retention: LOG_RETENTION_PERIOD,
-    },
-    environment: {
-      // PATH is critical for finding node/npx in the Lambda environment
-      PATH: '/var/lang/bin:/usr/local/bin:/usr/bin:/bin:/opt/bin',
-      // Ensure HOME is writable for git/npx config
-      HOME: '/tmp',
-      NPM_CONFIG_CACHE: '/tmp/npm-cache',
-      XDG_CACHE_HOME: '/tmp/mcp-cache',
-    },
-    // Enable function URL for direct IAM-authenticated access
-    url: {
-      authorization: 'iam',
-      cors: {
-        allowOrigins: ['*'],
-        allowMethods: ['POST'],
-        allowHeaders: ['Content-Type', 'Authorization', 'x-mcp-server'],
+    logging: { retention: LOG_RETENTION_PERIOD },
+    url: { authorization: 'iam' as const },
+  };
+
+  // 1. General Multiplexer (git, filesystem, fetch, google-search, ast)
+  // Low privilege: only needs basic links and CloudWatch metrics.
+  const generalMultiplexer = new sst.aws.Function('GeneralMCPMultiplexer', {
+    ...commonProps,
+    link: [memoryTable, configTable, ...validSecrets],
+    permissions: [
+      {
+        actions: ['cloudwatch:PutMetricData'],
+        resources: ['*'],
       },
+    ],
+    memory: AGENT_CONFIG.memory.MEDIUM, // 512 MB
+    timeout: AGENT_CONFIG.timeout.MEDIUM, // 60s
+    environment: baseEnv,
+  });
+
+  // 2. Browser Multiplexer (puppeteer)
+  // High memory/timeout for headless browser execution.
+  const browserMultiplexer = new sst.aws.Function('BrowserMCPMultiplexer', {
+    ...commonProps,
+    link: [memoryTable, configTable, ...validSecrets],
+    permissions: [
+      {
+        actions: ['cloudwatch:PutMetricData'],
+        resources: ['*'],
+      },
+    ],
+    memory: AGENT_CONFIG.memory.MEDIUM_LARGE, // 1024 MB
+    timeout: AGENT_CONFIG.timeout.LONG, // 600s
+    environment: {
+      ...baseEnv,
+      PUPPETEER_EXECUTABLE_PATH: '/opt/chromium',
     },
   });
 
+  // 3. DevOps Multiplexer (aws, aws-s3)
+  // Higher privilege: access to CodeBuild and S3.
+  const devOpsMultiplexer = new sst.aws.Function('DevOpsMCPMultiplexer', {
+    ...commonProps,
+    link: [memoryTable, configTable, stagingBucket, ...validSecrets],
+    permissions: [
+      {
+        actions: ['cloudwatch:PutMetricData'],
+        resources: ['*'],
+      },
+      {
+        actions: ['s3:GetObject', 's3:PutObject', 's3:ListBucket', 's3:DeleteObject'],
+        resources: [stagingBucket.arn, $util.interpolate`${stagingBucket.arn}/*`],
+      },
+      {
+        actions: [
+          'lambda:GetFunction',
+          'lambda:ListFunctions',
+          'ec2:DescribeInstances',
+          'iam:ListRoles',
+          'codebuild:StartBuild',
+          'codebuild:BatchGetBuilds',
+        ],
+        resources: ['*'],
+      },
+    ],
+    memory: AGENT_CONFIG.memory.MEDIUM, // 512 MB
+    timeout: AGENT_CONFIG.timeout.MEDIUM, // 60s
+    environment: baseEnv,
+  });
+
   return {
-    multiplexer,
+    multiplexer: generalMultiplexer,
+    browserMultiplexer,
+    devOpsMultiplexer,
   };
 }

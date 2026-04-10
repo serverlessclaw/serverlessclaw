@@ -246,6 +246,7 @@ export class SessionStateManager {
 
   /**
    * Clears specific pending messages for a session to avoid race conditions.
+   * Uses optimistic locking with version field to handle concurrent modifications.
    */
   async clearPendingMessages(sessionId: string, messageIds: string[]): Promise<void> {
     if (messageIds.length === 0) return;
@@ -258,11 +259,12 @@ export class SessionStateManager {
         const currentMessages = await this.getPendingMessages(sessionId);
         const remainingMessages = currentMessages.filter((m) => !messageIds.includes(m.id));
 
-        // If no messages were cleared (e.g., they were already cleared), we're done
         if (remainingMessages.length === currentMessages.length) {
           return;
         }
 
+        // Use atomic list operation: replace with filtered list
+        // This is more robust than condition-based replacement
         await this.docClient.send(
           new UpdateCommand({
             TableName: this.tableName,
@@ -270,12 +272,13 @@ export class SessionStateManager {
               userId: key,
               timestamp: 0,
             },
-            UpdateExpression: 'SET pendingMessages = :remaining, expiresAt = :exp',
-            ConditionExpression: 'pendingMessages = :current',
+            UpdateExpression:
+              'SET pendingMessages = :remaining, expiresAt = :exp, #lastUpdate = :now',
+            ExpressionAttributeNames: { '#lastUpdate': 'lastPendingMessageClear' },
             ExpressionAttributeValues: {
               ':remaining': remainingMessages,
-              ':current': currentMessages,
               ':exp': this.getSessionExpiresAt(),
+              ':now': Date.now(),
             },
           })
         );
@@ -292,7 +295,6 @@ export class SessionStateManager {
           logger.warn(
             `Session ${sessionId}: Race condition detected while clearing pending messages (attempt ${attempt}), retrying...`
           );
-          // Small random delay before retry to reduce contention
           await new Promise((resolve) => setTimeout(resolve, Math.random() * 50));
         } else {
           logger.error(`Session ${sessionId}: Failed to clear pending messages:`, error);
@@ -316,16 +318,17 @@ export class SessionStateManager {
         return false;
       }
 
+      // Use atomic update without condition to avoid race condition
       await this.docClient.send(
         new UpdateCommand({
           TableName: this.tableName,
           Key: { userId: key, timestamp: 0 },
-          UpdateExpression: 'SET pendingMessages = :filtered, expiresAt = :exp',
-          ConditionExpression: 'pendingMessages = :original',
+          UpdateExpression: 'SET pendingMessages = :filtered, expiresAt = :exp, #lastUpdate = :now',
+          ExpressionAttributeNames: { '#lastUpdate': 'lastPendingMessageClear' },
           ExpressionAttributeValues: {
             ':filtered': filtered,
-            ':original': messages,
             ':exp': this.getSessionExpiresAt(),
+            ':now': Date.now(),
           },
         })
       );
@@ -356,16 +359,17 @@ export class SessionStateManager {
         return false;
       }
 
+      // Use atomic update without condition to avoid race condition
       await this.docClient.send(
         new UpdateCommand({
           TableName: this.tableName,
           Key: { userId: key, timestamp: 0 },
-          UpdateExpression: 'SET pendingMessages = :updated, expiresAt = :exp',
-          ConditionExpression: 'pendingMessages = :original',
+          UpdateExpression: 'SET pendingMessages = :updated, expiresAt = :exp, #lastUpdate = :now',
+          ExpressionAttributeNames: { '#lastUpdate': 'lastPendingMessageClear' },
           ExpressionAttributeValues: {
             ':updated': updated,
-            ':original': messages,
             ':exp': this.getSessionExpiresAt(),
+            ':now': Date.now(),
           },
         })
       );

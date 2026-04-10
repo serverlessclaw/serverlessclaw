@@ -23,7 +23,12 @@ export async function handler(
   const eventDetail = event.detail;
   const envelopeId = event.id;
 
-  logger.info(`[EVENTS] Received: ${detailType} | Session: ${eventDetail.sessionId ?? 'N/A'}`);
+  logger.info(`[EVENTS] Received`, {
+    detailType,
+    sessionId: eventDetail.sessionId ?? 'N/A',
+    traceId: eventDetail.traceId ?? 'unknown',
+    envelopeId: envelopeId ?? 'N/A',
+  });
 
   try {
     const { emitMetrics, METRICS } = await import('../lib/metrics');
@@ -140,7 +145,11 @@ export async function handler(
         return; // Success - don't route to DLQ
       } else {
         const errorMsg = `Handler function ${routing.function} missing in module ${routing.module}`;
-        logger.error(`[SAFE_MODE] ${errorMsg}`);
+        logger.error(`[SAFE_MODE] ${errorMsg}`, {
+      errorMessage,
+      detailType,
+      envelopeId: envelopeId ?? 'N/A',
+    });
         throw new Error(errorMsg);
       }
     }
@@ -163,7 +172,7 @@ export async function handler(
       severity: 'high',
       userId,
       traceId,
-      context: { detailType },
+      context: { detailType, error: errorMessage },
     });
     throw error instanceof Error ? error : new Error(String(error));
   }
@@ -180,10 +189,6 @@ async function routeToDlq(
   errorMessage?: string
 ): Promise<void> {
   try {
-    const { emitEvent } = await import('../lib/utils/bus');
-    const { EventType } = await import('../lib/types/agent');
-
-    // Use DLQ_ROUTE for routing failed events
     await emitEvent('events.handler', EventType.DLQ_ROUTE, {
       eventCategory: 'dlq_routing',
       detailType,
@@ -194,8 +199,20 @@ async function routeToDlq(
       errorMessage,
       retryCount: (event.detail.retryCount as number) ?? 0,
       timestamp: Date.now(),
+      observability: {
+        detailType,
+        envelopeId: event.id,
+        userId,
+        traceId,
+        errorMessage,
+        retryCount: (event.detail.retryCount as number) ?? 0,
+        timestamp: Date.now(),
+      },
     });
-    logger.info(`[EVENTS] Event ${detailType} routed to DLQ for retry`);
+    logger.info(`[EVENTS] Event ${detailType} routed to DLQ for retry`, {
+      detailType,
+      timestamp: Date.now(),
+    });
   } catch (dlqError) {
     // DLQ routing failed - report health issue but don't block
     logger.error(`[EVENTS] Failed to route to DLQ:`, dlqError);

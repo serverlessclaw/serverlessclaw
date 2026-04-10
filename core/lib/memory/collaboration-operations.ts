@@ -81,7 +81,7 @@ export async function createCollaboration(
   );
   await base.putItem({
     userId: `${COLLAB_PREFIX}${collaborationId}`,
-    timestamp: '0',
+    timestamp: 0,
     type: 'COLLABORATION',
     expiresAt: collaboration.expiresAt ? Math.floor(collaboration.expiresAt / 1000) : ttlExpiresAt,
     ...collaboration,
@@ -91,7 +91,7 @@ export async function createCollaboration(
   for (const participant of participants) {
     await base.putItem({
       userId: `${COLLAB_INDEX_PREFIX}${participant.type}#${participant.id}`,
-      timestamp: String(now),
+      timestamp: now,
       type: 'COLLABORATION_INDEX',
       collaborationId,
       role: participant.role,
@@ -146,7 +146,7 @@ export async function addCollaborationParticipant(
   // Update collaboration
   await base.putItem({
     userId: `${COLLAB_PREFIX}${collaborationId}`,
-    timestamp: '0',
+    timestamp: 0,
     type: 'COLLABORATION',
     ...collaboration,
   });
@@ -154,7 +154,7 @@ export async function addCollaborationParticipant(
   // Add index entry for new participant
   await base.putItem({
     userId: `${COLLAB_INDEX_PREFIX}${newParticipant.type}#${newParticipant.id}`,
-    timestamp: String(now),
+    timestamp: now,
     type: 'COLLABORATION_INDEX',
     collaborationId,
     role: newParticipant.role,
@@ -179,7 +179,7 @@ export async function getCollaboration(
     ExpressionAttributeNames: { '#timestamp': 'timestamp' },
     ExpressionAttributeValues: {
       ':userId': `${COLLAB_PREFIX}${collaborationId}`,
-      ':zero': '0',
+      ':zero': 0,
     },
   });
 
@@ -272,10 +272,25 @@ export async function closeCollaboration(
 
   await base.putItem({
     userId: `${COLLAB_PREFIX}${collaborationId}`,
-    timestamp: '0',
+    timestamp: 0,
     type: 'COLLABORATION',
     ...collaboration,
   });
+
+  // Clean up ALL participant index entries to prevent orphaned records
+  // Need to fetch all participants including those added after creation
+  const allParticipants = collaboration.participants;
+  for (const participant of allParticipants) {
+    try {
+      // Use the participant's joinedAt timestamp as the sort key
+      await base.deleteItem({
+        userId: `${COLLAB_INDEX_PREFIX}${participant.type}#${participant.id}`,
+        timestamp: participant.joinedAt,
+      });
+    } catch (error) {
+      logger.warn(`Failed to delete index entry for ${participant.type}:${participant.id}:`, error);
+    }
+  }
 
   logger.info(`Collaboration ${collaborationId} closed by ${actorType}:${actorId}`);
 }
@@ -295,7 +310,7 @@ export async function updateCollaborationActivity(
 
   await base.putItem({
     userId: `${COLLAB_PREFIX}${collaborationId}`,
-    timestamp: '0',
+    timestamp: 0,
     type: 'COLLABORATION',
     ...collaboration,
   });

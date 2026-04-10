@@ -248,6 +248,22 @@ export const handler = async (_event?: { detail: Record<string, unknown> }): Pro
     const lkgHash = await memory.getLatestLKGHash();
     if (!lkgHash) {
       logger.warn('No LKG hash found in memory. Falling back to generic HEAD revert.');
+    } else if (!/^[a-f0-9]{7,40}$/i.test(lkgHash)) {
+      logger.error(
+        `Invalid LKG hash detected: ${lkgHash}. Aborting recovery to prevent corruption.`
+      );
+      await db.send(
+        new PutCommand({
+          TableName: typedResource.MemoryTable.name,
+          Item: {
+            userId: 'DISTILLED#RECOVERY',
+            timestamp: Date.now(),
+            content: `Recovery ABORTED: Invalid LKG hash "${lkgHash}" detected. Manual intervention required.`,
+            expiresAt: Math.floor((Date.now() + RETENTION.HEALTH_DAYS * 86400000) / 1000),
+          },
+        })
+      );
+      return;
     }
 
     logger.info(
