@@ -79,7 +79,7 @@ describe('Dead Man Switch Recovery Handler', () => {
   it('should retrieve LKG hash and trigger CodeBuild on health failure', async () => {
     lockMocks.acquire.mockResolvedValue(true);
     memoryMocks.incrementRecoveryAttemptCount.mockResolvedValue(1);
-    memoryMocks.getLatestLKGHash.mockResolvedValue('lkg-commit-123');
+    memoryMocks.getLatestLKGHash.mockResolvedValue('deadbeef1234567890');
     ddbMock.on(PutCommand).resolves({});
     codeBuildMock.on(StartBuildCommand).resolves({ build: { id: 'test-build' } });
 
@@ -90,7 +90,7 @@ describe('Dead Man Switch Recovery Handler', () => {
     expect(codeBuildMock.commandCalls(StartBuildCommand)).toHaveLength(1);
     const buildInput = codeBuildMock.commandCalls(StartBuildCommand)[0].args[0].input;
     expect(buildInput.environmentVariablesOverride).toContainEqual(
-      expect.objectContaining({ name: 'LKG_HASH', value: 'lkg-commit-123' })
+      expect.objectContaining({ name: 'LKG_HASH', value: 'deadbeef1234567890' })
     );
     expect(buildInput.environmentVariablesOverride).toContainEqual(
       expect.objectContaining({ name: 'EMERGENCY_ROLLBACK', value: 'true' })

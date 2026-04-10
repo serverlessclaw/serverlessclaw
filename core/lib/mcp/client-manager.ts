@@ -141,7 +141,7 @@ export class MCPClientManager {
         // Local command - use stdio transport
         // Regex to split by space but keep quoted strings together
         const parts = connectionString.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
-        if (parts.length === 0) {
+        if (parts.length === 0 || !parts[0]) {
           throw new Error(`Invalid empty connection string for MCP server ${serverName}`);
         }
         let command = parts[0].replace(/^"|"$/g, '');

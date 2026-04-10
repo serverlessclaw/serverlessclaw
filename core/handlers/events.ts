@@ -146,7 +146,7 @@ export async function handler(
       } else {
         const errorMsg = `Handler function ${routing.function} missing in module ${routing.module}`;
         logger.error(`[SAFE_MODE] ${errorMsg}`, {
-          errorMessage,
+          errorMessage: errorMsg,
           detailType,
           envelopeId: envelopeId ?? 'N/A',
         });
@@ -188,6 +188,8 @@ async function routeToDlq(
   traceId: string,
   errorMessage?: string
 ): Promise<void> {
+  const { emitEvent } = await import('../lib/utils/bus');
+  const { EventType } = await import('../lib/types/agent');
   try {
     await emitEvent('events.handler', EventType.DLQ_ROUTE, {
       eventCategory: 'dlq_routing',

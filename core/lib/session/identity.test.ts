@@ -19,6 +19,7 @@ describe('IdentityManager', () => {
   let manager: IdentityManager;
   let mockBase: {
     queryItems: ReturnType<typeof vi.fn>;
+    queryItemsPaginated: ReturnType<typeof vi.fn>;
     putItem: ReturnType<typeof vi.fn>;
     deleteItem: ReturnType<typeof vi.fn>;
     scanByPrefix: ReturnType<typeof vi.fn>;
@@ -35,6 +36,18 @@ describe('IdentityManager', () => {
         const item = state.get(pk);
         return item ? [item] : [];
       }),
+      queryItemsPaginated: vi
+        .fn()
+        .mockImplementation(async ({ ExpressionAttributeValues, FilterExpression }) => {
+          const type = ExpressionAttributeValues[':type'];
+          let items = Array.from(state.values()).filter((item) => item.type === type);
+          if (FilterExpression && FilterExpression.includes('sessionUserId = :uid')) {
+            items = items.filter(
+              (item) => item.sessionUserId === ExpressionAttributeValues[':uid']
+            );
+          }
+          return { items, lastEvaluatedKey: null };
+        }),
       putItem: vi.fn().mockImplementation(async (item) => {
         state.set(item.userId, item);
       }),

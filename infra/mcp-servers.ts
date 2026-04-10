@@ -26,7 +26,6 @@ export interface MCPServerResources {
  */
 export function createMCPServers(ctx: SharedContext): MCPServerResources {
   const { memoryTable, configTable, secrets, stagingBucket } = ctx;
-  const liveInLocalOnly = $app.stage === 'local' ? undefined : false;
   const validSecrets = getValidSecrets(secrets);
 
   const baseEnv = {
@@ -39,10 +38,10 @@ export function createMCPServers(ctx: SharedContext): MCPServerResources {
 
   const commonProps = {
     handler: 'core/mcp-servers/multiplexer.handler',
-    dev: liveInLocalOnly,
-    architecture: LAMBDA_ARCHITECTURE,
+    dev: false as const,
+    architecture: LAMBDA_ARCHITECTURE as 'arm64' | 'x86_64',
     nodejs: { loader: NODEJS_LOADERS },
-    logging: { retention: LOG_RETENTION_PERIOD },
+    logging: { retention: LOG_RETENTION_PERIOD as any },
     url: { authorization: 'iam' as const },
   };
 

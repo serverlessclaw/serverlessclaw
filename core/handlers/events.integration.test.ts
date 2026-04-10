@@ -47,6 +47,12 @@ vi.mock('@aws-sdk/client-eventbridge', () => ({
 
 vi.mock('../lib/utils/bus', () => ({
   emitEvent: ebMocks.mockEmitEvent,
+  EventPriority: {
+    CRITICAL: 'CRITICAL',
+    HIGH: 'HIGH',
+    NORMAL: 'NORMAL',
+    LOW: 'LOW',
+  },
 }));
 
 describe('Event Router Integration', () => {

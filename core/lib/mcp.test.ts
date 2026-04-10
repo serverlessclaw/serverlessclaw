@@ -575,11 +575,21 @@ describe('MCPBridge', () => {
 
   describe('getCachedTools', () => {
     it('returns cached tools from registry', async () => {
-      const cached = [{ name: 'tool1' }, { name: 'tool2' }];
-      (AgentRegistry.getRawConfig as any).mockResolvedValue(cached);
+      const serversConfig = { server1: {}, server2: {} };
+      const cachedServer1 = { tools: [{ name: 'tool1', description: 'desc1', inputSchema: {} }] };
+      const cachedServer2 = { tools: [{ name: 'tool2', description: 'desc2', inputSchema: {} }] };
+
+      (AgentRegistry.getRawConfig as any).mockImplementation((key: string) => {
+        if (key === 'mcp_servers') return Promise.resolve(serversConfig);
+        if (key === 'mcp_tools_cache_server1') return Promise.resolve(cachedServer1);
+        if (key === 'mcp_tools_cache_server2') return Promise.resolve(cachedServer2);
+        return Promise.resolve(null);
+      });
 
       const tools = await MCPBridge.getCachedTools();
-      expect(tools).toEqual(cached);
+      expect(tools).toHaveLength(2);
+      expect(tools[0].name).toBe('server1_tool1');
+      expect(tools[1].name).toBe('server2_tool2');
     });
 
     it('returns empty array when no cache exists', async () => {

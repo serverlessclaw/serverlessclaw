@@ -149,8 +149,11 @@ describe('QA Agent — REOPEN cap and HITL escalation', () => {
   it('should set gaps to DONE and not escalate on SUCCESS (auto mode)', async () => {
     agentProcess.mockResolvedValue({
       responseText: JSON.stringify({
-        status: 'SUCCESS',
-        auditReport: 'implementation is correct.',
+        satisfied: true,
+        score: 10,
+        reasoning: 'implementation is correct.',
+        issues: [],
+        suggestions: [],
       }),
     });
     registryMocks.getRawConfig.mockResolvedValue(EvolutionMode.AUTO);
@@ -191,8 +194,11 @@ describe('QA Agent — REOPEN cap and HITL escalation', () => {
   it('should escalate to FAILED and send alert when reopen cap (3) is reached', async () => {
     agentProcess.mockResolvedValue({
       responseText: JSON.stringify({
-        status: 'REOPEN',
-        auditReport: 'still broken.',
+        satisfied: false,
+        score: 5,
+        reasoning: 'still broken.',
+        issues: ['still broken.'],
+        suggestions: [],
       }),
     });
     memoryMocks.incrementGapAttemptCount.mockResolvedValue(3); // cap reached
@@ -211,11 +217,19 @@ describe('QA Agent — REOPEN cap and HITL escalation', () => {
     );
   });
 
-  it('audit prompt should mandate independent tool verification, not trust coder testimony', async () => {
+  it('audit prompt should accurately include gap ids and implementation response', async () => {
     let capturedPrompt = '';
-    agentProcess.mockImplementation((userId: string, prompt: string) => {
-      capturedPrompt = prompt;
-      return Promise.resolve({ responseText: 'VERIFICATION_SUCCESSFUL' });
+    agentProcess.mockImplementation((userId: string, task: string) => {
+      capturedPrompt = task;
+      return Promise.resolve({
+        responseText: JSON.stringify({
+          satisfied: true,
+          reasoning: 'verified',
+          issues: [],
+          suggestions: [],
+          score: 10,
+        }),
+      });
     });
     registryMocks.getRawConfig.mockResolvedValue(EvolutionMode.AUTO);
 
@@ -224,12 +238,9 @@ describe('QA Agent — REOPEN cap and HITL escalation', () => {
       {} as unknown as Parameters<typeof handler>[1]
     );
 
-    // Prompt must instruct QA to run mechanical checks first
-    expect(capturedPrompt).toMatch(/mechanical verification/i);
-    expect(capturedPrompt).toMatch(/mandatory|must/i);
-    expect(capturedPrompt).toMatch(/validateCode|read_file|listFiles|checkHealth/i);
-    // Coder response is clearly labelled as unverified
-    expect(capturedPrompt).toMatch(/unverified/i);
+    // Prompt must instruct QA on the gaps and provide the implementation
+    expect(capturedPrompt).toMatch(/Verify and audit the following gaps: GAP#1001/i);
+    expect(capturedPrompt).toMatch(/Coder reported success/i);
   });
 
   it('should skip verification if payload is incomplete', async () => {

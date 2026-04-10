@@ -1,10 +1,8 @@
-import { ReasoningProfile } from '../lib/types/llm';
 import {
   GapStatus,
   AgentStatus,
   AgentType,
   EvolutionMode,
-  TraceSource,
   AgentEvent,
   AgentPayload,
 } from '../lib/types/agent';
@@ -13,7 +11,6 @@ import { Context } from 'aws-lambda';
 import { extractPayload, initAgent, extractBaseUserId } from '../lib/utils/agent-helpers';
 import { emitTaskEvent } from '../lib/utils/agent-helpers/event-emitter';
 import { sendOutboundMessage } from '../lib/outbound';
-import { QA_SYSTEM_PROMPT } from './prompts';
 
 /**
  * QA Agent handler. Triggered after a build success or coder task completion.
@@ -284,7 +281,7 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
     [baseUserId],
     sessionId,
     config.name,
-    resultAttachments
+    []
   );
 
   // 2. Universal Coordination: Notify Initiator (if any)
@@ -294,7 +291,7 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
     userId: baseUserId,
     task: `Audit gaps: ${gapIds.join(', ')}`,
     response: auditReport,
-    attachments: resultAttachments,
+    attachments: [],
     traceId,
     sessionId,
     initiatorId,

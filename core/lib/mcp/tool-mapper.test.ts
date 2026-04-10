@@ -188,11 +188,10 @@ describe('MCPToolMapper', () => {
 
       const tools = MCPToolMapper.mapTools('filesystem', client, rawTools);
       await tools[0].execute({ path: '/etc/passwd' });
-
       expect(checkFileSecurity).toHaveBeenCalledWith(
         '/etc/passwd',
         undefined,
-        'MCP operation (read_file)'
+        'MCP operation (read_file) [arg: path]'
       );
     });
 
@@ -208,11 +207,10 @@ describe('MCPToolMapper', () => {
 
       const tools = MCPToolMapper.mapTools('filesystem', client, rawTools);
       await tools[0].execute({ path_to_file: '/some/file.txt' });
-
       expect(checkFileSecurity).toHaveBeenCalledWith(
         '/some/file.txt',
         undefined,
-        'MCP operation (read_file)'
+        'MCP operation (read_file) [arg: path_to_file]'
       );
     });
 
@@ -228,11 +226,10 @@ describe('MCPToolMapper', () => {
 
       const tools = MCPToolMapper.mapTools('filesystem', client, rawTools);
       await tools[0].execute({ file_path: '/some/file.txt' });
-
       expect(checkFileSecurity).toHaveBeenCalledWith(
         '/some/file.txt',
         undefined,
-        'MCP operation (read_file)'
+        'MCP operation (read_file) [arg: file_path]'
       );
     });
 
@@ -451,11 +448,10 @@ describe('MCPToolMapper', () => {
 
       const tools = MCPToolMapper.mapCachedTools('filesystem', rawTools, clientProvider);
       await tools[0].execute({ path: '/etc/passwd' });
-
       expect(checkFileSecurity).toHaveBeenCalledWith(
         '/etc/passwd',
         undefined,
-        'MCP operation (read_file)'
+        'MCP operation (read_file) [arg: path]'
       );
     });
 
@@ -472,11 +468,10 @@ describe('MCPToolMapper', () => {
 
       const tools = MCPToolMapper.mapCachedTools('filesystem', rawTools, clientProvider);
       await tools[0].execute({ path_to_file: '/some/file.txt' });
-
       expect(checkFileSecurity).toHaveBeenCalledWith(
         '/some/file.txt',
         undefined,
-        'MCP operation (read_file)'
+        'MCP operation (read_file) [arg: path_to_file]'
       );
     });
 
@@ -493,11 +488,10 @@ describe('MCPToolMapper', () => {
 
       const tools = MCPToolMapper.mapCachedTools('filesystem', rawTools, clientProvider);
       await tools[0].execute({ file_path: '/some/file.txt' });
-
       expect(checkFileSecurity).toHaveBeenCalledWith(
         '/some/file.txt',
         undefined,
-        'MCP operation (read_file)'
+        'MCP operation (read_file) [arg: file_path]'
       );
     });
 

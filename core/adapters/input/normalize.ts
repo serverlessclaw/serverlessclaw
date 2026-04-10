@@ -9,7 +9,9 @@
  * The shape mirrors the `InboundMessage` type used throughout the system.
  */
 
-import { InboundMessage, AttachmentSchema } from './types';
+import { InboundMessage } from './types';
+import { z } from 'zod';
+import { AttachmentSchema } from './types';
 
 /**
  * NormalizedMessage is the canonical representation of an inbound message.
@@ -20,7 +22,7 @@ export interface NormalizedMessage {
   userId: string; // unique identifier for the user (or channel)
   sessionId: string; // conversation/session identifier
   text: string; // user supplied text (or empty string for non‑text events)
-  attachments: AttachmentSchema[];
+  attachments: z.infer<typeof AttachmentSchema>[];
   metadata: Record<string, unknown>;
   timestamp: string; // ISO string
 }

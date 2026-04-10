@@ -5,6 +5,7 @@ import { Resource } from 'sst';
 import { SSTResource } from '../../lib/types/system';
 import { logger } from '../../lib/logger';
 import { AttachmentType } from '../../lib/types/llm';
+import { normalizeMessage } from './normalize';
 
 const typedResource = Resource as unknown as SSTResource;
 
@@ -132,7 +133,6 @@ export class TelegramAdapter implements InputAdapter {
       timestamp: new Date().toISOString(),
     };
     // Import the normalizeMessage function
-    const { normalizeMessage } = await import('./normalize');
     return normalizeMessage(rawMessage);
   }
 

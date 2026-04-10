@@ -225,15 +225,17 @@ export class MCPBridge {
 
     if (!serversConfig) return [];
 
-    const allCached: any[] = [];
+    const allCached: Partial<ITool>[] = [];
     const serverNames = Object.keys(serversConfig);
 
     for (const name of serverNames) {
       const cacheKey = `mcp_tools_cache_${name}`;
-      const cached = (await AgentRegistry.getRawConfig(cacheKey)) as { tools: any[] } | null;
+      const cached = (await AgentRegistry.getRawConfig(cacheKey)) as {
+        tools: Array<{ name: string; description?: string; inputSchema?: Record<string, unknown> }>;
+      } | null;
       if (cached?.tools && Array.isArray(cached.tools)) {
         // Map them to include server prefix like in mapTools
-        const mapped = cached.tools.map((t: any) => ({
+        const mapped = cached.tools.map((t) => ({
           name: `${name}_${t.name}`,
           description: t.description ?? `Cached tool from ${name} server.`,
           parameters: t.inputSchema ?? { type: 'object', properties: {} },
@@ -241,7 +243,7 @@ export class MCPBridge {
           connectionProfile: [],
           requiresApproval: false,
           requiredPermissions: [],
-        }));
+        })) as unknown as Partial<ITool>[];
         allCached.push(...mapped);
       }
     }
