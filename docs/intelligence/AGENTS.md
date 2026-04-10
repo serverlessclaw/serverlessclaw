@@ -10,26 +10,26 @@ We distinguish between **Autonomous Agents** (LLM-powered decision-makers) and *
 
 ### 1. Autonomous Agents (LLM-Powered)
 
-| Agent | Host (Tier) | Responsibilities |
-| :--- | :--- | :--- |
-| **SuperClaw** | `Standard` | **Nimble Orchestrator**. See [`core/agents/superclaw.ts`](../../core/agents/superclaw.ts). |
-| **Coder Agent** | `High-Power` | Writes code, validates deployments. See [`core/agents/coder.ts`](../../core/agents/coder.ts). |
-| **Researcher** | `High-Power` | Deep exploration. See [RESEARCH.md](./RESEARCH.md) & [`core/agents/researcher.ts`](../../core/agents/researcher.ts). |
-| **Strategic Planner**| `High-Power` | **Technical Auditor**. See [`core/agents/strategic-planner.ts`](../../core/agents/strategic-planner.ts). |
-| **QA Auditor** | `Standard` | Verifies changes. See [`core/agents/qa.ts`](../../core/agents/qa.ts). |
-| **Facilitator** | `Standard` | **Session Moderator**. See [`core/agents/facilitator.ts`](../../core/agents/facilitator.ts). |
-| **Merger** | `Standard` | **Code Integration**. See [`core/agents/merger.ts`](../../core/agents/merger.ts). |
-| **Critic** | `Standard` | **Logic Oversight**. See [`core/agents/critic.ts`](../../core/agents/critic.ts). |
-| **Cognition Reflector**| `Light` | **Knowledge Custodian**. See [`core/agents/cognition-reflector.ts`](../../core/agents/cognition-reflector.ts). |
+| Agent                   | Host (Tier)  | Responsibilities                                                                                                     |
+| :---------------------- | :----------- | :------------------------------------------------------------------------------------------------------------------- |
+| **SuperClaw**           | `Standard`   | **Nimble Orchestrator**. See [`core/agents/superclaw.ts`](../../core/agents/superclaw.ts).                           |
+| **Coder Agent**         | `High-Power` | Writes code, validates deployments. See [`core/agents/coder.ts`](../../core/agents/coder.ts).                        |
+| **Researcher**          | `High-Power` | Deep exploration. See [RESEARCH.md](./RESEARCH.md) & [`core/agents/researcher.ts`](../../core/agents/researcher.ts). |
+| **Strategic Planner**   | `High-Power` | **Technical Auditor**. See [`core/agents/strategic-planner.ts`](../../core/agents/strategic-planner.ts).             |
+| **QA Auditor**          | `Standard`   | Verifies changes. See [`core/agents/qa.ts`](../../core/agents/qa.ts).                                                |
+| **Facilitator**         | `Standard`   | **Session Moderator**. See [`core/agents/facilitator.ts`](../../core/agents/facilitator.ts).                         |
+| **Merger**              | `Standard`   | **Code Integration**. See [`core/agents/merger.ts`](../../core/agents/merger.ts).                                    |
+| **Critic**              | `Standard`   | **Logic Oversight**. See [`core/agents/critic.ts`](../../core/agents/critic.ts).                                     |
+| **Cognition Reflector** | `Light`      | **Knowledge Custodian**. See [`core/agents/cognition-reflector.ts`](../../core/agents/cognition-reflector.ts).       |
 
 ### 2. System Handlers (Logic-Powered)
 
-| Component | Trigger | Responsibilities |
-| :--- | :--- | :--- |
-| **Build Monitor** | CodeBuild Event | Observes builds, updates gap status, circuit breaking. |
-| **Recovery Handler** | Health Failure | Automated rollback orchestration. See [RESILIENCE.md](../system/RESILIENCE.md). |
-| **Event Handler** | AgentBus Event | Routes system signals and manages recursion depth. |
-| **Real-time Bridge** | AgentBus Event | Bridges signals to AWS IoT (MQTT). See [DASHBOARD.md](../interface/DASHBOARD.md). |
+| Component            | Trigger         | Responsibilities                                                                  |
+| :------------------- | :-------------- | :-------------------------------------------------------------------------------- |
+| **Build Monitor**    | CodeBuild Event | Observes builds, updates gap status, circuit breaking.                            |
+| **Recovery Handler** | Health Failure  | Automated rollback orchestration. See [RESILIENCE.md](../system/RESILIENCE.md).   |
+| **Event Handler**    | AgentBus Event  | Routes system signals and manages recursion depth.                                |
+| **Real-time Bridge** | AgentBus Event  | Bridges signals to AWS IoT (MQTT). See [DASHBOARD.md](../interface/DASHBOARD.md). |
 
 ---
 

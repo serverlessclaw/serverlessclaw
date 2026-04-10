@@ -28,7 +28,9 @@ function getFlag(name, defaultValue) {
 }
 
 if (!TABLE_NAME) {
-  console.error('Usage: TRACE_TABLE=<tableName> node create-trace-summaries.mjs <tableName> [--dry-run] [--limit=100] [--rate=200] [--page-size=500]');
+  console.error(
+    'Usage: TRACE_TABLE=<tableName> node create-trace-summaries.mjs <tableName> [--dry-run] [--limit=100] [--rate=200] [--page-size=500]'
+  );
   process.exit(1);
 }
 
@@ -36,7 +38,9 @@ const client = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1
 const docClient = DynamoDBDocumentClient.from(client);
 
 const PAGE_SIZE = Number(getFlag('page-size', process.env.PAGE_SIZE || 500));
-const DRY_RUN = getFlag('dry-run', process.env.DRY_RUN === 'true' ? true : false) === true || getFlag('dry-run', false) === 'true';
+const DRY_RUN =
+  getFlag('dry-run', process.env.DRY_RUN === 'true' ? true : false) === true ||
+  getFlag('dry-run', false) === 'true';
 const LIMIT = Number(getFlag('limit', process.env.LIMIT || 0)) || 0; // stop after creating LIMIT summaries (0 = unlimited)
 const RATE = Number(getFlag('rate', process.env.RATE || 0)) || 0; // writes per second (0 = no throttle)
 
@@ -55,7 +59,12 @@ async function main() {
 
   do {
     const res = await docClient.send(
-      new ScanCommand({ TableName: TABLE_NAME, ProjectionExpression: 'traceId', Limit: PAGE_SIZE, ExclusiveStartKey: lastKey })
+      new ScanCommand({
+        TableName: TABLE_NAME,
+        ProjectionExpression: 'traceId',
+        Limit: PAGE_SIZE,
+        ExclusiveStartKey: lastKey,
+      })
     );
 
     for (const item of res.Items ?? []) {
@@ -89,7 +98,9 @@ async function main() {
         agentId: base.agentId ?? null,
         timestamp: base.timestamp ?? Date.now(),
         status: base.status ?? 'started',
-        title: (base.initialContext && (base.initialContext.title || base.initialContext.message)) ?? null,
+        title:
+          (base.initialContext && (base.initialContext.title || base.initialContext.message)) ??
+          null,
         expiresAt: base.expiresAt,
       };
 

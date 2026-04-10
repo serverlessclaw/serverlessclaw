@@ -255,7 +255,8 @@ describe('shared event utilities', () => {
         undefined,
         'sess-1',
         'SuperClaw',
-        undefined
+        undefined,
+        'trace-1'
       );
     });
 
@@ -312,6 +313,7 @@ describe('shared event utilities', () => {
         undefined,
         'sess-1',
         'SuperClaw',
+        undefined,
         undefined
       );
     });

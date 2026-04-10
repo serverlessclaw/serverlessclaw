@@ -56,6 +56,7 @@ A **Workspace** is a shared context primitive providing multi-tenant capability 
 ### Member Profiles
 
 Humans can connect to a workspace via multiple channels:
+
 - Telegram / Discord / Slack
 - ClawCenter Dashboard
 - Email (for digests)
@@ -84,16 +85,17 @@ The `IdentityManager` (`core/lib/identity.ts`) provides:
 
 ### Member Roles
 
-| Role | Permissions |
-| :--- | :--- |
-| **Owner** | Full access, can delete workspace, manage all members. |
-| **Admin** | Can invite/remove members, manage collaborations. |
-| **Collaborator** | Can participate in sessions, write to shared context. |
-| **Observer** | Read-only access to sessions and history. |
+| Role             | Permissions                                            |
+| :--------------- | :----------------------------------------------------- |
+| **Owner**        | Full access, can delete workspace, manage all members. |
+| **Admin**        | Can invite/remove members, manage collaborations.      |
+| **Collaborator** | Can participate in sessions, write to shared context.  |
+| **Observer**     | Read-only access to sessions and history.              |
 
 ### Workspace-Aware Notifications
 
 When a `workspaceId` is associated with a collaboration, the system automatically:
+
 1. Adds all active workspace members (agents and humans) as participants.
 2. Routes notifications to human members via their configured channels (Telegram, Discord, Dashboard).
 

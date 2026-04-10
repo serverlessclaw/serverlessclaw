@@ -185,4 +185,3 @@ First, I'll call the getTransactions tool...
 ```
 
 This ensures that even when the final output is concise, the system's underlying strategy is auditable and traceable via **Langfuse**.
-

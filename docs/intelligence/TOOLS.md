@@ -308,4 +308,3 @@ dispatchTask (coder) → filesystem_write_file → [human approves if protected]
 `getAgentTools` in `core/tools/registry-utils.ts` now uses the structured logger (`logger.info`) for tool resolution steps, replacing `console.log` and improving CloudWatch queryability.
 
 ---
-

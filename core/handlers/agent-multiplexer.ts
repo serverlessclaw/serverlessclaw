@@ -2,6 +2,7 @@ import { AgentType, EventType } from '../lib/types/agent';
 import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
 import { handleWarmup } from '../lib/utils/agent-helpers';
+import { SessionStateManager } from '../lib/session/session-state';
 
 /**
  * Agent Multiplexer (Mono-lambda).
@@ -39,7 +40,18 @@ export const handler = async (
 
   logger.info(`[MULTIPLEXER] Received ${detailType}`, { requestId: context.awsRequestId });
 
-  // 2. Identify Target Agent
+  // 2. Extract session context for session locking (B3: Real-time Shared Awareness)
+  const detail = (event.detail as Record<string, unknown>) || {};
+  const sessionId = (detail.sessionId as string) || (event.sessionId as string);
+  // Note: traceId and userId are preserved for future use (e.g., logging, tracing)
+  const _traceId = (detail.traceId as string) || (event.traceId as string);
+  const _userId = (detail.userId as string) || (event.userId as string);
+
+  // Session lock management
+  const sessionStateManager = new SessionStateManager();
+  let heartbeatInterval: ReturnType<typeof setInterval> | undefined;
+
+  // 3. Identify Target Agent
   let targetAgent: AgentType | undefined;
   let handlerPath: string | undefined;
 
@@ -82,7 +94,7 @@ export const handler = async (
       break;
     default:
       // Check if it's a dynamic agent or explicitly specified in the payload
-      targetAgent = (event.detail as Record<string, unknown>)?.agentId as AgentType;
+      targetAgent = detail.agentId as AgentType;
       if (targetAgent) {
         // Dynamic agents are still handled by Agent Runner usually,
         // but the multiplexer could potentially handle them if imported.
@@ -97,8 +109,38 @@ export const handler = async (
     return;
   }
 
+  // Acquire session lock if sessionId is available (B3: Prevent Mutual Exclusion Violation)
+  let lockAcquired = false;
+  if (sessionId && targetAgent) {
+    lockAcquired = await sessionStateManager.acquireProcessing(sessionId, targetAgent);
+
+    if (!lockAcquired) {
+      logger.info(`[MULTIPLEXER] Session ${sessionId} busy. Queueing task for ${targetAgent}.`);
+      await sessionStateManager.addPendingMessage(sessionId, `${targetAgent}: ${detailType}`, []);
+      return {
+        status: 'QUEUED',
+        message: `Session busy. Task added to pending queue for ${targetAgent}.`,
+      };
+    }
+
+    // Start heartbeat to renew lock (B3: Real-time Shared Awareness)
+    // Renew every 60 seconds for tasks that may take longer (e.g., Coder)
+    heartbeatInterval = setInterval(async () => {
+      try {
+        const renewed = await sessionStateManager.renewProcessing(sessionId, targetAgent!);
+        if (!renewed) {
+          logger.warn(
+            `[MULTIPLEXER] Failed to renew lock for ${sessionId}. Lock may have been stolen or expired.`
+          );
+        }
+      } catch (err) {
+        logger.error(`[MULTIPLEXER] Heartbeat error for ${sessionId}:`, err);
+      }
+    }, 60000);
+  }
+
   try {
-    // 3. Dispatch to Agent Logic
+    // 4. Dispatch to Agent Logic
     logger.info(`[MULTIPLEXER] Dispatching to ${targetAgent}...`);
     const agentModule = await import(handlerPath);
 
@@ -110,5 +152,13 @@ export const handler = async (
   } catch (error) {
     logger.error(`[MULTIPLEXER] Failed to execute agent ${targetAgent}:`, error);
     throw error;
+  } finally {
+    // Cleanup: Clear heartbeat and release lock
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+    }
+    if (lockAcquired && sessionId && targetAgent) {
+      await sessionStateManager.releaseProcessing(sessionId, targetAgent);
+    }
   }
 };

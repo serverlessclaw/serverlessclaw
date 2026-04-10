@@ -515,7 +515,7 @@ export async function releaseGapLock(
 export async function getGapLock(
   base: BaseMemoryProvider,
   gapId: string
-): Promise<{ content: string; expiresAt: number; lockVersion?: number } | null> {
+): Promise<{ agentId: string; expiresAt: number; lockVersion?: number } | null> {
   const normalizedGapId = normalizeGapId(gapId);
   const lockKey = `${MEMORY_KEYS.GAP_LOCK_PREFIX}${normalizedGapId}`;
   try {
@@ -535,7 +535,7 @@ export async function getGapLock(
     if ((lock.expiresAt as number) < nowSec) return null;
 
     return {
-      content: lock.agentId as string,
+      agentId: lock.agentId as string,
       expiresAt: (lock.expiresAt as number) ?? 0,
       lockVersion: lock.lockVersion as number | undefined,
     };
@@ -543,7 +543,7 @@ export async function getGapLock(
     logger.error('Failed to check gap lock (fail-closed):', error);
     // Fail-closed: return a sentinel indicating we could not verify the lock state.
     // Callers should treat this as "possibly locked" to prevent race conditions.
-    return { content: '__LOCK_CHECK_FAILED__', expiresAt: Infinity };
+    return { agentId: '__LOCK_CHECK_FAILED__', expiresAt: Infinity };
   }
 }
 

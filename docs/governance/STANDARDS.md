@@ -8,12 +8,12 @@ To maintain the high technical integrity of the Serverless Claw swarm, all contr
 
 We follow a strict "no test, no merges" policy.
 
-| Component Type | Required Testing |
-| :--- | :--- |
-| **New Features** | Unit test (`.test.ts`) + Integration/Contract test |
-| **Bug Fixes** | Regression test demonstrating the fix |
-| **Agents** | Tool-mocked handler tests |
-| **UI Components** | Vitest + Storybook (optional) |
+| Component Type    | Required Testing                                   |
+| :---------------- | :------------------------------------------------- |
+| **New Features**  | Unit test (`.test.ts`) + Integration/Contract test |
+| **Bug Fixes**     | Regression test demonstrating the fix              |
+| **Agents**        | Tool-mocked handler tests                          |
+| **UI Components** | Vitest + Storybook (optional)                      |
 
 ---
 
@@ -50,6 +50,7 @@ Every autonomous action must leave a traceable signal.
 ## 🚧 5. Safety-Engine Readiness
 
 New tools that perform "Class C" (Infrastructure/Security) actions must be registered with the `SafetyEngine` to ensure they respect:
+
 - Circuit breakers
 - Approval tiers
 - Rate limits

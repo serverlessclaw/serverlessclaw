@@ -198,7 +198,7 @@ export interface IGapManager {
   /** Checks if a gap is currently locked and returns the lock holder info. */
   getGapLock(
     gapId: string
-  ): Promise<{ content: string; expiresAt: number; lockVersion?: number } | null>;
+  ): Promise<{ agentId: string; expiresAt: number; lockVersion?: number } | null>;
   /** Retrieves a specific capability gap by its ID. */
   getGap(gapId: string): Promise<MemoryInsight | null>;
   /** Updates metadata fields (impact, priority, etc.) on a specific gap. */

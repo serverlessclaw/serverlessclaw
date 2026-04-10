@@ -160,16 +160,16 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
     const lockAcquired = await memory.acquireGapLock(gapId, AgentType.STRATEGIC_PLANNER);
     if (!lockAcquired) {
       const lockInfo = await memory.getGapLock(gapId);
-      if (lockInfo?.content === '__LOCK_CHECK_FAILED__') {
+      if (lockInfo?.agentId === '__LOCK_CHECK_FAILED__') {
         logger.error(
           `Could not verify gap lock state for ${gapId}. Aborting to prevent race condition.`
         );
         return { status: 'GAP_LOCK_CHECK_FAILED' };
       }
       logger.warn(
-        `Gap ${gapId} is locked by ${lockInfo?.content ?? 'unknown'}. Skipping to prevent conflict.`
+        `Gap ${gapId} is locked by ${lockInfo?.agentId ?? 'unknown'}. Skipping to prevent conflict.`
       );
-      return { status: 'GAP_LOCKED', lockedBy: lockInfo?.content };
+      return { status: 'GAP_LOCKED', lockedBy: lockInfo?.agentId };
     }
   }
 

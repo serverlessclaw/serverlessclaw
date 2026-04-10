@@ -12,11 +12,11 @@ The dashboard is built with **Next.js (App Router)** and **Tailwind CSS**. It se
 
 ClawCenter uses **AWS IoT Core** to provide low-latency, bi-directional communication between the serverless backend and the browser.
 
-| Channel Type | Endpoint (MQTT Topic) | Purpose |
-| :--- | :--- | :--- |
-| **Agent Chunks** | `users/{userId}/chunks` | Streaming text fragments from agents |
+| Channel Type       | Endpoint (MQTT Topic)   | Purpose                                                     |
+| :----------------- | :---------------------- | :---------------------------------------------------------- |
+| **Agent Chunks**   | `users/{userId}/chunks` | Streaming text fragments from agents                        |
 | **System Signals** | `users/{userId}/signal` | Deployment status and health alerts and per-session signals |
-| **Trace Updates** | `users/{userId}/traces` | Real-time DAG execution updates |
+| **Trace Updates**  | `users/{userId}/traces` | Real-time DAG execution updates                             |
 
 #### Topic Taxonomy (application namespaces)
 
@@ -43,8 +43,8 @@ These topics are used by the `RealtimeBridge` implementation which routes EventB
 The dashboard connects to AWS IoT using a WebSocket `wss://.../mqtt` URL returned by the config API. Connection details are exposed by the server via the dashboard config endpoint (`/api/config`) and consumed by the client `useRealtime` hook.
 
 - Connection URL: the client connects to the WebSocket path at the `realtime.url` value and appends query parameters:
-	- `x-amz-customauthorizer-name=<AuthorizerName>` — *optional*; included when the IoT custom authorizer name is provided by the config API.
-	- `token=<clientToken>` — **required** by the custom authorizer. The dashboard will generate and persist a short, non-sensitive client token in browser `localStorage` under the key `sc_realtime_token` so reconnects reuse the same token.
+  - `x-amz-customauthorizer-name=<AuthorizerName>` — _optional_; included when the IoT custom authorizer name is provided by the config API.
+  - `token=<clientToken>` — **required** by the custom authorizer. The dashboard will generate and persist a short, non-sensitive client token in browser `localStorage` under the key `sc_realtime_token` so reconnects reuse the same token.
 
 - Token constraints: the custom authorizer requires a token string (server-side logic expects at least 10 characters). The token is not a credential with IAM rights; it is a lightweight client identifier used by the custom authorizer for session scoping.
 
@@ -62,13 +62,13 @@ The dashboard follows a "Cyber-Industrial" aesthetic, prioritized for high-densi
 
 The theme is entirely driven by CSS variables defined in [`dashboard/src/globals.css`](../../dashboard/src/globals.css).
 
-| Category | Variable | Purpose |
-| :--- | :--- | :--- |
-| **Background** | `--background` | Main surface color (Pitch black / Off-white) |
-| **Foreground** | `--foreground` | Primary text and high-contrast lines |
-| **Cyber Green** | `--cyber-green` | Success, running, and healthy states |
-| **Cyber Amber** | `--cyber-amber` | Warnings and in-progress tasks |
-| **Cyber Red** | `--cyber-red` | Errors, failures, and circuit breaker active |
+| Category        | Variable        | Purpose                                      |
+| :-------------- | :-------------- | :------------------------------------------- |
+| **Background**  | `--background`  | Main surface color (Pitch black / Off-white) |
+| **Foreground**  | `--foreground`  | Primary text and high-contrast lines         |
+| **Cyber Green** | `--cyber-green` | Success, running, and healthy states         |
+| **Cyber Amber** | `--cyber-amber` | Warnings and in-progress tasks               |
+| **Cyber Red**   | `--cyber-red`   | Errors, failures, and circuit breaker active |
 
 ### UI Best Practices
 

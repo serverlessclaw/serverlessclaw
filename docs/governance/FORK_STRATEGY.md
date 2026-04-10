@@ -10,10 +10,10 @@ ServerlessClaw is built on the principle of **Co-evolution**. Whether you are a 
 
 There are two primary ways to track the Mother Hub:
 
-| Method | Best For... | Complexity | Reliability |
-| :--- | :--- | :--- | :--- |
-| **Standard Fork** | Users modifying the entire stack | Low | High |
-| **Subtree Sync** | Users embedding Claw as a core component | Moderate | Highest |
+| Method            | Best For...                              | Complexity | Reliability |
+| :---------------- | :--------------------------------------- | :--------- | :---------- |
+| **Standard Fork** | Users modifying the entire stack         | Low        | High        |
+| **Subtree Sync**  | Users embedding Claw as a core component | Moderate   | Highest     |
 
 ---
 
@@ -22,17 +22,20 @@ There are two primary ways to track the Mother Hub:
 This is the recommended path for most OSS users. You treat the Mother Hub as an `upstream` remote.
 
 ### 1. Setup Upstream
+
 ```bash
 git remote add upstream https://github.com/serverlessclaw/serverlessclaw.git
 ```
 
 ### 2. Fetch and Merge
+
 ```bash
 git fetch upstream main
 git merge upstream/main -m "chore: sync with canonical hub"
 ```
 
 ### 3. Resolve Conflicts
+
 Focus on keeping your custom logic in separate directories or behind adapters to minimize merge friction.
 
 ---
@@ -42,11 +45,13 @@ Focus on keeping your custom logic in separate directories or behind adapters to
 Best for projects that include ServerlessClaw as a managed "core" directory (e.g., `core/`).
 
 ### 1. Initial Addition
+
 ```bash
 git subtree add --prefix=core/ https://github.com/serverlessclaw/serverlessclaw.git main --squash
 ```
 
 ### 2. Pulling Evolution
+
 ```bash
 git subtree pull --prefix=core/ https://github.com/serverlessclaw/serverlessclaw.git main --squash
 ```

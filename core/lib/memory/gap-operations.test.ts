@@ -514,8 +514,9 @@ describe('Gap Lock Operations', () => {
       const result = await getGapLock(base, 'GAP#42');
 
       expect(result).toEqual({
-        content: 'agent-planner-1',
+        agentId: 'agent-planner-1',
         expiresAt: futureExpiresAt,
+        lockVersion: undefined,
       });
     });
 
@@ -551,7 +552,7 @@ describe('Gap Lock Operations', () => {
       const result = await getGapLock(base, 'GAP#42');
 
       expect(result).toEqual({
-        content: '__LOCK_CHECK_FAILED__',
+        agentId: '__LOCK_CHECK_FAILED__',
         expiresAt: Infinity,
       });
     });

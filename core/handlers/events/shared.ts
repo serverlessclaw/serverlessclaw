@@ -99,7 +99,9 @@ export async function wakeupInitiator(
       userId,
       sessionId,
       'wakeup-initiator',
-      `I have detected an infinite loop between agents (Depth: ${depth}). I've intervened to stop the process.`
+      `I have detected an infinite loop between agents (Depth: ${depth}). I've intervened to stop the process.`,
+      traceId,
+      initiatorId
     );
     return;
   }
@@ -151,28 +153,53 @@ export async function getRecursionLimit(isMission: boolean = false): Promise<num
 }
 
 /**
- * Handle recursion limit exceeded scenario by informing the user.
+ * Handle recursion limit exceeded scenario by informing the user and emitting a failure event.
  *
  * @param userId - The ID of the user.
  * @param sessionId - Optional session identifier.
  * @param handlerName - The name of the handler reporting the limit.
  * @param reason - The reason for recursion limit.
+ * @param traceId - Trace ID of the failed operation.
+ * @param initiatorId - The agent that was supposed to be woken up.
  */
 export async function handleRecursionLimitExceeded(
   userId: string,
   sessionId: string | undefined,
   handlerName: string,
-  reason: string
+  reason: string,
+  traceId?: string,
+  initiatorId?: string
 ): Promise<void> {
+  const finalMessage = `⚠️ **Recursion Limit Exceeded**\n\n${reason}`;
+
+  // 1. Inform user
   await sendOutboundMessage(
     handlerName,
     userId,
-    `⚠️ **Recursion Limit Exceeded**\n\n${reason}`,
+    finalMessage,
     undefined,
     sessionId,
     'SuperClaw',
-    undefined
+    undefined,
+    traceId
   );
+
+  // 2. Emit failure event for automated system awareness
+  try {
+    const { emitTypedEvent } = await import('../../lib/utils/typed-emit');
+    await emitTypedEvent(handlerName, EventType.TASK_FAILED, {
+      userId,
+      agentId: initiatorId ?? 'unknown',
+      task: 'wakeup-continuation',
+      error: `RECURSION_LIMIT_EXCEEDED: ${reason}`,
+      traceId,
+      sessionId,
+      initiatorId: 'system.supervisor',
+      depth: 99, // Sentinel for limit hit
+    });
+  } catch (err) {
+    logger.error('Failed to emit TASK_FAILED for recursion limit:', err);
+  }
 }
 
 /**

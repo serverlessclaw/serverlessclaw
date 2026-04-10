@@ -571,7 +571,7 @@ export class CachedMemory implements IMemory {
 
   async getGapLock(
     gapId: string
-  ): Promise<{ content: string; expiresAt: number; lockVersion?: number } | null> {
+  ): Promise<{ agentId: string; expiresAt: number; lockVersion?: number } | null> {
     return this.underlying.getGapLock(gapId);
   }
 

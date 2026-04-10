@@ -9,12 +9,15 @@ This document describes the high-availability and self-healing mechanisms that e
 Serverless Claw employs a persistent circuit breaker to prevent runaway deployments and cost spikes.
 
 ### Layer 1: Daily Deployment Limit
+
 - **Mechanism**: Atomic counter in DynamoDB.
 - **Default**: 5 deployments per UTC day.
 - **Reset**: Automatically resets at UTC midnight.
 
 ### Layer 2: Sliding Window
+
 The system tracks `deploy` and `health` failures in a 1-hour sliding window.
+
 - **Closed**: System operating normally.
 - **Open**: Failures > 5. Autonomous deployments are blocked for 10 minutes.
 - **Half-Open**: One probe deployment allowed after cooldown.
@@ -50,6 +53,7 @@ When a deployment fails, the system automatically attempts a repair before escal
 ```
 
 ### Self-Healing Flow:
+
 1. **Diagnosis**: `BuildMonitor` extracts the last 3000 chars of build logs.
 2. **Enrichment**: The `traceId` and `gapId` of the failing task are bundled.
 3. **Repair**: The **Coder Agent** receives the error logs and reasoning context to propose a fix.

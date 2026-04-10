@@ -210,6 +210,7 @@ To ensure the system remains efficient, a continuous optimization loop runs in t
 ### Performance Telemetry
 
 The system captures granular metrics for every tool invocation and agent task:
+
 - **`tool_usage`**: Records input/output tokens, duration, and success status.
 - **`failure_patterns`**: The **Cognition Reflector** identifies persistent technical hurdles (anti-patterns).
 

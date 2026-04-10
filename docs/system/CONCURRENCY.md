@@ -111,6 +111,7 @@ To prevent multiple agents from simultaneously modifying the same session histor
 ### Lock Heartbeat Mechanism
 
 To prevent session "dead zones" caused by crashed or timed-out Lambda processes, the system uses a **Heartbeat-enabled Leasing** model:
+
 - **Dynamic Renewal**: While an agent is processing, a background heartbeat periodically (every 60s) renews the session lock in DynamoDB.
 - **Crash Recovery**: If an execution environment fails, the heartbeat stops, and the lock naturally expires within 5 minutes, allowing recovery handlers to take over.
 

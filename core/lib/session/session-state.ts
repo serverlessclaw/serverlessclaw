@@ -57,6 +57,9 @@ export class SessionStateManager {
    */
   async acquireProcessing(sessionId: string, agentId: string): Promise<boolean> {
     const lockId = `${LOCK_PREFIX}${sessionId}`;
+    const nowSec = Math.floor(Date.now() / TIME.MS_PER_SECOND);
+    const lockExpiresAt = nowSec + LOCK_TTL_SECONDS;
+
     const acquired = await this.lockManager.acquire(lockId, {
       ownerId: agentId,
       ttlSeconds: LOCK_TTL_SECONDS,
@@ -72,10 +75,11 @@ export class SessionStateManager {
             TableName: this.tableName,
             Key: { userId: key, timestamp: 0 },
             UpdateExpression:
-              'SET processingAgentId = :agentId, processingStartedAt = :now, expiresAt = :exp, pendingMessages = if_not_exists(pendingMessages, :empty)',
+              'SET processingAgentId = :agentId, processingStartedAt = :now, lockExpiresAt = :lockExp, expiresAt = :exp, pendingMessages = if_not_exists(pendingMessages, :empty)',
             ExpressionAttributeValues: {
               ':agentId': agentId,
               ':now': Date.now(),
+              ':lockExp': lockExpiresAt,
               ':exp': this.getSessionExpiresAt(),
               ':empty': [],
             },
@@ -97,29 +101,33 @@ export class SessionStateManager {
    */
   async releaseProcessing(sessionId: string, agentId: string): Promise<void> {
     const lockId = `${LOCK_PREFIX}${sessionId}`;
-    const released = await this.lockManager.release(lockId, agentId, '');
+    // Release the lock item itself
+    await this.lockManager.release(lockId, agentId, '');
 
-    if (released) {
-      const key = this.getKey(sessionId);
-      try {
-        await this.docClient.send(
-          new UpdateCommand({
-            TableName: this.tableName,
-            Key: { userId: key, timestamp: 0 },
-            UpdateExpression:
-              'SET processingAgentId = :null, processingStartedAt = :null, expiresAt = :exp',
-            ExpressionAttributeValues: {
-              ':null': null,
-              ':exp': this.getSessionExpiresAt(),
-            },
-          })
-        );
-        logger.info(`Session ${sessionId}: Processing lock released`);
-      } catch (error) {
-        logger.error(
-          `Session ${sessionId}: Failed to clear session state after lock release:`,
-          error
-        );
+    // ALWAYS attempt to clear session metadata to prevent zombie "Processing" states in UI,
+    // regardless of whether the lock release succeeded (it might have already expired).
+    const key = this.getKey(sessionId);
+    try {
+      await this.docClient.send(
+        new UpdateCommand({
+          TableName: this.tableName,
+          Key: { userId: key, timestamp: 0 },
+          UpdateExpression:
+            'SET processingAgentId = :null, processingStartedAt = :null, lockExpiresAt = :null, expiresAt = :exp',
+          ConditionExpression: 'processingAgentId = :agentId',
+          ExpressionAttributeValues: {
+            ':null': null,
+            ':agentId': agentId,
+            ':exp': this.getSessionExpiresAt(),
+          },
+        })
+      );
+      logger.info(`Session ${sessionId}: Processing metadata cleared for ${agentId}`);
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
+        logger.debug(`Session ${sessionId}: Metadata already cleared or owned by another agent.`);
+      } else {
+        logger.error(`Session ${sessionId}: Failed to clear session metadata:`, error);
       }
     }
   }
@@ -129,11 +137,38 @@ export class SessionStateManager {
    */
   async renewProcessing(sessionId: string, agentId: string): Promise<boolean> {
     const lockId = `${LOCK_PREFIX}${sessionId}`;
-    return this.lockManager.renew(lockId, {
+    const nowSec = Math.floor(Date.now() / TIME.MS_PER_SECOND);
+    const newLockExpiresAt = nowSec + LOCK_TTL_SECONDS;
+
+    const renewed = await this.lockManager.renew(lockId, {
       ownerId: agentId,
       ttlSeconds: LOCK_TTL_SECONDS,
       prefix: '',
     });
+
+    if (renewed) {
+      // Sync the new expiry into the session record for B3 Awareness
+      const key = this.getKey(sessionId);
+      try {
+        await this.docClient.send(
+          new UpdateCommand({
+            TableName: this.tableName,
+            Key: { userId: key, timestamp: 0 },
+            UpdateExpression: 'SET lockExpiresAt = :lockExp, expiresAt = :exp',
+            ConditionExpression: 'processingAgentId = :agentId',
+            ExpressionAttributeValues: {
+              ':lockExp': newLockExpiresAt,
+              ':exp': this.getSessionExpiresAt(),
+              ':agentId': agentId,
+            },
+          })
+        );
+      } catch (error) {
+        logger.warn(`Session ${sessionId}: Lock renewed but state sync failed.`, error);
+      }
+    }
+
+    return renewed;
   }
 
   /**
@@ -392,7 +427,7 @@ export class SessionStateManager {
 
       if (!result.Item || !result.Item.processingAgentId) return false;
 
-      const lockExpiresAt = result.Item.lockExpiresAt || 0;
+      const lockExpiresAt = (result.Item.lockExpiresAt as number) || 0;
       const now = Math.floor(Date.now() / TIME.MS_PER_SECOND);
 
       return now < lockExpiresAt;

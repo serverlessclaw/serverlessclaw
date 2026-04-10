@@ -9,27 +9,27 @@
 
 ## Hub-and-Spoke Map
 
-| Spoke                                            | Load When You Need To...                                                  |
-| ------------------------------------------------ | ------------------------------------------------------------------------- |
-| [ARCHITECTURE.md](./ARCHITECTURE.md)             | Understand system structure, data flow, or self-aware AWS topology        |
-| [docs/intelligence/LLM.md](./docs/intelligence/LLM.md)                     | Deep dive into 2026 reasoning profiles and the OpenAI Response API bridge |
-| [docs/governance/DEVOPS.md](./docs/governance/DEVOPS.md)               | Run quality checks, tests, deployments, or releases                       |
-| [docs/intelligence/AGENTS.md](./docs/intelligence/AGENTS.md)               | Work on agent logic and backbone registry                                 |
-| [docs/intelligence/SWARM.md](./docs/intelligence/SWARM.md)                 | Mission decomposition, parallel dispatch, and swarm coordination          |
-| [docs/intelligence/RESEARCH.md](./docs/intelligence/RESEARCH.md)           | Specialized Research Agent workflows and discovery patterns               |
-| [docs/interface/COLLABORATION.md](./docs/interface/COLLABORATION.md) | Shared sessions, Workspaces, RBAC, and human-in-the-loop chat             |
-| [docs/intelligence/MEMORY.md](./docs/intelligence/MEMORY.md)               | Understand the tiered memory system, recall mechanism, and storage options |
-| [docs/system/PROVISIONING.md](./docs/system/PROVISIONING.md)               | Setup infrastructure, storage, resources, and environments                |
-| [docs/system/RESILIENCE.md](./docs/system/RESILIENCE.md)                   | Circuit breakers, Dead Man's Switch, and self-healing loops               |
-| [docs/intelligence/SAFETY.md](./docs/intelligence/SAFETY.md)               | Understand guardrails, safety tiers, and policy enforcement               |
-| [docs/interface/EVENTS.md](./docs/interface/EVENTS.md)                     | Understand event routing, bus logic, and DLQ handling                    |
-| [docs/interface/PROTOCOL.md](./docs/interface/PROTOCOL.md)                 | External input/output adapters and Tool protocols (MCP)                   |
-| [docs/interface/DASHBOARD.md](./docs/interface/DASHBOARD.md)               | Real-time signals (MQTT), design system, and theme                        |
-| [docs/governance/STANDARDS.md](./docs/governance/STANDARDS.md)             | Engineering standards, test-first requirements, and audit rules            |
-| [docs/governance/ROADMAP.md](./docs/governance/ROADMAP.md)                 | Understand what's planned, pick the next task                             |
-| [docs/governance/CONTRIBUTING.md](./docs/governance/CONTRIBUTING.md)       | Understand how to contribute code or update documentation                 |
-| [Extensibility](./core/lib/registry/)            | Dynamic Skill and Agent registries for spoke extension                    |
-| [Evolution](./core/lib/safety/evolution-scheduler.ts) | Evolution Manager for proposing optimizations and bug fixes            |
+| Spoke                                                                | Load When You Need To...                                                   |
+| -------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| [ARCHITECTURE.md](./ARCHITECTURE.md)                                 | Understand system structure, data flow, or self-aware AWS topology         |
+| [docs/intelligence/LLM.md](./docs/intelligence/LLM.md)               | Deep dive into 2026 reasoning profiles and the OpenAI Response API bridge  |
+| [docs/governance/DEVOPS.md](./docs/governance/DEVOPS.md)             | Run quality checks, tests, deployments, or releases                        |
+| [docs/intelligence/AGENTS.md](./docs/intelligence/AGENTS.md)         | Work on agent logic and backbone registry                                  |
+| [docs/intelligence/SWARM.md](./docs/intelligence/SWARM.md)           | Mission decomposition, parallel dispatch, and swarm coordination           |
+| [docs/intelligence/RESEARCH.md](./docs/intelligence/RESEARCH.md)     | Specialized Research Agent workflows and discovery patterns                |
+| [docs/interface/COLLABORATION.md](./docs/interface/COLLABORATION.md) | Shared sessions, Workspaces, RBAC, and human-in-the-loop chat              |
+| [docs/intelligence/MEMORY.md](./docs/intelligence/MEMORY.md)         | Understand the tiered memory system, recall mechanism, and storage options |
+| [docs/system/PROVISIONING.md](./docs/system/PROVISIONING.md)         | Setup infrastructure, storage, resources, and environments                 |
+| [docs/system/RESILIENCE.md](./docs/system/RESILIENCE.md)             | Circuit breakers, Dead Man's Switch, and self-healing loops                |
+| [docs/intelligence/SAFETY.md](./docs/intelligence/SAFETY.md)         | Understand guardrails, safety tiers, and policy enforcement                |
+| [docs/interface/EVENTS.md](./docs/interface/EVENTS.md)               | Understand event routing, bus logic, and DLQ handling                      |
+| [docs/interface/PROTOCOL.md](./docs/interface/PROTOCOL.md)           | External input/output adapters and Tool protocols (MCP)                    |
+| [docs/interface/DASHBOARD.md](./docs/interface/DASHBOARD.md)         | Real-time signals (MQTT), design system, and theme                         |
+| [docs/governance/STANDARDS.md](./docs/governance/STANDARDS.md)       | Engineering standards, test-first requirements, and audit rules            |
+| [docs/governance/ROADMAP.md](./docs/governance/ROADMAP.md)           | Understand what's planned, pick the next task                              |
+| [docs/governance/CONTRIBUTING.md](./docs/governance/CONTRIBUTING.md) | Understand how to contribute code or update documentation                  |
+| [Extensibility](./core/lib/registry/)                                | Dynamic Skill and Agent registries for spoke extension                     |
+| [Evolution](./core/lib/safety/evolution-scheduler.ts)                | Evolution Manager for proposing optimizations and bug fixes                |
 
 ---
 
@@ -57,22 +57,23 @@ make dev
 >
 > **DIAGRAMS**: For any complex system-level changes (e.g., changing EventBridge routing, adding new agent-to-agent communication, or modifying the core backbone), you **MUST** also update the relevant **ASCII diagrams** in the spoke document using ` ```text ` fenced code blocks.
 
-| Changed File               | Update This Spoke                    | Diagram? |
-| -------------------------- | ------------------------------------ | :------: |
-| `core/agents/`             | [intelligence/AGENTS.md](./docs/intelligence/AGENTS.md)        |   Yes    |
-| `core/tools/`              | [intelligence/TOOLS.md](./docs/intelligence/TOOLS.md)          |   Yes    |
-| `core/handlers/events.ts`  | [interface/EVENTS.md](./docs/interface/EVENTS.md)          |   Yes    |
-| `core/handlers/monitor.ts` | [ARCHITECTURE.md](./ARCHITECTURE.md) |   Yes    |
-| `core/lib/types/`          | [ARCHITECTURE.md](./ARCHITECTURE.md) |  Struct  |
-| `core/lib/memory/`         | [intelligence/MEMORY.md](./docs/intelligence/MEMORY.md)        |   Yes    |
-| `core/lib/providers/`      | [intelligence/LLM.md](./docs/intelligence/LLM.md)              |    No    |
-| `infra/`                   | [ARCHITECTURE.md](./ARCHITECTURE.md) |   Yes    |
-| `makefiles/`               | [governance/DEVOPS.md](./docs/governance/DEVOPS.md)        |    No    |
-| `sst.config.ts`            | [ARCHITECTURE.md](./ARCHITECTURE.md) |   Yes    |
+| Changed File               | Update This Spoke                                       | Diagram? |
+| -------------------------- | ------------------------------------------------------- | :------: |
+| `core/agents/`             | [intelligence/AGENTS.md](./docs/intelligence/AGENTS.md) |   Yes    |
+| `core/tools/`              | [intelligence/TOOLS.md](./docs/intelligence/TOOLS.md)   |   Yes    |
+| `core/handlers/events.ts`  | [interface/EVENTS.md](./docs/interface/EVENTS.md)       |   Yes    |
+| `core/handlers/monitor.ts` | [ARCHITECTURE.md](./ARCHITECTURE.md)                    |   Yes    |
+| `core/lib/types/`          | [ARCHITECTURE.md](./ARCHITECTURE.md)                    |  Struct  |
+| `core/lib/memory/`         | [intelligence/MEMORY.md](./docs/intelligence/MEMORY.md) |   Yes    |
+| `core/lib/providers/`      | [intelligence/LLM.md](./docs/intelligence/LLM.md)       |    No    |
+| `infra/`                   | [ARCHITECTURE.md](./ARCHITECTURE.md)                    |   Yes    |
+| `makefiles/`               | [governance/DEVOPS.md](./docs/governance/DEVOPS.md)     |    No    |
+| `sst.config.ts`            | [ARCHITECTURE.md](./ARCHITECTURE.md)                    |   Yes    |
 
 ---
 
 _See [README.md](./README.md) for the public-facing overview._
+
 # Agent Instructions & Checklist
 
 > [!NOTE]

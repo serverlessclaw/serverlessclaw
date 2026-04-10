@@ -136,6 +136,7 @@ The IDS protocol manages the evolutionary synchronization between the **Mother H
 ```
 
 ### Key Components
+
 - **Sync Lock**: Prevents repository corruption by ensuring atomic Git operations per prefix (via `FileSystemSyncLock` or DynamoDB).
 - **Merge Policies**: Automated conflict resolution prioritizing the Hub for `core/` logic to maintain canonical alignment.
 - **Contribution Loop**: Spokes promote local innovations back to the Hub via `evolution-contribution` labels, triggering a `subtree push`.
@@ -226,11 +227,11 @@ Serverless Claw utilizes a tiered logic system to ensure efficiency and cost-con
 - **Hybrid Tooling**: Just-in-Time skill discovery and MCP Multiplexer architecture.
 - **Memory & Context**: Flattened DynamoDB model for sub-50ms context retrieval.
 
-| Component | Deep Dive |
-| :--- | :--- |
-| **LLM Reasoning** | [docs/intelligence/LLM.md](./docs/intelligence/LLM.md) |
-| **Dynamic Tools** | [docs/intelligence/TOOLS.md](./docs/intelligence/TOOLS.md) |
-| **Memory Strategy** | [docs/intelligence/MEMORY.md](./docs/intelligence/MEMORY.md) |
+| Component                 | Deep Dive                                                    |
+| :------------------------ | :----------------------------------------------------------- |
+| **LLM Reasoning**         | [docs/intelligence/LLM.md](./docs/intelligence/LLM.md)       |
+| **Dynamic Tools**         | [docs/intelligence/TOOLS.md](./docs/intelligence/TOOLS.md)   |
+| **Memory Strategy**       | [docs/intelligence/MEMORY.md](./docs/intelligence/MEMORY.md) |
 | **Resource Provisioning** | [docs/system/PROVISIONING.md](./docs/system/PROVISIONING.md) |
 
 ---
@@ -254,12 +255,11 @@ The system is designed for autonomous survival in unstable conditions.
 - **Dead Man's Switch**: Automated recovery sequence for severe failure.
 - **Self-Evolution**: Continuous optimization loops based on telemetry and reputation.
 
-| Component | Deep Dive |
-| :--- | :--- |
-| **Concurrency** | [docs/system/CONCURRENCY.md](./docs/system/CONCURRENCY.md) |
-| **Evolution** | [docs/system/EVOLUTION.md](./docs/system/EVOLUTION.md) |
-| **Resilience & Recovery** | [docs/system/RESILIENCE.md](./docs/system/RESILIENCE.md) |
-| **Provisioning** | [docs/system/PROVISIONING.md](./docs/system/PROVISIONING.md) |
+| Component                 | Deep Dive                                                    |
+| :------------------------ | :----------------------------------------------------------- |
+| **Concurrency**           | [docs/system/CONCURRENCY.md](./docs/system/CONCURRENCY.md)   |
+| **Evolution**             | [docs/system/EVOLUTION.md](./docs/system/EVOLUTION.md)       |
+| **Resilience & Recovery** | [docs/system/RESILIENCE.md](./docs/system/RESILIENCE.md)     |
+| **Provisioning**          | [docs/system/PROVISIONING.md](./docs/system/PROVISIONING.md) |
 
 For deep dives into these evolutionary mechanisms, see [docs/system/EVOLUTION.md](./docs/system/EVOLUTION.md) and [docs/system/RESILIENCE.md](./docs/system/RESILIENCE.md).
-

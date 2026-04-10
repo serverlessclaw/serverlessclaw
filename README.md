@@ -105,12 +105,12 @@ When you send a message, **SuperClaw** receives it, develops a plan with the **S
 
 ServerlessClaw is an organism made of specialized interacting repositories. While the Mother Hub (this repo) is the **Brain**, other repositories provide sensory, motor, and nervous connections:
 
-| Repository | Role | Component |
-| :--- | :--- | :--- |
-| **[cli](https://github.com/serverlessclaw/cli)** | **The Nerve** | **The Synapse**: Connects the Brain to remote Spokes/Clients. |
-| **[integration-github](https://github.com/serverlessclaw/serverlessclaw-integration-github)** | **Sensor** | **The Eyes**: Observes codebases, PRs, and Issue logs. |
-| **[integration-slack](https://github.com/serverlessclaw/serverlessclaw-integration-slack)** | **Interface** | **The Voice**: Communicates with users and reports health. |
-| **[integration-jira](https://github.com/serverlessclaw/serverlessclaw-integration-jira)** | **Adapter** | **The Hands**: Operates within enterprise project structures. |
+| Repository                                                                                    | Role          | Component                                                     |
+| :-------------------------------------------------------------------------------------------- | :------------ | :------------------------------------------------------------ |
+| **[cli](https://github.com/serverlessclaw/cli)**                                              | **The Nerve** | **The Synapse**: Connects the Brain to remote Spokes/Clients. |
+| **[integration-github](https://github.com/serverlessclaw/serverlessclaw-integration-github)** | **Sensor**    | **The Eyes**: Observes codebases, PRs, and Issue logs.        |
+| **[integration-slack](https://github.com/serverlessclaw/serverlessclaw-integration-slack)**   | **Interface** | **The Voice**: Communicates with users and reports health.    |
+| **[integration-jira](https://github.com/serverlessclaw/serverlessclaw-integration-jira)**     | **Adapter**   | **The Hands**: Operates within enterprise project structures. |
 
 ---
 
@@ -146,16 +146,16 @@ make deploy ENV=prod # High-availability, production-grade infrastructure
 
 ## 📚 Documentation
 
-| Document                                 | Description                                    |
-| ---------------------------------------- | ---------------------------------------------- |
-| **[INDEX.md](./INDEX.md)**               | Start here - Documentation hub and context map |
-| **[ARCHITECTURE.md](./ARCHITECTURE.md)** | System topology and AI-native principles       |
-| **[docs/intelligence/AGENTS.md](./docs/intelligence/AGENTS.md)**   | Agent roster and evolutionary loop             |
-| **[docs/intelligence/MEMORY.md](./docs/intelligence/MEMORY.md)**   | Tiered memory engine                           |
-| **[docs/intelligence/TOOLS.md](./docs/intelligence/TOOLS.md)**     | Tool registry and MCP standards                |
-| **[docs/intelligence/SAFETY.md](./docs/intelligence/SAFETY.md)**   | Circuit breakers and rollback safety           |
-| **[docs/governance/DEVOPS.md](./docs/governance/DEVOPS.md)**   | DevOps and CI/CD                               |
-| **[docs/governance/ROADMAP.md](./docs/governance/ROADMAP.md)** | Future plans                                   |
+| Document                                                         | Description                                    |
+| ---------------------------------------------------------------- | ---------------------------------------------- |
+| **[INDEX.md](./INDEX.md)**                                       | Start here - Documentation hub and context map |
+| **[ARCHITECTURE.md](./ARCHITECTURE.md)**                         | System topology and AI-native principles       |
+| **[docs/intelligence/AGENTS.md](./docs/intelligence/AGENTS.md)** | Agent roster and evolutionary loop             |
+| **[docs/intelligence/MEMORY.md](./docs/intelligence/MEMORY.md)** | Tiered memory engine                           |
+| **[docs/intelligence/TOOLS.md](./docs/intelligence/TOOLS.md)**   | Tool registry and MCP standards                |
+| **[docs/intelligence/SAFETY.md](./docs/intelligence/SAFETY.md)** | Circuit breakers and rollback safety           |
+| **[docs/governance/DEVOPS.md](./docs/governance/DEVOPS.md)**     | DevOps and CI/CD                               |
+| **[docs/governance/ROADMAP.md](./docs/governance/ROADMAP.md)**   | Future plans                                   |
 
 ## 🌐 Managed Service (ClawMore)
 
