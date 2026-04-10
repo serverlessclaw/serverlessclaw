@@ -133,6 +133,8 @@ export const handler = async (
 
   // Acquire session lock if sessionId is available (B3: Prevent Mutual Exclusion Violation)
   let lockAcquired = false;
+  const abortController = new AbortController();
+
   if (sessionId && targetAgent) {
     lockAcquired = await sessionStateManager.acquireProcessing(sessionId, targetAgent);
 
@@ -149,11 +151,12 @@ export const handler = async (
     // Renew every 60 seconds for tasks that may take longer (e.g., Coder)
     heartbeatInterval = setInterval(async () => {
       try {
+        if (!lockAcquired) return;
         const renewed = await sessionStateManager.renewProcessing(sessionId, targetAgent!);
         if (!renewed) {
-          logger.warn(
-            `[MULTIPLEXER] Failed to renew lock for ${sessionId}. Lock may have been stolen or expired.`
-          );
+          logger.warn(`[MULTIPLEXER] Failed to renew lock for ${sessionId}. Lock lost.`);
+          lockAcquired = false;
+          abortController.abort(new Error('LockLostError: Session lock was lost or expired.'));
         }
       } catch (err) {
         logger.error(`[MULTIPLEXER] Heartbeat error for ${sessionId}:`, err);
@@ -161,7 +164,10 @@ export const handler = async (
     }, 60000);
   }
 
-  const MAX_RECURSION_LIMIT = 10;
+  const { isMissionContext, getRecursionLimit } = await import('./events/shared');
+  const isMission = isMissionContext(detailType, detail as Record<string, unknown>);
+  const MAX_RECURSION_LIMIT = await getRecursionLimit(isMission);
+
   if (_traceId && targetAgent) {
     const currentDepth = await getRecursionDepth(_traceId);
     if (currentDepth >= MAX_RECURSION_LIMIT) {

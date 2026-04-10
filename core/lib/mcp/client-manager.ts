@@ -145,7 +145,7 @@ export class MCPClientManager {
           throw new Error(`Invalid empty connection string for MCP server ${serverName}`);
         }
         let command = parts[0].replace(/^"|"$/g, '');
-        const args = parts.slice(1).map(arg => arg.replace(/^"|"$/g, ''));
+        const args = parts.slice(1).map((arg) => arg.replace(/^"|"$/g, ''));
 
         // Resolve npx full path if needed (especially for Lambda)
         if (command === 'npx') {

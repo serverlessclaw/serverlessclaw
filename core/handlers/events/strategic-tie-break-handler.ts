@@ -47,7 +47,9 @@ export async function handleStrategicTieBreak(eventDetail: Record<string, unknow
 
   if (isHighRisk) {
     // High-risk operation detected - stop execution and fail the task to break the loop
-    logger.warn(`[TIE_BREAK] High-risk operation detected in task. Failing task to prevent infinite loops.`);
+    logger.warn(
+      `[TIE_BREAK] High-risk operation detected in task. Failing task to prevent infinite loops.`
+    );
     finalTask = `STRATEGIC_TIE_BREAK (FAILED): The original task contained high-risk operations that require explicit human approval. Task: "${originalTask}". Automated execution has been stopped to ensure system safety. Please re-run the task with explicit parameters if you still wish to proceed.`;
     eventType = EventType.TASK_FAILED;
   } else if (task.includes('SAFE_MODE') || task.includes('avoid.*high.*risk')) {
@@ -60,23 +62,26 @@ export async function handleStrategicTieBreak(eventDetail: Record<string, unknow
     eventType = `${agentId}_task`;
   }
 
-  await emitEvent(
-    'strategic-tie-break-handler',
-    eventType,
-    {
-      userId,
-      agentId,
-      task: finalTask,
-      originalTask,
-      traceId,
-      initiatorId,
-      sessionId,
-      depth,
-      isContinuation: true,
-      strategicDecision: isHighRisk ? 'DEFERRED' : 'PROCEED_SAFE',
-    },
-    { priority: EventPriority.HIGH }
-  );
+  const eventPayload: Record<string, unknown> = {
+    userId,
+    agentId,
+    task: finalTask,
+    originalTask,
+    traceId,
+    initiatorId,
+    sessionId,
+    depth,
+    isContinuation: true,
+    strategicDecision: isHighRisk ? 'DEFERRED' : 'PROCEED_SAFE',
+  };
+
+  if (isHighRisk) {
+    eventPayload.error = finalTask;
+  }
+
+  const source = isHighRisk ? `${agentId}.agent` : 'strategic-tie-break-handler';
+
+  await emitEvent(source, eventType, eventPayload, { priority: EventPriority.HIGH });
 
   // Notify user of the strategic tie-break decision
   const decisionType = isHighRisk ? 'DEFERRED' : 'PROCEED_SAFE';

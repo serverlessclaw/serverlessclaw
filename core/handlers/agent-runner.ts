@@ -56,6 +56,7 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
   const sessionStateManager = new SessionStateManager();
   let heartbeatInterval: ReturnType<typeof setInterval> | undefined;
   let lockAcquired = false;
+  const abortController = new AbortController();
 
   if (sessionId && agentId) {
     lockAcquired = await sessionStateManager.acquireProcessing(sessionId, agentId);
@@ -68,9 +69,12 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
 
     heartbeatInterval = setInterval(async () => {
       try {
+        if (!lockAcquired) return; // Prevent interval from trying if we already lost the lock
         const renewed = await sessionStateManager.renewProcessing(sessionId, agentId);
         if (!renewed) {
-          logger.warn(`[AgentRunner] Failed to renew lock for ${sessionId}.`);
+          logger.warn(`[AgentRunner] Failed to renew lock for ${sessionId}. Lock lost.`);
+          lockAcquired = false;
+          abortController.abort(new Error('LockLostError: Session lock was lost or expired.'));
         }
       } catch (err) {
         logger.error(`[AgentRunner] Heartbeat error for ${sessionId}:`, err);
@@ -78,7 +82,10 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
     }, 60000);
   }
 
-  const MAX_RECURSION_LIMIT = 10;
+  const { isMissionContext, getRecursionLimit } = await import('./events/shared');
+  const isMission = isMissionContext(detailType, payload.metadata as Record<string, unknown>);
+  const MAX_RECURSION_LIMIT = await getRecursionLimit(isMission);
+
   if (traceId) {
     const currentDepth = await getRecursionDepth(traceId);
     if (currentDepth >= MAX_RECURSION_LIMIT) {
@@ -114,6 +121,7 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
       source: TraceSource.SYSTEM,
       context,
       communicationMode: config?.defaultCommunicationMode,
+      abortSignal: abortController.signal,
     });
 
     // 3. Execution & Streaming

@@ -146,10 +146,10 @@ export async function handler(
       } else {
         const errorMsg = `Handler function ${routing.function} missing in module ${routing.module}`;
         logger.error(`[SAFE_MODE] ${errorMsg}`, {
-      errorMessage,
-      detailType,
-      envelopeId: envelopeId ?? 'N/A',
-    });
+          errorMessage,
+          detailType,
+          envelopeId: envelopeId ?? 'N/A',
+        });
         throw new Error(errorMsg);
       }
     }

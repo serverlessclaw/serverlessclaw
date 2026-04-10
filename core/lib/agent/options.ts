@@ -63,6 +63,10 @@ export interface AgentProcessOptions {
    */
   ignoreHandoff?: boolean;
   /**
+   * Optional AbortSignal to cancel the agent process.
+   */
+  abortSignal?: AbortSignal;
+  /**
    * Optional page context attached by the user (URL, title, page data, etc.)
    */
   pageContext?: {

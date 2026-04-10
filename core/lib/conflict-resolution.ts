@@ -52,7 +52,7 @@ export async function emitConflictTimeoutEvent(sessionId: string, traceId: strin
   let attempt = 0;
   while (true) {
     try {
-      await emitEvent('facilitator', EventType.TASK_FAILED, {
+      await emitEvent('facilitator', EventType.STRATEGIC_TIE_BREAK, {
         userId: sessionId,
         agentId: 'facilitator',
         task: 'conflict-resolution-timeout',

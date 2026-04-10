@@ -55,28 +55,28 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
       'The code matches the architectural spirit of Serverless Claw (Stateless, AI-Native, Event-Driven).',
       'The implementation actually solves the identified gaps.',
       'No new security risks or technical debt were introduced.',
-      'Code is idiomatically complete and follows system-wide conventions.'
+      'Code is idiomatically complete and follows system-wide conventions.',
     ],
     { gapIds, traceId, sessionId }
   );
 
   logger.info('LLM-as-a-Judge Result:', JSON.stringify(judgeResult, null, 2));
 
-  let status = judgeResult.satisfied ? AgentStatus.SUCCESS : AgentStatus.REOPEN;
-  let auditReport = judgeResult.reasoning;
+  const status = judgeResult.satisfied ? AgentStatus.SUCCESS : AgentStatus.REOPEN;
+  const auditReport = judgeResult.reasoning;
   let validatedFeedback: import('../lib/schema/orchestration').QAFailureFeedback | null = null;
 
   if (status === AgentStatus.REOPEN && judgeResult.issues && judgeResult.issues.length > 0) {
     // Attempt to map issues to structured feedback format if possible
     validatedFeedback = {
       failureType: 'LOGIC_ERROR',
-      issues: judgeResult.issues.map(issue => ({
+      issues: judgeResult.issues.map((issue) => ({
         file: 'multiple',
         line: 0,
         description: issue,
         expected: 'Requirement satisfied',
-        actual: 'Requirement failed'
-      }))
+        actual: 'Requirement failed',
+      })),
     };
   }
 

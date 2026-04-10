@@ -119,7 +119,9 @@ export class MCPBridge {
       if (!finalConfig[name]) {
         // If a Lambda ARN exists for this server, use it as a remote connection
         if (serverArns[name]) {
-          logger.info(`Configuring default MCP server ${name} as remote Lambda via MCP_SERVER_ARNS`);
+          logger.info(
+            `Configuring default MCP server ${name} as remote Lambda via MCP_SERVER_ARNS`
+          );
           finalConfig[name] = {
             type: 'remote',
             url: serverArns[name],

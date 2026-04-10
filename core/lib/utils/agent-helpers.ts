@@ -243,6 +243,7 @@ export interface ProcessOptionsParams {
     outputTokens: number;
     totalTokens: number;
   };
+  abortSignal?: AbortSignal;
 }
 
 /**
@@ -270,6 +271,7 @@ export function buildProcessOptions(params: ProcessOptionsParams): AgentProcessO
     tokenBudget: params.tokenBudget,
     costLimit: params.costLimit,
     priorTokenUsage: params.priorTokenUsage,
+    abortSignal: params.abortSignal,
   };
 }
 

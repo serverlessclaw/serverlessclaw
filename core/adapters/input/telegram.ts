@@ -118,22 +118,22 @@ export class TelegramAdapter implements InputAdapter {
 
     const { chatId, userText } = parsed.message;
 
-   // Use the unified normalization utility before returning
-   const rawMessage: InboundMessage = {
-     source: this.source,
-     userId: chatId,
-     sessionId: chatId,
-     text: userText,
-     attachments: [],
-     metadata: {
-       updateId: parsed.update_id,
-       rawMessage: parsed.message,
-     },
-     timestamp: new Date().toISOString(),
-   };
-   // Import the normalizeMessage function
-   const { normalizeMessage } = await import('./normalize');
-   return normalizeMessage(rawMessage);
+    // Use the unified normalization utility before returning
+    const rawMessage: InboundMessage = {
+      source: this.source,
+      userId: chatId,
+      sessionId: chatId,
+      text: userText,
+      attachments: [],
+      metadata: {
+        updateId: parsed.update_id,
+        rawMessage: parsed.message,
+      },
+      timestamp: new Date().toISOString(),
+    };
+    // Import the normalizeMessage function
+    const { normalizeMessage } = await import('./normalize');
+    return normalizeMessage(rawMessage);
   }
 
   async processMedia(message: InboundMessage): Promise<InboundMessage> {
