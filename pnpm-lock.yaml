@@ -39,8 +39,8 @@ importers:
         specifier: ^17.4.0
         version: 17.4.1
       sst:
-        specifier: 4.6.11
-        version: 4.6.11
+        specifier: 4.7.0
+        version: 4.7.0
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@swc/core@1.15.24)(@types/node@25.5.2)(typescript@6.0.2)
@@ -300,8 +300,8 @@ importers:
         specifier: ^2.0.7
         version: 2.0.7(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       sst:
-        specifier: 4.6.11
-        version: 4.6.11
+        specifier: 4.7.0
+        version: 4.7.0
       zod:
         specifier: ^4.3.6
         version: 4.3.6
@@ -829,6 +829,10 @@ packages:
   '@aws-sdk/xml-builder@3.972.17':
     resolution: {integrity: sha512-Ra7hjqAZf1OXRRMueB13qex7mFJRDK/pgCvdSFemXBT8KCGnQDPoKzHY1SjN+TjJVmnpSF14W5tJ1vDamFu+Gg==}
     engines: {node: '>=20.0.0'}
+
+  '@aws/durable-execution-sdk-js@1.0.2':
+    resolution: {integrity: sha512-KIYBVqV9gArkWdPEDYOjJqLlO+NecmCXOXadNBlOspJTmqztwuiyb6aZc468bYWSGuL4Me/gyTIK97ubkwFNCw==}
+    engines: {node: '>=22'}
 
   '@aws/lambda-invoke-store@0.2.4':
     resolution: {integrity: sha512-iY8yvjE0y651BixKNPgmv1WrQc+GZ142sb0z4gYnChDDY2YqI4P/jsSopBWrKfAt7LOJAkOXt7rC/hms+WclQQ==}
@@ -5285,48 +5289,48 @@ packages:
     resolution: {integrity: sha512-UcjcJOWknrNkF6PLX83qcHM6KHgVKNkV62Y8a5uYDVv9ydGQVwAHMKqHdJje1VTWpljG0WYpCDhrCdAOYH4TWg==}
     engines: {node: '>= 10.x'}
 
-  sst-darwin-arm64@4.6.11:
-    resolution: {integrity: sha512-FUnvogAL7iQYjcfF9Ne3YT9Ku0a8f3dd+5N/I4FP6PaqHYdHsOvS/tMU2xyokLuiZdbQ8kzh8JYZTCtZfbGe9A==}
+  sst-darwin-arm64@4.7.0:
+    resolution: {integrity: sha512-J5ldkerqKpQS3cToE8fWyn7BG5WjKpcGBUBLgdywNxDQgF6WM5xFyB63+dqd4lijZ65lskVOzzRJuCKnUDGn3Q==}
     cpu: [arm64]
     os: [darwin]
 
-  sst-darwin-x64@4.6.11:
-    resolution: {integrity: sha512-T3wmeYKjsggcHDD9eE17pf4mP5J+u6OlZSIJNSPJaEmx8UiJJMiqWK7o0c0EbmPngTOGDtkceNxLKBhj2TsCeQ==}
+  sst-darwin-x64@4.7.0:
+    resolution: {integrity: sha512-/QlFNdNk9EVSMVWUifCW9jI54pAhToXIURo87aWVpGudoM2QZqpqDp7A9faMpHEtkejEdb9EqrsHI3qVUq5TBg==}
     cpu: [x64]
     os: [darwin]
 
-  sst-linux-arm64@4.6.11:
-    resolution: {integrity: sha512-1ACzUFRFIu5bW2ncIm+AtPAEggYoXBSNDMs/cgiWkQ5D2m2MzcYRf99D6cankEXFMxv2qCkXouYo9WfWNlpDvQ==}
+  sst-linux-arm64@4.7.0:
+    resolution: {integrity: sha512-2s5BtTLIfOq5ZlsQk6JhBeINXf1rltH+OyFRhpziKDigI49Bx1Ejev7R2/F8vWvFa3HN8JE8NOebldYWtAMUIw==}
     cpu: [arm64]
     os: [linux]
 
-  sst-linux-x64@4.6.11:
-    resolution: {integrity: sha512-8pbmkApHWBkw4Wuj7V5XyIOTDYpDK9Vw13nq/4hoxv+C2UDheLix3ribOycAIH2JtdpwAhyMsztFrXO0zclseg==}
+  sst-linux-x64@4.7.0:
+    resolution: {integrity: sha512-YLApnYe5Kczk4gk3Se4U3zjkRzBgrZy0meAmQCuXXbYwn0Re+cRfbE4wuHPsPSf59v0Uv/kFx1e+Goi3ptJ2pw==}
     cpu: [x64]
     os: [linux]
 
-  sst-linux-x86@4.6.11:
-    resolution: {integrity: sha512-vO2RgtsuPy+4ee0RqAtYWvrguH4xPjl7XHsyqYOyt+dzOmCWiP/27AmYTWFt/yLay5leatYma/qqyZwe8avMHg==}
+  sst-linux-x86@4.7.0:
+    resolution: {integrity: sha512-Hxzs9dzINLJxNFpqib4kseORTMZAR2GQH0IR0I8lN1ge+1H76P19ltrST8bl88BIf3zHVZaiH41CsN1SKeZ2lg==}
     cpu: [x86]
     os: [linux]
 
-  sst-win32-arm64@4.6.11:
-    resolution: {integrity: sha512-2NulfXFSCOXSLfSYGeHOH27T3pWhsu/GDM6wlya12wSb2taOtXkVIXBnPNxxRIMPIeMweKNTsxeMZSBI2PfTWw==}
+  sst-win32-arm64@4.7.0:
+    resolution: {integrity: sha512-6YmuZ9iPVZBu3GexA4K4v4PDoYRvwvxCOyFS+cUSjMr4uay8H+rERm5SifP0BSQMjly+2oKLmZS9zehxO5fSHg==}
     cpu: [arm64]
     os: [win32]
 
-  sst-win32-x64@4.6.11:
-    resolution: {integrity: sha512-yAEKwpPv0qeE1mx6KHvg81uN5ZxCqzfmDansxpiTFvnyRm3+p7mDc2YrP3nXvqO17sbawPKibaJwM4V3C98OXg==}
+  sst-win32-x64@4.7.0:
+    resolution: {integrity: sha512-fu0Ue3kjkVpKN2IvD2gD+uilTv1fPQdcH7OB+N1GBZyvfzrXtqfEsKUDCxdRNVyaHNdWDa2l9SqqNGP9LQfy7g==}
     cpu: [x64]
     os: [win32]
 
-  sst-win32-x86@4.6.11:
-    resolution: {integrity: sha512-xeRxuI+GdWBEjP9SvO3IdIcSGzhhnDcmsUfMkiHmIJDAXzAOQbrNhoYfPGeFzPPDeCJZSYWF623NSL+OUiCLFQ==}
+  sst-win32-x86@4.7.0:
+    resolution: {integrity: sha512-1ksFHuNHmx5tk12+jtie+f8m7G4f8yRmriJovKF9vLbpmo0YbwQkvSZkNg5lmDZ913bZ9mMo31WoedDVJPOtbQ==}
     cpu: [x86]
     os: [win32]
 
-  sst@4.6.11:
-    resolution: {integrity: sha512-fepz1Xb8boDegv4mcgvZRmXQ7vObl09cX2e4cKrQiosZD3GeOC1MnMt08yyQcfOv12LcOI77/5+Hki9w2+6qGw==}
+  sst@4.7.0:
+    resolution: {integrity: sha512-mhoL2MBq+H/Vy1R05GwWIn5uxZ86ZOMjYmJgdBcHBF34AHWgrQEkZfXTXcauFwmu6pN/+wKQMVpQ1Aw/cBRBlw==}
     hasBin: true
 
   stable-hash@0.0.5:
@@ -7728,6 +7732,12 @@ snapshots:
       '@smithy/types': 4.14.0
       fast-xml-parser: 5.5.11
       tslib: 2.8.1
+
+  '@aws/durable-execution-sdk-js@1.0.2':
+    dependencies:
+      '@aws-sdk/client-lambda': 3.1027.0
+    transitivePeerDependencies:
+      - aws-crt
 
   '@aws/lambda-invoke-store@0.2.4': {}
 
@@ -12712,44 +12722,47 @@ snapshots:
 
   split2@4.2.0: {}
 
-  sst-darwin-arm64@4.6.11:
+  sst-darwin-arm64@4.7.0:
     optional: true
 
-  sst-darwin-x64@4.6.11:
+  sst-darwin-x64@4.7.0:
     optional: true
 
-  sst-linux-arm64@4.6.11:
+  sst-linux-arm64@4.7.0:
     optional: true
 
-  sst-linux-x64@4.6.11:
+  sst-linux-x64@4.7.0:
     optional: true
 
-  sst-linux-x86@4.6.11:
+  sst-linux-x86@4.7.0:
     optional: true
 
-  sst-win32-arm64@4.6.11:
+  sst-win32-arm64@4.7.0:
     optional: true
 
-  sst-win32-x64@4.6.11:
+  sst-win32-x64@4.7.0:
     optional: true
 
-  sst-win32-x86@4.6.11:
+  sst-win32-x86@4.7.0:
     optional: true
 
-  sst@4.6.11:
+  sst@4.7.0:
     dependencies:
+      '@aws/durable-execution-sdk-js': 1.0.2
       aws4fetch: 1.0.18
       jose: 5.2.3
       openid-client: 5.6.4
     optionalDependencies:
-      sst-darwin-arm64: 4.6.11
-      sst-darwin-x64: 4.6.11
-      sst-linux-arm64: 4.6.11
-      sst-linux-x64: 4.6.11
-      sst-linux-x86: 4.6.11
-      sst-win32-arm64: 4.6.11
-      sst-win32-x64: 4.6.11
-      sst-win32-x86: 4.6.11
+      sst-darwin-arm64: 4.7.0
+      sst-darwin-x64: 4.7.0
+      sst-linux-arm64: 4.7.0
+      sst-linux-x64: 4.7.0
+      sst-linux-x86: 4.7.0
+      sst-win32-arm64: 4.7.0
+      sst-win32-x64: 4.7.0
+      sst-win32-x86: 4.7.0
+    transitivePeerDependencies:
+      - aws-crt
 
   stable-hash@0.0.5: {}
 
