@@ -42,6 +42,7 @@ export const RETENTION = {
   SESSION_METADATA_DAYS: 90,
   EPHEMERAL_DAYS: 1,
   HEALTH_DAYS: 7,
+  MAX_PINNED_SESSION_DAYS: 365, // Maximum duration for pinned sessions before auto-unpin
 } as const;
 
 /**

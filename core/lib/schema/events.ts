@@ -417,6 +417,15 @@ export const ORCHESTRATION_SIGNAL_SCHEMA = z.object({
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
+export const DLQ_ROUTE_SCHEMA = BASE_EVENT_SCHEMA.extend({
+  eventCategory: z.string().default('dlq_routing'),
+  detailType: z.string(),
+  originalEvent: z.record(z.string(), z.unknown()),
+  envelopeId: z.string().optional(),
+  errorMessage: z.string().optional(),
+  retryCount: z.number().default(0),
+});
+
 /**
  * Event schema map for typed event emission and validation.
  * Maps EventType strings to their corresponding Zod schemas.
@@ -461,6 +470,7 @@ export const EVENT_SCHEMA_MAP = {
   [EventType.ESCALATION_LEVEL_TIMEOUT as string]: ESCALATION_LEVEL_TIMEOUT_SCHEMA,
   [EventType.PARALLEL_BARRIER_TIMEOUT as string]: PARALLEL_BARRIER_TIMEOUT_SCHEMA,
   [EventType.ORCHESTRATION_SIGNAL as string]: ORCHESTRATION_SIGNAL_SCHEMA,
+  [EventType.DLQ_ROUTE as string]: DLQ_ROUTE_SCHEMA,
 } as const;
 
 /** Keys of the EVENT_SCHEMA_MAP (for type-safe event type lookups). */

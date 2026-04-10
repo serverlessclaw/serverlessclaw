@@ -11,6 +11,8 @@ import { RetentionManager } from './tiering';
 import type { BaseMemoryProvider } from './base';
 import { filterPIIFromObject } from '../utils/pii';
 import { queryLatestContentByUserId } from './utils';
+import { RETENTION } from '../constants/memory';
+import { logger } from '../logger';
 
 /**
  * Appends a new message with tiered retention.
@@ -113,7 +115,17 @@ export async function saveConversationMeta(
   let expiresAt: number | undefined;
 
   if (isPinned) {
-    expiresAt = undefined;
+    // B1 Fix: Enforce maximum pinned session duration to prevent unbounded storage growth
+    // Pinned sessions now have a max TTL of 365 days (configurable via RETENTION.MAX_PINNED_SESSION_DAYS)
+    const maxPinnedTTL = RETENTION.MAX_PINNED_SESSION_DAYS * 24 * 60 * 60 * 1000;
+    expiresAt = Date.now() + maxPinnedTTL;
+    logger.info(
+      `[Session] Pinned session will auto-expire in ${RETENTION.MAX_PINNED_SESSION_DAYS} days`,
+      {
+        userId: normalizedUserId,
+        sessionId,
+      }
+    );
   } else {
     const retention = await RetentionManager.getExpiresAt('SESSIONS', normalizedUserId);
     expiresAt = retention.expiresAt;

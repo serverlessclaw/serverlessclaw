@@ -29,6 +29,11 @@ export class SafetyEngine {
   private violations: SafetyViolation[] = [];
   private limiter: SafetyRateLimiter;
   private evolutionScheduler: EvolutionScheduler;
+  // Sh2 Fix: Track blast radius for Class C actions
+  private classCBlastRadius: Map<
+    string,
+    { count: number; affectedResources: number; lastAction: number }
+  > = new Map();
 
   constructor(
     customPolicies?: Partial<Record<SafetyTier, Partial<SafetyPolicy>>>,
@@ -163,6 +168,8 @@ export class SafetyEngine {
         traceId: context?.traceId,
         userId: context?.userId,
       });
+      // Sh2 Fix: Track blast radius for Class C actions
+      this.trackClassCBlastRadius(action, context?.resource);
     }
 
     if (!approvalResult.allowed || approvalResult.requiresApproval) {
@@ -622,6 +629,54 @@ export class SafetyEngine {
    */
   clearViolations(): void {
     this.violations = [];
+  }
+
+  /**
+   * Track blast radius for Class C actions.
+   * Sh2 Fix: Add blast-radius tracking to measure propagation scope of sensitive changes.
+   */
+  private trackClassCBlastRadius(action: string, resource?: string): void {
+    const key = action;
+    const existing = this.classCBlastRadius.get(key) || {
+      count: 0,
+      affectedResources: 0,
+      lastAction: 0,
+    };
+
+    this.classCBlastRadius.set(key, {
+      count: existing.count + 1,
+      affectedResources: existing.affectedResources + (resource ? 1 : 0),
+      lastAction: Date.now(),
+    });
+
+    logger.info('[SafetyEngine] Class C action tracked for blast radius', {
+      action,
+      resource,
+      totalCount: existing.count + 1,
+    });
+  }
+
+  /**
+   * Get Class C blast radius stats.
+   */
+  getClassCBlastRadius(): Record<
+    string,
+    { count: number; affectedResources: number; lastAction: number }
+  > {
+    return Object.fromEntries(this.classCBlastRadius);
+  }
+
+  /**
+   * Sh2 Fix: Persist violations to DynamoDB for audit trail.
+   * Note: This requires a base memory provider to be available.
+   */
+  async persistViolations(_base?: BaseMemoryProvider): Promise<void> {
+    // This would persist to DynamoDB - placeholder for implementation
+    // The violations are already stored in-memory (max 1000)
+    // For full implementation, this would write to a safety:violations table
+    logger.info('[SafetyEngine] Violation persistence to DynamoDB not yet implemented', {
+      violationsCount: this.violations.length,
+    });
   }
 
   /**

@@ -101,6 +101,7 @@ export async function runSystemAudit(
     getAllGaps(status: unknown): Promise<unknown[]>;
     getFailurePatterns(userId: string, pattern: string, limit: number): Promise<unknown[]>;
     set(key: string, value: unknown): Promise<void>;
+    get?(key: string): Promise<unknown>;
   },
   triggerType: string,
   context?: Record<string, unknown>
@@ -144,6 +145,7 @@ async function auditSilo(
   memory: {
     getAllGaps(status: unknown): Promise<unknown[]>;
     getFailurePatterns(userId: string, pattern: string, limit: number): Promise<unknown[]>;
+    get?(key: string): Promise<unknown>;
   },
   silo: AuditSilo,
   _context?: Record<string, unknown>
@@ -220,8 +222,90 @@ async function auditHand(memory: {
   return findings;
 }
 
-async function auditShield(_memory: unknown): Promise<AuditFinding[]> {
+async function auditShield(memory: {
+  getAllGaps(status: unknown): Promise<unknown[]>;
+  getFailurePatterns(userId: string, pattern: string, limit: number): Promise<unknown[]>;
+  get?(key: string): Promise<unknown>;
+}): Promise<AuditFinding[]> {
   const findings: AuditFinding[] = [];
+
+  // Helper to safely get memory value if get() method exists
+  const safeGet = async (key: string): Promise<unknown | null> => {
+    if (typeof memory.get === 'function') {
+      return await memory.get(key);
+    }
+    return null;
+  };
+
+  // Sh1: Check for recent safety violations (in-memory only - gap from audit)
+  const recentViolationsKey = 'safety:violations:recent';
+  const recentViolations = (await safeGet(recentViolationsKey)) as {
+    count: number;
+    timestamp: number;
+  } | null;
+
+  if (!recentViolations || recentViolations.count === 0) {
+    findings.push({
+      silo: 'Shield',
+      expected: 'Safety violation logging persisted to DynamoDB for audit trail',
+      actual: 'No persisted violation data found - violations only stored in-memory (max 1000)',
+      severity: 'P2',
+      recommendation:
+        'Persist safety violations to DynamoDB for persistent audit trail and compliance',
+    });
+  }
+
+  // Sh2: Check for Class C action blast-radius tracking
+  const classCActionsKey = 'safety:class_c:blast_radius';
+  const blastRadius = (await safeGet(classCActionsKey)) as Record<
+    string,
+    { count: number; affectedResources: number }
+  > | null;
+
+  if (!blastRadius) {
+    findings.push({
+      silo: 'Shield',
+      expected: 'Class C actions have blast-radius tracking (number of affected resources)',
+      actual:
+        'No blast-radius tracking found - Class C classification exists but no containment enforcement',
+      severity: 'P2',
+      recommendation:
+        'Add blast-radius tracking for Class C actions to measure and limit propagation scope',
+    });
+  }
+
+  // Sh3: Check for dedicated security alert channel
+  const securityChannelKey = 'security:alert_channel';
+  const securityChannel = (await safeGet(securityChannelKey)) as { configured: boolean } | null;
+
+  if (!securityChannel?.configured) {
+    findings.push({
+      silo: 'Shield',
+      expected: 'Dedicated security alert channel (e.g., Slack/PagerDuty webhook)',
+      actual: 'Security issues emitted as generic health events - no separate security signaling',
+      severity: 'P2',
+      recommendation: 'Create dedicated security event channel separate from general health events',
+    });
+  }
+
+  // Sh4: Check recovery Dead Man's Switch health
+  const recoveryHealthKey = 'recovery:health';
+  const recoveryHealth = (await safeGet(recoveryHealthKey)) as {
+    lastCheck: number;
+    status: string;
+  } | null;
+
+  const healthCheckAge = recoveryHealth ? Date.now() - recoveryHealth.lastCheck : Infinity;
+  if (!recoveryHealth || healthCheckAge > 5 * 60 * 1000) {
+    findings.push({
+      silo: 'Shield',
+      expected: 'Recovery health checks within last 5 minutes',
+      actual: `Last health check ${Math.round(healthCheckAge / 60000)} minutes ago`,
+      severity: 'P1',
+      recommendation:
+        "Verify Dead Man's Switch recovery logic is functioning - health checks may be stalled",
+    });
+  }
 
   return findings;
 }
@@ -251,8 +335,110 @@ async function auditBrain(memory: {
   return findings;
 }
 
-async function auditEye(_memory: unknown): Promise<AuditFinding[]> {
+async function auditEye(memory: {
+  getAllGaps(status: unknown): Promise<unknown[]>;
+  getFailurePatterns(userId: string, pattern: string, limit: number): Promise<unknown[]>;
+  get?(key: string): Promise<unknown>;
+}): Promise<AuditFinding[]> {
   const findings: AuditFinding[] = [];
+
+  // Helper to safely get memory value if get() method exists
+  const safeGet = async (key: string): Promise<unknown | null> => {
+    if (typeof memory.get === 'function') {
+      return await memory.get(key);
+    }
+    return null;
+  };
+
+  // E1: Check E2E test pass rate
+  const e2eStatusKey = 'e2e:last_run';
+  const e2eStatus = (await safeGet(e2eStatusKey)) as {
+    passed: number;
+    failed: number;
+    timestamp: number;
+  } | null;
+
+  if (e2eStatus) {
+    const total = e2eStatus.passed + e2eStatus.failed;
+    const passRate = total > 0 ? e2eStatus.passed / total : 0;
+    if (passRate < 0.8) {
+      findings.push({
+        silo: 'Eye',
+        expected: 'E2E test pass rate >= 80%',
+        actual: `E2E pass rate: ${Math.round(passRate * 100)}% (${e2eStatus.passed}/${total})`,
+        severity: 'P1',
+        recommendation: 'Review failing E2E tests - system truth may not match backend state',
+      });
+    }
+
+    // Check if E2E tests are stale (not run in last 24 hours)
+    const e2eAge = Date.now() - e2eStatus.timestamp;
+    if (e2eAge > 24 * 60 * 60 * 1000) {
+      findings.push({
+        silo: 'Eye',
+        expected: 'E2E tests run within last 24 hours',
+        actual: `Last E2E run: ${Math.round(e2eAge / 3600000)} hours ago`,
+        severity: 'P2',
+        recommendation: 'Run E2E tests to verify current system truth against backend state',
+      });
+    }
+  } else {
+    findings.push({
+      silo: 'Eye',
+      expected: 'E2E test results recorded for truth verification',
+      actual: 'No E2E test results found - cannot verify truth matches backend state',
+      severity: 'P2',
+      recommendation: 'Integrate E2E test results into audit system for truth verification',
+    });
+  }
+
+  // E2: Check LLM-as-a-Judge module existence
+  const judgeModuleKey = 'quality:judge_module';
+  const judgeModule = (await safeGet(judgeModuleKey)) as { exists: boolean } | null;
+
+  if (!judgeModule?.exists) {
+    findings.push({
+      silo: 'Eye',
+      expected: 'Dedicated LLM-as-a-Judge module for systematic semantic evaluation',
+      actual: 'No LLM-as-a-Judge module found - semantic evaluation is ad-hoc via QA agent prompts',
+      severity: 'P2',
+      recommendation: 'Create dedicated LLM-as-a-Judge module for consistent semantic evaluation',
+    });
+  }
+
+  // E3: Check CI/CD pipeline health
+  const ciStatusKey = 'ci:last_run';
+  const ciStatus = (await safeGet(ciStatusKey)) as {
+    status: string;
+    timestamp: number;
+  } | null;
+
+  if (!ciStatus || ciStatus.status === 'failed') {
+    findings.push({
+      silo: 'Eye',
+      expected: 'CI pipeline passing - deployment lifecycle truth verified',
+      actual: ciStatus ? `CI failed: ${ciStatus.status}` : 'No CI status found',
+      severity: 'P1',
+      recommendation: 'Fix CI pipeline failures before deployment to maintain truth integrity',
+    });
+  }
+
+  // E4: Check trace dashboard data consistency
+  const traceHealthKey = 'traces:health';
+  const traceHealth = (await safeGet(traceHealthKey)) as {
+    lastSync: number;
+    consistency: string;
+  } | null;
+
+  if (!traceHealth) {
+    findings.push({
+      silo: 'Eye',
+      expected: 'Trace dashboard data synced with backend state',
+      actual: 'No trace health data found - cannot verify dashboard accuracy',
+      severity: 'P3',
+      recommendation: 'Add trace consistency checks to verify dashboard truth',
+    });
+  }
 
   return findings;
 }

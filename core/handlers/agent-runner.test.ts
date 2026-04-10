@@ -36,12 +36,30 @@ vi.mock('../lib/utils/agent-helpers/event-emitter', () => ({
   emitTaskEvent: vi.fn(),
 }));
 
+vi.mock('../lib/session/session-state', () => ({
+  SessionStateManager: vi.fn().mockImplementation(function () {
+    return {
+      acquireProcessing: vi.fn().mockResolvedValue(true),
+      renewProcessing: vi.fn().mockResolvedValue(true),
+      releaseProcessing: vi.fn().mockResolvedValue(true),
+      addPendingMessage: vi.fn().mockResolvedValue(true),
+      getState: vi.fn().mockResolvedValue(null),
+    };
+  }),
+}));
+
+vi.mock('../lib/recursion-tracker', () => ({
+  pushRecursionEntry: vi.fn(async () => undefined),
+  getRecursionDepth: vi.fn(async () => 0),
+  clearRecursionStack: vi.fn(async () => undefined),
+}));
+
 vi.mock('../lib/logger', () => ({
   logger: {
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn(),
+    info: vi.fn(() => {}),
+    error: vi.fn(() => {}),
+    warn: vi.fn(() => {}),
+    debug: vi.fn(() => {}),
   },
 }));
 

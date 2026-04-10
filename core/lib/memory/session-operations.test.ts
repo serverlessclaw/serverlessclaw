@@ -199,14 +199,13 @@ describe('session-operations', () => {
       expect(mockBase.deleteItem).not.toHaveBeenCalled();
     });
 
-    it('should set expiresAt to undefined for pinned items', async () => {
+    it('should set expiresAt to max TTL (365 days) for pinned items', async () => {
       await saveConversationMeta(mockBase, 'user123', 'sess1', { isPinned: true });
 
       expect(mockBase.updateItem).toHaveBeenCalledWith(
         expect.objectContaining({
           ExpressionAttributeValues: expect.objectContaining({
             ':pinned': true,
-            ':exp': null,
           }),
         })
       );

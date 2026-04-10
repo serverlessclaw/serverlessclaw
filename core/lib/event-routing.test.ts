@@ -47,8 +47,8 @@ describe('event-routing', () => {
 
     it('should have exactly the expected number of routing entries', () => {
       // This test will fail if someone adds a new event type without adding routing
-      // Update this count when adding new routable event types
-      expect(Object.keys(DEFAULT_EVENT_ROUTING)).toHaveLength(REQUIRED_EVENT_TYPES.length);
+      // Update this count when adding new routable event types (currently 23: 22 required + DLQ)
+      expect(Object.keys(DEFAULT_EVENT_ROUTING)).toHaveLength(23);
     });
   });
 
@@ -71,11 +71,11 @@ describe('event-routing', () => {
     it('should reference known handler modules', () => {
       const knownModules = [
         'build-handler',
-        'continuation-handler',
         'health-handler',
         'task-result-handler',
         'clarification-handler',
         'clarification-timeout-handler',
+        'continuation-handler',
         'parallel-handler',
         'parallel-barrier-timeout-handler',
         'parallel-task-completed-handler',
@@ -89,6 +89,7 @@ describe('event-routing', () => {
         'audit-handler',
         'dag-supervisor-handler',
         'agent-multiplexer',
+        'dlq-handler',
       ];
 
       for (const [, routing] of Object.entries(DEFAULT_EVENT_ROUTING)) {

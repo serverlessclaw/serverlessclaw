@@ -21,9 +21,9 @@ export const handler = async (event: { queryString?: Record<string, string> }) =
 
   const principalId = `user-${token.substring(0, 16).replace(/[^a-zA-Z0-9]/g, '')}`;
 
-  // Allow the principal to connect as a client and interact with
-  // both principal-scoped topics and the application topic namespaces
-  // used by the realtime bridge (users, workspaces, collaborations, system/metrics).
+  // Sh5 Fix: Use exact client ID match instead of wildcard prefix for better security
+  // The principal ID is derived from the token, so we allow exactly that client to connect
+  const clientResource = `arn:aws:iot:*:*:client/${principalId}`;
   const appTopicResources = [
     'arn:aws:iot:*:*:topic/users/*',
     'arn:aws:iot:*:*:topic/workspaces/*',
@@ -44,7 +44,7 @@ export const handler = async (event: { queryString?: Record<string, string> }) =
       {
         Action: 'iot:Connect',
         Effect: 'Allow',
-        Resource: `arn:aws:iot:*:*:client/${principalId}*`,
+        Resource: clientResource,
       },
       // Keep a principal-scoped publish/receive rule (backwards compatible for tests)
       {

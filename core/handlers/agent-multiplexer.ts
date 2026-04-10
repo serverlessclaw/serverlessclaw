@@ -3,6 +3,12 @@ import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
 import { handleWarmup } from '../lib/utils/agent-helpers';
 import { SessionStateManager } from '../lib/session/session-state';
+import {
+  pushRecursionEntry,
+  clearRecursionStack,
+  getRecursionDepth,
+} from '../lib/recursion-tracker';
+import { checkCollaborationTimeout } from '../lib/conflict-resolution';
 
 /**
  * Agent Multiplexer (Mono-lambda).
@@ -109,6 +115,22 @@ export const handler = async (
     return;
   }
 
+  // Check collaboration timeout if this is part of an active session
+  if (sessionId && _traceId) {
+    const sessionState = await sessionStateManager.getState(sessionId);
+    if (sessionState && sessionState.lastMessageAt) {
+      const isTimedOut = await checkCollaborationTimeout(
+        { sessionId, lastActivityAt: sessionState.lastMessageAt },
+        _traceId
+      );
+      // If a timeout is triggered, the event is emitted by checkCollaborationTimeout
+      // We log but continue processing this task since the tie-break logic might need to see it
+      if (isTimedOut) {
+        logger.info(`[MULTIPLEXER] Session ${sessionId} timed out, tie-break triggered.`);
+      }
+    }
+  }
+
   // Acquire session lock if sessionId is available (B3: Prevent Mutual Exclusion Violation)
   let lockAcquired = false;
   if (sessionId && targetAgent) {
@@ -139,6 +161,27 @@ export const handler = async (
     }, 60000);
   }
 
+  const MAX_RECURSION_LIMIT = 10;
+  if (_traceId && targetAgent) {
+    const currentDepth = await getRecursionDepth(_traceId);
+    if (currentDepth >= MAX_RECURSION_LIMIT) {
+      logger.error(
+        `[MULTIPLEXER] Recursion limit exceeded for trace ${_traceId} at depth ${currentDepth}`
+      );
+      if (lockAcquired && sessionId) {
+        if (heartbeatInterval) clearInterval(heartbeatInterval);
+        await sessionStateManager.releaseProcessing(sessionId, targetAgent);
+      }
+      return `Error: Recursion limit exceeded for trace ${_traceId}`;
+    }
+    await pushRecursionEntry(
+      _traceId,
+      ((detail.depth as number) ?? 0) + 1,
+      sessionId || 'unknown',
+      targetAgent
+    );
+  }
+
   try {
     // 4. Dispatch to Agent Logic
     logger.info(`[MULTIPLEXER] Dispatching to ${targetAgent}...`);
@@ -159,6 +202,9 @@ export const handler = async (
     }
     if (lockAcquired && sessionId && targetAgent) {
       await sessionStateManager.releaseProcessing(sessionId, targetAgent);
+    }
+    if (_traceId) {
+      await clearRecursionStack(_traceId);
     }
   }
 };

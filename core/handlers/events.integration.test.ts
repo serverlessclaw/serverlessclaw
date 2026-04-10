@@ -158,7 +158,7 @@ describe('Event Router Integration', () => {
     // Verify it attempted to emit a DLQ event
     expect(ebMocks.mockEmitEvent).toHaveBeenCalledWith(
       'events.handler',
-      EventType.SYSTEM_HEALTH_REPORT,
+      EventType.DLQ_ROUTE,
       expect.objectContaining({
         eventCategory: 'dlq_routing',
         detailType: 'unknown_event_type_xyz',

@@ -182,9 +182,6 @@ export interface AccessControlEntry {
 export class IdentityManager {
   private base: import('../memory/base').BaseMemoryProvider;
 
-  /** Hardcoded fallback owners to prevent lockouts and handle initial setup. */
-  private readonly FALLBACK_OWNER_IDS = ['owner', 'claw-owner', 'admin', 'claw-admin'];
-
   constructor(base: import('../memory/base').BaseMemoryProvider) {
     this.base = base;
   }

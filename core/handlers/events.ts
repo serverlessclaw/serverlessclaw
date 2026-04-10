@@ -183,8 +183,8 @@ async function routeToDlq(
     const { emitEvent } = await import('../lib/utils/bus');
     const { EventType } = await import('../lib/types/agent');
 
-    // Use SYSTEM_HEALTH_REPORT as the routing event since DLQ_ROUTE doesn't exist
-    await emitEvent('events.handler', EventType.SYSTEM_HEALTH_REPORT, {
+    // Use DLQ_ROUTE for routing failed events
+    await emitEvent('events.handler', EventType.DLQ_ROUTE, {
       eventCategory: 'dlq_routing',
       detailType,
       originalEvent: event.detail,

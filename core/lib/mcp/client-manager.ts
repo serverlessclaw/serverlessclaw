@@ -85,13 +85,19 @@ export class MCPClientManager {
       } | null;
 
       // Sync local failure count with global state
+      // B1 Fix: Add timestamp check to prevent stale counts from incorrectly tripping circuit
       if (persistentHealth?.count !== undefined) {
         const localFailure = this.failureCounts.get(serverName);
-        if (!localFailure || persistentHealth.count > localFailure.count) {
+        const lastFailureTime = persistentHealth.lastFailure ?? persistentHealth.timestamp;
+        const globalIsFresh = Date.now() - lastFailureTime < this.FAILURE_RESET_MS;
+        if (globalIsFresh && (!localFailure || persistentHealth.count > localFailure.count)) {
           this.failureCounts.set(serverName, {
             count: persistentHealth.count,
-            lastFailure: persistentHealth.lastFailure ?? persistentHealth.timestamp,
+            lastFailure: lastFailureTime,
           });
+        } else if (!globalIsFresh) {
+          // Clear stale global state
+          this.failureCounts.delete(serverName);
         }
       }
 
@@ -183,9 +189,10 @@ export class MCPClientManager {
         { capabilities: {} }
       );
 
+      // B2 Fix: Use empty string as default to properly detect non-hub URLs
+      const hubUrl = process.env.MCP_HUB_URL ?? '';
       const isHub =
-        connectionString.startsWith('http') &&
-        connectionString.includes(process.env.MCP_HUB_URL ?? '___none___');
+        connectionString.startsWith('http') && hubUrl !== '' && connectionString.includes(hubUrl);
       // Reduce timeout for local MCP servers to prevent dashboard timeouts
       const connectTimeout = isHub ? 5000 : 30000;
       let timeoutId: ReturnType<typeof setTimeout>;
