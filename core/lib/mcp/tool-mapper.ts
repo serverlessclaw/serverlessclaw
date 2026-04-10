@@ -44,6 +44,22 @@ export class MCPToolMapper {
       properties: {},
     };
 
+    const pathKeys: string[] = [];
+    if (parameters.type === 'object' && parameters.properties) {
+      for (const [key, prop] of Object.entries(parameters.properties)) {
+        const desc = (prop.description ?? '').toLowerCase();
+        if (
+          prop.type === 'string' &&
+          (desc.includes('path') ||
+            desc.includes('file') ||
+            desc.includes('directory') ||
+            desc.includes('dir'))
+        ) {
+          pathKeys.push(key);
+        }
+      }
+    }
+
     if (isFilesystemTool && parameters.type === 'object' && parameters.properties) {
       parameters.properties.manuallyApproved = {
         type: 'boolean',
@@ -63,12 +79,15 @@ export class MCPToolMapper {
       auth: { type: 'api_key', resource_id: '' },
       requiresApproval: false,
       requiredPermissions: [],
+      sequential: isFilesystemTool, // Filesystem operations usually need to be sequential
+      pathKeys: pathKeys.length > 0 ? pathKeys : undefined,
       execute: async (toolArgs: Record<string, unknown>) => {
         if (isFilesystemTool) {
           const { checkArgumentsForSecurity } = await import('../utils/fs-security');
           const securityError = checkArgumentsForSecurity(
             toolArgs,
-            `MCP operation (${mcpTool.name})`
+            `MCP operation (${mcpTool.name})`,
+            pathKeys
           );
           if (securityError) return securityError;
         }

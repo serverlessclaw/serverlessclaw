@@ -120,6 +120,27 @@ export async function handler(
     logger.warn(`[VALIDATION] Missing required fields: ${validation.errors?.join(', ')}`);
   }
 
+  // Recursion depth enforcement
+  // Retrieve configured recursion limit (default is 15 if not set)
+  const recursionLimit = await ConfigManager.getTypedConfig('recursion_limit', 15);
+  // Determine current depth (default 0 if not provided)
+  let currentDepth = (eventDetail as any).depth ?? 0;
+  currentDepth += 1;
+  if (typeof recursionLimit === 'number' && currentDepth > recursionLimit) {
+    logger.warn(`[RECURSION] Depth ${currentDepth} exceeds limit ${recursionLimit}`);
+    await routeToDlq(
+      event,
+      detailType,
+      'SYSTEM',
+      'unknown',
+      `Recursion limit exceeded (${currentDepth}/${recursionLimit})`
+    );
+    emitMetrics([METRICS.dlqEvents(1)]).catch(() => {});
+    return;
+  }
+  // Propagate updated depth to downstream handlers
+  (eventDetail as any).depth = currentDepth;
+
   logger.info(`[EVENTS] Received`, {
     detailType,
     sessionId: eventDetail.sessionId ?? 'N/A',

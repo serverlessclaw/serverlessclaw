@@ -45,10 +45,12 @@ export function isProtectedPath(filePath: string): boolean {
  *
  * @param args - The arguments object to scan.
  * @param operationName - Context for error messages.
+ * @param extraPathKeys - Additional keys provided by tool metadata that contain file paths.
  */
 export function checkArgumentsForSecurity(
   args: Record<string, unknown>,
-  operationName: string
+  operationName: string,
+  extraPathKeys: string[] = []
 ): string | null {
   const pathKeys = [
     'path',
@@ -64,7 +66,9 @@ export function checkArgumentsForSecurity(
     'file',
   ];
 
-  for (const key of pathKeys) {
+  const allKeys = [...new Set([...pathKeys, ...extraPathKeys])];
+
+  for (const key of allKeys) {
     const filePath = args[key];
     if (filePath && typeof filePath === 'string') {
       const securityError = checkFileSecurity(

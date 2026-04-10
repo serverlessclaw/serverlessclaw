@@ -470,7 +470,9 @@ export async function withMCPResilience<T>(
 ): Promise<T> {
   return withResilientExecution(execute, {
     operationName: `mcp:${toolName}`,
-    circuitBreakerType: 'health',
+    // Decoupled from global circuit breaker to prevent tool failures from blocking all autonomous actions.
+    // Tool-specific circuit breaking is handled by MCPClientManager and its persistent health tracking.
+    circuitBreakerType: undefined,
     fallback: options.fallback,
     maxRetries: 2,
     baseDelayMs: 500,

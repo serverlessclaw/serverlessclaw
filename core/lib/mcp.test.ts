@@ -53,6 +53,14 @@ vi.mock('./mcp/tool-mapper', () => ({
   },
 }));
 
+vi.mock('./lock/lock-manager', () => ({
+  LockManager: class {
+    acquire = vi.fn().mockResolvedValue(true);
+    release = vi.fn().mockResolvedValue(true);
+    renew = vi.fn().mockResolvedValue(true);
+  },
+}));
+
 // Mock MCP SDK
 const mockConnect = vi.fn().mockResolvedValue(true);
 const mockListTools = vi.fn().mockResolvedValue({

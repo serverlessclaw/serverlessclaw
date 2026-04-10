@@ -63,6 +63,10 @@ export interface IToolDefinition {
   requiresApproval: boolean;
   /** Required RBAC permissions to execute this tool. */
   requiredPermissions: string[];
+  /** Whether this tool should always be executed sequentially within a multi-tool turn. Defaults to false. */
+  sequential?: boolean;
+  /** Optional: specific argument keys that contain file paths (for security monitoring). */
+  pathKeys?: string[];
 }
 
 /**

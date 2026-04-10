@@ -28,50 +28,96 @@ export class MCPBridge {
     serverName: string,
     connectionString: string,
     env?: Record<string, string>,
-    options?: { skipHubRouting?: boolean }
+    options?: { skipHubRouting?: boolean; isRecursive?: boolean }
   ): Promise<ITool[]> {
     const cacheKey = `mcp_tools_cache_${serverName}`;
 
     // 1. Check in-memory discovery map first (Thundering Herd Protection)
-    const existingDiscovery = this.discovering.get(cacheKey);
-    if (existingDiscovery) {
-      logger.info(`[MCP] Discovery already in progress for ${serverName}, awaiting...`);
-      return await existingDiscovery;
+    // Only use for top-level calls to avoid self-deadlock during recursion
+    if (!options?.isRecursive) {
+      const existingDiscovery = this.discovering.get(cacheKey);
+      if (existingDiscovery) {
+        logger.info(`[MCP] Discovery already in progress for ${serverName}, awaiting...`);
+        return await existingDiscovery;
+      }
     }
 
     const discoveryPromise = (async () => {
-      const hubUrl = process.env.MCP_HUB_URL;
-      const isLocalCommand = !connectionString.startsWith('http');
+      let acquired = false;
+      let lockManager: any = null;
+      let lockId = '';
+      let ownerId = '';
 
-      if (hubUrl && isLocalCommand && !options?.skipHubRouting) {
-        try {
-          const hubServerUrl = `${hubUrl.replace(/\/$/, '')}/${serverName}`;
-          logger.info(`Attempting Hub connection for ${serverName}: ${hubServerUrl}`);
-          const tools = await this.getToolsFromServer(serverName, hubServerUrl, env, {
-            skipHubRouting: true,
-          });
-          if (tools.length > 0) return tools;
-        } catch {
-          logger.warn(`Hub connection failed for ${serverName}, switching to local.`);
+      // Skip locking and hub routing if this is a recursive call
+      if (!options?.isRecursive) {
+        // 1. Check Distributed Lock (Thundering Herd Protection across Fleet)
+        const { LockManager } = await import('./lock/lock-manager');
+        lockManager = new LockManager();
+        lockId = `mcp_discovery_lock_${serverName}`;
+        ownerId = `node_${Math.random().toString(36).substring(7)}`;
+
+        const hubUrl = process.env.MCP_HUB_URL;
+        const isLocalCommand = !connectionString.startsWith('http');
+
+        if (hubUrl && isLocalCommand && !options?.skipHubRouting) {
+          try {
+            const hubServerUrl = `${hubUrl.replace(/\/$/, '')}/${serverName}`;
+            logger.info(`Attempting Hub connection for ${serverName}: ${hubServerUrl}`);
+            const tools = await this.getToolsFromServer(serverName, hubServerUrl, env, {
+              skipHubRouting: true,
+              isRecursive: true,
+            });
+            if (tools.length > 0) return tools;
+          } catch {
+            logger.warn(`Hub connection failed for ${serverName}, switching to local.`);
+          }
         }
       }
 
-      // Check cache first
+      // Check cache first before trying to acquire lock
       interface CachedTools {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         tools: any[];
         timestamp: number;
       }
-      const cached = (await AgentRegistry.getRawConfig(cacheKey)) as CachedTools | null;
-
       const cacheTTL = parseInt(process.env.MCP_CACHE_TTL_MS ?? '900000');
-      if (cached && Date.now() - cached.timestamp < cacheTTL) {
-        logger.info(`Using cached tool definitions for MCP server ${serverName}`);
-        return MCPToolMapper.mapCachedTools(
-          serverName,
-          cached.tools,
-          async () => await MCPClientManager.connect(serverName, connectionString, env)
-        );
+
+      const checkCache = async () => {
+        const cached = (await AgentRegistry.getRawConfig(cacheKey)) as CachedTools | null;
+        if (cached && Date.now() - cached.timestamp < cacheTTL) {
+          logger.info(`Using cached tool definitions for MCP server ${serverName}`);
+          return MCPToolMapper.mapCachedTools(
+            serverName,
+            cached.tools,
+            async () => await MCPClientManager.connect(serverName, connectionString, env)
+          );
+        }
+        return null;
+      };
+
+      const cachedResult = await checkCache();
+      if (cachedResult) return cachedResult;
+
+      // Only acquire lock if not recursive
+      if (!options?.isRecursive && lockManager) {
+        // Acquire lock with retries
+        for (let i = 0; i < 3; i++) {
+          acquired = await lockManager.acquire(lockId, { ttlSeconds: 60, ownerId });
+          if (acquired) break;
+
+          logger.info(`[MCP] Discovery lock for ${serverName} held by another node, waiting...`);
+          await new Promise((r) => setTimeout(r, 2000));
+
+          // Re-check cache after waiting
+          const retryCached = await checkCache();
+          if (retryCached) return retryCached;
+        }
+
+        if (!acquired) {
+          logger.warn(
+            `[MCP] Failed to acquire discovery lock for ${serverName}, proceeding anyway.`
+          );
+        }
       }
 
       try {
@@ -89,14 +135,27 @@ export class MCPBridge {
         logger.warn(`Failed to fetch tools from ${serverName}:`, e);
         MCPClientManager.deleteClient(serverName);
         return [];
+      } finally {
+        if (acquired) {
+          await lockManager.release(lockId, ownerId).catch((err: any) => {
+            logger.warn(`Failed to release discovery lock for ${serverName}:`, err);
+          });
+        }
       }
     })();
 
-    this.discovering.set(cacheKey, discoveryPromise);
+    const discoveryResultPromise = discoveryPromise;
+
+    if (!options?.isRecursive) {
+      this.discovering.set(cacheKey, discoveryResultPromise);
+    }
+
     try {
-      return await discoveryPromise;
+      return await discoveryResultPromise;
     } finally {
-      this.discovering.delete(cacheKey);
+      if (!options?.isRecursive) {
+        this.discovering.delete(cacheKey);
+      }
     }
   }
 
@@ -158,7 +217,10 @@ export class MCPBridge {
 
     // Filter configuration to only servers we actually need before creating any promises
     const neededConfigs = Object.entries(finalConfig).filter(([name]) => {
-      return !requestedTools || requestedTools.some((t) => t === name || t.startsWith(`${name}_`));
+      if (!requestedTools || requestedTools.length === 0) return true;
+      return requestedTools.some(
+        (t) => t === name || t.startsWith(`${name}_`) || t.startsWith(`${name}:`)
+      );
     });
 
     const serverPromises = neededConfigs.map(async ([name, config]) => {
