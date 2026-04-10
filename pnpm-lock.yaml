@@ -33,8 +33,8 @@ importers:
         specifier: ^22.0.1
         version: 22.0.1
       '@opennextjs/aws':
-        specifier: 3.10.0
-        version: 3.10.0(next@16.2.3(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))
+        specifier: 3.10.1
+        version: 3.10.1(next@16.2.3(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))
       dotenv:
         specifier: ^17.4.0
         version: 17.4.1
@@ -264,8 +264,8 @@ importers:
         specifier: ^3.1004.0
         version: 3.1027.0(@aws-sdk/client-dynamodb@3.1027.0)
       '@opennextjs/aws':
-        specifier: 3.10.0
-        version: 3.10.0(next@16.2.3(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))
+        specifier: 3.10.1
+        version: 3.10.1(next@16.2.3(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))
       '@serverlessclaw/core':
         specifier: workspace:*
         version: link:../core
@@ -1698,8 +1698,8 @@ packages:
       zod:
         optional: true
 
-  '@opennextjs/aws@3.10.0':
-    resolution: {integrity: sha512-GGg7foW2ZfA54AYNP+OrgJboWt5TDhv9HNNWQ+inSuQLXzPqqDzbG0u3ff/uFwR1thq+0xb915mgOfh3CDUQbw==}
+  '@opennextjs/aws@3.10.1':
+    resolution: {integrity: sha512-Pn8hLuP3M9EWlsZnS/O7Bm41Nt+lIOEsCaW/QJ3KlmIbtAeixnSj1CS80Z9PlQe/LQCe0GnQ8vGJeOdg5a4iWg==}
     hasBin: true
     peerDependencies:
       next: 16.2.3
@@ -8445,7 +8445,7 @@ snapshots:
       - supports-color
       - ws
 
-  '@opennextjs/aws@3.10.0(next@16.2.3(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))':
+  '@opennextjs/aws@3.10.1(next@16.2.3(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))':
     dependencies:
       '@ast-grep/napi': 0.40.5
       '@aws-sdk/client-cloudfront': 3.984.0
@@ -11310,7 +11310,7 @@ snapshots:
 
   jest-worker@27.5.1:
     dependencies:
-      '@types/node': 24.12.2
+      '@types/node': 25.5.2
       merge-stream: 2.0.0
       supports-color: 8.1.1
 
