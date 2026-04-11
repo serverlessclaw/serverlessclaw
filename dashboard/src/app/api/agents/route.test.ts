@@ -21,7 +21,7 @@ vi.mock('@aws-sdk/lib-dynamodb', () => ({
   DeleteCommand: class {},
 }));
 
-vi.mock('@claw/core/lib/registry', () => ({
+vi.mock('@claw/core/lib/registry/index', () => ({
   AgentRegistry: {
     getAllConfigs: mockGetAllConfigs,
   },

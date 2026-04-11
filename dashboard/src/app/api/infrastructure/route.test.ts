@@ -10,7 +10,7 @@ vi.mock('sst', () => ({
   },
 }));
 
-vi.mock('@claw/core/lib/registry', () => ({
+vi.mock('@claw/core/lib/registry/index', () => ({
   AgentRegistry: {
     getFullTopology: mockGetFullTopology,
   },

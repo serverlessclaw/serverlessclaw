@@ -136,7 +136,7 @@ vi.mock('../lib/utils/agent-helpers', () => ({
   parseStructuredResponse: (r: string) => JSON.parse(r),
 }));
 
-vi.mock('../lib/registry', () => ({
+vi.mock('../lib/registry/index', () => ({
   AgentRegistry: {
     getAgentConfig: vi.fn().mockResolvedValue({
       id: 'test-agent',

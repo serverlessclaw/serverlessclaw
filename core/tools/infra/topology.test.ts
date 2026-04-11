@@ -7,7 +7,7 @@ vi.mock('../../lib/utils/topology', () => ({
   discoverSystemTopology: vi.fn(),
 }));
 
-vi.mock('../../lib/registry', () => ({
+vi.mock('../../lib/registry/index', () => ({
   AgentRegistry: {
     getAllConfigs: vi.fn().mockResolvedValue({
       coder: {

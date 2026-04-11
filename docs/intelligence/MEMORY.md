@@ -248,7 +248,7 @@ The `TokenTracker` maintains daily rollups for every agent, enabling the **Agent
 The `AgentRouter` uses these metrics to compute a **Composite Score**:
 `Score = (Capability * SuccessRate) - (AvgTokens / 10000)`
 
-This ensures the system naturally prefers faster, cheaper models (like GPT-4o-mini) for simple tasks while reserving powerful models (like Claude 3.5 Sonnet) for high-complexity strategic planning.
+This ensures the system naturally prefers faster, cheaper models (like GPT-4o-mini) for simple tasks while reserving powerful models (like Claude 3.5 Sonnet) for high-complexity strategic planning. The unified **AgentRouter** is located at `core/lib/routing/AgentRouter.ts`.
 
 ### Agent Reputation (Swarm Routing)
 

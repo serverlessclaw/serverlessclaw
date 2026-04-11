@@ -51,7 +51,7 @@ vi.mock('../lib/memory', () => ({
   },
 }));
 
-vi.mock('../lib/registry', () => ({
+vi.mock('../lib/registry/index', () => ({
   AgentRegistry: registryMocks,
 }));
 

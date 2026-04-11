@@ -10,6 +10,7 @@ import { emitEvent } from '../../lib/utils/bus';
 import { AgentType, EventType } from '../../lib/types/agent';
 import { runSystemAudit } from '../../agents/cognition-reflector/audit-protocol';
 import { getAgentContext } from '../../lib/utils/agent-helpers';
+import { ToolPruner } from '../../lib/lifecycle/pruning';
 
 export interface AuditTriggerEvent {
   triggerType: string;
@@ -70,6 +71,21 @@ export async function handleSystemAuditTrigger(
         traceId: event.traceId,
       }
     );
+
+    // Run tool pruning analysis if it's a major event or periodic audit
+    if (
+      triggerType === 'MAJOR_SWARM_COMPLETE' ||
+      triggerType === 'EVENT_TRIGGER' ||
+      triggerType === 'TRUNK_SYNC'
+    ) {
+      const pruneProposal = await ToolPruner.generatePruneProposal();
+      if (pruneProposal) {
+        await ToolPruner.recordPruneProposal(pruneProposal);
+        logger.info(
+          `[AuditHandler] Tool prune proposal generated for ${pruneProposal.unusedTools.length} tools`
+        );
+      }
+    }
 
     logger.info('[AuditHandler] Audit completed:', auditReport.summary);
 

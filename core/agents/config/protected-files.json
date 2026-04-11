@@ -2,7 +2,8 @@
   "protectedFiles": [
     "sst.config.ts",
     "core/lib/agent.ts",
-    "core/lib/registry.ts",
+    "core/lib/registry/AgentRegistry.ts",
+    "core/lib/routing/AgentRouter.ts",
     "core/lib/memory.ts",
     "core/lib/mcp.ts",
     "infra/agents.ts",

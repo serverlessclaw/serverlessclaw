@@ -41,7 +41,7 @@ vi.mock('../lib/agent', () => ({
   },
 }));
 
-vi.mock('../lib/registry', () => ({
+vi.mock('../lib/registry/index', () => ({
   AgentRegistry: {
     getAgentConfig: vi.fn().mockResolvedValue({
       id: 'cognition-reflector',

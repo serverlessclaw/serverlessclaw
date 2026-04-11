@@ -9,7 +9,7 @@ import {
   SafetyTier,
   EvolutionMode,
 } from './types/index';
-import { TOOLS } from './constants';
+import { TOOLS, UNIVERSAL_SYSTEM_TOOLS } from './constants';
 import {
   SUPERCLAW_SYSTEM_PROMPT,
   CODER_SYSTEM_PROMPT,
@@ -43,15 +43,6 @@ const BACKBONE_COMMON_CONFIG = {
   trustScore: 80,
 };
 
-const UNIVERSAL_SYSTEM_TOOLS = [
-  TOOLS.saveMemory,
-  TOOLS.recallKnowledge,
-  TOOLS.sendMessage,
-  TOOLS.discoverSkills,
-  TOOLS.installSkill,
-  TOOLS.seekClarification,
-  TOOLS.provideClarification,
-];
 export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
   [AgentType.SUPERCLAW]: {
     id: AgentType.SUPERCLAW,
@@ -384,12 +375,6 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       'puppeteer_navigate',
       'puppeteer_screenshot',
       'puppeteer_click',
-      'git_status',
-      'git_diff',
-      'git_log',
-      'ast_find_code',
-      'ast_get_call_hierarchy',
-      'ast_get_file_structure',
     ],
     connectionProfile: [
       ConnectionProfile.BUS,

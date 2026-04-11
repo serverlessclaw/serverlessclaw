@@ -2,6 +2,16 @@
 
 > **For Agents**: This is a **thinking framework**, not a checklist. Do not treat silos as tasks to "complete." Each silo is a lens — choose an angle, go deep, follow interesting threads, and report what you find. Creativity and lateral thinking are expected. If a silo leads you to an unexpected weakness in another area, pursue it. The cross-silo perspectives exist precisely because the most interesting failures live at the boundaries.
 
+## Table of Contents
+
+- [How to Use This Document](#how-to-use-this-document)
+- [Severity Guide](#severity-guide)
+- [🏗️ Deep-Dive Silos](#-deep-dive-silos)
+- [🔗 Cross-Silo Perspectives](#-cross-silo-perspectives)
+- [🛠️ Verification Strategy](#-verification-strategy)
+- [⚙️ Automated Audit Configuration](#-automated-audit-configuration)
+- [📖 Glossary](file:///Users/pengcao/projects/serverlessclaw/docs/governance/GLOSSARY.md)
+
 This document establishes a framework for auditing **Serverless Claw** through focused "Silos" and "Cross-Silo Perspectives." Unlike a traditional phased checklist, this approach encourages creative, deep-dive explorations that prioritize architectural spirit, resilience, and evolution over simple file-based verification.
 
 ---
@@ -36,12 +46,28 @@ This document establishes a framework for auditing **Serverless Claw** through f
 
 ### Severity Guide
 
-| Level  | Meaning                                                     | Response                       |
-| ------ | ----------------------------------------------------------- | ------------------------------ |
-| **P0** | Active data loss, security breach, or system compromise     | Fix immediately, block deploys |
-| **P1** | Reliability issue that will cause failures under load       | Fix in current sprint          |
-| **P2** | Architectural debt that will cause problems as system grows | Plan and schedule              |
-| **P3** | Observation or improvement idea                             | Track for future consideration |
+| Level  | Meaning                                                     | Response                       | Example Scenario                                                        |
+| ------ | ----------------------------------------------------------- | ------------------------------ | ----------------------------------------------------------------------- |
+| **P0** | Active data loss, security breach, or system compromise     | Fix immediately, block deploys | IAM policy allowing unauthorized access to secret keys.                 |
+| **P1** | Reliability issue that will cause failures under load       | Fix in current sprint          | Race condition in the distributed lock manager under concurrent writes. |
+| **P2** | Architectural debt that will cause problems as system grows | Plan and schedule              | Missing TTL or indexing strategy for a high-growth telemetry table.     |
+| **P3** | Observation or improvement idea                             | Track for future consideration | Suggesting a more efficient prompt structure for the Coder agent.       |
+
+---
+
+## 🗺️ Silo-to-Code Quick Reference
+
+Use this table to map high-level silos to the primary code areas that should be investigated.
+
+| Silo  | Name       | Primary Code Focus                                                                                                                                                                                         |
+| :---- | :--------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1** | The Spine  | [routing/AgentRouter.ts](file:///Users/pengcao/projects/serverlessclaw/core/lib/routing/AgentRouter.ts), [backbone.ts](file:///Users/pengcao/projects/serverlessclaw/core/lib/backbone.ts)                 |
+| **2** | The Hand   | [mcp.ts](file:///Users/pengcao/projects/serverlessclaw/core/lib/mcp.ts), [executor.ts](file:///Users/pengcao/projects/serverlessclaw/core/lib/agent/executor.ts)                                           |
+| **3** | The Shield | [safety-engine.ts](file:///Users/pengcao/projects/serverlessclaw/core/lib/safety/safety-engine.ts), [circuit-breaker.ts](file:///Users/pengcao/projects/serverlessclaw/core/lib/safety/circuit-breaker.ts) |
+| **4** | The Brain  | `core/lib/memory/`, `core/lib/rag/`                                                                                                                                                                        |
+| **5** | The Eye    | [judge.ts](file:///Users/pengcao/projects/serverlessclaw/core/lib/verify/judge.ts), `core/lib/metrics/`                                                                                                    |
+| **6** | The Scales | [safety-engine.ts](file:///Users/pengcao/projects/serverlessclaw/core/lib/safety/safety-engine.ts) (TrustScore)                                                                                            |
+| **7** | The Scythe | [registry/AgentRegistry.ts](file:///Users/pengcao/projects/serverlessclaw/core/lib/registry/AgentRegistry.ts) (Pruning/Cleanup)                                                                            |
 
 ---
 
@@ -96,7 +122,7 @@ Each silo represents a core functional domain. Reviews within a silo should adop
 **Perspective**: _What can be removed without losing capability?_
 
 - **Angle**: Audit the workspace for generated sprawl. Identify redundant tools, overlapping logic, and "dark" code that is never executed but adds cognitive load to agents. Evaluate if abstraction layers have become too thick and if pattern consolidation is overdue.
-- **Key Concepts**: Pattern consolidation, tool pruning (linked to `auto_prune_enabled`), cyclomatic complexity reduction, and semantic compression.
+- **Key Concepts**: Pattern consolidation, tool pruning (`core/lib/lifecycle/pruning.ts`), cyclomatic complexity reduction, and semantic compression.
 
 ---
 
@@ -122,10 +148,40 @@ Audit how a user's identity and workspace permissions are propagated and enforce
 
 Future reviews should utilize a "Probe and Verify" method rather than a simple pass/fail:
 
-- **Static Probes**: `make check` for structural health.
-- **Dynamic Probes**: `make test` and `npx vitest` for behavioral health.
-- **Holistic Probes**: `npx playwright test` to verify the user-facing reality.
-- **Observational Probes**: Reviewing `Trace Intelligence` in the dashboard to visualize the "creative" paths taken during complex tasks.
+- **Static Probes**: `make check` for structural health (Linting/Types).
+- **Dynamic Probes**: `make test` and `npx vitest` for behavioral health (Unit/Integration).
+- **Holistic Probes**: `npx playwright test` to verify the user-facing reality (E2E).
+- **Observational Probes**: Reviewing `Trace Intelligence` in the dashboard or via `TOOLS.inspectTrace` to visualize the "creative" paths taken during complex tasks.
+
+---
+
+## 📝 Documenting Your Findings
+
+Use the following template when creating reporting artifacts in the `reports/` directory.
+
+```markdown
+# Audit Report: [Topic/Silo] - [YYYY-MM-DD]
+
+## 🎯 Objective
+
+Brief description of what you were looking for.
+
+## 🔍 Investigation Path
+
+- Started at: [File/Component]
+- Followed: [Event/Trace]
+- Observed: [Behavior]
+
+## 🚨 Findings
+
+| ID  | Title             | Severity | Recommended Action |
+| :-- | :---------------- | :------- | :----------------- |
+| 1   | Brief description | P1       | Fix X in file Y    |
+
+## 💡 Architectural Reflections
+
+Any high-level notes on debt or potential consolidations.
+```
 
 ---
 
@@ -133,12 +189,15 @@ Future reviews should utilize a "Probe and Verify" method rather than a simple p
 
 The system supports automated audits triggered by code growth thresholds or major events.
 
-### Configuration (core/lib/config/config-defaults.ts)
+### Configuration ([config-defaults.ts](file:///Users/pengcao/projects/serverlessclaw/core/lib/config/config-defaults.ts))
 
-| Config Key                     | Default    | Description                                                        |
-| :----------------------------- | :--------- | :----------------------------------------------------------------- |
-| `audit_code_growth_threshold`  | 0.10 (10%) | Code growth percentage that triggers a system audit                |
+| Config Key                     | Default    | Description                                                                           |
+| :----------------------------- | :--------- | :------------------------------------------------------------------------------------ |
+| `audit_code_growth_threshold`  | 0.10 (10%) | Code growth percentage that triggers a system audit                                   |
 | `audit_event_triggers_enabled` | true       | Enable audit triggers on PRE_FLIGHT_READY, TRUST_SCORE_DROP, and MAJOR_SWARM_COMPLETE |
+
+> [!TIP]
+> To adjust thresholds, modify the values in `config-defaults.ts` or provide stage-specific overrides in `infra/config/`.
 
 ### Trigger Mechanisms
 
@@ -171,6 +230,9 @@ Trigger (Code Growth, PRE_FLIGHT_READY, TRUST_SCORE_DROP)
               └───────────────┼───────────────┘
                               ↓
                     Compile Audit Report
+                              ↓
+                [ ToolPruner Analysis ]
+                (Suggest Pruning Gaps)
                               ↓
                  P0 Alerts / Block PRE_FLIGHT
 ```

@@ -83,6 +83,7 @@ Serverless Claw implements a **dynamic trust model** where autonomy is not a sta
 ```
 
 ### Trust-Based Autonomy Scaling
+
 1. **Cognitive Health Metrics**: The system tracks reasoning quality, memory consistency, and task completion rates to generate a rolling **Trust Score** for each agent.
 2. **Advisory Promotion**: When an agent maintains a `TrustScore >= 90`, the `SafetyEngine` identifies it as an **Advisory Candidate**. This is surfaced in logs and on the Co-Management Dashboard.
 3. **Collaborative Negotiation**: SuperClaw uses the `proposeAutonomyUpdate` tool to request mode shifts (e.g., from HITL to AUTO) when performance is optimal.
@@ -92,10 +93,10 @@ Serverless Claw implements a **dynamic trust model** where autonomy is not a sta
 
 Serverless Claw supports two primary evolution modes that dictate how autonomously the system can execute tasks and use tools.
 
-| Mode | Autonomy Level | Approval Logic | Use Case |
-| :--- | :--- | :--- | :--- |
-| **HITL** (Human-in-the-Loop) | Medium | Requires manual approval for all sensitive tools. | Production, high-stakes environments. |
-| **AUTO** (Autonomous) | High | Bypasses manual approval for sensitive tools (Technical Guardrails still apply). | Rapid experimentation, trusted VPCs, autonomous agents. |
+| Mode                         | Autonomy Level | Approval Logic                                                                   | Use Case                                                |
+| :--------------------------- | :------------- | :------------------------------------------------------------------------------- | :------------------------------------------------------ |
+| **HITL** (Human-in-the-Loop) | Medium         | Requires manual approval for all sensitive tools.                                | Production, high-stakes environments.                   |
+| **AUTO** (Autonomous)        | High           | Bypasses manual approval for sensitive tools (Technical Guardrails still apply). | Rapid experimentation, trusted VPCs, autonomous agents. |
 
 ### ⚡ EvolutionMode.AUTO Flow
 
@@ -193,18 +194,20 @@ To balance rapid expansion, the system implements a long-term **Efficiency Loop*
               |
        1. RECORD_USAGE (per tool call)
               |
-       2. AUDIT_TELEMETRY (48-hr Strategic Review)
+       2. AUDIT_TELEMETRY (MAJOR_SWARM_COMPLETE / TRUNK_SYNC)
               |
-       3. SUGGEST_PRUNING (Refiner/Planner)
+       3. ToolPruner.generatePruneProposal()
+              |
+       4. SUGGEST_PRUNING (Strategic Gap: PENDING_REVIEW)
               |
     +---------+---------+
     |   Human Admin     | <--- Approve/Execute removal via Dashboard
     +-------------------+
 ```
 
-- **Deterministic Auditing**: Every 48 hours (or after 20 gaps), the Strategic Planner analyzes the `tool_usage` telemetry.
-- **Redundancy Detection**: If two MCP servers provide overlapping capabilities, or if a tool hasn't been used in 30 days, the Planner suggests a `PRUNE_CAPABILITY` plan.
-- **Manual Intervention**: Humans can instantly unregister servers or uninstall skills via the **Evolution** sector in the Dashboard.
+- **Deterministic Auditing**: During major events (`MAJOR_SWARM_COMPLETE`), the `AuditHandler` triggers the **ToolPruner** (`core/lib/lifecycle/pruning.ts`).
+- **Redundancy Detection**: If a tool hasn't been used in 30 days (configurable via `tool_prune_threshold_days`), the `ToolPruner` suggests a pruning plan.
+- **Manual Intervention**: Humans can review proposals and execute removals via the **Evolution** sector in the Dashboard.
 
 ### 3. Evolutionary Lifecycle (Verified Satisfaction)
 
@@ -301,6 +304,8 @@ On every `TASK_COMPLETED` or `TASK_FAILED` event, the system updates a rolling 7
                                                                  | (on result)   |
                                                                  +---------------+
 ```
+
+The unified **AgentRouter** (`core/lib/routing/AgentRouter.ts`) consolidates these metrics to ensure the most capable and cost-effective agent is selected for every task.
 
 ## 🛡️ Evolution Safeguards
 

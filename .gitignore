@@ -45,3 +45,4 @@ vitest_output.txt
 
 # Playwright auth state
 e2e/.auth/
+*.tmp

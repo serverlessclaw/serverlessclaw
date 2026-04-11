@@ -149,7 +149,7 @@ vi.mock('../../lib/utils/agent-helpers/event-emitter', () => ({
   emitTaskEvent: emitTaskEventMock,
 }));
 
-vi.mock('../../lib/registry', () => ({
+vi.mock('../../lib/registry/index', () => ({
   AgentRegistry: {
     getAgentConfig: vi.fn().mockResolvedValue({
       id: 'strategic-planner',

@@ -159,7 +159,7 @@ To resolve the "Silent Data Loss" risk for busy sessions, the `SessionStateManag
 
 1. **Lock Release**: The current agent releases the session lock.
 2. **Pending Check**: The system checks if any messages are in the `pendingMessages` array.
-3. **Next Task Re-emission**: If messages exist, the system takes the *first* message and re-emits it as a `dynamic_<agent>_task` event.
+3. **Next Task Re-emission**: If messages exist, the system takes the _first_ message and re-emits it as a `dynamic_<agent>_task` event.
 4. **Continuation**: The message is removed from the queue, and the event system triggers the next agent to process this message.
 
 This ensures that concurrent requests are not just stored, but are eventually executed in a first-in-first-out (FIFO) manner once the session becomes available.

@@ -79,7 +79,7 @@ vi.mock('../lib/session/session-state', () => ({
   },
 }));
 
-vi.mock('../lib/registry', () => ({
+vi.mock('../lib/registry/index', () => ({
   AgentRegistry: {
     getAgentConfig: vi.fn().mockResolvedValue({
       id: 'superclaw',

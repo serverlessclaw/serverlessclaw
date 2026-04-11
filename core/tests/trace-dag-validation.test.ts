@@ -46,7 +46,7 @@ vi.mock('sst', () => ({
   },
 }));
 
-vi.mock('../lib/registry', () => ({
+vi.mock('../lib/registry/index', () => ({
   AgentRegistry: {
     getRetentionDays: vi.fn().mockResolvedValue(7),
   },

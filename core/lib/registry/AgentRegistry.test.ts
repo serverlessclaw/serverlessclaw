@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AgentRegistry } from './registry';
-import { RETENTION, DYNAMO_KEYS } from './constants';
-import { ConfigManager, setDocClient } from './registry/config';
+import { AgentRegistry } from './AgentRegistry';
+import { RETENTION, DYNAMO_KEYS } from '../constants';
+import { ConfigManager, setDocClient } from './config';
 import { Resource } from 'sst';
 
 // Mock dependencies
@@ -17,8 +17,8 @@ const { mockDocClient } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('./registry/config', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./registry/config')>();
+vi.mock('./config', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./config')>();
   return {
     ...actual,
     ConfigManager: {
@@ -31,7 +31,7 @@ vi.mock('./registry/config', async (importOriginal) => {
 });
 
 // Mock topology discovery to avoid side effects
-vi.mock('./utils/topology', () => ({
+vi.mock('../utils/topology', () => ({
   discoverSystemTopology: vi.fn(async () => ({})),
 }));
 
@@ -119,7 +119,7 @@ describe('AgentRegistry', () => {
       });
 
       const config = await AgentRegistry.getAgentConfig('custom');
-      const { EvolutionMode } = await import('./types/agent');
+      const { EvolutionMode } = await import('../types/agent');
       expect(config?.evolutionMode).toBe(EvolutionMode.HITL);
     });
 

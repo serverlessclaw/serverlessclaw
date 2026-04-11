@@ -19,7 +19,7 @@ vi.mock('../../lib/utils/bus', () => ({
   emitEvent: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../lib/registry', () => ({
+vi.mock('../../lib/registry/index', () => ({
   AgentRegistry: {
     getAgentConfig: vi.fn().mockImplementation(async (id) => ({
       enabled: true,
@@ -77,7 +77,7 @@ describe('Knowledge Agent Tools', () => {
 
   describe('listAgents', () => {
     it('should list enabled agents but exclude main', async () => {
-      const { AgentRegistry } = await import('../../lib/registry');
+      const { AgentRegistry } = await import('../../lib/registry/index');
       vi.mocked(AgentRegistry.getAllConfigs).mockResolvedValueOnce({
         superclaw: {
           id: 'superclaw',
@@ -98,7 +98,7 @@ describe('Knowledge Agent Tools', () => {
     });
 
     it('should return helpful message when no agents available', async () => {
-      const { AgentRegistry } = await import('../../lib/registry');
+      const { AgentRegistry } = await import('../../lib/registry/index');
       vi.mocked(AgentRegistry.getAllConfigs).mockResolvedValueOnce({});
 
       const result = await listAgents.execute();
@@ -174,7 +174,7 @@ describe('Knowledge Agent Tools', () => {
 
   describe('createAgent', () => {
     it('should create a new non-backbone agent', async () => {
-      const { AgentRegistry } = await import('../../lib/registry');
+      const { AgentRegistry } = await import('../../lib/registry/index');
       vi.mocked(AgentRegistry.getAgentConfig).mockResolvedValueOnce(undefined);
 
       const result = await createAgent.execute({
@@ -211,7 +211,7 @@ describe('Knowledge Agent Tools', () => {
 
   describe('syncAgentRegistry', () => {
     it('should sync registry and discover topology', async () => {
-      const { AgentRegistry } = await import('../../lib/registry');
+      const { AgentRegistry } = await import('../../lib/registry/index');
       vi.mocked(AgentRegistry.getAllConfigs).mockResolvedValueOnce({
         coder: { id: 'coder', name: 'Coder', enabled: true } as any,
         'strategic-planner': {

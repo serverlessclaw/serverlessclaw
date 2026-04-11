@@ -31,7 +31,7 @@ import { handler } from './events';
 import { EventType } from '../lib/types/agent';
 
 // Mock AgentRegistry
-vi.mock('../lib/registry', () => ({
+vi.mock('../lib/registry/index', () => ({
   AgentRegistry: {
     getAgentConfig: vi.fn().mockResolvedValue({
       systemPrompt: 'Test Prompt',

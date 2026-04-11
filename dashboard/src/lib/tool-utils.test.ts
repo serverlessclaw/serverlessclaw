@@ -7,7 +7,7 @@ vi.mock('@/lib/tool-definitions', () => ({
   },
 }));
 
-vi.mock('@claw/core/lib/registry', () => ({
+vi.mock('@claw/core/lib/registry/index', () => ({
   AgentRegistry: {
     getRawConfig: vi.fn(),
   },
@@ -29,7 +29,7 @@ describe('tool-utils', () => {
 
   describe('getToolUsage', () => {
     it('returns tool usage data from registry', async () => {
-      const { AgentRegistry } = await import('@claw/core/lib/registry');
+      const { AgentRegistry } = await import('@claw/core/lib/registry/index');
       (AgentRegistry.getRawConfig as ReturnType<typeof vi.fn>).mockResolvedValue({
         dispatchTask: { count: 5, lastUsed: 1700000000 },
       });
@@ -42,7 +42,7 @@ describe('tool-utils', () => {
     });
 
     it('returns empty object on error', async () => {
-      const { AgentRegistry } = await import('@claw/core/lib/registry');
+      const { AgentRegistry } = await import('@claw/core/lib/registry/index');
       (AgentRegistry.getRawConfig as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error('DB error')
       );
@@ -53,7 +53,7 @@ describe('tool-utils', () => {
     });
 
     it('returns empty object when config is null', async () => {
-      const { AgentRegistry } = await import('@claw/core/lib/registry');
+      const { AgentRegistry } = await import('@claw/core/lib/registry/index');
       (AgentRegistry.getRawConfig as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
       const result = await getToolUsage();

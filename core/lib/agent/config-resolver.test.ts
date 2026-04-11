@@ -18,7 +18,7 @@ vi.mock('../logger', () => ({
 }));
 
 // Mock AgentRouter as it's dynamically imported
-vi.mock('../agent-router', () => ({
+vi.mock('../routing/AgentRouter', () => ({
   AgentRouter: {
     selectModel: vi.fn().mockImplementation((config, _options) => {
       return {
@@ -101,7 +101,7 @@ describe('resolveAgentConfig', () => {
 
   it('uses AgentRouter when no global config but agent config is provided', async () => {
     (ConfigManager.getRawConfig as any).mockResolvedValue(undefined);
-    const { AgentRouter } = await import('../agent-router');
+    const { AgentRouter } = await import('../routing/AgentRouter');
 
     const agentConfig = { id: 'test' } as any;
     const result = await resolveAgentConfig(agentConfig);

@@ -37,7 +37,7 @@ vi.mock('../../lib/outbound', () => ({
 }));
 
 const mockSaveRawConfig = vi.fn();
-vi.mock('../../lib/registry', () => ({
+vi.mock('../../lib/registry/index', () => ({
   AgentRegistry: {
     saveRawConfig: (...args: unknown[]) => mockSaveRawConfig(...args),
   },

@@ -20,7 +20,7 @@ const mockWarmupManager = vi.fn().mockImplementation(function (this: any) {
   this.smartWarmup = vi.fn().mockResolvedValue(undefined);
 });
 
-vi.mock('../lib/registry', () => ({
+vi.mock('../lib/registry/index', () => ({
   AgentRegistry: mockAgentRegistry,
 }));
 

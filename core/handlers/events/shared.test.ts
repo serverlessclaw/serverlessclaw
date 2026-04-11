@@ -49,7 +49,7 @@ vi.mock('../../lib/utils/agent-helpers', () => ({
   isTaskPaused: vi.fn().mockReturnValue(false),
 }));
 
-vi.mock('../../lib/registry', () => ({
+vi.mock('../../lib/registry/index', () => ({
   AgentRegistry: {
     getAgentConfig: vi.fn().mockResolvedValue({
       id: 'test-agent',

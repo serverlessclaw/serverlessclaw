@@ -75,6 +75,19 @@ export const TOOLS = {
 } as const;
 
 /**
+ * Universal system tools provided to all backbone agents.
+ */
+export const UNIVERSAL_SYSTEM_TOOLS = [
+  TOOLS.saveMemory,
+  TOOLS.recallKnowledge,
+  TOOLS.sendMessage,
+  TOOLS.discoverSkills,
+  TOOLS.installSkill,
+  TOOLS.seekClarification,
+  TOOLS.provideClarification,
+];
+
+/**
  * OpenAI-specific configuration and role mapping.
  */
 export const OPENAI = {
@@ -113,6 +126,8 @@ export const PROTECTED_FILES = [
   'core/tools/index.ts',
   'core/agents/superclaw.ts',
   'core/lib/agent.ts',
+  'core/lib/registry/AgentRegistry.ts',
+  'core/lib/routing/AgentRouter.ts',
   'buildspec.yml',
   'infra/**',
   // Critical recovery and safety handlers

@@ -5,27 +5,40 @@
  * combinations based on historical performance, token cost, capability match,
  * and reputation data.
  *
- * GAP #4 FIX: Per-agent model selection for optimal cost/performance ratio.
- * Reputation integration: agent success rate, latency, and recency factor into routing.
+ * This is the unified implementation consolidating logic from agent-router.ts
+ * and agent-routing.ts.
  */
 
-import { logger } from './logger';
-import type { IAgentConfig } from './types/agent';
-import { LLMProvider, OpenAIModel, MiniMaxModel, ReasoningProfile } from './types/llm';
-import type { AgentReputation } from './types/reputation';
-import { computeReputationScore } from './memory/reputation-operations';
+import { logger } from '../logger';
+import type { IAgentConfig } from '../types/agent';
+import { LLMProvider, OpenAIModel, MiniMaxModel, ReasoningProfile } from '../types/llm';
+import type { AgentReputation } from '../types/reputation';
+import { computeReputationScore } from '../memory/reputation-operations';
+import { TokenTracker } from '../metrics/token-usage';
+import { ConfigManager } from '../registry/config';
+
+/**
+ * Performance metrics for an agent.
+ */
+export interface AgentPerformanceMetrics {
+  agentId: string;
+  successRate: number;
+  avgTokensPerInvocation: number;
+  capabilityScore: number;
+  compositeScore: number;
+}
 
 /**
  * Performance rollup data for an agent-model combination.
  */
-interface AgentPerformanceRollup {
+export interface AgentPerformanceRollup {
   agentId: string;
-  model: string;
+  model?: string;
   avgInputTokens: number;
   avgOutputTokens: number;
   successRate: number;
   totalInvocations: number;
-  avgDurationMs: number;
+  avgDurationMs?: number;
 }
 
 /**
@@ -52,7 +65,6 @@ const PROFILE_TO_TIER: Record<ReasoningProfile, ModelTier> = {
 
 /**
  * Maps model tiers to preferred models.
- * All tiers use MiniMax — differentiated by reasoning level, not provider.
  * Order: first is preferred, rest are fallbacks.
  */
 const TIER_MODELS: Record<ModelTier, { provider: string; model: string }[]> = {
@@ -74,6 +86,8 @@ const TIER_MODELS: Record<ModelTier, { provider: string; model: string }[]> = {
  * AgentRouter provides dynamic model and agent selection based on task characteristics.
  */
 export class AgentRouter {
+  private static readonly ROLLBACK_DAYS = 7;
+
   /**
    * Selects the optimal model for a given agent configuration and task characteristics.
    *
@@ -132,6 +146,51 @@ export class AgentRouter {
   }
 
   /**
+   * Retrieves performance metrics for an agent, optionally incorporating historical data.
+   *
+   * @param agentId - The agent ID.
+   * @param capabilityScore - 0-1 match for the current task.
+   * @returns A promise resolving to agent performance metrics.
+   */
+  static async getMetrics(
+    agentId: string,
+    capabilityScore = 1.0
+  ): Promise<AgentPerformanceMetrics> {
+    let successRate = 0.5;
+    let avgTokensPerInvocation = 0;
+
+    try {
+      const rollups = await TokenTracker.getRollupRange(agentId, this.ROLLBACK_DAYS);
+      if (rollups.length > 0) {
+        const totalInvocations = rollups.reduce((s, r) => s + r.invocationCount, 0);
+        const totalSuccesses = rollups.reduce((s, r) => s + r.successCount, 0);
+        const totalTokens = rollups.reduce(
+          (s, r) => s + r.totalInputTokens + r.totalOutputTokens,
+          0
+        );
+        successRate = totalInvocations > 0 ? totalSuccesses / totalInvocations : 0.5;
+        avgTokensPerInvocation = totalInvocations > 0 ? totalTokens / totalInvocations : 0;
+      }
+    } catch (e) {
+      logger.warn(`Failed to get metrics for agent ${agentId}:`, e);
+    }
+
+    const successWeight = await ConfigManager.getTypedConfig('router_success_weight', 1.0);
+    const tokenWeight = await ConfigManager.getTypedConfig('router_token_penalty_weight', 0.0001);
+
+    const compositeScore =
+      capabilityScore * successRate * successWeight - avgTokensPerInvocation * tokenWeight;
+
+    return {
+      agentId,
+      successRate: Math.round(successRate * 1000) / 1000,
+      avgTokensPerInvocation: Math.round(avgTokensPerInvocation),
+      capabilityScore,
+      compositeScore: Math.round(compositeScore * 1000) / 1000,
+    };
+  }
+
+  /**
    * Computes a composite score for an agent based on its historical performance.
    * Higher scores indicate better candidates for the task.
    *
@@ -150,13 +209,47 @@ export class AgentRouter {
   }
 
   /**
-   * Selects the best agent from a list of candidates based on historical performance.
+   * Computes a composite score incorporating reputation data.
    *
-   * @param candidates - Array of agent rollups to evaluate.
-   * @param capabilityMatchFn - Function to compute capability match for each candidate.
-   * @returns The best agent ID, or undefined if no candidates are available.
+   * @param performanceScore - The score derived from historical performance/tokens.
+   * @param reputationScore - The score derived from reputation metrics.
+   * @returns A weighted composite score.
    */
-  static selectBestAgent(
+  static computeCompositeScore(performanceScore: number, reputationScore: number): number {
+    return 0.6 * performanceScore + 0.4 * reputationScore;
+  }
+
+  /**
+   * Selects the best agent from a list of candidates based on historical performance metrics.
+   *
+   * @param candidates - List of candidate agent IDs.
+   * @param capabilityScores - Optional map of agent ID to capability score.
+   * @returns A promise resolving to the best agent ID.
+   */
+  static async selectBestAgent(
+    candidates: string[],
+    capabilityScores?: Record<string, number>
+  ): Promise<string> {
+    if (candidates.length === 0) throw new Error('No candidate agents provided');
+    if (candidates.length === 1) return candidates[0];
+
+    const metrics = await Promise.all(
+      candidates.map((id) => this.getMetrics(id, capabilityScores?.[id] ?? 1.0))
+    );
+
+    metrics.sort((a, b) => b.compositeScore - a.compositeScore);
+
+    return metrics[0].agentId;
+  }
+
+  /**
+   * Synchronous version for selecting best agent when rollups are already available.
+   *
+   * @param candidates - Array of performance rollups.
+   * @param capabilityMatchFn - Optional function to compute capability match for an agent.
+   * @returns The best agent ID, or undefined if no candidates.
+   */
+  static selectBestAgentSync(
     candidates: AgentPerformanceRollup[],
     capabilityMatchFn?: (agentId: string) => number
   ): string | undefined {
@@ -175,13 +268,11 @@ export class AgentRouter {
       }
     }
 
-    logger.info(`[AgentRouter] Best agent: ${bestAgent} (score: ${bestScore.toFixed(3)})`);
     return bestAgent;
   }
 
   /**
    * Selects the best agent from candidates, incorporating reputation data.
-   * Combines the performance rollup score with the reputation composite score.
    *
    * Formula: (0.6 * performanceScore) + (0.4 * reputationScore)
    *
@@ -203,10 +294,11 @@ export class AgentRouter {
     for (const candidate of candidates) {
       const match = capabilityMatchFn?.(candidate.agentId) ?? 1.0;
       const performanceScore = this.computeScore(candidate, match);
+
       const reputation = reputations.get(candidate.agentId);
       const reputationScore = reputation ? computeReputationScore(reputation) : 0.5;
 
-      const compositeScore = 0.6 * performanceScore + 0.4 * reputationScore;
+      const compositeScore = this.computeCompositeScore(performanceScore, reputationScore);
 
       if (compositeScore > bestScore) {
         bestScore = compositeScore;

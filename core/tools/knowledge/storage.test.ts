@@ -90,7 +90,7 @@ vi.mock('../../lib/skills', () => ({
   },
 }));
 
-vi.mock('../../lib/registry', () => ({
+vi.mock('../../lib/registry/index', () => ({
   AgentRegistry: {
     getRawConfig: mocks.getRawConfig,
   },

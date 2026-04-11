@@ -66,7 +66,7 @@ function createMockMemory(overrides: Partial<IMemory> = {}): IMemory {
   } as unknown as IMemory;
 }
 
-vi.mock('../../lib/registry', () => ({
+vi.mock('../../lib/registry/index', () => ({
   AgentRegistry: {
     getRawConfig: vi.fn().mockResolvedValue(undefined),
   },
@@ -424,7 +424,7 @@ describe('buildProactiveReviewPrompt', () => {
 
   it('should return shouldRun: false when proactive review is too recent', async () => {
     vi.resetModules();
-    vi.mock('../../lib/registry', () => ({
+    vi.mock('../../lib/registry/index', () => ({
       AgentRegistry: {
         getRawConfig: vi.fn().mockResolvedValue(undefined),
       },
@@ -451,7 +451,7 @@ describe('buildProactiveReviewPrompt', () => {
 
   it('should return shouldRun: false when no gaps exist after review check passes', async () => {
     vi.resetModules();
-    vi.mock('../../lib/registry', () => ({
+    vi.mock('../../lib/registry/index', () => ({
       AgentRegistry: {
         getRawConfig: vi.fn().mockResolvedValue(undefined),
       },
@@ -489,7 +489,7 @@ describe('buildProactiveReviewPrompt', () => {
 
   it('should build full prompt with gaps and improvements for scheduled review', async () => {
     vi.resetModules();
-    vi.mock('../../lib/registry', () => ({
+    vi.mock('../../lib/registry/index', () => ({
       AgentRegistry: {
         getRawConfig: vi.fn().mockResolvedValue(undefined),
       },
@@ -552,7 +552,7 @@ describe('buildProactiveReviewPrompt', () => {
 
   it('should include failed plans anti-patterns in prompt', async () => {
     vi.resetModules();
-    vi.mock('../../lib/registry', () => ({
+    vi.mock('../../lib/registry/index', () => ({
       AgentRegistry: {
         getRawConfig: vi.fn().mockResolvedValue(undefined),
       },
@@ -611,7 +611,7 @@ describe('buildProactiveReviewPrompt', () => {
 
   it('should call updateDistilledMemory with current timestamp on success', async () => {
     vi.resetModules();
-    vi.mock('../../lib/registry', () => ({
+    vi.mock('../../lib/registry/index', () => ({
       AgentRegistry: {
         getRawConfig: vi.fn().mockResolvedValue(undefined),
       },
@@ -658,7 +658,7 @@ describe('buildProactiveReviewPrompt', () => {
 
   it('should include no improvements message when none exist', async () => {
     vi.resetModules();
-    vi.mock('../../lib/registry', () => ({
+    vi.mock('../../lib/registry/index', () => ({
       AgentRegistry: {
         getRawConfig: vi.fn().mockResolvedValue(undefined),
       },
@@ -702,7 +702,7 @@ describe('buildProactiveReviewPrompt', () => {
 
   it('should include only top 3 gaps by impact and show backlog summary for remaining gaps', async () => {
     vi.resetModules();
-    vi.mock('../../lib/registry', () => ({
+    vi.mock('../../lib/registry/index', () => ({
       AgentRegistry: {
         getRawConfig: vi.fn().mockResolvedValue(undefined),
       },
@@ -777,7 +777,7 @@ describe('buildProactiveReviewPrompt', () => {
 
   it('should omit backlog summary when there are no remaining gaps beyond top 3', async () => {
     vi.resetModules();
-    vi.mock('../../lib/registry', () => ({
+    vi.mock('../../lib/registry/index', () => ({
       AgentRegistry: {
         getRawConfig: vi.fn().mockResolvedValue(undefined),
       },

@@ -1,59 +1,315 @@
+import { PutCommand } from '@aws-sdk/lib-dynamodb';
+import { IAgentConfig } from '../types/agent';
+import { BACKBONE_REGISTRY } from '../backbone';
+import { logger } from '../logger';
+import type { Topology, TopologyNode } from '../types/index';
+import { DYNAMO_KEYS, RETENTION, TOOLS, UNIVERSAL_SYSTEM_TOOLS } from '../constants';
+import { ConfigManager, defaultDocClient } from './config';
+
 /**
- * The AgentRegistry is a central directory for all available agent types.
- * It allows for modular discovery and loading of agents based on spoke needs.
+ * AgentRegistry handles discovery and configuration of agents.
+ * It combines hardcoded backbone agents with user-defined agents from DynamoDB.
  */
-
-export interface AgentDefinition {
-  id: string;
-  name: string;
-  role: string;
-  description: string;
-  isCore: boolean; // CORE agents are always available in the Hub template.
-}
-
 export class AgentRegistry {
-  private agents: Map<string, AgentDefinition> = new Map();
+  private static backboneConfigs: Record<string, IAgentConfig> = BACKBONE_REGISTRY;
 
-  constructor() {
-    this.registerCoreAgents();
+  private static ESSENTIAL_SYSTEM_TOOLS = [...UNIVERSAL_SYSTEM_TOOLS, TOOLS.dispatchTask];
+
+  private static DEFAULT_AGENT_TOOLS = [...AgentRegistry.ESSENTIAL_SYSTEM_TOOLS, TOOLS.listAgents];
+
+  private static DISCOVERY_BOOTLOADER_TOOLS = [
+    ...AgentRegistry.ESSENTIAL_SYSTEM_TOOLS,
+    TOOLS.listAgents,
+  ];
+
+  /**
+   * Delegates raw config operations to ConfigManager.
+   */
+  public static getRawConfig = ConfigManager.getRawConfig;
+  public static saveRawConfig = ConfigManager.saveRawConfig;
+  public static getAgentOverrideConfig = ConfigManager.getAgentOverrideConfig;
+
+  /**
+   * Retrieves the retention period in days for a specific item type.
+   *
+   * @param item - The key for the retention setting (e.g., MESSAGES_DAYS).
+   * @returns A promise resolving to the number of retention days.
+   */
+  static async getRetentionDays(item: keyof typeof RETENTION): Promise<number> {
+    const config = (await ConfigManager.getRawConfig(DYNAMO_KEYS.RETENTION_CONFIG)) as Record<
+      string,
+      number
+    >;
+    return config?.[item] ?? RETENTION[item];
   }
 
-  private registerCoreAgents() {
-    this.registerAgent({
-      id: 'super-claw',
-      name: 'SuperClaw',
-      role: 'Orchestrator',
-      description: 'The central backbone for agentic coordination.',
-      isCore: true,
-    });
-    this.registerAgent({
-      id: 'coder-agent',
-      name: 'CoderAgent',
-      role: 'Code Synthesis',
-      description: 'The specialist for code generation and refactoring.',
-      isCore: true,
-    });
-    this.registerAgent({
-      id: 'qa-auditor',
-      name: 'QA Auditor',
-      role: 'Quality Assurance',
-      description: 'The specialist for testing and deployment verification.',
-      isCore: true,
-    });
+  /**
+   * Retrieves the configuration for a specific agent by ID.
+   *
+   * @param id - The unique agent identifier.
+   * @param preFetchedConfigs - Optional pre-fetched configurations to avoid redundant DB calls.
+   * @returns A promise resolving to the agent configuration or undefined.
+   */
+  static async getAgentConfig(
+    id: string,
+    preFetchedConfigs?: Record<string, unknown>
+  ): Promise<IAgentConfig | undefined> {
+    let config: IAgentConfig | undefined;
+
+    // 1. Resolve Base Config
+    if (this.backboneConfigs[id]) {
+      config = { ...this.backboneConfigs[id] };
+      const ddbAgents =
+        (preFetchedConfigs?.[DYNAMO_KEYS.AGENTS_CONFIG] as Record<string, Partial<IAgentConfig>>) ??
+        ((await ConfigManager.getRawConfig(DYNAMO_KEYS.AGENTS_CONFIG)) as Record<
+          string,
+          Partial<IAgentConfig>
+        >) ??
+        {};
+      if (ddbAgents[id]) Object.assign(config, ddbAgents[id]);
+    } else {
+      const ddbAgents =
+        (preFetchedConfigs?.[DYNAMO_KEYS.AGENTS_CONFIG] as Record<string, unknown>) ??
+        ((await ConfigManager.getRawConfig(DYNAMO_KEYS.AGENTS_CONFIG)) as Record<
+          string,
+          unknown
+        >) ??
+        {};
+      config = ddbAgents[id] as IAgentConfig;
+    }
+
+    if (!config) return undefined;
+
+    // 2. Resolve evolutionMode (HITL default)
+    const { EvolutionMode } = await import('../types/agent');
+    config.evolutionMode = config.evolutionMode ?? EvolutionMode.HITL;
+
+    // 3. Tool Overrides (with TTL Support)
+    // Support both per-agent `${id}_tools` entries and the newer batch
+    // `DYNAMO_KEYS.AGENT_TOOL_OVERRIDES` map. Batch overrides take precedence
+    // and are merged with per-agent overrides when present.
+    const batchOverrides =
+      (preFetchedConfigs?.[DYNAMO_KEYS.AGENT_TOOL_OVERRIDES] as Record<string, unknown[]>) ??
+      ((await ConfigManager.getRawConfig(DYNAMO_KEYS.AGENT_TOOL_OVERRIDES)) as
+        | Record<string, unknown[]>
+        | undefined);
+
+    const perAgentOverrides =
+      (preFetchedConfigs?.[`${id}_tools`] as Array<
+        string | import('../types/agent').InstalledSkill
+      >) ??
+      ((await ConfigManager.getRawConfig(`${id}_tools`)) as Array<
+        string | import('../types/agent').InstalledSkill
+      >);
+
+    const now = Date.now();
+    const activeOverrides: string[] = [];
+    let prunedCount = 0;
+
+    const filterActive = (list: (string | import('../types/agent').InstalledSkill)[]) =>
+      list.filter((t) => {
+        if (typeof t === 'string') return true;
+        if (!t.expiresAt || t.expiresAt > now) return true;
+        prunedCount++;
+        return false;
+      });
+
+    const activeBatch =
+      batchOverrides && Array.isArray(batchOverrides[id])
+        ? filterActive(batchOverrides[id] as (string | import('../types/agent').InstalledSkill)[])
+        : [];
+    const activePerAgent = Array.isArray(perAgentOverrides) ? filterActive(perAgentOverrides) : [];
+
+    activeOverrides.push(...activeBatch.map((t) => (typeof t === 'string' ? t : t.name)));
+    activeOverrides.push(...activePerAgent.map((t) => (typeof t === 'string' ? t : t.name)));
+
+    if (prunedCount > 0) {
+      logger.info(`[REGISTRY] Pruned ${prunedCount} expired tools for agent ${id}`);
+
+      // Persist pruned lists back to DDB
+      if (
+        batchOverrides &&
+        Array.isArray(batchOverrides[id]) &&
+        activeBatch.length < (batchOverrides[id] as unknown[]).length
+      ) {
+        const update = this.saveRawConfig(DYNAMO_KEYS.AGENT_TOOL_OVERRIDES, {
+          ...batchOverrides,
+          [id]: activeBatch,
+        });
+        if (update instanceof Promise) {
+          update.catch((e) => logger.error(`Failed to persist pruned batch tools for ${id}:`, e));
+        }
+      }
+
+      if (Array.isArray(perAgentOverrides) && activePerAgent.length < perAgentOverrides.length) {
+        const update = this.saveRawConfig(`${id}_tools`, activePerAgent);
+        if (update instanceof Promise) {
+          update.catch((e) => logger.error(`Failed to persist pruned tools for ${id}:`, e));
+        }
+      }
+    }
+
+    if (activeOverrides.length > 0) {
+      config.tools = Array.from(
+        new Set([
+          ...activeOverrides,
+          ...(this.backboneConfigs[id]?.tools ??
+            (AgentRegistry.ESSENTIAL_SYSTEM_TOOLS as string[])),
+        ])
+      );
+    } else {
+      config.tools = Array.from(
+        new Set([...(config.tools ?? []), ...AgentRegistry.ESSENTIAL_SYSTEM_TOOLS])
+      );
+    }
+
+    if (!config.tools || config.tools.length === 0)
+      config.tools = [...AgentRegistry.DEFAULT_AGENT_TOOLS];
+
+    return config;
   }
 
-  public registerAgent(agent: AgentDefinition) {
-    this.agents.set(agent.id, agent);
-    console.log(`[AgentRegistry] Registered agent: ${agent.id}`);
+  /**
+   * Retrieves configurations for all registered agents, merging backbone and dynamic configs.
+   * This is a heavy operation used primarily for discovery and topology visualization.
+   *
+   * @returns A promise resolving to a record of all agent configurations.
+   */
+  static async getAllConfigs(): Promise<Record<string, IAgentConfig>> {
+    const [ddbConfig, batchToolOverrides] = await Promise.all([
+      ConfigManager.getRawConfig(DYNAMO_KEYS.AGENTS_CONFIG),
+      ConfigManager.getRawConfig(DYNAMO_KEYS.AGENT_TOOL_OVERRIDES),
+    ]);
+
+    const all: Record<string, IAgentConfig> = { ...this.backboneConfigs };
+    const dynamicAgents = (ddbConfig as Record<string, unknown>) ?? {};
+    const agentIds = Array.from(new Set([...Object.keys(all), ...Object.keys(dynamicAgents)]));
+
+    const preFetchedConfigs: Record<string, unknown> = {
+      [DYNAMO_KEYS.AGENTS_CONFIG]: dynamicAgents,
+    };
+
+    if (batchToolOverrides && typeof batchToolOverrides === 'object') {
+      for (const [id, tools] of Object.entries(batchToolOverrides)) {
+        preFetchedConfigs[`${id}_tools`] = tools;
+      }
+    }
+
+    const results = await Promise.all(
+      agentIds.map(async (id) => ({
+        id,
+        config: await this.getAgentConfig(id, preFetchedConfigs),
+      }))
+    );
+
+    for (const { id, config } of results) {
+      if (config) all[id] = config;
+    }
+
+    return all;
   }
 
-  public getAgent(id: string): AgentDefinition | undefined {
-    return this.agents.get(id);
+  /**
+   * Retrieves infrastructure configurations from the ConfigTable.
+   * Includes connection nodes for the bus, storage, and other resources.
+   *
+   * @returns A promise resolving to an array of topology nodes.
+   */
+  static async getInfraConfig(): Promise<TopologyNode[]> {
+    const ddbConfig = await ConfigManager.getRawConfig(DYNAMO_KEYS.INFRA_CONFIG);
+    return Array.isArray(ddbConfig) ? (ddbConfig as TopologyNode[]) : [];
   }
 
-  public listAgents(): AgentDefinition[] {
-    return Array.from(this.agents.values());
+  /**
+   * Retrieves the full system topology.
+   *
+   * @returns A promise resolving to the full system topology or undefined.
+   */
+  static async getFullTopology(): Promise<Topology | undefined> {
+    return (await ConfigManager.getRawConfig(DYNAMO_KEYS.SYSTEM_TOPOLOGY)) as Topology | undefined;
+  }
+
+  /**
+   * Saves or updates an agent configuration and triggers topology refresh.
+   *
+   * @param id - The unique agent identifier.
+   * @param config - The new agent configuration to save.
+   */
+  static async saveConfig(id: string, config: Partial<IAgentConfig>): Promise<void> {
+    const { ConfigTable } = (await import('sst')).Resource as { ConfigTable?: { name: string } };
+    if (!ConfigTable?.name) {
+      logger.warn(`ConfigTable not linked. Skipping save for ${id}`);
+      return;
+    }
+
+    if (!config.name || !config.systemPrompt) {
+      throw new Error('Invalid agent configuration: name and systemPrompt are required.');
+    }
+
+    const { UpdateCommand } = await import('@aws-sdk/lib-dynamodb');
+    await defaultDocClient.send(
+      new UpdateCommand({
+        TableName: ConfigTable.name,
+        Key: { key: DYNAMO_KEYS.AGENTS_CONFIG },
+        UpdateExpression: 'SET #agents.#id = :config',
+        ExpressionAttributeNames: { '#agents': 'value', '#id': id },
+        ExpressionAttributeValues: { ':config': config },
+      })
+    );
+
+    try {
+      const { discoverSystemTopology } = await import('../utils/topology');
+      const topology = await discoverSystemTopology();
+      await defaultDocClient.send(
+        new PutCommand({
+          TableName: ConfigTable.name,
+          Item: { key: DYNAMO_KEYS.SYSTEM_TOPOLOGY, value: topology },
+        })
+      );
+      logger.info('Topology auto-refreshed after agent save.');
+    } catch (e) {
+      logger.error('Failed to auto-refresh topology:', e);
+    }
+  }
+
+  /**
+   * Records tool usage atomically in the ConfigTable.
+   * Tracks both global tool popularity and per-agent usage stats.
+   *
+   * @param toolName - The name of the tool used.
+   * @param agentId - The ID of the agent that used the tool.
+   * @returns A promise that resolves when the usage has been recorded.
+   */
+  static async recordToolUsage(toolName: string, agentId: string = 'unknown'): Promise<void> {
+    const { ConfigTable } = (await import('sst')).Resource as { ConfigTable?: { name: string } };
+    if (!ConfigTable?.name) return;
+
+    const { UpdateCommand } = await import('@aws-sdk/lib-dynamodb');
+    const updateUsage = async (key: string) => {
+      try {
+        await defaultDocClient.send(
+          new UpdateCommand({
+            TableName: ConfigTable.name,
+            Key: { key },
+            UpdateExpression:
+              'SET #usage.#tool.#count = if_not_exists(#usage.#tool.#count, :zero) + :one, #usage.#tool.#last = :now',
+            ExpressionAttributeNames: {
+              '#usage': 'value',
+              '#tool': toolName,
+              '#count': 'count',
+              '#last': 'lastUsed',
+            },
+            ExpressionAttributeValues: { ':one': 1, ':zero': 0, ':now': Date.now() },
+          })
+        );
+      } catch (e: unknown) {
+        if (e instanceof Error && e.name === 'ValidationException') {
+          await this.saveRawConfig(key, { [toolName]: { count: 1, lastUsed: Date.now() } });
+        }
+      }
+    };
+
+    await updateUsage(DYNAMO_KEYS.TOOL_USAGE);
+    await updateUsage(`tool_usage_${agentId}`);
   }
 }
-
-export const globalAgentRegistry = new AgentRegistry();

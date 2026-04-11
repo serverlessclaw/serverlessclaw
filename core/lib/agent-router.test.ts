@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { AgentRouter, ModelTier } from './agent-router';
+import { AgentRouter, ModelTier } from './routing/AgentRouter';
 import { ReasoningProfile } from './types/llm';
 
 describe('AgentRouter', () => {
@@ -89,7 +89,7 @@ describe('AgentRouter', () => {
 
   describe('selectBestAgent', () => {
     it('returns undefined for empty candidates', () => {
-      expect(AgentRouter.selectBestAgent([])).toBeUndefined();
+      expect(AgentRouter.selectBestAgentSync([])).toBeUndefined();
     });
 
     it('selects the agent with the highest score', () => {
@@ -109,7 +109,7 @@ describe('AgentRouter', () => {
           avgOutputTokens: 100,
         },
       ] as any[];
-      expect(AgentRouter.selectBestAgent(candidates)).toBe('a2');
+      expect(AgentRouter.selectBestAgentSync(candidates)).toBe('a2');
     });
 
     it('respects capability match function', () => {
@@ -130,7 +130,7 @@ describe('AgentRouter', () => {
         },
       ] as any[];
       const matchFn = (id: string) => (id === 'a2' ? 1.0 : 0.1);
-      expect(AgentRouter.selectBestAgent(candidates, matchFn)).toBe('a2');
+      expect(AgentRouter.selectBestAgentSync(candidates, matchFn)).toBe('a2');
     });
   });
 
