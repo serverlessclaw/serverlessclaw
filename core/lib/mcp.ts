@@ -188,7 +188,7 @@ export class MCPBridge {
 
     const allTools: ITool[] = [];
     const defaultServers: Record<string, MCPServerConfig> = {
-      ast: { type: 'local', command: 'npx --no-install -y @aiready/ast-mcp-server@0.1.6' },
+      ast: { type: 'local', command: 'npx -y @aiready/ast-mcp-server@0.4.8' },
       filesystem: {
         type: 'local',
         command: 'npx --no-install -y @modelcontextprotocol/server-filesystem@0.6.2',

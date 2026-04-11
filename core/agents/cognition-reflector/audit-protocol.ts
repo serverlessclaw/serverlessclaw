@@ -8,7 +8,7 @@
 import { logger } from '../../lib/logger';
 import { emitEvent } from '../../lib/utils/bus';
 import { AgentType, EventType } from '../../lib/types/agent';
-import { ScytheLogic } from './lib/scythe';
+import { MCPBridge } from '../../lib/mcp';
 import { AuditSilo, AuditFinding, AuditReport, AUDIT_SILOS } from './lib/audit-definitions';
 
 /**
@@ -86,8 +86,8 @@ async function auditSilo(
       case 'Scales':
         findings.push(...(await auditScales(memory)));
         break;
-      case 'Scythe':
-        findings.push(...(await auditScythe(memory)));
+      case 'Metabolism':
+        findings.push(...(await auditMetabolism(memory)));
         break;
     }
   } catch (e) {
@@ -242,86 +242,68 @@ async function auditScales(memory: any): Promise<AuditFinding[]> {
 }
 
 /**
- * Audits Silo 7: The Scythe (Bloat & Debt)
+ * Audits Silo 7: The Metabolism (Bloat & Debt)
+ * Offloaded to AIReady (AST) MCP suite.
  */
-async function auditScythe(memory: any): Promise<AuditFinding[]> {
+async function auditMetabolism(_memory: any): Promise<AuditFinding[]> {
   const findings: AuditFinding[] = [];
 
   try {
-    // 1. Core Scythe Scan
-    await ScytheLogic.updateToolHistory(memory);
-    const freshProposal = await ScytheLogic.generatePruneProposal();
-    if (!freshProposal) return findings;
+    // 1. Discover Metabolism-related tools from the AIReady (AST) MCP suite
+    const astTools = await MCPBridge.getToolsFromServer('ast', '');
+    const auditTool = astTools.find(
+      (t) =>
+        t.name === 'metabolism_audit' ||
+        t.name === 'codebase_audit' ||
+        t.name.includes('metabolism')
+    );
 
-    await ScytheLogic.recordPruneProposal(freshProposal, memory);
-    if (freshProposal.swarm.unusedTools.length > 0) {
-      findings.push({
-        silo: 'Scythe',
-        expected: 'Lean swarm with high tool utilization',
-        actual: `[Swarm Debt] Found ${freshProposal.swarm.unusedTools.length} unused tools.`,
-        severity: 'P2',
-        recommendation: 'Review the prune proposal for swarm optimization.',
-      });
+    if (!auditTool) {
+      logger.warn(
+        '[Audit] Metabolism: No specialized audit tool found in AIReady (AST) MCP suite.'
+      );
+      return findings;
     }
 
-    // 2. Growth Analysis
-    const growth = await ScytheLogic.analyzeToolGrowth(memory);
-    if (growth && growth.growthRate > 0.2) {
-      findings.push({
-        silo: 'Scythe',
-        expected: 'Tool registry growth < 20%',
-        actual: `Tool count grew ${(growth.growthRate * 100).toFixed(1)}%`,
-        severity: 'P2',
-        recommendation: 'Review newly added tools for overlap.',
-      });
-    }
+    // 2. Execute the audit via MCP
+    const result = await auditTool.execute({
+      path: './core',
+      includeTelemetry: true,
+      depth: 'full',
+    });
 
-    // 3. Semantic Overlap
-    const overlaps = await ScytheLogic.detectSemanticOverlap();
-    if (overlaps.length > 0) {
-      findings.push({
-        silo: 'Scythe',
-        expected: 'No structural semantic overlap in tools',
-        actual: `Found ${overlaps.length} potentially overlapping tool pairs.`,
-        severity: 'P3',
-        recommendation: 'Consolidate overlapping tool patterns.',
-      });
-    }
+    // 3. Parse and Map Findings
+    // The MCP suite follows the AIReady report format, which we map to AuditFindings
+    if (result && typeof result === 'object') {
+      const data = ('metadata' in result ? (result.metadata as any) : result) as any;
 
-    // 4. File Bloat & Debt
-    if (freshProposal.codebase.emptyDirs.length > 0) {
-      findings.push({
-        silo: 'Scythe',
-        expected: 'Clean project structure',
-        actual: `[Codebase Debt] Found ${freshProposal.codebase.emptyDirs.length} empty directories in /core.`,
-        severity: 'P3',
-        recommendation: 'Clean up empty directories.',
-      });
-    }
+      // Map 'bloat' or 'debt' findings to our silo
+      const mcpFindings = data.findings || data.results || [];
+      if (Array.isArray(mcpFindings)) {
+        for (const f of mcpFindings) {
+          findings.push({
+            silo: 'Metabolism',
+            expected: f.expected || 'Lean, optimized system state',
+            actual: f.actual || f.message || 'Bloat/Debt detected by AIReady',
+            severity: f.severity || 'P2',
+            recommendation: f.recommendation || f.fix || 'Review AIReady report for details.',
+          });
+        }
+      }
 
-    if (freshProposal.codebase.debtMarkers > 20) {
-      findings.push({
-        silo: 'Scythe',
-        expected: 'Technical debt markers < 20',
-        actual: `[Codebase Debt] Found ${freshProposal.codebase.debtMarkers} TODO/FIXME markers in /core.`,
-        severity: 'P3',
-        recommendation: 'Address accumulated technical debt.',
-      });
-    }
-
-    // 5. Dark Code
-    const darkTools = await ScytheLogic.identifyDarkTools();
-    if (darkTools.length > 5) {
-      findings.push({
-        silo: 'Scythe',
-        expected: 'Telemetry-backed tool utilization',
-        actual: `[Swarm Debt] Found ${darkTools.length} never-executed "dark" tools.`,
-        severity: 'P2',
-        recommendation: 'Evaluate and prune unused tool implementations.',
-      });
+      // Handle direct debt metrics if metabolism_audit returns them
+      if (data.debtMarkers > 20) {
+        findings.push({
+          silo: 'Metabolism',
+          expected: 'Technical debt markers < 20',
+          actual: `[Codebase Debt] Found ${data.debtMarkers} TODO/FIXME markers.`,
+          severity: 'P3',
+          recommendation: 'Address accumulated technical debt.',
+        });
+      }
     }
   } catch (e) {
-    logger.warn('[Audit] Scythe audit wrapper failure:', e);
+    logger.error('[Audit] Metabolism: MCP-based audit failed:', e);
   }
 
   return findings;

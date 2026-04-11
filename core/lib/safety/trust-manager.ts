@@ -161,7 +161,7 @@ export class TrustManager {
 
   /**
    * Periodically decays trust scores to ensure autonomy is continuously earned.
-   * This should be called by a scheduled process (e.g. Scythe).
+   * This should be called by a scheduled process (e.g. Metabolism).
    */
   static async decayTrustScores(): Promise<void> {
     const configs =

@@ -100,7 +100,7 @@ export const AUDIT_SILOS: AuditSilo[] = [
     ],
   },
   {
-    name: 'Scythe',
+    name: 'Metabolism',
     perspective:
       'How can we refactor for a leaner, more consistent, and efficient codebase? What is strictly necessary?',
     angle:

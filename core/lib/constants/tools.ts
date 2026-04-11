@@ -72,7 +72,7 @@ export const TOOLS = {
   navigateTo: 'navigateTo',
   uiAction: 'uiAction',
   proposeAutonomyUpdate: 'proposeAutonomyUpdate',
-  scanScythe: 'scanScythe',
+  scanMetabolism: 'scanMetabolism',
 } as const;
 
 /**

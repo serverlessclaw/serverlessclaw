@@ -1,8 +1,8 @@
 import { ITool, ToolResult } from '../../lib/types/index';
 import { proposeAutonomyUpdate as proposeLogic } from '../../lib/agent/tools/governance';
-import { ScytheLogic } from '../../agents/cognition-reflector/lib/scythe';
-import { getAgentContext } from '../../lib/utils/agent-helpers';
+import { MCPBridge } from '../../lib/mcp';
 import { systemSchema as schema } from './schema';
+import { logger } from '../../lib/logger';
 
 /**
  * Tool for SuperClaw to propose autonomy level updates (AUTO vs HITL).
@@ -22,43 +22,71 @@ export const proposeAutonomyUpdate: ITool = {
 
 /**
  * Tool for Cognition Reflector to scan for system bloat and technical debt.
+ * Offloaded to AIReady (AST) MCP suite.
  */
-export const scanScythe: ITool = {
-  ...schema.scanScythe,
+export const scanMetabolism: ITool = {
+  ...schema.scanMetabolism,
   execute: async (_args: Record<string, unknown>): Promise<ToolResult> => {
-    const { memory } = await getAgentContext();
+    try {
+      // 1. Discover Metabolism-related tools from the AIReady (AST) MCP suite
+      const astTools = await MCPBridge.getToolsFromServer('ast', '');
+      const auditTool = astTools.find(
+        (t) =>
+          t.name === 'metabolism_audit' ||
+          t.name === 'scythe_audit' ||
+          t.name === 'codebase_audit' ||
+          t.name.includes('metabolism')
+      );
 
-    // 1. Update history
-    await ScytheLogic.updateToolHistory(memory as any);
+      if (!auditTool) {
+        return {
+          text: 'Metabolism scan failed: No specialized audit tool found in AIReady (AST) MCP suite.',
+          images: [],
+          metadata: { status: 'error', reason: 'tool_not_found' },
+          ui_blocks: [],
+        };
+      }
 
-    // 2. Generate proposal
-    const proposal = await ScytheLogic.generatePruneProposal();
+      // 2. Execute the audit via MCP
+      const result = await auditTool.execute({
+        path: './core',
+        includeTelemetry: true,
+        depth: 'full',
+      });
 
-    if (!proposal) {
+      // 3. Map Results
+      if (result && typeof result === 'object') {
+        const data = ('metadata' in result ? (result.metadata as any) : result) as any;
+        const swarmIssues = (data.findings || []).filter((f: any) =>
+          f.actual?.includes('Swarm')
+        ).length;
+        const codeIssues = data.debtMarkers || 0;
+
+        return {
+          text: `Metabolism scan identified ${swarmIssues} swarm-level issues and ${codeIssues} codebase-level debt markers. A prune proposal has been recorded in the AIReady suite.`,
+          images: [],
+          metadata: {
+            findings: data.findings || [],
+            debtMarkers: data.debtMarkers,
+          },
+          ui_blocks: [],
+        };
+      }
+
       return {
-        text: 'Scythe scan complete. No significant bloat detected at this time.',
+        text: 'Metabolism scan complete. No significant bloat detected by AIReady suite.',
         images: [],
         metadata: { status: 'lean' },
         ui_blocks: [],
       };
+    } catch (e) {
+      logger.error('[Tool] scanMetabolism failed:', e);
+      return {
+        text: `Metabolism scan failed: ${(e as Error).message}`,
+        images: [],
+        metadata: { status: 'error' },
+        ui_blocks: [],
+      };
     }
-
-    // 3. Record proposal
-    await ScytheLogic.recordPruneProposal(proposal, memory);
-
-    const swarmIssues = proposal.swarm.unusedTools.length + proposal.swarm.zombieAgents.length;
-    const codeIssues =
-      proposal.codebase.emptyDirs.length + (proposal.codebase.debtMarkers > 0 ? 1 : 0);
-
-    return {
-      text: `Scythe scan identified ${swarmIssues} swarm-level issues and ${codeIssues} codebase-level issues. A prune proposal has been recorded for review.`,
-      images: [],
-      metadata: {
-        swarm: proposal.swarm,
-        codebase: proposal.codebase,
-        thresholdDays: proposal.thresholdDays,
-      },
-      ui_blocks: [],
-    };
   },
 };

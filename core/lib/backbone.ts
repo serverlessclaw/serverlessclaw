@@ -197,7 +197,7 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
       TOOLS.prioritizeMemory,
       TOOLS.deleteTraces,
       TOOLS.inspectTrace,
-      TOOLS.scanScythe,
+      TOOLS.scanMetabolism,
     ],
     connectionProfile: [
       ConnectionProfile.BUS,

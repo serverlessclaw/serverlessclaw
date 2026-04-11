@@ -304,7 +304,7 @@ export async function buildProactiveReviewPrompt(
     If low-utilization memory is no longer relevant, recommend pruning it via 'pruneMemory'.
     If tools are failing or overlapping, provide 'toolOptimizations' recommendations in your JSON output.
     
-    [SCYTHE_SPECIAL_INSTRUCTIONS]:
+    [METABOLISM_SPECIAL_INSTRUCTIONS]:
     - Look for 'Failing Tools' in telemetry; if a tool is consistently failing, it may be dead weight.
     - Review 'Prune Proposals' in the improvement summary; these represent tools that haven't been used in a long time.
     - Aim for "Capability Density": maximize functionality while minimizing tool surface area.

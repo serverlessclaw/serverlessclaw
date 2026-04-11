@@ -502,7 +502,7 @@ export const systemSchema: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
   },
-  scanScythe: {
+  scanMetabolism: {
     type: ToolType.FUNCTION,
     argSchema: z.any(),
     connectionProfile: ['config', 'bus'],
@@ -510,9 +510,9 @@ export const systemSchema: Record<string, IToolDefinition> = {
     auth: { type: 'api_key', resource_id: '' },
     requiresApproval: false,
     requiredPermissions: [],
-    name: 'scanScythe',
+    name: 'scanMetabolism',
     description:
-      'Performs a deep-scan for system bloat and technical debt (Silo 7), generating prune proposals for unused tools and redundant files.',
+      'Performs a deep-scan for metabolic health and regenerative repair (Silo 7 (Metabolism)), generating prune proposals for unused tools and redundant files.',
     parameters: {
       type: 'object',
       properties: {

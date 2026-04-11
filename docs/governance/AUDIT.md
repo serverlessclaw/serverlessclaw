@@ -58,15 +58,15 @@ This document establishes a framework for auditing **Serverless Claw** through f
 
 Use this table to map high-level silos to the primary code areas that should be investigated.
 
-| Silo  | Name       | Primary Code Focus                                                                                                                                                                                                            |
-| :---- | :--------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **1** | The Spine  | [routing/AgentRouter.ts](../../core/lib/routing/AgentRouter.ts), [backbone.ts](../../core/lib/backbone.ts)                                                                                                                    |
-| **2** | The Hand   | [mcp.ts](../../core/lib/mcp.ts), [executor.ts](../../core/lib/agent/executor.ts)                                                                                                                                              |
-| **3** | The Shield | [safety-engine.ts](../../core/lib/safety/safety-engine.ts), [circuit-breaker.ts](../../core/lib/safety/circuit-breaker.ts)                                                                                                    |
-| **4** | The Brain  | `core/lib/memory/`, `core/lib/rag/`                                                                                                                                                                                           |
-| **5** | The Eye    | `core/lib/metrics/`, `core/lib/tracer/` (Trace Intelligence)                                                                                                                                                                  |
-| **6** | The Scales | [judge.ts](../../core/lib/verify/judge.ts), [trust-manager.ts](../../core/lib/safety/trust-manager.ts)                                                                                                                        |
-| **7** | The Scythe | [pruning.ts](../../core/lib/lifecycle/pruning.ts), [AgentRegistry.ts](../../core/lib/registry/AgentRegistry.ts) (firstRegistered), [audit-protocol.ts](../../core/agents/cognition-reflector/audit-protocol.ts) (auditScythe) |
+| Silo  | Name           | Primary Code Focus                                                                                                                                                             |
+| :---- | :------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1** | The Spine      | [routing/AgentRouter.ts](../../core/lib/routing/AgentRouter.ts), [backbone.ts](../../core/lib/backbone.ts)                                                                     |
+| **2** | The Hand       | [mcp.ts](../../core/lib/mcp.ts), [executor.ts](../../core/lib/agent/executor.ts)                                                                                               |
+| **3** | The Shield     | [safety-engine.ts](../../core/lib/safety/safety-engine.ts), [circuit-breaker.ts](../../core/lib/safety/circuit-breaker.ts)                                                     |
+| **4** | The Brain      | `core/lib/memory/`, `core/lib/rag/`                                                                                                                                            |
+| **5** | The Eye        | `core/lib/metrics/`, `core/lib/tracer/` (Trace Intelligence)                                                                                                                   |
+| **6** | The Scales     | [judge.ts](../../core/lib/verify/judge.ts), [trust-manager.ts](../../core/lib/safety/trust-manager.ts)                                                                         |
+| **7** | The Metabolism | [audit-protocol.ts](../../core/agents/cognition-reflector/audit-protocol.ts) (auditMetabolism), [AgentRegistry.ts](../../core/lib/registry/AgentRegistry.ts) (firstRegistered) |
 
 ---
 
@@ -117,12 +117,12 @@ Each silo represents a core functional domain. Reviews within a silo should adop
 - **Angle**: Audit the integrity of the feedback loop from observation to trust calibration. Review the **LLM-as-a-Judge** semantic evaluation layer to ensure it is impartial and that `TrustScore` calculations accurately reflect agent performance. Verify that failures (caught by QA or SLO breaches) correctly penalize the trust score.
 - **Key Concepts**: LLM-as-a-Judge impartiality, TrustScore penalties, Success rewards, Trust decay rates.
 
-### 7. The Scythe (Bloat & Debt)
+### 7. The Metabolism (Bloat & Debt)
 
-**Perspective**: _How can we refactor for a leaner, more consistent, and efficient codebase? What is strictly necessary?_
+**Perspective**: _Is the system maintaining a healthy state by repairing debt and recycling waste?_
 
-- **Angle**: Audit the workspace for generated sprawl and over-engineered implementations. Act as a critic on necessity to prevent overgrowth. Identify redundant tools, overlapping logic, "dark" code that is never executed, and overly thick abstraction layers. Prioritize consolidating patterns and ensuring that code additions pull their weight against the cognitive load they introduce to agents and maintainers.
-- **Key Concepts**: Necessity critique, bloat prevention, pattern consolidation, cyclomatic complexity reduction, and semantic compression.
+- **Angle**: Audit the workspace for "metabolic waste" (dead code, orphaned files) and architectural fractures. Act as a healer on systemic efficiency. Identify overlapping patterns and "dark" logic that should be recycled or repaired. Prioritize consolidating structures to ensure high metabolic efficiency.
+- **Key Concepts**: Regenerative repair, waste management, pattern consolidation, symbolic renewal, metabolic efficiency, and semantic compression.
 
 ---
 
