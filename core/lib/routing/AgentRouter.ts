@@ -95,14 +95,14 @@ export class AgentRouter {
    * @param options - Task characteristics for routing.
    * @returns The selected provider and model combination.
    */
-  static selectModel(
+  static async selectModel(
     config: IAgentConfig,
     options: {
       profile?: ReasoningProfile;
       taskComplexity?: number; // 1-10
       budget?: 'low' | 'normal' | 'high';
     } = {}
-  ): { provider: string; model: string; tier: ModelTier } {
+  ): Promise<{ provider: string; model: string; tier: ModelTier }> {
     const profile = options.profile ?? config.reasoningProfile ?? ReasoningProfile.STANDARD;
 
     // If the agent config has explicit overrides, respect them
@@ -132,7 +132,20 @@ export class AgentRouter {
     }
 
     const candidates = TIER_MODELS[tier] ?? TIER_MODELS[ModelTier.BALANCED];
-    const selected = candidates[0]; // Prefer the first candidate
+
+    if (candidates.length === 1) {
+      logger.info(
+        `[AgentRouter] Selected ${candidates[0].provider}/${candidates[0].model} (tier: ${tier}) for agent ${config.id}`
+      );
+
+      return {
+        provider: candidates[0].provider,
+        model: candidates[0].model,
+        tier,
+      };
+    }
+
+    const selected = await this.weightedModelSelection(candidates);
 
     logger.info(
       `[AgentRouter] Selected ${selected.provider}/${selected.model} (tier: ${tier}) for agent ${config.id}`
@@ -143,6 +156,43 @@ export class AgentRouter {
       model: selected.model,
       tier,
     };
+  }
+
+  /**
+   * Performs weighted/random selection between candidates in the same tier.
+   * Uses performance history to weight selection, with fallback to random.
+   */
+  private static async weightedModelSelection(
+    candidates: { provider: string; model: string }[]
+  ): Promise<{ provider: string; model: string }> {
+    try {
+      const weights: number[] = [];
+
+      for (const candidate of candidates) {
+        const rollups = await TokenTracker.getRollupRange(
+          `${candidate.provider}_${candidate.model}`,
+          7
+        );
+        const totalInvocations = rollups.reduce((s, r) => s + r.invocationCount, 0);
+        const totalSuccesses = rollups.reduce((s, r) => s + r.successCount, 0);
+        const successRate = totalInvocations > 0 ? totalSuccesses / totalInvocations : 0.5;
+        weights.push(successRate + 0.1);
+      }
+
+      const totalWeight = weights.reduce((s, w) => s + w, 0);
+      let random = Math.random() * totalWeight;
+
+      for (let i = 0; i < candidates.length; i++) {
+        random -= weights[i];
+        if (random <= 0) {
+          return candidates[i];
+        }
+      }
+
+      return candidates[candidates.length - 1];
+    } catch {
+      return candidates[Math.floor(Math.random() * candidates.length)];
+    }
   }
 
   /**

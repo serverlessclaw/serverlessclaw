@@ -11,7 +11,7 @@ vi.mock('../registry/config', () => ({
 }));
 
 vi.mock('../logger', () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
 vi.mock('../../tools/index', () => ({
@@ -52,8 +52,10 @@ describe('ToolPruner', () => {
 
       const result = await ToolPruner.generatePruneProposal();
       expect(result).toBeDefined();
+      // tool2 is stale (lastUsed 35 days ago, firstRegistered falls back to lastUsed - outside grace period)
       expect(result?.unusedTools).toContain('tool2');
-      expect(result?.unusedTools).toContain('tool3');
+      // tool3 has NO usage record at all → skipped (not flagged) to avoid pruning newly-added tools
+      expect(result?.unusedTools).not.toContain('tool3');
       expect(result?.unusedTools).not.toContain('tool1');
     });
 

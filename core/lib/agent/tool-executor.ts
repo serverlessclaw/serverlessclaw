@@ -209,6 +209,24 @@ export class ToolExecutor {
     // If evolutionMode is AUTO, we treat it as approved unless it's explicitly blocked (Class D check happens in fs-security)
     const effectiveApproved = isApproved || evolutionMode === EvolutionMode.AUTO;
 
+    // CRITICAL SECURITY: Clear any self-approval attempt by the agent immediately if not in AUTO mode and not already approved.
+    // Agents must not be able to bypass security gates by injecting this parameter in HITL mode.
+    // We also block self-approval for SENSITIVE tools even in AUTO mode if not explicitly approved by human.
+    if (args.manuallyApproved === true && (!effectiveApproved || isSensitive)) {
+      logger.warn(
+        `[SECURITY] Agent '${execContext.agentId}' attempted to self-approve tool '${tool.name}'. (Sensitive: ${isSensitive})`
+      );
+      messages.push({
+        role: MessageRole.TOOL,
+        tool_call_id: toolCall.id,
+        name: toolCall.function.name,
+        content: `FAILED: PERMISSION_DENIED - Self-approval is not allowed for sensitive tools or in current mode.`,
+        traceId: execContext.traceId,
+        messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      });
+      return { toolCallCount: 0 };
+    }
+
     if (requiresApproval && !effectiveApproved) {
       console.log(
         'PAUSING. requiresApproval:',

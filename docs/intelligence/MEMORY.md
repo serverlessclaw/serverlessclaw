@@ -56,14 +56,15 @@ Serverless Claw uses a tiered, evolutionary memory system designed to provide co
 |                          MEMORY TABLE                               |
 +---------------------------------------------------------------------+
 |                                                                     |
-|  [ TIER 1: CORE INTELLIGENCE ] --------> Retain: 90-730 Days        |
-|  - Key: DISTILLED# / LESSON# (90d) / FACT# (365d) / GAP# (730d) /  |
-|    GAP_LOCK#: (30m) / REPUTATION# (365d) / FAILED_PLAN#:           |
+|  [ TIER 1: CORE INTELLIGENCE ] --------> Retain: 60-365 Days         |
+|  - Key: DISTILLED# (365d) / LESSON# (90d) / FACT# (365d) / GAP# (60d)/ |
+|    GAP_LOCK#: (30m) / REPUTATION# (365d) / FAILED_PLAN#:              |
 |  - Purpose: Permanent identity, tactical lessons, strategic roadmaps,|
 |    concurrency control for evolution, and anti-pattern learning.     |
+|  - Note: GAPS_RETENTION_DAYS configurable via configDefaults           |
 |                                                                     |
 |  [ TIER 2: HUMAN CONVERSATION ] -------> Retain: 30 Days            |
-|  - Key: CONV# / SESSIONS# (90d) / SUMMARY# (30d)                    |
+|  - Key: CONV# (30d) / SESSIONS# (90d) / SUMMARY# (30d)              |
 |  - Purpose: Recent user chat history and session metadata.           |
 |                                                                     |
 |  [ TIER 3: AGENT OPERATIONAL TRACES ] -> Retain: 30 Days            |

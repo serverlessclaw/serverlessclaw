@@ -9,3 +9,4 @@ export { handleParallelDispatch } from './parallel-handler';
 export { handleFacilitatorTask } from './facilitator-handler';
 export { handleConsensus } from './consensus-handler';
 export { handleStrategicTieBreak } from './strategic-tie-break-handler';
+export { handleSystemAuditTrigger } from './audit-handler';

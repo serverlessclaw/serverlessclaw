@@ -26,7 +26,7 @@ export async function resolveAgentConfig(
 
     if (!globalProvider && !globalModel && agentConfig) {
       const { AgentRouter } = await import('../routing/AgentRouter');
-      const routed = AgentRouter.selectModel(agentConfig, { profile: activeProfile });
+      const routed = await AgentRouter.selectModel(agentConfig, { profile: activeProfile });
       activeProvider = routed.provider;
       activeModel = routed.model;
     }

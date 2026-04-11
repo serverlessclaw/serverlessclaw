@@ -28,6 +28,7 @@ export class AgentRegistry {
   public static getRawConfig = ConfigManager.getRawConfig;
   public static saveRawConfig = ConfigManager.saveRawConfig;
   public static getAgentOverrideConfig = ConfigManager.getAgentOverrideConfig;
+  public static incrementConfig = ConfigManager.incrementConfig;
 
   /**
    * Retrieves the retention period in days for a specific item type.
@@ -292,19 +293,23 @@ export class AgentRegistry {
             TableName: ConfigTable.name,
             Key: { key },
             UpdateExpression:
-              'SET #usage.#tool.#count = if_not_exists(#usage.#tool.#count, :zero) + :one, #usage.#tool.#last = :now',
+              'SET #usage.#tool.#count = if_not_exists(#usage.#tool.#count, :zero) + :one, #usage.#tool.#last = :now, #usage.#tool.#first = if_not_exists(#usage.#tool.#first, :now)',
             ExpressionAttributeNames: {
               '#usage': 'value',
               '#tool': toolName,
               '#count': 'count',
               '#last': 'lastUsed',
+              '#first': 'firstRegistered',
             },
             ExpressionAttributeValues: { ':one': 1, ':zero': 0, ':now': Date.now() },
           })
         );
       } catch (e: unknown) {
         if (e instanceof Error && e.name === 'ValidationException') {
-          await this.saveRawConfig(key, { [toolName]: { count: 1, lastUsed: Date.now() } });
+          const now = Date.now();
+          await this.saveRawConfig(key, {
+            [toolName]: { count: 1, lastUsed: now, firstRegistered: now },
+          });
         }
       }
     };

@@ -112,8 +112,9 @@ export class MCPBridge {
       // Only acquire lock if not recursive
       if (!options?.isRecursive && lockManager) {
         // Acquire lock with retries
+        // P1 Fix: Increase TTL to 300s to handle heavy cold starts (e.g. npx downloads)
         for (let i = 0; i < 3; i++) {
-          acquired = await lockManager.acquire(lockId, { ttlSeconds: 60, ownerId });
+          acquired = await lockManager.acquire(lockId, { ttlSeconds: 300, ownerId });
           if (acquired) break;
 
           logger.info(`[MCP] Discovery lock for ${serverName} held by another node, waiting...`);
@@ -187,14 +188,23 @@ export class MCPBridge {
 
     const allTools: ITool[] = [];
     const defaultServers: Record<string, MCPServerConfig> = {
-      ast: { type: 'local', command: 'npx -y @aiready/ast-mcp-server@0.1.6' },
-      filesystem: { type: 'local', command: 'npx -y @modelcontextprotocol/server-filesystem .' },
-      git: { type: 'local', command: 'npx -y @cyanheads/git-mcp-server' },
-      'google-search': { type: 'local', command: 'npx -y @mcp-server/google-search-mcp' },
-      puppeteer: { type: 'local', command: 'npx -y @kirkdeam/puppeteer-mcp-server' },
-      fetch: { type: 'local', command: 'npx -y mcp-fetch-server' },
-      aws: { type: 'local', command: 'npx -y mcp-aws-devops-server' },
-      'aws-s3': { type: 'local', command: 'npx -y @geunoh/s3-mcp-server' },
+      ast: { type: 'local', command: 'npx --no-install -y @aiready/ast-mcp-server@0.1.6' },
+      filesystem: {
+        type: 'local',
+        command: 'npx --no-install -y @modelcontextprotocol/server-filesystem@0.6.2',
+      },
+      git: { type: 'local', command: 'npx --no-install -y @cyanheads/git-mcp-server@0.1.1' },
+      'google-search': {
+        type: 'local',
+        command: 'npx --no-install -y @mcp-server/google-search-mcp@0.1.0',
+      },
+      puppeteer: {
+        type: 'local',
+        command: 'npx --no-install -y @kirkdeam/puppeteer-mcp-server@0.2.1',
+      },
+      fetch: { type: 'local', command: 'npx --no-install -y mcp-fetch-server@0.1.0' },
+      aws: { type: 'local', command: 'npx --no-install -y mcp-aws-devops-server@0.1.0' },
+      'aws-s3': { type: 'local', command: 'npx --no-install -y @geunoh/s3-mcp-server@0.1.0' },
     };
 
     const finalConfig = serversConfig ?? {};

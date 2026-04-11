@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { ITool, ToolType, JsonSchema } from '../types/index';
+import { ITool, ToolType, JsonSchema, ToolResult, createToolResult } from '../types/index';
 import { logger } from '../logger';
 import { MCPClientManager } from './client-manager';
 import { jsonSchemaToZod } from '../utils/zod-utils';
@@ -49,12 +49,21 @@ export class MCPToolMapper {
     if (parameters.type === 'object' && parameters.properties) {
       for (const [key, prop] of Object.entries(parameters.properties)) {
         const desc = (prop.description ?? '').toLowerCase();
+        const lowKey = key.toLowerCase();
         if (
           prop.type === 'string' &&
           (desc.includes('path') ||
             desc.includes('file') ||
             desc.includes('directory') ||
-            desc.includes('dir'))
+            desc.includes('dir') ||
+            desc.includes('folder') ||
+            lowKey.includes('path') ||
+            lowKey.includes('file') ||
+            lowKey.includes('dir') ||
+            lowKey === 'src' ||
+            lowKey === 'dest' ||
+            lowKey === 'source' ||
+            lowKey === 'destination')
         ) {
           pathKeys.push(key);
         }
@@ -86,7 +95,7 @@ export class MCPToolMapper {
                 name: mcpTool.name,
                 arguments: toolArgs,
               });
-              return JSON.stringify(result.content);
+              return this.parseMcpToolResult(result);
             },
             {
               onFailure: (execError: Error) => {
@@ -108,5 +117,42 @@ export class MCPToolMapper {
         }
       },
     };
+  }
+
+  /**
+   * Parses MCP callTool result into a structured ToolResult.
+   * Handles TextContent, ImageContent, and other content types.
+   */
+  private static parseMcpToolResult(result: unknown): ToolResult {
+    const images: string[] = [];
+    let text = '';
+    const metadata: Record<string, unknown> = {};
+
+    const content = (result as { content?: unknown[] })?.content;
+
+    if (content && Array.isArray(content)) {
+      for (const item of content) {
+        const itemAny = item as Record<string, unknown>;
+        const itemType = itemAny.type as string | undefined;
+
+        if (itemType === 'text' || itemType === 'resource' || !itemType) {
+          const itemText = itemAny.text as string | undefined;
+          if (itemText) text += itemText;
+        } else if (itemType === 'image') {
+          const imageData = itemAny.data as string | undefined;
+          if (imageData) {
+            images.push(imageData);
+            metadata.imageMimeType = itemAny.mimeType;
+          }
+        } else {
+          metadata[itemType] = item;
+        }
+      }
+    }
+
+    return createToolResult(text || 'MCP tool executed successfully', {
+      images: images.length > 0 ? images : undefined,
+      metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+    });
   }
 }

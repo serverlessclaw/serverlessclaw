@@ -523,10 +523,11 @@ describe('ToolExecutor', () => {
         const tool = createTool({ name: 'protected-tool', execute: executeFn });
         const { EvolutionMode } = await import('../types/agent');
 
-        await ToolExecutor.executeToolCalls(
+        const messages: any[] = [];
+        const result = await ToolExecutor.executeToolCalls(
           [createToolCall({ name: 'protected-tool', args: { manuallyApproved: true } })],
           [tool],
-          [],
+          messages,
           [],
           createExecContext({
             agentConfig: { evolutionMode: EvolutionMode.HITL },
@@ -534,8 +535,9 @@ describe('ToolExecutor', () => {
           tracer
         );
 
-        const calledArgs = executeFn.mock.calls[0][0];
-        expect(calledArgs.manuallyApproved).toBe(false);
+        expect(result.toolCallCount).toBe(0);
+        expect(messages[0].content).toContain('PERMISSION_DENIED');
+        expect(executeFn).not.toHaveBeenCalled();
       });
 
       it('respects existing manuallyApproved: true if tool is approved (HITL)', async () => {
@@ -547,7 +549,7 @@ describe('ToolExecutor', () => {
           name: 'protected-tool',
           args: { manuallyApproved: true },
         });
-        await ToolExecutor.executeToolCalls(
+        const result = await ToolExecutor.executeToolCalls(
           [toolCall],
           [tool],
           [],
@@ -559,8 +561,47 @@ describe('ToolExecutor', () => {
           [toolCall.id] // Explicitly approved
         );
 
+        expect(result.toolCallCount).toBe(1);
+        expect(executeFn).toHaveBeenCalled();
         const calledArgs = executeFn.mock.calls[0][0];
         expect(calledArgs.manuallyApproved).toBe(true);
+      });
+
+      it('BLOCKS agent from self-approving protected file write in AUTO mode', async () => {
+        const executeFn = vi.fn().mockResolvedValue('success');
+        const tool = createTool({
+          name: 'write_file',
+          execute: executeFn,
+          requiresApproval: true,
+          pathKeys: ['path'],
+        });
+        const { EvolutionMode } = await import('../types/agent');
+
+        const messages: any[] = [];
+        const toolCall = createToolCall({
+          name: 'write_file',
+          args: {
+            path: 'sst.config.ts',
+            content: 'malicious change',
+            manuallyApproved: true, // Agent-injected
+          },
+        });
+
+        const result = await ToolExecutor.executeToolCalls(
+          [toolCall],
+          [tool],
+          messages,
+          [],
+          createExecContext({
+            userId: 'SYSTEM', // Bypass RBAC
+            agentConfig: { evolutionMode: EvolutionMode.AUTO },
+          }),
+          tracer
+        );
+
+        expect(result.toolCallCount).toBe(0);
+        expect(messages[0].content).toContain('PERMISSION_DENIED');
+        expect(executeFn).not.toHaveBeenCalled();
       });
     });
   });

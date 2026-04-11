@@ -152,7 +152,7 @@ describe('MCPToolMapper', () => {
         name: 'echo',
         arguments: { message: 'hello' },
       });
-      expect(result).toBe(JSON.stringify([{ type: 'text', text: 'result' }]));
+      expect(result).toMatchObject({ text: 'result' });
     });
 
     it('maps filesystem tools with pathKeys', async () => {

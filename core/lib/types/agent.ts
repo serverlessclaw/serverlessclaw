@@ -242,6 +242,8 @@ export enum AgentType {
   MERGER = 'merger',
   /** Specialized agent for technical research and pattern discovery. */
   RESEARCHER = 'researcher',
+  /** Dedicated impartial judge for semantic evaluation and trust calibration. */
+  JUDGE = 'judge',
 }
 
 /**

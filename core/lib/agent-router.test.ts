@@ -4,51 +4,51 @@ import { ReasoningProfile } from './types/llm';
 
 describe('AgentRouter', () => {
   describe('selectModel', () => {
-    it('respects explicit agent config overrides', () => {
+    it('respects explicit agent config overrides', async () => {
       const config = {
         id: 'test',
         provider: 'custom-provider',
         model: 'custom-model',
       } as any;
-      const result = AgentRouter.selectModel(config);
+      const result = await AgentRouter.selectModel(config);
       expect(result.provider).toBe('custom-provider');
       expect(result.model).toBe('custom-model');
       expect(result.tier).toBe(ModelTier.BALANCED);
     });
 
-    it('selects economy tier for fast profile', () => {
+    it('selects economy tier for fast profile', async () => {
       const config = { id: 'test' } as any;
-      const result = AgentRouter.selectModel(config, { profile: ReasoningProfile.FAST });
+      const result = await AgentRouter.selectModel(config, { profile: ReasoningProfile.FAST });
       expect(result.tier).toBe(ModelTier.ECONOMY);
     });
 
-    it('selects premium tier for deep profile', () => {
+    it('selects premium tier for deep profile', async () => {
       const config = { id: 'test' } as any;
-      const result = AgentRouter.selectModel(config, { profile: ReasoningProfile.DEEP });
+      const result = await AgentRouter.selectModel(config, { profile: ReasoningProfile.DEEP });
       expect(result.tier).toBe(ModelTier.PREMIUM);
     });
 
-    it('overrides tier based on budget (low)', () => {
+    it('overrides tier based on budget (low)', async () => {
       const config = { id: 'test' } as any;
-      const result = AgentRouter.selectModel(config, { budget: 'low' });
+      const result = await AgentRouter.selectModel(config, { budget: 'low' });
       expect(result.tier).toBe(ModelTier.ECONOMY);
     });
 
-    it('overrides tier based on budget (high)', () => {
+    it('overrides tier based on budget (high)', async () => {
       const config = { id: 'test' } as any;
-      const result = AgentRouter.selectModel(config, { budget: 'high' });
+      const result = await AgentRouter.selectModel(config, { budget: 'high' });
       expect(result.tier).toBe(ModelTier.PREMIUM);
     });
 
-    it('overrides tier based on task complexity (low)', () => {
+    it('overrides tier based on task complexity (low)', async () => {
       const config = { id: 'test' } as any;
-      const result = AgentRouter.selectModel(config, { taskComplexity: 2 });
+      const result = await AgentRouter.selectModel(config, { taskComplexity: 2 });
       expect(result.tier).toBe(ModelTier.ECONOMY);
     });
 
-    it('overrides tier based on task complexity (high)', () => {
+    it('overrides tier based on task complexity (high)', async () => {
       const config = { id: 'test' } as any;
-      const result = AgentRouter.selectModel(config, { taskComplexity: 9 });
+      const result = await AgentRouter.selectModel(config, { taskComplexity: 9 });
       expect(result.tier).toBe(ModelTier.PREMIUM);
     });
   });

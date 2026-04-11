@@ -59,35 +59,36 @@ Serverless Claw implements a **dynamic trust model** where autonomy is not a sta
 ### The Agent-User Trust Loop
 
 ```text
-       [ Cognitive Health Monitor ]
+       [ QA Auditor / SLO Tracker ]
                  |
-      (1) Continuous Audit <-----------+
+      (1) Continuous Verification <----+
                  |                     |
-      (2) Calculate Trust Score        |
-          (0-100)                      |
+      (2) Update Trust Score           |
+          (Punitive delta via          |
+           TrustManager)               |
                  |                     |
-      (3) Advisory Promotion candidacy |
-          (if Score >= 90)             |
+      (3) Threshold Check (>= 95)      |
                  |                     |
       +----------v----------+          |
-      |   Security Hub      |          | (5) Recalibrate
+      |   Governance Hub    |          | (5) Decay / Earn Back
       | (Dashboard UI)      |----------+
       +----------+----------+
                  |
-      (4) User Approval (HITL -> AUTO)
+      (4) Mode Transition (HITL <-> AUTO)
                  |
       +----------v----------+
-      |  Enhanced Autonomy  |
+      |  Dynamic Autonomy   |
       | (Class B Bypass)    |
       +---------------------+
 ```
 
 ### Trust-Based Autonomy Scaling
 
-1. **Cognitive Health Metrics**: The system tracks reasoning quality, memory consistency, and task completion rates to generate a rolling **Trust Score** for each agent.
-2. **Advisory Promotion**: When an agent maintains a `TrustScore >= 90`, the `SafetyEngine` identifies it as an **Advisory Candidate**. This is surfaced in logs and on the Co-Management Dashboard.
-3. **Collaborative Negotiation**: SuperClaw uses the `proposeAutonomyUpdate` tool to request mode shifts (e.g., from HITL to AUTO) when performance is optimal.
-4. **Governance Boundaries**: Even in AUTO mode, **Class C** (Infrastructure/IAM) actions remain protected by the governance framework unless explicitly overridden in the `governance_config`.
+1. **Punitive Feedback**: The system tracks task outcomes via the **QA Auditor** and system health via the **SLO Tracker**. Failures and SLO breaches result in immediate trust penalties (e.g., -5 points).
+2. **Success Rewards**: Sustained high-quality work and successful gap closures earn back trust (+1 point per success).
+3. **Automatic Decay**: Trust scores naturally decay over time (e.g., 0.5 points per day) down to a baseline, ensuring autonomy must be continuously earned.
+4. **Dynamic Mode Shifting**: Agents that maintain a `TrustScore >= 95` for a defined epoch are authorized to operate in **AUTO** mode. If trust drops below this threshold, the agent is forced back to **HITL** mode.
+5. **Governance Boundaries**: Even in AUTO mode, **Class C** (Infrastructure/IAM) actions remain protected by the governance framework unless explicitly overridden in the `governance_config`.
 
 ## Evolution Modes: HITL vs AUTO
 

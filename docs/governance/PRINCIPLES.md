@@ -8,15 +8,15 @@ This document outlines the core principles, quality standards, and missions that
 
 The system architecture follows ten foundational philosophies:
 
-1. **Stateless Core:** Execution is entirely stateless with persistence offloaded to highly available managed services ([DynamoDB](file:///Users/pengcao/projects/serverlessclaw/core/lib/memory/)) using Tiered Retention.
+1. **Stateless Core:** Execution is entirely stateless with persistence offloaded to highly available managed services ([DynamoDB](../../core/lib/memory/)) using Tiered Retention.
 2. **AI-Native:** Optimized for agent-human pair programming. Prioritizes semantic transparency, strict neural typing, and direct schema definitions over traditional boilerplate.
-3. **Safety-First:** Multi-layered guardrails including Circuit Breakers, Recursion Limits, protected scopes, and role-based access control (RBAC). (See [safety-engine.ts](file:///Users/pengcao/projects/serverlessclaw/core/lib/safety/safety-engine.ts))
+3. **Safety-First:** Multi-layered guardrails including Circuit Breakers, Recursion Limits, protected scopes, and role-based access control (RBAC). (See [safety-engine.ts](../../core/lib/safety/safety-engine.ts))
 4. **Proactive & Efficient:** Uses a "Trigger-on-Message" smart warm-up strategy rather than rigid scheduling or persistent heartbeats to minimize idling costs.
 5. **Low Latency:** Optimized for fast startup times with Real-time Streaming (MQTT) for instantaneous feedback. Latency goals must always be declared with a percentile and workload shape (for example: retrieval p95 under defined concurrency).
 6. **Extensible:** Every major component (Memory, Messaging, Tools) is designed as a pluggable adapter.
 7. **Multi-Lingual:** Employs a "Baseline English Strategy" where core reasoning prompts are in English for maximum AI performance, but interactions are dynamically localized. Safety policy behavior must remain consistent across supported languages.
 8. **Stable Contextual Addressing:** Uses deterministic FNV-1a hashing for session identifiers to ensure stable sort-key (SK) mapping in DynamoDB, enabling sub-50ms retrieval across stateless execution environments. Collision handling and namespace boundaries must be explicitly enforced.
-9. **Trust-Driven Mode Shifting:** Autonomy is earned, not statically configured. Agents that sustain a `TrustScore >= 95` for a defined epoch are authorized to dynamically shift their own operating mode from `HITL` to `AUTO` without explicit human approval. (Refer to the [Glossary](file:///Users/pengcao/projects/serverlessclaw/docs/governance/GLOSSARY.md) for definitions of `TrustScore` and `Epoch`).
+9. **Trust-Driven Mode Shifting:** Autonomy is earned, not statically configured. Agents that sustain a `TrustScore >= 95` for a defined epoch are authorized to dynamically shift their own operating mode from `HITL` to `AUTO` without explicit human approval. (Refer to the [Glossary](../../docs/governance/GLOSSARY.md) for definitions of `TrustScore` and `Epoch`).
 10. **Lean Evolution:** Every line of code is a maintenance liability. The system prioritizes minimal viable implementations and regular extraction of common patterns into core libraries over duplication. Proactive deletion of redundant or low-utilization code is considered a primary evolution success metric.
 
 ## ⚖️ Governance and Autonomy Boundaries
@@ -41,23 +41,23 @@ Autonomy is a capability, not a blanket permission. Every proposed change is ris
 
 The ultimate mission of Serverless Claw is to act as a **self-evolving system** that identifies its own weaknesses, designs its own upgrades, and verifies its own satisfaction. The swarm executes this through a strict hierarchical loop:
 
-1. **Observation & Audit:** [Cognition Reflector](file:///Users/pengcao/projects/serverlessclaw/core/agents/cognition-reflector.ts) identifies `strategic_gaps` from conversations.
-2. **Planning & Review:** [Strategic Planner](file:///Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner.ts) designs a `STRATEGIC_PLAN`. High-risk items require review by the [Critic Agent](file:///Users/pengcao/projects/serverlessclaw/core/agents/critic.ts).
-3. **Implementation:** [Coder Agent](file:///Users/pengcao/projects/serverlessclaw/core/agents/coder.ts) implements changes. All code MUST be lean, documented, and tested.
+1. **Observation & Audit:** [Cognition Reflector](../../core/agents/cognition-reflector.ts) identifies `strategic_gaps` from conversations.
+2. **Planning & Review:** [Strategic Planner](../../core/agents/strategic-planner.ts) designs a `STRATEGIC_PLAN`. High-risk items require review by the [Critic Agent](../../core/agents/critic.ts).
+3. **Implementation:** [Coder Agent](../../core/agents/coder.ts) implements changes. All code MUST be lean, documented, and tested.
 4. **Atomic Deployment:** Changes are deployed via CodeBuild. Build metadata and provenance are atomically synced.
-5. **Verification & Sync:** [QA Auditor](file:///Users/pengcao/projects/serverlessclaw/core/agents/qa.ts) verifies live satisfaction using [LLM-as-a-Judge](file:///Users/pengcao/projects/serverlessclaw/core/lib/verify/judge.ts) and deterministic tests. If successful, an Atomic Sync pushes to the trunk.
+5. **Verification & Sync:** [QA Auditor](../../core/agents/qa.ts) verifies live satisfaction using [LLM-as-a-Judge](../../core/lib/verify/judge.ts) and deterministic tests. If successful, an Atomic Sync pushes to the trunk.
 
 ## 🤖 Key System Agents
 
-| Persona                 | Responsibility                               | Source Code                                                                                                |
-| :---------------------- | :------------------------------------------- | :--------------------------------------------------------------------------------------------------------- |
-| **SuperClaw**           | System Orchestrator & Dispatcher             | [superclaw.ts](file:///Users/pengcao/projects/serverlessclaw/core/agents/superclaw.ts)                     |
-| **Strategic Planner**   | Architectural Planning & Gap Management      | [strategic-planner.ts](file:///Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner.ts)     |
-| **Cognition Reflector** | Memory Audit & Insight Extraction            | [cognition-reflector.ts](file:///Users/pengcao/projects/serverlessclaw/core/agents/cognition-reflector.ts) |
-| **Coder Agent**         | Implementation & Pre-flight Validation       | [coder.ts](file:///Users/pengcao/projects/serverlessclaw/core/agents/coder.ts)                             |
-| **QA Auditor**          | Deployment Verification & Semantic Judge     | [qa.ts](file:///Users/pengcao/projects/serverlessclaw/core/agents/qa.ts)                                   |
-| **Critic Agent**        | Security, Performance & Architectural Review | [critic.ts](file:///Users/pengcao/projects/serverlessclaw/core/agents/critic.ts)                           |
-| **Facilitator**         | Consensus Management & Tie-breaking          | [facilitator.ts](file:///Users/pengcao/projects/serverlessclaw/core/agents/facilitator.ts)                 |
+| Persona                 | Responsibility                               | Source Code                                                        |
+| :---------------------- | :------------------------------------------- | :----------------------------------------------------------------- |
+| **SuperClaw**           | System Orchestrator & Dispatcher             | [superclaw.ts](../../core/agents/superclaw.ts)                     |
+| **Strategic Planner**   | Architectural Planning & Gap Management      | [strategic-planner.ts](../../core/agents/strategic-planner.ts)     |
+| **Cognition Reflector** | Memory Audit & Insight Extraction            | [cognition-reflector.ts](../../core/agents/cognition-reflector.ts) |
+| **Coder Agent**         | Implementation & Pre-flight Validation       | [coder.ts](../../core/agents/coder.ts)                             |
+| **QA Auditor**          | Deployment Verification & Semantic Judge     | [qa.ts](../../core/agents/qa.ts)                                   |
+| **Critic Agent**        | Security, Performance & Architectural Review | [critic.ts](../../core/agents/critic.ts)                           |
+| **Facilitator**         | Consensus Management & Tie-breaking          | [facilitator.ts](../../core/agents/facilitator.ts)                 |
 
 ---
 

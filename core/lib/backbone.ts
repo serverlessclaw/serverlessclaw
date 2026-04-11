@@ -20,6 +20,7 @@ import {
   FACILITATOR_SYSTEM_PROMPT,
   MERGER_SYSTEM_PROMPT,
   RESEARCHER_SYSTEM_PROMPT,
+  JUDGE_SYSTEM_PROMPT,
 } from '../agents/prompts/index';
 
 /**
@@ -398,5 +399,21 @@ export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {
     maxIterations: 1,
     tools: [],
     connectionProfile: [ConnectionProfile.MEMORY],
+  },
+  [AgentType.JUDGE]: {
+    id: AgentType.JUDGE,
+    name: 'Judge Agent',
+    systemPrompt: JUDGE_SYSTEM_PROMPT,
+    description:
+      'Impartial evaluator. Provides objective semantic verification and trust calibration.',
+    category: AgentCategory.SYSTEM,
+    icon: 'Gavel',
+    enabled: true,
+    ...BACKBONE_COMMON_CONFIG,
+    ...BACKBONE_LLM_CONFIG,
+    reasoningProfile: ReasoningProfile.THINKING,
+    defaultCommunicationMode: 'json',
+    tools: [...UNIVERSAL_SYSTEM_TOOLS],
+    connectionProfile: [ConnectionProfile.MEMORY, ConnectionProfile.TRACE],
   },
 };

@@ -77,12 +77,13 @@ export function jsonSchemaToZod(schema: JsonSchema): z.ZodSchema {
         shape[key] = zodProp;
       }
 
-      const objSchema = z.object(shape);
+      let objSchema = z.object(shape);
       if (schema.additionalProperties === false) {
-        zodSchema = objSchema.strict();
+        objSchema = objSchema.strict();
       } else {
-        zodSchema = objSchema.passthrough();
+        objSchema = objSchema.passthrough();
       }
+      zodSchema = objSchema;
       break;
     }
     case 'null': {

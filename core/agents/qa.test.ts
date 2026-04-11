@@ -1,3 +1,15 @@
+const safetyEngineMocks = vi.hoisted(() => ({
+  recordSuccess: vi.fn().mockResolvedValue(90),
+  recordFailure: vi.fn().mockResolvedValue(80),
+}));
+
+vi.mock('../lib/safety/safety-engine', () => ({
+  SafetyEngine: class {
+    recordSuccess = safetyEngineMocks.recordSuccess;
+    recordFailure = safetyEngineMocks.recordFailure;
+  },
+}));
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handler } from './qa';
 import { GapStatus, EvolutionMode } from '../lib/types/index';
@@ -133,17 +145,55 @@ const BASE_PAYLOAD = {
     metadata: { gapIds: ['GAP#1001'] },
     response: 'Coder reported success.',
     traceId: 'trace-1',
+    initiatorId: 'coder',
   },
 };
 
 describe('QA Agent — REOPEN cap and HITL escalation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    safetyEngineMocks.recordSuccess.mockClear();
+    safetyEngineMocks.recordFailure.mockClear();
     memoryMocks.updateGapStatus.mockResolvedValue({ success: true });
     memoryMocks.incrementGapAttemptCount.mockResolvedValue(1);
     memoryMocks.acquireGapLock.mockResolvedValue(true);
     memoryMocks.releaseGapLock.mockResolvedValue(true);
     registryMocks.getRawConfig.mockResolvedValue(EvolutionMode.AUTO);
+  });
+
+  describe('Trust Score Feedback Loop', () => {
+    it('calls recordSuccess on satisfied verification', async () => {
+      agentProcess.mockResolvedValueOnce({
+        responseText: JSON.stringify({
+          satisfied: true,
+          score: 10,
+          reasoning: 'Verified successfully',
+          issues: [],
+        }),
+      });
+
+      await handler(BASE_PAYLOAD as any, {} as any);
+
+      expect(safetyEngineMocks.recordSuccess).toHaveBeenCalledWith('coder');
+    });
+
+    it('calls recordFailure on unsatisfied verification', async () => {
+      agentProcess.mockResolvedValueOnce({
+        responseText: JSON.stringify({
+          satisfied: false,
+          score: 4,
+          reasoning: 'Missing implementation',
+          issues: ['file.ts is empty'],
+        }),
+      });
+
+      await handler(BASE_PAYLOAD as any, {} as any);
+
+      expect(safetyEngineMocks.recordFailure).toHaveBeenCalledWith(
+        'coder',
+        expect.stringContaining('Missing implementation')
+      );
+    });
   });
 
   it('should set gaps to DONE and not escalate on SUCCESS (auto mode)', async () => {
@@ -325,7 +375,12 @@ describe('QA Agent — REOPEN cap and HITL escalation', () => {
 
     const { TOOLS } = await import('../tools/index');
 
-    await handler(BASE_PAYLOAD as any, {} as any);
+    const payloadNoInitiator = {
+      ...BASE_PAYLOAD,
+      detail: { ...BASE_PAYLOAD.detail, initiatorId: undefined },
+    };
+
+    await handler(payloadNoInitiator as any, {} as any);
 
     expect(TOOLS.dispatchTask.execute).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -41,7 +41,7 @@ export class LLMJudge {
     criteria: string[],
     context?: Record<string, unknown>
   ): Promise<JudgeResult> {
-    const { agent } = await initAgent(AgentType.CRITIC);
+    const { agent } = await initAgent(AgentType.JUDGE);
 
     const prompt = `
 # LLM-as-a-Judge: Semantic Evaluation

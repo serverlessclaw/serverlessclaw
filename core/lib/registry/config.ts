@@ -1,5 +1,10 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
+import {
+  DynamoDBDocumentClient,
+  GetCommand,
+  PutCommand,
+  UpdateCommand,
+} from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
 import { logger } from '../logger';
 
@@ -153,5 +158,38 @@ export class ConfigManager {
   public static async resolveTableName(): Promise<string | undefined> {
     const resource = Resource as { ConfigTable?: { name: string } };
     return 'ConfigTable' in resource ? resource.ConfigTable!.name : undefined;
+  }
+
+  /**
+   * Atomically increments a numeric configuration value.
+   * Uses DynamoDB UpdateCommand with ADD operation to avoid lost update bugs.
+   *
+   * @param key - The unique configuration key.
+   * @param increment - The amount to increment (default 1).
+   * @returns A promise resolving to the new value after increment.
+   */
+  public static async incrementConfig(key: string, increment: number = 1): Promise<number> {
+    const resource = Resource as { ConfigTable?: { name: string } };
+    if (!('ConfigTable' in resource)) {
+      logger.warn(`ConfigTable not linked. Skipping increment for ${key}`);
+      return 0;
+    }
+
+    try {
+      const result = await getDocClient().send(
+        new UpdateCommand({
+          TableName: resource.ConfigTable?.name,
+          Key: { key },
+          UpdateExpression: 'ADD #val :inc',
+          ExpressionAttributeNames: { '#val': 'value' },
+          ExpressionAttributeValues: { ':inc': increment },
+          ReturnValues: 'ALL_NEW',
+        })
+      );
+      return (result.Attributes?.value as number) ?? 0;
+    } catch (e) {
+      logger.warn(`Failed to increment ${key} in DDB:`, e);
+      return 0;
+    }
   }
 }

@@ -199,6 +199,7 @@ export class BaseMemoryProvider {
 
   /**
    * Standard implementation for getHistory.
+   * Filters out expired items based on TTL.
    *
    * @param userId - The user identifier to retrieve history for.
    * @returns A promise resolving to an array of Message objects.
@@ -212,7 +213,12 @@ export class BaseMemoryProvider {
       ScanIndexForward: true, // Oldest first
     });
 
-    return (items || []).map((item) => ({
+    const now = Math.floor(Date.now() / 1000); // Current time in seconds for TTL comparison
+    const validItems = (items || []).filter(
+      (item) => !item.expiresAt || (item.expiresAt as number) > now
+    );
+
+    return validItems.map((item) => ({
       role: item.role as MessageRole,
       content: (item.content as string) ?? '',
       thought: item.thought as string | undefined,

@@ -30,11 +30,12 @@ export class ToolPruner {
 
     const thresholdDays = await ConfigManager.getTypedConfig('tool_prune_threshold_days', 30);
     const thresholdMs = thresholdDays * 24 * 60 * 60 * 1000;
+    const GRACE_PERIOD_MS = 7 * 24 * 60 * 60 * 1000; // 7 day grace period for new tools
     const now = Date.now();
 
     // 1. Fetch global tool usage from DynamoDB
     const toolUsage = (await ConfigManager.getRawConfig(DYNAMO_KEYS.TOOL_USAGE)) as
-      | Record<string, { count: number; lastUsed: number }>
+      | Record<string, { count: number; lastUsed: number; firstRegistered?: number }>
       | undefined;
 
     if (!toolUsage) {
@@ -42,21 +43,24 @@ export class ToolPruner {
       return undefined;
     }
 
-    // 2. Identify all registered tool names
+    // 2. Identify all registered tool names from the hardcoded registry
     const registeredToolNames = Object.keys(TOOLS);
 
-    // 3. Identify unused tools (those not in toolUsage or lastUsed > threshold)
+    // 3. Identify unused tools
     const unusedTools: string[] = [];
 
     for (const name of registeredToolNames) {
       const stats = toolUsage[name];
 
-      // Never used
+      // If no stats, it hasn't been used yet. We assume it's new and skip pruning.
       if (!stats) {
-        // We only prune tools that HAVE been registered for a while.
-        // For simplicity, we assume if they are in the registry but have no usage, they might be new or truly unused.
-        // We check if they've ever been used.
-        unusedTools.push(name);
+        continue;
+      }
+
+      // Check grace period
+      const firstRegistered = stats.firstRegistered || stats.lastUsed;
+      if (now - firstRegistered < GRACE_PERIOD_MS) {
+        logger.debug(`[PRUNER] Skipping ${name} - still in grace period.`);
         continue;
       }
 
@@ -81,29 +85,48 @@ export class ToolPruner {
   }
 
   /**
-   * Records a prune proposal in the system knowledge as a strategic gap.
-   * This allows the swarm to review and potentially act on it.
+   * Records a prune proposal in the system knowledge as a strategic improvement.
+   * This allows the Strategic Planner to review and potentially act on it.
    */
-  public static async recordPruneProposal(proposal: {
-    unusedTools: string[];
-    thresholdDays: number;
-  }): Promise<void> {
-    // Use AgentRegistry to record a strategic gap for this proposal
+  public static async recordPruneProposal(
+    proposal: {
+      unusedTools: string[];
+      thresholdDays: number;
+    },
+    memory?: any // Accepting memory instance
+  ): Promise<void> {
     const gapId = `prune_proposal_${Date.now()}`;
 
-    // We can't use reportGap directly as it's a tool, but we can save it to the config.
-    // In many agents, we use a tool for this. But here we are in core lib.
-
     logger.warn(
-      `[PRUNER] PRUNE PROPOSAL GENERATED: ${proposal.unusedTools.length} tools. Reported as system gap.`
+      `[PRUNER] PRUNE PROPOSAL GENERATED: ${proposal.unusedTools.length} tools. Reporting as system improvement.`
     );
 
-    // Actually, we should probably trigger a SYSTEM_AUDIT event or similar.
-    // For now, let's just log it and potentially save it to a known config key.
+    // Persist to config for backward compatibility/dashboard
     await ConfigManager.saveRawConfig(`pending_prune_proposal`, {
       ...proposal,
       status: 'PENDING_REVIEW',
       id: gapId,
     });
+
+    // Record as a SYSTEM_IMPROVEMENT insight if memory is provided
+    if (memory && typeof memory.addMemory === 'function') {
+      try {
+        const { InsightCategory } = await import('../types/memory');
+        await memory.addMemory(
+          'system',
+          InsightCategory.SYSTEM_IMPROVEMENT,
+          `Tool Pruning Proposal: Identified ${proposal.unusedTools.length} tools for removal due to low utilization (>${proposal.thresholdDays} days). Tools: ${proposal.unusedTools.join(', ')}`,
+          {
+            impact: 4,
+            urgency: 2,
+            priority: 3,
+            tags: ['scythe', 'bloat-reduction'],
+          }
+        );
+        logger.info('[PRUNER] Prune proposal recorded as system improvement memory.');
+      } catch (e) {
+        logger.error('[PRUNER] Failed to record prune proposal in memory:', e);
+      }
+    }
   }
 }

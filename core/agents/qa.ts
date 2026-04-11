@@ -90,6 +90,17 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
   }
 
   if (isSatisfied) {
+    // Mirror Silo 5: Record success and increment trust score for the implementing agent
+    if (initiatorId) {
+      try {
+        const { SafetyEngine } = await import('../lib/safety/safety-engine');
+        const safety = new SafetyEngine();
+        await safety.recordSuccess(initiatorId);
+      } catch (e) {
+        logger.warn(`Failed to record trust success for ${initiatorId}:`, e);
+      }
+    }
+
     if (evolutionMode === EvolutionMode.AUTO) {
       logger.info('Verification successful. Auto-closing gaps.');
       const { EVOLUTION_METRICS } = await import('../lib/metrics/evolution-metrics');
@@ -162,6 +173,20 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
       );
     }
   } else {
+    // Mirror Silo 5: Record failure and penalize trust score for the implementing agent
+    if (initiatorId) {
+      try {
+        const { SafetyEngine } = await import('../lib/safety/safety-engine');
+        const safety = new SafetyEngine();
+        await safety.recordFailure(
+          initiatorId,
+          `QA Verification Failed for Gaps: ${gapIds.join(', ')} - ${judgeResult.reasoning.substring(0, 150)}`
+        );
+      } catch (e) {
+        logger.warn(`Failed to record trust penalty for ${initiatorId}:`, e);
+      }
+    }
+
     // Reopen failed verification. Track attempt count and escalate to FAILED if cap reached.
     const MAX_REOPEN_ATTEMPTS = 3;
     logger.warn('Verification failed. Checking reopen attempt counts.');

@@ -227,15 +227,16 @@ export class MCPClientManager {
           timestamp: Date.now(),
         });
       } catch (error) {
-        // Increment failure count and mark as down in DynamoDB (Global state sync)
-        const prev = this.failureCounts.get(serverName) ?? { count: 0, lastFailure: 0 };
-        const newCount = prev.count + 1;
+        // Increment failure count atomically to avoid lost update bug
+        const { ConfigManager } = await import('../registry');
+        const newCount = await ConfigManager.incrementConfig(`mcp_health_${serverName}`, 1);
         const lastFailure = Date.now();
         this.failureCounts.set(serverName, {
           count: newCount,
           lastFailure,
         });
 
+        // Update status based on new count (don't overwrite count since we used atomic increment)
         await AgentRegistry.saveRawConfig(`mcp_health_${serverName}`, {
           status: newCount >= this.MAX_FAILURES ? 'down' : 'degraded',
           count: newCount,

@@ -366,7 +366,8 @@ export const CONFIG_DEFAULTS = {
     code: true,
     hotSwappable: true,
     configKey: 'audit_event_triggers_enabled',
-    description: 'Enable audit triggers after TRUNK_SYNC, DEPLOYMENT_COMPLETE events.',
+    description:
+      'Enable audit triggers on PRE_FLIGHT_READY, TRUST_SCORE_DROP, MAJOR_SWARM_COMPLETE, TRUNK_SYNC, and DEPLOYMENT_COMPLETE events.',
   },
 
   /** Session lock heartbeat interval (ms). Default: 60000 (60 sec) */
@@ -423,6 +424,70 @@ export const CONFIG_DEFAULTS = {
     hotSwappable: true,
     configKey: 'event_execution_timeout_ms',
     description: 'Internal timeout for event handler execution.',
+  },
+
+  /** TTL for distilled facts (days). Default: 365 */
+  FACTS_RETENTION_DAYS: {
+    code: 365,
+    hotSwappable: false,
+    configKey: null,
+    description: 'Days to retain distilled memory facts.',
+  },
+
+  /** TTL for lessons (days). Default: 90 */
+  LESSONS_RETENTION_DAYS: {
+    code: 90,
+    hotSwappable: false,
+    configKey: null,
+    description: 'Days to retain tactical lessons.',
+  },
+
+  /** TTL for session summaries (days). Default: 30 */
+  SUMMARY_RETENTION_DAYS: {
+    code: 30,
+    hotSwappable: false,
+    configKey: null,
+    description: 'Days to retain conversation summaries.',
+  },
+
+  /** TTL for strategic gaps (days). Default: 60 */
+  GAPS_RETENTION_DAYS: {
+    code: 60,
+    hotSwappable: true,
+    configKey: 'gaps_retention_days',
+    description: 'Days to retain strategic gaps beforeTTL expiry.',
+  },
+
+  /** Cache TTL for user data (ms). Default: 300000 (5 min) */
+  CACHE_TTL_USER_DATA_MS: {
+    code: 300000,
+    hotSwappable: true,
+    configKey: 'cache_ttl_user_data_ms',
+    description: 'Cache TTL for user-specific data.',
+  },
+
+  /** Cache TTL for conversations (ms). Default: 120000 (2 min) */
+  CACHE_TTL_CONVERSATION_MS: {
+    code: 120000,
+    hotSwappable: true,
+    configKey: 'cache_ttl_conversation_ms',
+    description: 'Cache TTL for conversation data.',
+  },
+
+  /** Cache TTL for global data (ms). Default: 900000 (15 min) */
+  CACHE_TTL_GLOBAL_MS: {
+    code: 900000,
+    hotSwappable: true,
+    configKey: 'cache_ttl_global_ms',
+    description: 'Cache TTL for global/system-wide data.',
+  },
+
+  /** Cache TTL for search results (ms). Default: 180000 (3 min) */
+  CACHE_TTL_SEARCH_MS: {
+    code: 180000,
+    hotSwappable: true,
+    configKey: 'cache_ttl_search_ms',
+    description: 'Cache TTL for search results.',
   },
 } as const;
 

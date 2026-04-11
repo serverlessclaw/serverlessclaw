@@ -1,4 +1,6 @@
 import { TokenRollup } from './token-usage';
+import { AgentType } from '../types/agent';
+import { logger } from '../logger';
 
 export interface SLODefinition {
   name: string;
@@ -62,6 +64,21 @@ export class SLOTracker {
     for (const slo of DEFAULT_SLOS) {
       const rollups = rollupsBySLO[slo.name] ?? [];
       const { withinBudget } = await this.checkSLO(slo, rollups);
+
+      if (!withinBudget) {
+        // Mirror Silo 5: SLO breach results in trust penalty for the orchestrator
+        try {
+          const { SafetyEngine } = await import('../safety/safety-engine');
+          const safety = new SafetyEngine();
+          await safety.recordFailure(
+            AgentType.SUPERCLAW,
+            `System SLO Breach: ${slo.name}`,
+            2 // Severity 2 for system-level SLO breaches
+          );
+        } catch (e) {
+          logger.warn(`Failed to record SLO trust penalty for ${slo.name}:`, e);
+        }
+      }
 
       let current: number;
       if (slo.metric === 'availability' || slo.metric === 'task_success_rate') {

@@ -4,20 +4,20 @@ Definitions of core concepts, metrics, and protocols used in the self-evolving g
 
 ## Core Metrics
 
-| Term                 | Definition                                                                                                                                                       | Primary Code Location                   |
-| :------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------- |
-| **TrustScore**       | A dynamic metric (0-100) representing the reliability and safety record of an agent or the system as a whole. High scores enable greater autonomy (`AUTO` mode). | `core/lib/safety/safety-engine.ts`      |
-| **Cognitive Health** | A measure of reasoning coherence, memory usage efficiency, and anomaly detection during multi-turn agent sessions.                                               | `core/lib/metrics/cognitive-metrics.ts` |
-| **Trust Decay**      | The rate at which `TrustScore` decreases following a failure or violation, ensuring that autonomy must be continuously earned.                                   | `core/lib/safety/safety-engine.ts`      |
+| Term                 | Definition                                                                                                                                                                                            | Primary Code Location                   |
+| :------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------- |
+| **TrustScore**       | A dynamic metric (0-100) representing the reliability and safety record of an agent. It is punitively updated by QA failures/SLO breaches and rewarded by successes. Scores >= 95 enable `AUTO` mode. | `core/lib/safety/trust-manager.ts`      |
+| **Cognitive Health** | A measure of reasoning coherence, memory usage efficiency, and anomaly detection during multi-turn agent sessions.                                                                                    | `core/lib/metrics/cognitive-metrics.ts` |
+| **Trust Decay**      | The automatic time-based reduction of `TrustScore` (e.g., -0.5/day), ensuring that high-level autonomy must be continuously earned through sustained reliability.                                     | `core/lib/safety/trust-manager.ts`      |
 
 ## System Protocols
 
-| Term                          | Definition                                                                                                                                                  | Primary Code Location                   |
-| :---------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------- |
-| **LLM-as-a-Judge**            | A semantic evaluation protocol where a high-capability LLM acts as a judge to verify task success or security compliance against natural language criteria. | `core/lib/verify/judge.ts`              |
-| **Proactive Trunk Evolution** | The autonomous process where high-trust agents implement, verify, and sync changes directly to the main production branch without manual intervention.      | `core/agents/strategic-planner.ts`      |
-| **Dead Man's Switch**         | An emergency safety protocol that triggers automated rollbacks if system-wide health probes fail or if a "Class C" violation occurs.                        | `core/lib/backbone.ts` (RECOVERY agent) |
-| **Tiered Retention**          | A memory strategy that moves context between "Hot" (DynamoDB), "Warm" (Semantic Vector), and "Cold" (S3) storage based on access frequency and age.         | `core/lib/memory/`                      |
+| Term                          | Definition                                                                                                                                                            | Primary Code Location                   |
+| :---------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------- |
+| **LLM-as-a-Judge**            | A semantic evaluation protocol where a high-capability LLM acts as a judge to verify task success or security compliance against natural language criteria.           | `core/lib/verify/judge.ts`              |
+| **Proactive Trunk Evolution** | The autonomous process where high-trust agents implement, verify, and sync changes directly to the main production branch without manual intervention.                | `core/agents/strategic-planner.ts`      |
+| **Dead Man's Switch**         | An emergency safety protocol that triggers automated rollbacks if system-wide health probes fail or if a "Class C" violation occurs.                                  | `core/lib/backbone.ts` (RECOVERY agent) |
+| **Tiered Retention**          | A memory strategy using DynamoDB with LRU cache. TTLs: CONVERSATION(30d), SESSIONS(90d), LESSONS(90d), GAPS(60d), FACTS(365d). Semantic Vector is a future milestone. | `core/lib/memory/`                      |
 
 ## Evolutionary Stages
 

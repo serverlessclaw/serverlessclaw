@@ -186,6 +186,7 @@ export async function addGlobalLesson(
   metadata?: Partial<InsightMetadata> & { tags?: string[] }
 ): Promise<number | string> {
   const timestamp = String(Date.now());
+  const { expiresAt } = await RetentionManager.getExpiresAt('LESSONS', 'SYSTEM#GLOBAL');
   await base.putItem({
     userId: 'SYSTEM#GLOBAL',
     timestamp,
@@ -193,6 +194,7 @@ export async function addGlobalLesson(
     tags: normalizeTags(metadata?.tags),
     content: filterPII(lesson),
     createdAt: parseInt(timestamp, 10),
+    expiresAt,
     metadata: createMetadata(metadata, timestamp),
   });
   return timestamp;

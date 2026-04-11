@@ -94,6 +94,30 @@ export const AUDIT_SILOS: AuditSilo[] = [
       'autonomous test suite evolution',
     ],
   },
+  {
+    name: 'Scales',
+    perspective: 'Is the system grading its own homework too leniently?',
+    angle:
+      'Audit the SafetyEngine and the LLM-as-a-Judge semantic evaluation layer to ensure TrustScore calculations are resistant to artificial inflation. Verify that failures accurately and immediately penalize the trust score.',
+    keyConcepts: [
+      'Trust decay rates',
+      'metric gaming',
+      'false-positive evaluations',
+      'mode-shift thrashing',
+    ],
+  },
+  {
+    name: 'Scythe',
+    perspective: 'What can be removed without losing capability?',
+    angle:
+      'Audit the workspace for generated sprawl. Identify redundant tools, overlapping logic, and "dark" code that is never executed but adds cognitive load to agents. Evaluate if abstraction layers have become too thick.',
+    keyConcepts: [
+      'Pattern consolidation',
+      'tool pruning',
+      'cyclomatic complexity reduction',
+      'semantic compression',
+    ],
+  },
 ];
 
 export async function runSystemAudit(
@@ -168,6 +192,12 @@ async function auditSilo(
         break;
       case 'Eye':
         findings.push(...(await auditEye(memory)));
+        break;
+      case 'Scales':
+        findings.push(...(await auditScales(memory)));
+        break;
+      case 'Scythe':
+        findings.push(...(await auditScythe(memory)));
         break;
     }
   } catch (e) {
@@ -438,6 +468,174 @@ async function auditEye(memory: {
       severity: 'P3',
       recommendation: 'Add trace consistency checks to verify dashboard truth',
     });
+  }
+
+  return findings;
+}
+
+/**
+ * Audits Silo 6: The Scales (Trust & Calibration)
+ * Checks whether the TrustScore system is accurately penalizing failures
+ * and resistant to artificial inflation.
+ */
+async function auditScales(memory: {
+  getFailurePatterns(userId: string, pattern: string, limit: number): Promise<unknown[]>;
+  get?(key: string): Promise<unknown>;
+}): Promise<AuditFinding[]> {
+  const findings: AuditFinding[] = [];
+
+  const safeGet = async (key: string): Promise<unknown | null> => {
+    if (typeof memory.get === 'function') {
+      return await memory.get(key);
+    }
+    return null;
+  };
+
+  // Sc1: Check if TrustScore history is being persisted for trend analysis
+  const trustHistoryKey = 'trust:score_history';
+  const trustHistory = (await safeGet(trustHistoryKey)) as Array<{
+    score: number;
+    timestamp: number;
+  }> | null;
+
+  if (!trustHistory || trustHistory.length === 0) {
+    findings.push({
+      silo: 'Scales',
+      expected: 'TrustScore history persisted for trend detection (mode-shift thrashing)',
+      actual: 'No TrustScore history found — cannot detect inflation or thrashing patterns',
+      severity: 'P2',
+      recommendation: 'Persist TrustScore snapshots per epoch to enable drift and gaming detection',
+    });
+  } else {
+    // Sc2: Detect mode-shift thrashing — rapidly toggling between HITL and AUTO
+    const shifts = trustHistory.filter((entry, i) => {
+      if (i === 0) return false;
+      const prev = trustHistory[i - 1];
+      // A shift occurs when score crosses 95 (AUTO threshold) in either direction
+      return (entry.score >= 95 && prev.score < 95) || (entry.score < 95 && prev.score >= 95);
+    });
+
+    if (shifts.length > 4) {
+      findings.push({
+        silo: 'Scales',
+        expected: 'Stable TrustScore with fewer than 5 mode-shift crossings per epoch',
+        actual: `${shifts.length} mode-shift crossings detected — potential system thrashing`,
+        severity: 'P1',
+        recommendation:
+          'Add a hysteresis band (e.g., require 95+ for 3 consecutive checks before AUTO) to prevent thrashing',
+      });
+    }
+  }
+
+  // Sc3: Check if failures are penalizing the TrustScore promptly
+  const recentFailures = (await memory.getFailurePatterns('*', '*', 5)) as unknown[];
+  const trustPenaltyLogKey = 'trust:penalty_log';
+  const penaltyLog = (await safeGet(trustPenaltyLogKey)) as Array<{
+    timestamp: number;
+  }> | null;
+
+  if (recentFailures.length > 0 && (!penaltyLog || penaltyLog.length === 0)) {
+    findings.push({
+      silo: 'Scales',
+      expected: 'Each failure pattern triggers a corresponding TrustScore penalty event',
+      actual:
+        'Failure patterns exist but no TrustScore penalty log found — failures may not be penalizing the score',
+      severity: 'P2',
+      recommendation:
+        'Ensure SafetyEngine.recordFailure() atomically writes to the penalty log and decrements TrustScore',
+    });
+  }
+
+  return findings;
+}
+
+/**
+ * Audits Silo 7: The Scythe (Bloat & Debt)
+ * Identifies unused tools, stale prune proposals, and high tool-count agents
+ * that are accumulating cognitive load without capability gain.
+ */
+async function auditScythe(memory: {
+  get?(key: string): Promise<unknown>;
+}): Promise<AuditFinding[]> {
+  const findings: AuditFinding[] = [];
+
+  const safeGet = async (key: string): Promise<unknown | null> => {
+    if (typeof memory.get === 'function') {
+      return await memory.get(key);
+    }
+    return null;
+  };
+
+  // Sy1: Check for stale pending prune proposals
+  const pruneProposalKey = 'pending_prune_proposal';
+  const pruneProposal = (await safeGet(pruneProposalKey)) as {
+    unusedTools: string[];
+    thresholdDays: number;
+    status: string;
+    id: string;
+    lastAudit?: number;
+  } | null;
+
+  if (pruneProposal && pruneProposal.status === 'PENDING_REVIEW') {
+    const ageSinceProposal = pruneProposal.lastAudit
+      ? Date.now() - pruneProposal.lastAudit
+      : Infinity;
+    const STALE_PROPOSAL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+    if (ageSinceProposal > STALE_PROPOSAL_MS) {
+      findings.push({
+        silo: 'Scythe',
+        expected: 'Prune proposals actioned within 7 days',
+        actual: `Prune proposal ${pruneProposal.id} has been pending for ${Math.round(ageSinceProposal / 86400000)} days. Targets: ${pruneProposal.unusedTools.slice(0, 5).join(', ')}${pruneProposal.unusedTools.length > 5 ? '...' : ''}`,
+        severity: 'P2',
+        recommendation:
+          'Review the stale prune proposal and either action or dismiss it via the Strategic Planner',
+      });
+    }
+  }
+
+  // Sy2: Check if auto-pruning is disabled (a configuration debt observation)
+  try {
+    const { ConfigManager } = await import('../../lib/registry/config');
+    const autoPruneEnabled = await ConfigManager.getTypedConfig('auto_prune_enabled', false);
+
+    if (!autoPruneEnabled) {
+      findings.push({
+        silo: 'Scythe',
+        expected: 'Automated tool pruning enabled or explicitly managed via HITL proposals',
+        actual:
+          'auto_prune_enabled is false — pruning relies entirely on manual review of proposals',
+        severity: 'P3',
+        recommendation:
+          'Enable auto_prune_enabled=true once trust is established, or ensure prune proposals are reviewed at each strategic cycle',
+      });
+    }
+  } catch {
+    // Registry not available in this context — skip check
+  }
+
+  // Sy3: Check tool growth — detect if total registered tools are growing rapidly
+  const toolGrowthKey = 'scythe:tool_count_history';
+  const toolHistory = (await safeGet(toolGrowthKey)) as Array<{
+    count: number;
+    timestamp: number;
+  }> | null;
+
+  if (toolHistory && toolHistory.length >= 2) {
+    const oldest = toolHistory[0];
+    const newest = toolHistory[toolHistory.length - 1];
+    const growthRate = (newest.count - oldest.count) / oldest.count;
+
+    if (growthRate > 0.2) {
+      findings.push({
+        silo: 'Scythe',
+        expected: 'Tool registry growth < 20% between audits',
+        actual: `Tool count grew ${(growthRate * 100).toFixed(1)}% from ${oldest.count} to ${newest.count}`,
+        severity: 'P2',
+        recommendation:
+          'Review newly added tools for overlap with existing capabilities before the registry becomes unmanageable',
+      });
+    }
   }
 
   return findings;

@@ -225,6 +225,16 @@ When code growth exceeds the `audit_code_growth_threshold` (default 10%), the **
 3. **Execution**: A Coder agent is dispatched with a specific directive to **simplify and consolidate**, rather than add features.
 4. **Success Metric**: A successful maintenance mission results in a net **negative or neutral** code growth while maintaining 100% test coverage and feature parity.
 
+### Configuration
+
+| Config Key                     | Default    | Description                                                                                                            |
+| :----------------------------- | :--------- | :--------------------------------------------------------------------------------------------------------------------- |
+| `audit_code_growth_threshold`  | 0.10 (10%) | Code growth percentage that triggers a system audit                                                                    |
+| `audit_event_triggers_enabled` | true       | Enable audit triggers on PRE_FLIGHT_READY, TRUST_SCORE_DROP, MAJOR_SWARM_COMPLETE, TRUNK_SYNC, and DEPLOYMENT_COMPLETE |
+
+> [!TIP]
+> To adjust thresholds, modify the values in [`config-defaults.ts`](../../core/lib/config/config-defaults.ts) or provide stage-specific overrides in `infra/config/`.
+
 ### Tool Pruning
 
 If `auto_prune_enabled` is true, tools that have not been called by any agent for `tool_prune_threshold_days` (default 30) are automatically marked for removal. The system generates a "Prune Proposal" for human review (Class C) before final deletion.

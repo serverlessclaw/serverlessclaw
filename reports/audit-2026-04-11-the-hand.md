@@ -1,38 +1,36 @@
-# System Audit: The Hand (Agency & Skill Mastery)
-**Date**: 2026-04-11
-**Auditor**: Gemini CLI
+# Audit Report: The Hand (Agency & Skill Mastery) & The Shield (Survival & Perimeter) - 2026-04-11
 
-## Overview
-Deep-dive into the "Hand" vertical, focusing on the Unified MCP Multiplexer, Agent-Tool interaction, and the boundary between intent and execution.
+## 🎯 Objective
 
-## Findings
+Deep-dive into the "Unified MCP Multiplexer" (The Hand) and the "Safety Engine" (The Shield) to identify bugs, gaps, inconsistencies, and opportunities for improvement.
 
-### P1: Warmup Failure for Multiplexed MCP Servers (FIXED)
-*   **Observation**: `WarmupManager.warmMcpServer` was sending a payload to the multiplexer without specifying the server name in the path or headers.
-*   **Impact**: Proactive warmup for all MCP servers managed by the multiplexer was failing with a 404, leading to avoidable cold-start latency during the first tool call.
-*   **Action**: Fixed in `core/lib/warmup/warmup-manager.ts` and verified with reproduction tests.
+## 🔍 Investigation Path
 
-### P2: Incomplete MCP Registration Tool
-*   **Observation**: The `registerMCPServer` tool (`core/tools/knowledge/mcp.ts`) only supports `local` (command-based) configurations.
-*   **Impact**: Agents cannot autonomously register `remote` (SSE) or `managed` (OpenAI Connector) MCP servers, even though the underlying `MCPBridge` supports them.
-*   **Recommendation**: Update `registerMCPServer` to support the full `MCPServerConfig` union type.
+- **Silo 2 (The Hand)**: Examined `core/lib/mcp.ts`, `core/lib/mcp/client-manager.ts`, `core/lib/mcp/tool-mapper.ts`, and `core/lib/agent/tool-executor.ts`.
+- **Silo 3 (The Shield)**: Examined `core/lib/safety/safety-engine.ts`, `core/lib/utils/fs-security.ts`, and their integration in `core/agents/superclaw.ts` and `core/lib/agent.ts`.
+- **Silo 5 (The Eye)**: Examined `core/lib/verify/judge.ts` for semantic evaluation integration.
+- **Silo 1 (The Spine)**: Examined `core/lib/routing/AgentRouter.ts` for model selection logic.
 
-### P2: Multiplexer Performance & Latency
-*   **Observation**: Every tool call through the Lambda multiplexer involves spawning a subprocess (`npx`) and performing a full MCP `initialize` handshake.
-*   **Impact**: High latency (p95 > 2s) for tool execution in Lambda environments.
-*   **Recommendation**: Explore "Unified Discovery" and "Persistent Handshake Caching" to reduce the overhead of on-demand process spawning.
+## 🚨 Findings
 
-### P3: Heuristic-based Security and Sensitivity Checks
-*   **Observation**: `isSensitiveTool` and `checkArgumentsForSecurity` rely on keyword matching (e.g., "delete", "path").
-*   **Impact**: Risk of false positives (blocking safe calls) or false negatives (missing sensitive calls with non-obvious names).
-*   **Recommendation**: Augment heuristics with semantic analysis or explicit tool metadata.
+| ID  | Title                                                | Severity | Recommended Action |
+| :-- | :--------------------------------------------------- | :------- | :----------------- |
+| 1   | Lost Update Bug in `ConfigManager.saveRawConfig`     | **P1**   | Use `UpdateCommand` with atomic increments (`ADD`) for health/metrics instead of `PutCommand` after read. |
+| 2   | Strict Zod Validation Blocks Context Injection       | **P1**   | Modify `jsonSchemaToZod` to always use `.passthrough()` even if `additionalProperties: false` is specified, or handle injection after validation. |
+| 3   | `SafetyEngine` is Dead Code in Core Path             | **P2**   | Integrate `SafetyEngine.evaluateAction` into `ToolExecutor.executeSingleToolCall` to activate advanced policies. |
+| 4   | MCP Results lack structure (Images/Metadata ignored) | **P2**   | Update `MCPToolMapper` to parse MCP `CallToolResult` into a structured `ToolResult` instead of `JSON.stringify`ing the content array. |
+| 5   | Placeholder Violation Persistence in `SafetyEngine`  | **P2**   | Implement `persistViolations` to record safety events in DynamoDB for audit trails. |
+| 6   | Hardcoded LLM Pricing in `ExecutorCore`              | **P2**   | Move pricing to `AgentRegistry` or a dynamic config to allow updates without code changes. |
+| 7   | Redundant Security Logic in `ToolExecutor`           | **P2**   | Consolidate `fs-security.ts` and `IdentityManager` checks into `SafetyEngine` to provide a unified "Shield". |
+| 8   | Performance Gap in Sequential Multi-Turn             | **P3**   | Optimize `ToolExecutor` to only execute sequential tools sequentially, allowing others to run in parallel. |
+| 9   | Lack of Load Balancing in `AgentRouter`              | **P3**   | Implement weighted or random selection between candidates in the same `ModelTier`. |
 
-### P3: Inconsistent Filesystem Defaults
-*   **Observation**: `MCPBridge` and `multiplexer` have slightly different default paths for the filesystem MCP server (`/var/task` vs `.` vs `/tmp`).
-*   **Impact**: Confusion about where files are being read/written in Lambda environments.
-*   **Recommendation**: Centralize filesystem path resolution in a single utility used by both the bridge and the multiplexer.
+## 💡 Architectural Reflections
 
-## Verification Strategy Used
-*   Static code analysis of `core/lib/mcp`, `core/lib/warmup`, and `core/lib/agent/tool-executor.ts`.
-*   Reproduction test in `core/lib/warmup/warmup-manager.test.ts` confirming the P1 bug.
-*   Verification of the fix through automated test suite.
+The system has a very strong "Hand" (MCP integration is robust with thundering herd protection and multi-transport support) but a "Shield" that is currently disconnected from reality. The `SafetyEngine` contains the "survival instincts" mentioned in `AUDIT.md`, but they are not being exercised because the core loop uses a simplified version in `fs-security.ts`.
+
+### Recommendation: Unified Security Layer
+Merge the keyword-based `isSensitiveTool`, the file-path based `checkArgumentsForSecurity`, and the RBAC checks into `SafetyEngine.evaluateAction`. Ensure every tool execution call passes through this single gate.
+
+### Recommendation: Structured MCP Protocol
+The current MCP mapping is too "lossy". By stringifying the content array, we lose the ability for agents to see images from MCP tools (e.g., Puppeteer screenshots or AST diagrams) in a structured way. `MCPToolMapper` should intelligently map `TextContent` to `text` and `ImageContent` to the `images` array in `ToolResult`.

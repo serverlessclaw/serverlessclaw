@@ -65,7 +65,20 @@ vi.mock('../registry', () => ({
     getRawConfig: vi.fn().mockResolvedValue(null),
     saveRawConfig: vi.fn().mockResolvedValue(undefined),
   },
+  ConfigManager: {
+    getRawConfig: vi.fn().mockResolvedValue(null),
+    saveRawConfig: vi.fn().mockResolvedValue(undefined),
+    incrementConfig: vi.fn().mockImplementation(async (key: string) => {
+      const { AgentRegistry } = await import('../registry');
+      const current = (await AgentRegistry.getRawConfig(key)) as any;
+      const base = current?.count ?? incrementCount;
+      incrementCount = base + 1;
+      return incrementCount;
+    }),
+  },
 }));
+
+let incrementCount = 0;
 
 vi.mock('../logger', () => ({
   logger: {
@@ -79,6 +92,7 @@ vi.mock('../logger', () => ({
 describe('MCPClientManager', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    incrementCount = 0;
     mockConnect.mockResolvedValue(undefined);
     const { AgentRegistry } = await import('../registry');
     vi.mocked(AgentRegistry.getRawConfig).mockResolvedValue(null);

@@ -532,4 +532,18 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   ): Promise<import('../types/collaboration').Collaboration[]> {
     return CollaborationOps.findStaleCollaborations(this, defaultTimeoutMs);
   }
+
+  /**
+   * Gets cache statistics for monitoring. DynamoMemory itself doesn't cache,
+   * so it returns zeroed stats. Use CachedMemory for actual caching.
+   */
+  getCacheStats() {
+    return {
+      userData: { hits: 0, misses: 0, evictions: 0, size: 0 },
+      conversation: { hits: 0, misses: 0, evictions: 0, size: 0 },
+      global: { hits: 0, misses: 0, evictions: 0, size: 0 },
+      search: { hits: 0, misses: 0, evictions: 0, size: 0 },
+      overallHitRate: 0,
+    };
+  }
 }

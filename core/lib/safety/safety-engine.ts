@@ -11,7 +11,6 @@ import {
   SafetyPolicy,
   TimeRestriction,
   SafetyEvaluationResult,
-  SafetyViolation,
 } from '../types/agent';
 import { logger } from '../logger';
 import type { BaseMemoryProvider } from '../memory/base';
@@ -19,27 +18,23 @@ import { SafetyRateLimiter, ToolSafetyOverride } from './safety-limiter';
 import { SafetyConfigManager } from './safety-config-manager';
 import { EvolutionScheduler } from './evolution-scheduler';
 import { CONFIG_DEFAULTS } from '../config/config-defaults';
+import { SafetyBase } from './safety-base';
 
 /**
  * Safety Engine for evaluating actions against granular policies.
  */
-export class SafetyEngine {
+export class SafetyEngine extends SafetyBase {
   private policies: Map<SafetyTier, Partial<SafetyPolicy>>;
   private toolOverrides: Map<string, ToolSafetyOverride>;
-  private violations: SafetyViolation[] = [];
   private limiter: SafetyRateLimiter;
   private evolutionScheduler: EvolutionScheduler;
-  // Sh2 Fix: Track blast radius for Class C actions
-  private classCBlastRadius: Map<
-    string,
-    { count: number; affectedResources: number; lastAction: number }
-  > = new Map();
 
   constructor(
     customPolicies?: Partial<Record<SafetyTier, Partial<SafetyPolicy>>>,
     toolOverrides?: ToolSafetyOverride[],
     base?: BaseMemoryProvider
   ) {
+    super();
     this.policies = new Map();
     this.toolOverrides = new Map();
     this.limiter = new SafetyRateLimiter(base);
@@ -114,7 +109,7 @@ export class SafetyEngine {
           context.traceId,
           context.userId
         );
-        this.logViolation(violation);
+        await this.logViolation(violation);
 
         return {
           allowed: true,
@@ -133,17 +128,23 @@ export class SafetyEngine {
 
     // Check resource-level controls
     if (context?.resource) {
-      const resourceResult = this.checkResourceAccess(policy, context.resource, action, tier, {
-        ...context,
-        agentId: agentConfig?.id,
-      });
+      const resourceResult = await this.checkResourceAccess(
+        policy,
+        context.resource,
+        action,
+        tier,
+        {
+          ...context,
+          agentId: agentConfig?.id,
+        }
+      );
       if (!resourceResult.allowed || resourceResult.requiresApproval) {
         return resourceResult;
       }
     }
 
     // Check time-based restrictions
-    const timeResult = this.checkTimeRestrictions(policy, action, tier, {
+    const timeResult = await this.checkTimeRestrictions(policy, action, tier, {
       ...context,
       agentId: agentConfig?.id,
     });
@@ -152,7 +153,7 @@ export class SafetyEngine {
     }
 
     // Check action-specific approval requirements
-    const approvalResult = this.checkApprovalRequirements(policy, action, tier, {
+    const approvalResult = await this.checkApprovalRequirements(policy, action, tier, {
       ...context,
       agentId: agentConfig?.id,
     });
@@ -213,13 +214,13 @@ export class SafetyEngine {
   /**
    * Check if a file path is allowed for the given policy.
    */
-  private checkResourceAccess(
+  private async checkResourceAccess(
     policy: SafetyPolicy,
     resource: string,
     action: string,
     tier: SafetyTier,
     context?: { traceId?: string; userId?: string; toolName?: string; agentId?: string }
-  ): SafetyEvaluationResult {
+  ): Promise<SafetyEvaluationResult> {
     // Check blocked paths first
     if (policy.blockedFilePaths) {
       for (const pattern of policy.blockedFilePaths) {
@@ -235,7 +236,7 @@ export class SafetyEngine {
             context?.traceId,
             context?.userId
           );
-          this.logViolation(violation);
+          await this.logViolation(violation);
 
           return {
             allowed: false,
@@ -266,7 +267,7 @@ export class SafetyEngine {
           context?.traceId,
           context?.userId
         );
-        this.logViolation(violation);
+        await this.logViolation(violation);
 
         return {
           allowed: false,
@@ -283,12 +284,12 @@ export class SafetyEngine {
   /**
    * Check time-based restrictions.
    */
-  private checkTimeRestrictions(
+  private async checkTimeRestrictions(
     policy: SafetyPolicy,
     action: string,
     tier: SafetyTier,
     context?: { traceId?: string; userId?: string; toolName?: string; agentId?: string }
-  ): SafetyEvaluationResult {
+  ): Promise<SafetyEvaluationResult> {
     if (!policy.timeRestrictions || policy.timeRestrictions.length === 0) {
       return { allowed: true, requiresApproval: false };
     }
@@ -316,7 +317,7 @@ export class SafetyEngine {
             context?.traceId,
             context?.userId
           );
-          this.logViolation(violation);
+          await this.logViolation(violation);
 
           return {
             allowed: false,
@@ -337,7 +338,7 @@ export class SafetyEngine {
             context?.traceId,
             context?.userId
           );
-          this.logViolation(violation);
+          await this.logViolation(violation);
 
           return {
             allowed: true,
@@ -355,12 +356,12 @@ export class SafetyEngine {
   /**
    * Check approval requirements based on action type and policy.
    */
-  private checkApprovalRequirements(
+  private async checkApprovalRequirements(
     policy: SafetyPolicy,
     action: string,
     tier: SafetyTier,
     _context?: { traceId?: string; userId?: string; toolName?: string; agentId?: string }
-  ): SafetyEvaluationResult {
+  ): Promise<SafetyEvaluationResult> {
     switch (action) {
       case 'code_change':
         if (policy.requireCodeApproval) {
@@ -375,7 +376,7 @@ export class SafetyEngine {
             _context?.traceId,
             _context?.userId
           );
-          this.logViolation(violation);
+          await this.logViolation(violation);
           return {
             allowed: true,
             requiresApproval: true,
@@ -397,7 +398,7 @@ export class SafetyEngine {
             _context?.traceId,
             _context?.userId
           );
-          this.logViolation(violation);
+          await this.logViolation(violation);
           return {
             allowed: true,
             requiresApproval: true,
@@ -419,7 +420,7 @@ export class SafetyEngine {
             _context?.traceId,
             _context?.userId
           );
-          this.logViolation(violation);
+          await this.logViolation(violation);
           return {
             allowed: true,
             requiresApproval: true,
@@ -441,7 +442,7 @@ export class SafetyEngine {
             _context?.traceId,
             _context?.userId
           );
-          this.logViolation(violation);
+          await this.logViolation(violation);
           return {
             allowed: true,
             requiresApproval: true,
@@ -463,7 +464,7 @@ export class SafetyEngine {
             _context?.traceId,
             _context?.userId
           );
-          this.logViolation(violation);
+          await this.logViolation(violation);
           return {
             allowed: true,
             requiresApproval: true,
@@ -485,7 +486,7 @@ export class SafetyEngine {
           _context?.traceId,
           _context?.userId
         );
-        this.logViolation(violation);
+        await this.logViolation(violation);
         return {
           allowed: true,
           requiresApproval: true,
@@ -534,153 +535,6 @@ export class SafetyEngine {
     } else {
       return hour >= restriction.startHour || hour < restriction.endHour;
     }
-  }
-
-  /**
-   * Simple glob pattern matching.
-   * Handles ** (match any path including /), * (match except /), and ? (single char).
-   */
-  private matchesGlob(path: string, pattern: string): boolean {
-    const regexSource = pattern
-      .replace(/[.+^${}()|[\]\\]/g, '\\$&') // Escape regex special chars
-      .replace(/\*\*\//g, '___DIR___')
-      .replace(/\*\*/g, '___ANY___')
-      .replace(/\*/g, '___NONSLASH___')
-      .replace(/\?/g, '.')
-      .replace(/___DIR___/g, '(?:.*/)?')
-      .replace(/___ANY___/g, '.*')
-      .replace(/___NONSLASH___/g, '[^/]*');
-
-    const regex = new RegExp(`^${regexSource}$`);
-    return regex.test(path);
-  }
-
-  /**
-   * Create a safety violation record.
-   */
-  private createViolation(
-    agentId: string,
-    safetyTier: SafetyTier,
-    action: string,
-    toolName: string | undefined,
-    resource: string | undefined,
-    reason: string,
-    outcome: 'blocked' | 'approval_required' | 'allowed',
-    traceId?: string,
-    userId?: string
-  ): SafetyViolation {
-    return {
-      id: `violation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      timestamp: new Date(),
-      agentId,
-      safetyTier,
-      action,
-      toolName,
-      resource,
-      reason,
-      outcome,
-      traceId,
-      userId,
-    };
-  }
-
-  /**
-   * Log a safety violation.
-   */
-  private logViolation(violation: SafetyViolation): void {
-    this.violations.push(violation);
-
-    // Keep only last 1000 violations in memory
-    if (this.violations.length > 1000) {
-      this.violations = this.violations.slice(-1000);
-    }
-
-    logger.warn('Safety violation detected', {
-      violationId: violation.id,
-      agentId: violation.agentId,
-      action: violation.action,
-      toolName: violation.toolName,
-      resource: violation.resource,
-      reason: violation.reason,
-      outcome: violation.outcome,
-      traceId: violation.traceId,
-    });
-  }
-
-  /**
-   * Get recent safety violations.
-   */
-  getViolations(limit: number = 100): SafetyViolation[] {
-    return this.violations.slice(-limit);
-  }
-
-  /**
-   * Get violations for a specific agent.
-   */
-  getViolationsByAgent(agentId: string, limit: number = 100): SafetyViolation[] {
-    return this.violations.filter((v) => v.agentId === agentId).slice(-limit);
-  }
-
-  /**
-   * Get violations for a specific action type.
-   */
-  getViolationsByAction(action: string, limit: number = 100): SafetyViolation[] {
-    return this.violations.filter((v) => v.action === action).slice(-limit);
-  }
-
-  /**
-   * Clear all violations (useful for testing).
-   */
-  clearViolations(): void {
-    this.violations = [];
-  }
-
-  /**
-   * Track blast radius for Class C actions.
-   * Sh2 Fix: Add blast-radius tracking to measure propagation scope of sensitive changes.
-   */
-  private trackClassCBlastRadius(action: string, resource?: string): void {
-    const key = action;
-    const existing = this.classCBlastRadius.get(key) || {
-      count: 0,
-      affectedResources: 0,
-      lastAction: 0,
-    };
-
-    this.classCBlastRadius.set(key, {
-      count: existing.count + 1,
-      affectedResources: existing.affectedResources + (resource ? 1 : 0),
-      lastAction: Date.now(),
-    });
-
-    logger.info('[SafetyEngine] Class C action tracked for blast radius', {
-      action,
-      resource,
-      totalCount: existing.count + 1,
-    });
-  }
-
-  /**
-   * Get Class C blast radius stats.
-   */
-  getClassCBlastRadius(): Record<
-    string,
-    { count: number; affectedResources: number; lastAction: number }
-  > {
-    return Object.fromEntries(this.classCBlastRadius);
-  }
-
-  /**
-   * Sh2 Fix: Persist violations to DynamoDB for audit trail.
-   * Note: This requires a base memory provider to be available.
-   */
-  async persistViolations(_base?: BaseMemoryProvider): Promise<void> {
-    // This would persist to DynamoDB - placeholder for implementation
-    // The violations are already stored in-memory (max 1000)
-    // For full implementation, this would write to a safety:violations table
-    logger.info('[SafetyEngine] Violation persistence to DynamoDB not yet implemented', {
-      violationsCount: this.violations.length,
-    });
   }
 
   /**

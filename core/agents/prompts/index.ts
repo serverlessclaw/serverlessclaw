@@ -7,6 +7,7 @@ import CRITIC_SYSTEM_PROMPT from './critic.md';
 import FACILITATOR_SYSTEM_PROMPT from './facilitator.md';
 import MERGER_SYSTEM_PROMPT from './merger.md';
 import RESEARCHER_SYSTEM_PROMPT from './researcher.md';
+import JUDGE_SYSTEM_PROMPT from './judge.md';
 
 export {
   SUPERCLAW_SYSTEM_PROMPT,
@@ -18,4 +19,5 @@ export {
   FACILITATOR_SYSTEM_PROMPT,
   MERGER_SYSTEM_PROMPT,
   RESEARCHER_SYSTEM_PROMPT,
+  JUDGE_SYSTEM_PROMPT,
 };

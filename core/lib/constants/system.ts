@@ -55,6 +55,8 @@ export const DYNAMO_KEYS = {
   AGENT_TOOL_OVERRIDES: 'agent_tool_overrides',
   GOVERNANCE_CONFIG: 'governance_config',
   GOVERNANCE_STATE: 'governance_state',
+  TRUST_SCORE_HISTORY: 'trust:score_history',
+  TRUST_PENALTY_LOG: 'trust:penalty_log',
   CLARIFICATION_TIMEOUT_MS: 'clarification_timeout_ms',
   CLARIFICATION_MAX_RETRIES: 'clarification_max_retries',
   CONTEXT_SAFETY_MARGIN: 'context_safety_margin',

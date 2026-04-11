@@ -9,8 +9,7 @@
 - [🏗️ Deep-Dive Silos](#-deep-dive-silos)
 - [🔗 Cross-Silo Perspectives](#-cross-silo-perspectives)
 - [🛠️ Verification Strategy](#-verification-strategy)
-- [⚙️ Automated Audit Configuration](#-automated-audit-configuration)
-- [📖 Glossary](file:///Users/pengcao/projects/serverlessclaw/docs/governance/GLOSSARY.md)
+- [📖 Glossary](../../docs/governance/GLOSSARY.md)
 
 This document establishes a framework for auditing **Serverless Claw** through focused "Silos" and "Cross-Silo Perspectives." Unlike a traditional phased checklist, this approach encourages creative, deep-dive explorations that prioritize architectural spirit, resilience, and evolution over simple file-based verification.
 
@@ -59,15 +58,15 @@ This document establishes a framework for auditing **Serverless Claw** through f
 
 Use this table to map high-level silos to the primary code areas that should be investigated.
 
-| Silo  | Name       | Primary Code Focus                                                                                                                                                                                         |
-| :---- | :--------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **1** | The Spine  | [routing/AgentRouter.ts](file:///Users/pengcao/projects/serverlessclaw/core/lib/routing/AgentRouter.ts), [backbone.ts](file:///Users/pengcao/projects/serverlessclaw/core/lib/backbone.ts)                 |
-| **2** | The Hand   | [mcp.ts](file:///Users/pengcao/projects/serverlessclaw/core/lib/mcp.ts), [executor.ts](file:///Users/pengcao/projects/serverlessclaw/core/lib/agent/executor.ts)                                           |
-| **3** | The Shield | [safety-engine.ts](file:///Users/pengcao/projects/serverlessclaw/core/lib/safety/safety-engine.ts), [circuit-breaker.ts](file:///Users/pengcao/projects/serverlessclaw/core/lib/safety/circuit-breaker.ts) |
-| **4** | The Brain  | `core/lib/memory/`, `core/lib/rag/`                                                                                                                                                                        |
-| **5** | The Eye    | [judge.ts](file:///Users/pengcao/projects/serverlessclaw/core/lib/verify/judge.ts), `core/lib/metrics/`                                                                                                    |
-| **6** | The Scales | [safety-engine.ts](file:///Users/pengcao/projects/serverlessclaw/core/lib/safety/safety-engine.ts) (TrustScore)                                                                                            |
-| **7** | The Scythe | [registry/AgentRegistry.ts](file:///Users/pengcao/projects/serverlessclaw/core/lib/registry/AgentRegistry.ts) (Pruning/Cleanup)                                                                            |
+| Silo  | Name       | Primary Code Focus                                                                                                                                                                                                            |
+| :---- | :--------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1** | The Spine  | [routing/AgentRouter.ts](../../core/lib/routing/AgentRouter.ts), [backbone.ts](../../core/lib/backbone.ts)                                                                                                                    |
+| **2** | The Hand   | [mcp.ts](../../core/lib/mcp.ts), [executor.ts](../../core/lib/agent/executor.ts)                                                                                                                                              |
+| **3** | The Shield | [safety-engine.ts](../../core/lib/safety/safety-engine.ts), [circuit-breaker.ts](../../core/lib/safety/circuit-breaker.ts)                                                                                                    |
+| **4** | The Brain  | `core/lib/memory/`, `core/lib/rag/`                                                                                                                                                                                           |
+| **5** | The Eye    | `core/lib/metrics/`, `core/lib/tracer/` (Trace Intelligence)                                                                                                                                                                  |
+| **6** | The Scales | [judge.ts](../../core/lib/verify/judge.ts), [trust-manager.ts](../../core/lib/safety/trust-manager.ts)                                                                                                                        |
+| **7** | The Scythe | [pruning.ts](../../core/lib/lifecycle/pruning.ts), [AgentRegistry.ts](../../core/lib/registry/AgentRegistry.ts) (firstRegistered), [audit-protocol.ts](../../core/agents/cognition-reflector/audit-protocol.ts) (auditScythe) |
 
 ---
 
@@ -100,22 +99,23 @@ Each silo represents a core functional domain. Reviews within a silo should adop
 
 **Perspective**: _How does the system maintain its "sense of self" and history?_
 
-- **Angle**: Investigate the continuity of context across multi-turn sessions. Audit the multi-tenant Workspace isolation and the efficiency of the **Hybrid Memory Model** (Hot DynamoDB + Semantic Vector Memory) for high-speed recall and strategic reflection.
-- **Key Concepts**: Tiered retention (TTL), Vector RAG efficiency, RBAC (Owner/Admin/Collab), and strategic gap identification.
+- **Angle**: Investigate the continuity of context across multi-turn sessions. Audit the multi-tenant Workspace isolation and the efficiency of the **Tiered Memory Model** (Hot DynamoDB + LRU Cache) for high-speed recall and strategic reflection.
+- **Note**: Semantic Vector Memory is a future milestone. Current implementation uses DynamoDB with tiered retention.
+- **Key Concepts**: Tiered retention (TTL), Cache hit rates, RBAC (Owner/Admin/Collab), and strategic gap identification.
 
-### 5. The Eye (Self-Perception & Truth)
+### 5. The Eye (Observation & Consistency)
 
-**Perspective**: _Is the system’s view of itself accurate?_
+**Perspective**: _Does the system's internal trace state match what is reported to the user?_
 
-- **Angle**: Audit the feedback loops. Review the Playwright E2E suite and the **LLM-as-a-Judge** semantic evaluation layer to ensure "truth" matches backend state. Evaluate the CI/CD pipelines as the "ultimate truth" of the deployment lifecycle.
-- **Key Concepts**: Dashboard tracing accuracy, LLM-as-a-Judge consistency, build-monitor signaling, and autonomous test suite evolution.
+- **Angle**: Audit the consistency between backend trace state and the Dashboard's Trace Intelligence. Ensure that "truth" matches backend state and that no signal is lost between internal execution and external reporting.
+- **Key Concepts**: Trace consistency, Real-time sync, Dashboard accuracy, Observability SLOs.
 
 ### 6. The Scales (Trust & Calibration)
 
-**Perspective**: _Is the system grading its own homework too leniently?_
+**Perspective**: _Is the system accurately penalizing failure and rewarding success?_
 
-- **Angle**: Audit the `SafetyEngine` and the LLM-as-a-Judge semantic evaluation layer to ensure `TrustScore` calculations are resistant to artificial inflation (gaming the metrics). Verify that failures accurately and immediately penalize the trust score.
-- **Key Concepts**: Trust decay rates, metric gaming, false-positive evaluations, and mode-shift thrashing.
+- **Angle**: Audit the integrity of the feedback loop from observation to trust calibration. Review the **LLM-as-a-Judge** semantic evaluation layer to ensure it is impartial and that `TrustScore` calculations accurately reflect agent performance. Verify that failures (caught by QA or SLO breaches) correctly penalize the trust score.
+- **Key Concepts**: LLM-as-a-Judge impartiality, TrustScore penalties, Success rewards, Trust decay rates.
 
 ### 7. The Scythe (Bloat & Debt)
 
@@ -130,11 +130,11 @@ Each silo represents a core functional domain. Reviews within a silo should adop
 
 These perspectives intentionally span multiple silos to identify integration gaps and emergent system behaviors.
 
-### A. The "Life of a Message" (Spine ↔ Brain ↔ Eye)
+### A. The "Life of a Message" (Spine ↔ Brain ↔ Mirror)
 
 Track a single user message from the initial Webhook entry, through memory retrieval and agent reasoning, to the final real-time UI push via MQTT.
 
-### B. The "Evolution Cycle" (Hand ↔ Shield ↔ Eye)
+### B. The "Evolution Cycle" (Hand ↔ Shield ↔ Mirror)
 
 Review the end-to-end flow of self-evolution: from a Strategic Plan to code generation, safety verification, and finally the atomic deployment sync to the trunk.
 
@@ -181,58 +181,4 @@ Brief description of what you were looking for.
 ## 💡 Architectural Reflections
 
 Any high-level notes on debt or potential consolidations.
-```
-
----
-
-## ⚙️ Automated Audit Configuration
-
-The system supports automated audits triggered by code growth thresholds or major events.
-
-### Configuration ([config-defaults.ts](file:///Users/pengcao/projects/serverlessclaw/core/lib/config/config-defaults.ts))
-
-| Config Key                     | Default    | Description                                                                           |
-| :----------------------------- | :--------- | :------------------------------------------------------------------------------------ |
-| `audit_code_growth_threshold`  | 0.10 (10%) | Code growth percentage that triggers a system audit                                   |
-| `audit_event_triggers_enabled` | true       | Enable audit triggers on PRE_FLIGHT_READY, TRUST_SCORE_DROP, and MAJOR_SWARM_COMPLETE |
-
-> [!TIP]
-> To adjust thresholds, modify the values in `config-defaults.ts` or provide stage-specific overrides in `infra/config/`.
-
-### Trigger Mechanisms
-
-1. **Code Growth Threshold**: When code growth exceeds 10% (configurable), the Strategic Planner triggers an audit
-2. **Event-Based (Shift-Left)**: On `PRE_FLIGHT_READY` (to catch P0s before trunk sync) or `MAJOR_SWARM_COMPLETE` events
-3. **Trust-Based**: On `TRUST_SCORE_DROP` (if systemic trust drops > 15% in a single cycle, instantly trigger the Cognition Reflector)
-4. **Manual**: Invoke with task "system audit" to the Cognition Reflector
-
-### Agent Responsibilities
-
-| Agent                   | Audit Focus                                        |
-| :---------------------- | :------------------------------------------------- |
-| **Strategic Planner**   | Code growth tracking, threshold triggers           |
-| **Cognition Reflector** | Knowledge gaps, memory consistency, trace analysis |
-| **QA Auditor**          | Deployment validation, feature-gap alignment       |
-| **Critic**              | Security, performance, architectural debt          |
-
-### Audit Flow
-
-```
-Trigger (Code Growth, PRE_FLIGHT_READY, TRUST_SCORE_DROP)
-                              ↓
-                      Strategic Planner (Orchestrator)
-                              ↓
-              ┌───────────────┼───────────────┐
-              ↓               ↓               ↓
-           Critic        QA Auditor    Cognition Reflector
-      (Security/Perf)   (Deploy/Gaps)   (Memory/Traces)
-              ↓               ↓               ↓
-              └───────────────┼───────────────┘
-                              ↓
-                    Compile Audit Report
-                              ↓
-                [ ToolPruner Analysis ]
-                (Suggest Pruning Gaps)
-                              ↓
-                 P0 Alerts / Block PRE_FLIGHT
 ```

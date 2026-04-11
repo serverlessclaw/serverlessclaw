@@ -319,6 +319,15 @@ export interface IMemory extends IHistoryStore, IKnowledgeStore, IGapManager {
       collaborationName: string;
     }>
   >;
+
+  /** Gets cache statistics for monitoring. Returns hit rates and sizes for all caches. */
+  getCacheStats(): {
+    userData: { hits: number; misses: number; evictions: number; size: number };
+    conversation: { hits: number; misses: number; evictions: number; size: number };
+    global: { hits: number; misses: number; evictions: number; size: number };
+    search: { hits: number; misses: number; evictions: number; size: number };
+    overallHitRate: number;
+  };
 }
 
 /**

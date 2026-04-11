@@ -6,6 +6,7 @@
  */
 
 import { logger } from '../logger';
+import { CACHE_TTL } from '../constants/memory';
 
 interface CacheEntry<T> {
   value: T;
@@ -254,31 +255,32 @@ export const CacheKeys = {
 
 /**
  * Default cache instances for different data types with optimized TTLs.
+ * TTLs now centralized through CACHE_TTL constant for hot-swappability.
  */
 export const MemoryCaches = {
   /**
    * Cache for user-specific data (distilled memory, preferences).
-   * TTL: 5 minutes (user data changes moderately)
+   * TTL: from CACHE_TTL.USER_DATA (default 5 min)
    */
-  userData: new MemoryCache<unknown>(500, 5 * 60 * 1000),
+  userData: new MemoryCache<unknown>(500, CACHE_TTL.USER_DATA),
 
   /**
    * Cache for conversation history and summaries.
-   * TTL: 2 minutes (conversations update frequently)
+   * TTL: from CACHE_TTL.CONVERSATION (default 2 min)
    */
-  conversation: new MemoryCache<unknown>(1000, 2 * 60 * 1000),
+  conversation: new MemoryCache<unknown>(1000, CACHE_TTL.CONVERSATION),
 
   /**
    * Cache for global/system-wide data (global lessons, system config).
-   * TTL: 15 minutes (system data changes infrequently)
+   * TTL: from CACHE_TTL.GLOBAL (default 15 min)
    */
-  global: new MemoryCache<unknown>(100, 15 * 60 * 1000),
+  global: new MemoryCache<unknown>(100, CACHE_TTL.GLOBAL),
 
   /**
    * Cache for search results and queries.
-   * TTL: 3 minutes (search results may change with new data)
+   * TTL: from CACHE_TTL.SEARCH (default 3 min)
    */
-  search: new MemoryCache<unknown>(200, 3 * 60 * 1000),
+  search: new MemoryCache<unknown>(200, CACHE_TTL.SEARCH),
 } as const;
 
 /**
