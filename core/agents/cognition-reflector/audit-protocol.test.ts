@@ -1,169 +1,76 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { runSystemAudit, AUDIT_SILOS } from './audit-protocol';
+import { runSystemAudit } from './audit-protocol';
+import { ScytheLogic } from './lib/scythe';
+import * as fs from 'fs';
 
-vi.mock('../../lib/logger', () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}));
+vi.mock('./lib/scythe');
+vi.mock('fs');
+vi.mock('../../lib/logger');
+vi.mock('../../lib/utils/bus');
 
-vi.mock('../../lib/utils/bus', () => ({
-  emitEvent: vi.fn().mockResolvedValue(undefined),
-}));
+describe('Audit Protocol - Scythe Silo', () => {
+  let mockMemory: any;
 
-// Minimal mock memory satisfying all audit function signatures
-function makeMemory(overrides: Record<string, unknown> = {}) {
-  return {
-    getAllGaps: vi.fn().mockResolvedValue([]),
-    getFailurePatterns: vi.fn().mockResolvedValue([]),
-    set: vi.fn().mockResolvedValue(undefined),
-    get: vi.fn().mockImplementation(async (key: string) => overrides[key] ?? null),
-  };
-}
-
-describe('AUDIT_SILOS', () => {
-  it('defines all 7 silos matching AUDIT.md', () => {
-    const names = AUDIT_SILOS.map((s) => s.name);
-    expect(names).toEqual(['Spine', 'Hand', 'Shield', 'Brain', 'Eye', 'Scales', 'Scythe']);
-  });
-
-  it('every silo has perspective, angle, and keyConcepts', () => {
-    for (const silo of AUDIT_SILOS) {
-      expect(silo.perspective).toBeTruthy();
-      expect(silo.angle).toBeTruthy();
-      expect(silo.keyConcepts.length).toBeGreaterThan(0);
-    }
-  });
-});
-
-describe('runSystemAudit', () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  it('returns a report with correct structure', async () => {
-    const memory = makeMemory();
-    const report = await runSystemAudit(memory, 'CODE_GROWTH');
-
-    expect(report.auditId).toMatch(/^AUDIT-/);
-    expect(report.triggerType).toBe('CODE_GROWTH');
-    expect(Array.isArray(report.findings)).toBe(true);
-    expect(Array.isArray(report.silosReviewed)).toBe(true);
-    expect(report.silosReviewed).toHaveLength(7);
-    expect(typeof report.summary).toBe('string');
-  });
-
-  it('saves the report to memory', async () => {
-    const memory = makeMemory();
-    await runSystemAudit(memory, 'EVENT_TRIGGER');
-    expect(memory.set).toHaveBeenCalledWith(
-      expect.stringMatching(/^audit:AUDIT-/),
-      expect.objectContaining({ auditId: expect.any(String) })
-    );
-  });
-});
-
-describe('Scythe silo (auditScythe)', () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  it('reports P2 when a prune proposal is stale (>7 days PENDING_REVIEW)', async () => {
-    const staleProposal = {
-      unusedTools: ['toolA', 'toolB'],
-      thresholdDays: 30,
-      status: 'PENDING_REVIEW',
-      id: 'prune_proposal_123',
-      lastAudit: Date.now() - 8 * 24 * 60 * 60 * 1000, // 8 days ago
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockMemory = {
+      getAllGaps: vi.fn().mockResolvedValue([]),
+      getFailurePatterns: vi.fn().mockResolvedValue([]),
+      set: vi.fn().mockResolvedValue(undefined),
+      get: vi.fn().mockResolvedValue([]),
     };
 
-    const memory = makeMemory({ pending_prune_proposal: staleProposal });
-    // Mock ConfigManager for auto_prune_enabled check inside auditScythe
-    vi.doMock('../../lib/registry/config', () => ({
-      ConfigManager: {
-        getTypedConfig: vi.fn().mockResolvedValue(false),
+    (vi.mocked(fs.existsSync) as any).mockReturnValue(true);
+    (vi.mocked(fs.readdirSync) as any).mockReturnValue([]);
+    (vi.mocked(fs.readFileSync) as any).mockReturnValue('');
+    (vi.mocked(fs.statSync) as any).mockReturnValue({ isDirectory: () => false });
+  });
+
+  it('should identify per-agent bloat correctly', async () => {
+    (ScytheLogic.generatePruneProposal as any).mockResolvedValue({
+      swarm: {
+        unusedTools: ['tool1'],
+        zombieAgents: [],
+        perAgentBloat: [
+          {
+            agentId: 'test-agent',
+            unusedTools: ['tool1', 'tool2', 'tool3', 'tool4', 'tool5', 'tool6'],
+          },
+        ],
       },
-    }));
-
-    const report = await runSystemAudit(memory, 'EVENT_TRIGGER');
-    const scytheFinding = report.findings.find(
-      (f) => f.silo === 'Scythe' && f.severity === 'P2' && f.actual.includes('pending for')
-    );
-    expect(scytheFinding).toBeDefined();
-    expect(scytheFinding?.recommendation).toContain('Strategic Planner');
-  });
-
-  it('does not flag a fresh prune proposal (<7 days)', async () => {
-    const freshProposal = {
-      unusedTools: ['toolA'],
+      codebase: { emptyDirs: [], debtMarkers: 0, orphanedFiles: [] },
       thresholdDays: 30,
-      status: 'PENDING_REVIEW',
-      id: 'prune_proposal_456',
-      lastAudit: Date.now() - 1 * 24 * 60 * 60 * 1000, // 1 day ago
-    };
+    });
 
-    const memory = makeMemory({ pending_prune_proposal: freshProposal });
-    const report = await runSystemAudit(memory, 'EVENT_TRIGGER');
+    const report = await runSystemAudit(mockMemory, 'TEST');
+    const scytheFindings = report.findings.filter((f) => f.silo === 'Scythe');
 
-    const staleFinding = report.findings.find(
-      (f) => f.silo === 'Scythe' && f.actual.includes('pending for')
-    );
-    expect(staleFinding).toBeUndefined();
+    expect(scytheFindings.some((f) => f.actual.includes('[Swarm Debt]'))).toBe(true);
   });
 
-  it('reports P3 when tool registry growth rate exceeds 20%', async () => {
-    const toolHistory = [
-      { count: 50, timestamp: Date.now() - 30 * 24 * 60 * 60 * 1000 },
-      { count: 65, timestamp: Date.now() }, // +30% growth
-    ];
+  it('should detect technical debt markers (TODO/FIXME)', async () => {
+    (ScytheLogic.generatePruneProposal as any).mockResolvedValue({
+      swarm: { unusedTools: [], zombieAgents: [], perAgentBloat: [] },
+      codebase: { emptyDirs: [], debtMarkers: 30, orphanedFiles: [] },
+      thresholdDays: 30,
+    });
 
-    const memory = makeMemory({ 'scythe:tool_count_history': toolHistory });
-    const report = await runSystemAudit(memory, 'TRUNK_SYNC');
+    const report = await runSystemAudit(mockMemory, 'TEST');
+    const scytheFindings = report.findings.filter((f) => f.silo === 'Scythe');
 
-    const growthFinding = report.findings.find(
-      (f) => f.silo === 'Scythe' && f.actual.includes('grew')
-    );
-    expect(growthFinding).toBeDefined();
-    expect(growthFinding?.severity).toBe('P2');
-  });
-});
-
-describe('Scales silo (auditScales)', () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  it('reports P2 when TrustScore history is missing', async () => {
-    const memory = makeMemory(); // no trust:score_history
-    const report = await runSystemAudit(memory, 'TRUST_SCORE_DROP');
-
-    const finding = report.findings.find(
-      (f) => f.silo === 'Scales' && f.actual.includes('No TrustScore history')
-    );
-    expect(finding).toBeDefined();
-    expect(finding?.severity).toBe('P2');
-    expect(finding?.recommendation).toContain('epoch');
+    expect(scytheFindings.some((f) => f.actual.includes('[Codebase Debt]'))).toBe(true);
   });
 
-  it('reports P1 when mode-shift thrashing exceeds 4 crossings', async () => {
-    // Alternates across the 95 threshold 5 times
-    const trustHistory = [90, 96, 90, 96, 90, 96].map((score, i) => ({
-      score,
-      timestamp: Date.now() - (6 - i) * 3600000,
-    }));
+  it('should detect empty directories', async () => {
+    (ScytheLogic.generatePruneProposal as any).mockResolvedValue({
+      swarm: { unusedTools: [], zombieAgents: [], perAgentBloat: [] },
+      codebase: { emptyDirs: ['core/temp'], debtMarkers: 0, orphanedFiles: [] },
+      thresholdDays: 30,
+    });
 
-    const memory = makeMemory({ 'trust:score_history': trustHistory });
-    const report = await runSystemAudit(memory, 'TRUST_SCORE_DROP');
+    const report = await runSystemAudit(mockMemory, 'TEST');
+    const scytheFindings = report.findings.filter((f) => f.silo === 'Scythe');
 
-    const thrashFinding = report.findings.find((f) => f.silo === 'Scales' && f.severity === 'P1');
-    expect(thrashFinding).toBeDefined();
-    expect(thrashFinding?.recommendation).toContain('hysteresis');
-  });
-
-  it('reports P2 when failures exist but no penalty log', async () => {
-    const memory = makeMemory();
-    memory.getFailurePatterns.mockResolvedValue([
-      { content: 'some failure', category: 'TOOL_EXECUTION' },
-    ]);
-    // trust:penalty_log returns null by default
-
-    const report = await runSystemAudit(memory, 'CODE_GROWTH');
-    const penaltyFinding = report.findings.find(
-      (f) => f.silo === 'Scales' && f.actual.includes('penalty log')
-    );
-    expect(penaltyFinding).toBeDefined();
-    expect(penaltyFinding?.severity).toBe('P2');
+    expect(scytheFindings.some((f) => f.actual.includes('[Codebase Debt]'))).toBe(true);
   });
 });

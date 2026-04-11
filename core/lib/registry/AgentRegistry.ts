@@ -317,4 +317,36 @@ export class AgentRegistry {
     await updateUsage(DYNAMO_KEYS.TOOL_USAGE);
     await updateUsage(`tool_usage_${agentId}`);
   }
+
+  /**
+   * Initializes firstRegistered timestamp for tools that have no stats yet.
+   * This is used by the pruner to ensure grace periods are respected for never-used tools.
+   */
+  static async initializeToolStats(toolNames: string[]): Promise<void> {
+    const { ConfigTable } = (await import('sst')).Resource as { ConfigTable?: { name: string } };
+    if (!ConfigTable?.name || toolNames.length === 0) return;
+
+    const { UpdateCommand } = await import('@aws-sdk/lib-dynamodb');
+    const now = Date.now();
+
+    for (const toolName of toolNames) {
+      try {
+        await defaultDocClient.send(
+          new UpdateCommand({
+            TableName: ConfigTable.name,
+            Key: { key: DYNAMO_KEYS.TOOL_USAGE },
+            UpdateExpression: 'SET #usage.#tool.#first = if_not_exists(#usage.#tool.#first, :now)',
+            ExpressionAttributeNames: {
+              '#usage': 'value',
+              '#tool': toolName,
+              '#first': 'firstRegistered',
+            },
+            ExpressionAttributeValues: { ':now': now },
+          })
+        );
+      } catch (e) {
+        logger.debug(`[REGISTRY] Failed to initialize stats for ${toolName}: ${e}`);
+      }
+    }
+  }
 }

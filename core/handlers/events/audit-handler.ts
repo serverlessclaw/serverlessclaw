@@ -10,7 +10,6 @@ import { emitEvent } from '../../lib/utils/bus';
 import { AgentType, EventType } from '../../lib/types/agent';
 import { runSystemAudit } from '../../agents/cognition-reflector/audit-protocol';
 import { getAgentContext } from '../../lib/utils/agent-helpers';
-import { ToolPruner } from '../../lib/lifecycle/pruning';
 
 export interface AuditTriggerEvent {
   triggerType: string;
@@ -71,26 +70,6 @@ export async function handleSystemAuditTrigger(
         traceId: event.traceId,
       }
     );
-
-    // Run tool pruning analysis on major events and any audit that signals potential bloat
-    const PRUNE_TRIGGER_TYPES = [
-      'MAJOR_SWARM_COMPLETE',
-      'EVENT_TRIGGER',
-      'TRUNK_SYNC',
-      'CODE_GROWTH',
-      'PRE_FLIGHT_READY',
-      'TRUST_SCORE_DROP',
-    ];
-
-    if (PRUNE_TRIGGER_TYPES.includes(triggerType)) {
-      const pruneProposal = await ToolPruner.generatePruneProposal();
-      if (pruneProposal) {
-        await ToolPruner.recordPruneProposal(pruneProposal, memory);
-        logger.info(
-          `[AuditHandler] Tool prune proposal generated for ${pruneProposal.unusedTools.length} tools`
-        );
-      }
-    }
 
     logger.info('[AuditHandler] Audit completed:', auditReport.summary);
 

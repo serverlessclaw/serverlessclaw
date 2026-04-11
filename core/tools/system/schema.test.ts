@@ -21,6 +21,7 @@ describe('System Domain Tool Schemas', () => {
     'getSystemConfig',
     'listSystemConfigs',
     'proposeAutonomyUpdate',
+    'scanScythe',
   ];
 
   it('should export all expected tool definitions', () => {

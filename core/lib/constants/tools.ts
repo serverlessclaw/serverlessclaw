@@ -72,6 +72,7 @@ export const TOOLS = {
   navigateTo: 'navigateTo',
   uiAction: 'uiAction',
   proposeAutonomyUpdate: 'proposeAutonomyUpdate',
+  scanScythe: 'scanScythe',
 } as const;
 
 /**

@@ -85,7 +85,7 @@ export async function fetchToolUsageContext(): Promise<string> {
     const { TokenTracker } = await import('../../lib/metrics/token-usage');
 
     const toolNames = Object.keys(TOOLS);
-    const anomalies: Array<{ toolName: string; stats: Record<string, unknown> }> = [];
+    const anomalies: Array<{ toolName: string; type: string; stats: Record<string, unknown> }> = [];
 
     for (const toolName of toolNames) {
       const rollups = await TokenTracker.getToolRollupRange(toolName, 7);
@@ -105,12 +105,21 @@ export async function fetchToolUsageContext(): Promise<string> {
       const successRate = successes / invocations;
 
       // Anomaly criteria: < 80% success rate OR very high cost (> 100k tokens in 7 days)
-      if (successRate < 0.8 || totalCost > 100000) {
+      if (successRate < 0.8) {
         anomalies.push({
           toolName,
+          type: 'LOW_SUCCESS_RATE',
           stats: {
             invocations,
             successRate: (successRate * 100).toFixed(1) + '%',
+          },
+        });
+      } else if (totalCost > 100000) {
+        anomalies.push({
+          toolName,
+          type: 'HIGH_COST_OUTLIER',
+          stats: {
+            invocations,
             totalCostTokens: totalCost,
           },
         });
@@ -294,6 +303,11 @@ export async function buildProactiveReviewPrompt(
     
     If low-utilization memory is no longer relevant, recommend pruning it via 'pruneMemory'.
     If tools are failing or overlapping, provide 'toolOptimizations' recommendations in your JSON output.
+    
+    [SCYTHE_SPECIAL_INSTRUCTIONS]:
+    - Look for 'Failing Tools' in telemetry; if a tool is consistently failing, it may be dead weight.
+    - Review 'Prune Proposals' in the improvement summary; these represent tools that haven't been used in a long time.
+    - Aim for "Capability Density": maximize functionality while minimizing tool surface area.
   `;
 
   // Update last review timestamp

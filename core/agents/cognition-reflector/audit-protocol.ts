@@ -8,6 +8,10 @@
 import { logger } from '../../lib/logger';
 import { emitEvent } from '../../lib/utils/bus';
 import { AgentType, EventType } from '../../lib/types/agent';
+import { ScytheLogic } from './lib/scythe';
+import { TOOLS } from '../../tools/index';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export interface AuditSilo {
   name: string;
@@ -108,11 +112,14 @@ export const AUDIT_SILOS: AuditSilo[] = [
   },
   {
     name: 'Scythe',
-    perspective: 'What can be removed without losing capability?',
+    perspective:
+      'How can we refactor for a leaner, more consistent, and efficient codebase? What is strictly necessary?',
     angle:
-      'Audit the workspace for generated sprawl. Identify redundant tools, overlapping logic, and "dark" code that is never executed but adds cognitive load to agents. Evaluate if abstraction layers have become too thick.',
+      'Audit the workspace for generated sprawl and over-engineered implementations. Act as a critic on necessity to prevent overgrowth. Identify redundant tools, overlapping logic, "dark" code that is never executed, and overly thick abstraction layers. Prioritize consolidating patterns and ensuring that code additions pull their weight.',
     keyConcepts: [
-      'Pattern consolidation',
+      'Necessity critique',
+      'bloat prevention',
+      'pattern consolidation',
       'tool pruning',
       'cyclomatic complexity reduction',
       'semantic compression',
@@ -566,6 +573,45 @@ async function auditScythe(memory: {
     return null;
   };
 
+  // Sy0: Core Scythe Scan (Proactive)
+  try {
+    // 1. Update tool count history for trend analysis
+    await ScytheLogic.updateToolHistory(memory);
+
+    // 2. Generate a fresh pruning proposal
+    const freshProposal = await ScytheLogic.generatePruneProposal();
+    if (freshProposal) {
+      // 3. Record it as a pending proposal and a system improvement (memory)
+      await ScytheLogic.recordPruneProposal(freshProposal, memory);
+
+      const swarmIssues =
+        freshProposal.swarm.unusedTools.length + freshProposal.swarm.zombieAgents.length;
+      if (swarmIssues > 0) {
+        findings.push({
+          silo: 'Scythe',
+          expected: 'Agent registry and swarm topology should be lean and high-utilization',
+          actual: `[Swarm Debt] Identified ${freshProposal.swarm.unusedTools.length} unused tools and ${freshProposal.swarm.zombieAgents.length} zombie agents.`,
+          severity: 'P2',
+          recommendation: `Review the prune proposal for swarm-level optimization.`,
+        });
+      }
+
+      const codeIssues =
+        freshProposal.codebase.emptyDirs.length + (freshProposal.codebase.debtMarkers > 20 ? 1 : 0);
+      if (codeIssues > 0) {
+        findings.push({
+          silo: 'Scythe',
+          expected: 'Codebase should be lean and free of technical debt markers or artifact debris',
+          actual: `[Codebase Debt] Identified ${freshProposal.codebase.emptyDirs.length} empty directories and ${freshProposal.codebase.debtMarkers} debt markers (TODO/FIXME).`,
+          severity: 'P3',
+          recommendation: `Review codebase debt findings and schedule Refactoring Hour.`,
+        });
+      }
+    }
+  } catch (e) {
+    logger.warn('[Audit] Sy0: Failed to run proactive Scythe scan:', e);
+  }
+
   // Sy1: Check for stale pending prune proposals
   const pruneProposalKey = 'pending_prune_proposal';
   const pruneProposal = (await safeGet(pruneProposalKey)) as {
@@ -586,7 +632,7 @@ async function auditScythe(memory: {
       findings.push({
         silo: 'Scythe',
         expected: 'Prune proposals actioned within 7 days',
-        actual: `Prune proposal ${pruneProposal.id} has been pending for ${Math.round(ageSinceProposal / 86400000)} days. Targets: ${pruneProposal.unusedTools.slice(0, 5).join(', ')}${pruneProposal.unusedTools.length > 5 ? '...' : ''}`,
+        actual: `[Governance Debt] Prune proposal ${pruneProposal.id} has been pending for ${Math.round(ageSinceProposal / 86400000)} days.`,
         severity: 'P2',
         recommendation:
           'Review the stale prune proposal and either action or dismiss it via the Strategic Planner',
@@ -604,7 +650,7 @@ async function auditScythe(memory: {
         silo: 'Scythe',
         expected: 'Automated tool pruning enabled or explicitly managed via HITL proposals',
         actual:
-          'auto_prune_enabled is false — pruning relies entirely on manual review of proposals',
+          '[Strategy Debt] auto_prune_enabled is false — pruning relies entirely on manual review of proposals',
         severity: 'P3',
         recommendation:
           'Enable auto_prune_enabled=true once trust is established, or ensure prune proposals are reviewed at each strategic cycle',
@@ -615,27 +661,212 @@ async function auditScythe(memory: {
   }
 
   // Sy3: Check tool growth — detect if total registered tools are growing rapidly
-  const toolGrowthKey = 'scythe:tool_count_history';
-  const toolHistory = (await safeGet(toolGrowthKey)) as Array<{
-    count: number;
-    timestamp: number;
-  }> | null;
+  try {
+    const toolGrowthKey = 'scythe:tool_count_history';
+    const toolHistory = (await safeGet(toolGrowthKey)) as Array<{
+      count: number;
+      timestamp: number;
+    }> | null;
 
-  if (toolHistory && toolHistory.length >= 2) {
-    const oldest = toolHistory[0];
-    const newest = toolHistory[toolHistory.length - 1];
-    const growthRate = (newest.count - oldest.count) / oldest.count;
+    if (toolHistory && toolHistory.length >= 2) {
+      const oldest = toolHistory[0];
+      const newest = toolHistory[toolHistory.length - 1];
+      const growthRate = (newest.count - oldest.count) / oldest.count;
 
-    if (growthRate > 0.2) {
+      if (growthRate > 0.2) {
+        findings.push({
+          silo: 'Scythe',
+          expected: 'Tool registry growth < 20% between audits',
+          actual: `Tool count grew ${(growthRate * 100).toFixed(1)}% from ${oldest.count} to ${newest.count}`,
+          severity: 'P2',
+          recommendation:
+            'Review newly added tools for overlap with existing capabilities before the registry becomes unmanageable.',
+        });
+      }
+    } else {
+      logger.debug('[Audit] Sy3: Insufficient tool count history for trend analysis.');
+    }
+  } catch (e) {
+    logger.warn('[Audit] Sy3: Failed to analyze tool growth history:', e);
+  }
+
+  // Sy4: Semantic Overlap Detection
+  try {
+    const toolNames = Object.keys(TOOLS);
+    const overlaps: string[] = [];
+    const SIMILARITY_THRESHOLD = 0.8;
+
+    const getSimilarity = (s1: string, s2: string): number => {
+      const longer = s1.length > s2.length ? s1 : s2;
+      const shorter = s1.length > s2.length ? s2 : s1;
+      if (longer.length === 0) return 1.0;
+      return (longer.length - editDistance(longer, shorter)) / longer.length;
+    };
+
+    const editDistance = (s1: string, s2: string): number => {
+      const costs = [];
+      for (let i = 0; i <= s1.length; i++) {
+        let lastValue = i;
+        for (let j = 0; j <= s2.length; j++) {
+          if (i === 0) costs[j] = j;
+          else {
+            if (j > 0) {
+              let newValue = costs[j - 1];
+              if (s1.charAt(i - 1) !== s2.charAt(j - 1))
+                newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+              costs[j - 1] = lastValue;
+              lastValue = newValue;
+            }
+          }
+        }
+        if (i > 0) costs[s2.length] = lastValue;
+      }
+      return costs[s2.length];
+    };
+
+    for (let i = 0; i < toolNames.length; i++) {
+      for (let j = i + 1; j < toolNames.length; j++) {
+        const t1 = toolNames[i];
+        const t2 = toolNames[j];
+        if (getSimilarity(t1, t2) > SIMILARITY_THRESHOLD) {
+          overlaps.push(`${t1} <-> ${t2}`);
+        }
+      }
+    }
+
+    if (overlaps.length > 0) {
       findings.push({
         silo: 'Scythe',
-        expected: 'Tool registry growth < 20% between audits',
-        actual: `Tool count grew ${(growthRate * 100).toFixed(1)}% from ${oldest.count} to ${newest.count}`,
-        severity: 'P2',
+        expected: 'Tools should be lean and strictly necessary without semantic overlap',
+        actual: `Identified ${overlaps.length} potentially overlapping tool name pairs. Examples: ${overlaps.slice(0, 3).join(', ')}`,
+        severity: 'P3',
         recommendation:
-          'Review newly added tools for overlap with existing capabilities before the registry becomes unmanageable',
+          'Refactor to consolidate overlapping patterns to reduce cognitive load and prevent overgrowth.',
       });
     }
+  } catch (e) {
+    logger.warn('[Audit] Sy4: Failed to run semantic overlap check:', e);
+  }
+
+  // Sy5: File System Bloat (Empty Directories & Debris)
+  try {
+    const coreDir = path.resolve(process.cwd(), 'core');
+    const emptyDirs: string[] = [];
+
+    const checkEmpty = (dir: string) => {
+      const files = fs.readdirSync(dir);
+      if (files.length === 0) {
+        emptyDirs.push(path.relative(process.cwd(), dir));
+        return;
+      }
+      for (const file of files) {
+        const fullPath = path.join(dir, file);
+        if (fs.statSync(fullPath).isDirectory()) {
+          checkEmpty(fullPath);
+        }
+      }
+    };
+
+    if (fs.existsSync(coreDir)) {
+      checkEmpty(coreDir);
+    }
+
+    if (emptyDirs.length > 0) {
+      findings.push({
+        silo: 'Scythe',
+        expected: 'Codebase should be lean, efficient, and free of artifact debris',
+        actual: `Found ${emptyDirs.length} empty directories in /core. Example: ${emptyDirs[0]}`,
+        severity: 'P3',
+        recommendation: 'Clean up empty directories to prevent bloated project structure.',
+      });
+    }
+  } catch (e) {
+    logger.warn('[Audit] Sy5: Failed to run file bloat check:', e);
+  }
+
+  // Sy6: Debt Index (TODO/FIXME tracking)
+  try {
+    // Note: In a real environment, we'd use grep. Here we do a limited scan of /core.
+    let todoCount = 0;
+    const scanTodos = (dir: string) => {
+      const files = fs.readdirSync(dir);
+      for (const file of files) {
+        const fullPath = path.join(dir, file);
+        const stats = fs.statSync(fullPath);
+        if (stats.isDirectory() && !file.includes('node_modules')) {
+          scanTodos(fullPath);
+        } else if (file.endsWith('.ts') || file.endsWith('.js')) {
+          const content = fs.readFileSync(fullPath, 'utf8');
+          const matches = content.match(/\/\/\s*(TODO|FIXME)/gi);
+          if (matches) todoCount += matches.length;
+        }
+      }
+    };
+
+    const coreDir = path.resolve(process.cwd(), 'core');
+    if (fs.existsSync(coreDir)) {
+      scanTodos(coreDir);
+    }
+
+    if (todoCount > 20) {
+      findings.push({
+        silo: 'Scythe',
+        expected:
+          'Codebase should be lean and consistent; technical debt markers (TODO/FIXME) must be resolved to prevent overgrowth (<20)',
+        actual: `Identified ${todoCount} unresolved debt markers in /core.`,
+        severity: 'P3',
+        recommendation:
+          'Conduct a necessity critique and schedule refactoring to address accumulated technical debt and bloated implementations.',
+      });
+    }
+  } catch (e) {
+    logger.warn('[Audit] Sy6: Failed to run debt index check:', e);
+  }
+
+  // Sy7: Per-Agent Bloat Reporting
+  try {
+    const freshProposal = await ScytheLogic.generatePruneProposal();
+    if (freshProposal && freshProposal.swarm.perAgentBloat?.length > 0) {
+      const bloatCount = freshProposal.swarm.perAgentBloat.length;
+      findings.push({
+        silo: 'Scythe',
+        expected: 'Agents should only have necessary tools enabled to minimize prompt size',
+        actual: `[Swarm Debt] ${bloatCount} agents have high tool bloat (>5 unused tools).`,
+        severity: 'P2',
+        recommendation: `Review and prune tool overrides for agents: ${freshProposal.swarm.perAgentBloat.map((b: any) => b.agentId).join(', ')}`,
+      });
+    }
+  } catch (e) {
+    logger.warn('[Audit] Sy7: Failed to run per-agent bloat report:', e);
+  }
+
+  // Sy8: Dark Code Critique (Identify tools that have NEVER been executed)
+  try {
+    const { ConfigManager } = await import('../../lib/registry/config');
+    const { DYNAMO_KEYS } = await import('../../lib/constants');
+
+    const toolUsage = (await ConfigManager.getRawConfig(DYNAMO_KEYS.TOOL_USAGE)) as
+      | Record<string, { count: number; lastUsed: number; firstRegistered?: number }>
+      | undefined;
+
+    if (toolUsage) {
+      const toolNames = Object.keys(TOOLS);
+      const darkTools = toolNames.filter((name) => !toolUsage[name]);
+
+      if (darkTools.length > 5) {
+        findings.push({
+          silo: 'Scythe',
+          expected:
+            'Codebase additions should pull their weight; all registered tools should have usage telemetry',
+          actual: `Identified ${darkTools.length} "dark" tools that have never been executed: ${darkTools.slice(0, 5).join(', ')}${darkTools.length > 5 ? '...' : ''}`,
+          severity: 'P2',
+          recommendation:
+            'Refactor for a leaner codebase by removing these bloated implementations or ensuring they are strictly necessary.',
+        });
+      }
+    }
+  } catch (e) {
+    logger.warn('[Audit] Sy8: Failed to run dark code critique:', e);
   }
 
   return findings;

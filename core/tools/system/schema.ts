@@ -476,6 +476,8 @@ export const systemSchema: Record<string, IToolDefinition> = {
     type: ToolType.FUNCTION,
     argSchema: z.any(),
     connectionProfile: ['config', 'bus'],
+    connector_id: '',
+    auth: { type: 'api_key', resource_id: '' },
     requiresApproval: false,
     requiredPermissions: [],
     name: 'proposeAutonomyUpdate',
@@ -497,6 +499,29 @@ export const systemSchema: Record<string, IToolDefinition> = {
         },
       },
       required: ['agentId', 'targetMode', 'reason'],
+      additionalProperties: false,
+    },
+  },
+  scanScythe: {
+    type: ToolType.FUNCTION,
+    argSchema: z.any(),
+    connectionProfile: ['config', 'bus'],
+    connector_id: '',
+    auth: { type: 'api_key', resource_id: '' },
+    requiresApproval: false,
+    requiredPermissions: [],
+    name: 'scanScythe',
+    description:
+      'Performs a deep-scan for system bloat and technical debt (Silo 7), generating prune proposals for unused tools and redundant files.',
+    parameters: {
+      type: 'object',
+      properties: {
+        agentId: {
+          type: 'string',
+          description:
+            'Optional specific agent ID to scan for tool bloat. If not provided, performs a global system scan.',
+        },
+      },
       additionalProperties: false,
     },
   },

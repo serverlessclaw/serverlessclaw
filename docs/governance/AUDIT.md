@@ -119,10 +119,10 @@ Each silo represents a core functional domain. Reviews within a silo should adop
 
 ### 7. The Scythe (Bloat & Debt)
 
-**Perspective**: _What can be removed without losing capability?_
+**Perspective**: _How can we refactor for a leaner, more consistent, and efficient codebase? What is strictly necessary?_
 
-- **Angle**: Audit the workspace for generated sprawl. Identify redundant tools, overlapping logic, and "dark" code that is never executed but adds cognitive load to agents. Evaluate if abstraction layers have become too thick and if pattern consolidation is overdue.
-- **Key Concepts**: Pattern consolidation, tool pruning (`core/lib/lifecycle/pruning.ts`), cyclomatic complexity reduction, and semantic compression.
+- **Angle**: Audit the workspace for generated sprawl and over-engineered implementations. Act as a critic on necessity to prevent overgrowth. Identify redundant tools, overlapping logic, "dark" code that is never executed, and overly thick abstraction layers. Prioritize consolidating patterns and ensuring that code additions pull their weight against the cognitive load they introduce to agents and maintainers.
+- **Key Concepts**: Necessity critique, bloat prevention, pattern consolidation, cyclomatic complexity reduction, and semantic compression.
 
 ---
 
