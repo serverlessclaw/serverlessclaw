@@ -14,8 +14,8 @@ export const systemSchema: Record<string, IToolDefinition> = {
     connectionProfile: [],
     connector_id: '',
     auth: { type: 'api_key', resource_id: '' },
-    requiresApproval: false,
-    requiredPermissions: [],
+    requiresApproval: true,
+    requiredPermissions: ['admin'],
     name: 'runShellCommand',
     description: 'Executes a shell command in the agent environment.',
     parameters: {
@@ -53,8 +53,8 @@ export const systemSchema: Record<string, IToolDefinition> = {
     connectionProfile: [],
     connector_id: '',
     auth: { type: 'api_key', resource_id: '' },
-    requiresApproval: false,
-    requiredPermissions: [],
+    requiresApproval: true,
+    requiredPermissions: ['admin'],
     name: 'triggerTrunkSync',
     description: 'Triggers a CI/CD job to sync with the origin main branch.',
     parameters: {
@@ -163,8 +163,8 @@ export const systemSchema: Record<string, IToolDefinition> = {
     connectionProfile: [],
     connector_id: '',
     auth: { type: 'api_key', resource_id: '' },
-    requiresApproval: false,
-    requiredPermissions: [],
+    requiresApproval: true,
+    requiredPermissions: ['admin'],
     name: 'switchModel',
     description: 'Switch the active LLM provider and model at runtime.',
     parameters: {

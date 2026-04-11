@@ -44,6 +44,7 @@ export class MCPToolMapper {
       properties: {},
     };
 
+    // Filesystem path key discovery
     const pathKeys: string[] = [];
     if (parameters.type === 'object' && parameters.properties) {
       for (const [key, prop] of Object.entries(parameters.properties)) {
@@ -60,35 +61,6 @@ export class MCPToolMapper {
       }
     }
 
-    if (isFilesystemTool && parameters.type === 'object' && parameters.properties) {
-      // manuallyApproved injection removed: handled by ToolExecutor based on evolutionMode
-    }
-
-    // Sensitive keywords that should trigger mandatory approval for MCP tools
-    const sensitiveKeywords = [
-      'aws',
-      'delete',
-      'remove',
-      'terminate',
-      'write',
-      'update',
-      'create',
-      'put',
-      'iam',
-      'policy',
-      'permission',
-      'secret',
-      'password',
-      'token',
-      'key',
-    ];
-    const isSensitive = sensitiveKeywords.some(
-      (kw) =>
-        serverName.toLowerCase().includes(kw) ||
-        mcpTool.name.toLowerCase().includes(kw) ||
-        (mcpTool.description ?? '').toLowerCase().includes(kw)
-    );
-
     return {
       name: toolName,
       description: mcpTool.description ?? `Tool from ${serverName} server.`,
@@ -98,21 +70,11 @@ export class MCPToolMapper {
       connectionProfile: [],
       connector_id: '',
       auth: { type: 'api_key', resource_id: '' },
-      requiresApproval: isSensitive,
-      requiredPermissions: isSensitive ? ['admin'] : [],
+      requiresApproval: mcpTool.requiresApproval ?? false, // Defaults to false, overridden by executor if sensitive
+      requiredPermissions: mcpTool.requiredPermissions ?? [],
       sequential: isFilesystemTool, // Filesystem operations usually need to be sequential
       pathKeys: pathKeys.length > 0 ? pathKeys : undefined,
       execute: async (toolArgs: Record<string, unknown>) => {
-        if (isFilesystemTool) {
-          const { checkArgumentsForSecurity } = await import('../utils/fs-security');
-          const securityError = checkArgumentsForSecurity(
-            toolArgs,
-            `MCP operation (${mcpTool.name})`,
-            pathKeys
-          );
-          if (securityError) return securityError;
-        }
-
         try {
           const client = await clientProvider();
           const { withMCPResilience, isConnectionError } =

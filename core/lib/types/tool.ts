@@ -3,7 +3,7 @@
  */
 export interface JsonSchema {
   /** The data type (e.g., 'string', 'object', 'array'). */
-  type: 'string' | 'number' | 'integer' | 'boolean' | 'object' | 'array';
+  type?: 'string' | 'number' | 'integer' | 'boolean' | 'object' | 'array' | 'null';
   /** Human-readable description of the property. */
   description?: string;
   /** Nested properties for object types. */
@@ -13,9 +13,31 @@ export interface JsonSchema {
   /** Schema for array items. */
   items?: JsonSchema;
   /** Allowed values for the property. */
-  enum?: string[];
+  enum?: Array<string | number | boolean | null>;
   /** Whether additional properties are allowed. */
-  additionalProperties?: boolean;
+  additionalProperties?: boolean | JsonSchema;
+  /** Regex pattern for string validation. */
+  pattern?: string;
+  /** Minimum value for numbers. */
+  minimum?: number;
+  /** Maximum value for numbers. */
+  maximum?: number;
+  /** Minimum length for strings. */
+  minLength?: number;
+  /** Maximum length for strings. */
+  maxLength?: number;
+  /** Minimum number of items in an array. */
+  minItems?: number;
+  /** Maximum number of items in an array. */
+  maxItems?: number;
+  /** Valid if matches any of the sub-schemas. */
+  anyOf?: JsonSchema[];
+  /** Valid if matches exactly one of the sub-schemas. */
+  oneOf?: JsonSchema[];
+  /** Valid if matches all of the sub-schemas. */
+  allOf?: JsonSchema[];
+  /** Default value for the property. */
+  default?: any;
 }
 
 /**

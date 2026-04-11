@@ -66,8 +66,8 @@ export const infraSchema: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
     connectionProfile: ['codebuild'],
-    requiresApproval: false,
-    requiredPermissions: [],
+    requiresApproval: true,
+    requiredPermissions: ['admin'],
   },
   triggerInfraRebuild: {
     type: ToolType.FUNCTION,
@@ -102,8 +102,8 @@ export const infraSchema: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
     connectionProfile: ['codebuild'],
-    requiresApproval: false,
-    requiredPermissions: [],
+    requiresApproval: true,
+    requiredPermissions: ['admin'],
   },
 
   // Scheduler (from scheduler.ts)
@@ -125,8 +125,8 @@ export const infraSchema: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
     connectionProfile: ['scheduler'],
-    requiresApproval: false,
-    requiredPermissions: [],
+    requiresApproval: true,
+    requiredPermissions: ['admin'],
   },
   cancelGoal: {
     type: ToolType.FUNCTION,

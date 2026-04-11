@@ -133,9 +133,10 @@ export class WarmupManager extends BaseMemoryProvider {
           InvocationType: 'RequestResponse',
           Payload: JSON.stringify({
             httpMethod: 'POST',
-            path: '/mcp',
+            path: `/mcp/${serverName}`,
             headers: {
               'Content-Type': 'application/json',
+              'x-mcp-server': serverName,
             },
             body: JSON.stringify(jsonRpcRequest),
           }),

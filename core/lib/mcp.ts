@@ -114,9 +114,9 @@ export class MCPBridge {
         }
 
         if (!acquired) {
-          logger.warn(
-            `[MCP] Failed to acquire discovery lock for ${serverName}, proceeding anyway.`
-          );
+          const errorMsg = `[MCP] Failed to acquire discovery lock for ${serverName} after multiple retries. Aborting to prevent thundering herd.`;
+          logger.error(errorMsg);
+          throw new Error(errorMsg);
         }
       }
 

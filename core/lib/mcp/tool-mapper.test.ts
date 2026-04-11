@@ -10,10 +10,7 @@ vi.mock('../logger', () => ({
   },
 }));
 
-vi.mock('../utils/fs-security', () => ({
-  checkArgumentsForSecurity: vi.fn().mockReturnValue(null),
-  checkFileSecurity: vi.fn().mockReturnValue(null),
-}));
+// Removed outdated security mocks as they are now handled by ToolExecutor
 
 vi.mock('../lifecycle/error-recovery', () => ({
   withMCPResilience: vi.fn(async (_name: string, fn: () => Promise<any>) => fn()),
@@ -26,7 +23,6 @@ vi.mock('./client-manager', () => ({
   },
 }));
 
-import { checkArgumentsForSecurity, checkFileSecurity } from '../utils/fs-security';
 import { MCPClientManager } from './client-manager';
 import { withMCPResilience, isConnectionError } from '../lifecycle/error-recovery';
 import { logger } from '../logger';
@@ -39,8 +35,7 @@ vi.mocked(isConnectionError).mockImplementation(
       err.message.includes('Socket') ||
       err.message.includes('timeout'))
 );
-vi.mocked(checkArgumentsForSecurity).mockImplementation((_args, _op) => null);
-vi.mocked(checkFileSecurity).mockImplementation((_path, _approved, _op) => null);
+// Security check mocks removed
 
 function makeMockClient() {
   return {
@@ -160,81 +155,24 @@ describe('MCPToolMapper', () => {
       expect(result).toBe(JSON.stringify([{ type: 'text', text: 'result' }]));
     });
 
-    it('checks file security for filesystem tools with path', async () => {
+    it('maps filesystem tools with pathKeys', async () => {
       const client = makeMockClient();
       const rawTools = [
         {
           name: 'read_file',
           description: 'Read',
-          inputSchema: { type: 'object', properties: { path: { type: 'string' } } },
+          inputSchema: {
+            type: 'object',
+            properties: { path: { type: 'string', description: 'The file path' } },
+          },
         },
       ];
 
       const tools = MCPToolMapper.mapTools('filesystem', client, rawTools);
-      await tools[0].execute({ path: '/etc/passwd' });
-      expect(checkArgumentsForSecurity).toHaveBeenCalledWith(
-        expect.objectContaining({ path: '/etc/passwd' }),
-        'MCP operation (read_file)',
-        []
-      );
+      expect(tools[0].pathKeys).toContain('path');
     });
 
-    it('checks file security with path_to_file', async () => {
-      const client = makeMockClient();
-      const rawTools = [
-        {
-          name: 'read_file',
-          description: 'Read',
-          inputSchema: { type: 'object', properties: {} },
-        },
-      ];
-
-      const tools = MCPToolMapper.mapTools('filesystem', client, rawTools);
-      await tools[0].execute({ path_to_file: '/some/file.txt' });
-      expect(checkArgumentsForSecurity).toHaveBeenCalledWith(
-        expect.objectContaining({ path_to_file: '/some/file.txt' }),
-        'MCP operation (read_file)',
-        []
-      );
-    });
-
-    it('checks file security with file_path', async () => {
-      const client = makeMockClient();
-      const rawTools = [
-        {
-          name: 'read_file',
-          description: 'Read',
-          inputSchema: { type: 'object', properties: {} },
-        },
-      ];
-
-      const tools = MCPToolMapper.mapTools('filesystem', client, rawTools);
-      await tools[0].execute({ file_path: '/some/file.txt' });
-      expect(checkArgumentsForSecurity).toHaveBeenCalledWith(
-        expect.objectContaining({ file_path: '/some/file.txt' }),
-        'MCP operation (read_file)',
-        []
-      );
-    });
-
-    it('returns security error when checkArgumentsForSecurity returns error', async () => {
-      vi.mocked(checkArgumentsForSecurity).mockReturnValueOnce('PERMISSION_DENIED: blocked');
-
-      const client = makeMockClient();
-      const rawTools = [
-        {
-          name: 'write_file',
-          description: 'Write',
-          inputSchema: { type: 'object', properties: { path: { type: 'string' } } },
-        },
-      ];
-
-      const tools = MCPToolMapper.mapTools('filesystem', client, rawTools);
-      const result = await tools[0].execute({ path: '/etc/shadow' });
-
-      expect(result).toBe('PERMISSION_DENIED: blocked');
-      expect(client.callTool).not.toHaveBeenCalled();
-    });
+    // Security error handling tests removed as enforcement moved to ToolExecutor
 
     it('deletes client on Connection closed error', async () => {
       const client = makeMockClient();
@@ -302,7 +240,7 @@ describe('MCPToolMapper', () => {
       expect(tools.map((t) => t.name)).toEqual(['srv_a', 'srv_b', 'srv_c']);
     });
 
-    it('skips file security check when no path is provided in filesystem tool', async () => {
+    it('successfully calls tool without internal security check', async () => {
       const client = makeMockClient();
       const rawTools = [
         {
@@ -315,7 +253,6 @@ describe('MCPToolMapper', () => {
       const tools = MCPToolMapper.mapTools('filesystem', client, rawTools);
       await tools[0].execute({});
 
-      expect(checkFileSecurity).not.toHaveBeenCalled();
       expect(client.callTool).toHaveBeenCalled();
     });
   });
@@ -393,87 +330,27 @@ describe('MCPToolMapper', () => {
       expect(tools[0].parameters.properties).toBeUndefined();
     });
 
-    it('checks file security for filesystem tools with path', async () => {
+    it('maps cached filesystem tools with pathKeys', async () => {
       const mockClient = makeMockClient();
       const clientProvider = vi.fn().mockResolvedValue(mockClient);
       const rawTools = [
         {
           name: 'read_file',
           description: 'Read',
-          inputSchema: { type: 'object', properties: { path: { type: 'string' } } },
+          inputSchema: {
+            type: 'object',
+            properties: { path: { type: 'string', description: 'path to file' } },
+          },
         },
       ];
 
       const tools = MCPToolMapper.mapCachedTools('filesystem', rawTools, clientProvider);
-      await tools[0].execute({ path: '/etc/passwd' });
-      expect(checkArgumentsForSecurity).toHaveBeenCalledWith(
-        expect.objectContaining({ path: '/etc/passwd' }),
-        'MCP operation (read_file)',
-        []
-      );
+      expect(tools[0].pathKeys).toContain('path');
     });
 
-    it('checks file security with path_to_file', async () => {
-      const mockClient = makeMockClient();
-      const clientProvider = vi.fn().mockResolvedValue(mockClient);
-      const rawTools = [
-        {
-          name: 'read_file',
-          description: 'Read',
-          inputSchema: { type: 'object', properties: {} },
-        },
-      ];
+    // Cached tool security tests removed
 
-      const tools = MCPToolMapper.mapCachedTools('filesystem', rawTools, clientProvider);
-      await tools[0].execute({ path_to_file: '/some/file.txt' });
-      expect(checkArgumentsForSecurity).toHaveBeenCalledWith(
-        expect.objectContaining({ path_to_file: '/some/file.txt' }),
-        'MCP operation (read_file)',
-        []
-      );
-    });
-
-    it('checks file security with file_path', async () => {
-      const mockClient = makeMockClient();
-      const clientProvider = vi.fn().mockResolvedValue(mockClient);
-      const rawTools = [
-        {
-          name: 'read_file',
-          description: 'Read',
-          inputSchema: { type: 'object', properties: {} },
-        },
-      ];
-
-      const tools = MCPToolMapper.mapCachedTools('filesystem', rawTools, clientProvider);
-      await tools[0].execute({ file_path: '/some/file.txt' });
-      expect(checkArgumentsForSecurity).toHaveBeenCalledWith(
-        expect.objectContaining({ file_path: '/some/file.txt' }),
-        'MCP operation (read_file)',
-        []
-      );
-    });
-
-    it('returns security error when checkArgumentsForSecurity returns error', async () => {
-      vi.mocked(checkArgumentsForSecurity).mockReturnValueOnce('PERMISSION_DENIED: blocked');
-
-      const mockClient = makeMockClient();
-      const clientProvider = vi.fn().mockResolvedValue(mockClient);
-      const rawTools = [
-        {
-          name: 'write_file',
-          description: 'Write',
-          inputSchema: { type: 'object', properties: { path: { type: 'string' } } },
-        },
-      ];
-
-      const tools = MCPToolMapper.mapCachedTools('filesystem', rawTools, clientProvider);
-      const result = await tools[0].execute({ path: '/etc/shadow' });
-
-      expect(result).toBe('PERMISSION_DENIED: blocked');
-      expect(clientProvider).not.toHaveBeenCalled();
-    });
-
-    it('skips file security check when no path is provided', async () => {
+    it('successfully calls cached tool without internal security check', async () => {
       const mockClient = makeMockClient();
       const clientProvider = vi.fn().mockResolvedValue(mockClient);
       const rawTools = [
@@ -487,7 +364,6 @@ describe('MCPToolMapper', () => {
       const tools = MCPToolMapper.mapCachedTools('filesystem', rawTools, clientProvider);
       await tools[0].execute({});
 
-      expect(checkArgumentsForSecurity).toHaveBeenCalledWith({}, 'MCP operation (list_dir)', []);
       expect(clientProvider).toHaveBeenCalled();
       expect(mockClient.callTool).toHaveBeenCalled();
     });

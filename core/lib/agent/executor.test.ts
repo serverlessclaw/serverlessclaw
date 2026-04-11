@@ -298,6 +298,7 @@ describe('AgentExecutor', () => {
       description: 'Deletes a database',
       parameters: { type: 'object', properties: {} },
       requiresApproval: true,
+      requiredPermissions: [],
       execute: vi.fn().mockResolvedValue('SUCCESS: deleted'),
     };
 
@@ -325,6 +326,7 @@ describe('AgentExecutor', () => {
       getDefaultOptions({
         traceId: 't1',
         taskId: 't1',
+        userId: 'SYSTEM',
         userText: 'delete db',
       })
     );
@@ -422,6 +424,7 @@ describe('AgentExecutor', () => {
       description: 'Deletes a database',
       parameters: { type: 'object', properties: {} },
       requiresApproval: true,
+      requiredPermissions: [],
       execute: vi.fn().mockResolvedValue('SUCCESS: deleted'),
     };
 
@@ -454,6 +457,7 @@ describe('AgentExecutor', () => {
       getDefaultOptions({
         traceId: 't1',
         taskId: 't1',
+        userId: 'SYSTEM',
         userText: 'delete db',
         maxIterations: 2,
         approvedToolCalls: ['call-approved'],

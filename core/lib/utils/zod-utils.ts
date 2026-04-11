@@ -9,28 +9,60 @@ import { JsonSchema } from '../types/tool';
 export function jsonSchemaToZod(schema: JsonSchema): z.ZodSchema {
   if (!schema) return z.any();
 
+  // Handle anyOf, oneOf, allOf first
+  if (schema.anyOf && schema.anyOf.length > 0) {
+    return z.union(
+      schema.anyOf.map((s) => jsonSchemaToZod(s)) as [z.ZodSchema, z.ZodSchema, ...z.ZodSchema[]]
+    );
+  }
+  if (schema.oneOf && schema.oneOf.length > 0) {
+    return z.union(
+      schema.oneOf.map((s) => jsonSchemaToZod(s)) as [z.ZodSchema, z.ZodSchema, ...z.ZodSchema[]]
+    );
+  }
+  if (schema.allOf && schema.allOf.length > 0) {
+    // Zod intersection only takes two types; for allOf we might need to reduce
+    return schema.allOf.reduce((acc, s) => acc.and(jsonSchemaToZod(s)), z.any() as any);
+  }
+
+  let zodSchema: z.ZodTypeAny;
+
   switch (schema.type) {
     case 'string': {
-      let zodSchema: z.ZodType<any> = z.string();
       if (schema.enum) {
         zodSchema = z.enum(schema.enum as [string, ...string[]]);
+      } else {
+        let strSchema = z.string();
+        if (schema.pattern) strSchema = strSchema.regex(new RegExp(schema.pattern));
+        if (schema.minLength !== undefined) strSchema = strSchema.min(schema.minLength);
+        if (schema.maxLength !== undefined) strSchema = strSchema.max(schema.maxLength);
+        zodSchema = strSchema;
       }
-      return schema.description ? zodSchema.describe(schema.description) : zodSchema;
+      break;
     }
     case 'number':
     case 'integer': {
-      const zodSchema = schema.type === 'integer' ? z.number().int() : z.number();
-      return schema.description ? zodSchema.describe(schema.description) : zodSchema;
+      let numSchema = schema.type === 'integer' ? z.number().int() : z.number();
+      if (schema.minimum !== undefined) numSchema = numSchema.min(schema.minimum);
+      if (schema.maximum !== undefined) numSchema = numSchema.max(schema.maximum);
+      zodSchema = numSchema;
+      break;
     }
     case 'boolean': {
-      const zodSchema = z.boolean();
-      return schema.description ? zodSchema.describe(schema.description) : zodSchema;
+      zodSchema = z.boolean();
+      break;
     }
     case 'array': {
-      if (!schema.items) return z.array(z.any());
-      const itemsSchema = jsonSchemaToZod(schema.items);
-      const zodSchema = z.array(itemsSchema);
-      return schema.description ? zodSchema.describe(schema.description) : zodSchema;
+      if (!schema.items) {
+        zodSchema = z.array(z.any());
+      } else {
+        const itemsSchema = jsonSchemaToZod(schema.items);
+        let arrSchema = z.array(itemsSchema);
+        if (schema.minItems !== undefined) arrSchema = (arrSchema as any).min(schema.minItems);
+        if (schema.maxItems !== undefined) arrSchema = (arrSchema as any).max(schema.maxItems);
+        zodSchema = arrSchema;
+      }
+      break;
     }
     case 'object': {
       const shape: Record<string, z.ZodSchema> = {};
@@ -45,16 +77,25 @@ export function jsonSchemaToZod(schema: JsonSchema): z.ZodSchema {
         shape[key] = zodProp;
       }
 
-      let zodSchema = z.object(shape);
+      const objSchema = z.object(shape);
       if (schema.additionalProperties === false) {
-        zodSchema = zodSchema.strict();
+        zodSchema = objSchema.strict();
       } else {
-        zodSchema = zodSchema.passthrough();
+        zodSchema = objSchema.passthrough();
       }
-
-      return schema.description ? zodSchema.describe(schema.description) : zodSchema;
+      break;
+    }
+    case 'null': {
+      zodSchema = z.null();
+      break;
     }
     default:
-      return z.any();
+      zodSchema = z.any();
   }
+
+  if (schema.default !== undefined) {
+    zodSchema = (zodSchema as any).default(schema.default);
+  }
+
+  return schema.description ? zodSchema.describe(schema.description) : zodSchema;
 }

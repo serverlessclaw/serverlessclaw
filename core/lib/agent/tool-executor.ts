@@ -175,10 +175,17 @@ export class ToolExecutor {
       .update(`${toolCall.function.name}:${toolCall.function.arguments}`)
       .digest('hex');
 
+    // Centralized Sensitive Check (G3)
+    const isSensitive = this.isSensitiveTool(tool, toolCall);
+    const requiresApproval = tool.requiresApproval || isSensitive;
+    const requiredPermissions = isSensitive
+      ? [...new Set([...(tool.requiredPermissions || []), 'admin'])]
+      : tool.requiredPermissions || [];
+
     const isApproved =
       approvedToolCalls?.includes(toolCall.id) || approvedToolCalls?.includes(toolCallFingerprint);
 
-    if (tool.requiresApproval && !isApproved) {
+    if (requiresApproval && !isApproved) {
       logger.info(
         `Tool ${tool.name} (Fingerprint: ${toolCallFingerprint}) requires human approval. Pausing...`
       );
@@ -190,7 +197,7 @@ export class ToolExecutor {
     }
 
     // 1.5 RBAC Check
-    if (tool.requiredPermissions && tool.requiredPermissions.length > 0) {
+    if (requiredPermissions && requiredPermissions.length > 0) {
       let hasPermission = false;
       try {
         const { BaseMemoryProvider } = await import('../memory/base');
@@ -200,7 +207,7 @@ export class ToolExecutor {
         if (!execContext.userId || execContext.userId === 'SYSTEM') {
           hasPermission = true;
         } else {
-          for (const perm of tool.requiredPermissions) {
+          for (const perm of requiredPermissions) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Permission enum vs string[]
             hasPermission = await identity.hasPermission(execContext.userId, perm as any);
             if (!hasPermission) {
@@ -219,7 +226,7 @@ export class ToolExecutor {
           role: MessageRole.TOOL,
           tool_call_id: toolCall.id,
           name: toolCall.function.name,
-          content: `FAILED: Unauthorized. You do not have the required permissions (${tool.requiredPermissions.join(', ')}) to execute this tool.`,
+          content: `FAILED: Unauthorized. You do not have the required permissions (${requiredPermissions.join(', ')}) to execute this tool.`,
           traceId: execContext.traceId,
           messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         });
@@ -423,5 +430,48 @@ export class ToolExecutor {
       toolCallCount: 1,
       ui_blocks: ui_blocks.length > 0 ? ui_blocks : undefined,
     };
+  }
+
+  /**
+   * Helper to detect if a tool or tool call is sensitive based on names/descriptions.
+   */
+  private static isSensitiveTool(tool: ITool, toolCall: ToolCall): boolean {
+    const sensitiveKeywords = [
+      'aws',
+      'delete',
+      'remove',
+      'terminate',
+      'write',
+      'update',
+      'create',
+      'put',
+      'iam',
+      'policy',
+      'permission',
+      'secret',
+      'password',
+      'token',
+      'key',
+      'grant',
+      'revoke',
+      'execute',
+      'eval',
+      'shell',
+      'command',
+      'drop',
+      'truncate',
+    ];
+
+    const contentToCheck = [
+      tool.name,
+      tool.description,
+      toolCall.function.name,
+      // We don't check arguments here to avoid false positives,
+      // but we could if needed for specific keywords like 'rm -rf'
+    ]
+      .map((s) => (s ?? '').toLowerCase())
+      .join(' ');
+
+    return sensitiveKeywords.some((kw) => contentToCheck.includes(kw));
   }
 }

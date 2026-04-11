@@ -114,6 +114,29 @@ describe('WarmupManager', () => {
   });
 
   describe('warmMcpServer', () => {
+    it('should warm server and record state with correct payload for multiplexer', async () => {
+      mockLambdaSend.mockResolvedValue({});
+      mockDdbSend.mockResolvedValue({});
+
+      const result = await warmupManager.warmMcpServer('mcp-github', 'webhook');
+
+      expect(result.server).toBe('mcp-github');
+      expect(mockLambdaSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: expect.objectContaining({
+            Payload: expect.stringContaining('"path":"/mcp/mcp-github"'),
+          }),
+        })
+      );
+      expect(mockLambdaSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: expect.objectContaining({
+            Payload: expect.stringContaining('"x-mcp-server":"mcp-github"'),
+          }),
+        })
+      );
+    });
+
     it('should warm server and record state', async () => {
       mockLambdaSend.mockResolvedValue({});
       mockDdbSend.mockResolvedValue({});
