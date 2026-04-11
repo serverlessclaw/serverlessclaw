@@ -136,6 +136,10 @@ To prevent session "dead zones" caused by crashed or timed-out Lambda processes,
                  |
                  v
 6. Release flag (in finally block)
+                 |
+                 v
+7. P0 Reliability: Drain Pending Queue
+   (Re-emit next pending message as Event)
 ```
 
 ## Crash Recovery
@@ -148,6 +152,17 @@ If an agent crashes during processing:
 4. Next message for the session will check `lockExpiresAt < now` and find the lock has expired.
 5. A new agent starts and picks up any pending messages.
 6. The entire session state record persists for **30 days** (`expiresAt`) unless a new message is received.
+
+## 🔄 Queue Draining Mechanism
+
+To resolve the "Silent Data Loss" risk for busy sessions, the `SessionStateManager.releaseProcessing` method implements an automatic **Queue Draining** logic:
+
+1. **Lock Release**: The current agent releases the session lock.
+2. **Pending Check**: The system checks if any messages are in the `pendingMessages` array.
+3. **Next Task Re-emission**: If messages exist, the system takes the *first* message and re-emits it as a `dynamic_<agent>_task` event.
+4. **Continuation**: The message is removed from the queue, and the event system triggers the next agent to process this message.
+
+This ensures that concurrent requests are not just stored, but are eventually executed in a first-in-first-out (FIFO) manner once the session becomes available.
 
 ## UI Integration (ClawCenter Dashboard)
 

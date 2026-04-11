@@ -10,6 +10,11 @@ import { SessionStateManager } from './session-state';
 
 const ddbMock = mockClient(DynamoDBDocumentClient);
 
+const mockEmit = vi.fn();
+vi.mock('../utils/bus', () => ({
+  emitEvent: (...args: any[]) => mockEmit(...args),
+}));
+
 vi.mock('sst', () => ({
   Resource: {
     MemoryTable: { name: 'test-memory-table' },
@@ -91,6 +96,41 @@ describe('SessionStateManager', () => {
 
       const sessionClearCall = ddbMock.call(1).args[0].input as UpdateCommandInput;
       expect(sessionClearCall.UpdateExpression).toContain('processingAgentId = :null');
+    });
+
+    it('should re-emit pending message if found during release', async () => {
+      ddbMock
+        .on(UpdateCommand)
+        .resolvesOnce({}) // LockManager.release
+        .resolvesOnce({
+          // SessionStateManager update
+          Attributes: {
+            userId: 'SESSION#user-1',
+            pendingMessages: [{ id: 'msg-1', content: 'coder: do stuff', attachments: [] }],
+          },
+        })
+        .resolvesOnce({}); // removePendingMessage update
+
+      await sessionStateManager.releaseProcessing('session-123', 'agent-abc');
+
+      // 1. release, 2. update session, 3. remove pending
+      expect(ddbMock.calls()).toHaveLength(3);
+
+      // Verify re-emission
+      expect(mockEmit).toHaveBeenCalledWith(
+        'agent-abc.session-release',
+        'dynamic_coder_task',
+        expect.objectContaining({
+          sessionId: 'session-123',
+          task: 'do stuff',
+          userId: 'SESSION#user-1',
+        })
+      );
+
+      // Verify removal call
+      const removeCall = ddbMock.call(2).args[0].input as UpdateCommandInput;
+      expect(removeCall.UpdateExpression).toBeDefined();
+      expect(removeCall.UpdateExpression).toContain('REMOVE pendingMessages[0]');
     });
   });
 

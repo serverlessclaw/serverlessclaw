@@ -95,9 +95,14 @@ export class MCPClientManager {
             count: persistentHealth.count,
             lastFailure: lastFailureTime,
           });
-        } else if (!globalIsFresh) {
-          // Clear stale global state
+        } else if (!globalIsFresh && persistentHealth?.status !== 'up') {
+          // Clear stale global state in both local memory and DynamoDB
           this.failureCounts.delete(serverName);
+          AgentRegistry.saveRawConfig(`mcp_health_${serverName}`, {
+            status: 'up',
+            count: 0,
+            timestamp: Date.now(),
+          }).catch((err) => logger.warn(`Failed to clear stale global health for ${serverName}:`, err));
         }
       }
 

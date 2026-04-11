@@ -169,14 +169,35 @@ export class ToolExecutor {
       return { toolCallCount: 0 };
     }
 
-    // 1. Approval Check (P1 Fix: Support both ID and Semantic Fingerprint)
+    // 1. Argument Preparation (Moved up for sensitivity detection)
+    let args: Record<string, unknown>;
+    try {
+      args = JSON.parse(toolCall.function.arguments);
+    } catch (e) {
+      logger.error(`Failed to parse arguments for tool ${tool.name}:`, e);
+      messages.push({
+        role: MessageRole.TOOL,
+        tool_call_id: toolCall.id,
+        name: toolCall.function.name,
+        content: `FAILED: Malformed JSON arguments.`,
+        traceId: execContext.traceId,
+        messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      });
+      return { toolCallCount: 0 };
+    }
+
+    // 1.5 Approval & Evolution Context
+    const { EvolutionMode } = await import('../types/agent');
+    const evolutionMode = agentConfig?.evolutionMode ?? EvolutionMode.HITL;
+
+    // Support both ID and Semantic Fingerprint for manual approvals
     const { createHash } = await import('crypto');
     const toolCallFingerprint = createHash('sha256')
       .update(`${toolCall.function.name}:${toolCall.function.arguments}`)
       .digest('hex');
 
-    // Centralized Sensitive Check (G3)
-    const isSensitive = this.isSensitiveTool(tool, toolCall);
+    // Centralized Sensitive Check
+    const isSensitive = await this.isSensitiveTool(tool, toolCall, args);
     const requiresApproval = tool.requiresApproval || isSensitive;
     const requiredPermissions = isSensitive
       ? [...new Set([...(tool.requiredPermissions || []), 'admin'])]
@@ -185,7 +206,10 @@ export class ToolExecutor {
     const isApproved =
       approvedToolCalls?.includes(toolCall.id) || approvedToolCalls?.includes(toolCallFingerprint);
 
-    if (requiresApproval && !isApproved) {
+    // If evolutionMode is AUTO, we treat it as approved unless it's explicitly blocked (Class D check happens in fs-security)
+    const effectiveApproved = isApproved || evolutionMode === EvolutionMode.AUTO;
+
+    if (requiresApproval && !effectiveApproved) {
       logger.info(
         `Tool ${tool.name} (Fingerprint: ${toolCallFingerprint}) requires human approval. Pausing...`
       );
@@ -203,12 +227,11 @@ export class ToolExecutor {
         const { BaseMemoryProvider } = await import('../memory/base');
         const { IdentityManager } = await import('../session/identity');
         const identity = new IdentityManager(new BaseMemoryProvider());
-        // System-initiated calls bypass RBAC
+        // System-initiated calls or AUTO mode (if system-owned) bypass initial RBAC
         if (!execContext.userId || execContext.userId === 'SYSTEM') {
           hasPermission = true;
         } else {
           for (const perm of requiredPermissions) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Permission enum vs string[]
             hasPermission = await identity.hasPermission(execContext.userId, perm as any);
             if (!hasPermission) {
               break;
@@ -234,31 +257,18 @@ export class ToolExecutor {
       }
     }
 
-    // 2. Argument Preparation & Context Injection
-    let args: Record<string, unknown>;
-    try {
-      args = JSON.parse(toolCall.function.arguments);
-    } catch (e) {
-      logger.error(`Failed to parse arguments for tool ${tool.name}:`, e);
-      messages.push({
-        role: MessageRole.TOOL,
-        tool_call_id: toolCall.id,
-        name: toolCall.function.name,
-        content: `FAILED: Malformed JSON arguments.`,
-        traceId: execContext.traceId,
-        messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      });
-      return { toolCallCount: 0 };
-    }
+    // 2. Context Injection (Args already parsed)
+    const { checkArgumentsForSecurity } = await import('../utils/fs-security');
+    const isSecurityViolation = !!checkArgumentsForSecurity(
+      args,
+      `Security Pre-flight (${tool.name})`,
+      tool.pathKeys
+    );
 
-    // P0 Fix: Toggleable Evolution & Approval Mode
-    const { EvolutionMode } = await import('../types/agent');
-    const evolutionMode = agentConfig?.evolutionMode ?? EvolutionMode.HITL;
-
-    if (evolutionMode === EvolutionMode.AUTO) {
-      if (args.manuallyApproved !== true) {
+    if (evolutionMode === EvolutionMode.AUTO || effectiveApproved) {
+      if (args.manuallyApproved !== true && !isSecurityViolation) {
         logger.info(
-          `[SECURITY] Injecting 'manuallyApproved: true' for tool ${tool.name} (AUTO mode enabled).`
+          `[SECURITY] Activating 'manuallyApproved: true' for tool ${tool.name} (AUTO/Approved mode and no security violation).`
         );
         args.manuallyApproved = true;
       }
@@ -433,9 +443,13 @@ export class ToolExecutor {
   }
 
   /**
-   * Helper to detect if a tool or tool call is sensitive based on names/descriptions.
+   * Helper to detect if a tool or tool call is sensitive based on names, descriptions, and arguments.
    */
-  private static isSensitiveTool(tool: ITool, toolCall: ToolCall): boolean {
+  private static async isSensitiveTool(
+    tool: ITool,
+    toolCall: ToolCall,
+    args?: Record<string, unknown>
+  ): Promise<boolean> {
     const sensitiveKeywords = [
       'aws',
       'delete',
@@ -466,12 +480,32 @@ export class ToolExecutor {
       tool.name,
       tool.description,
       toolCall.function.name,
-      // We don't check arguments here to avoid false positives,
-      // but we could if needed for specific keywords like 'rm -rf'
     ]
       .map((s) => (s ?? '').toLowerCase())
       .join(' ');
 
-    return sensitiveKeywords.some((kw) => contentToCheck.includes(kw));
+    const hasSensitiveKeyword = sensitiveKeywords.some((kw) => contentToCheck.includes(kw));
+    if (hasSensitiveKeyword) return true;
+
+    // Argument-aware sensitivity: Check if any paths are protected
+    if (args) {
+      try {
+        const { isProtectedPath } = await import('../utils/fs-security');
+        const pathKeys = tool.pathKeys ?? ['path', 'file_path', 'filePath', 'file', 'dir'];
+
+        for (const key of pathKeys) {
+          const val = args[key];
+          if (typeof val === 'string' && isProtectedPath(val)) {
+            logger.info(`[SECURITY] Argument-aware sensitivity triggered for ${tool.name} on ${val}`);
+            return true;
+          }
+        }
+      } catch (e) {
+        // Fallback to name-based only if fs-security fails
+        logger.warn('Failed to run argument-aware sensitivity check:', e);
+      }
+    }
+
+    return false;
   }
 }

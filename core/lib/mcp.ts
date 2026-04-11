@@ -14,6 +14,8 @@ import { LockManager } from './lock/lock-manager';
  */
 export class MCPBridge {
   private static discovering: Map<string, Promise<ITool[]>> = new Map();
+  private static lastFailures: Map<string, number> = new Map();
+  private static readonly FAILURE_BACKOFF_MS = 30000; // 30 seconds
 
   /**
    * Connects to an MCP server and returns its tools.
@@ -32,6 +34,13 @@ export class MCPBridge {
     options?: { skipHubRouting?: boolean; isRecursive?: boolean }
   ): Promise<ITool[]> {
     const cacheKey = `mcp_tools_cache_${serverName}`;
+
+    // 0. Check for recent failures (Discovery Backoff)
+    const lastFailure = this.lastFailures.get(cacheKey);
+    if (lastFailure && Date.now() - lastFailure < this.FAILURE_BACKOFF_MS) {
+      logger.info(`[MCP] Discovery recently failed for ${serverName}, skipping until backoff expires.`);
+      return [];
+    }
 
     // 1. Check in-memory discovery map first (Thundering Herd Protection)
     // Only use for top-level calls to avoid self-deadlock during recursion
@@ -133,6 +142,7 @@ export class MCPBridge {
         return MCPToolMapper.mapTools(serverName, client, response.tools);
       } catch (e: unknown) {
         logger.warn(`Failed to fetch tools from ${serverName}:`, e);
+        this.lastFailures.set(cacheKey, Date.now());
         MCPClientManager.deleteClient(serverName);
         return [];
       } finally {
