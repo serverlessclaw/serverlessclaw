@@ -15,6 +15,12 @@ const CONFIG_SCHEMAS = {
     max: 100,
     description: 'Maximum recursion depth for agent delegation',
   },
+  mission_recursion_limit: {
+    type: 'number',
+    min: 1,
+    max: 100,
+    description: 'Stricter recursion limit for mission-critical workflows',
+  },
   deploy_limit: {
     type: 'number',
     min: 1,
@@ -62,6 +68,12 @@ const CONFIG_SCHEMAS = {
     min: 1000,
     max: 30000,
     description: 'MCP hub connection timeout',
+  },
+  session_lock_heartbeat_ms: {
+    type: 'number',
+    min: 10000,
+    max: 300000,
+    description: 'Interval for renewing session locks to prevent premature expiration',
   },
   auto_prune_enabled: {
     type: 'boolean',

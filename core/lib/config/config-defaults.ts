@@ -360,6 +360,14 @@ export const CONFIG_DEFAULTS = {
     configKey: 'audit_event_triggers_enabled',
     description: 'Enable audit triggers after TRUNK_SYNC, DEPLOYMENT_COMPLETE events.',
   },
+
+  /** Session lock heartbeat interval (ms). Default: 60000 (60 sec) */
+  SESSION_LOCK_HEARTBEAT_MS: {
+    code: 60000,
+    hotSwappable: true,
+    configKey: 'session_lock_heartbeat_ms',
+    description: 'Interval for renewing session locks to prevent premature expiration.',
+  },
 } as const;
 
 export type ConfigKey = keyof typeof CONFIG_DEFAULTS;

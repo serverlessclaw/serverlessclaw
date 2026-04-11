@@ -32,6 +32,8 @@ export async function handleContinuationTask(
   const currentDepth = depth ?? 1;
 
   // 1. Loop Protection - Check recursion depth before processing
+  // Boundary: Depth 1 is the first level. If limit is 15, allow depths 1-14, block at 15+.
+  // This uses >= for safety: at depth 15 with limit 15, we stop to prevent runaway recursion.
   const RECURSION_LIMIT = await getRecursionLimit();
 
   if (currentDepth >= RECURSION_LIMIT) {

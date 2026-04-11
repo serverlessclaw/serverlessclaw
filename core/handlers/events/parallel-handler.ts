@@ -60,6 +60,10 @@ export async function handleParallelDispatch(
     return;
   }
 
+  // Guard against negative/zero budget values that could cause NaN in per-task division
+  const effectiveTokenBudget = tokenBudget && tokenBudget > 0 ? tokenBudget : undefined;
+  const effectiveCostLimit = costLimit && costLimit > 0 ? costLimit : undefined;
+
   const safeTraceId = traceId ?? `parallel-${Date.now()}`;
 
   // Check if any tasks have dependencies
@@ -176,8 +180,10 @@ export async function handleParallelDispatch(
 
     // Dispatch ready tasks (A6: with error boundary)
     const dagDispatchErrors: Array<{ taskId: string; error: string }> = [];
-    const perTaskBudget = tokenBudget ? Math.floor(tokenBudget / tasks.length) : undefined;
-    const perTaskCost = costLimit ? costLimit / tasks.length : undefined;
+    const perTaskBudget = effectiveTokenBudget
+      ? Math.floor(effectiveTokenBudget / tasks.length)
+      : undefined;
+    const perTaskCost = effectiveCostLimit ? effectiveCostLimit / tasks.length : undefined;
     for (const task of readyTasks) {
       try {
         await dispatchTask(
@@ -273,8 +279,10 @@ export async function handleParallelDispatch(
   // Standard parallel execution (no dependencies)
   // A6: Wrap each dispatch in try/catch to prevent partial failures
   const dispatchErrors: Array<{ taskId: string; error: string }> = [];
-  const perTaskBudget = tokenBudget ? Math.floor(tokenBudget / tasks.length) : undefined;
-  const perTaskCost = costLimit ? costLimit / tasks.length : undefined;
+  const perTaskBudget = effectiveTokenBudget
+    ? Math.floor(effectiveTokenBudget / tasks.length)
+    : undefined;
+  const perTaskCost = effectiveCostLimit ? effectiveCostLimit / tasks.length : undefined;
   for (const task of tasks) {
     try {
       await dispatchTask(

@@ -9,16 +9,22 @@ import { Context } from 'aws-lambda';
 import { parseConfigInt } from '../../lib/providers/utils';
 import { isTaskPaused } from '../../lib/utils/agent-helpers';
 import { SessionStateManager } from '../../lib/session/session-state';
+import { CONFIG_DEFAULTS } from '../../lib/config/config-defaults';
 
 /**
  * Event types that indicate mission-critical workflows with stricter recursion limits.
  * These include DAG/swarm executions and parallel task dispatches.
+ *
+ * NOTE: DAG dispatch is handled via PARALLEL_TASK_DISPATCH with DAG mode enabled
+ * (hasDependencies=true). There is no separate DAG_TASK_DISPATCH event type -
+ * the same handler serves both parallel and DAG modes for consistency.
  */
 const MISSION_EVENT_TYPES = [
   EventType.DAG_TASK_COMPLETED,
   EventType.DAG_TASK_FAILED,
   EventType.PARALLEL_TASK_DISPATCH,
   EventType.PARALLEL_TASK_COMPLETED,
+  EventType.PARALLEL_BARRIER_TIMEOUT, // Barrier timeout is critical for DAG recovery
 ];
 
 /**
@@ -88,6 +94,8 @@ export async function wakeupInitiator(
   }
 
   // Detect mission context and use appropriate recursion limit
+  // Boundary: depth starts at 0. If limit is 15, allow depth 0-14, block at 15+.
+  // This uses >= for safety to prevent runaway recursion in agent handoffs.
   const missionContext = isMissionContext(eventType as string);
   const RECURSION_LIMIT = await getRecursionLimit(missionContext);
 
@@ -294,6 +302,17 @@ export async function processEventWithAgent(
   try {
     const startTime = Date.now();
 
+    // Get heartbeat interval from config or use default (60 seconds)
+    let heartbeatMs: number = CONFIG_DEFAULTS.SESSION_LOCK_HEARTBEAT_MS.code;
+    try {
+      const configuredHeartbeat = await ConfigManager.getRawConfig('session_lock_heartbeat_ms');
+      if (typeof configuredHeartbeat === 'number' && configuredHeartbeat > 0) {
+        heartbeatMs = configuredHeartbeat;
+      }
+    } catch {
+      logger.warn('Failed to fetch session_lock_heartbeat_ms from DDB, using default.');
+    }
+
     // Start heartbeat to renew lock (B3: Real-time Shared Awareness)
     let heartbeatInterval: ReturnType<typeof setInterval> | undefined;
     if (options.sessionId) {
@@ -311,7 +330,7 @@ export async function processEventWithAgent(
         } catch (err) {
           logger.error(`[${options.handlerTitle}] Heartbeat error for ${options.sessionId}:`, err);
         }
-      }, 60000); // Renew every 60 seconds
+      }, heartbeatMs);
     }
 
     const stream = agent.stream(userId, `${options.handlerTitle}: ${taskContent}`, {
