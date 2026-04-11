@@ -315,14 +315,21 @@ export class CircuitBreaker {
         state.emergencyDeployWindowStart = now;
       }
 
-      // Allow max 3 emergency deployments per hour
-      if (state.emergencyDeployCount >= 3) {
+      const emergencyRateLimit = await (
+        await import('../registry/config')
+      ).ConfigManager.getTypedConfig(
+        'circuit_breaker_emergency_rate_limit',
+        CONFIG_DEFAULTS.CIRCUIT_BREAKER_EMERGENCY_RATE_LIMIT.code
+      );
+
+      // Allow max emergency deployments per hour
+      if (state.emergencyDeployCount >= emergencyRateLimit) {
         logger.warn(
           `Circuit Breaker: Emergency deployment rate limit exceeded (${state.emergencyDeployCount}/hr)`
         );
         return {
           allowed: false,
-          reason: `EMERGENCY_RATE_LIMIT_EXCEEDED: ${state.emergencyDeployCount}/3 in last hour`,
+          reason: `EMERGENCY_RATE_LIMIT_EXCEEDED: ${state.emergencyDeployCount}/${emergencyRateLimit} in last hour`,
           state: state.state,
           failureCount: state.failures.length,
         };

@@ -73,6 +73,14 @@ export const CONFIG_DEFAULTS = {
     description: 'Max probe deployments allowed in half-open state before reopening.',
   },
 
+  /** Maximum emergency deployments per hour. Default: 3 */
+  CIRCUIT_BREAKER_EMERGENCY_RATE_LIMIT: {
+    code: 3,
+    hotSwappable: true,
+    configKey: 'circuit_breaker_emergency_rate_limit',
+    description: 'Maximum emergency deployments allowed per hour.',
+  },
+
   /** Maximum recovery attempts before escalation. Default: 4 */
   MAX_RECOVERY_ATTEMPTS: {
     code: 4,
