@@ -85,7 +85,7 @@ describe('Knowledge Domain Tool Schemas', () => {
       deleteTraces: ['traceId'],
       refineMemory: ['timestamp'],
       forceReleaseLock: ['lockId'],
-      registerMCPServer: ['serverName', 'command', 'env'],
+      registerMCPServer: ['serverName'],
       unregisterMCPServer: ['serverName'],
       checkConfig: [],
       setSystemConfig: ['key', 'value'],

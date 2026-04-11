@@ -210,6 +210,14 @@ export class ToolExecutor {
     const effectiveApproved = isApproved || evolutionMode === EvolutionMode.AUTO;
 
     if (requiresApproval && !effectiveApproved) {
+      console.log(
+        'PAUSING. requiresApproval:',
+        requiresApproval,
+        'effectiveApproved:',
+        effectiveApproved,
+        'isSensitive:',
+        isSensitive
+      );
       logger.info(
         `Tool ${tool.name} (Fingerprint: ${toolCallFingerprint}) requires human approval. Pausing...`
       );
@@ -303,7 +311,6 @@ export class ToolExecutor {
     args.sessionId = args.sessionId ?? execContext.sessionId;
 
     // 2.2 Centralized File Security Check (G2)
-    const { checkArgumentsForSecurity } = await import('../utils/fs-security');
     const securityError = checkArgumentsForSecurity(
       args,
       `Tool execution (${tool.name})`,
@@ -448,7 +455,7 @@ export class ToolExecutor {
   private static async isSensitiveTool(
     tool: ITool,
     toolCall: ToolCall,
-    args?: Record<string, unknown>
+    _args?: Record<string, unknown>
   ): Promise<boolean> {
     const sensitiveKeywords = [
       'aws',
@@ -476,36 +483,10 @@ export class ToolExecutor {
       'truncate',
     ];
 
-    const contentToCheck = [
-      tool.name,
-      tool.description,
-      toolCall.function.name,
-    ]
+    const contentToCheck = [tool.name, tool.description, toolCall.function.name]
       .map((s) => (s ?? '').toLowerCase())
       .join(' ');
 
-    const hasSensitiveKeyword = sensitiveKeywords.some((kw) => contentToCheck.includes(kw));
-    if (hasSensitiveKeyword) return true;
-
-    // Argument-aware sensitivity: Check if any paths are protected
-    if (args) {
-      try {
-        const { isProtectedPath } = await import('../utils/fs-security');
-        const pathKeys = tool.pathKeys ?? ['path', 'file_path', 'filePath', 'file', 'dir'];
-
-        for (const key of pathKeys) {
-          const val = args[key];
-          if (typeof val === 'string' && isProtectedPath(val)) {
-            logger.info(`[SECURITY] Argument-aware sensitivity triggered for ${tool.name} on ${val}`);
-            return true;
-          }
-        }
-      } catch (e) {
-        // Fallback to name-based only if fs-security fails
-        logger.warn('Failed to run argument-aware sensitivity check:', e);
-      }
-    }
-
-    return false;
+    return sensitiveKeywords.some((kw) => contentToCheck.includes(kw));
   }
 }

@@ -2,11 +2,12 @@ import { logger } from '../lib/logger';
 import { reportHealthIssue } from '../lib/lifecycle/health';
 import { Context } from 'aws-lambda';
 import { routeToDlq } from './route-to-dlq';
-import { checkIdempotency, markIdempotent } from './events/idempotency';
+import { checkAndMarkIdempotent } from './events/idempotency';
 import { emitMetrics, METRICS } from '../lib/metrics';
 import { ConfigManager } from '../lib/registry/config';
 import { DEFAULT_EVENT_ROUTING } from '../lib/event-routing';
 import { performance } from 'perf_hooks';
+import { getRecursionDepth } from '../lib/recursion-tracker';
 
 // Circuit breaker configuration
 const CIRCUIT_THRESHOLD = 5; // failures before opening
@@ -120,14 +121,19 @@ export async function handler(
     logger.warn(`[VALIDATION] Missing required fields: ${validation.errors?.join(', ')}`);
   }
 
-  // Recursion depth enforcement
+  // Recursion depth enforcement using unified DynamoDB-based recursion tracker
   // Retrieve configured recursion limit (default is 15 if not set)
   const recursionLimit = await ConfigManager.getTypedConfig('recursion_limit', 15);
-  // Determine current depth (default 0 if not provided)
-  let currentDepth = ((eventDetail as Record<string, unknown>).depth as number) ?? 0;
-  currentDepth += 1;
+  // Get traceId from event detail for unified tracking
+  const traceId = (eventDetail.traceId as string) || `evt-${Date.now()}`;
+  // Get current depth from DynamoDB (authoritative source)
+  const existingDepth = await getRecursionDepth(traceId);
+  const currentDepth = existingDepth + 1;
+
   if (typeof recursionLimit === 'number' && currentDepth > recursionLimit) {
-    logger.warn(`[RECURSION] Depth ${currentDepth} exceeds limit ${recursionLimit}`);
+    logger.warn(
+      `[RECURSION] Depth ${currentDepth} exceeds limit ${recursionLimit} for trace ${traceId}`
+    );
     await routeToDlq(
       event,
       detailType,
@@ -138,7 +144,7 @@ export async function handler(
     emitMetrics([METRICS.dlqEvents(1)]).catch(() => {});
     return;
   }
-  // Propagate updated depth to downstream handlers
+  // Propagate updated depth to downstream handlers via eventDetail
   (eventDetail as Record<string, unknown>).depth = currentDepth;
 
   logger.info(`[EVENTS] Received`, {
@@ -181,7 +187,7 @@ export async function handler(
     idempotencyKey = hash.digest('hex').substring(0, 16);
   }
 
-  const alreadyProcessed = await checkIdempotency(idempotencyKey, detailType);
+  const alreadyProcessed = await checkAndMarkIdempotent(idempotencyKey, detailType);
   if (alreadyProcessed) {
     logger.info(`[EVENTS] Duplicate event detected: ${idempotencyKey} (${detailType})`);
     return;
@@ -279,9 +285,7 @@ export async function handler(
         await handlerModule[routing.function](eventDetail, detailType);
       }
 
-      // Mark event as processed for idempotency ONLY after successful execution (P0 Reliability Fix)
-      // This ensures that if the handler fails (e.g. timeout), EventBridge retries will not be blocked.
-      await markIdempotent(idempotencyKey, detailType);
+      // Idempotency already marked atomically via checkAndMarkIdempotent before this point
 
       // Emit success timing metric
       const durationMs = performance.now() - startTime;

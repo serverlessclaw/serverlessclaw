@@ -38,7 +38,9 @@ export class MCPBridge {
     // 0. Check for recent failures (Discovery Backoff)
     const lastFailure = this.lastFailures.get(cacheKey);
     if (lastFailure && Date.now() - lastFailure < this.FAILURE_BACKOFF_MS) {
-      logger.info(`[MCP] Discovery recently failed for ${serverName}, skipping until backoff expires.`);
+      logger.info(
+        `[MCP] Discovery recently failed for ${serverName}, skipping until backoff expires.`
+      );
       return [];
     }
 

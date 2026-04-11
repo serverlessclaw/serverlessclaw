@@ -94,6 +94,10 @@ describe('MCPBridge', () => {
     vi.mocked(MCPClientManager.connect).mockReset();
     vi.mocked(MCPClientManager.deleteClient).mockReset();
     vi.mocked(MCPClientManager.closeAll).mockReset();
+    // @ts-expect-error accessing private property for test isolation
+    MCPBridge.lastFailures.clear();
+    // @ts-expect-error accessing private property for test isolation
+    MCPBridge.discovering.clear();
   });
 
   it('should lazy load ONLY requested servers', async () => {

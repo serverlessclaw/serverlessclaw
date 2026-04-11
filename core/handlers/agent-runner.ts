@@ -57,6 +57,10 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
   let heartbeatInterval: ReturnType<typeof setInterval> | undefined;
   let lockAcquired = false;
   const abortController = new AbortController();
+  // Adaptive heartbeat: start aggressive (15s), back off to 60s as execution progresses
+  let heartbeatIntervalMs = 15000; // Start at 15 seconds
+  const HEARTBEAT_BACKOFF_THRESHOLD_MS = 60000; // After 60s of execution, back off to 60s
+  const MAX_HEARTBEAT_INTERVAL_MS = 60000;
 
   if (sessionId && agentId) {
     lockAcquired = await sessionStateManager.acquireProcessing(sessionId, agentId);
@@ -67,9 +71,25 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
       return 'QUEUED';
     }
 
-    heartbeatInterval = setInterval(async () => {
+    const executionStartTime = Date.now();
+    const lastIntervalMs = heartbeatIntervalMs;
+
+    const runHeartbeat = async () => {
       try {
-        if (!lockAcquired) return; // Prevent interval from trying if we already lost the lock
+        if (!lockAcquired) return;
+
+        // Adaptive: back off heartbeat interval as execution progresses
+        const elapsedMs = Date.now() - executionStartTime;
+        if (
+          elapsedMs > HEARTBEAT_BACKOFF_THRESHOLD_MS &&
+          heartbeatIntervalMs < MAX_HEARTBEAT_INTERVAL_MS
+        ) {
+          logger.info(
+            `[AgentRunner] Heartbeat backing off for ${sessionId}: ${heartbeatIntervalMs}ms -> ${MAX_HEARTBEAT_INTERVAL_MS}ms`
+          );
+          heartbeatIntervalMs = MAX_HEARTBEAT_INTERVAL_MS;
+        }
+
         const renewed = await sessionStateManager.renewProcessing(sessionId, agentId);
         if (!renewed) {
           logger.warn(`[AgentRunner] Failed to renew lock for ${sessionId}. Lock lost.`);
@@ -79,7 +99,9 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
       } catch (err) {
         logger.error(`[AgentRunner] Heartbeat error for ${sessionId}:`, err);
       }
-    }, 60000);
+    };
+
+    heartbeatInterval = setInterval(runHeartbeat, lastIntervalMs);
   }
 
   const { isMissionContext, getRecursionLimit } = await import('./events/shared');
@@ -168,27 +190,43 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
     // 4. Swarm Self-Organization: Decompose high-level plans into parallel sub-tasks
     const { handleSwarmDecomposition } = await import('../lib/agent/swarm-orchestrator');
 
-    const { wasDecomposed, isPaused, response } = await handleSwarmDecomposition(
-      finalResponseText,
-      payload as AgentPayload,
-      {
-        traceId: traceId || `plan-${Date.now()}`,
-        sessionId,
-        depth: payload.depth,
-        isContinuation,
-        sourceAgentId: agentId,
-        lockedGapIds: payload.metadata?.gapIds as string[],
-        barrierTimeoutMs: 15 * 60 * 1000,
-        aggregationType: 'agent_guided',
-        aggregationPrompt: `I have completed the parallel execution of the mission: "${finalResponseText.substring(0, 200)}...". 
-                           Please synthesize the results and provide a final summary.
-                           Prepend the result with [AGGREGATED_RESULTS].`,
-      }
-    );
+    let wasDecomposed = false;
+    let isPaused = false;
+    let swarmResponse: string | undefined;
+
+    try {
+      const decompositionResult = await handleSwarmDecomposition(
+        finalResponseText,
+        payload as AgentPayload,
+        {
+          traceId: traceId || `plan-${Date.now()}`,
+          sessionId,
+          depth: payload.depth,
+          isContinuation,
+          sourceAgentId: agentId,
+          lockedGapIds: payload.metadata?.gapIds as string[],
+          barrierTimeoutMs: 15 * 60 * 1000,
+          aggregationType: 'agent_guided',
+          aggregationPrompt: `I have completed the parallel execution of the mission: "${finalResponseText.substring(0, 200)}...". 
+                             Please synthesize the results and provide a final summary.
+                             Prepend the result with [AGGREGATED_RESULTS].`,
+        }
+      );
+      wasDecomposed = decompositionResult.wasDecomposed;
+      isPaused = decompositionResult.isPaused;
+      swarmResponse = decompositionResult.response;
+    } catch (decompositionError) {
+      logger.error(
+        `[AgentRunner] Swarm decomposition failed for ${agentId}, preserving original response:`,
+        decompositionError instanceof Error
+          ? decompositionError.message
+          : String(decompositionError)
+      );
+    }
 
     if (wasDecomposed) {
       logger.info(`[AgentRunner] Plan from ${agentId} successfully decomposed into swarm tasks.`);
-      finalResponseText = response || finalResponseText;
+      finalResponseText = swarmResponse || finalResponseText;
 
       // Emit the notification of decomposition
       await emitTaskEvent({

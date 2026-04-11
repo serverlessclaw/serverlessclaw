@@ -102,7 +102,9 @@ export class MCPClientManager {
             status: 'up',
             count: 0,
             timestamp: Date.now(),
-          }).catch((err) => logger.warn(`Failed to clear stale global health for ${serverName}:`, err));
+          }).catch((err) =>
+            logger.warn(`Failed to clear stale global health for ${serverName}:`, err)
+          );
         }
       }
 

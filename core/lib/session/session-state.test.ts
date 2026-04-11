@@ -111,10 +111,16 @@ describe('SessionStateManager', () => {
         })
         .resolvesOnce({}); // removePendingMessage update
 
+      ddbMock.on(GetCommand).resolvesOnce({
+        Item: {
+          pendingMessages: [{ id: 'msg-1', content: 'coder: do stuff', attachments: [] }],
+        },
+      });
+
       await sessionStateManager.releaseProcessing('session-123', 'agent-abc');
 
-      // 1. release, 2. update session, 3. remove pending
-      expect(ddbMock.calls()).toHaveLength(3);
+      // 1. release, 2. update session, 3. get pending, 4. remove pending
+      expect(ddbMock.calls()).toHaveLength(4);
 
       // Verify re-emission
       expect(mockEmit).toHaveBeenCalledWith(
@@ -128,9 +134,15 @@ describe('SessionStateManager', () => {
       );
 
       // Verify removal call
-      const removeCall = ddbMock.call(2).args[0].input as UpdateCommandInput;
-      expect(removeCall.UpdateExpression).toBeDefined();
-      expect(removeCall.UpdateExpression).toContain('REMOVE pendingMessages[0]');
+      const removeCall = ddbMock
+        .calls()
+        .find((c) =>
+          (c.args[0].input as UpdateCommandInput).UpdateExpression?.includes('SET pendingMessages')
+        );
+      expect(removeCall).toBeDefined();
+      expect((removeCall?.args[0].input as UpdateCommandInput).UpdateExpression).toContain(
+        'SET pendingMessages = :filtered'
+      );
     });
   });
 
