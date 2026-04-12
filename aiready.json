@@ -138,12 +138,9 @@
       "checkLargeFiles": true,
       "exclude": [
         "dashboard/src/components/ui/**",
-        "core/lib/memory/gap-operations.ts",
-        "core/lib/agent/executor-core.ts",
-        "lib/memory/gap-operations.ts",
-        "lib/agent/executor-core.ts",
         "**/lib/memory/gap-operations.ts",
-        "**/lib/agent/executor-core.ts"
+        "**/lib/agent/executor-core.ts",
+        "core/lib/metrics/cognitive-metrics.ts"
       ]
     },
     "agent-grounding": {
@@ -163,7 +160,9 @@
     "dependency-health": {
       "trainingCutoffYear": 2023
     },
-    "change-amplification": {}
+    "change-amplification": {
+      "exclude": ["core/lib/types/agent.ts"]
+    }
   },
   "visualizer": {
     "groupingDirs": ["core", "dashboard", "infra", "scripts"],

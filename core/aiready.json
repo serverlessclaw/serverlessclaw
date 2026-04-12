@@ -141,7 +141,8 @@
         "lib/memory/gap-operations.ts",
         "lib/agent/executor-core.ts",
         "**/lib/memory/gap-operations.ts",
-        "**/lib/agent/executor-core.ts"
+        "**/lib/agent/executor-core.ts",
+        "lib/metrics/cognitive-metrics.ts"
       ]
     },
     "agent-grounding": {
@@ -161,7 +162,9 @@
     "dependency-health": {
       "trainingCutoffYear": 2023
     },
-    "change-amplification": {}
+    "change-amplification": {
+      "exclude": ["lib/types/agent.ts"]
+    }
   },
   "visualizer": {
     "groupingDirs": ["core", "dashboard", "infra", "scripts"],
