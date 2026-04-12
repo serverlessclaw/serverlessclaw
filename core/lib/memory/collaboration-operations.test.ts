@@ -110,14 +110,18 @@ describe('createCollaboration', () => {
 
     // First call stores the collaboration
     const collabItem = base.putItem.mock.calls[0][0];
-    expect(collabItem.userId).toBe('COLLAB#collab-uuid');
+    expect(collabItem.userId).toBe('COLLAB#collab-uuid#ws-1');
     expect(collabItem.type).toBe('COLLABORATION');
 
     // Second call indexes the owner
     const indexItem = base.putItem.mock.calls[1][0];
-    expect(indexItem.userId).toBe('COLLAB_INDEX#agent#owner-1');
+    expect(indexItem.userId).toBe('COLLAB_INDEX#agent#owner-1#ws-1');
     expect(indexItem.type).toBe('COLLABORATION_INDEX');
     expect(indexItem.role).toBe('owner');
+
+    expect(logger.info).toHaveBeenCalledWith(
+      'Collaboration created: collab-uuid by agent:owner-1 in workspace: ws-1'
+    );
   });
 
   it('should use provided sessionId', async () => {
@@ -257,6 +261,10 @@ describe('addCollaborationParticipant', () => {
     expect(indexEntry.userId).toBe('COLLAB_INDEX#human#human-1');
     expect(indexEntry.role).toBe('editor');
     expect(indexEntry.collaborationId).toBe('collab-1');
+
+    expect(logger.info).toHaveBeenCalledWith(
+      'Participant human:human-1 added to collaboration collab-1 in workspace undefined'
+    );
   });
 
   it('should throw when collaboration not found', async () => {
@@ -614,7 +622,9 @@ describe('closeCollaboration', () => {
 
     await closeCollaboration(base, 'collab-1', 'owner-1', 'agent');
 
-    expect(logger.info).toHaveBeenCalledWith('Collaboration collab-1 closed by agent:owner-1');
+    expect(logger.info).toHaveBeenCalledWith(
+      'Collaboration collab-1 closed by agent:owner-1 in workspace undefined'
+    );
   });
 });
 

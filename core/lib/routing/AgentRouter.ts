@@ -300,7 +300,7 @@ export class AgentRouter {
     const enabledCandidates: string[] = [];
     for (let i = 0; i < candidates.length; i++) {
       const config = configs[i];
-      if (config && config.enabled !== false) {
+      if (config && config.enabled === true) {
         enabledCandidates.push(candidates[i]);
       } else {
         logger.warn(`[AgentRouter] Skipping disabled or non-existent agent: ${candidates[i]}`);
@@ -308,10 +308,16 @@ export class AgentRouter {
     }
 
     if (enabledCandidates.length === 0) {
-      logger.warn(`[AgentRouter] Target agents disabled: ${candidates.join(', ')}. Using backbone fallback.`);
-      const fallbackConfigs = await Promise.all(BACKBONE_FALLBACK_AGENTS.map(id => AgentRegistry.getAgentConfig(id)));
-      enabledCandidates.push(...BACKBONE_FALLBACK_AGENTS.filter((id, i) => fallbackConfigs[i]?.enabled !== false));
-      
+      logger.warn(
+        `[AgentRouter] Target agents disabled: ${candidates.join(', ')}. Using backbone fallback.`
+      );
+      const fallbackConfigs = await Promise.all(
+        BACKBONE_FALLBACK_AGENTS.map((id) => AgentRegistry.getAgentConfig(id))
+      );
+      enabledCandidates.push(
+        ...BACKBONE_FALLBACK_AGENTS.filter((id, i) => fallbackConfigs[i]?.enabled === true)
+      );
+
       if (enabledCandidates.length === 0) {
         throw new Error(`Critical: All target and backbone fallback agents are disabled.`);
       }

@@ -42,7 +42,6 @@ describe('LockManager', () => {
 
   describe('acquire', () => {
     it('should return true if lock is acquired successfully', async () => {
-      mockSend.mockResolvedValueOnce({ Item: null }); // GetCommand (no item)
       mockSend.mockResolvedValueOnce({}); // UpdateCommand
 
       const result = await lockManager.acquire('test-lock', {
@@ -52,15 +51,12 @@ describe('LockManager', () => {
 
       expect(result).toBe(true);
       expect(mockSend).toHaveBeenCalledWith(expect.any(UpdateCommand));
-      const input = mockSend.mock.calls[1][0].input;
+      const input = mockSend.mock.calls[0][0].input;
       expect(input.Key.userId).toBe('LOCK#test-lock');
       expect(input.ExpressionAttributeValues[':owner']).toBe('agent-1');
     });
 
     it('should return false if lock is already held', async () => {
-      mockSend.mockResolvedValueOnce({
-        Item: { ownerId: 'agent-1', expiresAt: Date.now() + 1000 },
-      }); // GetCommand (held)
       const error = new Error('ConditionalCheckFailedException');
       error.name = 'ConditionalCheckFailedException';
       mockSend.mockRejectedValueOnce(error); // UpdateCommand (failed)
@@ -74,7 +70,6 @@ describe('LockManager', () => {
     });
 
     it('should throw if dynamo errors', async () => {
-      mockSend.mockResolvedValueOnce({ Item: null }); // GetCommand (success)
       mockSend.mockRejectedValueOnce(new Error('Dynamo Error')); // UpdateCommand (error)
 
       await expect(

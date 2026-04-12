@@ -61,7 +61,7 @@ describe('SLOTracker', () => {
         name: 'response_latency',
         target: 1000,
         window: 'daily',
-        metric: 'p95_latency',
+        metric: 'avg_latency',
       };
       const rollups = [mockRollup({ totalInputTokens: 500, totalOutputTokens: 500 })];
       const result = await SLOTracker.checkSLO(slo, rollups);

@@ -72,8 +72,6 @@ export class LockManager {
     const now = Math.floor(Date.now() / 1000);
     const expiresAt = now + options.ttlSeconds;
 
-    const state = await this.getLockState(fullId);
-
     const conditionExpression =
       'attribute_not_exists(ownerId) OR ownerId = :null OR expiresAt < :now';
 

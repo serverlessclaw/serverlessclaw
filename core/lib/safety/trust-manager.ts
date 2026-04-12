@@ -5,7 +5,7 @@
  */
 
 import { AgentRegistry } from '../registry';
-import { DYNAMO_KEYS } from '../constants';
+import { DYNAMO_KEYS, TRUST } from '../constants';
 import { logger } from '../logger';
 import { EventType } from '../types/agent';
 import { CognitiveAnomaly, AnomalySeverity } from '../types/metrics';
@@ -26,11 +26,11 @@ export interface TrustSnapshot {
 }
 
 export class TrustManager {
-  private static DEFAULT_PENALTY = -5;
-  private static DEFAULT_SUCCESS_BUMP = 1;
-  private static MAX_SCORE = 100;
-  private static MIN_SCORE = 0;
-  private static DECAY_RATE = 0.5; // per day
+  private static readonly DEFAULT_PENALTY = TRUST.DEFAULT_PENALTY;
+  private static readonly DEFAULT_SUCCESS_BUMP = TRUST.DEFAULT_SUCCESS_BUMP;
+  private static readonly MAX_SCORE = TRUST.MAX_SCORE;
+  private static readonly MIN_SCORE = TRUST.MIN_SCORE;
+  private static readonly DECAY_RATE = TRUST.DECAY_RATE;
 
   /**
    * Records a failure for an agent and penalizes its trust score.
@@ -101,7 +101,7 @@ export class TrustManager {
   static async recordAnomalies(agentId: string, anomalies: CognitiveAnomaly[]): Promise<number> {
     if (anomalies.length === 0) {
       const config = await AgentRegistry.getAgentConfig(agentId);
-      return config?.trustScore ?? 85;
+      return config?.trustScore ?? TRUST.DEFAULT_SCORE;
     }
 
     let totalDelta = 0;
@@ -166,7 +166,7 @@ export class TrustManager {
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
         const fullConfig = await AgentRegistry.getAgentConfig(agentId);
-        const currentScore = fullConfig?.trustScore ?? 85;
+        const currentScore = fullConfig?.trustScore ?? TRUST.DEFAULT_SCORE;
         const newScore = Math.min(this.MAX_SCORE, Math.max(this.MIN_SCORE, currentScore + delta));
 
         if (newScore === currentScore) {
@@ -247,9 +247,9 @@ export class TrustManager {
 
     for (const agentId of Object.keys(configs)) {
       const config = configs[agentId];
-      if (config.trustScore !== undefined && config.trustScore > 70) {
+      if (config.trustScore !== undefined && config.trustScore > TRUST.DECAY_BASELINE) {
         // Decay down to a baseline
-        const newScore = Math.max(70, config.trustScore - this.DECAY_RATE);
+        const newScore = Math.max(TRUST.DECAY_BASELINE, config.trustScore - this.DECAY_RATE);
         decayPromises.push(
           AgentRegistry.atomicUpdateAgentField(agentId, 'trustScore', newScore)
             .then(() => this.recordHistory(agentId, newScore))

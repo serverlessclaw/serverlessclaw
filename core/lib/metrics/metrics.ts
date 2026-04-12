@@ -41,7 +41,7 @@ export async function emitMetrics(metrics: MetricDatum[]): Promise<void> {
 
   const cw = await getCloudWatchClient();
   if (!cw) {
-    console.debug('[METRICS] CloudWatch not available, skipping:', metrics);
+    console.warn('[METRICS] CloudWatch not available, metrics dropped:', metrics.length, 'items');
     return;
   }
 

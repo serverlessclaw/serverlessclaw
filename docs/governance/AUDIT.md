@@ -199,15 +199,15 @@ A poor path is:
 
 Use this table to map high-level silos to the primary code areas that should be investigated.
 
-| Silo  | Name           | Primary Code Focus                                                                                                                                                             |
-| :---- | :------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **1** | The Spine      | [routing/AgentRouter.ts](../../core/lib/routing/AgentRouter.ts), [backbone.ts](../../core/lib/backbone.ts)                                                                     |
-| **2** | The Hand       | [mcp.ts](../../core/lib/mcp.ts), [executor.ts](../../core/lib/agent/executor.ts)                                                                                               |
-| **3** | The Shield     | [safety-engine.ts](../../core/lib/safety/safety-engine.ts), [circuit-breaker.ts](../../core/lib/safety/circuit-breaker.ts)                                                     |
-| **4** | The Brain      | `core/lib/memory/`, `core/lib/rag/`                                                                                                                                            |
-| **5** | The Eye        | `core/lib/metrics/`, `core/lib/tracer/` (Trace Intelligence)                                                                                                                   |
-| **6** | The Scales     | [judge.ts](../../core/lib/verify/judge.ts), [trust-manager.ts](../../core/lib/safety/trust-manager.ts)                                                                         |
-| **7** | The Metabolism | [audit-protocol.ts](../../core/agents/cognition-reflector/audit-protocol.ts) (auditMetabolism), [AgentRegistry.ts](../../core/lib/registry/AgentRegistry.ts) (firstRegistered) |
+| Silo  | Name           | Primary Code Focus                                                                                                                                              |
+| :---- | :------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1** | The Spine      | [routing/AgentRouter.ts](../../core/lib/routing/AgentRouter.ts), [backbone.ts](../../core/lib/backbone.ts)                                                      |
+| **2** | The Hand       | [mcp.ts](../../core/lib/mcp.ts), [executor.ts](../../core/lib/agent/executor.ts)                                                                                |
+| **3** | The Shield     | [safety-engine.ts](../../core/lib/safety/safety-engine.ts), [circuit-breaker.ts](../../core/lib/safety/circuit-breaker.ts)                                      |
+| **4** | The Brain      | `core/lib/memory/`, `core/lib/rag/`                                                                                                                             |
+| **5** | The Eye        | `core/lib/metrics/`, `core/lib/tracer/` (Trace Intelligence)                                                                                                    |
+| **6** | The Scales     | [judge.ts](../../core/lib/verify/judge.ts), [trust-manager.ts](../../core/lib/safety/trust-manager.ts)                                                          |
+| **7** | The Metabolism | [metabolism.ts](../../core/lib/maintenance/metabolism.ts) (Regenerative Audit & Repair), [AgentRegistry.ts](../../core/lib/registry/AgentRegistry.ts) (Pruning) |
 
 ---
 
@@ -533,19 +533,19 @@ The Shield has been unified. The `SafetyEngine` now acts as the authoritative ga
  [ AgentRegistry (DDB) ]
 ```
 
-### 7. The Metabolism (Bloat & Debt)
+### 7. The Metabolism (Regenerative Repair & Bloat Management)
 
-**Perspective**: _Is the system maintaining a healthy state by repairing debt and recycling waste?_
+**Perspective**: _Is the system capable of autonomously healing its own debt and recycling waste?_
 
-- **Angle**: Audit the workspace for "metabolic waste" (dead code, orphaned files) and architectural fractures. Act as a healer on systemic efficiency. Identify overlapping patterns and "dark" logic that should be recycled or repaired. Prioritize consolidating structures to ensure high metabolic efficiency.
-- **Key Concepts**: Regenerative repair, waste management, pattern consolidation, symbolic renewal, metabolic efficiency, and semantic compression.
+- **Angle**: Audit the system through the lens of **Regenerative Metabolism**. Unlike passive audits, Silo 7 operates on the "Perform while Auditing" philosophy — identifying metabolic waste (dead overrides, memory bloat) and executing repairs in real-time.
+- **Key Concepts**: Regenerative repair, tool pruning, memory culling, strategic propagation, and metabolic efficiency.
 
 #### What to Look For
 
-- **Dead Code**: Functions never called, exports never used, conditional code for removed features
-- **Architectural Fractures**: Modules with diverging patterns, inconsistent abstractions, or broken contracts
-- **Pattern Duplication**: Same logic copied in multiple places
-- **Configuration Drift**: Hardcoded values that should be external, or config not being used
+- **Tool Decay**: Dynamic tool overrides that haven't been used in 30+ days (Metabolic Waste).
+- **Memory Bloat**: Resolved knowledge gaps that should be culled to prevent context pollution (Lean Evolution).
+- **Architectural Debt**: Overlapping patterns or "dark" logic identified by the AIReady (AST) scanner.
+- **Repair Integrity**: Verify that autonomous repairs (pruning/culling) are correctly logged and respect multi-tenant isolation.
 
 #### Common Finding Patterns
 

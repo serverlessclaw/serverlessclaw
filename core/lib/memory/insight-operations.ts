@@ -411,8 +411,6 @@ function mapToInsights(items: Record<string, unknown>[]): MemoryInsight[] {
   });
 }
 
-
-
 /**
  * Retrieves memory items with low utilization.
  */

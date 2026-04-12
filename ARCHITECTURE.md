@@ -173,10 +173,10 @@ For detailed fork strategies, see [FORK_STRATEGY.md](docs/governance/FORK_STRATE
 The system architecture follows a **Distributed Spine** model where all critical state (routing, safety, trust) is synchronized via DynamoDB to ensure consistency across serverless execution boundaries.
 
 ```text
-  [ Inbound Event ] 
+  [ Inbound Event ]
           |
           v
-  [ Silo 1: The Spine (EventHandler) ] 
+  [ Silo 1: The Spine (EventHandler) ]
           |-- (1) Distributed Safety Check (Rate Limit / Circuit Breaker)
           |-- (2) Trace-Aware Recursion Guard (Atomic Increment)
           v
@@ -213,7 +213,7 @@ To maintain a **Stateless Core** (Principle 1) while ensuring systemic safety, t
 
 ## ⚖️ The Dynamic Trust Loop (Silo 5 ↔ Silo 6)
 
-The system maintains a continuous feedback loop between execution observability and agent authority. 
+The system maintains a continuous feedback loop between execution observability and agent authority.
 
 ```text
 [ Execution ] ---- (Telemetry) ----> [ Silo 5: The Eye ]
@@ -232,6 +232,7 @@ The system maintains a continuous feedback loop between execution observability 
 1. **Detection**: The `CognitiveHealthMonitor` identifies reasoning loops or degradation.
 2. **Calibration**: `TrustManager` applies severity-based penalties or quality-weighted bumps.
 3. **Enforcement**: If `TrustScore` drops below the autonomous threshold, the system automatically shifts to `HITL`.
+
 ```
 
 ---
@@ -305,3 +306,4 @@ The system is designed for autonomous survival in unstable conditions.
 | **Provisioning**          | [docs/system/PROVISIONING.md](./docs/system/PROVISIONING.md) |
 
 For deep dives into these evolutionary mechanisms, see [docs/system/EVOLUTION.md](./docs/system/EVOLUTION.md) and [docs/system/RESILIENCE.md](./docs/system/RESILIENCE.md).
+```

@@ -15,6 +15,7 @@ import { extractBaseUserId } from './utils/agent-helpers';
  * @param attachments - Optional attachments to include in the message.
  * @param messageId - Optional ID for the message to track it throughout the system.
  * @param options - Optional array of interactive button options for the message.
+ * @param workspaceId - Optional workspace identifier for isolation and routing.
  * @param collaborationId - Optional collaboration ID for multi-agent collaboration sessions.
  * @returns A promise that resolves when the event has been sent.
  */
@@ -32,6 +33,7 @@ export async function sendOutboundMessage(
     value: string;
     type?: 'primary' | 'secondary' | 'danger';
   }[],
+  workspaceId?: string,
   collaborationId?: string
 ): Promise<void> {
   // Normalize userId to base form for memory syncing and event routing
@@ -45,6 +47,7 @@ export async function sendOutboundMessage(
       message,
       memoryContexts: memoryContexts ?? [baseUserId],
       sessionId,
+      workspaceId,
       agentName,
       attachments,
       messageId,

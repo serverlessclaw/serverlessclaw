@@ -19,13 +19,44 @@ While the default implementation uses DynamoDB for globally distributed, low-lat
 
 To support sub-50ms context retrieval across millions of records, the system uses a **Flattened DynamoDB Model**. Searchable fields are projected at the root level to maximize Global Secondary Index (GSI) efficiency.
 
+### Workspace Scoping & Multi-Tenancy
+
+In multi-tenant environments, logical isolation is enforced via the `userId` partition key. When a `workspaceId` is present in the execution context, all memory operations utilize a scoped PK format:
+
+**Format**: `WS#<workspaceId>#<userId>`
+
+- **Isolation**: Prevents data leakage between different workspaces even if they share the same `userId`.
+- **Consistency**: This scoping is applied transparently across all memory tiers (History, Lessons, Gaps).
+- **Fallback**: If no `workspaceId` is provided, the system defaults to the raw `userId`.
+
+#### Isolated Memory Flow
+
+```text
+  [ Event / Task ] -> (workspaceId) -> [ Agent ]
+          |                               |
+          |                               v
+          +----------------------> [ Memory Layer ]
+                                          |
+                                          v
+                                [ getScopedUserId ]
+                                          |
+                                          v
+                                [ DynamoDB PK Scan ]
+                          (WS#workspace-123#user-456)
+                                          |
+                                          +-- (Isolated from) --+
+                                                                |
+                                                     (WS#workspace-abc#user-456)
+```
+
 ```text
 [ Record Root ]
- ├── userId (PK)         <-- Scoped partition
+ ├── userId (PK)         <-- Scoped partition (WS#ws-abc#user-123)
  ├── timestamp (SK)      <-- Unique ID
  ├── type (GSI-PK)       <-- Category
  ├── tags (GSI-Filter)   <-- Consolidated keywords
- ├── orgId               <-- Multi-tenant isolation
+ ├── orgId               <-- Organizational isolation
+ ├── workspaceId         <-- Workspace-specific isolation
  ├── createdAt           <-- Immutable source
  └── [ metadata ]        <-- Strategic scores (confidence, priority)
 ```

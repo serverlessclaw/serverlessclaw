@@ -77,6 +77,8 @@ export interface EscalationState {
   completed: boolean;
   /** Final outcome if completed */
   outcome?: 'answered' | 'failed' | 'continued_with_defaults' | 'escalated_to_admin';
+  /** Workspace identifier for isolation */
+  workspaceId?: string;
 }
 
 export const DEFAULT_ESCALATION_POLICY: EscalationPolicy = {

@@ -8,8 +8,10 @@
 import { logger } from '../../lib/logger';
 import { emitEvent } from '../../lib/utils/bus';
 import { AgentType, EventType } from '../../lib/types/agent';
-import { MCPMultiplexer } from '../../lib/mcp';
 import { AuditSilo, AuditFinding, AuditReport, AUDIT_SILOS } from './lib/audit-definitions';
+import { MetabolismService } from '../../lib/maintenance/metabolism';
+import { setGap } from '../../lib/memory/gap-operations';
+import { InsightCategory } from '../../lib/types/memory';
 
 /**
  * Runs a full system audit across all defined silos.
@@ -243,86 +245,25 @@ async function auditScales(memory: any): Promise<AuditFinding[]> {
 
 /**
  * Audits Silo 7: The Metabolism (Bloat & Debt)
- * Offloaded to AIReady (AST) MCP suite.
- * BUG FIX: Now properly reports findings when MCP unavailable (was silent failure)
+ * Now uses the central MetabolismService for Regenerative Repair.
  */
-async function auditMetabolism(_memory: any): Promise<AuditFinding[]> {
-  const findings: AuditFinding[] = [];
+async function auditMetabolism(memory: any): Promise<AuditFinding[]> {
+  const findings = await MetabolismService.runMetabolismAudit(memory, { repair: true });
 
-  try {
-    // 1. Discover Metabolism-related tools from the AIReady (AST) MCP suite
-    const astTools = await MCPMultiplexer.getToolsFromServer('ast', '');
-    const auditTool = astTools.find(
-      (t: { name: string }) =>
-        t.name === 'metabolism_audit' ||
-        t.name === 'codebase_audit' ||
-        t.name.includes('metabolism')
-    );
-
-    if (!auditTool) {
-      // FIX: Report finding instead of silent return
-      logger.warn(
-        '[Audit] Metabolism: No specialized audit tool found in AIReady (AST) MCP suite.'
-      );
-      findings.push({
-        silo: 'Metabolism',
-        expected: 'MCP-based metabolism audit available',
-        actual: 'No metabolism_audit or codebase_audit tool found in MCP server',
-        severity: 'P1',
-        recommendation:
-          'Ensure AIReady (AST) MCP server is deployed and contains metabolism audit tools, or implement native audit fallback.',
-      });
-      return findings;
-    }
-
-    // 2. Execute the audit via MCP
-    const result = await auditTool.execute({
-      path: './core',
-      includeTelemetry: true,
-      depth: 'full',
-    });
-
-    // 3. Parse and Map Findings
-    // The MCP suite follows the AIReady report format, which we map to AuditFindings
-    if (result && typeof result === 'object') {
-      const data = ('metadata' in result ? (result.metadata as any) : result) as any;
-
-      // Map 'bloat' or 'debt' findings to our silo
-      const mcpFindings = data.findings || data.results || [];
-      if (Array.isArray(mcpFindings)) {
-        for (const f of mcpFindings) {
-          findings.push({
-            silo: 'Metabolism',
-            expected: f.expected || 'Lean, optimized system state',
-            actual: f.actual || f.message || 'Bloat/Debt detected by AIReady',
-            severity: f.severity || 'P2',
-            recommendation: f.recommendation || f.fix || 'Review AIReady report for details.',
-          });
-        }
-      }
-
-      // Handle direct debt metrics if metabolism_audit returns them
-      if (data.debtMarkers > 20) {
-        findings.push({
-          silo: 'Metabolism',
-          expected: 'Technical debt markers < 20',
-          actual: `[Codebase Debt] Found ${data.debtMarkers} TODO/FIXME markers.`,
-          severity: 'P3',
-          recommendation: 'Address accumulated technical debt.',
-        });
+  // Propagate critical metabolism findings as Strategic Gaps for the Planner to pick up
+  for (const f of findings) {
+    if (f.severity === 'P1' || f.severity === 'P2') {
+      try {
+        await setGap(
+          memory,
+          `MAINTENANCE-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+          `[Metabolism] ${f.actual}. Recommendation: ${f.recommendation}`,
+          { category: InsightCategory.STRATEGIC_GAP, urgency: 5, impact: 8 }
+        );
+      } catch (e) {
+        logger.warn('[Audit] Failed to propagate maintenance gap:', e);
       }
     }
-  } catch (e) {
-    // FIX: Report finding instead of silent return
-    logger.error('[Audit] Metabolism: MCP-based audit failed:', e);
-    findings.push({
-      silo: 'Metabolism',
-      expected: 'MCP-based metabolism audit executes successfully',
-      actual: `Audit execution failed: ${e instanceof Error ? e.message : String(e)}`,
-      severity: 'P1',
-      recommendation:
-        'Check MCP server connectivity, ensure AST server is reachable, or implement native fallback audit mechanism.',
-    });
   }
 
   return findings;

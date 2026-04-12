@@ -29,11 +29,15 @@ vi.mock('../safety/safety-engine', () => {
   };
 });
 
-vi.mock('../constants', () => ({
-  TRACE_TYPES: { TOOL_CALL: 'tool_call', TOOL_RESULT: 'tool_result' },
-  TIME: { MS_PER_MINUTE: 60000, MS_PER_HOUR: 3600000 },
-  LIMITS: { MAX_ITERATIONS: 10, MAX_CONTEXT_TOKENS: 4000 },
-}));
+vi.mock('../constants', async (importOriginal) => {
+  const actual = (await importOriginal()) as any;
+  return {
+    ...actual,
+    TRACE_TYPES: { TOOL_CALL: 'tool_call', TOOL_RESULT: 'tool_result' },
+    TIME: { MS_PER_MINUTE: 60000, MS_PER_HOUR: 3600000 },
+    LIMITS: { MAX_ITERATIONS: 10, MAX_CONTEXT_TOKENS: 4000 },
+  };
+});
 
 describe('AgentExecutor', () => {
   let mockProvider: any;

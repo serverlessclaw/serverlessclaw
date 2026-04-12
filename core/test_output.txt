@@ -1,0 +1,731 @@
+[vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.dev/rolldown
+
+ RUN  v4.1.3 /Users/pengcao/projects/serverlessclaw/core
+
+ ✓ lib/memory/clarification-operations.test.ts (15 tests) 7ms
+stdout | lib/agent/executor.test.ts
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+stdout | agents/cognition-reflector/audit-protocol.test.ts
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+stdout | agents/strategic-planner/council-continuation.test.ts > Council of Agents — Continuation Logic > should handle missing plan data gracefully
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+stdout | tools/system/health.test.ts
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+ ❯ tools/system/health.test.ts (0 test)
+ ❯ lib/agent/tool-executor.test.ts (0 test)
+ ❯ lib/agent/executor.test.ts (0 test)
+stdout | handlers/events.integration.test.ts > Event Router Integration > should route SYSTEM_BUILD_FAILED to build-handler.handleBuildFailure
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+stdout | lib/utils/topology.test.ts > discoverSystemTopology > should always include baseline infrastructure nodes
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+ ✓ handlers/agent-runner.decomposition.test.ts (4 tests) 547ms
+     ✓ triggers decomposition when response contains mission markers  403ms
+ ❯ agents/cognition-reflector/audit-protocol.test.ts (4 tests | 3 failed) 8ms
+     ✓ should identify metabolism issues via MCP correctly 3ms
+     × should detect technical debt markers via MCP 3ms
+     × should report P1 finding when MCP tools are missing 1ms
+     × should report P1 finding when MCP execution fails 1ms
+stdout | handlers/events.integration.test.ts > Event Router Integration > should route SYSTEM_BUILD_SUCCESS to build-handler.handleBuildSuccess
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+ ✓ agents/strategic-planner.test.ts (6 tests) 341ms
+stdout | handlers/events.integration.test.ts > Event Router Integration > should route TASK_COMPLETED to task-result-handler.handleTaskResult
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+stdout | lib/agent.test.ts
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+stderr | lib/utils/topology.test.ts > discoverSystemTopology > should be resilient to DynamoDB errors
+Failed to scan dynamic agents, proceeding with backbone only: Error: DDB Down
+    at /Users/pengcao/projects/serverlessclaw/core/lib/utils/topology.test.ts:212:69
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/.pnpm/@vitest+runner@4.1.3/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+
+ ✓ lib/utils/topology.test.ts (10 tests) 825ms
+     ✓ should always include baseline infrastructure nodes  813ms
+stdout | tests/tracing-integration.test.ts > Tracing Integration > Strategic Planner Traces > should emit PLAN_GENERATED trace after successful planning
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+ ✓ agents/strategic-planner/council-continuation.test.ts (4 tests) 1210ms
+     ✓ should dispatch to Coder when Council APPROVED and mode is AUTO  497ms
+     ✓ should handle missing plan data gracefully  711ms
+ ✓ handlers/webhook.test.ts (5 tests) 341ms
+stdout | handlers/events.integration.test.ts > Event Router Integration > should route unknown event type to DLQ and resolve
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+stdout | handlers/events.integration.test.ts > Event Router Integration > should inject envelope id into detail for idempotency
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+ ✓ handlers/events.integration.test.ts (5 tests) 1363ms
+     ✓ should route SYSTEM_BUILD_FAILED to build-handler.handleBuildFailure  947ms
+stdout | tests/multimodal.test.ts
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+ ✓ tests/tracing-integration.test.ts (4 tests) 197ms
+stderr | tools/collaboration/clarification.test.ts > Clarification Tools > provideClarification > should pass through traceId and sessionId
+Failed to update clarification status: Error: It does not look like SST links are active. If this is in local development and you are not starting this process through the multiplexer, wrap your command with `sst dev -- <command>`
+    at Object.typedResource [as get] (file:///Users/pengcao/projects/serverlessclaw/node_modules/.pnpm/sst@4.6.11/node_modules/sst/dist/resource.js:88:19)
+    at DynamoMemory.tableName (/Users/pengcao/projects/serverlessclaw/core/lib/memory/base.ts:48:12)
+    at DynamoMemory.updateItem (/Users/pengcao/projects/serverlessclaw/core/lib/memory/base.ts:173:23)
+    at Module.updateClarificationStatus (/Users/pengcao/projects/serverlessclaw/core/lib/memory/clarification-operations.ts:165:14)
+    at DynamoMemory.updateClarificationStatus (/Users/pengcao/projects/serverlessclaw/core/lib/memory/dynamo-memory.ts:306:29)
+    at Object.execute (/Users/pengcao/projects/serverlessclaw/core/tools/collaboration/clarification.ts:91:24)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at /Users/pengcao/projects/serverlessclaw/core/tools/collaboration/clarification.test.ts:231:7
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/.pnpm/@vitest+runner@4.1.3/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+
+stderr | tools/collaboration/clarification.test.ts > Clarification Tools > provideClarification > should update clarification status when traceId and agentId provided
+Failed to update clarification status: Error: It does not look like SST links are active. If this is in local development and you are not starting this process through the multiplexer, wrap your command with `sst dev -- <command>`
+    at Object.typedResource [as get] (file:///Users/pengcao/projects/serverlessclaw/node_modules/.pnpm/sst@4.6.11/node_modules/sst/dist/resource.js:88:19)
+    at DynamoMemory.tableName (/Users/pengcao/projects/serverlessclaw/core/lib/memory/base.ts:48:12)
+    at DynamoMemory.updateItem (/Users/pengcao/projects/serverlessclaw/core/lib/memory/base.ts:173:23)
+    at Module.updateClarificationStatus (/Users/pengcao/projects/serverlessclaw/core/lib/memory/clarification-operations.ts:165:14)
+    at DynamoMemory.updateClarificationStatus (/Users/pengcao/projects/serverlessclaw/core/lib/memory/dynamo-memory.ts:306:29)
+    at Object.execute (/Users/pengcao/projects/serverlessclaw/core/tools/collaboration/clarification.ts:91:24)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at /Users/pengcao/projects/serverlessclaw/core/tools/collaboration/clarification.test.ts:281:7
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/.pnpm/@vitest+runner@4.1.3/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+
+stderr | tools/collaboration/clarification.test.ts > Clarification Tools > provideClarification > should not fail when memory update fails
+Failed to update clarification status: Error: It does not look like SST links are active. If this is in local development and you are not starting this process through the multiplexer, wrap your command with `sst dev -- <command>`
+    at Object.typedResource [as get] (file:///Users/pengcao/projects/serverlessclaw/node_modules/.pnpm/sst@4.6.11/node_modules/sst/dist/resource.js:88:19)
+    at DynamoMemory.tableName (/Users/pengcao/projects/serverlessclaw/core/lib/memory/base.ts:48:12)
+    at DynamoMemory.updateItem (/Users/pengcao/projects/serverlessclaw/core/lib/memory/base.ts:173:23)
+    at Module.updateClarificationStatus (/Users/pengcao/projects/serverlessclaw/core/lib/memory/clarification-operations.ts:165:14)
+    at DynamoMemory.updateClarificationStatus (/Users/pengcao/projects/serverlessclaw/core/lib/memory/dynamo-memory.ts:306:29)
+    at Object.execute (/Users/pengcao/projects/serverlessclaw/core/tools/collaboration/clarification.ts:91:24)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at /Users/pengcao/projects/serverlessclaw/core/tools/collaboration/clarification.test.ts:293:22
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/.pnpm/@vitest+runner@4.1.3/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+
+ ✓ tools/collaboration/clarification.test.ts (19 tests) 234ms
+ ✓ handlers/events/proactive-handler.test.ts (2 tests) 399ms
+     ✓ should handle errors gracefully during dispatch  391ms
+ ✓ lib/utils/bus.test.ts (12 tests) 520ms
+       ✓ should store in DLQ after max retries  304ms
+ ✓ lib/agent.test.ts (9 tests) 245ms
+Warning: A vi.mock('../../lib/registry/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../tools/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/metrics/token-usage') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/registry/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../tools/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/metrics/token-usage') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/registry/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../tools/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/metrics/token-usage') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/registry/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../tools/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/metrics/token-usage') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/registry/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../tools/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/metrics/token-usage') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/registry/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../tools/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/metrics/token-usage') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/registry/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../tools/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/metrics/token-usage') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/registry/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../tools/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/metrics/token-usage') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../tools/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../lib/metrics/token-usage') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../../tools/index') call in "/Users/pengcao/projects/serverlessclaw/core/agents/strategic-planner/prompts.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+ ✓ handlers/health.test.ts (4 tests) 140ms
+ ✓ tests/swarm-recursive.test.ts (5 tests) 51ms
+ ✓ handlers/recovery.test.ts (6 tests) 1566ms
+     ✓ should NOT trigger CodeBuild if health check passes  716ms
+     ✓ should log error but continue if EventBridge escalation fails  350ms
+     ✓ should release lock and report health issue if any error occurs during recovery flow  346ms
+ ✓ agents/strategic-planner/prompts.test.ts (30 tests) 94ms
+ ✓ handlers/agent-runner.test.ts (6 tests) 111ms
+stdout | handlers/monitor.test.ts > BuildMonitor — FAILED gap handling > should REOPEN a gap when attempt count is below the cap
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+ ✓ tools/infra/deployment.test.ts (28 tests) 231ms
+ ✓ handlers/monitor.test.ts (29 tests) 112ms
+ ✓ tests/workspace-collaboration.test.ts (2 tests) 129ms
+ ✓ tests/mechanisms.integration.test.ts (3 tests) 223ms
+ ✓ tests/multimodal.test.ts (1 test) 239ms
+Warning: A vi.mock('../agents/coder') call in "/Users/pengcao/projects/serverlessclaw/core/handlers/agent-multiplexer.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../agents/qa') call in "/Users/pengcao/projects/serverlessclaw/core/handlers/agent-multiplexer.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../agents/critic') call in "/Users/pengcao/projects/serverlessclaw/core/handlers/agent-multiplexer.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+Warning: A vi.mock('../agents/merger') call in "/Users/pengcao/projects/serverlessclaw/core/handlers/agent-multiplexer.test.ts" is not at the top level of the module. Although it appears nested, it will be hoisted and executed before any tests run. Move it to the top level to reflect its actual execution order. This will become an error in a future version.
+See: https://vitest.dev/guide/mocking/modules#how-it-works
+ ✓ lib/skills.test.ts (7 tests) 89ms
+ ✓ agents/cognition-reflector/prompts.test.ts (29 tests) 84ms
+ ✓ tools/collaboration/collaboration.test.ts (30 tests) 108ms
+ ✓ handlers/events/task-result-handler.unit.test.ts (1 test) 104ms
+ ✓ handlers/agent-multiplexer.test.ts (6 tests) 68ms
+ ✓ handlers/events/parallel-task-completed-handler.test.ts (8 tests) 74ms
+ ✓ lib/safety/trust-manager.test.ts (6 tests) 93ms
+ ✓ agents/coder.test.ts (12 tests) 96ms
+ ✓ handlers/heartbeat.test.ts (2 tests) 72ms
+ ✓ lib/safety/circuit-breaker.test.ts (7 tests) 71ms
+ ✓ handlers/events/research-handler.test.ts (8 tests) 66ms
+ ✓ handlers/events/merger-handler.test.ts (7 tests) 62ms
+ ✓ lib/mcp/client-manager.test.ts (15 tests) 64ms
+ ✓ handlers/webhook.integration.test.ts (5 tests) 68ms
+ ✓ agents/strategic-planner/evolution.test.ts (12 tests) 55ms
+ ✓ agents/strategic-planner/council.test.ts (9 tests) 61ms
+ ✓ lib/mcp.parallel.test.ts (3 tests) 56ms
+ ✓ handlers/recovery.integration.test.ts (6 tests) 55ms
+ ✓ tests/trace-dag-validation.test.ts (10 tests) 38ms
+stdout | lib/safety/safety-engine.integration.test.ts
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+stdout | lib/agent.stream.test.ts
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+ ✓ handlers/events/cognitive-health-handler.test.ts (13 tests) 6ms
+ ✓ lib/safety/safety-engine.integration.test.ts (8 tests) 22ms
+ ✓ lib/sync/lock.test.ts (3 tests) 21ms
+ ✓ lib/memory/cached-memory.test.ts (67 tests) 40ms
+stdout | lib/memory/integration.test.ts > DynamoMemory Regression Tests > LKG (Last Known Good) Logic > should save LKG hash with correct partition and sort key
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+ ✓ lib/memory/integration.test.ts (5 tests) 37ms
+stdout | lib/memory/scope.test.ts
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+ ✓ lib/session/identity.test.ts (41 tests) 28ms
+ ✓ lib/memory/dynamo-memory.test.ts (59 tests) 28ms
+stdout | lib/safety/safety-engine.test.ts
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+ ✓ lib/agent.stream.test.ts (7 tests) 31ms
+ ✓ adapters/input/telegram.test.ts (19 tests) 21ms
+ ✓ lib/safety/safety-engine.test.ts (20 tests) 25ms
+stdout | lib/memory/insight-operations.test.ts > Insight Operations > addMemory > should include createdAt in putItem and metadata
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+stdout | lib/agent-memory.test.ts
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+ ✓ lib/memory/base.test.ts (24 tests) 15ms
+ ✓ lib/memory/insight-operations.test.ts (32 tests) 38ms
+ ✓ lib/metrics/evolution-metrics.test.ts (11 tests) 12ms
+ ✓ lib/schema/events.test.ts (193 tests) 22ms
+ ✓ lib/memory/scope.test.ts (2 tests) 38ms
+ ✓ lib/utils/workspace-manager.test.ts (7 tests) 19ms
+ ✓ lib/mcp/tool-mapper.test.ts (29 tests) 18ms
+ ✓ lib/schema/orchestration.test.ts (66 tests) 15ms
+ ✓ lib/agent-memory.test.ts (3 tests) 26ms
+ ✓ lib/routing/__tests__/AgentRouter.test.ts (16 tests) 5ms
+ ✓ tools/knowledge/storage.test.ts (29 tests) 17ms
+ ✓ lib/utils/agent-helpers.test.ts (23 tests) 4ms
+stdout | lib/memory/__tests__/workspace-isolation.test.ts > Workspace Isolation [Silo 4] > Memory Isolation > should use scoped PK when adding and getting messages
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+ ✓ lib/memory/__tests__/workspace-isolation.test.ts (5 tests) 26ms
+ ✓ lib/lifecycle/scheduler.test.ts (33 tests) 15ms
+ ✓ tools/knowledge/agent.test.ts (9 tests) 19ms
+ ✓ tests/contract.test.ts (77 tests) 19ms
+ ✓ lib/handoff.test.ts (13 tests) 23ms
+ ✓ handlers/events/consensus-handler.test.ts (11 tests) 11ms
+ ✓ lib/metrics/cognitive-metrics.test.ts (45 tests) 14ms
+ ✓ handlers/notifier.test.ts (33 tests) 17ms
+ ✓ lib/memory/collaboration-operations.test.ts (36 tests) 15ms
+ ✓ lib/test-helpers/mock-agent-executor.test.ts (4 tests) 7ms
+ ✓ lib/memory/evolution.test.ts (5 tests) 8ms
+ ✓ lib/schema/webhook.test.ts (55 tests) 9ms
+ ✓ adapters/input/types.test.ts (13 tests) 9ms
+stdout | lib/utils/topology/nodes.test.ts > discoverAwsNodes > discovers nodes from AWS services
+[TopologyDiscovery] Performing reflective scan for app: serverlessclaw, stage: local, region: ap-southeast-2
+
+stdout | lib/utils/topology/nodes.test.ts > discoverAwsNodes > resolves stage from .sst/stage if SST_STAGE is not set
+[TopologyDiscovery] Performing reflective scan for app: serverlessclaw, stage: prod, region: ap-southeast-2
+
+stdout | lib/utils/topology/nodes.test.ts > discoverAwsNodes > defaults to local if stage is unrecognized
+[TopologyDiscovery] Performing reflective scan for app: serverlessclaw, stage: local, region: ap-southeast-2
+
+stderr | lib/utils/topology/nodes.test.ts > discoverAwsNodes > defaults to local if stage is unrecognized
+[TopologyDiscovery] Unrecognized stage "unknown", defaulting to "local"
+
+stdout | lib/utils/topology/nodes.test.ts > discoverAwsNodes > handles AWS scan failures gracefully
+[TopologyDiscovery] Performing reflective scan for app: serverlessclaw, stage: local, region: ap-southeast-2
+
+stderr | lib/utils/topology/nodes.test.ts > discoverAwsNodes > handles AWS scan failures gracefully
+[TopologyDiscovery] AWS Reflective Scan failed: Error: AWS Error
+    at new <anonymous> (/Users/pengcao/projects/serverlessclaw/core/lib/utils/topology/nodes.test.ts:556:45)
+    at new Mock (file:///Users/pengcao/projects/serverlessclaw/node_modules/.pnpm/@vitest+spy@4.1.3/node_modules/@vitest/spy/dist/index.js:309:27)
+    at Module.discoverAwsNodes (/Users/pengcao/projects/serverlessclaw/core/lib/utils/topology/nodes.ts:208:17)
+    at /Users/pengcao/projects/serverlessclaw/core/lib/utils/topology/nodes.test.ts:559:26
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/.pnpm/@vitest+runner@4.1.3/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+
+ ✓ lib/utils/topology/nodes.test.ts (41 tests) 15ms
+ ✓ lib/warmup/warmup-manager.test.ts (24 tests) 11ms
+ ✓ adapters/input/jira.test.ts (18 tests) 9ms
+ ✓ lib/utils/trace-helper.test.ts (11 tests) 9ms
+ ✓ lib/mcp.test.ts (31 tests) 12ms
+stderr | lib/utils/metadata.test.ts > extractMetadata > should return defaults for invalid metadata
+Metadata validation failed, returning defaults: ZodError: [
+  {
+    "expected": "number",
+    "code": "invalid_type",
+    "path": [
+      "count"
+    ],
+    "message": "Invalid input: expected number, received string"
+  }
+]
+    at Module.extractMetadata (/Users/pengcao/projects/serverlessclaw/core/lib/utils/metadata.ts:20:19)
+    at /Users/pengcao/projects/serverlessclaw/core/lib/utils/metadata.test.ts:76:20
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/.pnpm/@vitest+runner@4.1.3/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/.pnpm/@vitest+runner@4.1.3/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/.pnpm/@vitest+runner@4.1.3/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20
+    at new Promise (<anonymous>)
+    at runWithCancel (file:///Users/pengcao/projects/serverlessclaw/node_modules/.pnpm/@vitest+runner@4.1.3/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/.pnpm/@vitest+runner@4.1.3/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///Users/pengcao/projects/serverlessclaw/node_modules/.pnpm/@vitest+runner@4.1.3/node_modules/@vitest/runner/dist/chunk-artifact.js:2272:10)
+
+ ✓ lib/utils/metadata.test.ts (11 tests) 7ms
+ ✓ mcp-servers/multiplexer.test.ts (3 tests) 14ms
+ ✓ lib/lifecycle/escalation-manager.test.ts (33 tests) 10ms
+ ✓ lib/memory/gap-operations.test.ts (37 tests) 17ms
+ ✓ lib/utils/realtime.test.ts (2 tests) 10ms
+ ✓ agents/critic.test.ts (12 tests) 6ms
+ ✓ adapters/input/github-sensor.test.ts (14 tests) 10ms
+ ✓ tools/infra/orchestration.test.ts (24 tests) 8ms
+ ✓ lib/session/session-state.test.ts (7 tests) 9ms
+ ✓ adapters/input/generic-http.test.ts (18 tests) 9ms
+ ✓ lib/agent/executor.session.test.ts (3 tests) 12ms
+ ✓ handlers/events/task-result-handler.test.ts (16 tests) 15ms
+ ✓ handlers/dlq-handler.test.ts (8 tests) 5ms
+stdout | lib/handoff-ignore.test.ts
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+ ✓ lib/memory/utils.test.ts (50 tests) 13ms
+ ✓ handlers/events/health-handler.test.ts (5 tests) 5ms
+ ✓ lib/handoff-ignore.test.ts (3 tests) 16ms
+ ✓ tools/knowledge/mcp.test.ts (16 tests) 5ms
+ ✓ lib/metrics/token-usage.test.ts (30 tests) 8ms
+ ✓ lib/logger.test.ts (40 tests) 8ms
+ ✓ adapters/__tests__/adapters.test.ts (14 tests) 8ms
+stderr | lib/metrics/metrics.test.ts > Metrics > emitMetrics > should handle CloudWatch send failure gracefully
+[METRICS] Failed to emit CloudWatch metrics: Error: CloudWatch unavailable
+    at /Users/pengcao/projects/serverlessclaw/core/lib/metrics/metrics.test.ts:64:38
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/.pnpm/@vitest+runner@4.1.3/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/.pnpm/@vitest+runner@4.1.3/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/.pnpm/@vitest+runner@4.1.3/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20
+    at new Promise (<anonymous>)
+    at runWithCancel (file:///Users/pengcao/projects/serverlessclaw/node_modules/.pnpm/@vitest+runner@4.1.3/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/.pnpm/@vitest+runner@4.1.3/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///Users/pengcao/projects/serverlessclaw/node_modules/.pnpm/@vitest+runner@4.1.3/node_modules/@vitest/runner/dist/chunk-artifact.js:2272:10)
+    at file:///Users/pengcao/projects/serverlessclaw/node_modules/.pnpm/@vitest+runner@4.1.3/node_modules/@vitest/runner/dist/chunk-artifact.js:2955:64
+
+ ✓ lib/metrics/metrics.test.ts (29 tests) 11ms
+ ✓ lib/agent/executor-helper.test.ts (26 tests) 5ms
+ ✓ lib/lock/lock-manager.test.ts (7 tests) 5ms
+ ✓ tools/infra/rollback.test.ts (4 tests) 7ms
+stderr | handlers/concurrency-monitor.test.ts > concurrency-monitor > should handle Lambda SDK errors gracefully
+[vitest] The vi.fn() mock did not use 'function' or 'class' in its implementation, see https://vitest.dev/api/vi#vi-spyon for examples.
+
+stderr | handlers/concurrency-monitor.test.ts > concurrency-monitor > should log checking message on invocation
+[vitest] The vi.fn() mock did not use 'function' or 'class' in its implementation, see https://vitest.dev/api/vi#vi-spyon for examples.
+
+stderr | handlers/concurrency-monitor.test.ts > concurrency-monitor > should not throw on invocation
+[vitest] The vi.fn() mock did not use 'function' or 'class' in its implementation, see https://vitest.dev/api/vi#vi-spyon for examples.
+
+stderr | handlers/concurrency-monitor.test.ts > concurrency-monitor > should complete without errors on multiple invocations
+[vitest] The vi.fn() mock did not use 'function' or 'class' in its implementation, see https://vitest.dev/api/vi#vi-spyon for examples.
+
+stderr | handlers/concurrency-monitor.test.ts > concurrency-monitor > should complete without errors on multiple invocations
+[vitest] The vi.fn() mock did not use 'function' or 'class' in its implementation, see https://vitest.dev/api/vi#vi-spyon for examples.
+
+stderr | handlers/concurrency-monitor.test.ts > concurrency-monitor > should complete without errors on multiple invocations
+[vitest] The vi.fn() mock did not use 'function' or 'class' in its implementation, see https://vitest.dev/api/vi#vi-spyon for examples.
+
+stderr | handlers/concurrency-monitor.test.ts > concurrency-monitor > should not throw when called repeatedly
+[vitest] The vi.fn() mock did not use 'function' or 'class' in its implementation, see https://vitest.dev/api/vi#vi-spyon for examples.
+
+stderr | handlers/concurrency-monitor.test.ts > concurrency-monitor > should not throw when called repeatedly
+[vitest] The vi.fn() mock did not use 'function' or 'class' in its implementation, see https://vitest.dev/api/vi#vi-spyon for examples.
+
+stderr | handlers/concurrency-monitor.test.ts > concurrency-monitor > should not throw when called repeatedly
+[vitest] The vi.fn() mock did not use 'function' or 'class' in its implementation, see https://vitest.dev/api/vi#vi-spyon for examples.
+
+stderr | handlers/concurrency-monitor.test.ts > concurrency-monitor > should not throw when called repeatedly
+[vitest] The vi.fn() mock did not use 'function' or 'class' in its implementation, see https://vitest.dev/api/vi#vi-spyon for examples.
+
+stderr | handlers/concurrency-monitor.test.ts > concurrency-monitor > should not throw when called repeatedly
+[vitest] The vi.fn() mock did not use 'function' or 'class' in its implementation, see https://vitest.dev/api/vi#vi-spyon for examples.
+
+stdout | lib/agent/executor.stream.test.ts
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+ ✓ handlers/concurrency-monitor.test.ts (7 tests) 10ms
+ ✓ lib/config/config-versioning.test.ts (8 tests) 6ms
+ ✓ handlers/events/parallel-handler.test.ts (13 tests) 9ms
+ ✓ tools/infra/topology.test.ts (11 tests) 6ms
+ ✓ lib/providers/attachments.test.ts (3 tests) 9ms
+ ✓ lib/agent/context-manager.test.ts (38 tests) 9ms
+ ✓ lib/providers/fallback.test.ts (11 tests) 7ms
+ ✓ lib/lifecycle/health.test.ts (21 tests) 8ms
+ ✓ lib/providers/integration.test.ts (1 test) 9ms
+ ✓ lib/config/config-defaults.test.ts (14 tests) 10ms
+ ✓ lib/agent/executor.stream.test.ts (5 tests) 11ms
+ ✓ handlers/events/shared.test.ts (22 tests) 7ms
+ ✓ lib/metrics/deploy-stats.test.ts (12 tests) 8ms
+ ✓ lib/utils/topology/classifiers.test.ts (34 tests) 6ms
+ ✓ lib/utils/topology/edges.test.ts (56 tests) 7ms
+ ✓ tools/system/git.test.ts (10 tests) 4ms
+ ✓ lib/memory/tiering.test.ts (12 tests) 8ms
+ ✓ lib/event-routing.test.ts (38 tests) 9ms
+ ✓ handlers/events/escalation-handler.test.ts (5 tests) 4ms
+ ✓ lib/safety/safety-config.test.ts (18 tests) 9ms
+ ✓ lib/utils/agent-helpers/event-emitter.test.ts (15 tests) 12ms
+ ✓ lib/lifecycle/error-recovery.test.ts (61 tests) 5072ms
+     ✓ should fall through to next provider on failure  3569ms
+     ✓ should use fallback on failure  1384ms
+ ✓ lib/memory/workspace-operations.test.ts (14 tests) 10ms
+ ✓ lib/config/escalation-defaults.test.ts (65 tests) 10ms
+ ✓ lib/agent/emitter.test.ts (30 tests) 6ms
+ ✓ handlers/events/clarification-handler.test.ts (7 tests) 11ms
+ ✓ tools/collaboration/workspace.test.ts (9 tests) 6ms
+ ✓ lib/agent/tool-executor.security.test.ts (3 tests) 4ms
+ ✓ lib/lock/lock-manager.concurrency.test.ts (3 tests) 11ms
+ ✓ lib/registry/AgentRegistry.test.ts (18 tests) 18ms
+ ✓ lib/providers/openai.stream.test.ts (2 tests) 3ms
+ ✓ lib/utils/agent-helpers/llm-utils.test.ts (16 tests) 5ms
+ ✓ tools/collaboration/messaging.test.ts (12 tests) 4ms
+ ✓ handlers/events/build-handler.test.ts (9 tests) 12ms
+ ✓ tools/system/hot-config.test.ts (8 tests) 4ms
+ ✓ lib/agent/dag-executor.test.ts (53 tests) 8ms
+ ✓ agents/qa.test.ts (13 tests) 7ms
+ ✓ lib/providers/utils.test.ts (11 tests) 4ms
+ ✓ lib/utils/zod-utils.test.ts (8 tests) 7ms
+ ✓ handlers/events/cancellation-handler.test.ts (11 tests) 8ms
+ ✓ agents/cognition-reflector.test.ts (5 tests) 8ms
+ ✓ lib/utils/fs-security.test.ts (17 tests) 3ms
+ ✓ tools/system/schema.test.ts (7 tests) 9ms
+ ✓ lib/utils/lru.test.ts (17 tests) 4ms
+ ✓ tools/knowledge/schema.test.ts (7 tests) 10ms
+ ✓ agents/facilitator.test.ts (2 tests) 7ms
+ ✓ lib/memory/session-operations.test.ts (22 tests | 3 skipped) 7ms
+ ✓ lib/providers/openrouter.stream.test.ts (8 tests) 11ms
+ ✓ lib/utils/pii.test.ts (5 tests) 8ms
+ ✓ lib/routing/__tests__/AgentRouter.integration.test.ts (9 tests) 4ms
+ ✓ handlers/mcp-warmup.test.ts (5 tests) 5ms
+ ✓ lib/memory/collaboration.test.ts (5 tests) 8ms
+ ✓ lib/memory/cache.test.ts (24 tests) 7ms
+ ✓ lib/utils/typed-emit.test.ts (20 tests) 6ms
+ ✓ handlers/realtime-auth.test.ts (3 tests) 3ms
+ ✓ lib/config/config-validator.test.ts (18 tests) 4ms
+ ✓ lib/lifecycle/alerting.test.ts (11 tests) 4ms
+stderr | tools/registry-utils.test.ts > registry-utils > getAgentTools > should handle smart warmup failure gracefully
+[vitest] The vi.fn() mock did not use 'function' or 'class' in its implementation, see https://vitest.dev/api/vi#vi-spyon for examples.
+
+ ✓ tools/registry-utils.test.ts (7 tests) 10ms
+ ✓ lib/agent/options.test.ts (3 tests) 4ms
+ ✓ lib/utils/ddb-client.test.ts (12 tests) 5ms
+ ✓ lib/utils/tool-error.test.ts (10 tests) 3ms
+ ✓ tools/infra/schema.test.ts (6 tests) 5ms
+stdout | agents/superclaw.test.ts
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+ ✓ lib/agent/parallel-aggregator.test.ts (4 tests) 5ms
+ ✓ lib/memory/reputation-operations.test.ts (18 tests) 7ms
+ ✓ lib/providers/openai.test.ts (7 tests) 7ms
+ ✓ tools/system/validation.test.ts (4 tests) 3ms
+ ✓ adapters/input/slack.test.ts (4 tests) 6ms
+ ✓ tools/system/definitions.test.ts (4 tests) 5ms
+ ✓ lib/providers/index.test.ts (15 tests) 6ms
+ ✓ handlers/events/clarification-timeout-handler.test.ts (10 tests) 7ms
+ ✓ lib/tracer.test.ts (6 tests) 5ms
+ ✓ lib/memory/pagination.test.ts (4 tests) 6ms
+ ✓ lib/agent/assembler.test.ts (9 tests) 6ms
+ ✓ tools/collaboration/schema.test.ts (6 tests) 6ms
+ ✓ agents/superclaw.test.ts (8 tests) 6ms
+ ✓ handlers/notifier.repro.test.ts (5 tests) 5ms
+ ✓ lib/metrics/slo.test.ts (9 tests) 3ms
+ ✓ lib/sync/sync.test.ts (12 tests) 3ms
+ ✓ tests/decomposer.test.ts (18 tests) 5ms
+ ✓ handlers/events/dag-supervisor-handler.test.ts (3 tests) 4ms
+ ✓ lib/utils/normalize.test.ts (13 tests) 3ms
+ ✓ lib/providers/bedrock.test.ts (5 tests) 5ms
+ ✓ tests/schema-type-drift.test.ts (12 tests) 7ms
+ ✓ tools/knowledge/research.test.ts (2 tests) 3ms
+ ✓ tests/evolution-loop.integration.test.ts (16 tests) 7ms
+(node:96931) TimeoutNaNWarning: NaN is not a number.
+Timeout duration was set to 1.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ✓ handlers/events.test.ts (5 tests) 6ms
+ ✓ agents/cognition-reflector/schema.test.ts (23 tests) 4ms
+stdout | lib/safety/evolution-scheduler.test.ts > EvolutionScheduler > should schedule an action correctly
+STORAGE: putting EVOLUTION#PENDING#eve_1776035191722_xlvjoa1br
+
+stdout | lib/safety/evolution-scheduler.test.ts > EvolutionScheduler > should trigger timed out actions
+STORAGE: putting EVOLUTION#PENDING#eve_1776035191725_hr8u8lxjz
+
+stdout | lib/safety/evolution-scheduler.test.ts > EvolutionScheduler > should trigger timed out actions
+STORAGE: querying with params {"IndexName":"TypeTimestampIndex","KeyConditionExpression":"#tp = :type","FilterExpression":"#status = :pending AND expiresAt <= :now","ExpressionAttributeNames":{"#tp":"type","#status":"status"},"ExpressionAttributeValues":{":type":"PENDING_EVOLUTION",":pending":"pending",":now":1776035191726}}
+STORAGE: found 1 items
+
+stdout | lib/safety/evolution-scheduler.test.ts > EvolutionScheduler > should trigger timed out actions
+STORAGE: putting EVOLUTION#PENDING#eve_1776035191725_hr8u8lxjz
+
+ ✓ lib/providers/minimax.test.ts (11 tests) 5ms
+ ✓ agents/merger.test.ts (6 tests) 5ms
+stdout | lib/safety/evolution-scheduler.test.ts > EvolutionScheduler > should not trigger actions that have not timed out
+STORAGE: putting EVOLUTION#PENDING#eve_1776035191727_victj1fx9
+
+stdout | lib/safety/evolution-scheduler.test.ts > EvolutionScheduler > should not trigger actions that have not timed out
+STORAGE: querying with params {"IndexName":"TypeTimestampIndex","KeyConditionExpression":"#tp = :type","FilterExpression":"#status = :pending AND expiresAt <= :now","ExpressionAttributeNames":{"#tp":"type","#status":"status"},"ExpressionAttributeValues":{":type":"PENDING_EVOLUTION",":pending":"pending",":now":1776035191727}}
+STORAGE: found 0 items
+
+ ✓ lib/safety/evolution-scheduler.test.ts (3 tests) 9ms
+ ✓ lib/agent/protocol-fallback.test.ts (12 tests) 8ms
+ ✓ lib/providers/bedrock.stream.test.ts (4 tests) 11ms
+ ✓ lib/metadata.test.ts (6 tests) 4ms
+ ✓ tools/infra/generate-patch.test.ts (6 tests) 6ms
+ ✓ adapters/output/types.test.ts (7 tests) 5ms
+ ✓ handlers/events/facilitator-handler.test.ts (1 test) 2ms
+ ✓ agents/critic/collab.test.ts (2 tests) 5ms
+ ✓ lib/safety/safety-limiter.test.ts (9 tests) 4ms
+stderr | tests/parallel-aggregation.test.ts > Parallel Aggregation Integration > should fallback to summary if agent-guided fails
+[vitest] The vi.fn() mock did not use 'function' or 'class' in its implementation, see https://vitest.dev/api/vi#vi-spyon for examples.
+
+ ✓ tests/parallel-aggregation.test.ts (4 tests) 6ms
+ ✓ lib/idempotency.test.ts (12 tests) 7ms
+ ✓ tools/knowledge/config.test.ts (17 tests) 6ms
+ ✓ lib/feature-flags.test.ts (12 tests) 5ms
+ ✓ handlers/bridge.test.ts (10 tests) 5ms
+ ✓ lib/prompts/snippets.test.ts (6 tests) 7ms
+ ✓ lib/lifecycle/self-verify.test.ts (5 tests) 3ms
+ ✓ lib/recursion-tracker.test.ts (5 tests) 4ms
+ ✓ tests/parallel-stress.test.ts (3 tests) 3ms
+ ✓ lib/utils/error.test.ts (12 tests) 4ms
+ ✓ lib/providers/minimax.stream.test.ts (3 tests) 4ms
+ ✓ tools/system/fs.test.ts (11 tests) 7ms
+ ✓ lib/metrics/token-budget-enforcer.test.ts (9 tests) 8ms
+ ✓ lib/registry/config.test.ts (9 tests) 5ms
+ ✓ handlers/events/continuation-handler.test.ts (7 tests) 4ms
+ ✓ tests/metabolism.test.ts (5 tests) 4ms
+ ✓ mcp-servers/registry.test.ts (4 tests) 4ms
+ ✓ lib/outbound.test.ts (5 tests) 3ms
+ ✓ lib/providers/openrouter.test.ts (7 tests) 4ms
+ ✓ tools/infra/scheduler.test.ts (7 tests) 4ms
+ ✓ handlers/events/parallel-failure.test.ts (2 tests) 5ms
+ ✓ handlers/events/parallel-barrier-timeout-handler.test.ts (9 tests) 6ms
+ ✓ lib/agent/decomposer.test.ts (4 tests) 5ms
+stdout | lib/agent.handoff.test.ts
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+ ✓ lib/agent/context-strategies.test.ts (9 tests) 4ms
+ ✓ lib/safety/semantic-loop-detector.test.ts (7 tests) 3ms
+ ✓ lib/backbone.test.ts (7 tests) 4ms
+ ✓ tools/system/ui.test.ts (5 tests) 6ms
+ ✓ lib/safety/safety-config-manager.test.ts (8 tests) 3ms
+ ✓ lib/agent/config-resolver.test.ts (6 tests) 4ms
+ ✓ lib/constants.test.ts (7 tests) 2ms
+ ✓ agents/strategic-planner/schema.test.ts (13 tests) 3ms
+ ✓ agents/critic/schema.test.ts (17 tests) 3ms
+ ✓ lib/types/constants.test.ts (10 tests) 3ms
+ ✓ lib/safety/loop-detection-trust.integration.test.ts (1 test) 2ms
+ ✓ lib/types/collaboration.test.ts (6 tests) 4ms
+ ✓ lib/agent.handoff.test.ts (2 tests) 5ms
+ ✓ lib/agent/schema.test.ts (10 tests) 3ms
+ ✓ lib/types/session.test.ts (4 tests) 4ms
+ ✓ lib/types/mcp.test.ts (9 tests) 4ms
+stdout | lib/agent/executor.tokens.test.ts
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+ ✓ lib/agent/context.test.ts (8 tests) 2ms
+ ✓ tools/knowledge/metadata.test.ts (4 tests) 3ms
+ ✓ agents/prompts/index.test.ts (1 test) 2ms
+stdout | lib/metrics/metrics.integration.test.ts > Metrics Permission Integration > should successfully emit a heartbeat metric to CloudWatch
+Skipping integration test (INTEGRATION_TESTS not set to true)
+
+ ✓ lib/metrics/metrics.integration.test.ts (1 test) 2ms
+stdout | lib/agent.validate.test.ts
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+ ✓ lib/agent/executor.tokens.test.ts (1 test) 3ms
+stdout | lib/schema.test.ts
+[SkillRegistry] Registered skill: fs-read
+[SkillRegistry] Registered skill: web-search
+
+ ✓ tools/system/reputation.test.ts (3 tests) 3ms
+ ✓ lib/agent.validate.test.ts (3 tests) 2ms
+ ✓ lib/schema.test.ts (3 tests) 2ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  lib/agent/executor.test.ts [ lib/agent/executor.test.ts ]
+ FAIL  lib/agent/tool-executor.test.ts [ lib/agent/tool-executor.test.ts ]
+Error: [vitest] No "TRUST" export is defined on the "../constants" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+vi.mock(import("../constants"), async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    // your mocked methods
+  }
+})
+
+ ❯ lib/safety/trust-manager.ts:29:45
+     27|
+     28| export class TrustManager {
+     29|   private static readonly DEFAULT_PENALTY = TRUST.DEFAULT_PENALTY;
+       |                                             ^
+     30|   private static readonly DEFAULT_SUCCESS_BUMP = TRUST.DEFAULT_SUCCESS…
+     31|   private static readonly MAX_SCORE = TRUST.MAX_SCORE;
+ ❯ lib/safety/index.ts:14:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  tools/system/health.test.ts [ tools/system/health.test.ts ]
+Error: [vitest] No "TRUST" export is defined on the "../../lib/constants" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+vi.mock(import("../../lib/constants"), async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    // your mocked methods
+  }
+})
+
+ ❯ lib/safety/trust-manager.ts:29:45
+     27|
+     28| export class TrustManager {
+     29|   private static readonly DEFAULT_PENALTY = TRUST.DEFAULT_PENALTY;
+       |                                             ^
+     30|   private static readonly DEFAULT_SUCCESS_BUMP = TRUST.DEFAULT_SUCCESS…
+     31|   private static readonly MAX_SCORE = TRUST.MAX_SCORE;
+ ❯ lib/metrics/cognitive-metrics.ts:12:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  agents/cognition-reflector/audit-protocol.test.ts > Audit Protocol - Metabolism Silo (MCP-based) > should detect technical debt markers via MCP
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ agents/cognition-reflector/audit-protocol.test.ts:52:82
+     50|     const metabolismFindings = report.findings.filter((f) => f.silo ==…
+     51|
+     52|     expect(metabolismFindings.some((f) => f.actual.includes('[Codebase…
+       |                                                                                  ^
+     53|   });
+     54|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  agents/cognition-reflector/audit-protocol.test.ts > Audit Protocol - Metabolism Silo (MCP-based) > should report P1 finding when MCP tools are missing
+AssertionError: expected 2 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 2
+
+ ❯ agents/cognition-reflector/audit-protocol.test.ts:62:39
+     60|
+     61|     // FIXED: Now reports P1 finding instead of silent empty
+     62|     expect(metabolismFindings.length).toBe(1);
+       |                                       ^
+     63|     expect(metabolismFindings[0].severity).toBe('P1');
+     64|     expect(metabolismFindings[0].actual).toContain('No metabolism_audi…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  agents/cognition-reflector/audit-protocol.test.ts > Audit Protocol - Metabolism Silo (MCP-based) > should report P1 finding when MCP execution fails
+AssertionError: expected 'P3' to be 'P1' // Object.is equality
+
+Expected: "P1"
+Received: "P3"
+
+ ❯ agents/cognition-reflector/audit-protocol.test.ts:75:44
+     73|     // FIXED: Now reports P1 finding instead of silent empty
+     74|     expect(metabolismFindings.length).toBe(1);
+     75|     expect(metabolismFindings[0].severity).toBe('P1');
+       |                                            ^
+     76|     expect(metabolismFindings[0].actual).toContain('failed');
+     77|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+
+ Test Files  4 failed | 250 passed (254)
+      Tests  3 failed | 3475 passed | 3 skipped (3481)
+   Start at  09:06:24
+   Duration  8.26s (transform 8.54s, setup 0ms, import 28.96s, tests 17.37s, environment 16ms)
+

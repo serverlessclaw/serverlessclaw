@@ -44,18 +44,18 @@ vi.mock('../../lib/registry/config', async () => {
 });
 
 // Mock constants
-vi.mock('../../lib/constants', () => ({
-  MEMORY_KEYS: {
-    HEALTH_PREFIX: 'HEALTH#',
-  },
-  RETENTION: {
-    HEALTH_DAYS: 30,
-  },
-  TIME: {
-    MS_PER_DAY: 86400000,
-    MS_PER_HOUR: 3600000,
-  },
-}));
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = (await importOriginal()) as any;
+  return {
+    ...actual,
+    TIME: {
+      MS_PER_SECOND: 1000,
+      MS_PER_MINUTE: 60000,
+      MS_PER_HOUR: 3600000,
+      MS_PER_DAY: 86400000,
+    },
+  };
+});
 
 // Mock BaseMemoryProvider
 const createMockBase = () => ({

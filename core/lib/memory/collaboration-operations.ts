@@ -36,6 +36,7 @@ export async function createCollaboration(
   const collaborationId = uuidv4();
   const sessionId = input.sessionId ?? uuidv4();
   const now = Date.now();
+  const workspaceId = input.workspaceId;
 
   const participants: CollaborationParticipant[] = [
     { type: ownerType, id: ownerId, role: 'owner', joinedAt: now },
@@ -80,11 +81,12 @@ export async function createCollaboration(
     timeoutMs: input.timeoutMs,
     status: 'active',
     tags: input.tags,
-    workspaceId: input.workspaceId,
+    workspaceId,
   };
 
+  const pk = base.getScopedUserId(`${COLLAB_PREFIX}${collaborationId}`, workspaceId);
   await base.putItem({
-    userId: `${COLLAB_PREFIX}${collaborationId}`,
+    userId: pk,
     timestamp: 0,
     type: 'COLLABORATION',
     ...collaboration,
@@ -92,18 +94,25 @@ export async function createCollaboration(
 
   // Index for each participant
   for (const participant of participants) {
+    const indexPk = base.getScopedUserId(
+      `${COLLAB_INDEX_PREFIX}${participant.type}#${participant.id}`,
+      workspaceId
+    );
     await base.putItem({
-      userId: `${COLLAB_INDEX_PREFIX}${participant.type}#${participant.id}`,
+      userId: indexPk,
       timestamp: now,
       type: 'COLLABORATION_INDEX',
       collaborationId,
       role: participant.role,
       collaborationName: input.name,
       status: 'active',
+      workspaceId,
     });
   }
 
-  logger.info(`Collaboration created: ${collaborationId} by ${ownerType}:${ownerId}`);
+  logger.info(
+    `Collaboration created: ${collaborationId} by ${ownerType}:${ownerId} in workspace: ${workspaceId}`
+  );
   return collaboration;
 }
 
@@ -115,15 +124,17 @@ export async function createCollaboration(
  * @param actorId - The ID of the member adding the participant (must be owner).
  * @param actorType - The type of the actor.
  * @param newParticipant - The new participant details including type, id, and role.
+ * @param workspaceId - Optional workspace identifier for isolation.
  */
 export async function addCollaborationParticipant(
   base: BaseMemoryProvider,
   collaborationId: string,
   actorId: string,
   actorType: ParticipantType,
-  newParticipant: { type: ParticipantType; id: string; role: CollaborationRole }
+  newParticipant: { type: ParticipantType; id: string; role: CollaborationRole },
+  workspaceId?: string
 ): Promise<void> {
-  const collaboration = await getCollaboration(base, collaborationId);
+  const collaboration = await getCollaboration(base, collaborationId, workspaceId);
   if (!collaboration) {
     throw new Error(`Collaboration ${collaborationId} not found`);
   }
@@ -143,10 +154,12 @@ export async function addCollaborationParticipant(
     joinedAt: now,
   };
 
+  const pk = base.getScopedUserId(`${COLLAB_PREFIX}${collaborationId}`, workspaceId);
+
   // Update collaboration metadata atomically (Principle 13)
   await base.updateItem({
     Key: {
-      userId: `${COLLAB_PREFIX}${collaborationId}`,
+      userId: pk,
       timestamp: 0,
     },
     UpdateExpression:
@@ -159,18 +172,23 @@ export async function addCollaborationParticipant(
   });
 
   // Add index entry for new participant
+  const indexPk = base.getScopedUserId(
+    `${COLLAB_INDEX_PREFIX}${newParticipant.type}#${newParticipant.id}`,
+    workspaceId
+  );
   await base.putItem({
-    userId: `${COLLAB_INDEX_PREFIX}${newParticipant.type}#${newParticipant.id}`,
+    userId: indexPk,
     timestamp: now,
     type: 'COLLABORATION_INDEX',
     collaborationId,
     role: newParticipant.role,
     collaborationName: collaboration.name,
     status: 'active',
+    workspaceId,
   });
 
   logger.info(
-    `Participant ${newParticipant.type}:${newParticipant.id} added to collaboration ${collaborationId}`
+    `Participant ${newParticipant.type}:${newParticipant.id} added to collaboration ${collaborationId} in workspace ${workspaceId}`
   );
 }
 
@@ -179,13 +197,15 @@ export async function addCollaborationParticipant(
  */
 export async function getCollaboration(
   base: BaseMemoryProvider,
-  collaborationId: string
+  collaborationId: string,
+  workspaceId?: string
 ): Promise<Collaboration | null> {
+  const pk = base.getScopedUserId(`${COLLAB_PREFIX}${collaborationId}`, workspaceId);
   const result = await base.queryItems({
     KeyConditionExpression: 'userId = :userId AND #timestamp = :zero',
     ExpressionAttributeNames: { '#timestamp': 'timestamp' },
     ExpressionAttributeValues: {
-      ':userId': `${COLLAB_PREFIX}${collaborationId}`,
+      ':userId': pk,
       ':zero': 0,
     },
   });
@@ -200,16 +220,22 @@ export async function getCollaboration(
  * @param base - The base memory provider.
  * @param participantId - The ID of the participant to list collaborations for.
  * @param participantType - The type of the participant (human or agent).
+ * @param workspaceId - Optional workspace identifier for isolation.
  */
 export async function listCollaborationsForParticipant(
   base: BaseMemoryProvider,
   participantId: string,
-  participantType: ParticipantType
+  participantType: ParticipantType,
+  workspaceId?: string
 ): Promise<Array<{ collaborationId: string; role: CollaborationRole; collaborationName: string }>> {
+  const pk = base.getScopedUserId(
+    `${COLLAB_INDEX_PREFIX}${participantType}#${participantId}`,
+    workspaceId
+  );
   const result = await base.queryItems({
     KeyConditionExpression: 'userId = :userId',
     ExpressionAttributeValues: {
-      ':userId': `${COLLAB_INDEX_PREFIX}${participantType}#${participantId}`,
+      ':userId': pk,
     },
   });
 
@@ -228,15 +254,17 @@ export async function listCollaborationsForParticipant(
  * @param participantId - The ID of the participant.
  * @param participantType - The type of the participant.
  * @param requiredRole - Optional minimum role required for access.
+ * @param workspaceId - Optional workspace identifier for isolation.
  */
 export async function checkCollaborationAccess(
   base: BaseMemoryProvider,
   collaborationId: string,
   participantId: string,
   participantType: ParticipantType,
-  requiredRole?: CollaborationRole
+  requiredRole?: CollaborationRole,
+  workspaceId?: string
 ): Promise<boolean> {
-  const collaboration = await getCollaboration(base, collaborationId);
+  const collaboration = await getCollaboration(base, collaborationId, workspaceId);
   if (!collaboration) return false;
 
   const participant = collaboration.participants.find(
@@ -261,9 +289,10 @@ export async function closeCollaboration(
   base: BaseMemoryProvider,
   collaborationId: string,
   actorId: string,
-  actorType: ParticipantType
+  actorType: ParticipantType,
+  workspaceId?: string
 ): Promise<void> {
-  const collaboration = await getCollaboration(base, collaborationId);
+  const collaboration = await getCollaboration(base, collaborationId, workspaceId);
   if (!collaboration) {
     throw new Error(`Collaboration ${collaborationId} not found`);
   }
@@ -274,11 +303,12 @@ export async function closeCollaboration(
   }
 
   const now = Date.now();
+  const pk = base.getScopedUserId(`${COLLAB_PREFIX}${collaborationId}`, workspaceId);
 
   // Atomic update status (Principle 13)
   await base.updateItem({
     Key: {
-      userId: `${COLLAB_PREFIX}${collaborationId}`,
+      userId: pk,
       timestamp: 0,
     },
     UpdateExpression: 'SET #status = :closed, updatedAt = :now, lastActivityAt = :now',
@@ -290,13 +320,16 @@ export async function closeCollaboration(
   });
 
   // Clean up ALL participant index entries to prevent orphaned records
-  // Need to fetch all participants including those added after creation
   const allParticipants = collaboration.participants;
   for (const participant of allParticipants) {
     try {
+      const indexPk = base.getScopedUserId(
+        `${COLLAB_INDEX_PREFIX}${participant.type}#${participant.id}`,
+        workspaceId
+      );
       // Use the participant's joinedAt timestamp as the sort key
       await base.deleteItem({
-        userId: `${COLLAB_INDEX_PREFIX}${participant.type}#${participant.id}`,
+        userId: indexPk,
         timestamp: participant.joinedAt,
       });
     } catch (error) {
@@ -304,7 +337,9 @@ export async function closeCollaboration(
     }
   }
 
-  logger.info(`Collaboration ${collaborationId} closed by ${actorType}:${actorId}`);
+  logger.info(
+    `Collaboration ${collaborationId} closed by ${actorType}:${actorId} in workspace ${workspaceId}`
+  );
 }
 
 /**
@@ -312,16 +347,18 @@ export async function closeCollaboration(
  */
 export async function updateCollaborationActivity(
   base: BaseMemoryProvider,
-  collaborationId: string
+  collaborationId: string,
+  workspaceId?: string
 ): Promise<void> {
-  const collaboration = await getCollaboration(base, collaborationId);
+  const collaboration = await getCollaboration(base, collaborationId, workspaceId);
   if (!collaboration) return;
 
   collaboration.lastActivityAt = Date.now();
   collaboration.updatedAt = Date.now();
 
+  const pk = base.getScopedUserId(`${COLLAB_PREFIX}${collaborationId}`, workspaceId);
   await base.putItem({
-    userId: `${COLLAB_PREFIX}${collaborationId}`,
+    userId: pk,
     timestamp: 0,
     type: 'COLLABORATION',
     ...collaboration,
@@ -334,18 +371,23 @@ export async function updateCollaborationActivity(
  */
 export async function findStaleCollaborations(
   base: BaseMemoryProvider,
-  defaultTimeoutMs: number
+  defaultTimeoutMs: number,
+  workspaceId?: string
 ): Promise<Collaboration[]> {
   const now = Date.now();
 
-  // Note: For a production scale, we would use a GSI with lastActivityAt.
-  // For this sandbox implementaiton, we'll scan (limited to active collaborations prefix).
-  // In a real AWS setup, you'd use a scheduled Lambda + GSI query.
-  const allActive = await base.queryItems({
-    FilterExpression: '#status = :active',
+  const params: any = {
+    FilterExpression: workspaceId
+      ? '#status = :active AND workspaceId = :workspaceId'
+      : '#status = :active',
     ExpressionAttributeNames: { '#status': 'status' },
-    ExpressionAttributeValues: { ':active': 'active' },
-  });
+    ExpressionAttributeValues: {
+      ':active': 'active',
+      ...(workspaceId ? { ':workspaceId': workspaceId } : {}),
+    },
+  };
+
+  const allActive = await base.queryItems(params);
 
   return (allActive as unknown as Collaboration[]).filter((c) => {
     const timeout = c.timeoutMs || defaultTimeoutMs;

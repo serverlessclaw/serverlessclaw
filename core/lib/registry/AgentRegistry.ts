@@ -572,4 +572,56 @@ export class AgentRegistry {
       throw e;
     }
   }
+
+  /**
+   * Performs metabolic pruning of low-utilization tools.
+   * Tools with 0 usage and registered > 30 days ago are removed from agent configs.
+   *
+   * @param daysThreshold - Days of inactivity before a never-used tool is pruned.
+   * @returns A promise resolving to the number of tools pruned.
+   */
+  static async pruneLowUtilizationTools(daysThreshold: number = 30): Promise<number> {
+    const usage = (await ConfigManager.getRawConfig(DYNAMO_KEYS.TOOL_USAGE)) as Record<
+      string,
+      { count: number; firstRegistered: number }
+    >;
+    if (!usage) return 0;
+
+    const thresholdMs = daysThreshold * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const lowUtilTools = Object.entries(usage)
+      .filter(([_, stats]) => stats.count === 0 && now - stats.firstRegistered > thresholdMs)
+      .map(([name]) => name);
+
+    if (lowUtilTools.length === 0) return 0;
+
+    logger.info(`[REGISTRY] Found ${lowUtilTools.length} low-utilization tools for pruning.`);
+
+    const allConfigs = await this.getAllConfigs();
+    let totalPruned = 0;
+
+    for (const [agentId, config] of Object.entries(allConfigs)) {
+      if (!config.tools) continue;
+
+      const toolsToPrune = config.tools.filter((t) => lowUtilTools.includes(t));
+      if (toolsToPrune.length === 0) continue;
+
+      // Only prune dynamic tool overrides, not backbone tools
+      const backboneTools =
+        (this.backboneConfigs as Record<string, IAgentConfig>)[agentId]?.tools ?? [];
+      const dynamicTools = config.tools.filter((t) => !backboneTools.includes(t));
+      const pruneTargets = dynamicTools.filter((t) => toolsToPrune.includes(t));
+
+      if (pruneTargets.length > 0) {
+        const remainingTools = config.tools.filter((t) => !pruneTargets.includes(t));
+        // Note: This logic assumes per-agent tools. In a real system, we'd also check batch overrides.
+        // For Silo 7 Deep Dive, we focus on the per-agent tool list.
+        await ConfigManager.saveRawConfig(`${agentId}_tools`, remainingTools);
+        totalPruned += pruneTargets.length;
+        logger.info(`[REGISTRY] Pruned ${pruneTargets.length} tools from agent ${agentId}`);
+      }
+    }
+
+    return totalPruned;
+  }
 }

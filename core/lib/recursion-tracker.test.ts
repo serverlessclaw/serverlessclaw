@@ -11,9 +11,15 @@ vi.mock('@aws-sdk/lib-dynamodb', () => {
         send: (cmd: any) => mockSend(cmd),
       }),
     },
-    UpdateCommand: class { constructor(public input: any) {} },
-    GetCommand: class { constructor(public input: any) {} },
-    DeleteCommand: class { constructor(public input: any) {} },
+    UpdateCommand: class {
+      constructor(public input: any) {}
+    },
+    GetCommand: class {
+      constructor(public input: any) {}
+    },
+    DeleteCommand: class {
+      constructor(public input: any) {}
+    },
   };
 });
 
@@ -38,7 +44,7 @@ describe('recursion-tracker', () => {
 
     it('should handle ConditionalCheckFailedException gracefully', async () => {
       mockSend.mockRejectedValue({ name: 'ConditionalCheckFailedException' });
-      
+
       // Should not throw
       await expect(pushRecursionEntry('trace-1', 3, 'sess-1', 'agent-1')).resolves.not.toThrow();
     });

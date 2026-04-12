@@ -1,0 +1,88 @@
+
+> @serverlessclaw/core@1.0.0 lint /Users/pengcao/projects/serverlessclaw/core
+> eslint .
+
+
+/Users/pengcao/projects/serverlessclaw/core/agents/coder.ts
+  101:89  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/pengcao/projects/serverlessclaw/core/agents/cognition-reflector/audit-protocol.ts
+   65:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  104:35  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  121:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  125:51  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  140:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  146:75  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  158:64  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  173:35  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  175:57  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  193:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  198:56  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  213:54  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  227:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  232:66  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  250:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  274:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/pengcao/projects/serverlessclaw/core/agents/qa.ts
+  49:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  96:64  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/pengcao/projects/serverlessclaw/core/handlers/events/shared.ts
+  263:76  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  384:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/pengcao/projects/serverlessclaw/core/lib/agent/tool-executor.ts
+  300:86  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/pengcao/projects/serverlessclaw/core/lib/lock/lock-manager.ts
+  75:11  error  'state' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/pengcao/projects/serverlessclaw/core/lib/maintenance/metabolism.ts
+   21:13  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   51:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  122:66  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  122:84  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/pengcao/projects/serverlessclaw/core/lib/memory/clarification-operations.ts
+  199:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  250:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/pengcao/projects/serverlessclaw/core/lib/memory/collaboration-operations.ts
+  379:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/pengcao/projects/serverlessclaw/core/lib/metrics/cognitive-metrics.ts
+  831:52  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/pengcao/projects/serverlessclaw/core/lib/safety/policy-validator.ts
+   26:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   37:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   57:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   68:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  106:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  117:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  126:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  137:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  199:39  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  210:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/pengcao/projects/serverlessclaw/core/lib/safety/safety-engine.ts
+  86:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/pengcao/projects/serverlessclaw/core/lib/session/session-state.ts
+  144:92  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/pengcao/projects/serverlessclaw/core/lib/types/tool.ts
+  40:13  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/pengcao/projects/serverlessclaw/core/lib/utils/fs-security.ts
+  99:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/pengcao/projects/serverlessclaw/core/lib/warmup/warmup-manager.ts
+  272:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 46 problems (1 error, 45 warnings)
+
+/Users/pengcao/projects/serverlessclaw/core:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @serverlessclaw/core@1.0.0 lint: `eslint .`
+Exit status 1

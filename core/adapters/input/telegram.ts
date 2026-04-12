@@ -124,6 +124,7 @@ export class TelegramAdapter implements InputAdapter {
       source: this.source,
       userId: chatId,
       sessionId: chatId,
+      workspaceId: undefined, // Telegram currently doesn't provide workspaceId
       text: userText,
       attachments: [],
       metadata: {

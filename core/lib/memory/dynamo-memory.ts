@@ -31,73 +31,93 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   /**
    * Appends a new message with tiered retention.
    */
-  async addMessage(userId: string, message: Message): Promise<void> {
-    return SessionOps.addMessage(this, userId, message);
+  async addMessage(userId: string, message: Message, workspaceId?: string): Promise<void> {
+    return SessionOps.addMessage(this, userId, message, workspaceId);
   }
 
   /**
    * Deletes a conversation session and its history
    */
-  async deleteConversation(userId: string, sessionId: string): Promise<void> {
-    return SessionOps.deleteConversation(this, userId, sessionId);
+  async deleteConversation(userId: string, sessionId: string, workspaceId?: string): Promise<void> {
+    return SessionOps.deleteConversation(this, userId, sessionId, workspaceId);
   }
 
   /**
    * Updates distilled memory with a 2-year retention policy
    */
-  async updateDistilledMemory(userId: string, facts: string): Promise<void> {
-    return SessionOps.updateDistilledMemory(this, userId, facts);
+  async updateDistilledMemory(userId: string, facts: string, workspaceId?: string): Promise<void> {
+    return SessionOps.updateDistilledMemory(this, userId, facts, workspaceId);
   }
 
   /**
    * Retrieves all capability gaps filtered by status
    */
-  async getAllGaps(status: GapStatus = GapStatus.OPEN): Promise<MemoryInsight[]> {
-    return GapOps.getAllGaps(this, status);
+  async getAllGaps(
+    status: GapStatus = GapStatus.OPEN,
+    workspaceId?: string
+  ): Promise<MemoryInsight[]> {
+    return GapOps.getAllGaps(this, status, workspaceId);
   }
 
   /**
    * Archives stale gaps that have been open for longer than the specified days.
    * Returns the number of gaps archived.
    */
-  async archiveStaleGaps(staleDays: number = LIMITS.STALE_GAP_DAYS): Promise<number> {
-    return GapOps.archiveStaleGaps(this, staleDays);
+  async archiveStaleGaps(
+    staleDays: number = LIMITS.STALE_GAP_DAYS,
+    workspaceId?: string
+  ): Promise<number> {
+    return GapOps.archiveStaleGaps(this, staleDays, workspaceId);
   }
 
   /**
    * Records a new capability gap
    */
-  async setGap(gapId: string, details: string, metadata?: InsightMetadata): Promise<void> {
-    return GapOps.setGap(this, gapId, details, metadata);
+  async setGap(
+    gapId: string,
+    details: string,
+    metadata?: InsightMetadata,
+    workspaceId?: string
+  ): Promise<void> {
+    return GapOps.setGap(this, gapId, details, metadata, workspaceId);
   }
 
   /**
    * Atomically increments the attempt counter on a capability gap and returns the new count.
    * Used by the self-healing loop to cap infinite reopen/redeploy cycles.
    */
-  async incrementGapAttemptCount(gapId: string): Promise<number> {
-    return GapOps.incrementGapAttemptCount(this, gapId);
+  async incrementGapAttemptCount(gapId: string, workspaceId?: string): Promise<number> {
+    return GapOps.incrementGapAttemptCount(this, gapId, workspaceId);
   }
 
   /**
    * Transitions a capability gap to a new status
    */
-  async updateGapStatus(gapId: string, status: GapStatus): Promise<GapTransitionResult> {
-    return GapOps.updateGapStatus(this, gapId, status);
+  async updateGapStatus(
+    gapId: string,
+    status: GapStatus,
+    workspaceId?: string
+  ): Promise<GapTransitionResult> {
+    return GapOps.updateGapStatus(this, gapId, status, workspaceId);
   }
 
   /**
    * Adds a tactical lesson
    */
-  async addLesson(userId: string, lesson: string, metadata?: InsightMetadata): Promise<void> {
-    return InsightOps.addLesson(this, userId, lesson, metadata);
+  async addLesson(
+    userId: string,
+    lesson: string,
+    metadata?: InsightMetadata,
+    workspaceId?: string
+  ): Promise<void> {
+    return InsightOps.addLesson(this, userId, lesson, metadata, workspaceId);
   }
 
   /**
    * Retrieves recent tactical lessons
    */
-  async getLessons(userId: string): Promise<string[]> {
-    return InsightOps.getLessons(this, userId);
+  async getLessons(userId: string, workspaceId?: string): Promise<string[]> {
+    return InsightOps.getLessons(this, userId, workspaceId);
   }
 
   /**
@@ -107,9 +127,10 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
     scopeId: string,
     category: InsightCategory | string,
     content: string,
-    metadata?: Partial<InsightMetadata> & { orgId?: string; tags?: string[] }
+    metadata?: Partial<InsightMetadata> & { orgId?: string; tags?: string[] },
+    workspaceId?: string
   ): Promise<number | string> {
-    return InsightOps.addMemory(this, scopeId, category, content, metadata);
+    return InsightOps.addMemory(this, scopeId, category, content, metadata, workspaceId);
   }
 
   /**
@@ -122,7 +143,8 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
     limit: number = 50,
     lastEvaluatedKey?: Record<string, unknown>,
     tags?: string[],
-    orgId?: string
+    orgId?: string,
+    workspaceId?: string
   ): Promise<{ items: MemoryInsight[]; lastEvaluatedKey?: Record<string, unknown> }> {
     return InsightOps.searchInsights(
       this,
@@ -132,7 +154,8 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
       limit,
       lastEvaluatedKey,
       tags,
-      orgId
+      orgId,
+      workspaceId
     );
   }
 
@@ -142,9 +165,10 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   async updateInsightMetadata(
     userId: string,
     timestamp: number | string,
-    metadata: Partial<InsightMetadata>
+    metadata: Partial<InsightMetadata>,
+    workspaceId?: string
   ): Promise<void> {
-    return InsightOps.updateInsightMetadata(this, userId, timestamp, metadata);
+    return InsightOps.updateInsightMetadata(this, userId, timestamp, metadata, workspaceId);
   }
 
   /**
@@ -154,9 +178,10 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
     userId: string,
     timestamp: number | string,
     content?: string,
-    metadata?: Partial<InsightMetadata> & { tags?: string[] }
+    metadata?: Partial<InsightMetadata> & { tags?: string[] },
+    workspaceId?: string
   ): Promise<void> {
-    return InsightOps.refineMemory(this, userId, timestamp, content, metadata);
+    return InsightOps.refineMemory(this, userId, timestamp, content, metadata, workspaceId);
   }
 
   /**
@@ -165,9 +190,10 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   async saveConversationMeta(
     userId: string,
     sessionId: string,
-    meta: Partial<ConversationMeta>
+    meta: Partial<ConversationMeta>,
+    workspaceId?: string
   ): Promise<void> {
-    return SessionOps.saveConversationMeta(this, userId, sessionId, meta);
+    return SessionOps.saveConversationMeta(this, userId, sessionId, meta, workspaceId);
   }
 
   /**
@@ -176,16 +202,21 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   async getMemoryByTypePaginated(
     type: string,
     limit: number = 100,
-    lastEvaluatedKey?: Record<string, unknown>
+    lastEvaluatedKey?: Record<string, unknown>,
+    workspaceId?: string
   ): Promise<{ items: Record<string, unknown>[]; lastEvaluatedKey?: Record<string, unknown> }> {
-    return MemoryUtils.getMemoryByTypePaginated(this, type, limit, lastEvaluatedKey);
+    return MemoryUtils.getMemoryByTypePaginated(this, type, limit, lastEvaluatedKey, workspaceId);
   }
 
   /**
    * Universal fetcher for memory items by their type using the GSI.
    */
-  async getMemoryByType(type: string, limit: number = 100): Promise<Record<string, unknown>[]> {
-    return MemoryUtils.getMemoryByType(this, type, limit);
+  async getMemoryByType(
+    type: string,
+    limit: number = 100,
+    workspaceId?: string
+  ): Promise<Record<string, unknown>[]> {
+    return MemoryUtils.getMemoryByType(this, type, limit, workspaceId);
   }
 
   /**
@@ -205,8 +236,12 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   /**
    * Atomically increments the hit count and updates the lastAccessed timestamp for a memory item.
    */
-  async recordMemoryHit(userId: string, timestamp: number | string): Promise<void> {
-    return InsightOps.recordMemoryHit(this, userId, timestamp);
+  async recordMemoryHit(
+    userId: string,
+    timestamp: number | string,
+    workspaceId?: string
+  ): Promise<void> {
+    return InsightOps.recordMemoryHit(this, userId, timestamp, workspaceId);
   }
 
   /**
@@ -240,15 +275,15 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   /**
    * Retrieves the latest summary for a conversation session.
    */
-  async getSummary(userId: string): Promise<string | null> {
-    return SessionOps.getSummary(this, userId);
+  async getSummary(userId: string, workspaceId?: string): Promise<string | null> {
+    return SessionOps.getSummary(this, userId, workspaceId);
   }
 
   /**
    * Updates the latest summary for a conversation session.
    */
-  async updateSummary(userId: string, summary: string): Promise<void> {
-    return SessionOps.updateSummary(this, userId, summary);
+  async updateSummary(userId: string, summary: string, workspaceId?: string): Promise<void> {
+    return SessionOps.updateSummary(this, userId, summary, workspaceId);
   }
 
   /**
@@ -270,9 +305,10 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
    * Saves a clarification request to DynamoDB for state persistence.
    */
   async saveClarificationRequest(
-    state: Omit<import('../types/memory').ClarificationState, 'type' | 'expiresAt' | 'timestamp'>
+    state: Omit<import('../types/memory').ClarificationState, 'type' | 'expiresAt' | 'timestamp'>,
+    workspaceId?: string
   ): Promise<void> {
-    return ClarificationOps.saveClarificationRequest(this, state);
+    return ClarificationOps.saveClarificationRequest(this, state, workspaceId);
   }
 
   /**
@@ -280,9 +316,10 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
    */
   async getClarificationRequest(
     traceId: string,
-    agentId: string
+    agentId: string,
+    workspaceId?: string
   ): Promise<import('../types/memory').ClarificationState | null> {
-    return ClarificationOps.getClarificationRequest(this, traceId, agentId);
+    return ClarificationOps.getClarificationRequest(this, traceId, agentId, workspaceId);
   }
 
   /**
@@ -291,16 +328,20 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   async updateClarificationStatus(
     traceId: string,
     agentId: string,
-    status: import('../types/memory').ClarificationStatus
+    status: import('../types/memory').ClarificationStatus,
+    workspaceId?: string
   ): Promise<void> {
-    return ClarificationOps.updateClarificationStatus(this, traceId, agentId, status);
+    return ClarificationOps.updateClarificationStatus(this, traceId, agentId, status, workspaceId);
   }
 
   /**
    * Saves escalation state for a clarification.
    */
-  async saveEscalationState(state: import('../types/escalation').EscalationState): Promise<void> {
-    return ClarificationOps.saveEscalationState(this, state);
+  async saveEscalationState(
+    state: import('../types/escalation').EscalationState,
+    workspaceId?: string
+  ): Promise<void> {
+    return ClarificationOps.saveEscalationState(this, state, workspaceId);
   }
 
   /**
@@ -308,23 +349,30 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
    */
   async getEscalationState(
     traceId: string,
-    agentId: string
+    agentId: string,
+    workspaceId?: string
   ): Promise<import('../types/escalation').EscalationState | null> {
-    return ClarificationOps.getEscalationState(this, traceId, agentId);
+    return ClarificationOps.getEscalationState(this, traceId, agentId, workspaceId);
   }
 
   /**
    * Finds all expired clarification requests (for orphan detection).
    */
-  async findExpiredClarifications(): Promise<import('../types/memory').ClarificationState[]> {
-    return ClarificationOps.findExpiredClarifications(this);
+  async findExpiredClarifications(
+    workspaceId?: string
+  ): Promise<import('../types/memory').ClarificationState[]> {
+    return ClarificationOps.findExpiredClarifications(this, workspaceId);
   }
 
   /**
    * Increments the retry count for a clarification request.
    */
-  async incrementClarificationRetry(traceId: string, agentId: string): Promise<number> {
-    return ClarificationOps.incrementClarificationRetry(this, traceId, agentId);
+  async incrementClarificationRetry(
+    traceId: string,
+    agentId: string,
+    workspaceId?: string
+  ): Promise<number> {
+    return ClarificationOps.incrementClarificationRetry(this, traceId, agentId, workspaceId);
   }
 
   /**
@@ -333,9 +381,10 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   async recordFailurePattern(
     scopeId: string,
     content: string,
-    metadata?: Partial<InsightMetadata>
+    metadata?: Partial<InsightMetadata>,
+    workspaceId?: string
   ): Promise<number | string> {
-    return InsightOps.recordFailurePattern(this, scopeId, content, metadata);
+    return InsightOps.recordFailurePattern(this, scopeId, content, metadata, workspaceId);
   }
 
   /**
@@ -344,16 +393,22 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   async getFailurePatterns(
     scopeId: string,
     context?: string,
-    limit?: number
+    limit?: number,
+    workspaceId?: string
   ): Promise<MemoryInsight[]> {
-    return InsightOps.getFailurePatterns(this, scopeId, context, limit);
+    return InsightOps.getFailurePatterns(this, scopeId, context, limit, workspaceId);
   }
 
   /**
    * Acquires a lock on a gap to prevent concurrent modification by multiple agents.
    */
-  async acquireGapLock(gapId: string, agentId: string, ttlMs?: number): Promise<boolean> {
-    return GapOps.acquireGapLock(this, gapId, agentId, ttlMs);
+  async acquireGapLock(
+    gapId: string,
+    agentId: string,
+    ttlMs?: number,
+    workspaceId?: string
+  ): Promise<boolean> {
+    return GapOps.acquireGapLock(this, gapId, agentId, ttlMs, workspaceId);
   }
 
   /**
@@ -363,32 +418,38 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
     gapId: string,
     agentId: string,
     expectedVersion?: number,
-    force?: boolean
+    force?: boolean,
+    workspaceId?: string
   ): Promise<void> {
-    return GapOps.releaseGapLock(this, gapId, agentId, expectedVersion, force);
+    return GapOps.releaseGapLock(this, gapId, agentId, expectedVersion, force, workspaceId);
   }
 
   /**
    * Checks if a gap is currently locked and returns the lock holder info.
    */
   async getGapLock(
-    gapId: string
+    gapId: string,
+    workspaceId?: string
   ): Promise<{ agentId: string; expiresAt: number; lockVersion?: number } | null> {
-    return GapOps.getGapLock(this, gapId);
+    return GapOps.getGapLock(this, gapId, workspaceId);
   }
 
   /**
    * Retrieves a specific capability gap by its ID.
    */
-  async getGap(gapId: string): Promise<MemoryInsight | null> {
-    return GapOps.getGap(this, gapId);
+  async getGap(gapId: string, workspaceId?: string): Promise<MemoryInsight | null> {
+    return GapOps.getGap(this, gapId, workspaceId);
   }
 
   /**
    * Updates metadata fields (impact, priority, etc.) on a specific gap.
    */
-  async updateGapMetadata(gapId: string, metadata: Partial<InsightMetadata>): Promise<void> {
-    return GapOps.updateGapMetadata(this, gapId, metadata);
+  async updateGapMetadata(
+    gapId: string,
+    metadata: Partial<InsightMetadata>,
+    workspaceId?: string
+  ): Promise<void> {
+    return GapOps.updateGapMetadata(this, gapId, metadata, workspaceId);
   }
 
   /**
@@ -399,7 +460,8 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
     planContent: string,
     gapIds: string[],
     failureReason: string,
-    metadata?: Partial<InsightMetadata>
+    metadata?: Partial<InsightMetadata>,
+    workspaceId?: string
   ): Promise<number | string> {
     return InsightOps.recordFailedPlan(
       this,
@@ -407,15 +469,16 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
       planContent,
       gapIds,
       failureReason,
-      metadata
+      metadata,
+      workspaceId
     );
   }
 
   /**
    * Retrieves previously failed plans to inform the planner about anti-patterns.
    */
-  async getFailedPlans(limit?: number): Promise<MemoryInsight[]> {
-    return InsightOps.getFailedPlans(this, limit);
+  async getFailedPlans(limit?: number, workspaceId?: string): Promise<MemoryInsight[]> {
+    return InsightOps.getFailedPlans(this, limit, workspaceId);
   }
 
   /**
@@ -443,18 +506,23 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   async createCollaboration(
     ownerId: string,
     ownerType: import('../types/collaboration').ParticipantType,
-    input: import('../types/collaboration').CreateCollaborationInput
+    input: import('../types/collaboration').CreateCollaborationInput,
+    workspaceId?: string
   ): Promise<import('../types/collaboration').Collaboration> {
-    return CollaborationOps.createCollaboration(this, ownerId, ownerType, input);
+    return CollaborationOps.createCollaboration(this, ownerId, ownerType, {
+      ...input,
+      workspaceId: workspaceId ?? input.workspaceId,
+    });
   }
 
   /**
    * Gets a collaboration by ID.
    */
   async getCollaboration(
-    collaborationId: string
+    collaborationId: string,
+    workspaceId?: string
   ): Promise<import('../types/collaboration').Collaboration | null> {
-    return CollaborationOps.getCollaboration(this, collaborationId);
+    return CollaborationOps.getCollaboration(this, collaborationId, workspaceId);
   }
 
   /**
@@ -468,14 +536,16 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
       type: import('../types/collaboration').ParticipantType;
       id: string;
       role: import('../types/collaboration').CollaborationRole;
-    }
+    },
+    workspaceId?: string
   ): Promise<void> {
     return CollaborationOps.addCollaborationParticipant(
       this,
       collaborationId,
       actorId,
       actorType,
-      newParticipant
+      newParticipant,
+      workspaceId
     );
   }
 
@@ -484,7 +554,8 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
    */
   async listCollaborationsForParticipant(
     participantId: string,
-    participantType: import('../types/collaboration').ParticipantType
+    participantType: import('../types/collaboration').ParticipantType,
+    workspaceId?: string
   ): Promise<
     Array<{
       collaborationId: string;
@@ -492,7 +563,12 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
       collaborationName: string;
     }>
   > {
-    return CollaborationOps.listCollaborationsForParticipant(this, participantId, participantType);
+    return CollaborationOps.listCollaborationsForParticipant(
+      this,
+      participantId,
+      participantType,
+      workspaceId
+    );
   }
 
   /**
@@ -502,14 +578,16 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
     collaborationId: string,
     participantId: string,
     participantType: import('../types/collaboration').ParticipantType,
-    requiredRole?: import('../types/collaboration').CollaborationRole
+    requiredRole?: import('../types/collaboration').CollaborationRole,
+    workspaceId?: string
   ): Promise<boolean> {
     return CollaborationOps.checkCollaborationAccess(
       this,
       collaborationId,
       participantId,
       participantType,
-      requiredRole
+      requiredRole,
+      workspaceId
     );
   }
 
@@ -519,18 +597,26 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   async closeCollaboration(
     collaborationId: string,
     actorId: string,
-    actorType: import('../types/collaboration').ParticipantType
+    actorType: import('../types/collaboration').ParticipantType,
+    workspaceId?: string
   ): Promise<void> {
-    return CollaborationOps.closeCollaboration(this, collaborationId, actorId, actorType);
+    return CollaborationOps.closeCollaboration(
+      this,
+      collaborationId,
+      actorId,
+      actorType,
+      workspaceId
+    );
   }
 
   /**
    * Finds collaborations that have timed out and require automated tie-break.
    */
   async findStaleCollaborations(
-    defaultTimeoutMs: number
+    defaultTimeoutMs: number,
+    workspaceId?: string
   ): Promise<import('../types/collaboration').Collaboration[]> {
-    return CollaborationOps.findStaleCollaborations(this, defaultTimeoutMs);
+    return CollaborationOps.findStaleCollaborations(this, defaultTimeoutMs, workspaceId);
   }
 
   /**

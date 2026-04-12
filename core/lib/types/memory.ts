@@ -114,23 +114,24 @@ export interface IHistoryStore {
   /** Retrieves the conversation history for a specific user or session. */
   getHistory(userId: string): Promise<Message[]>;
   /** Appends a new message to the conversation history. */
-  addMessage(userId: string, message: Message): Promise<void>;
+  addMessage(userId: string, message: Message, workspaceId?: string): Promise<void>;
   /** Clears the conversation history for a specific user or session. */
-  clearHistory(userId: string): Promise<void>;
+  clearHistory(userId: string, workspaceId?: string): Promise<void>;
   /** Lists all available conversation sessions for a user. */
-  listConversations(userId: string): Promise<ConversationMeta[]>;
+  listConversations(userId: string, workspaceId?: string): Promise<ConversationMeta[]>;
   /** Saves or updates metadata for a specific conversation session. */
   saveConversationMeta(
     userId: string,
     sessionId: string,
-    meta: Partial<ConversationMeta>
+    meta: Partial<ConversationMeta>,
+    workspaceId?: string
   ): Promise<void>;
   /** Deletes a conversation session and its history. */
-  deleteConversation(userId: string, sessionId: string): Promise<void>;
+  deleteConversation(userId: string, sessionId: string, workspaceId?: string): Promise<void>;
   /** Retrieves the latest summary for a conversation session. */
-  getSummary(userId: string): Promise<string | null>;
+  getSummary(userId: string, workspaceId?: string): Promise<string | null>;
   /** Updates the latest summary for a conversation session. */
-  updateSummary(userId: string, summary: string): Promise<void>;
+  updateSummary(userId: string, summary: string, workspaceId?: string): Promise<void>;
 }
 
 /**
@@ -138,17 +139,18 @@ export interface IHistoryStore {
  */
 export interface IKnowledgeStore {
   /** Retrieves the distilled "long-term" memory facts for a user. */
-  getDistilledMemory(userId: string): Promise<string>;
+  getDistilledMemory(userId: string, workspaceId?: string): Promise<string>;
   /** Updates the distilled long-term memory facts for a user. */
-  updateDistilledMemory(userId: string, facts: string): Promise<void>;
+  updateDistilledMemory(userId: string, facts: string, workspaceId?: string): Promise<void>;
   /** Adds a tactical lesson learned during an agent's task execution. */
   addLesson(
     userId: string,
     lesson: string,
-    metadata?: Partial<InsightMetadata> & { tags?: string[] }
+    metadata?: Partial<InsightMetadata> & { tags?: string[] },
+    workspaceId?: string
   ): Promise<void>;
   /** Retrieves a set of recent tactical lessons for a user. */
-  getLessons(userId: string): Promise<string[]>;
+  getLessons(userId: string, workspaceId?: string): Promise<string[]>;
   /** Records a failure pattern for future cross-referencing. */
   recordFailurePattern(
     scopeId: string,
@@ -168,7 +170,8 @@ export interface IKnowledgeStore {
     userId: string,
     timestamp: number | string,
     content?: string,
-    metadata?: Partial<InsightMetadata> & { tags?: string[] }
+    metadata?: Partial<InsightMetadata> & { tags?: string[] },
+    workspaceId?: string
   ): Promise<void>;
 }
 
@@ -177,15 +180,20 @@ export interface IKnowledgeStore {
  */
 export interface IGapManager {
   /** Records a new identified capability gap in the system. */
-  setGap(gapId: string, details: string, metadata?: InsightMetadata): Promise<void>;
+  setGap(
+    gapId: string,
+    details: string,
+    metadata?: InsightMetadata,
+    workspaceId?: string
+  ): Promise<void>;
   /** Retrieves all capability gaps, optionally filtered by their current status. */
-  getAllGaps(status?: import('./agent').GapStatus): Promise<MemoryInsight[]>;
+  getAllGaps(status?: import('./agent').GapStatus, workspaceId?: string): Promise<MemoryInsight[]>;
   /** Updates the lifecycle status of a specific capability gap. */
   updateGapStatus(gapId: string, status: import('./agent').GapStatus): Promise<GapTransitionResult>;
   /** Archives stale gaps older than specified days. Returns count of archived gaps. */
-  archiveStaleGaps(staleDays?: number): Promise<number>;
+  archiveStaleGaps(staleDays?: number, workspaceId?: string): Promise<number>;
   /** Atomically increments the attempt counter on a capability gap. */
-  incrementGapAttemptCount(gapId: string): Promise<number>;
+  incrementGapAttemptCount(gapId: string, workspaceId?: string): Promise<number>;
   /** Acquires a lock on a gap to prevent concurrent modification by multiple agents. */
   acquireGapLock(gapId: string, agentId: string, ttlMs?: number): Promise<boolean>;
   /** Releases a gap lock after work is complete. */
@@ -200,9 +208,13 @@ export interface IGapManager {
     gapId: string
   ): Promise<{ agentId: string; expiresAt: number; lockVersion?: number } | null>;
   /** Retrieves a specific capability gap by its ID. */
-  getGap(gapId: string): Promise<MemoryInsight | null>;
+  getGap(gapId: string, workspaceId?: string): Promise<MemoryInsight | null>;
   /** Updates metadata fields (impact, priority, etc.) on a specific gap. */
-  updateGapMetadata(gapId: string, metadata: Partial<InsightMetadata>): Promise<void>;
+  updateGapMetadata(
+    gapId: string,
+    metadata: Partial<InsightMetadata>,
+    workspaceId?: string
+  ): Promise<void>;
   /** Records a failed strategic plan so the swarm learns anti-patterns. */
   recordFailedPlan(
     planHash: string,
@@ -236,14 +248,16 @@ export interface IMemory extends IHistoryStore, IKnowledgeStore, IGapManager {
     scopeId: string,
     category: InsightCategory | string,
     content: string,
-    metadata?: Partial<InsightMetadata> & { orgId?: string; tags?: string[] }
+    metadata?: Partial<InsightMetadata> & { orgId?: string; tags?: string[] },
+    workspaceId?: string
   ): Promise<number | string>;
 
   /** Updates the metadata (priority, impact, etc.) for a specific recorded insight. */
   updateInsightMetadata(
     userId: string,
     timestamp: number | string,
-    metadata: Partial<InsightMetadata>
+    metadata: Partial<InsightMetadata>,
+    workspaceId?: string
   ): Promise<void>;
 
   /**
@@ -253,65 +267,83 @@ export interface IMemory extends IHistoryStore, IKnowledgeStore, IGapManager {
 
   /** Saves a clarification request to DynamoDB for state persistence. */
   saveClarificationRequest(
-    state: Omit<ClarificationState, 'type' | 'expiresAt' | 'timestamp'>
+    state: Omit<ClarificationState, 'type' | 'expiresAt' | 'timestamp'>,
+    workspaceId?: string
   ): Promise<void>;
 
   /** Retrieves a clarification request by traceId and agentId. */
-  getClarificationRequest(traceId: string, agentId: string): Promise<ClarificationState | null>;
+  getClarificationRequest(
+    traceId: string,
+    agentId: string,
+    workspaceId?: string
+  ): Promise<ClarificationState | null>;
 
   /** Updates the status of a clarification request. */
   updateClarificationStatus(
     traceId: string,
     agentId: string,
-    status: ClarificationStatus
+    status: ClarificationStatus,
+    workspaceId?: string
   ): Promise<void>;
 
   /** Saves escalation state for a clarification. */
-  saveEscalationState(state: import('./escalation').EscalationState): Promise<void>;
+  saveEscalationState(
+    state: import('./escalation').EscalationState,
+    workspaceId?: string
+  ): Promise<void>;
 
   /** Retrieves escalation state for a clarification. */
   getEscalationState(
     traceId: string,
-    agentId: string
+    agentId: string,
+    workspaceId?: string
   ): Promise<import('./escalation').EscalationState | null>;
 
   /** Finds all expired clarification requests (for orphan detection). */
-  findExpiredClarifications(): Promise<ClarificationState[]>;
+  findExpiredClarifications(workspaceId?: string): Promise<ClarificationState[]>;
 
   /** Increments the retry count for a clarification request. */
-  incrementClarificationRetry(traceId: string, agentId: string): Promise<number>;
+  incrementClarificationRetry(
+    traceId: string,
+    agentId: string,
+    workspaceId?: string
+  ): Promise<number>;
 
   // Collaboration Operations
 
   /** Gets a collaboration by ID. */
-  getCollaboration(collaborationId: string): Promise<Collaboration | null>;
+  getCollaboration(collaborationId: string, workspaceId?: string): Promise<Collaboration | null>;
 
   /** Checks if a participant has access to a collaboration. */
   checkCollaborationAccess(
     collaborationId: string,
     participantId: string,
     participantType: ParticipantType,
-    requiredRole?: CollaborationRole
+    requiredRole?: CollaborationRole,
+    workspaceId?: string
   ): Promise<boolean>;
 
   /** Closes a collaboration. */
   closeCollaboration(
     collaborationId: string,
     actorId: string,
-    actorType: ParticipantType
+    actorType: ParticipantType,
+    workspaceId?: string
   ): Promise<void>;
 
   /** Creates a new collaboration with a shared session. */
   createCollaboration(
     ownerId: string,
     ownerType: ParticipantType,
-    input: import('./collaboration').CreateCollaborationInput
+    input: import('./collaboration').CreateCollaborationInput,
+    workspaceId?: string
   ): Promise<Collaboration>;
 
   /** Lists collaborations for a participant. */
   listCollaborationsForParticipant(
     participantId: string,
-    participantType: ParticipantType
+    participantType: ParticipantType,
+    workspaceId?: string
   ): Promise<
     Array<{
       collaborationId: string;
@@ -361,4 +393,5 @@ export interface ClarificationState {
   createdAt: number;
   expiresAt: number;
   retryCount: number;
+  workspaceId?: string;
 }

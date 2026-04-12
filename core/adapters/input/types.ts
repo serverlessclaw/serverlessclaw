@@ -19,6 +19,7 @@ export const InboundMessageSchema = z.object({
   source: z.string(),
   userId: z.string(),
   sessionId: z.string(),
+  workspaceId: z.string().optional(),
   text: z.string(),
   attachments: z.array(AttachmentSchema).default(() => []),
   metadata: z.record(z.string(), z.unknown()).default(() => ({})),

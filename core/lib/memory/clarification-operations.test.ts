@@ -15,6 +15,7 @@ import {
 import type { BaseMemoryProvider } from './base';
 import { ClarificationStatus } from '../types/memory';
 import { EscalationChannel } from '../types/escalation';
+import { logger } from '../logger';
 
 vi.mock('../logger', () => ({
   logger: {
@@ -33,7 +34,7 @@ describe('clarification-operations', () => {
     mockBase = {
       putItem: vi.fn().mockResolvedValue(undefined),
       queryItems: vi.fn().mockResolvedValue([]),
-      updateItem: vi.fn().mockResolvedValue({ retryCount: 2 }),
+      updateItem: vi.fn().mockResolvedValue({ Attributes: { retryCount: 2 } }),
       getScopedUserId: vi.fn().mockImplementation((uid, wid) => (wid ? `${uid}#${wid}` : uid)),
     } as unknown as BaseMemoryProvider;
   });
@@ -136,6 +137,10 @@ describe('clarification-operations', () => {
           }),
         })
       );
+
+      expect(logger.info).toHaveBeenCalledWith(
+        'Updated clarification status: traceId=trace-123, agentId=coder-agent, status=answered, workspaceId=undefined'
+      );
     });
   });
 
@@ -169,7 +174,7 @@ describe('clarification-operations', () => {
 
   describe('incrementClarificationRetry', () => {
     it('should increment and return new retry count', async () => {
-      mockBase.updateItem = vi.fn().mockResolvedValue({ retryCount: 3 });
+      mockBase.updateItem = vi.fn().mockResolvedValue({ Attributes: { retryCount: 3 } });
 
       const result = await incrementClarificationRetry(mockBase, 'trace-123', 'coder-agent');
 

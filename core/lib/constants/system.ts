@@ -104,3 +104,28 @@ export const SWARM = {
   /** Default barrier timeout for parallel tasks (5 minutes). */
   DEFAULT_BARRIER_TIMEOUT_MS: 300_000,
 } as const;
+
+/**
+ * Trust Score Constants
+ * Centralized trust scoring parameters for Silo 6: The Scales.
+ */
+export const TRUST = {
+  /** Default trust score for new agents when not specified. */
+  DEFAULT_SCORE: 85,
+  /** Minimum allowed trust score (floor). */
+  MIN_SCORE: 0,
+  /** Maximum allowed trust score (ceiling). */
+  MAX_SCORE: 100,
+  /** Default penalty applied for failures (before severity multiplier). */
+  DEFAULT_PENALTY: -5,
+  /** Default trust increment for successful tasks. */
+  DEFAULT_SUCCESS_BUMP: 1,
+  /** Trust decay rate per day (0.5 means decay from 90 to 70 takes ~40 days). */
+  DECAY_RATE: 0.5,
+  /** Trust score baseline - decay won't reduce below this threshold. */
+  DECAY_BASELINE: 70,
+  /** Trust score threshold for autonomous mode promotion (Principle 9). */
+  AUTONOMY_THRESHOLD: 95,
+  /** Trust score threshold for facilitator tie-breaking. */
+  FACILITATOR_THRESHOLD: 90,
+} as const;

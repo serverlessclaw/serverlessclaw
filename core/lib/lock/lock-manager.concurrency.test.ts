@@ -27,15 +27,13 @@ describe('LockManager Concurrency & Cleanup [Sh1]', () => {
   });
 
   it('should allow acquisition if existing lock is expired', async () => {
-    // Simulate expired lock condition check failure followed by success
-    // Actually, we just need to verify the ConditionExpression in the UpdateCommand
-    const now = Math.floor(Date.now() / 1000);
-    mockSend.mockResolvedValueOnce({ Item: { ownerId: 'other-agent', expiresAt: now - 100 } });
+    // Simulate expired lock condition check success
+    mockSend.mockResolvedValueOnce({});
 
     const result = await lockManager.acquire(lockId, { ttlSeconds: 10, ownerId });
 
     expect(result).toBe(true);
-    const command = mockSend.mock.calls[1][0] as UpdateCommand;
+    const command = mockSend.mock.calls[0][0] as UpdateCommand;
     expect(command.input.ConditionExpression).toContain('expiresAt < :now');
   });
 

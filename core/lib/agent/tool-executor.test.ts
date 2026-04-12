@@ -46,10 +46,14 @@ vi.mock('../safety/safety-engine', () => {
   };
 });
 
-vi.mock('../constants', () => ({
-  TRACE_TYPES: { TOOL_CALL: 'tool_call', TOOL_RESULT: 'tool_result' },
-  TIME: { MS_PER_MINUTE: 60000, MS_PER_HOUR: 3600000 },
-}));
+vi.mock('../constants', async (importOriginal) => {
+  const actual = (await importOriginal()) as any;
+  return {
+    ...actual,
+    TRACE_TYPES: { TOOL_CALL: 'tool_call', TOOL_RESULT: 'tool_result' },
+    TIME: { MS_PER_SECOND: 1000, MS_PER_MINUTE: 60000, MS_PER_HOUR: 3600000 },
+  };
+});
 
 function createTool(overrides: Partial<any> = {}) {
   return {

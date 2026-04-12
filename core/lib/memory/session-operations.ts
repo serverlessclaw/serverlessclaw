@@ -21,21 +21,25 @@ import { sessionIdToSortKey } from '../utils/id-generator';
  * @param base - The base memory provider instance.
  * @param userId - The user identifier.
  * @param message - The message object to add.
+ * @param workspaceId - Optional workspace identifier for isolation.
  * @returns A promise resolving when the message is added.
  */
 export async function addMessage(
   base: BaseMemoryProvider,
   userId: string,
-  message: Message
+  message: Message,
+  workspaceId?: string
 ): Promise<void> {
-  const { expiresAt, type } = await RetentionManager.getExpiresAt('MESSAGES', userId);
+  const scopedUserId = base.getScopedUserId(userId, workspaceId);
+  const { expiresAt, type } = await RetentionManager.getExpiresAt('MESSAGES', scopedUserId);
   const scrubbedMessage = filterPIIFromObject(message);
   await base.putItem({
-    userId,
+    userId: scopedUserId,
     timestamp: Date.now(),
     createdAt: Date.now(),
     type,
     expiresAt,
+    workspaceId,
     ...scrubbedMessage,
   });
 }
@@ -46,25 +50,28 @@ export async function addMessage(
  * @param base - The base memory provider instance.
  * @param userId - The user identifier.
  * @param sessionId - The session identifier to delete.
+ * @param workspaceId - Optional workspace identifier for isolation.
  * @returns A promise resolving when the conversation is deleted.
  */
 export async function deleteConversation(
   base: BaseMemoryProvider,
   userId: string,
-  sessionId: string
+  sessionId: string,
+  workspaceId?: string
 ): Promise<void> {
   const normalizedUserId = userId.replace(/^(SESSIONS#)+/, '');
-  const conversations = await base.listConversations(normalizedUserId);
+  const conversations = await base.listConversations(normalizedUserId, workspaceId);
   const existing = conversations.find((c) => c.sessionId === sessionId);
 
   if (existing) {
+    const scopedSessionsId = base.getScopedUserId(`SESSIONS#${normalizedUserId}`, workspaceId);
     await base.deleteItem({
-      userId: `SESSIONS#${normalizedUserId}`,
+      userId: scopedSessionsId,
       timestamp: existing.updatedAt,
     });
   }
 
-  await base.clearHistory(`CONV#${normalizedUserId}#${sessionId}`);
+  await base.clearHistory(`CONV#${normalizedUserId}#${sessionId}`, workspaceId);
 }
 
 /**
@@ -74,21 +81,25 @@ export async function deleteConversation(
  * @param base - The base memory provider instance.
  * @param userId - The user identifier.
  * @param facts - The distilled facts string to store.
+ * @param workspaceId - Optional workspace identifier for isolation.
  * @returns A promise resolving when memory is updated.
  */
 export async function updateDistilledMemory(
   base: BaseMemoryProvider,
   userId: string,
-  facts: string
+  facts: string,
+  workspaceId?: string
 ): Promise<void> {
   const normalizedUserId = userId.replace(/^(DISTILLED#)+/, '');
+  const scopedUserId = base.getScopedUserId(`DISTILLED#${normalizedUserId}`, workspaceId);
   const { expiresAt } = await RetentionManager.getExpiresAt('DISTILLED', normalizedUserId);
   await base.putItem({
-    userId: `DISTILLED#${normalizedUserId}`,
+    userId: scopedUserId,
     timestamp: 0,
     type: 'DISTILLED',
     expiresAt,
     content: facts,
+    workspaceId,
   });
 }
 
@@ -100,6 +111,7 @@ export async function updateDistilledMemory(
  * @param userId - The user identifier.
  * @param sessionId - The session identifier.
  * @param meta - Partial conversation metadata to update.
+ * @param workspaceId - Optional workspace identifier for isolation.
  * @returns A promise resolving when metadata is saved.
  * @since 2026-03-19
  */
@@ -107,7 +119,8 @@ export async function saveConversationMeta(
   base: BaseMemoryProvider,
   userId: string,
   sessionId: string,
-  meta: Partial<ConversationMeta>
+  meta: Partial<ConversationMeta>,
+  workspaceId?: string
 ): Promise<void> {
   const normalizedUserId = userId.replace(/^(SESSIONS#)+/, '');
   const { type } = await RetentionManager.getExpiresAt('SESSIONS', normalizedUserId);
@@ -134,7 +147,7 @@ export async function saveConversationMeta(
 
   let stableSortKey = sessionIdToSortKey(sessionId);
 
-  const partitionKey = `SESSIONS#${normalizedUserId}`;
+  const partitionKey = base.getScopedUserId(`SESSIONS#${normalizedUserId}`, workspaceId);
 
   const existingItems = await base.queryItems({
     KeyConditionExpression: 'userId = :pk AND #ts = :ts',
@@ -162,7 +175,7 @@ export async function saveConversationMeta(
       timestamp: stableSortKey,
     },
     UpdateExpression:
-      'SET sessionId = :sessionId, #tp = :type, expiresAt = :exp, title = :title, content = :content, isPinned = :pinned, updatedAt = :now, updatedAtNumeric = :now',
+      'SET sessionId = :sessionId, #tp = :type, expiresAt = :exp, title = :title, content = :content, isPinned = :pinned, updatedAt = :now, updatedAtNumeric = :now, workspaceId = :workspaceId',
     ExpressionAttributeNames: {
       '#tp': 'type',
     },
@@ -174,6 +187,7 @@ export async function saveConversationMeta(
       ':content': meta.lastMessage || '',
       ':pinned': isPinned,
       ':now': Date.now(),
+      ':workspaceId': workspaceId ?? null,
     },
   });
 }
@@ -261,10 +275,16 @@ export async function resetRecoveryAttemptCount(base: BaseMemoryProvider): Promi
  *
  * @param base - The base memory provider instance.
  * @param userId - The user identifier or conversation ID.
+ * @param workspaceId - Optional workspace identifier for isolation.
  * @returns A promise resolving to the summary string or null if not found.
  */
-export async function getSummary(base: BaseMemoryProvider, userId: string): Promise<string | null> {
-  const results = await queryLatestContentByUserId(base, `SUMMARY#${userId}`, 1);
+export async function getSummary(
+  base: BaseMemoryProvider,
+  userId: string,
+  workspaceId?: string
+): Promise<string | null> {
+  const scopedUserId = base.getScopedUserId(`SUMMARY#${userId}`, workspaceId);
+  const results = await queryLatestContentByUserId(base, scopedUserId, 1);
   return results[0] ?? null;
 }
 
@@ -274,19 +294,23 @@ export async function getSummary(base: BaseMemoryProvider, userId: string): Prom
  * @param base - The base memory provider instance.
  * @param userId - The user identifier or conversation ID.
  * @param summary - The summary string to store.
+ * @param workspaceId - Optional workspace identifier for isolation.
  * @returns A promise resolving when the summary is updated.
  */
 export async function updateSummary(
   base: BaseMemoryProvider,
   userId: string,
-  summary: string
+  summary: string,
+  workspaceId?: string
 ): Promise<void> {
   const { expiresAt } = await RetentionManager.getExpiresAt('SESSIONS', userId);
+  const scopedUserId = base.getScopedUserId(`SUMMARY#${userId}`, workspaceId);
   await base.putItem({
-    userId: `SUMMARY#${userId}`,
+    userId: scopedUserId,
     timestamp: Date.now(),
     type: 'SUMMARY',
     expiresAt,
     content: summary,
+    workspaceId,
   });
 }

@@ -1,0 +1,57 @@
+[STARTED] Backing up original state...
+[COMPLETED] Backed up original state in git stash (babb9ce4)
+[STARTED] Running tasks for staged files...
+[STARTED] package.json — 38 files
+[STARTED] **/*.ts — 33 files
+[STARTED] eslint --fix
+[FAILED] eslint --fix [FAILED]
+[FAILED] eslint --fix [FAILED]
+[COMPLETED] Running tasks for staged files...
+[STARTED] Applying modifications from tasks...
+[SKIPPED] Skipped because of errors from tasks.
+[STARTED] Reverting to original state because of errors...
+[COMPLETED] Reverting to original state because of errors...
+[STARTED] Cleaning up temporary files...
+[COMPLETED] Cleaning up temporary files...
+
+✖ eslint --fix:
+
+/Users/pengcao/projects/serverlessclaw/core/agents/cognition-reflector/audit-protocol.ts
+   11:10  error    'MCPMultiplexer' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   66:11  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  105:35  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  122:34  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  126:51  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  141:36  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  147:75  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  159:64  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  174:35  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  176:57  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  194:33  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  199:56  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  214:54  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  228:36  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  233:66  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  251:40  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  275:40  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+
+/Users/pengcao/projects/serverlessclaw/core/lib/maintenance/metabolism.ts
+   21:13  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   51:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  122:66  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  122:84  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/pengcao/projects/serverlessclaw/core/lib/memory/clarification-operations.ts
+  199:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  250:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/pengcao/projects/serverlessclaw/core/lib/memory/collaboration-operations.ts
+  379:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/pengcao/projects/serverlessclaw/core/lib/metrics/cognitive-metrics.ts
+  831:52  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/pengcao/projects/serverlessclaw/core/lib/safety/safety-engine.ts
+  86:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 26 problems (1 error, 25 warnings)

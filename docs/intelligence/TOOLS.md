@@ -268,7 +268,7 @@ To ensure tools are always available even in unstable network conditions or Lamb
 
 ## ⚡ Dynamic Selection & Selection Integrity (Active)
 
-The system now enforces **Selection Integrity** at the gateway level. 
+The system now enforces **Selection Integrity** at the gateway level.
 
 1.  **Mandatory Enabled Check (P0 Fix)**: The `AgentMultiplexer` verifies the `enabled` status of every agent in the `AgentRegistry` before invocation. Any attempt to route a task to a disabled agent is rejected immediately.
 2.  **Reputation-Aware Routing (P1 Fix)**: Dynamic routing is now active in production. When multiple agents are candidates for a task, the system uses the `AgentRouter` to select the best performer based on historical success rates, latency, and cost: `CapabilityMatch * SuccessRate - (AvgTokens / 10000)`.

@@ -125,9 +125,10 @@ export const handler = async (
     return { statusCode: 400, body: `Invalid ${source} message format` };
   }
 
-  const { userId, sessionId, text } = {
+  const { userId, sessionId, workspaceId, text } = {
     userId: inbound.userId,
     sessionId: inbound.sessionId,
+    workspaceId: inbound.workspaceId,
     text: inbound.text,
   };
 
@@ -294,6 +295,7 @@ export const handler = async (
         source: inbound.source === 'telegram' ? TraceSource.TELEGRAM : TraceSource.API,
         attachments,
         sessionId,
+        workspaceId,
         sessionStateManager,
         ignoreHandoff: true,
       }
@@ -308,7 +310,10 @@ export const handler = async (
       undefined,
       undefined,
       'SuperClaw',
-      resultAttachments
+      resultAttachments,
+      undefined,
+      undefined,
+      workspaceId
     );
   } catch (err) {
     logger.error('[WEBHOOK] Execution Error:', err);

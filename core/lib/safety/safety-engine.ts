@@ -5,7 +5,13 @@
  * resource-level controls, time-based windows, and comprehensive violation logging.
  */
 
-import { SafetyTier, IAgentConfig, SafetyPolicy, SafetyEvaluationResult } from '../types/agent';
+import {
+  SafetyTier,
+  IAgentConfig,
+  SafetyPolicy,
+  SafetyEvaluationResult,
+  EvolutionMode,
+} from '../types/agent';
 import { logger } from '../logger';
 import type { BaseMemoryProvider } from '../memory/base';
 import { SafetyRateLimiter, ToolSafetyOverride } from './safety-limiter';
@@ -14,6 +20,7 @@ import { EvolutionScheduler } from './evolution-scheduler';
 import { CONFIG_DEFAULTS } from '../config/config-defaults';
 import { SafetyBase } from './safety-base';
 import { PolicyValidator } from './policy-validator';
+import { TRUST } from '../constants';
 
 /**
  * Safety Engine for evaluating actions against granular policies.
@@ -239,8 +246,8 @@ export class SafetyEngine extends SafetyBase {
       this.trackClassCBlastRadius(agentConfig?.id ?? 'unknown', action, context?.resource);
     }
 
-    const hasPromotionTrust = (agentConfig?.trustScore ?? 0) >= 95;
-    const isAutoMode = agentConfig?.evolutionMode === 'auto';
+    const hasPromotionTrust = (agentConfig?.trustScore ?? 0) >= TRUST.AUTONOMY_THRESHOLD;
+    const isAutoMode = agentConfig?.evolutionMode === EvolutionMode.AUTO;
 
     if (approvalResult.requiresApproval && hasPromotionTrust) {
       if (isAutoMode) {

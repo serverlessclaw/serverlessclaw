@@ -49,6 +49,23 @@ export class BaseMemoryProvider {
   }
 
   /**
+   * Helper to derive a workspace-scoped userId for DynamoDB partition keys.
+   * Format: WS#workspaceId#userId
+   * If workspaceId is provided, prefixes the userId to ensure logical isolation.
+   *
+   * @param userId - The base user identifier.
+   * @param workspaceId - Optional workspace identifier identifier.
+   * @returns The scoped partition key string.
+   */
+  public getScopedUserId(userId: string, workspaceId?: string): string {
+    if (!workspaceId) return userId;
+    // Prevent double-prefixing
+    const prefix = `WS#${workspaceId}#`;
+    if (userId.startsWith(prefix)) return userId;
+    return `${prefix}${userId}`;
+  }
+
+  /**
    * Internal helper to put an item into DynamoDB.
    *
    * @param item - The item object to store.
@@ -210,13 +227,15 @@ export class BaseMemoryProvider {
    * Filters out expired items based on TTL.
    *
    * @param userId - The user identifier to retrieve history for.
+   * @param workspaceId - Optional workspace identifier for isolation.
    * @returns A promise resolving to an array of Message objects.
    */
-  async getHistory(userId: string): Promise<Message[]> {
+  async getHistory(userId: string, workspaceId?: string): Promise<Message[]> {
+    const scopedUserId = this.getScopedUserId(userId, workspaceId);
     const items = await this.queryItems({
       KeyConditionExpression: 'userId = :userId',
       ExpressionAttributeValues: {
-        ':userId': userId,
+        ':userId': scopedUserId,
       },
       ScanIndexForward: true, // Oldest first
     });
@@ -244,13 +263,15 @@ export class BaseMemoryProvider {
    * Standard implementation for clearHistory.
    *
    * @param userId - The user identifier to clear history for.
+   * @param workspaceId - Optional workspace identifier for isolation.
    * @returns A promise resolving when history is cleared.
    */
-  async clearHistory(userId: string): Promise<void> {
+  async clearHistory(userId: string, workspaceId?: string): Promise<void> {
+    const scopedUserId = this.getScopedUserId(userId, workspaceId);
     const items = await this.queryItems({
       KeyConditionExpression: 'userId = :userId',
       ExpressionAttributeValues: {
-        ':userId': userId,
+        ':userId': scopedUserId,
       },
     });
 
@@ -285,25 +306,30 @@ export class BaseMemoryProvider {
       }
 
       if (Object.keys(requestItems).length > 0) {
-        logger.error(`Failed to clear all history for ${userId} after ${MAX_ATTEMPTS} attempts.`, {
-          unprocessedCount: Object.keys(requestItems[this.tableName] || {}).length,
-        });
+        logger.error(
+          `Failed to clear all history for ${scopedUserId} after ${MAX_ATTEMPTS} attempts.`,
+          {
+            unprocessedCount: Object.keys(requestItems[this.tableName] || {}).length,
+          }
+        );
       }
     }
-    logger.info(`Cleared history for ${userId} (${items.length} items)`);
+    logger.info(`Cleared history for ${scopedUserId} (${items.length} items)`);
   }
 
   /**
    * Standard implementation for getDistilledMemory.
    *
    * @param userId - The user identifier to retrieve distilled memory for.
+   * @param workspaceId - Optional workspace identifier for isolation.
    * @returns A promise resolving to the distilled memory string.
    */
-  async getDistilledMemory(userId: string): Promise<string> {
+  async getDistilledMemory(userId: string, workspaceId?: string): Promise<string> {
+    const scopedUserId = this.getScopedUserId(userId, workspaceId);
     const items = await this.queryItems({
       KeyConditionExpression: 'userId = :userId',
       ExpressionAttributeValues: {
-        ':userId': `DISTILLED#${userId}`,
+        ':userId': `DISTILLED#${scopedUserId}`,
       },
       ScanIndexForward: false, // Latest first
       Limit: 1,
@@ -316,13 +342,15 @@ export class BaseMemoryProvider {
    * Standard implementation for listConversations.
    *
    * @param userId - The user identifier to list conversations for.
+   * @param workspaceId - Optional workspace identifier for isolation.
    * @returns A promise resolving to an array of ConversationMeta objects.
    */
-  async listConversations(userId: string): Promise<ConversationMeta[]> {
+  async listConversations(userId: string, workspaceId?: string): Promise<ConversationMeta[]> {
+    const scopedUserId = this.getScopedUserId(userId, workspaceId);
     const items = await this.queryItems({
       KeyConditionExpression: 'userId = :userId',
       ExpressionAttributeValues: {
-        ':userId': `SESSIONS#${userId}`,
+        ':userId': `SESSIONS#${scopedUserId}`,
       },
       ScanIndexForward: false, // Newest first
     });
@@ -335,19 +363,5 @@ export class BaseMemoryProvider {
       isPinned: !!item.isPinned,
       expiresAt: item.expiresAt as number | undefined,
     }));
-  }
-  /**
-   * Generates a scoped userId based on the current context.
-   * Format: userId#workspaceId
-   *
-   * @param userId - The base user or entity ID.
-   * @param workspaceId - Optional workspace identifier.
-   * @returns The scoped partition key string.
-   */
-  public getScopedUserId(userId: string, workspaceId?: string): string {
-    if (!workspaceId) return userId;
-    // If the userId already contains the workspaceId suffix, don't re-append it
-    if (userId.includes(`#${workspaceId}`)) return userId;
-    return `${userId}#${workspaceId}`;
   }
 }

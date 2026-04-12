@@ -41,11 +41,19 @@ const GAP_LOCK_TTL_MS = 30 * 60 * 1000;
  */
 export async function getAllGaps(
   base: BaseMemoryProvider,
-  status: GapStatus = GapStatus.OPEN
+  status: GapStatus = GapStatus.OPEN,
+  workspaceId?: string
 ): Promise<MemoryInsight[]> {
-  return queryByTypeAndMap(base, 'GAP', InsightCategory.STRATEGIC_GAP, 100, '#status = :status', {
-    ':status': status,
-  });
+  return queryByTypeAndMap(
+    base,
+    'GAP',
+    InsightCategory.STRATEGIC_GAP,
+    100,
+    '#status = :status',
+    { ':status': status },
+    undefined,
+    workspaceId
+  );
 }
 
 /**
@@ -58,15 +66,17 @@ export async function getAllGaps(
  */
 export async function archiveStaleGaps(
   base: BaseMemoryProvider,
-  staleDays: number = LIMITS.STALE_GAP_DAYS
+  staleDays: number = LIMITS.STALE_GAP_DAYS,
+  workspaceId?: string
 ): Promise<number> {
   const cutoffTime = Date.now() - staleDays * TIME.SECONDS_IN_DAY * TIME.MS_PER_SECOND;
 
-  // Get all OPEN and PLANNED gaps
   const items = await base.queryItems({
     IndexName: 'TypeTimestampIndex',
     KeyConditionExpression: '#tp = :type',
-    FilterExpression: '#status IN (:open, :planned)',
+    FilterExpression: workspaceId
+      ? '#status IN (:open, :planned) AND workspaceId = :wid'
+      : '#status IN (:open, :planned)',
     ExpressionAttributeNames: {
       '#tp': 'type',
       '#status': 'status',
@@ -75,16 +85,17 @@ export async function archiveStaleGaps(
       ':type': 'GAP',
       ':open': GapStatus.OPEN,
       ':planned': GapStatus.PLANNED,
+      ...(workspaceId ? { ':wid': workspaceId } : {}),
     },
   });
 
-  const staleGaps = items.filter(
-    (item) =>
-      item.timestamp &&
+  const staleGaps = items.filter((item) => {
+    const ts =
       (typeof item.timestamp === 'string'
         ? parseInt(item.timestamp, 10)
-        : (item.timestamp as number)) < cutoffTime
-  );
+        : (item.timestamp as number)) || (item.createdAt as number);
+    return ts < cutoffTime;
+  });
 
   let archived = 0;
   for (const gap of staleGaps) {
@@ -117,6 +128,56 @@ export async function archiveStaleGaps(
   return archived;
 }
 
+export async function cullResolvedGaps(
+  base: BaseMemoryProvider,
+  thresholdDays: number = 90,
+  workspaceId?: string
+): Promise<number> {
+  const cutoffTime = Date.now() - thresholdDays * TIME.SECONDS_IN_DAY * TIME.MS_PER_SECOND;
+
+  // Get all DONE and DEPLOYED gaps
+  const items = await base.queryItems({
+    IndexName: 'TypeTimestampIndex',
+    KeyConditionExpression: '#tp = :type',
+    FilterExpression: '#status IN (:done, :deployed)',
+    ExpressionAttributeNames: {
+      '#tp': 'type',
+      '#status': 'status',
+    },
+    ExpressionAttributeValues: {
+      ':type': 'GAP',
+      ':done': GapStatus.DONE,
+      ':deployed': GapStatus.DEPLOYED,
+    },
+  });
+
+  const staleGaps = items.filter((item) => {
+    const ts = ((item.updatedAt as number) ||
+      (typeof item.timestamp === 'string'
+        ? parseInt(item.timestamp, 10)
+        : (item.timestamp as number))) as number;
+    return ts < cutoffTime;
+  });
+
+  let deleted = 0;
+  for (const gap of staleGaps) {
+    try {
+      if (workspaceId && !(gap.userId as string).startsWith(`WS#${workspaceId}#`)) continue;
+
+      await base.deleteItem({
+        userId: gap.userId as string,
+        timestamp: gap.timestamp as number | string,
+      });
+      deleted++;
+      logger.info(`Culled resolved gap: ${gap.userId}`);
+    } catch (e: unknown) {
+      logger.warn(`Failed to cull gap ${gap.userId}:`, e);
+    }
+  }
+
+  return deleted;
+}
+
 /**
  * Records a new capability gap.
  *
@@ -124,6 +185,7 @@ export async function archiveStaleGaps(
  * @param gapId - The unique identifier for the gap (usually a timestamp).
  * @param details - The textual description of the gap.
  * @param metadata - Optional insight metadata.
+ * @param workspaceId - Optional workspace identifier.
  * @returns A promise resolving when the gap is recorded.
  * @since 2026-03-19
  */
@@ -131,13 +193,14 @@ export async function setGap(
   base: BaseMemoryProvider,
   gapId: string,
   details: string,
-  metadata?: InsightMetadata
+  metadata?: Partial<InsightMetadata>,
+  workspaceId?: string
 ): Promise<void> {
   const { expiresAt, type } = await RetentionManager.getExpiresAt('GAP', '');
   const normalizedGapId = normalizeGapId(gapId);
   const gapTimestamp = getGapTimestamp(normalizedGapId) || Date.now();
   await base.putItem({
-    userId: getGapIdPK(normalizedGapId),
+    userId: base.getScopedUserId(getGapIdPK(normalizedGapId), workspaceId),
     timestamp: gapTimestamp,
     createdAt: gapTimestamp,
     type,
@@ -157,10 +220,11 @@ export async function setGap(
  */
 export async function getGap(
   base: BaseMemoryProvider,
-  gapId: string
+  gapId: string,
+  workspaceId?: string
 ): Promise<MemoryInsight | null> {
   const normalizedId = normalizeGapId(gapId);
-  const pk = getGapIdPK(normalizedId);
+  const pk = base.getScopedUserId(getGapIdPK(normalizedId), workspaceId);
   const sk = getGapTimestamp(normalizedId);
 
   // 1. Try targeted lookup if we have a valid timestamp
@@ -206,7 +270,8 @@ export async function getGap(
  */
 export async function incrementGapAttemptCount(
   base: BaseMemoryProvider,
-  gapId: string
+  gapId: string,
+  workspaceId?: string
 ): Promise<number> {
   const normalizedId = normalizeGapId(gapId);
   const gapTimestamp = getGapTimestamp(normalizedId);
@@ -215,7 +280,7 @@ export async function incrementGapAttemptCount(
     const now = Date.now();
     const result = await base.updateItem({
       Key: {
-        userId: getGapIdPK(normalizedId),
+        userId: base.getScopedUserId(getGapIdPK(normalizedId), workspaceId),
         timestamp: gapTimestamp,
       },
       UpdateExpression:
@@ -277,14 +342,15 @@ export async function incrementGapAttemptCount(
 export async function updateGapStatus(
   base: BaseMemoryProvider,
   gapId: string,
-  status: GapStatus
+  status: GapStatus,
+  workspaceId?: string
 ): Promise<GapTransitionResult> {
   const normalizedId = normalizeGapId(gapId);
   const gapTimestamp = getGapTimestamp(normalizedId);
 
   const params: Record<string, unknown> = {
     Key: {
-      userId: getGapIdPK(normalizedId),
+      userId: base.getScopedUserId(getGapIdPK(normalizedId), workspaceId),
       timestamp: gapTimestamp,
     },
     UpdateExpression: 'SET #status = :status, updatedAt = :now',
@@ -402,10 +468,14 @@ export async function acquireGapLock(
   base: BaseMemoryProvider,
   gapId: string,
   agentId: string,
-  ttlMs: number = GAP_LOCK_TTL_MS
+  ttlMs: number = GAP_LOCK_TTL_MS,
+  workspaceId?: string
 ): Promise<boolean> {
   const normalizedGapId = normalizeGapId(gapId);
-  const lockKey = `${MEMORY_KEYS.GAP_LOCK_PREFIX}${normalizedGapId}`;
+  const lockKey = base.getScopedUserId(
+    `${MEMORY_KEYS.GAP_LOCK_PREFIX}${normalizedGapId}`,
+    workspaceId
+  );
   const now = Date.now();
   const expiresAt = Math.floor((now + ttlMs) / 1000); // DynamoDB TTL uses seconds
 
@@ -463,10 +533,14 @@ export async function releaseGapLock(
   gapId: string,
   agentId: string,
   expectedVersion?: number,
-  force: boolean = false
+  force: boolean = false,
+  workspaceId?: string
 ): Promise<void> {
   const normalizedGapId = normalizeGapId(gapId);
-  const lockKey = `${MEMORY_KEYS.GAP_LOCK_PREFIX}${normalizedGapId}`;
+  const lockKey = base.getScopedUserId(
+    `${MEMORY_KEYS.GAP_LOCK_PREFIX}${normalizedGapId}`,
+    workspaceId
+  );
 
   // Build condition: must own the lock (and version match if provided)
   let conditionExpr = force ? 'attribute_exists(userId)' : '#content = :agentId';
@@ -514,10 +588,14 @@ export async function releaseGapLock(
  */
 export async function getGapLock(
   base: BaseMemoryProvider,
-  gapId: string
+  gapId: string,
+  workspaceId?: string
 ): Promise<{ agentId: string; expiresAt: number; lockVersion?: number } | null> {
   const normalizedGapId = normalizeGapId(gapId);
-  const lockKey = `${MEMORY_KEYS.GAP_LOCK_PREFIX}${normalizedGapId}`;
+  const lockKey = base.getScopedUserId(
+    `${MEMORY_KEYS.GAP_LOCK_PREFIX}${normalizedGapId}`,
+    workspaceId
+  );
   try {
     const items = await base.queryItems({
       KeyConditionExpression: 'userId = :lockKey AND #ts = :zero',
