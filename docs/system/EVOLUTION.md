@@ -86,7 +86,7 @@ Serverless Claw implements a **dynamic trust model** where autonomy is not a sta
 
 1. **Punitive Feedback**: The system tracks task outcomes via the **QA Auditor** and system health via the **SLO Tracker**. Failures and SLO breaches result in immediate trust penalties (e.g., -5 points).
 2. **Success Rewards**: Sustained high-quality work and successful gap closures earn back trust (+1 point per success).
-3. **Automatic Decay**: Trust scores naturally decay over time (e.g., 0.5 points per day) down to a baseline, ensuring autonomy must be continuously earned.
+3. **Automatic Decay**: Trust scores naturally decay over time (0.5 points per day baseline, with higher scores decaying faster: 1.5x for autonomy threshold >=95, 1.2x for >=85), ensuring autonomy must be continuously earned.
 4. **Dynamic Mode Shifting**: Agents that maintain a `TrustScore >= 95` for a defined epoch are authorized to operate in **AUTO** mode. If trust drops below this threshold, the agent is forced back to **HITL** mode.
 5. **Governance Boundaries**: Even in AUTO mode, **Class C** (Infrastructure/IAM) actions remain protected by the governance framework unless explicitly overridden in the `governance_config`.
 

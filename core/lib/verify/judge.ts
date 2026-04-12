@@ -17,6 +17,8 @@ export interface JudgeResult {
   issues?: string[];
   /** Suggested improvements for the next iteration. */
   suggestions?: string[];
+  /** Whether the evaluation failed due to a system error (vs. quality issues). */
+  systemError?: boolean;
 }
 
 /**
@@ -105,9 +107,11 @@ Return your evaluation in strict JSON format:
       logger.error('LLM-as-a-Judge evaluation failed:', error);
       return {
         satisfied: false,
-        score: 0,
-        reasoning: `Evaluation failed due to an internal error: ${error instanceof Error ? error.message : String(error)}`,
+        score: 5,
+        reasoning: `Evaluation failed due to an internal error: ${error instanceof Error ? error.message : String(error)}. Defaulting to neutral score.`,
         issues: ['INTERNAL_ERROR'],
+        suggestions: ['Review system health and retry evaluation'],
+        systemError: true,
       };
     }
   }

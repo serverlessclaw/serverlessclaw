@@ -538,14 +538,15 @@ The Shield has been unified. The `SafetyEngine` now acts as the authoritative ga
 **Perspective**: _Is the system capable of autonomously healing its own debt and recycling waste?_
 
 - **Angle**: Audit the system through the lens of **Regenerative Metabolism**. Unlike passive audits, Silo 7 operates on the "Perform while Auditing" philosophy — identifying metabolic waste (dead overrides, memory bloat) and executing repairs in real-time.
+- **Detailed Framework**: Refer to the exhaustive [METABOLISM.md](../../docs/system/METABOLISM.md) for architecture and diagrams.
 - **Key Concepts**: Regenerative repair, tool pruning, memory culling, strategic propagation, and metabolic efficiency.
 
 #### What to Look For
 
-- **Tool Decay**: Dynamic tool overrides that haven't been used in 30+ days (Metabolic Waste).
-- **Memory Bloat**: Resolved knowledge gaps that should be culled to prevent context pollution (Lean Evolution).
-- **Architectural Debt**: Overlapping patterns or "dark" logic identified by the AIReady (AST) scanner.
-- **Repair Integrity**: Verify that autonomous repairs (pruning/culling) are correctly logged and respect multi-tenant isolation.
+- **Metabolic Waste**: Dynamic tool overrides with zero executions over 30 days.
+- **Memory Bloat**: Resolved knowledge gaps held beyond 90 days.
+- **Architectural Debt**: Patterns identified by AIReady (AST) analysis as potentially redundant.
+- **Repair Integrity**: Correct propagation of P1/P2 findings into the [Strategic Planner](../../core/agents/strategic-planner.ts) for HITL/Review.
 
 #### Common Finding Patterns
 

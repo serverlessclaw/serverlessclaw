@@ -1,12 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { runSystemAudit } from './audit-protocol';
-import { MCPMultiplexer } from '../../lib/mcp';
+import { MetabolismService } from '../../lib/maintenance/metabolism';
+import { setGap } from '../../lib/memory/gap-operations';
 
-vi.mock('../../lib/mcp');
+vi.mock('../../lib/maintenance/metabolism');
+vi.mock('../../lib/memory/gap-operations');
 vi.mock('../../lib/logger');
 vi.mock('../../lib/utils/bus');
 
-describe('Audit Protocol - Metabolism Silo (MCP-based)', () => {
+describe('Audit Protocol - Silo 7 (Regenerative Metabolism)', () => {
   let mockMemory: any;
 
   beforeEach(() => {
@@ -18,61 +20,56 @@ describe('Audit Protocol - Metabolism Silo (MCP-based)', () => {
       get: vi.fn().mockResolvedValue([]),
     };
 
-    // Mock MCPMultiplexer.getToolsFromServer
-    (MCPMultiplexer.getToolsFromServer as any).mockResolvedValue([
+    // Mock MetabolismService.runMetabolismAudit
+    vi.mocked(MetabolismService.runMetabolismAudit).mockResolvedValue([
       {
-        name: 'metabolism_audit',
-        execute: vi.fn().mockResolvedValue({
-          findings: [
-            {
-              expected: 'Lean swarm',
-              actual: '[Swarm Debt] Unused tools found',
-              severity: 'P2',
-              recommendation: 'Prune tools',
-            },
-          ],
-          debtMarkers: 25,
-        }),
+        silo: 'Metabolism',
+        expected: 'Lean, optimized system state',
+        actual: 'Orphaned tool overrides detected',
+        severity: 'P2',
+        recommendation: 'Autonomous repair executed.',
       },
     ]);
   });
 
-  it('should identify metabolism issues via MCP correctly', async () => {
-    const report = await runSystemAudit(mockMemory, 'TEST');
-    const metabolismFindings = report.findings.filter((f) => f.silo === 'Metabolism');
+  it('should trigger regenerative metabolism during system audit', async () => {
+    await runSystemAudit(mockMemory, 'SCHEDULED');
 
-    expect(metabolismFindings.length).toBeGreaterThan(0);
-    expect(metabolismFindings.some((f) => f.actual.includes('[Swarm Debt]'))).toBe(true);
+    expect(MetabolismService.runMetabolismAudit).toHaveBeenCalledWith(mockMemory, { repair: true });
   });
 
-  it('should detect technical debt markers via MCP', async () => {
-    const report = await runSystemAudit(mockMemory, 'TEST');
-    const metabolismFindings = report.findings.filter((f) => f.silo === 'Metabolism');
+  it('should propagate P1/P2 findings as strategic maintenance gaps', async () => {
+    // P2 finding already mocked in beforeEach
+    await runSystemAudit(mockMemory, 'MANUAL');
 
-    // The findings now come through MetabolismService which aggregates them
-    expect(metabolismFindings.length).toBeGreaterThan(0);
+    expect(setGap).toHaveBeenCalledWith(
+      mockMemory,
+      expect.stringContaining('MAINTENANCE-'),
+      expect.stringContaining('Orphaned tool overrides detected'),
+      expect.objectContaining({ urgency: 5, impact: 8 })
+    );
   });
 
-  it('should report native fallback finding when MCP tools are missing', async () => {
-    (MCPMultiplexer.getToolsFromServer as any).mockResolvedValue([]);
+  it('should not propagate P3 findings as gaps', async () => {
+    vi.mocked(MetabolismService.runMetabolismAudit).mockResolvedValue([
+      {
+        silo: 'Metabolism',
+        expected: 'Clean code',
+        actual: 'Minor TODO found',
+        severity: 'P3',
+        recommendation: 'Ignore for now',
+      },
+    ]);
 
-    const report = await runSystemAudit(mockMemory, 'TEST');
-    const metabolismFindings = report.findings.filter((f) => f.silo === 'Metabolism');
+    await runSystemAudit(mockMemory, 'MANUAL');
 
-    // Should have at least the native fallback finding
-    expect(
-      metabolismFindings.some((f) => f.expected === 'Native metabolism fallback check active')
-    ).toBe(true);
+    expect(setGap).not.toHaveBeenCalled();
   });
 
-  it('should report native fallback finding when MCP execution fails', async () => {
-    (MCPMultiplexer.getToolsFromServer as any).mockRejectedValue(new Error('Connection refused'));
+  it('should aggregate findings into the final report', async () => {
+    const report = await runSystemAudit(mockMemory, 'EVENT');
 
-    const report = await runSystemAudit(mockMemory, 'TEST');
-    const metabolismFindings = report.findings.filter((f) => f.silo === 'Metabolism');
-
-    expect(
-      metabolismFindings.some((f) => f.expected === 'Native metabolism fallback check active')
-    ).toBe(true);
+    expect(report.findings.some((f) => f.silo === 'Metabolism')).toBe(true);
+    expect(report.findings.length).toBeGreaterThan(0);
   });
 });

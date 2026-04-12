@@ -4,32 +4,52 @@ Silo 7 is the **Regenerative Repair Engine** of the Serverless Claw swarm. It en
 
 ## The Regenerative Cycle
 
-The metabolism operates on a continuous feedback loop that bridges observation (Audit) and action (Repair).
+The metabolism operates on a continuous feedback loop that bridges observation (Audit) and action (Repair), ensuring the system remains lean and self-correcting.
 
 ```text
-       [ Continuous Event Stream ]
-                  |
-                  v
-       +-------------------------+
-       |   Cognition Reflector   | <--- (Scheduled or Event-Triggered)
-       |   (Metabolism Audit)    |
-       +------------+------------+
-                    |
-          (Perform while Auditing)
-                    |
-                    v
-       +-------------------------+      +-------------------------+
-       |   Metabolism Service    |----->| AIReady (AST) Analyzer  |
-       |    (Audit & Repair)     |      | (Deep Codebase Audit)   |
-       +------------+------------+      +------------+------------+
-          |         |                              |
-          |         |                              |
- (Repair State) (Scan Debt)                 (Detect Patterns)
-          |         |                              |
-          v         v                              v
-  [ Agent Registry ] [ Memory Table ]      [ Maintenance Gaps ]
-  (Prune Unused    (Cull Resolved)         (Propagate to Planner)
-      Tools)           Gaps)
+          .-----------------------------------------.
+         /        REGENERATIVE METABOLISM         \
+        |             (SILO 7 ENGINE)              |
+         \_________________________________________/
+                        |
+                        v
+          .--------------------------------.
+         /       COGNITION REFLECTOR      /|
+        /   (Audit Protocol Execution)    / |
+       +--------------------------------+  |
+       |                                |  |
+       |  "Perform While Auditing"      |  |
+       |                                |  /
+       +--------------------------------+ /
+                |              |
+                | (Repair)     | (Propagate)
+                v              v
+       .----------------.    .----------------.
+      /  METABOLISM    /|   /   STRATEGIC    /|
+     /    SERVICE     / |  /    PLANNER     / |
+    +----------------+  | +----------------+  |
+    |  - Prune Tools |  | |  - Execute P1  |  |
+    |  - Cull Gaps   |  | |    Maintenance |  |
+    |  - AIReady MCP |  / |    Gaps        |  /
+    +----------------+ /  +----------------+ /
+           ^                  | 
+           |                  |
+           '------------------'
+           (Architectural Decay Recycled)
+```
+
+## Metabolic State Transitions
+
+The lifecycle of systemic "Waste" follows a strict entropy-reversal path:
+
+```text
+ [ ACTIVE STATE ] ---- (90-Day Stasis) ----> [ METABOLIC WASTE ]
+      |                                           |
+      |                                           |
+      |                                  (Silo 7 Detection)
+      |                                           |
+      v                                           v
+ [ PRODUCTIVE ] <---- (Re-Integration) ---- [ ARCHIVAL/CULL ]
 ```
 
 ## Core Components

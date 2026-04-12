@@ -10,6 +10,7 @@ import { EvolutionScheduler } from '../lib/safety/evolution-scheduler';
 import { CONFIG_DEFAULTS } from '../lib/config/config-defaults';
 import { emitTypedEvent } from '../lib/utils/typed-emit';
 import { EventType } from '../lib/types/agent';
+import { TrustManager } from '../lib/safety/trust-manager';
 
 /**
  * Main maintenance loop. Designed to be triggered by a CloudWatch Event (cron).
@@ -55,6 +56,10 @@ export const handler = async (_event: unknown, _context: Context): Promise<void>
     if (archivedGaps > 0) {
       logger.info(`[MAINTENANCE] Archived ${archivedGaps} stale capability gaps`);
     }
+
+    // 4. Trust Score Decay (Silo 6: The Scales)
+    // Periodically decay trust scores to ensure continuous autonomy earning
+    await TrustManager.decayTrustScores();
 
     logger.info('[MAINTENANCE] cycle completed successfully.');
   } catch (error) {

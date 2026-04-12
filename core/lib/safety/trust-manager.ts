@@ -166,11 +166,13 @@ export class TrustManager {
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
         const fullConfig = await AgentRegistry.getAgentConfig(agentId);
+        if (!fullConfig) {
+          throw new Error(`Agent ${agentId} not found - cannot update trust score`);
+        }
         const currentScore = fullConfig?.trustScore ?? TRUST.DEFAULT_SCORE;
         const newScore = Math.min(this.MAX_SCORE, Math.max(this.MIN_SCORE, currentScore + delta));
 
         if (newScore === currentScore) {
-          await this.recordHistory(agentId, newScore);
           return newScore;
         }
 
@@ -238,29 +240,50 @@ export class TrustManager {
 
   /**
    * Periodically decays trust scores to ensure autonomy is continuously earned.
+   * Decay applies to all agents above minimum score - higher scores decay more aggressively.
    * This should be called by a scheduled process (e.g. Metabolism).
    */
   static async decayTrustScores(): Promise<void> {
     const configs = await AgentRegistry.getAllConfigs();
 
     const decayPromises: Promise<void>[] = [];
+    const decayDetails: { agentId: string; oldScore: number; newScore: number }[] = [];
 
     for (const agentId of Object.keys(configs)) {
       const config = configs[agentId];
-      if (config.trustScore !== undefined && config.trustScore > TRUST.DECAY_BASELINE) {
-        // Decay down to a baseline
-        const newScore = Math.max(TRUST.DECAY_BASELINE, config.trustScore - this.DECAY_RATE);
-        decayPromises.push(
-          AgentRegistry.atomicUpdateAgentField(agentId, 'trustScore', newScore)
-            .then(() => this.recordHistory(agentId, newScore))
-            .catch((e) => logger.error(`Failed to apply trust decay for agent ${agentId}`, e))
-        );
+      if (config.trustScore !== undefined && config.trustScore > TRUST.MIN_SCORE) {
+        let decayAmount = this.DECAY_RATE;
+
+        if (config.trustScore >= TRUST.AUTONOMY_THRESHOLD) {
+          decayAmount = this.DECAY_RATE * 1.5;
+        } else if (config.trustScore >= 85) {
+          decayAmount = this.DECAY_RATE * 1.2;
+        }
+
+        const newScore = Math.max(TRUST.MIN_SCORE, config.trustScore - decayAmount);
+
+        if (newScore < config.trustScore) {
+          decayDetails.push({ agentId, oldScore: config.trustScore, newScore });
+          decayPromises.push(
+            AgentRegistry.atomicUpdateAgentField(agentId, 'trustScore', newScore)
+              .then(() => this.recordHistory(agentId, newScore))
+              .catch((e) => logger.error(`Failed to apply trust decay for agent ${agentId}`, e))
+          );
+        }
       }
     }
 
     if (decayPromises.length > 0) {
       await Promise.all(decayPromises);
+
+      for (const detail of decayDetails) {
+        logger.info(
+          `[TrustManager] Decayed agent ${detail.agentId}: ${detail.oldScore.toFixed(1)} -> ${detail.newScore.toFixed(1)}`
+        );
+      }
       logger.info(`[TrustManager] Periodic trust decay applied to ${decayPromises.length} agents.`);
+    } else {
+      logger.info(`[TrustManager] No agents eligible for trust decay.`);
     }
   }
 }
