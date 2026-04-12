@@ -18,6 +18,7 @@ The system architecture follows ten foundational philosophies:
 8. **Stable Contextual Addressing:** Uses deterministic FNV-1a hashing for session identifiers to ensure stable sort-key (SK) mapping in DynamoDB, enabling sub-50ms retrieval across stateless execution environments. Collision handling and namespace boundaries must be explicitly enforced.
 9. **Trust-Driven Mode Shifting:** Autonomy is earned, not statically configured. Agents that sustain a `TrustScore >= 95` for a defined epoch are authorized to dynamically shift their own operating mode from `HITL` to `AUTO` without explicit human approval. (Refer to the [Glossary](../../docs/governance/GLOSSARY.md) for definitions of `TrustScore` and `Epoch`).
 10. **Lean Evolution:** Every line of code is a maintenance liability. The system prioritizes minimal viable implementations and regular extraction of common patterns into core libraries over duplication. Proactive deletion of redundant or low-utilization code is considered a primary evolution success metric.
+11. **Durable Observability:** Telemetry must outlive the processes that generate it. In serverless environments, critical signals (failures, errors, budget exits) must be flushed immediately to persistent storage to prevent 'telemetry blindness' during container recycling or crashes.
 
 ## ⚖️ Governance and Autonomy Boundaries
 

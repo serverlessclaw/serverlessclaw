@@ -172,6 +172,7 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
   const { processEventWithAgent } = await import('../handlers/events/shared');
 
   let responseText: string;
+  let parsedData: any;
 
   try {
     const result = await processEventWithAgent(userId, AgentType.STRATEGIC_PLANNER, plannerPrompt, {
@@ -185,11 +186,13 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
       attachments: (metadata as unknown as AgentPayload | undefined)?.attachments as Attachment[],
       handlerTitle: 'Strategic Planner',
       outboundHandlerName: AgentType.STRATEGIC_PLANNER,
+      skipOutbound: true,
       formatResponse: (text) => text,
       tokenBudget: config.tokenBudget,
       costLimit: config.costLimit,
     });
     responseText = result.responseText;
+    parsedData = result.parsedData;
   } catch (error) {
     const errorDetail = error instanceof Error ? error.message : String(error);
     logger.error(`[StrategicPlanner] Unified execution failure: ${errorDetail}`, error);
@@ -210,13 +213,15 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
 
   if (!isSystemFailure && isProactive) {
     try {
-      const parsed = parseStructuredResponse<{
-        status: string;
-        plan: string;
-        coveredGapIds: string[];
-        tasks?: Array<{ agentId: string; task: string; gapIds: string[] }>;
-        toolOptimizations?: Array<{ action: string; toolName: string; reason: string }>;
-      }>(responseText);
+      const parsed =
+        parsedData ||
+        parseStructuredResponse<{
+          status: string;
+          plan: string;
+          coveredGapIds: string[];
+          tasks?: Array<{ agentId: string; task: string; gapIds: string[] }>;
+          toolOptimizations?: Array<{ action: string; toolName: string; reason: string }>;
+        }>(responseText);
       status = parsed.status || 'SUCCESS';
       plan = parsed.plan || responseText;
       coveredGapIds = parsed.coveredGapIds ?? [];

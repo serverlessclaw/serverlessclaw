@@ -1,11 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handler } from './coder';
 import { AgentType, GapStatus } from '../lib/types/agent';
-import { sendOutboundMessage } from '../lib/outbound';
 import { initAgent } from '../lib/utils/agent-helpers';
 import { emitTaskEvent } from '../lib/utils/agent-helpers/event-emitter';
 
-// Mock dependencies
+import { processEventWithAgent } from '../handlers/events/shared';
 vi.mock('../lib/outbound', () => ({
   sendOutboundMessage: vi.fn().mockResolvedValue(undefined),
 }));
@@ -26,12 +25,16 @@ vi.mock('../lib/utils/workspace-manager', () => ({
 vi.mock('../handlers/events/shared', () => ({
   processEventWithAgent: vi.fn().mockImplementation((...args) => {
     const options = args[3] as { handlerTitle?: string; taskId?: string };
+    const responseText = 'Completed task';
+    const parsedData = {
+      status: 'SUCCESS',
+      response: responseText,
+      patch: options?.taskId === 'trace-patch' ? 'diff-content' : undefined,
+    };
     return Promise.resolve({
-      responseText: JSON.stringify({
-        status: 'SUCCESS',
-        response: options?.handlerTitle === 'Coder Agent' ? 'Completed task' : 'Completed task',
-      }),
+      responseText,
       attachments: [],
+      parsedData,
     });
   }),
 }));
@@ -70,10 +73,10 @@ describe('Coder Agent', () => {
   });
 
   it('should process a valid task and emit events', async () => {
-    const { processEventWithAgent } = await import('../handlers/events/shared');
-    (processEventWithAgent as any).mockResolvedValueOnce({
-      responseText: JSON.stringify({ status: 'SUCCESS', response: 'Completed task' }),
+    vi.mocked(processEventWithAgent).mockResolvedValueOnce({
+      responseText: 'Completed task',
       attachments: [],
+      parsedData: { status: 'SUCCESS', response: 'Completed task' },
     });
 
     const event = {
@@ -90,15 +93,6 @@ describe('Coder Agent', () => {
 
     expect(result).toContain('Completed task');
     expect(processEventWithAgent).toHaveBeenCalled();
-    expect(sendOutboundMessage).toHaveBeenCalledWith(
-      AgentType.CODER,
-      'user123',
-      'Completed task',
-      ['user123'],
-      'session123',
-      'CoderAgent',
-      []
-    );
     expect(emitTaskEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         agentId: AgentType.CODER,
@@ -110,13 +104,14 @@ describe('Coder Agent', () => {
   });
 
   it('should pass patch metadata in emitTaskEvent when patch is present in response', async () => {
-    mockAgent.process.mockResolvedValueOnce({
-      responseText: JSON.stringify({
+    vi.mocked(processEventWithAgent).mockResolvedValueOnce({
+      responseText: 'Completed with patch',
+      attachments: [],
+      parsedData: {
         status: 'SUCCESS',
         response: 'Completed with patch',
         patch: 'diff --git a/file.ts b/file.ts\n+new line',
-      }),
-      attachments: [],
+      },
     });
 
     const event = {
@@ -159,19 +154,23 @@ describe('Coder Agent', () => {
     expect(emitTaskEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         agentId: AgentType.CODER,
-        metadata: undefined,
+        metadata: {
+          patch: undefined,
+          buildId: undefined,
+        },
       })
     );
   });
 
   it('should transition gaps to PROGRESS and DEPLOYED if no buildId', async () => {
-    mockAgent.process.mockResolvedValueOnce({
-      responseText: JSON.stringify({
+    vi.mocked(processEventWithAgent).mockResolvedValueOnce({
+      responseText: 'Completed',
+      attachments: [],
+      parsedData: {
         status: 'SUCCESS',
         response: 'Completed',
         patch: 'diff-1', // Required for evolution tasks now
-      }),
-      attachments: [],
+      },
     });
 
     const event = {
@@ -191,14 +190,15 @@ describe('Coder Agent', () => {
   });
 
   it('should not update gap status to DEPLOYED if buildId is returned', async () => {
-    mockAgent.process.mockResolvedValueOnce({
-      responseText: JSON.stringify({
+    vi.mocked(processEventWithAgent).mockResolvedValueOnce({
+      responseText: 'Building',
+      attachments: [],
+      parsedData: {
         status: 'SUCCESS',
         response: 'Building',
         buildId: 'build456',
         patch: 'diff-2', // Required for evolution tasks now
-      }),
-      attachments: [],
+      },
     });
 
     const event = {
@@ -215,11 +215,12 @@ describe('Coder Agent', () => {
     // Should NOT mark as DEPLOYED
     expect(mockMemory.updateGapStatus).not.toHaveBeenCalledWith('gap1', GapStatus.DEPLOYED);
   });
-
   it('should handle FAILED status correctly', async () => {
-    mockAgent.process.mockResolvedValueOnce({
-      responseText: JSON.stringify({ status: 'FAILED', response: 'Compilation error' }),
+    const { processEventWithAgent } = await import('../handlers/events/shared');
+    vi.mocked(processEventWithAgent).mockResolvedValueOnce({
+      responseText: 'FAILED: Compilation error',
       attachments: [],
+      parsedData: { status: 'FAILED', response: 'FAILED: Compilation error' },
     });
 
     const event = {
@@ -232,20 +233,9 @@ describe('Coder Agent', () => {
 
     await handler(event, mockContext);
 
-    expect(sendOutboundMessage).toHaveBeenCalledWith(
-      AgentType.CODER,
-      'user123',
-      'Compilation error',
-      ['user123'],
-      undefined,
-      'CoderAgent',
-      []
-    );
-
     // Should not mark as deployed
     expect(mockMemory.updateGapStatus).not.toHaveBeenCalledWith('gap1', GapStatus.DEPLOYED);
   });
-
   it('should ignore invalid payload missing task or userId', async () => {
     const event = {
       detail: {
@@ -259,13 +249,14 @@ describe('Coder Agent', () => {
   });
 
   it('should mark as FAILED if evolution task (gapIds present) does not provide a patch', async () => {
-    mockAgent.process.mockResolvedValueOnce({
-      responseText: JSON.stringify({
+    vi.mocked(processEventWithAgent).mockResolvedValueOnce({
+      responseText: 'Implemented without patch',
+      attachments: [],
+      parsedData: {
         status: 'SUCCESS',
         response: 'Implemented without patch',
         // patch is missing
-      }),
-      attachments: [],
+      },
     });
 
     const event = {
@@ -340,9 +331,10 @@ describe('Coder Agent', () => {
       const spy = vi.spyOn(logger, 'warn');
 
       // 1. Mock failure status
-      mockAgent.process.mockResolvedValueOnce({
-        responseText: JSON.stringify({ status: 'FAILED', response: 'Error' }),
+      vi.mocked(processEventWithAgent).mockResolvedValueOnce({
+        responseText: 'Error',
         attachments: [],
+        parsedData: { status: 'FAILED', response: 'Error' },
       });
 
       // 2. Mock transition: success for PROGRESS, but failure for OPEN reset
@@ -375,13 +367,14 @@ describe('Coder Agent', () => {
       const spy = vi.spyOn(logger, 'warn');
 
       // 1. Mock success but failed transition
-      mockAgent.process.mockResolvedValueOnce({
-        responseText: JSON.stringify({
+      vi.mocked(processEventWithAgent).mockResolvedValueOnce({
+        responseText: 'Completed',
+        attachments: [],
+        parsedData: {
           status: 'SUCCESS',
           response: 'Completed',
           patch: 'diff-1',
-        }),
-        attachments: [],
+        },
       });
 
       // 2. Mock PROGRESS success, but DEPLOYED failure

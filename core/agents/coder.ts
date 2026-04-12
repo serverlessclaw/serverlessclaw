@@ -1,4 +1,4 @@
-import { AgentType, AgentEvent, AgentPayload, Attachment } from '../lib/types/agent';
+import { AgentType, AgentEvent, AgentPayload, Attachment, GapStatus } from '../lib/types/agent';
 import { Message } from '../lib/types/llm';
 import { sendOutboundMessage } from '../lib/outbound';
 import { logger } from '../lib/logger';
@@ -9,6 +9,7 @@ import {
   isTaskPaused,
   validatePayload,
   extractBaseUserId,
+  initAgent,
 } from '../lib/utils/agent-helpers';
 import { TRACE_TYPES } from '../lib/constants';
 
@@ -74,10 +75,30 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
     return swarmResponse || `[DELEGATED] Task decomposed into parallel sub-tasks for execution.`;
   }
 
-  // 3. Process the task via unified lifecycle (Session Locking + Heartbeat)
+  // 2. Discovery & Initialization
+  const { config, memory } = await initAgent(AgentType.CODER);
+
+  // 3. Gap Management - PROGRESS (Phase B2: Atomic Transitions)
+  if (gapIds && gapIds.length > 0) {
+    for (const gapId of gapIds) {
+      const lockAcquired = await memory.acquireGapLock(gapId, AgentType.CODER);
+      if (lockAcquired) {
+        try {
+          const res = await memory.updateGapStatus(gapId, GapStatus.PROGRESS);
+          if (!res.success) {
+            logger.warn(`[Coder] Failed to transition gap ${gapId} to PROGRESS: ${res.error}`);
+          }
+        } finally {
+          await memory.releaseGapLock(gapId, AgentType.CODER);
+        }
+      }
+    }
+  }
+
+  // 4. Process the task via unified lifecycle (Session Locking + Heartbeat)
   const { processEventWithAgent } = await import('../handlers/events/shared');
 
-  let result: { responseText: string; attachments: Message['attachments'] };
+  let result: { responseText: string; attachments: Message['attachments']; parsedData?: any };
   try {
     result = await processEventWithAgent(userId, AgentType.CODER, task || '', {
       context,
@@ -90,7 +111,7 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
       attachments: metadata?.attachments as Attachment[],
       handlerTitle: 'Coder Agent',
       outboundHandlerName: AgentType.CODER,
-      formatResponse: (text) => text, // Coder handles its own formatting in the prompt
+      formatResponse: (text) => text,
     });
   } catch (err) {
     logger.error('Unexpected error in Coder Agent processing:', err);
@@ -101,16 +122,49 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
   } finally {
     process.chdir(originalCwd);
     await cleanupWorkspace(workspacePath);
-
-    // Release any specific gap locks if they were acquired during tool execution
-    // Note: processEventWithAgent handles the session lock, but not individual gap locks
-    // that might have been acquired by tools.
   }
 
-  const responseText = result.responseText;
+  let responseText = result.responseText;
   const isFailure = detectFailure(responseText);
+  const parsed = result.parsedData;
 
-  if (!isTaskPaused(responseText)) {
+  // 5. Evolution Validation: Require patch for successful evolution tasks
+  if (gapIds && gapIds.length > 0 && !isFailure && !isTaskPaused(responseText)) {
+    if (!parsed?.patch) {
+      logger.error('[Coder] Evolution task successful but no patch was returned.');
+      responseText = `FAILED: Evolution task requires a technical patch for gaps: ${gapIds.join(', ')}`;
+    }
+  }
+
+  // 6. Gap Management - Final State (Phase B2: Atomic Transitions)
+  if (gapIds && gapIds.length > 0) {
+    const finalStatus =
+      detectFailure(responseText) || isTaskPaused(responseText)
+        ? GapStatus.OPEN
+        : parsed?.buildId
+          ? GapStatus.PROGRESS // Still in progress if building
+          : GapStatus.DEPLOYED;
+
+    for (const gapId of gapIds) {
+      const lockAcquired = await memory.acquireGapLock(gapId, AgentType.CODER);
+      if (lockAcquired) {
+        try {
+          const res = await memory.updateGapStatus(gapId, finalStatus);
+          if (!res.success) {
+            const step = finalStatus === GapStatus.OPEN ? 'reset' : 'transition';
+            logger.warn(`[Gaps] Failed to ${step} gap ${gapId} to ${finalStatus}: ${res.error}`);
+          }
+        } finally {
+          await memory.releaseGapLock(gapId, AgentType.CODER);
+        }
+      }
+    }
+  }
+
+  // 7. Final response and outbound message (Only if not already sent by shared handler)
+  // Note: processEventWithAgent already calls sendOutboundMessage if response is not paused.
+  // We only need to call it if we modified the responseText here (e.g. added FAILED prefix).
+  if (responseText !== result.responseText && !isTaskPaused(responseText)) {
     const baseUserId = extractBaseUserId(userId);
     await sendOutboundMessage(
       AgentType.CODER,
@@ -118,13 +172,13 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
       responseText,
       [baseUserId],
       sessionId,
-      'Coder Agent',
+      config.name,
       result.attachments
     );
   }
 
-  // 4. Trace gap transitions if successful
-  if (!isFailure && !isTaskPaused(responseText)) {
+  // 8. Trace gap transitions if successful
+  if (!detectFailure(responseText) && !isTaskPaused(responseText)) {
     const { addTraceStep } = await import('../lib/utils/trace-helper');
     await addTraceStep(traceId || 'unknown', 'root', {
       type: TRACE_TYPES.CODE_WRITTEN,
@@ -135,6 +189,25 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
       metadata: { event: 'code_written' },
     });
   }
+
+  // 9. Emit Task Result
+  const { emitTaskEvent } = await import('../lib/utils/agent-helpers/event-emitter');
+  await emitTaskEvent({
+    source: `${AgentType.CODER}.agent`,
+    agentId: AgentType.CODER,
+    userId: extractBaseUserId(userId),
+    task: task || '',
+    response: responseText,
+    traceId,
+    taskId: payload.taskId,
+    sessionId,
+    initiatorId,
+    depth,
+    metadata: {
+      patch: parsed?.patch,
+      buildId: parsed?.buildId,
+    },
+  });
 
   return responseText;
 };

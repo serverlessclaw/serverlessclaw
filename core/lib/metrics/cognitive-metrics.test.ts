@@ -181,16 +181,34 @@ describe('MetricsCollector', () => {
     disabledCollector.destroy();
   });
 
-  it('should auto-flush when buffer exceeds 100 metrics', async () => {
-    // Record 51 completions (each adds 3 metrics = 153 total)
+  it('should auto-flush when buffer exceeds thresholds [Sh5]', async () => {
+    // Sh5: Threshold now set to 50 items (each completion records 3 metrics)
     const promises = [];
-    for (let i = 0; i < 51; i++) {
+    for (let i = 0; i < 20; i++) {
       promises.push(collector.recordTaskCompletion('agent-1', true, 100, 200));
     }
     await Promise.all(promises);
 
-    // Should have auto-flushed
     expect(mockBase.putItem).toHaveBeenCalled();
+  });
+
+  it('should flush immediately when a task fails (Direct-Persistence) [Sh5]', async () => {
+    // Sh5: Critical for preventing telemetry loss on Lambda crashes
+    await collector.recordTaskCompletion('agent-1', false, 100, 200, { error: 'test-fail' });
+
+    expect(mockBase.putItem).toHaveBeenCalled();
+    const firstCall = mockBase.putItem.mock.calls[0][0];
+    expect(firstCall.metricName).toBe('task_completed');
+    expect(firstCall.value).toBe(0);
+  });
+
+  it('should use a shorter flush interval suitable for Lambda [Sh5]', () => {
+    collector.start();
+    const flushSpy = vi.spyOn(collector, 'flush');
+
+    // Sh5: Advance by 10 seconds (the new interval)
+    vi.advanceTimersByTime(10001);
+    expect(flushSpy).toHaveBeenCalled();
   });
 
   it('should handle flush errors gracefully', async () => {
@@ -578,6 +596,14 @@ describe('CognitiveHealthMonitor', () => {
     expect(agentIds).toContain('coder');
     expect(agentIds).toContain('strategic-planner');
     expect(agentIds).toContain('cognition-reflector');
+  });
+
+  it('should aggregate agent metrics in parallel [Sh5]', async () => {
+    const agents = ['agent-1', 'agent-2', 'agent-3'];
+    await monitor.takeSnapshot(agents);
+
+    // Sh5: Each agent should have triggered a concurrent DynamoDB query
+    expect(mockBase.queryItems).toHaveBeenCalledTimes(agents.length);
   });
 
   it('should cap anomalies at 100', async () => {

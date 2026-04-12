@@ -105,6 +105,12 @@ Serverless Claw integrates a robust tracking system, emitting real-time signals 
  [ Agent Execution ] ----------(Tokens/Duration)--------> [ TokenTracker ] -> (Daily Rollups)
         |                                                       |
  [ LLM/Tool Calls  ] --(Success/Failure/Tokens)--> [ Metrics ]  |
+        |                  |         ^                 |        |
+        |                  |         |                 |        |
+        |          [ CRITICAL_FAIL ] | [ PARALLEL_AGG ]|        |
+        |                  |         |                 |        |
+        |                  v         |                 |        |
+        |          (DIRECT_PERSIST)  +-----------------+        |
         |                                              |        |
         +-------(CloudWatch Metrics / Dashboard)-------+        |
                                                        |        |

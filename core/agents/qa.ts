@@ -46,6 +46,7 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
   const qaPrompt = `Verify and audit the following gaps: ${gapIds.join(', ')}\n\nImplementation Output:\n${implementationResponse || 'No implementation response provided.'}`;
 
   let auditReport: string;
+  let parsedData: any;
   try {
     const result = await processEventWithAgent(userId, AgentType.QA, qaPrompt, {
       context: _context,
@@ -60,14 +61,20 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
       formatResponse: (text) => text,
     });
     auditReport = result.responseText;
+    parsedData = result.parsedData;
   } catch (err) {
     logger.error('Unexpected error in QA Agent processing:', err);
     return; // Failure handled by wrapper
   }
 
   // 2. Evolution Management (Post-Audit Logic)
+  // Check both raw text (for backward compatibility) and parsed status
   const isSatisfied =
-    !detectFailure(auditReport) && auditReport.toLowerCase().includes('satisfied');
+    parsedData?.status === 'SUCCESS' ||
+    parsedData?.satisfied === true ||
+    (!detectFailure(auditReport) &&
+      auditReport.toLowerCase().includes('satisfied') &&
+      !auditReport.toLowerCase().includes('"satisfied": false'));
 
   // Resolve evolution mode
   let evolutionMode = EvolutionMode.HITL;

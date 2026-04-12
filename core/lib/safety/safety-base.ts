@@ -6,7 +6,7 @@
 import { TrustManager } from './trust-manager';
 import { SafetyTier, SafetyViolation } from '../types/agent';
 import { logger } from '../logger';
-import { PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { PutCommand } from '@aws-sdk/lib-dynamodb';
 import { defaultDocClient } from '../registry/config';
 import { Resource } from 'sst';
 
@@ -130,52 +130,25 @@ export class SafetyBase {
 
   /**
    * Track blast radius for Class C actions.
-   * Sh3 Fix: Persist to DynamoDB for cross-session continuity.
    */
-  protected async trackClassCBlastRadius(action: string, resource?: string): Promise<void> {
-    const key = `safety:blast_radius:${action}`;
-    const now = Date.now();
-
-    // 1. Update in-memory cache for fast retrieval
-    const existing = this.classCBlastRadius.get(action) || {
+  protected trackClassCBlastRadius(action: string, resource?: string): void {
+    const key = action;
+    const existing = this.classCBlastRadius.get(key) || {
       count: 0,
       affectedResources: 0,
       lastAction: 0,
     };
-    this.classCBlastRadius.set(action, {
+
+    this.classCBlastRadius.set(key, {
       count: existing.count + 1,
       affectedResources: existing.affectedResources + (resource ? 1 : 0),
-      lastAction: now,
+      lastAction: Date.now(),
     });
 
-    // 2. Persist atomically to ConfigTable
-    const tableResource = Resource as { ConfigTable?: { name: string } };
-    if (!('ConfigTable' in tableResource)) return;
-
-    try {
-      await defaultDocClient.send(
-        new UpdateCommand({
-          TableName: tableResource.ConfigTable?.name,
-          Key: { key },
-          UpdateExpression:
-            'SET #v.count = if_not_exists(#v.count, :zero) + :one, #v.affectedResources = if_not_exists(#v.affectedResources, :zero) + :res, #v.lastAction = :now',
-          ExpressionAttributeNames: { '#v': 'value' },
-          ExpressionAttributeValues: {
-            ':zero': 0,
-            ':one': 1,
-            ':res': resource ? 1 : 0,
-            ':now': now,
-          },
-        })
-      );
-    } catch (e) {
-      logger.error(`Failed to persist blast radius for ${action}:`, e);
-    }
-
-    logger.info('[SafetyEngine] Class C action tracked and persisted', {
+    logger.info('[SafetyEngine] Class C action tracked for blast radius', {
       action,
       resource,
-      cumulativeCount: existing.count + 1,
+      totalCount: existing.count + 1,
     });
   }
 

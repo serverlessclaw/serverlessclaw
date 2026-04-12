@@ -17,6 +17,8 @@ const memoryMocks = vi.hoisted(() => ({
   getFailedPlans: vi.fn().mockResolvedValue([]),
 }));
 
+import { processEventWithAgent } from '../handlers/events/shared';
+
 const gapOperationsMocks = vi.hoisted(() => ({
   assignGapToTrack: vi.fn().mockResolvedValue(undefined),
   determineTrack: vi.fn().mockReturnValue('FEATURE'),
@@ -94,6 +96,33 @@ vi.mock('../tools/registry-utils', () => registryUtilsMocks);
 
 vi.mock('../lib/outbound', () => ({
   sendOutboundMessage: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../handlers/events/shared', () => ({
+  wakeupInitiator: vi.fn().mockResolvedValue(undefined),
+  getRecursionLimit: vi.fn().mockResolvedValue(15),
+  handleRecursionLimitExceeded: vi.fn().mockResolvedValue(undefined),
+  processEventWithAgent: vi.fn().mockImplementation((_userId, _agentId, _task, options) => {
+    return Promise.resolve({
+      responseText:
+        options.handlerTitle === 'Strategic Planner'
+          ? JSON.stringify({
+              status: 'SUCCESS',
+              plan: 'Test Plan Content',
+              coveredGapIds: ['GAP#1001'],
+            })
+          : 'Mock response',
+      attachments: [],
+      parsedData:
+        options.handlerTitle === 'Strategic Planner'
+          ? {
+              status: 'SUCCESS',
+              plan: 'Test Plan Content',
+              coveredGapIds: ['GAP#1001'],
+            }
+          : null,
+    });
+  }),
 }));
 
 vi.mock('@aws-sdk/client-dynamodb', () => ({
@@ -179,7 +208,12 @@ describe('Strategic Planner — selective PLANNED marking', () => {
       coveredGapIds: ['GAP#1001'],
       reasoning: 'Missing tools',
     });
-    agentProcess.mockResolvedValue({ responseText: planResponse });
+    const { processEventWithAgent } = await import('../handlers/events/shared');
+    vi.mocked(processEventWithAgent).mockResolvedValueOnce({
+      responseText: 'plan response',
+      attachments: [],
+      parsedData: JSON.parse(planResponse),
+    });
 
     const event = {
       detail: {
@@ -226,7 +260,8 @@ describe('Strategic Planner — selective PLANNED marking', () => {
       {} as unknown as Parameters<typeof handler>[1]
     );
     expect(result).toMatchObject({ status: 'COOLDOWN_ACTIVE' });
-    expect(agentProcess).not.toHaveBeenCalled();
+    const { processEventWithAgent } = await import('../handlers/events/shared');
+    expect(processEventWithAgent).not.toHaveBeenCalled();
   });
 
   it('should proceed if cooldown entry is expired', async () => {
@@ -234,7 +269,12 @@ describe('Strategic Planner — selective PLANNED marking', () => {
       { gapId: 'GAP#5002', expiresAt: Date.now() - 1000 }, // expired
     ]);
     memoryMocks.getDistilledMemory.mockResolvedValue(cooldownStore);
-    agentProcess.mockResolvedValue({ responseText: 'STRATEGIC_PLAN: fix things' });
+    const { processEventWithAgent } = await import('../handlers/events/shared');
+    vi.mocked(processEventWithAgent).mockResolvedValueOnce({
+      responseText: 'STRATEGIC_PLAN: fix things',
+      attachments: [],
+      parsedData: { plan: 'fix things' },
+    });
 
     const event = {
       detail: {
@@ -249,7 +289,7 @@ describe('Strategic Planner — selective PLANNED marking', () => {
       {} as unknown as Parameters<typeof handler>[1]
     );
     expect(result).not.toMatchObject({ status: 'COOLDOWN_ACTIVE' });
-    expect(agentProcess).toHaveBeenCalled();
+    expect(processEventWithAgent).toHaveBeenCalled();
   });
 
   it('should NOT check cooldown for scheduled reviews (gapId is undefined)', async () => {
@@ -258,7 +298,12 @@ describe('Strategic Planner — selective PLANNED marking', () => {
       { gapId: 'GAP#9999', expiresAt: Date.now() + 3_600_000 },
     ]);
     memoryMocks.getDistilledMemory.mockResolvedValue(cooldownStore);
-    agentProcess.mockResolvedValue({ responseText: 'STRATEGIC_PLAN: review result' });
+    const { processEventWithAgent } = await import('../handlers/events/shared');
+    vi.mocked(processEventWithAgent).mockResolvedValueOnce({
+      responseText: 'STRATEGIC_PLAN: review result',
+      attachments: [],
+      parsedData: { plan: 'review result' },
+    });
 
     const event = {
       detail: {
@@ -289,7 +334,12 @@ describe('Strategic Planner — selective PLANNED marking', () => {
         },
       ],
     });
-    agentProcess.mockResolvedValue({ responseText: planResponse });
+    const { processEventWithAgent } = await import('../handlers/events/shared');
+    vi.mocked(processEventWithAgent).mockResolvedValueOnce({
+      responseText: 'plan response',
+      attachments: [],
+      parsedData: JSON.parse(planResponse),
+    });
 
     const event = {
       detail: {
@@ -322,7 +372,11 @@ describe('Strategic Planner — tool loading (Bug 1 regression)', () => {
       systemPrompt: 'Planner prompt',
       enabled: true,
     });
-    agentProcess.mockResolvedValue({ responseText: '{"status":"SUCCESS","plan":"noop"}' });
+    vi.mocked(processEventWithAgent).mockResolvedValue({
+      responseText: 'noop',
+      attachments: [],
+      parsedData: { status: 'SUCCESS', plan: 'noop' },
+    });
   });
 
   it('should call getAgentTools with AgentType.STRATEGIC_PLANNER, not "planner"', async () => {

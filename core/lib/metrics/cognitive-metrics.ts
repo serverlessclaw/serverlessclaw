@@ -55,7 +55,8 @@ export class MetricsCollector {
    */
   start(): void {
     if (this.config.enabled && !this.flushInterval) {
-      this.flushInterval = setInterval(() => this.flush(), 60000);
+      // Sh5: Shorter flush interval (10s) suitable for Lambda environments
+      this.flushInterval = setInterval(() => this.flush(), 10000);
       // Unref so it doesn't prevent Lambda from freezing
       if (
         this.flushInterval &&
@@ -86,8 +87,8 @@ export class MetricsCollector {
       { agentId, name: 'tokens_used', value: tokensUsed, timestamp }
     );
 
-    // Flush if buffer is large
-    if (this.buffer.length > 100) {
+    // Sh5: Immediate flush for failures to prevent signal loss on container recycling
+    if (!success || this.buffer.length > 50) {
       await this.flush();
     }
   }
@@ -548,13 +549,17 @@ export class CognitiveHealthMonitor {
 
     // Get metrics for each agent
     const agents = agentIds ?? ['superclaw', 'coder', 'strategic-planner', 'cognition-reflector'];
-    for (const agentId of agents) {
-      const metrics = await this.analyzer.getAggregatedMetrics(
-        agentId,
-        MetricsWindow.HOURLY,
-        hourAgo,
-        now
-      );
+
+    // Sh5: Parallelize metric aggregation to reduce snapshot latency
+    const metricsPromises = agents.map((agentId) =>
+      this.analyzer.getAggregatedMetrics(agentId, MetricsWindow.HOURLY, hourAgo, now)
+    );
+
+    const results = await Promise.all(metricsPromises);
+
+    for (let i = 0; i < agents.length; i++) {
+      const agentId = agents[i];
+      const metrics = results[i];
       agentMetrics.push(metrics);
 
       // Detect anomalies

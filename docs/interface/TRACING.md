@@ -24,9 +24,6 @@ Instead of a linear log, the system records a **Directed Acyclic Graph (DAG)** o
    [Research]                  [Fix Code]
       |                           |
       +------------+--------------+
-                   |
-                (node_C)
-                QA Agent
 ```
 
 ### Council of Agents Path (High-Impact Plans)
@@ -378,6 +375,35 @@ Circuit breaker state changes are recorded for debugging and monitoring:
   ]
 }
 ```
+
+## Ghost Trace Prevention
+
+In serverless execution (Lambda), agents may be terminated unexpectedly due to timeouts or OOMs. Without explicit finalization, these execution nodes remain in `STARTED` state, creating "Ghost Traces."
+
+The system implements a **Fail-Safe Finalization** strategy:
+
+```text
+ [ Agent/Node ]
+        |
+ (startTrace) -> status: STARTED
+        |
+ [ Execution ] --- (Success) --> (endTrace)  -> status: COMPLETED
+        |                  |      |
+ [ TIMEOUT/FAIL ]          |      +--> Update __summary__
+        |                  |
+ (failTrace) <-------------+
+        |
+ status: FAILED
+ failureReason: "..."
+        |
+ [ Cleanup Job ]
+ (TraceCleaner)
+        |
+ [ Sweeps orphand STRATED nodes ]
+```
+
+1. **`failTrace(reason)`**: Explicitly called in `finally` blocks or by the `TokenBudgetEnforcer` to close nodes on known exit paths.
+2. **`TraceCleaner`**: A background utility that marks stale `STARTED` traces as `FAILED` if they exceed the maximum execution window.
 
 ## Dashboard Visualization
 

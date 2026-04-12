@@ -95,7 +95,10 @@ export function detectFailure(response: string): boolean {
     response === AGENT_ERRORS.PROCESS_FAILURE ||
     response === AGENT_ERRORS_CN.PROCESS_FAILURE ||
     response.startsWith(AGENT_ERROR_PREFIXES.EN) ||
-    response.startsWith(AGENT_ERROR_PREFIXES.CN)
+    response.startsWith(AGENT_ERROR_PREFIXES.CN) ||
+    response.startsWith('SYSTEM_ERROR') ||
+    response.startsWith('FAILED') ||
+    response.startsWith('I encountered an internal error')
   );
 }
 

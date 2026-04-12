@@ -1,4 +1,5 @@
 import { logger } from '../logger';
+import type { MetricsCollector } from './cognitive-metrics';
 
 /**
  * Budget configuration for a session or agent.
@@ -69,9 +70,11 @@ export interface BudgetCheckResult {
 export class TokenBudgetEnforcer {
   private sessions: Map<string, TokenUsageRecord[]> = new Map();
   private config: BudgetConfig;
+  private metricsCollector?: MetricsCollector;
 
-  constructor(config: Partial<BudgetConfig> = {}) {
+  constructor(config: Partial<BudgetConfig> = {}, metricsCollector?: MetricsCollector) {
     this.config = { ...DEFAULT_CONFIG, ...config };
+    this.metricsCollector = metricsCollector;
   }
 
   /**
@@ -127,6 +130,12 @@ export class TokenBudgetEnforcer {
         `[TokenBudgetEnforcer] Session ${sessionId} exceeded budget: ` +
           `$${sessionCostUsd.toFixed(4)} / $${this.config.maxSessionCostUsd.toFixed(2)}`
       );
+      if (this.metricsCollector && agentId) {
+        this.metricsCollector.recordTaskCompletion(agentId, false, 0, 0, {
+          reason: 'session_budget_exhausted',
+          cost: sessionCostUsd,
+        });
+      }
       return {
         allowed: false,
         reason: `Session budget exhausted: $${sessionCostUsd.toFixed(4)} / $${this.config.maxSessionCostUsd.toFixed(2)}`,
@@ -142,6 +151,12 @@ export class TokenBudgetEnforcer {
         `[TokenBudgetEnforcer] Agent call exceeded per-call budget: ` +
           `$${estimatedCostUsd.toFixed(4)} / $${this.config.maxAgentCostUsd.toFixed(2)}`
       );
+      if (this.metricsCollector && agentId) {
+        this.metricsCollector.recordTaskCompletion(agentId, false, 0, 0, {
+          reason: 'agent_budget_exhausted',
+          cost: estimatedCostUsd,
+        });
+      }
       return {
         allowed: false,
         reason: `Agent call budget exceeded: $${estimatedCostUsd.toFixed(4)} / $${this.config.maxAgentCostUsd.toFixed(2)}`,

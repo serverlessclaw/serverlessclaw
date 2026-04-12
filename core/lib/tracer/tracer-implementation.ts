@@ -254,6 +254,55 @@ export class ClawTracer {
   }
 
   /**
+   * Ends the trace node with a failure status.
+   * Sh5: Critical for preventing 'Ghost Traces' when an agent crashes.
+   *
+   * @param reason - The failure reason or error message.
+   * @param metadata - Additional failure context.
+   */
+  async failTrace(reason: string, metadata?: Record<string, unknown>): Promise<void> {
+    const finalMetadata = { ...metadata, failureReason: reason };
+
+    await this.docClient.send(
+      new UpdateCommand({
+        TableName: this.getTableName(),
+        Key: { traceId: this.traceId, nodeId: this.nodeId },
+        UpdateExpression:
+          'SET #status = :status, failureReason = :reason, endTime = :end, metadata = :meta',
+        ExpressionAttributeNames: { '#status': 'status' },
+        ExpressionAttributeValues: {
+          ':status': TRACE_STATUS.FAILED,
+          ':reason': reason,
+          ':end': Date.now(),
+          ':meta': finalMetadata,
+        },
+      })
+    );
+
+    // Mark the summary as failed as well
+    const summariesEnabledFail = process.env.TRACE_SUMMARIES_ENABLED === 'true';
+    if (summariesEnabledFail && this.nodeId === 'root') {
+      try {
+        await this.docClient.send(
+          new UpdateCommand({
+            TableName: this.getTableName(),
+            Key: { traceId: this.traceId, nodeId: '__summary__' },
+            UpdateExpression: 'SET #status = :status, #ts = :ts, failureReason = :reason',
+            ExpressionAttributeNames: { '#status': 'status', '#ts': 'timestamp' },
+            ExpressionAttributeValues: {
+              ':status': TRACE_STATUS.FAILED,
+              ':ts': Date.now(),
+              ':reason': reason,
+            },
+          })
+        );
+      } catch (e) {
+        logger.warn(`Failed to update trace summary on failure for ${this.traceId}:`, e);
+      }
+    }
+  }
+
+  /**
    * Returns the current trace ID.
    *
    * @returns The trace ID string.

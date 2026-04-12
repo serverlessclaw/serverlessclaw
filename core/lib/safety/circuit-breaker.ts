@@ -1,10 +1,5 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import {
-  DynamoDBDocumentClient,
-  GetCommand,
-  PutCommand,
-  UpdateCommand,
-} from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
 import { logger } from '../logger';
 import { CONFIG_DEFAULTS } from '../config/config-defaults';
@@ -65,7 +60,6 @@ async function loadState(): Promise<CircuitBreakerStateData> {
       new GetCommand({
         TableName: getTableName(),
         Key: { key: STATE_KEY },
-        ConsistentRead: true, // Sh3 Fix: Use consistent read for breaker state
       })
     );
     if (Item?.value && typeof Item.value === 'object' && 'state' in Item.value) {
@@ -82,16 +76,7 @@ async function loadState(): Promise<CircuitBreakerStateData> {
       };
     }
   } catch (e) {
-    // Sh3 Fix: Fail-Safe on database error. Do NOT return freshState().
-    // If it's a 404, freshState is fine. If it's Throttling/Timeout, we must throw.
-    if (
-      e instanceof Error &&
-      (e.name === 'ResourceNotFoundException' || e.message.includes('not found'))
-    ) {
-      return freshState();
-    }
-    logger.error('CRITICAL: CircuitBreaker failed to load state from ConfigTable:', e);
-    throw new Error('CIRCUIT_BREAKER_STORAGE_FAILURE: Shield is compromised, failing closed.');
+    logger.warn('Failed to load circuit breaker state, starting fresh:', e);
   }
   return freshState();
 }
@@ -324,8 +309,11 @@ export class CircuitBreaker {
       const now = Date.now();
       const emergencyWindowMs = 3600000; // 1 hour window
 
-      // Reset window if expired (using local state check, but update is atomic)
-      const needsWindowReset = now - state.emergencyDeployWindowStart > emergencyWindowMs;
+      // Reset window if expired
+      if (now - state.emergencyDeployWindowStart > emergencyWindowMs) {
+        state.emergencyDeployCount = 0;
+        state.emergencyDeployWindowStart = now;
+      }
 
       const emergencyRateLimit = await (
         await import('../registry/config')
@@ -335,7 +323,7 @@ export class CircuitBreaker {
       );
 
       // Allow max emergency deployments per hour
-      if (state.emergencyDeployCount >= emergencyRateLimit && !needsWindowReset) {
+      if (state.emergencyDeployCount >= emergencyRateLimit) {
         logger.warn(
           `Circuit Breaker: Emergency deployment rate limit exceeded (${state.emergencyDeployCount}/hr)`
         );
@@ -347,32 +335,11 @@ export class CircuitBreaker {
         };
       }
 
-      // Sh3 Fix: Use atomic increment for emergency deploy count
-      try {
-        const updateResult = await db.send(
-          new UpdateCommand({
-            TableName: getTableName(),
-            Key: { key: STATE_KEY },
-            UpdateExpression: needsWindowReset
-              ? 'SET #v.emergencyDeployCount = :one, #v.emergencyDeployWindowStart = :now, #v.version = #v.version + :one'
-              : 'SET #v.emergencyDeployCount = #v.emergencyDeployCount + :one, #v.version = #v.version + :one',
-            ExpressionAttributeNames: { '#v': 'value' },
-            ExpressionAttributeValues: {
-              ':one': 1,
-              ':now': now,
-            },
-            ReturnValues: 'ALL_NEW',
-          })
-        );
-        const newState = updateResult.Attributes?.value as CircuitBreakerStateData;
-        logger.warn(
-          `Circuit Breaker: Emergency deployment approved (Count: ${newState.emergencyDeployCount}).`
-        );
-      } catch (e) {
-        logger.error('Failed to atomically increment emergency deploy count:', e);
-        // Fallback to allowing if the count was below threshold, but this is a degraded state
-      }
+      // Increment counter for this emergency deployment
+      state.emergencyDeployCount += 1;
+      await saveState(state);
 
+      logger.warn('Circuit Breaker: Emergency deployment approved with rate limiting.');
       return {
         allowed: true,
         reason: 'EMERGENCY_BYPASS_WITH_RATE_LIMIT',

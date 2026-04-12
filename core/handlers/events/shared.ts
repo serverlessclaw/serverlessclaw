@@ -250,6 +250,7 @@ export async function processEventWithAgent(
     isContinuation?: boolean;
     handlerTitle: string;
     outboundHandlerName: string;
+    skipOutbound?: boolean;
     formatResponse?: (responseText: string, attachments: Attachment[]) => string;
     tokenBudget?: number;
     costLimit?: number;
@@ -259,7 +260,7 @@ export async function processEventWithAgent(
       totalTokens: number;
     };
   }
-): Promise<{ responseText: string; attachments: Attachment[] }> {
+): Promise<{ responseText: string; attachments: Attachment[]; parsedData?: any }> {
   // Heavy SDK dependencies loaded lazily to keep this module's static import depth low.
   const { Agent } = await import('../../lib/agent');
   const { getAgentContext } = await import('../../lib/utils/agent-helpers');
@@ -378,21 +379,33 @@ export async function processEventWithAgent(
 
     const isPaused = isTaskPaused(responseText);
 
-    // 1. Notify user (unless it's a background pause/continuation)
-    if (!isPaused && responseText.trim().length > 0) {
-      const finalMessage = options.formatResponse
-        ? options.formatResponse(responseText, attachments)
-        : responseText;
+    // 1. Extract message if JSON (Phase B3: Real-time Shared Awareness)
+    let finalMessage = responseText;
+    let parsedData: any = null;
+    try {
+      if (responseText.trim().startsWith('{')) {
+        parsedData = JSON.parse(responseText);
+        finalMessage = parsedData.message || parsedData.plan || parsedData.response || responseText;
+      }
+    } catch {
+      // Fallback to raw response if not valid JSON
+    }
+
+    // 1. Notify user (unless it's a background pause/continuation or skip requested)
+    if (!isPaused && responseText.trim().length > 0 && !options.skipOutbound) {
+      const formattedMessage = options.formatResponse
+        ? options.formatResponse(finalMessage, attachments)
+        : finalMessage;
 
       const messageId = agentId === 'superclaw' ? options.traceId : `${options.traceId}-${agentId}`;
 
       await sendOutboundMessage(
         options.outboundHandlerName,
         userId,
-        finalMessage,
+        formattedMessage,
         undefined,
         options.sessionId,
-        'SuperClaw',
+        options.handlerTitle === 'SuperClaw' ? 'SuperClaw' : options.handlerTitle,
         attachments,
         messageId
       );
@@ -410,7 +423,7 @@ export async function processEventWithAgent(
         userId,
         agentId,
         task: taskContent,
-        response: responseText,
+        response: finalMessage,
         attachments,
         traceId: options.traceId,
         taskId: options.taskId ?? options.traceId,
@@ -423,7 +436,7 @@ export async function processEventWithAgent(
       });
     }
 
-    return { responseText, attachments };
+    return { responseText: finalMessage, attachments, parsedData };
   } finally {
     if (options.sessionId) {
       await sessionStateManager.releaseProcessing(options.sessionId, agentId);

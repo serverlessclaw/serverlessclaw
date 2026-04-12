@@ -123,16 +123,20 @@ vi.mock('../lib/outbound', () => ({
 vi.mock('../handlers/events/shared', () => ({
   wakeupInitiator: vi.fn().mockResolvedValue(undefined),
   processEventWithAgent: vi.fn().mockImplementation((...args) => {
-    const lastArg = args[2] as { handlerTitle?: string };
-    if (lastArg?.handlerTitle === 'QA Auditor') {
-      return Promise.resolve({
-        responseText: 'QA verification satisfied. All checks pass.',
-        attachments: [],
-      });
-    }
+    const lastArg = args[3] as { handlerTitle?: string };
+    const responseText =
+      lastArg?.handlerTitle === 'QA Auditor'
+        ? 'QA verification satisfied. All checks pass.'
+        : 'QA verification satisfied. All checks pass.';
+
     return Promise.resolve({
-      responseText: 'QA verification satisfied. All checks pass.',
+      responseText,
       attachments: [],
+      parsedData: {
+        status: responseText.toLowerCase().includes('failed') ? 'REOPEN' : 'SUCCESS',
+        message: responseText,
+        satisfied: !responseText.toLowerCase().includes('failed'),
+      },
     });
   }),
 }));
@@ -177,13 +181,17 @@ describe('QA Agent — REOPEN cap and HITL escalation', () => {
 
   describe('Trust Score Feedback Loop', () => {
     it('calls recordSuccess on satisfied verification', async () => {
-      agentProcess.mockResolvedValueOnce({
-        responseText: JSON.stringify({
+      const { processEventWithAgent } = await import('../handlers/events/shared');
+      (processEventWithAgent as any).mockResolvedValueOnce({
+        responseText: 'QA verification satisfied. All checks pass.',
+        attachments: [],
+        parsedData: {
+          status: 'SUCCESS',
           satisfied: true,
           score: 10,
           reasoning: 'Verified successfully',
           issues: [],
-        }),
+        },
       });
 
       await handler(BASE_PAYLOAD as any, {} as any);
@@ -192,13 +200,17 @@ describe('QA Agent — REOPEN cap and HITL escalation', () => {
     });
 
     it('calls recordFailure on unsatisfied verification', async () => {
-      agentProcess.mockResolvedValueOnce({
-        responseText: JSON.stringify({
+      const { processEventWithAgent } = await import('../handlers/events/shared');
+      (processEventWithAgent as any).mockResolvedValueOnce({
+        responseText: 'FAILED: Missing implementation',
+        attachments: [],
+        parsedData: {
+          status: 'FAILED',
           satisfied: false,
           score: 4,
           reasoning: 'Missing implementation',
           issues: ['file.ts is empty'],
-        }),
+        },
       });
 
       await handler(BASE_PAYLOAD as any, {} as any);
@@ -211,14 +223,18 @@ describe('QA Agent — REOPEN cap and HITL escalation', () => {
   });
 
   it('should set gaps to DONE and not escalate on SUCCESS (auto mode)', async () => {
-    agentProcess.mockResolvedValue({
-      responseText: JSON.stringify({
+    const { processEventWithAgent } = await import('../handlers/events/shared');
+    vi.mocked(processEventWithAgent).mockResolvedValueOnce({
+      responseText: 'QA verification satisfied.',
+      attachments: [],
+      parsedData: {
+        status: 'SUCCESS',
         satisfied: true,
         score: 10,
         reasoning: 'implementation is correct.',
         issues: [],
         suggestions: [],
-      }),
+      },
     });
     registryMocks.getRawConfig.mockResolvedValue(EvolutionMode.AUTO);
 
@@ -233,11 +249,14 @@ describe('QA Agent — REOPEN cap and HITL escalation', () => {
   });
 
   it('should REOPEN gap and increment attempt count on REOPEN status below cap', async () => {
-    agentProcess.mockResolvedValue({
-      responseText: JSON.stringify({
+    const { processEventWithAgent } = await import('../handlers/events/shared');
+    vi.mocked(processEventWithAgent).mockResolvedValueOnce({
+      responseText: 'REOPEN',
+      attachments: [],
+      parsedData: {
         status: 'REOPEN',
         auditReport: 'the file was not changed.',
-      }),
+      },
     });
     memoryMocks.incrementGapAttemptCount.mockResolvedValue(1); // attempt 1 of 3
 
@@ -256,14 +275,18 @@ describe('QA Agent — REOPEN cap and HITL escalation', () => {
   });
 
   it('should escalate to FAILED and send alert when reopen cap (3) is reached', async () => {
-    agentProcess.mockResolvedValue({
-      responseText: JSON.stringify({
+    const { processEventWithAgent } = await import('../handlers/events/shared');
+    vi.mocked(processEventWithAgent).mockResolvedValueOnce({
+      responseText: 'FAILED: still broken.',
+      attachments: [],
+      parsedData: {
+        status: 'FAILED',
         satisfied: false,
         score: 5,
         reasoning: 'still broken.',
         issues: ['still broken.'],
         suggestions: [],
-      }),
+      },
     });
     memoryMocks.incrementGapAttemptCount.mockResolvedValue(3); // cap reached
 
@@ -283,18 +306,24 @@ describe('QA Agent — REOPEN cap and HITL escalation', () => {
 
   it('audit prompt should accurately include gap ids and implementation response', async () => {
     let capturedPrompt = '';
-    agentProcess.mockImplementation((userId: string, task: string) => {
-      capturedPrompt = task;
-      return Promise.resolve({
-        responseText: JSON.stringify({
-          satisfied: true,
-          reasoning: 'verified',
-          issues: [],
-          suggestions: [],
-          score: 10,
-        }),
-      });
-    });
+    const { processEventWithAgent } = await import('../handlers/events/shared');
+    vi.mocked(processEventWithAgent).mockImplementationOnce(
+      (userId: string, agentId: string, task: string) => {
+        capturedPrompt = task;
+        return Promise.resolve({
+          responseText: 'QA verification satisfied.',
+          attachments: [],
+          parsedData: {
+            status: 'SUCCESS',
+            satisfied: true,
+            reasoning: 'verified',
+            issues: [],
+            suggestions: [],
+            score: 10,
+          },
+        });
+      }
+    );
     registryMocks.getRawConfig.mockResolvedValue(EvolutionMode.AUTO);
 
     await handler(
