@@ -170,7 +170,7 @@ export class SafetyEngine extends SafetyBase {
         userId: context?.userId,
       });
       // Sh2 Fix: Track blast radius for Class C actions
-      this.trackClassCBlastRadius(action, context?.resource);
+      await this.trackClassCBlastRadius(action, context?.resource);
     }
 
     if (approvalResult.requiresApproval && (agentConfig?.trustScore ?? 0) >= 90) {

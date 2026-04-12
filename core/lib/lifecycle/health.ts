@@ -125,6 +125,8 @@ export async function checkTraceCoherence(): Promise<CoherenceResult> {
   const issues: string[] = [];
 
   try {
+    // Sh3 Warning: Full scan on TraceTable is inefficient.
+    // TODO: Switch to GSI-based query once a time-based index is provisioned.
     const scanResult = await getDynamoDbClient().send(
       new ScanCommand({
         TableName: typedResource.TraceTable.name,
