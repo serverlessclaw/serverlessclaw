@@ -281,10 +281,28 @@ export class AgentRouter {
     capabilityScores?: Record<string, number>
   ): Promise<string> {
     if (candidates.length === 0) throw new Error('No candidate agents provided');
-    if (candidates.length === 1) return candidates[0];
+
+    // Sh1: Filter candidates against AgentRegistry to respect "enabled" status
+    const { AgentRegistry } = await import('../registry/AgentRegistry');
+    const enabledCandidates: string[] = [];
+
+    for (const id of candidates) {
+      const config = await AgentRegistry.getAgentConfig(id);
+      if (config && config.enabled !== false) {
+        enabledCandidates.push(id);
+      } else {
+        logger.warn(`[AgentRouter] Skipping disabled or non-existent agent: ${id}`);
+      }
+    }
+
+    if (enabledCandidates.length === 0) {
+      throw new Error(`All target agents are disabled: ${candidates.join(', ')}`);
+    }
+
+    if (enabledCandidates.length === 1) return enabledCandidates[0];
 
     const metrics = await Promise.all(
-      candidates.map((id) => this.getMetrics(id, capabilityScores?.[id] ?? 1.0))
+      enabledCandidates.map((id) => this.getMetrics(id, capabilityScores?.[id] ?? 1.0))
     );
 
     metrics.sort((a, b) => b.compositeScore - a.compositeScore);

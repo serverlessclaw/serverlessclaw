@@ -196,7 +196,7 @@ describe('QA Agent — REOPEN cap and HITL escalation', () => {
 
       await handler(BASE_PAYLOAD as any, {} as any);
 
-      expect(safetyEngineMocks.recordSuccess).toHaveBeenCalledWith('coder');
+      expect(safetyEngineMocks.recordSuccess).toHaveBeenCalledWith('coder', 10);
     });
 
     it('calls recordFailure on unsatisfied verification', async () => {

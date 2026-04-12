@@ -28,8 +28,8 @@ export class SafetyBase {
   /**
    * Records a success for an agent and increments its trust score.
    */
-  async recordSuccess(agentId: string): Promise<number> {
-    return TrustManager.recordSuccess(agentId);
+  async recordSuccess(agentId: string, qualityScore?: number): Promise<number> {
+    return TrustManager.recordSuccess(agentId, qualityScore);
   }
 
   /**

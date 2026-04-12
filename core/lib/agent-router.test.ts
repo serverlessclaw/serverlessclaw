@@ -1,6 +1,19 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { AgentRouter, ModelTier } from './routing/AgentRouter';
 import { ReasoningProfile } from './types/llm';
+
+vi.mock('./registry/AgentRegistry', () => ({
+  AgentRegistry: {
+    getAgentConfig: vi.fn(),
+  },
+}));
+
+vi.mock('./metrics/token-usage', () => ({
+  TokenTracker: {
+    getRollupRange: vi.fn().mockResolvedValue([]),
+  },
+}));
+
 
 describe('AgentRouter', () => {
   describe('selectModel', () => {
@@ -161,6 +174,39 @@ describe('AgentRouter', () => {
 
     it('returns undefined for empty candidates', () => {
       expect(AgentRouter.selectBestAgentWithReputation([], new Map())).toBeUndefined();
+    });
+  });
+
+  describe('async selectBestAgent [Sh1]', () => {
+    it('should filter out disabled agents during selection', async () => {
+      const { AgentRegistry } = await import('./registry/AgentRegistry');
+      const mockResult = (id: string, enabled: boolean) =>
+        ({
+          id,
+          name: id,
+          enabled,
+        }) as any;
+
+      vi.mocked(AgentRegistry.getAgentConfig).mockImplementation(async (id: string) => {
+        if (id === 'disabled-agent') return mockResult('disabled-agent', false);
+        return mockResult('enabled-agent', true);
+      });
+
+      const best = await AgentRouter.selectBestAgent(['disabled-agent', 'enabled-agent']);
+      expect(best).toBe('enabled-agent');
+      expect(AgentRegistry.getAgentConfig).toHaveBeenCalledWith('disabled-agent');
+    });
+
+    it('should throw Error if no enabled agents remain', async () => {
+      const { AgentRegistry } = await import('./registry/AgentRegistry');
+      vi.mocked(AgentRegistry.getAgentConfig).mockResolvedValue({
+        id: 'test',
+        enabled: false,
+      } as any);
+
+      await expect(AgentRouter.selectBestAgent(['test'])).rejects.toThrow(
+        'All target agents are disabled: test'
+      );
     });
   });
 });

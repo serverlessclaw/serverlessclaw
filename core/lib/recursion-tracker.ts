@@ -7,9 +7,9 @@ import { logger } from './logger';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
   DynamoDBDocumentClient,
-  PutCommand,
   GetCommand,
   DeleteCommand,
+  UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 
 const RECURSION_STACK_PREFIX = 'RECURSION_STACK#';
@@ -37,24 +37,37 @@ export async function pushRecursionEntry(
     const key = `${RECURSION_STACK_PREFIX}${traceId}`;
     const expiresAt = Math.floor(Date.now() / 1000) + RECURSION_TTL_SECONDS;
 
+    // Sh1: Use UpdateCommand to ensure atomic depth increment and prevent concurrent "resets"
     await docClient.send(
-      new PutCommand({
+      new UpdateCommand({
         TableName: process.env.MEMORY_TABLE_NAME ?? 'MemoryTable',
-        Item: {
+        Key: {
           userId: key,
           timestamp: 0,
-          type: 'RECURSION_ENTRY',
-          depth,
-          sessionId,
-          agentId,
-          createdAt: Date.now(),
-          expiresAt,
+        },
+        UpdateExpression:
+          'SET depth = :depth, sessionId = :sessionId, agentId = :agentId, createdAt = :now, expiresAt = :exp, #type = :type',
+        ConditionExpression: 'attribute_not_exists(depth) OR depth < :depth',
+        ExpressionAttributeNames: {
+          '#type': 'type',
+        },
+        ExpressionAttributeValues: {
+          ':depth': depth,
+          ':sessionId': sessionId,
+          ':agentId': agentId,
+          ':now': Date.now(),
+          ':exp': expiresAt,
+          ':type': 'RECURSION_ENTRY',
         },
       })
     );
 
     logger.info(`[RECURSION] Pushed entry for trace ${traceId}: depth=${depth}, agent=${agentId}`);
-  } catch (error) {
+  } catch (error: any) {
+    if (error.name === 'ConditionalCheckFailedException') {
+      logger.debug(`[RECURSION] Skip push for ${traceId}: existing depth is already >= ${depth}`);
+      return;
+    }
     logger.warn(`[RECURSION] Failed to push entry for ${traceId}:`, error);
   }
 }

@@ -75,6 +75,8 @@ export async function discoverSystemTopology(): Promise<Topology> {
     console.warn('Failed to scan dynamic agents, proceeding with backbone only:', innerErr);
   }
 
+  let edgeDiscoveryFailed = false;
+
   try {
     // 4. Dynamic Edge Inference (After all nodes are identified)
     // Add node-based edges
@@ -84,9 +86,10 @@ export async function discoverSystemTopology(): Promise<Topology> {
     edges.push(...(await inferBackboneEdges(finalNodes)));
   } catch (err: unknown) {
     console.error('Critical failure in topology discovery:', err);
+    edgeDiscoveryFailed = true;
   }
 
   // 6. Dynamic Agent Tool based edges (handled in step 3 for dynamic agents)
 
-  return { nodes: finalNodes, edges };
+  return { nodes: finalNodes, edges, incomplete: edgeDiscoveryFailed };
 }

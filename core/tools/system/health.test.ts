@@ -31,7 +31,10 @@ vi.mock('../../lib/logger', () => ({
 }));
 
 // Mock ConfigManager for debugAgent - using hoisted mock factory
-const mockSaveRawConfig = vi.fn().mockResolvedValue(undefined);
+const { mockSaveRawConfig } = vi.hoisted(() => ({
+  mockSaveRawConfig: vi.fn(),
+}));
+
 vi.mock('../../lib/registry/config', async () => {
   return {
     ConfigManager: {

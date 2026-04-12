@@ -117,7 +117,6 @@ export class LockManager {
    */
   async release(lockId: string, ownerId: string, prefix?: string): Promise<boolean> {
     const fullId = this.getFullId(lockId, prefix);
-    const now = Math.floor(Date.now() / 1000);
     try {
       await this.docClient.send(
         new UpdateCommand({
@@ -127,10 +126,10 @@ export class LockManager {
             timestamp: 0,
           },
           UpdateExpression: 'REMOVE ownerId, expiresAt, acquiredAt, lockType, renewedAt',
-          ConditionExpression: 'ownerId = :owner AND expiresAt > :now',
+          // Sh1: Allow the owner to release the lock even if it has expired to ensure clean setup
+          ConditionExpression: 'ownerId = :owner',
           ExpressionAttributeValues: {
             ':owner': ownerId,
-            ':now': now,
           },
         })
       );

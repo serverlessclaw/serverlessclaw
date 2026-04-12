@@ -92,7 +92,8 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
       try {
         const { SafetyEngine } = await import('../lib/safety/safety-engine');
         const safety = new SafetyEngine();
-        await safety.recordSuccess(initiatorId);
+        // Sh6: Pass the numeric score from the judge to reward high-quality work
+        await safety.recordSuccess(initiatorId, (parsedData as any)?.score);
       } catch (e) {
         logger.warn(`Failed to record trust success for ${initiatorId}:`, e);
       }

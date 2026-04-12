@@ -77,9 +77,11 @@ export async function requestHandoff(userId: string, sessionId?: string): Promis
 
 /**
  * Checks if a human is currently taking control of the session.
+ * @param userId - The user ID to check.
+ * @param sessionId - Optional session ID to scope the check to a specific session.
  * @returns boolean - True if agent should enter OBSERVE mode.
  */
-export async function isHumanTakingControl(userId: string): Promise<boolean> {
+export async function isHumanTakingControl(userId: string, sessionId?: string): Promise<boolean> {
   const docClient = getDocClient();
 
   // Safe resource check for test environments
@@ -104,7 +106,16 @@ export async function isHumanTakingControl(userId: string): Promise<boolean> {
     if (!response.Item) return false;
 
     const now = Math.floor(Date.now() / 1000);
-    return (response.Item.expiresAt as number) > now;
+    const hasNotExpired = (response.Item.expiresAt as number) > now;
+
+    if (!hasNotExpired) return false;
+
+    // If sessionId was provided, verify it matches the stored session
+    if (sessionId && response.Item.sessionId && response.Item.sessionId !== sessionId) {
+      return false;
+    }
+
+    return true;
   } catch (error) {
     logger.warn(`[Handoff] Failed to check handoff status for ${userId}:`, error);
     return false;

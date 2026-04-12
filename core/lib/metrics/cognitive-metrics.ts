@@ -7,7 +7,12 @@
 
 import { logger } from '../logger';
 import { MEMORY_KEYS, RETENTION, TIME } from '../constants';
-import type { BaseMemoryProvider } from '../memory/base';
+import { BaseMemoryProvider } from '../memory/base';
+import { DynamoMemory } from '../memory/dynamo-memory';
+import { TrustManager } from '../safety/trust-manager';
+import { SafetyConfigManager } from '../safety/safety-config-manager';
+import { AgentRegistry } from '../registry/AgentRegistry';
+import { SafetyTier } from '../types/agent';
 import {
   MetricsWindow,
   AnomalySeverity,
@@ -193,19 +198,41 @@ export class DegradationDetector {
   }
 
   /**
+   * Resolves the effective thresholds for an agent based on its safety tier.
+   */
+  private async getThresholds(agentId: string) {
+    try {
+      const agentConfig = await AgentRegistry.getAgentConfig(agentId);
+      const tier = agentConfig?.safetyTier ?? SafetyTier.LOCAL;
+      const policy = await SafetyConfigManager.getPolicy(tier);
+
+      return {
+        ...this.config.thresholds,
+        ...(policy.cognitiveThresholds ?? {}),
+      };
+    } catch (e) {
+      logger.warn(`Failed to resolve dynamic thresholds for agent ${agentId}, using defaults`, e);
+      return this.config.thresholds;
+    }
+  }
+
+  /**
    * Analyze aggregated metrics for anomalies.
    */
-  detectAnomalies(agentId: string, metrics: AggregatedMetrics): CognitiveAnomaly[] {
+  async detectAnomalies(agentId: string, metrics: AggregatedMetrics): Promise<CognitiveAnomaly[]> {
+    const thresholds = await this.getThresholds(agentId);
     const anomalies: CognitiveAnomaly[] = [];
     const now = Date.now();
 
     // Check task completion rate
-    if (metrics.taskCompletionRate < this.config.thresholds.minCompletionRate) {
+    if (metrics.taskCompletionRate < thresholds.minCompletionRate) {
       anomalies.push({
         id: `anomaly_${now}_${Math.random().toString(36).slice(2, 11)}`,
         type: AnomalyType.TASK_FAILURE_SPIKE,
         severity:
-          metrics.taskCompletionRate < 0.5 ? AnomalySeverity.CRITICAL : AnomalySeverity.HIGH,
+          metrics.taskCompletionRate < thresholds.minCompletionRate / 2
+            ? AnomalySeverity.CRITICAL
+            : AnomalySeverity.HIGH,
         agentId,
         detectedAt: now,
         description: `Task completion rate dropped to ${(metrics.taskCompletionRate * 100).toFixed(1)}%`,
@@ -215,11 +242,14 @@ export class DegradationDetector {
     }
 
     // Check error rate
-    if (metrics.errorRate > this.config.thresholds.maxErrorRate) {
+    if (metrics.errorRate > thresholds.maxErrorRate) {
       anomalies.push({
         id: `anomaly_${now}_${Math.random().toString(36).slice(2, 11)}`,
         type: AnomalyType.TASK_FAILURE_SPIKE,
-        severity: metrics.errorRate > 0.5 ? AnomalySeverity.CRITICAL : AnomalySeverity.HIGH,
+        severity:
+          metrics.errorRate > thresholds.maxErrorRate * 2
+            ? AnomalySeverity.CRITICAL
+            : AnomalySeverity.HIGH,
         agentId,
         detectedAt: now,
         description: `Error rate elevated to ${(metrics.errorRate * 100).toFixed(1)}%`,
@@ -229,12 +259,14 @@ export class DegradationDetector {
     }
 
     // Check reasoning coherence
-    if (metrics.reasoningCoherence < this.config.thresholds.minCoherence) {
+    if (metrics.reasoningCoherence < thresholds.minCoherence) {
       anomalies.push({
         id: `anomaly_${now}_${Math.random().toString(36).slice(2, 11)}`,
         type: AnomalyType.REASONING_DEGRADATION,
         severity:
-          metrics.reasoningCoherence < 3 ? AnomalySeverity.CRITICAL : AnomalySeverity.MEDIUM,
+          metrics.reasoningCoherence < thresholds.minCoherence / 2
+            ? AnomalySeverity.CRITICAL
+            : AnomalySeverity.MEDIUM,
         agentId,
         detectedAt: now,
         description: `Reasoning coherence dropped to ${metrics.reasoningCoherence.toFixed(1)}/10`,
@@ -244,11 +276,14 @@ export class DegradationDetector {
     }
 
     // Check memory miss rate
-    if (metrics.memoryMissRate > this.config.thresholds.maxMissRate) {
+    if (metrics.memoryMissRate > thresholds.maxMissRate) {
       anomalies.push({
         id: `anomaly_${now}_${Math.random().toString(36).slice(2, 11)}`,
         type: AnomalyType.MEMORY_MISS,
-        severity: metrics.memoryMissRate > 0.8 ? AnomalySeverity.HIGH : AnomalySeverity.MEDIUM,
+        severity:
+          metrics.memoryMissRate > thresholds.maxMissRate * 1.5
+            ? AnomalySeverity.HIGH
+            : AnomalySeverity.MEDIUM,
         agentId,
         detectedAt: now,
         description: `Memory miss rate at ${(metrics.memoryMissRate * 100).toFixed(1)}%`,
@@ -258,10 +293,7 @@ export class DegradationDetector {
     }
 
     // Check token efficiency
-    if (
-      metrics.totalTasks >= this.config.thresholds.minSampleTasks &&
-      metrics.tokenEfficiency < 0.5
-    ) {
+    if (metrics.totalTasks >= thresholds.minSampleTasks && metrics.tokenEfficiency < 0.5) {
       anomalies.push({
         id: `anomaly_${now}_${Math.random().toString(36).slice(2, 11)}`,
         type: AnomalyType.TOKEN_OVERUSE,
@@ -276,14 +308,14 @@ export class DegradationDetector {
 
     // Check latency anomaly
     if (
-      metrics.totalTasks >= this.config.thresholds.minSampleTasks &&
-      metrics.avgTaskLatencyMs > this.config.thresholds.maxAvgLatencyMs
+      metrics.totalTasks >= thresholds.minSampleTasks &&
+      metrics.avgTaskLatencyMs > thresholds.maxAvgLatencyMs
     ) {
       anomalies.push({
         id: `anomaly_${now}_${Math.random().toString(36).slice(2, 11)}`,
         type: AnomalyType.LATENCY_ANOMALY,
         severity:
-          metrics.avgTaskLatencyMs > this.config.thresholds.maxAvgLatencyMs * 2
+          metrics.avgTaskLatencyMs > thresholds.maxAvgLatencyMs * 2
             ? AnomalySeverity.HIGH
             : AnomalySeverity.MEDIUM,
         agentId,
@@ -296,15 +328,12 @@ export class DegradationDetector {
 
     // Check cognitive loop (excessive pivoting without progress)
     const pivotRate = metrics.totalTasks > 0 ? metrics.totalPivots / metrics.totalTasks : 0;
-    if (
-      metrics.totalTasks >= this.config.thresholds.minSampleTasks &&
-      pivotRate > this.config.thresholds.maxPivotRate
-    ) {
+    if (metrics.totalTasks >= thresholds.minSampleTasks && pivotRate > thresholds.maxPivotRate) {
       anomalies.push({
         id: `anomaly_${now}_${Math.random().toString(36).slice(2, 11)}`,
         type: AnomalyType.COGNITIVE_LOOP,
         severity:
-          pivotRate > this.config.thresholds.maxPivotRate * 1.5
+          pivotRate > thresholds.maxPivotRate * 1.5
             ? AnomalySeverity.CRITICAL
             : AnomalySeverity.HIGH,
         agentId,
@@ -461,9 +490,12 @@ export class HealthTrendAnalyzer {
     ];
 
     const allItems: Record<string, unknown>[] = [];
+    const MAX_ITEMS_PER_PREFIX = 100;
+
     for (const prefix of prefixes) {
       try {
-        const items = await this.base.scanByPrefix(prefix);
+        // Sh5: Sample scan instead of full scan to avoid DynamoDB timeouts in large workspaces
+        const items = await this.base.scanByPrefix(prefix, { limit: MAX_ITEMS_PER_PREFIX });
         allItems.push(...items);
       } catch (error) {
         logger.warn('Failed to scan prefix for memory health analysis', { prefix, error });
@@ -555,6 +587,7 @@ export class CognitiveHealthMonitor {
       this.analyzer.getAggregatedMetrics(agentId, MetricsWindow.HOURLY, hourAgo, now)
     );
 
+    const trustManagerPromises: Promise<number>[] = [];
     const results = await Promise.all(metricsPromises);
 
     for (let i = 0; i < agents.length; i++) {
@@ -563,14 +596,28 @@ export class CognitiveHealthMonitor {
       agentMetrics.push(metrics);
 
       // Detect anomalies
-      const anomalies = this.detector.detectAnomalies(agentId, metrics);
+      const anomalies = await this.detector.detectAnomalies(agentId, metrics);
       allAnomalies.push(...anomalies);
+
+      // Sh6: Report anomalies to TrustManager for automatic trust calibration
+      // Sh6: Batched report to avoid race conditions and reduce writes
+      if (anomalies.length > 0) {
+        trustManagerPromises.push(
+          TrustManager.recordAnomalies(agentId, anomalies).catch((err) => {
+            logger.error(`Failed to record trust penalty batch for agent ${agentId}`, err);
+            return 0;
+          })
+        );
+      }
     }
+
+    // Await all trust updates to ensure health report is consistent
+    await Promise.all(trustManagerPromises);
 
     // Store anomalies
     this.anomalies.push(...allAnomalies);
-    if (this.anomalies.length > 100) {
-      this.anomalies = this.anomalies.slice(-100);
+    if (this.anomalies.length > 1000) {
+      this.anomalies = this.anomalies.slice(-1000);
     }
 
     // Analyze memory health
@@ -645,5 +692,93 @@ export class CognitiveHealthMonitor {
    */
   destroy(): void {
     this.collector.destroy();
+  }
+}
+
+/**
+ * Silo 5: The Eye - Observation & Consistency Probe
+ * Verifies that the internal system state matches reported metrics
+ * and that no signal drift has occurred between backend and dashboard.
+ */
+export class ConsistencyProbe {
+  private base: BaseMemoryProvider;
+
+  constructor(base: BaseMemoryProvider) {
+    this.base = base;
+  }
+
+  /**
+   * Run a consistency check for a specific agent's traces.
+   * Compares raw trace counts in DynamoDB with the aggregated metrics.
+   */
+  async verifyTraceConsistency(
+    agentId: string,
+    windowStart: number,
+    windowEnd: number
+  ): Promise<{
+    consistent: boolean;
+    drift: number;
+    details: string;
+  }> {
+    // 1. Get raw task completions from metrics table
+    const items = await this.base.queryItems({
+      KeyConditionExpression: 'userId = :pk AND #ts BETWEEN :start AND :end',
+      FilterExpression: 'metricName = :name',
+      ExpressionAttributeNames: { '#ts': 'timestamp' },
+      ExpressionAttributeValues: {
+        ':pk': `${MEMORY_KEYS.HEALTH_PREFIX}METRIC#${agentId}`,
+        ':start': windowStart,
+        ':end': windowEnd,
+        ':name': 'task_completed',
+      },
+    });
+
+    const metricsCount = items.length;
+
+    // 2. Cross-reference with Tracer (if integrated)
+    // For now, we compare against expected counts from the Dashboard intelligence service
+    // (mocked or inferred from other event stores if available)
+
+    // Gap: Tracer integration for Silo 5 probe is a future milestone.
+    // We currently verify that task_completed and task_latency_ms are pairwise consistent.
+    const latencyItems = await this.base.queryItems({
+      KeyConditionExpression: 'userId = :pk AND #ts BETWEEN :start AND :end',
+      FilterExpression: 'metricName = :name',
+      ExpressionAttributeNames: { '#ts': 'timestamp' },
+      ExpressionAttributeValues: {
+        ':pk': `${MEMORY_KEYS.HEALTH_PREFIX}METRIC#${agentId}`,
+        ':start': windowStart,
+        ':end': windowEnd,
+        ':name': 'task_latency_ms',
+      },
+    });
+
+    const latencyCount = latencyItems.length;
+    const drift = Math.abs(metricsCount - latencyCount);
+
+    return {
+      consistent: drift === 0,
+      drift,
+      details:
+        metricsCount === latencyCount
+          ? `Backend signals are consistent (${metricsCount} events).`
+          : `Divergence detected: ${metricsCount} task completions vs ${latencyCount} latency records. Potential signal loss in metrics pipeline.`,
+    };
+  }
+
+  /**
+   * Static helper for quick drift detection (default: last 1 hour).
+   */
+  static async detectDrift(agentId: string, memory?: BaseMemoryProvider): Promise<boolean> {
+    const provider = memory ?? new DynamoMemory();
+    const probe = new ConsistencyProbe(provider as any);
+    const now = Date.now();
+    const result = await probe.verifyTraceConsistency(agentId, now - 3600000, now);
+
+    if (!result.consistent) {
+      logger.warn(`[Silo 5] Signal drift detected for agent ${agentId}: ${result.details}`);
+    }
+
+    return !result.consistent;
   }
 }

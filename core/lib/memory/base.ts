@@ -164,11 +164,16 @@ export class BaseMemoryProvider {
    * Note: This is a Scan operation, use sparingly on large tables.
    *
    * @param prefix - The prefix to search for in the userId field.
+   * @param options - Optional scan parameters like limit.
    * @returns A promise resolving to an array of items.
    */
-  public async scanByPrefix(prefix: string): Promise<Record<string, unknown>[]> {
+  public async scanByPrefix(
+    prefix: string,
+    options?: { limit?: number }
+  ): Promise<Record<string, unknown>[]> {
     const items: Record<string, unknown>[] = [];
     let lastEvaluatedKey: Record<string, unknown> | undefined = undefined;
+    const limit = options?.limit;
 
     try {
       do {
@@ -179,6 +184,7 @@ export class BaseMemoryProvider {
             ':prefix': prefix,
           },
           ExclusiveStartKey: lastEvaluatedKey,
+          Limit: limit,
         } as import('@aws-sdk/lib-dynamodb').ScanCommandInput);
 
         const scanResponse = (await this.docClient.send(
@@ -187,6 +193,8 @@ export class BaseMemoryProvider {
         if (scanResponse.Items && scanResponse.Items.length > 0) {
           items.push(...(scanResponse.Items as Record<string, unknown>[]));
         }
+
+        if (limit && items.length >= limit) break;
         lastEvaluatedKey = scanResponse.LastEvaluatedKey;
       } while (lastEvaluatedKey);
 

@@ -81,6 +81,31 @@ Each silo represents a core functional domain. Reviews within a silo should adop
 - **Angle**: Audit the journey of events through the asynchronous backbone. Look for "dead ends," race conditions in the distributed lock, and the effectiveness of **Conflict Resolution Timeouts** during agent handoffs.
 - **Key Concepts**: Event routing, recursion limits, strategic tie-break logic, and adapter normalization (Telegram/GitHub/Jira).
 
+#### 🩻 Spine Event Flow
+```text
+  [ EventBridge ]
+         |
+         v
+  [ Event Handler ] -- (Trace Context) --> [ Recursion Tracker ] -- (Atomic Push) --> [ MemoryTable ]
+         |                                                                           (depth check)
+         v
+  [ Agent Router ] -- (Selection Guard) --> [ Agent Registry ]
+         |                                   (check config.enabled)
+         v
+  [ Lock Manager ] -- (Cond. Update) --> [ MemoryTable ]
+         |                                (userId: LOCK#<id>)
+         v
+  [ Agent Executor ] -- (Action) --> [ Unified MCP Multiplexer ]
+         |
+         v
+  [ Lock Manager ] -- (Relaxed Release) --> [ MemoryTable ]
+```
+
+- **Verification Methods**:
+  - **Atomic Recursion Check**: Verify that `RECURSION_ENTRY` updates use monotonic depth guards (`depth < :newDepth`) to prevent loop bypass.
+  - **Selection Integrity**: Assert that `selectBestAgent` filters out candidates with `enabled: false` regardless of reputation scores.
+  - **Dead-End Discovery**: Scan `event-routing.ts` for unhandled or explicitly excluded agent task events that lack multiplexer subscriptions.
+
 ### 2. The Hand (Agency & Skill Mastery)
 
 **Perspective**: _How effectively can the system manipulate its environment?_
@@ -107,15 +132,41 @@ Each silo represents a core functional domain. Reviews within a silo should adop
 
 **Perspective**: _Does the system's internal trace state match what is reported to the user?_
 
-- **Angle**: Audit the consistency between backend trace state and the Dashboard's Trace Intelligence. Ensure that "truth" matches backend state and that no signal is lost between internal execution and external reporting.
-- **Key Concepts**: Trace consistency, Real-time sync, Dashboard accuracy, Observability SLOs.
+- **Angle**: Audit the consistency between backend trace state and the Dashboard's Trace Intelligence. Ensure that "truth" matches backend state and that no signal is lost between internal execution and external reporting. Utilize the **`ConsistencyProbe`** to detect drift between raw metrics (completion counts, latency) and dashboard events.
+- **Key Concepts**: Trace consistency, Real-time sync, Dashboard accuracy, Observability SLOs, **Metrics Integrity Probing**.
 
 ### 6. The Scales (Trust & Calibration)
 
 **Perspective**: _Is the system accurately penalizing failure and rewarding success?_
 
-- **Angle**: Audit the integrity of the feedback loop from observation to trust calibration. Review the **LLM-as-a-Judge** semantic evaluation layer to ensure it is impartial and that `TrustScore` calculations accurately reflect agent performance. Verify that failures (caught by QA or SLO breaches) correctly penalize the trust score.
-- **Key Concepts**: LLM-as-a-Judge impartiality, TrustScore penalties, Success rewards, Trust decay rates.
+- **Angle**: Audit the integrity of the feedback loop from observation to trust calibration. Review the **LLM-as-a-Judge** semantic evaluation layer to ensure it is impartial and that `TrustScore` calculations accurately reflect agent performance. Verify that failures (caught by QA or SLO breaches) and cognitive anomalies (reasoning loops, degradation detected by Silo 5) correctly penalize the trust score. Ensure success bumps are weighted by quality scores. **Technical Integrity**: Verify that trust updates utilize the **Atomic Field Pattern** to prevent race conditions during concurrent agent activity.
+- **Key Concepts**: LLM-as-a-Judge impartiality, TrustScore penalties, Success rewards, Trust decay rates, **Atomic State Integrity**, **Batched Anomaly Reporting**.
+
+#### 🔄 Trust Anomaly Feedback Loop
+
+```text
+ [ Silo 5: The Eye ]           [ Silo 6: The Scales ]
+         |                            ^
+ (Anomaly Detected)                   |
+         |                            |
+         v                            |
+ [ DegradationDetector ]              |
+         |                            |
+  (Batch Anomalies)                   |
+         |                            |
+         v                            |
+ [ CognitiveHealthMonitor ]           |
+         |                            |
+   (AwaitForBatch)                    |
+         |                            |
+         v                            |
+ [ TrustManager ] --------------------+
+         |
+  (Atomic Update)
+         |
+         v
+ [ AgentRegistry (DDB) ]
+```
 
 ### 7. The Metabolism (Bloat & Debt)
 

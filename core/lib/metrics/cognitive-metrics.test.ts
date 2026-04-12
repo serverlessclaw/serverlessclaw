@@ -18,6 +18,43 @@ vi.mock('../logger', () => ({
   },
 }));
 
+// Mock TrustManager
+vi.mock('../safety/trust-manager', () => ({
+  TrustManager: {
+    recordAnomalies: vi.fn().mockResolvedValue(100),
+    recordSuccess: vi.fn().mockResolvedValue(100),
+    recordFailure: vi.fn().mockResolvedValue(100),
+  },
+}));
+
+// Mock SafetyConfigManager
+vi.mock('../safety/safety-config-manager', () => ({
+  SafetyConfigManager: {
+    getPolicy: vi.fn().mockResolvedValue({
+      cognitiveThresholds: {
+        minCompletionRate: 0.7,
+        maxErrorRate: 0.3,
+        minCoherence: 5.0,
+        maxMissRate: 0.5,
+        maxAvgLatencyMs: 15000,
+        maxPivotRate: 0.2,
+        minSampleTasks: 10,
+      },
+    }),
+  },
+}));
+
+// Mock AgentRegistry
+vi.mock('../registry/AgentRegistry', () => ({
+  AgentRegistry: {
+    getAgentConfig: vi.fn().mockResolvedValue({
+      id: 'agent-1',
+      safetyTier: 'local',
+    }),
+    atomicUpdateAgentField: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
 // Mock constants
 vi.mock('./constants', () => ({
   MEMORY_KEYS: {
@@ -255,16 +292,16 @@ describe('DegradationDetector', () => {
     ...overrides,
   });
 
-  it('should return no anomalies for healthy metrics', () => {
+  it('should return no anomalies for healthy metrics', async () => {
     const metrics = createMetrics();
-    const anomalies = detector.detectAnomalies('agent-1', metrics);
+    const anomalies = await detector.detectAnomalies('agent-1', metrics);
 
     expect(anomalies).toHaveLength(0);
   });
 
-  it('should detect task failure spike when completion rate drops below threshold', () => {
+  it('should detect task failure spike when completion rate drops below threshold', async () => {
     const metrics = createMetrics({ taskCompletionRate: 0.6 });
-    const anomalies = detector.detectAnomalies('agent-1', metrics);
+    const anomalies = await detector.detectAnomalies('agent-1', metrics);
 
     expect(anomalies).toHaveLength(1);
     expect(anomalies[0].type).toBe(AnomalyType.TASK_FAILURE_SPIKE);
@@ -272,16 +309,19 @@ describe('DegradationDetector', () => {
     expect(anomalies[0].description).toContain('60.0%');
   });
 
-  it('should escalate task failure to CRITICAL when completion rate below 50%', () => {
-    const metrics = createMetrics({ taskCompletionRate: 0.4 });
-    const anomalies = detector.detectAnomalies('agent-1', metrics);
+  it('should escalate task failure to CRITICAL when completion rate below 50% of threshold', async () => {
+    // Sh5: thresholds.minCompletionRate is 0.7.
+    // Severity becomes CRITICAL if < thresholds.minCompletionRate / 2 (0.35)
+    // Actually the code says: metrics.taskCompletionRate < (thresholds.minCompletionRate / 2)
+    const metrics = createMetrics({ taskCompletionRate: 0.3 });
+    const anomalies = await detector.detectAnomalies('agent-1', metrics);
 
     expect(anomalies[0].severity).toBe(AnomalySeverity.CRITICAL);
   });
 
-  it('should detect elevated error rate', () => {
+  it('should detect elevated error rate', async () => {
     const metrics = createMetrics({ errorRate: 0.35 });
-    const anomalies = detector.detectAnomalies('agent-1', metrics);
+    const anomalies = await detector.detectAnomalies('agent-1', metrics);
 
     const errorAnomaly = anomalies.find((a) => a.type === AnomalyType.TASK_FAILURE_SPIKE);
     expect(errorAnomaly).toBeDefined();
@@ -289,17 +329,18 @@ describe('DegradationDetector', () => {
     expect(errorAnomaly!.description).toContain('35.0%');
   });
 
-  it('should escalate error rate to CRITICAL when above 50%', () => {
-    const metrics = createMetrics({ errorRate: 0.55 });
-    const anomalies = detector.detectAnomalies('agent-1', metrics);
+  it('should escalate error rate to CRITICAL when above 2x threshold', async () => {
+    // thresholds.maxErrorRate is 0.3. 2x is 0.6.
+    const metrics = createMetrics({ errorRate: 0.65 });
+    const anomalies = await detector.detectAnomalies('agent-1', metrics);
 
     const errorAnomaly = anomalies.find((a) => a.description.includes('Error rate'));
     expect(errorAnomaly?.severity).toBe(AnomalySeverity.CRITICAL);
   });
 
-  it('should detect reasoning degradation', () => {
+  it('should detect reasoning degradation', async () => {
     const metrics = createMetrics({ reasoningCoherence: 4.5 });
-    const anomalies = detector.detectAnomalies('agent-1', metrics);
+    const anomalies = await detector.detectAnomalies('agent-1', metrics);
 
     const reasoningAnomaly = anomalies.find((a) => a.type === AnomalyType.REASONING_DEGRADATION);
     expect(reasoningAnomaly).toBeDefined();
@@ -307,17 +348,18 @@ describe('DegradationDetector', () => {
     expect(reasoningAnomaly!.description).toContain('4.5/10');
   });
 
-  it('should escalate reasoning degradation to CRITICAL when coherence below 3', () => {
-    const metrics = createMetrics({ reasoningCoherence: 2.5 });
-    const anomalies = detector.detectAnomalies('agent-1', metrics);
+  it('should escalate reasoning degradation to CRITICAL when coherence below 50% of threshold', async () => {
+    // thresholds.minCoherence is 5.0. 50% is 2.5
+    const metrics = createMetrics({ reasoningCoherence: 2.0 });
+    const anomalies = await detector.detectAnomalies('agent-1', metrics);
 
     const reasoningAnomaly = anomalies.find((a) => a.type === AnomalyType.REASONING_DEGRADATION);
     expect(reasoningAnomaly?.severity).toBe(AnomalySeverity.CRITICAL);
   });
 
-  it('should detect memory miss rate anomaly', () => {
+  it('should detect memory miss rate anomaly', async () => {
     const metrics = createMetrics({ memoryMissRate: 0.6 });
-    const anomalies = detector.detectAnomalies('agent-1', metrics);
+    const anomalies = await detector.detectAnomalies('agent-1', metrics);
 
     const memoryAnomaly = anomalies.find((a) => a.type === AnomalyType.MEMORY_MISS);
     expect(memoryAnomaly).toBeDefined();
@@ -325,34 +367,35 @@ describe('DegradationDetector', () => {
     expect(memoryAnomaly!.description).toContain('Memory miss rate');
   });
 
-  it('should escalate memory miss rate anomaly to HIGH when above 80%', () => {
-    const metrics = createMetrics({ memoryMissRate: 0.85 });
-    const anomalies = detector.detectAnomalies('agent-1', metrics);
+  it('should escalate memory miss rate anomaly to HIGH when above 1.5x threshold', async () => {
+    // thresholds.maxMissRate is 0.5. 1.5x is 0.75
+    const metrics = createMetrics({ memoryMissRate: 0.8 });
+    const anomalies = await detector.detectAnomalies('agent-1', metrics);
 
     const memoryAnomaly = anomalies.find((a) => a.type === AnomalyType.MEMORY_MISS);
     expect(memoryAnomaly?.severity).toBe(AnomalySeverity.HIGH);
   });
 
-  it('should detect token overuse when efficiency is low', () => {
+  it('should detect token overuse when efficiency is low', async () => {
     const metrics = createMetrics({ tokenEfficiency: 0.3, totalTasks: 50 });
-    const anomalies = detector.detectAnomalies('agent-1', metrics);
+    const anomalies = await detector.detectAnomalies('agent-1', metrics);
 
     const tokenAnomaly = anomalies.find((a) => a.type === AnomalyType.TOKEN_OVERUSE);
     expect(tokenAnomaly).toBeDefined();
     expect(tokenAnomaly!.severity).toBe(AnomalySeverity.MEDIUM);
   });
 
-  it('should not detect token overuse when totalTasks is less than minSampleTasks', () => {
+  it('should not detect token overuse when totalTasks is less than minSampleTasks', async () => {
     const metrics = createMetrics({ tokenEfficiency: 0.3, totalTasks: 5 });
-    const anomalies = detector.detectAnomalies('agent-1', metrics);
+    const anomalies = await detector.detectAnomalies('agent-1', metrics);
 
     const tokenAnomaly = anomalies.find((a) => a.type === AnomalyType.TOKEN_OVERUSE);
     expect(tokenAnomaly).toBeUndefined();
   });
 
-  it('should detect latency anomaly when avgTaskLatencyMs exceeds threshold', () => {
+  it('should detect latency anomaly when avgTaskLatencyMs exceeds threshold', async () => {
     const metrics = createMetrics({ avgTaskLatencyMs: 20000, totalTasks: 20 });
-    const anomalies = detector.detectAnomalies('agent-1', metrics);
+    const anomalies = await detector.detectAnomalies('agent-1', metrics);
 
     const latencyAnomaly = anomalies.find((a) => a.type === AnomalyType.LATENCY_ANOMALY);
     expect(latencyAnomaly).toBeDefined();
@@ -360,25 +403,25 @@ describe('DegradationDetector', () => {
     expect(latencyAnomaly!.description).toContain('20000ms');
   });
 
-  it('should escalate latency anomaly to HIGH when above 2x threshold', () => {
+  it('should escalate latency anomaly to HIGH when above 2x threshold', async () => {
     const metrics = createMetrics({ avgTaskLatencyMs: 40000, totalTasks: 20 });
-    const anomalies = detector.detectAnomalies('agent-1', metrics);
+    const anomalies = await detector.detectAnomalies('agent-1', metrics);
 
     const latencyAnomaly = anomalies.find((a) => a.type === AnomalyType.LATENCY_ANOMALY);
     expect(latencyAnomaly?.severity).toBe(AnomalySeverity.HIGH);
   });
 
-  it('should not detect latency anomaly when totalTasks is less than minSampleTasks', () => {
+  it('should not detect latency anomaly when totalTasks is less than minSampleTasks', async () => {
     const metrics = createMetrics({ avgTaskLatencyMs: 50000, totalTasks: 3 });
-    const anomalies = detector.detectAnomalies('agent-1', metrics);
+    const anomalies = await detector.detectAnomalies('agent-1', metrics);
 
     const latencyAnomaly = anomalies.find((a) => a.type === AnomalyType.LATENCY_ANOMALY);
     expect(latencyAnomaly).toBeUndefined();
   });
 
-  it('should detect cognitive loop when pivot rate exceeds threshold', () => {
+  it('should detect cognitive loop when pivot rate exceeds threshold', async () => {
     const metrics = createMetrics({ totalPivots: 6, totalTasks: 20 }); // pivot rate 0.3 > 0.2
-    const anomalies = detector.detectAnomalies('agent-1', metrics);
+    const anomalies = await detector.detectAnomalies('agent-1', metrics);
 
     const loopAnomaly = anomalies.find((a) => a.type === AnomalyType.COGNITIVE_LOOP);
     expect(loopAnomaly).toBeDefined();
@@ -386,30 +429,30 @@ describe('DegradationDetector', () => {
     expect(loopAnomaly!.description).toContain('30.0%');
   });
 
-  it('should escalate cognitive loop to CRITICAL when pivot rate above 1.5x threshold', () => {
+  it('should escalate cognitive loop to CRITICAL when pivot rate above 1.5x threshold', async () => {
     const metrics = createMetrics({ totalPivots: 8, totalTasks: 20 }); // pivot rate 0.4 > 0.3 (1.5 * 0.2)
-    const anomalies = detector.detectAnomalies('agent-1', metrics);
+    const anomalies = await detector.detectAnomalies('agent-1', metrics);
 
     const loopAnomaly = anomalies.find((a) => a.type === AnomalyType.COGNITIVE_LOOP);
     expect(loopAnomaly?.severity).toBe(AnomalySeverity.CRITICAL);
   });
 
-  it('should not detect cognitive loop when totalTasks is less than minSampleTasks', () => {
+  it('should not detect cognitive loop when totalTasks is less than minSampleTasks', async () => {
     const metrics = createMetrics({ totalPivots: 5, totalTasks: 5 });
-    const anomalies = detector.detectAnomalies('agent-1', metrics);
+    const anomalies = await detector.detectAnomalies('agent-1', metrics);
 
     const loopAnomaly = anomalies.find((a) => a.type === AnomalyType.COGNITIVE_LOOP);
     expect(loopAnomaly).toBeUndefined();
   });
 
-  it('should detect multiple anomalies simultaneously', () => {
+  it('should detect multiple anomalies simultaneously', async () => {
     const metrics = createMetrics({
-      taskCompletionRate: 0.4,
-      errorRate: 0.6,
+      taskCompletionRate: 0.3,
+      errorRate: 0.7,
       reasoningCoherence: 2.0,
       memoryMissRate: 0.85,
     });
-    const anomalies = detector.detectAnomalies('agent-1', metrics);
+    const anomalies = await detector.detectAnomalies('agent-1', metrics);
 
     expect(anomalies.length).toBeGreaterThanOrEqual(4);
     const types = new Set(anomalies.map((a) => a.type));
@@ -418,9 +461,9 @@ describe('DegradationDetector', () => {
     expect(types.has(AnomalyType.MEMORY_MISS)).toBe(true);
   });
 
-  it('should include trigger metrics and suggestions in anomalies', () => {
+  it('should include trigger metrics and suggestions in anomalies', async () => {
     const metrics = createMetrics({ taskCompletionRate: 0.6 });
-    const anomalies = detector.detectAnomalies('agent-1', metrics);
+    const anomalies = await detector.detectAnomalies('agent-1', metrics);
 
     expect(anomalies[0].triggerMetrics).toHaveProperty('taskCompletionRate', 0.6);
     expect(anomalies[0].suggestion).toBeDefined();
@@ -606,7 +649,7 @@ describe('CognitiveHealthMonitor', () => {
     expect(mockBase.queryItems).toHaveBeenCalledTimes(agents.length);
   });
 
-  it('should cap anomalies at 100', async () => {
+  it('should cap anomalies at 1000', async () => {
     // Generate many snapshots to accumulate anomalies
     mockBase.queryItems.mockResolvedValue([{ metricName: 'task_completed', value: 0 }]);
 
@@ -614,8 +657,44 @@ describe('CognitiveHealthMonitor', () => {
       await monitor.takeSnapshot(['agent-1']);
     }
 
-    const anomalies = monitor.getRecentAnomalies(200);
-    expect(anomalies.length).toBeLessThanOrEqual(100);
+    const anomalies = monitor.getRecentAnomalies(2000);
+    expect(anomalies.length).toBeLessThanOrEqual(1000);
+  });
+
+  it('should report detected anomalies to TrustManager in batch [Sh6]', async () => {
+    const { TrustManager } = await import('../safety/trust-manager');
+
+    // Simulate metrics that trigger an anomaly
+    mockBase.queryItems.mockResolvedValue([
+      { metricName: 'task_completed', value: 0 },
+      { metricName: 'task_completed', value: 0 },
+    ]);
+
+    await monitor.takeSnapshot(['agent-1']);
+
+    expect(TrustManager.recordAnomalies).toHaveBeenCalledWith(
+      'agent-1',
+      expect.arrayContaining([
+        expect.objectContaining({
+          agentId: 'agent-1',
+          type: expect.any(String),
+        }),
+      ])
+    );
+  });
+
+  it('should detect signal drift via ConsistencyProbe [Sh5]', async () => {
+    const { ConsistencyProbe } = await import('./cognitive-metrics');
+    const probe = new ConsistencyProbe(mockBase as any);
+
+    // Scenario: Backend has 10 task completions, but Dashboard only has 5 events
+    mockBase.queryItems
+      .mockResolvedValueOnce(new Array(10).fill({ metricName: 'task_completed' })) // task_completed
+      .mockResolvedValueOnce(new Array(5).fill({ metricName: 'task_latency_ms' })); // task_latency_ms (Drift!)
+
+    const result = await probe.verifyTraceConsistency('agent-1', Date.now() - 3600000, Date.now());
+    expect(result.consistent).toBe(false);
+    expect(result.drift).toBe(5);
   });
 });
 

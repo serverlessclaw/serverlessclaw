@@ -45,7 +45,7 @@ The system monitors its own "state of mind" to detect degradation or hallucinati
 
 - **Completion Rate**: Tracks the ratio of successful vs. failed missions.
 - **Reasoning Coherence**: Agents score each other's reasoning quality.
-- **Anomaly Detection**: Triggers alerts if the failure rate spikes or token efficiency drops.
+- **Anomaly Detection**: Triggers alerts if the failure rate spikes or token efficiency drops. Thresholds for loops, latency, and frequency are **dynamically resolved** based on the agent's `SafetyTier` (LOCAL vs. PROD) via the `SafetyConfigManager`.
 
 ---
 

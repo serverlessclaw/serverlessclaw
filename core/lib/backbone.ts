@@ -9,7 +9,7 @@ import {
   SafetyTier,
   EvolutionMode,
 } from './types/index';
-import { TOOLS, UNIVERSAL_SYSTEM_TOOLS } from './constants';
+import { TOOLS, UNIVERSAL_SYSTEM_TOOLS } from './constants/tools';
 import {
   SUPERCLAW_SYSTEM_PROMPT,
   CODER_SYSTEM_PROMPT,

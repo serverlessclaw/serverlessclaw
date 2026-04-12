@@ -11,16 +11,22 @@ import { ConfigManager, defaultDocClient } from './config';
  * It combines hardcoded backbone agents with user-defined agents from DynamoDB.
  */
 export class AgentRegistry {
-  private static backboneConfigs: Record<string, IAgentConfig> = BACKBONE_REGISTRY;
+  private static _backboneConfigs: Record<string, IAgentConfig> | null = null;
+  private static _essentialTools: string[] | null = null;
 
-  private static ESSENTIAL_SYSTEM_TOOLS = [...UNIVERSAL_SYSTEM_TOOLS, TOOLS.dispatchTask];
+  private static get backboneConfigs(): Record<string, IAgentConfig> {
+    if (!this._backboneConfigs) {
+      this._backboneConfigs = BACKBONE_REGISTRY;
+    }
+    return this._backboneConfigs;
+  }
 
-  private static DEFAULT_AGENT_TOOLS = [...AgentRegistry.ESSENTIAL_SYSTEM_TOOLS, TOOLS.listAgents];
-
-  private static DISCOVERY_BOOTLOADER_TOOLS = [
-    ...AgentRegistry.ESSENTIAL_SYSTEM_TOOLS,
-    TOOLS.listAgents,
-  ];
+  private static get essentialTools(): string[] {
+    if (!this._essentialTools) {
+      this._essentialTools = [...UNIVERSAL_SYSTEM_TOOLS, TOOLS.dispatchTask];
+    }
+    return this._essentialTools;
+  }
 
   /**
    * Delegates raw config operations to ConfigManager.
@@ -121,8 +127,14 @@ export class AgentRegistry {
         : [];
     const activePerAgent = Array.isArray(perAgentOverrides) ? filterActive(perAgentOverrides) : [];
 
+    // Batch overrides take precedence - exclude per-agent tools that duplicate batch tools
+    const batchToolNames = new Set(activeBatch.map((t) => (typeof t === 'string' ? t : t.name)));
+    const filteredPerAgent = activePerAgent.filter(
+      (t) => !batchToolNames.has(typeof t === 'string' ? t : t.name)
+    );
+
     activeOverrides.push(...activeBatch.map((t) => (typeof t === 'string' ? t : t.name)));
-    activeOverrides.push(...activePerAgent.map((t) => (typeof t === 'string' ? t : t.name)));
+    activeOverrides.push(...filteredPerAgent.map((t) => (typeof t === 'string' ? t : t.name)));
 
     if (prunedCount > 0) {
       logger.info(`[REGISTRY] Pruned ${prunedCount} expired tools for agent ${id}`);
@@ -154,18 +166,17 @@ export class AgentRegistry {
       config.tools = Array.from(
         new Set([
           ...activeOverrides,
-          ...(this.backboneConfigs[id]?.tools ??
-            (AgentRegistry.ESSENTIAL_SYSTEM_TOOLS as string[])),
+          ...(this.backboneConfigs[id]?.tools ?? (AgentRegistry.essentialTools as string[])),
         ])
       );
     } else {
       config.tools = Array.from(
-        new Set([...(config.tools ?? []), ...AgentRegistry.ESSENTIAL_SYSTEM_TOOLS])
+        new Set([...(config.tools ?? []), ...AgentRegistry.essentialTools])
       );
     }
 
     if (!config.tools || config.tools.length === 0)
-      config.tools = [...AgentRegistry.DEFAULT_AGENT_TOOLS];
+      config.tools = [...AgentRegistry.essentialTools, TOOLS.listAgents];
 
     return config;
   }
@@ -347,6 +358,44 @@ export class AgentRegistry {
       } catch (e) {
         logger.debug(`[REGISTRY] Failed to initialize stats for ${toolName}: ${e}`);
       }
+    }
+  }
+  /**
+   * Atomically updates a specific field for an agent in the AGENTS_CONFIG map.
+   * This avoids race conditions where parallel updates to different agents would
+   * overwrite each other.
+   *
+   * @param id - The unique agent identifier.
+   * @param field - The field name to update (e.g., 'trustScore').
+   * @param value - The new value for the field.
+   */
+  static async atomicUpdateAgentField(id: string, field: string, value: unknown): Promise<void> {
+    const resource = (await import('sst')).Resource as { ConfigTable?: { name: string } };
+    if (!resource.ConfigTable?.name) {
+      logger.warn(`ConfigTable not linked. Skipping atomic update for ${id}`);
+      return;
+    }
+
+    const { UpdateCommand } = await import('@aws-sdk/lib-dynamodb');
+    try {
+      await defaultDocClient.send(
+        new UpdateCommand({
+          TableName: resource.ConfigTable.name,
+          Key: { key: DYNAMO_KEYS.AGENTS_CONFIG },
+          UpdateExpression: 'SET #val.#id.#field = :value',
+          ExpressionAttributeNames: {
+            '#val': 'value',
+            '#id': id,
+            '#field': field,
+          },
+          ExpressionAttributeValues: { ':value': value },
+        })
+      );
+    } catch (e: unknown) {
+      // If the agent doesn't exist in the dynamic registry, we can't update its field atomically
+      // in the AGENTS_CONFIG map easily without first ensuring the agent entry exists.
+      logger.error(`Failed to atomically update ${field} for agent ${id}:`, e);
+      throw e;
     }
   }
 }

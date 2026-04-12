@@ -231,6 +231,43 @@ Since multiple agents may attempt to write to the same session simultaneously, t
 - **Participant Registry**: The `Collaboration` metadata record is protected via conditional updates (`attribute_not_exists` or `version` checks), ensuring that participant management and status changes are thread-safe.
 - **Turn-Taking**: While the storage is concurrent-safe, agents follow a turn-taking pattern guided by the `Owner` of the session to prevent infinite loops and ensure high-signal coordination.
 
+## ⚙️ Agent Configuration Atomicity
+
+Traditional configuration management risks "Last Write Wins" race conditions where one agent's update (e.g., a trust score penalty) is overwritten by another's simultaneous change (e.g., a success bump). 
+
+Serverless Claw enforces atomicity through **Field-Level `UpdateItem` Operations**:
+
+### Implementation Pattern
+
+Instead of reading a full `IAgentConfig` object, modifying it locally, and saving it back, the system uses the **`atomicUpdateAgentField`** pattern:
+
+```typescript
+// core/lib/registry/AgentRegistry.ts
+static async atomicUpdateAgentField(agentId: string, field: string, value: any) {
+  // Uses DynamoDB UpdateCommand with a SET expression targeting the AGENTS_CONFIG map
+  // Key: agents_config, UpdateExpression: "SET #config.#agent.#field = :val"
+}
+```
+
+### Benefits
+- **No Conflict Resolution Needed**: Concurrent updates to different agents, or even different fields of the same agent, are handled natively by DynamoDB.
+- **Improved Performance**: Smaller payload sizes (only the field/value being updated) reduce throughput consumption and latency.
+- **Consistent Trust History**: Ensures that every `TrustScore` modification is accurately recorded even during high-frequency maintenance cycles (e.g., Trust Decay).
+
+## 🪢 Cross-Session Recursion Safety
+
+In a distributed swarm, preventing infinite loops requires more than a local counter. Serverless Claw uses an atomic **Recursion Tracker** to enforce safety across long-lived trace chains:
+
+- **Atomic Increments**: Depth is updated via DynamoDB `UpdateItem` with a `ConditionExpression: "depth < :newDepth"`. This ensures that even if concurrent branches of a swarm attempt to "reset" the depth, only the deepest record persists. (See [recursion-tracker.ts](../../core/lib/recursion-tracker.ts))
+- **Fail-Fast**: Any agent found at a depth exceeding `backbone.maxIterations` must immediately emit a `TASK_FAILED` event with `LOOP_TERMINATION` reason.
+
+## 🔓 Relaxed Lock Cleanup
+
+To maintain environment hygiene without risking race conditions, the system follows a **Relaxed Release** pattern in the `LockManager`:
+
+- **Ownership Over Expiry**: An owner is permitted to release a lock `ConditionExpression: "ownerId = :owner"` regardless of whether the lock has already expired. 
+- **Metadata Hygiene**: This allows processes that finish *exactly* as a wall-clock timeout occurs to still clean up their lock metadata, ensuring that audit logs and telemetry remain clear for the next execution cycle.
+
 ## Comparison: Lock vs Queue vs Parallel
 
 | Parameter                 | Default         | Description                       |

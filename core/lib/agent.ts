@@ -134,7 +134,7 @@ export class Agent {
       : userId;
 
     const { isHumanTakingControl } = await import('./handoff');
-    if (!ignoreHandoff && (await isHumanTakingControl(baseUserId))) {
+    if (!ignoreHandoff && (await isHumanTakingControl(baseUserId, sessionId))) {
       logger.info(`[Agent] Human control active for ${baseUserId}, entering OBSERVE mode.`);
       const responseText = 'HUMAN_TAKING_CONTROL: Entering observe mode.';
       await tracer.endTrace(responseText);
@@ -412,7 +412,7 @@ export class Agent {
       : userId;
 
     const { isHumanTakingControl } = await import('./handoff');
-    if (!ignoreHandoff && (await isHumanTakingControl(baseUserId))) {
+    if (!ignoreHandoff && (await isHumanTakingControl(baseUserId, sessionId))) {
       logger.info(`[Agent] Human control active for ${baseUserId}, entering OBSERVE mode.`);
       yield { content: 'HUMAN_TAKING_CONTROL: Entering observe mode.' };
       await tracer.endTrace('HUMAN_TAKING_CONTROL');

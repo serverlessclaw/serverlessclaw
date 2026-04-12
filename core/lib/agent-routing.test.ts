@@ -10,6 +10,17 @@ vi.mock('./logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
+vi.mock('./registry/AgentRegistry', () => ({
+  AgentRegistry: {
+    getAgentConfig: vi.fn().mockImplementation((id: string) =>
+      Promise.resolve({
+        id,
+        enabled: true,
+      })
+    ),
+  },
+}));
+
 import { AgentRouter } from './routing/AgentRouter';
 import { TokenTracker } from './metrics/token-usage';
 

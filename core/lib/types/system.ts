@@ -120,6 +120,8 @@ export interface Topology {
   nodes: TopologyNode[];
   /** All identified relationships between nodes. */
   edges: TopologyEdge[];
+  /** Indicates if the topology discovery had errors (edges may be incomplete). */
+  incomplete?: boolean;
 }
 
 /**

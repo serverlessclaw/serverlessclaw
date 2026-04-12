@@ -1,14 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TrustManager } from './trust-manager';
-import { AgentRegistry } from '../registry';
 import { DYNAMO_KEYS } from '../constants';
 
-vi.mock('../registry', () => ({
-  AgentRegistry: {
+const { mockAgentRegistry } = vi.hoisted(() => ({
+  mockAgentRegistry: {
     getRawConfig: vi.fn(),
     saveRawConfig: vi.fn().mockResolvedValue(undefined),
     getAgentConfig: vi.fn(),
+    atomicUpdateAgentField: vi.fn().mockResolvedValue(undefined),
   },
+}));
+
+vi.mock('../registry', () => ({
+  AgentRegistry: mockAgentRegistry,
 }));
 
 vi.mock('../logger', () => ({
@@ -27,90 +31,132 @@ vi.mock('../utils/bus', () => ({
 describe('TrustManager', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAgentRegistry.getRawConfig.mockResolvedValue([]);
+    mockAgentRegistry.getAgentConfig.mockResolvedValue(undefined);
+    mockAgentRegistry.saveRawConfig.mockResolvedValue(undefined);
+    mockAgentRegistry.atomicUpdateAgentField.mockResolvedValue(undefined);
   });
 
   describe('updateTrustScore', () => {
     it('penalizes an agent and caps at MIN_SCORE', async () => {
-      const mockConfigs = {
-        'test-agent': { id: 'test-agent', trustScore: 10 },
-      };
-      vi.mocked(AgentRegistry.getRawConfig).mockResolvedValueOnce(mockConfigs);
-      vi.mocked(AgentRegistry.getRawConfig).mockResolvedValueOnce([]); // history
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
+        id: 'test-agent',
+        name: 'Test',
+        trustScore: 10,
+        enabled: true,
+        systemPrompt: '',
+      });
 
       const newScore = await TrustManager.recordFailure('test-agent', 'Test Failure', 3); // -5 * 3 = -15
 
       expect(newScore).toBe(0); // 10 - 15 -> 0
-      expect(AgentRegistry.saveRawConfig).toHaveBeenCalledWith(
-        DYNAMO_KEYS.AGENTS_CONFIG,
-        expect.objectContaining({
-          'test-agent': expect.objectContaining({ trustScore: 0 }),
-        }),
-        expect.anything()
+      expect(mockAgentRegistry.atomicUpdateAgentField).toHaveBeenCalledWith(
+        'test-agent',
+        'trustScore',
+        0
       );
     });
 
     it('increments an agent and caps at MAX_SCORE', async () => {
-      const mockConfigs = {
-        'test-agent': { id: 'test-agent', trustScore: 99 },
-      };
-      vi.mocked(AgentRegistry.getRawConfig).mockResolvedValueOnce(mockConfigs);
-      vi.mocked(AgentRegistry.getRawConfig).mockResolvedValueOnce([]); // history
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
+        id: 'test-agent',
+        name: 'Test',
+        trustScore: 99,
+        enabled: true,
+        systemPrompt: '',
+      });
 
       const newScore = await TrustManager.recordSuccess('test-agent');
 
       expect(newScore).toBe(100); // 99 + 1 -> 100
+      expect(mockAgentRegistry.atomicUpdateAgentField).toHaveBeenCalledWith(
+        'test-agent',
+        'trustScore',
+        100
+      );
     });
 
-    it('falls back to backbone defaults if no override exists', async () => {
-      vi.mocked(AgentRegistry.getRawConfig).mockResolvedValueOnce({}); // no overrides
-      vi.mocked(AgentRegistry.getAgentConfig).mockResolvedValueOnce({
-        id: 'backbone-agent',
-        name: 'Backbone',
-        trustScore: 80,
+    it('applies quality weighting to success bumps', async () => {
+      const getConfig = () => ({
+        id: 'test-agent',
+        name: 'Test',
+        trustScore: 50,
         enabled: true,
         systemPrompt: '',
       });
-      vi.mocked(AgentRegistry.getRawConfig).mockResolvedValueOnce([]); // history
 
-      const newScore = await TrustManager.recordFailure('backbone-agent', 'First Failure');
+      // High quality (10/10) -> 1.33x bump
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce(getConfig());
+      const highQualityScore = await TrustManager.recordSuccess('test-agent', 10);
+      expect(highQualityScore).toBeCloseTo(51.33, 1);
 
-      expect(newScore).toBe(75); // 80 - 5 = 75
+      // Low quality (5/10) -> 0.66x bump
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce(getConfig());
+      const lowQualityScore = await TrustManager.recordSuccess('test-agent', 5);
+      expect(lowQualityScore).toBeCloseTo(50.66, 1);
+    });
+
+    it('penalizes based on anomaly severity (batched)', async () => {
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
+        id: 'test-agent',
+        name: 'Test',
+        trustScore: 50,
+        enabled: true,
+        systemPrompt: '',
+      });
+      const { AnomalyType, AnomalySeverity } = await import('../types/metrics');
+
+      const criticalScore = await TrustManager.recordAnomalies('test-agent', [
+        {
+          id: 'a1',
+          type: AnomalyType.COGNITIVE_LOOP,
+          severity: AnomalySeverity.CRITICAL,
+          agentId: 'test-agent',
+          detectedAt: Date.now(),
+          description: 'Stuck in loop',
+          triggerMetrics: {},
+          suggestion: '',
+        },
+      ]);
+      expect(criticalScore).toBe(35); // 50 - 15 = 35
+      expect(mockAgentRegistry.atomicUpdateAgentField).toHaveBeenCalledWith(
+        'test-agent',
+        'trustScore',
+        35
+      );
     });
   });
 
   describe('history and logging', () => {
     it('persists score history and penalty log', async () => {
-      const mockConfigs = { 'agent-1': { trustScore: 50 } };
-      vi.mocked(AgentRegistry.getRawConfig).mockResolvedValueOnce(mockConfigs); // configs
-      vi.mocked(AgentRegistry.getRawConfig).mockResolvedValueOnce([]); // penalty log
-      vi.mocked(AgentRegistry.getRawConfig).mockResolvedValueOnce([]); // history
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
+        id: 'agent-1',
+        name: 'Agent 1',
+        trustScore: 50,
+        enabled: true,
+        systemPrompt: '',
+      });
+      mockAgentRegistry.getRawConfig.mockResolvedValue([]); // history
 
       await TrustManager.recordFailure('agent-1', 'Reason X');
 
-      // 1. Save AGENTS_CONFIG
-      // 2. Save history
-      // 3. Save penalty log
-      expect(AgentRegistry.saveRawConfig).toHaveBeenCalledWith(
-        DYNAMO_KEYS.AGENTS_CONFIG,
-        expect.anything(),
-        expect.anything()
+      expect(mockAgentRegistry.atomicUpdateAgentField).toHaveBeenCalledWith(
+        'agent-1',
+        'trustScore',
+        expect.any(Number)
       );
-      expect(AgentRegistry.saveRawConfig).toHaveBeenCalledWith(
-        DYNAMO_KEYS.TRUST_SCORE_HISTORY,
-        expect.anything(),
-        expect.anything()
-      );
-      expect(AgentRegistry.saveRawConfig).toHaveBeenCalledWith(
-        DYNAMO_KEYS.TRUST_PENALTY_LOG,
+
+      const agentHistoryKey = `${DYNAMO_KEYS.REPUTATION_PREFIX}HISTORY#agent-1`;
+      expect(mockAgentRegistry.saveRawConfig).toHaveBeenCalledWith(
+        agentHistoryKey,
         expect.anything(),
         expect.anything()
       );
 
-      const historyCall = vi
-        .mocked(AgentRegistry.saveRawConfig)
-        .mock.calls.find((c) => c[0] === DYNAMO_KEYS.TRUST_SCORE_HISTORY);
-      expect(historyCall?.[1]).toContainEqual(
-        expect.objectContaining({ agentId: 'agent-1', score: 45 })
+      expect(mockAgentRegistry.saveRawConfig).toHaveBeenCalledWith(
+        DYNAMO_KEYS.TRUST_PENALTY_LOG,
+        expect.anything(),
+        expect.anything()
       );
     });
   });
@@ -118,18 +164,33 @@ describe('TrustManager', () => {
   describe('decay', () => {
     it('applies decay to agents above baseline', async () => {
       const mockConfigs = {
-        'high-trust': { trustScore: 90 },
-        'low-trust': { trustScore: 70 },
-        'mid-trust': { trustScore: 70.2 },
+        'high-trust': { id: 'high-trust', trustScore: 90 },
+        'low-trust': { id: 'low-trust', trustScore: 70 },
+        'mid-trust': { id: 'mid-trust', trustScore: 70.2 },
       };
-      vi.mocked(AgentRegistry.getRawConfig).mockResolvedValueOnce(mockConfigs);
+
+      mockAgentRegistry.getRawConfig.mockImplementation(async (key) => {
+        if (key === DYNAMO_KEYS.AGENTS_CONFIG) return mockConfigs;
+        return [];
+      });
 
       await TrustManager.decayTrustScores();
 
-      const saveCall = vi.mocked(AgentRegistry.saveRawConfig).mock.calls[0][1] as any;
-      expect(saveCall['high-trust'].trustScore).toBe(89.5);
-      expect(saveCall['low-trust'].trustScore).toBe(70);
-      expect(saveCall['mid-trust'].trustScore).toBe(70);
+      expect(mockAgentRegistry.atomicUpdateAgentField).toHaveBeenCalledWith(
+        'high-trust',
+        'trustScore',
+        89.5
+      );
+      expect(mockAgentRegistry.atomicUpdateAgentField).not.toHaveBeenCalledWith(
+        'low-trust',
+        'trustScore',
+        expect.anything()
+      );
+      expect(mockAgentRegistry.atomicUpdateAgentField).toHaveBeenCalledWith(
+        'mid-trust',
+        'trustScore',
+        70
+      );
     });
   });
 });

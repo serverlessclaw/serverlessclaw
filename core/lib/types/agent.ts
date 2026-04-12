@@ -539,6 +539,16 @@ export interface SafetyPolicy {
   maxShellCommandsPerHour?: number;
   /** Maximum file writes per hour. */
   maxFileWritesPerHour?: number;
+  /** Cognitive metric thresholds for anomaly detection. */
+  cognitiveThresholds?: {
+    minCompletionRate?: number;
+    maxErrorRate?: number;
+    minCoherence?: number;
+    maxMissRate?: number;
+    maxAvgLatencyMs?: number;
+    maxPivotRate?: number;
+    minSampleTasks?: number;
+  };
   /** Time-based restrictions. */
   timeRestrictions?: TimeRestriction[];
 }

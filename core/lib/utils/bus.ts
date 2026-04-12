@@ -171,7 +171,7 @@ async function reserveIdempotencyKey(key: string): Promise<boolean> {
       return false;
     }
     logger.error(`Idempotency reservation failed for ${key}:`, error);
-    return true; // Proceed anyway if DDB is just down, to avoid blocking the event
+    return true; // Best-effort: proceed if DDB is down - better to have potential duplicate than total failure
   }
 }
 
@@ -211,18 +211,24 @@ async function storeInDLQ(
     errorCategory?: ErrorCategory;
     priority: EventPriority;
     correlationId?: string;
-  }
+  },
+  idempotencyKey?: string
 ): Promise<void> {
   try {
     const tableName = await getMemoryTableName();
     const now = Date.now();
     const expiresAt = Math.floor(now / 1000) + 86400; // 24 hours for DLQ
 
+    // Use deterministic key if provided, otherwise generate from event content
+    const dlqKey = idempotencyKey
+      ? `${DLQ_PREFIX}#${idempotencyKey}`
+      : `${DLQ_PREFIX}#${now}#${type.slice(0, 20)}`;
+
     await getDb().send(
       new PutCommand({
         TableName: tableName,
         Item: {
-          userId: `${DLQ_PREFIX}#${now}#${Math.random().toString(36).slice(2, 8)}`,
+          userId: dlqKey,
           timestamp: now,
           type: DLQ_TYPE,
           source,

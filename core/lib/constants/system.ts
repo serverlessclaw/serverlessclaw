@@ -63,6 +63,7 @@ export const DYNAMO_KEYS = {
   CONTEXT_SUMMARY_TRIGGER_RATIO: 'context_summary_trigger_ratio',
   CONTEXT_SUMMARY_RATIO: 'context_summary_ratio',
   CONTEXT_ACTIVE_WINDOW_RATIO: 'context_active_window_ratio',
+  REPUTATION_PREFIX: 'REPUTATION#',
   FIELDS: {
     USER_ID: 'userId',
     TIMESTAMP: 'timestamp',
