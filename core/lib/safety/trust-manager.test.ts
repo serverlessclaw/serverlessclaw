@@ -8,6 +8,7 @@ const { mockAgentRegistry, mockDefaultDocClient } = vi.hoisted(() => ({
     getAgentConfig: vi.fn(),
     getAllConfigs: vi.fn().mockResolvedValue({}),
     atomicUpdateAgentField: vi.fn().mockResolvedValue(undefined),
+    atomicUpdateAgentFieldWithCondition: vi.fn().mockResolvedValue(undefined),
   },
   mockDefaultDocClient: {
     send: vi.fn().mockResolvedValue({}),
@@ -92,10 +93,11 @@ describe('TrustManager', () => {
       const newScore = await TrustManager.recordFailure('test-agent', 'Test Failure', 3); // -5 * 3 = -15
 
       expect(newScore).toBe(0); // 10 - 15 -> 0
-      expect(mockAgentRegistry.atomicUpdateAgentField).toHaveBeenCalledWith(
+      expect(mockAgentRegistry.atomicUpdateAgentFieldWithCondition).toHaveBeenCalledWith(
         'test-agent',
         'trustScore',
-        0
+        0,
+        10
       );
     });
 
@@ -111,10 +113,11 @@ describe('TrustManager', () => {
       const newScore = await TrustManager.recordSuccess('test-agent');
 
       expect(newScore).toBe(100); // 99 + 1 -> 100
-      expect(mockAgentRegistry.atomicUpdateAgentField).toHaveBeenCalledWith(
+      expect(mockAgentRegistry.atomicUpdateAgentFieldWithCondition).toHaveBeenCalledWith(
         'test-agent',
         'trustScore',
-        100
+        100,
+        99
       );
     });
 
@@ -161,10 +164,11 @@ describe('TrustManager', () => {
         },
       ]);
       expect(criticalScore).toBe(35); // 50 - 15 = 35
-      expect(mockAgentRegistry.atomicUpdateAgentField).toHaveBeenCalledWith(
+      expect(mockAgentRegistry.atomicUpdateAgentFieldWithCondition).toHaveBeenCalledWith(
         'test-agent',
         'trustScore',
-        35
+        35,
+        50
       );
     });
   });
@@ -182,10 +186,11 @@ describe('TrustManager', () => {
 
       await TrustManager.recordFailure('agent-1', 'Reason X');
 
-      expect(mockAgentRegistry.atomicUpdateAgentField).toHaveBeenCalledWith(
+      expect(mockAgentRegistry.atomicUpdateAgentFieldWithCondition).toHaveBeenCalledWith(
         'agent-1',
         'trustScore',
-        expect.any(Number)
+        expect.any(Number),
+        50
       );
 
       const agentHistoryKey = `${DYNAMO_KEYS.REPUTATION_PREFIX}HISTORY#agent-1`;

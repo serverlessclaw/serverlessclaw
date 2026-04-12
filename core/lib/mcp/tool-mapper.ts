@@ -121,36 +121,62 @@ export class MCPToolMapper {
 
   /**
    * Parses MCP callTool result into a structured ToolResult.
-   * Handles TextContent, ImageContent, and other content types.
+   * Handles TextContent, ImageContent, and other content types with high fidelity.
    */
   private static parseMcpToolResult(result: unknown): ToolResult {
+    const res = result as { content?: unknown[]; isError?: boolean };
     const images: string[] = [];
+    const resources: Array<{ uri: string; text?: string; mimeType?: string }> = [];
     let text = '';
     const metadata: Record<string, unknown> = {};
 
-    const content = (result as { content?: unknown[] })?.content;
+    const content = res.content;
 
     if (content && Array.isArray(content)) {
       for (const item of content) {
         const itemAny = item as Record<string, unknown>;
         const itemType = itemAny.type as string | undefined;
 
-        if (itemType === 'text' || itemType === 'resource' || !itemType) {
+        if (itemType === 'text' || !itemType) {
           const itemText = itemAny.text as string | undefined;
-          if (itemText) text += itemText;
+          if (itemText) text += (text ? '\n' : '') + itemText;
+        } else if (itemType === 'resource') {
+          const itemText = itemAny.text as string | undefined;
+          const uri = itemAny.uri as string;
+          if (itemText) text += (text ? '\n' : '') + itemText;
+          resources.push({
+            uri,
+            text: itemText,
+            mimeType: itemAny.mimeType as string | undefined,
+          });
         } else if (itemType === 'image') {
           const imageData = itemAny.data as string | undefined;
           if (imageData) {
             images.push(imageData);
-            metadata.imageMimeType = itemAny.mimeType;
+            // Collect mime types for all images if available
+            if (itemAny.mimeType) {
+              const mimeTypes = (metadata.imageMimeTypes as string[]) ?? [];
+              mimeTypes.push(itemAny.mimeType as string);
+              metadata.imageMimeTypes = mimeTypes;
+            }
           }
         } else {
-          metadata[itemType] = item;
+          metadata[itemType || 'other'] = item;
         }
       }
     }
 
-    return createToolResult(text || 'MCP tool executed successfully', {
+    if (resources.length > 0) {
+      metadata.resources = resources;
+    }
+
+    let finalResultText =
+      text || (res.isError ? 'Tool execution failed' : 'MCP tool executed successfully');
+    if (res.isError && !finalResultText.startsWith('FAILED')) {
+      finalResultText = `FAILED: ${finalResultText}`;
+    }
+
+    return createToolResult(finalResultText, {
       images: images.length > 0 ? images : undefined,
       metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
     });

@@ -26,6 +26,8 @@ export interface JudgeResult {
  * and system state using high-reasoning LLMs.
  */
 export class LLMJudge {
+  private static readonly DEFAULT_TIMEOUT_MS = 60000; // 60 seconds
+
   /**
    * Evaluates a task implementation against a set of criteria.
    *
@@ -33,13 +35,15 @@ export class LLMJudge {
    * @param implementation - The implementation or response to evaluate.
    * @param criteria - Specific evaluation criteria or "rubric".
    * @param context - Optional additional context (e.g., related files, traces).
+   * @param timeoutMs - Optional timeout in milliseconds (default: 60000ms).
    * @returns A promise resolving to the judge's verdict.
    */
   static async evaluate(
     task: string,
     implementation: string,
     criteria: string[],
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
+    timeoutMs: number = LLMJudge.DEFAULT_TIMEOUT_MS
   ): Promise<JudgeResult> {
     const { agent } = await initAgent(AgentType.JUDGE);
 
@@ -71,12 +75,21 @@ Return your evaluation in strict JSON format:
 }
     `.trim();
 
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`LLM-as-a-Judge evaluation timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+    });
+
     try {
-      const { responseText } = await agent.process('SYSTEM#JUDGE', prompt, {
-        profile: ReasoningProfile.THINKING,
-        isIsolated: true,
-        source: TraceSource.SYSTEM,
-      });
+      const { responseText } = await Promise.race([
+        agent.process('SYSTEM#JUDGE', prompt, {
+          profile: ReasoningProfile.THINKING,
+          isIsolated: true,
+          source: TraceSource.SYSTEM,
+        }),
+        timeoutPromise,
+      ]);
 
       const jsonContent = responseText.replace(/```json\n?|\n?```/g, '').trim();
       const parsed = JSON.parse(jsonContent);

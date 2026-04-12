@@ -7,7 +7,7 @@ const mockAgentRegistry = {
   getAgentConfig: vi.fn(),
 };
 
-const mockMCPBridge = {
+const mockMCPMultiplexer = {
   getExternalTools: vi.fn().mockResolvedValue([]),
 };
 
@@ -25,7 +25,7 @@ vi.mock('../lib/registry/index', () => ({
 }));
 
 vi.mock('../lib/mcp', () => ({
-  MCPBridge: mockMCPBridge,
+  MCPMultiplexer: mockMCPMultiplexer,
 }));
 
 vi.mock('./index', () => ({
@@ -90,7 +90,7 @@ describe('registry-utils', () => {
         description: 'ext',
         parameters: {},
       } as ITool;
-      mockMCPBridge.getExternalTools.mockResolvedValueOnce([mockExternalTool]);
+      mockMCPMultiplexer.getExternalTools.mockResolvedValueOnce([mockExternalTool]);
 
       const tools = await getAgentTools('a1');
       expect(tools).toContain(mockExternalTool);
@@ -102,7 +102,7 @@ describe('registry-utils', () => {
         id: 'a1',
         tools: ['myServer_tool'],
       });
-      mockMCPBridge.getExternalTools.mockResolvedValueOnce([
+      mockMCPMultiplexer.getExternalTools.mockResolvedValueOnce([
         { name: 'myServer_tool', description: 'd', parameters: {} } as ITool,
       ]);
 
@@ -117,7 +117,7 @@ describe('registry-utils', () => {
         id: 'a1',
         tools: ['myServer_tool'],
       });
-      mockMCPBridge.getExternalTools.mockResolvedValueOnce([
+      mockMCPMultiplexer.getExternalTools.mockResolvedValueOnce([
         { name: 'myServer_tool', description: 'd', parameters: {} } as ITool,
       ]);
 

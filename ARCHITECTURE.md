@@ -65,7 +65,29 @@ Value: {
 }
 ```
 
-### 2. Trigger-on-Message (Human Activity)
+### 2. Contextual Activity-Based Smart Warmup
+
+The system prioritizes a **Trigger-on-Message** strategy to maintain $0 idle costs while eliminating cold-start perception.
+
+```text
+[ User ]        [ Webhook ]        [ Intent Analyzer ]        [ Warmup Manager ]        [ Target (MCP/Agent) ]
+    |               |                       |                        |                          |
+    +--- Message -->|                       |                        |                          |
+    |               +---- Analyze Input --->|                        |                          |
+    |               |                       +--- Identify Targets -->|                          |
+    |               |                       |   (Coder? FS? Git?)    |                          |
+    |               |                       |                        +--- Async Warm Trigger -->|
+    |               |                       |                        |                          | [ COLD BOOT ]
+    |               |                       |                        |<----- Success/Latency ---+
+    |               |                       |                        |                          |
+    |               |                       |                        +---- Update WARM State ---+
+    |               |                       |                        |      (DynamoDB TTL)      |
+    |               |                       |                        |                          |
+    +<-- Acknowledge+                       |                        |                          |
+    |               |                       |                        |                          |
+```
+
+### 3. Trigger-on-Message (Human Activity)
 
 High-memory agents (Coder, Planner) remain idle and cost-free when no user interaction is occurring. Upon receiving a message:
 
@@ -249,7 +271,7 @@ For detailed event schemas and routing logic, see [docs/interface/EVENTS.md](./d
 Serverless Claw utilizes a tiered logic system to ensure efficiency and cost-control.
 
 - **LLM Reasoning**: Provider-agnostic adapters for 2026-grade reasoning profiles (Thinking Budgets, Responses API).
-- **Hybrid Tooling**: Just-in-Time skill discovery via the **MCPBridge** (Unified MCP Multiplexer architecture).
+- **Hybrid Tooling**: Just-in-Time skill discovery via the **MCPMultiplexer** (Unified MCP Multiplexer architecture).
 - **Memory & Context**: Flattened DynamoDB model for sub-50ms context retrieval.
 
 | Component                 | Deep Dive                                                    |

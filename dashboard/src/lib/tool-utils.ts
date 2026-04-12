@@ -43,7 +43,7 @@ export async function getAllTools(
   const { forceRefresh = false } = options;
 
   try {
-    const { MCPBridge } = await import('@claw/core/lib/mcp');
+    const { MCPMultiplexer } = await import('@claw/core/lib/mcp');
 
     // 1. Local tools
     const localTools = Object.values(tools).map((t) => ({
@@ -56,19 +56,19 @@ export async function getAllTools(
     // 2. MCP tools (use cache by default for dashboard speed)
     let externalToolsDefinitions: { name: string; description: string }[] = [];
     if (forceRefresh) {
-      externalToolsDefinitions = (await MCPBridge.getExternalTools()) as {
+      externalToolsDefinitions = (await MCPMultiplexer.getExternalTools()) as {
         name: string;
         description: string;
       }[];
     } else {
-      externalToolsDefinitions = (await MCPBridge.getCachedTools()) as {
+      externalToolsDefinitions = (await MCPMultiplexer.getCachedTools()) as {
         name: string;
         description: string;
       }[];
       // If cache is empty, use skipConnection mode to avoid timeout and ENOSPC
       // This shows server names without actually connecting to them (no npx execution)
       if (externalToolsDefinitions.length === 0) {
-        externalToolsDefinitions = (await MCPBridge.getExternalTools(undefined, true)) as {
+        externalToolsDefinitions = (await MCPMultiplexer.getExternalTools(undefined, true)) as {
           name: string;
           description: string;
         }[];

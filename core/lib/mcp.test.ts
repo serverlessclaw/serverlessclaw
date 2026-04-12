@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { MCPBridge } from './mcp';
+import { MCPMultiplexer } from './mcp';
 import { AgentRegistry } from './registry';
 import { MCPClientManager } from './mcp/client-manager';
 
@@ -88,16 +88,16 @@ vi.mock('@modelcontextprotocol/sdk/client/stdio.js', () => ({
   StdioClientTransport: class {},
 }));
 
-describe('MCPBridge', () => {
+describe('MCPMultiplexer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(MCPClientManager.connect).mockReset();
     vi.mocked(MCPClientManager.deleteClient).mockReset();
     vi.mocked(MCPClientManager.closeAll).mockReset();
     // @ts-expect-error accessing private property for test isolation
-    MCPBridge.lastFailures.clear();
+    MCPMultiplexer.lastFailures.clear();
     // @ts-expect-error accessing private property for test isolation
-    MCPBridge.discovering.clear();
+    MCPMultiplexer.discovering.clear();
   });
 
   it('should lazy load ONLY requested servers', async () => {
@@ -113,7 +113,7 @@ describe('MCPBridge', () => {
     };
     vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
 
-    const tools = await MCPBridge.getExternalTools(['srv1_test_tool']);
+    const tools = await MCPMultiplexer.getExternalTools(['srv1_test_tool']);
 
     expect(tools.length).toBe(1);
     expect(tools[0].name).toBe('srv1_test_tool');
@@ -136,7 +136,7 @@ describe('MCPBridge', () => {
     };
     vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
 
-    const tools = await MCPBridge.getExternalTools();
+    const tools = await MCPMultiplexer.getExternalTools();
 
     // Default servers (8) + our mock servers (2) = 10
     expect(tools.length).toBe(10);
@@ -153,7 +153,7 @@ describe('MCPBridge', () => {
       },
     });
 
-    const tools = await MCPBridge.getExternalTools(['google-drive']);
+    const tools = await MCPMultiplexer.getExternalTools(['google-drive']);
 
     expect(tools.length).toBe(1);
     expect(tools[0].name).toBe('google-drive');
@@ -177,7 +177,7 @@ describe('MCPBridge', () => {
       };
       vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
 
-      const tools = await MCPBridge.getToolsFromServer('srv', 'npx srv');
+      const tools = await MCPMultiplexer.getToolsFromServer('srv', 'npx srv');
 
       expect(MCPClientManager.connect).toHaveBeenCalledWith('srv', 'npx srv', undefined);
       expect(tools).toHaveLength(1);
@@ -187,7 +187,7 @@ describe('MCPBridge', () => {
     it('returns empty array on connection failure', async () => {
       vi.mocked(MCPClientManager.connect).mockRejectedValue(new Error('Connection failed'));
 
-      const tools = await MCPBridge.getToolsFromServer('srv', 'npx srv');
+      const tools = await MCPMultiplexer.getToolsFromServer('srv', 'npx srv');
 
       expect(tools).toEqual([]);
       expect(MCPClientManager.deleteClient).toHaveBeenCalledWith('srv');
@@ -199,7 +199,7 @@ describe('MCPBridge', () => {
       };
       vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
 
-      const tools = await MCPBridge.getToolsFromServer('srv', 'npx srv');
+      const tools = await MCPMultiplexer.getToolsFromServer('srv', 'npx srv');
       expect(tools).toEqual([]);
     });
 
@@ -209,7 +209,7 @@ describe('MCPBridge', () => {
       };
       vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
 
-      await MCPBridge.getToolsFromServer('srv', 'npx srv', { KEY: 'val' });
+      await MCPMultiplexer.getToolsFromServer('srv', 'npx srv', { KEY: 'val' });
 
       expect(MCPClientManager.connect).toHaveBeenCalledWith('srv', 'npx srv', { KEY: 'val' });
     });
@@ -223,7 +223,7 @@ describe('MCPBridge', () => {
       };
       vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
 
-      await MCPBridge.getToolsFromServer('mysrv', 'npx mysrv');
+      await MCPMultiplexer.getToolsFromServer('mysrv', 'npx mysrv');
 
       expect(MCPClientManager.connect).toHaveBeenCalledWith(
         'mysrv',
@@ -247,7 +247,7 @@ describe('MCPBridge', () => {
         .mockResolvedValueOnce(hubClient as any)
         .mockResolvedValueOnce(localClient as any);
 
-      const tools = await MCPBridge.getToolsFromServer('mysrv', 'npx mysrv');
+      const tools = await MCPMultiplexer.getToolsFromServer('mysrv', 'npx mysrv');
 
       expect(tools).toHaveLength(1);
       expect(tools[0].name).toBe('mysrv_local_tool');
@@ -264,7 +264,7 @@ describe('MCPBridge', () => {
           }),
         } as any);
 
-      const tools = await MCPBridge.getToolsFromServer('mysrv', 'npx mysrv');
+      const tools = await MCPMultiplexer.getToolsFromServer('mysrv', 'npx mysrv');
 
       expect(MCPClientManager.connect).toHaveBeenCalledTimes(2);
       expect(tools).toHaveLength(1);
@@ -278,7 +278,9 @@ describe('MCPBridge', () => {
       };
       vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
 
-      await MCPBridge.getToolsFromServer('srv', 'npx srv', undefined, { skipHubRouting: true });
+      await MCPMultiplexer.getToolsFromServer('srv', 'npx srv', undefined, {
+        skipHubRouting: true,
+      });
 
       expect(MCPClientManager.connect).toHaveBeenCalledWith('srv', 'npx srv', undefined);
       delete process.env.MCP_HUB_URL;
@@ -291,7 +293,7 @@ describe('MCPBridge', () => {
       };
       vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
 
-      await MCPBridge.getToolsFromServer('srv', 'http://remote:8080');
+      await MCPMultiplexer.getToolsFromServer('srv', 'http://remote:8080');
 
       expect(MCPClientManager.connect).toHaveBeenCalledWith('srv', 'http://remote:8080', undefined);
       delete process.env.MCP_HUB_URL;
@@ -309,7 +311,7 @@ describe('MCPBridge', () => {
       };
       vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
 
-      await MCPBridge.getExternalTools(['srv1']);
+      await MCPMultiplexer.getExternalTools(['srv1']);
 
       expect(MCPClientManager.connect).toHaveBeenCalledWith('srv1', 'npx srv1', undefined);
     });
@@ -324,7 +326,7 @@ describe('MCPBridge', () => {
       };
       vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
 
-      await MCPBridge.getExternalTools(['srv1']);
+      await MCPMultiplexer.getExternalTools(['srv1']);
 
       expect(MCPClientManager.connect).toHaveBeenCalledWith(
         'srv1',
@@ -343,7 +345,7 @@ describe('MCPBridge', () => {
       };
       vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
 
-      await MCPBridge.getExternalTools(['srv1']);
+      await MCPMultiplexer.getExternalTools(['srv1']);
 
       expect(MCPClientManager.connect).toHaveBeenCalledWith('srv1', 'npx srv1', { KEY: 'val' });
     });
@@ -353,7 +355,7 @@ describe('MCPBridge', () => {
         srv1: { command: 'npx srv1' },
       });
 
-      const tools = await MCPBridge.getExternalTools(undefined, true);
+      const tools = await MCPMultiplexer.getExternalTools(undefined, true);
 
       // srv1 + 7 default servers = 8 placeholders
       expect(tools.length).toBeGreaterThan(0);
@@ -369,7 +371,7 @@ describe('MCPBridge', () => {
       };
       vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
 
-      await MCPBridge.getExternalTools();
+      await MCPMultiplexer.getExternalTools();
 
       expect(AgentRegistry.saveRawConfig).toHaveBeenCalled();
     });
@@ -384,7 +386,7 @@ describe('MCPBridge', () => {
       };
       vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
 
-      await MCPBridge.getExternalTools();
+      await MCPMultiplexer.getExternalTools();
 
       expect(AgentRegistry.saveRawConfig).toHaveBeenCalledWith(
         'mcp_servers',
@@ -413,7 +415,7 @@ describe('MCPBridge', () => {
       };
       vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
 
-      await MCPBridge.getExternalTools();
+      await MCPMultiplexer.getExternalTools();
 
       expect(AgentRegistry.saveRawConfig).not.toHaveBeenCalledWith(
         'mcp_servers',
@@ -436,7 +438,7 @@ describe('MCPBridge', () => {
         } as any;
       });
 
-      const tools = await MCPBridge.getExternalTools();
+      const tools = await MCPMultiplexer.getExternalTools();
       expect(tools.length).toBeGreaterThan(0);
     });
 
@@ -455,7 +457,7 @@ describe('MCPBridge', () => {
           }) as any
       );
 
-      const tools = await MCPBridge.getExternalTools();
+      const tools = await MCPMultiplexer.getExternalTools();
       expect(tools.length).toBeGreaterThanOrEqual(2);
     });
 
@@ -467,7 +469,7 @@ describe('MCPBridge', () => {
         },
       });
 
-      const tools = await MCPBridge.getExternalTools();
+      const tools = await MCPMultiplexer.getExternalTools();
 
       const managedTool = tools.find((t) => t.connector_id === 'connector_abc');
       expect(managedTool).toBeDefined();
@@ -487,7 +489,7 @@ describe('MCPBridge', () => {
       };
       vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
 
-      await MCPBridge.getExternalTools(['srv1_tool', 'srv2_other']);
+      await MCPMultiplexer.getExternalTools(['srv1_tool', 'srv2_other']);
 
       // Should connect to srv1 and srv2, but not srv3
       expect(MCPClientManager.connect).toHaveBeenCalledWith('srv1', expect.any(String), undefined);
@@ -499,7 +501,7 @@ describe('MCPBridge', () => {
         srv1: { type: 'unknown_type', command: 'npx srv1' },
       });
 
-      const tools = await MCPBridge.getExternalTools(['srv1']);
+      const tools = await MCPMultiplexer.getExternalTools(['srv1']);
       expect(tools).toEqual([]);
     });
   });
@@ -524,7 +526,7 @@ describe('MCPBridge', () => {
         return null;
       });
 
-      const tools = await MCPBridge.getToolsFromServer('filesystem', 'node fs.js');
+      const tools = await MCPMultiplexer.getToolsFromServer('filesystem', 'node fs.js');
 
       expect(tools.length).toBe(1);
       expect(tools[0].name).toBe('filesystem_read_file');
@@ -545,7 +547,7 @@ describe('MCPBridge', () => {
       };
       vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
 
-      await MCPBridge.getToolsFromServer('filesystem', 'node fs.js');
+      await MCPMultiplexer.getToolsFromServer('filesystem', 'node fs.js');
 
       expect(MCPClientManager.connect).toHaveBeenCalled();
       expect(AgentRegistry.saveRawConfig).toHaveBeenCalledWith(
@@ -572,7 +574,7 @@ describe('MCPBridge', () => {
         return null;
       });
 
-      const tools = await MCPBridge.getToolsFromServer('filesystem', 'node fs.js');
+      const tools = await MCPMultiplexer.getToolsFromServer('filesystem', 'node fs.js');
 
       // Mock the client for execution
       const mockClient = {
@@ -605,7 +607,7 @@ describe('MCPBridge', () => {
         return Promise.resolve(null);
       });
 
-      const tools = await MCPBridge.getCachedTools();
+      const tools = await MCPMultiplexer.getCachedTools();
       expect(tools).toHaveLength(2);
       expect(tools[0].name).toBe('server1_tool1');
       expect(tools[1].name).toBe('server2_tool2');
@@ -614,21 +616,21 @@ describe('MCPBridge', () => {
     it('returns empty array when no cache exists', async () => {
       (AgentRegistry.getRawConfig as any).mockResolvedValue(null);
 
-      const tools = await MCPBridge.getCachedTools();
+      const tools = await MCPMultiplexer.getCachedTools();
       expect(tools).toEqual([]);
     });
 
     it('returns empty array when cache is not an array', async () => {
       (AgentRegistry.getRawConfig as any).mockResolvedValue({ some: 'object' });
 
-      const tools = await MCPBridge.getCachedTools();
+      const tools = await MCPMultiplexer.getCachedTools();
       expect(tools).toEqual([]);
     });
   });
 
   describe('closeAll', () => {
     it('delegates to MCPClientManager.closeAll', async () => {
-      await MCPBridge.closeAll();
+      await MCPMultiplexer.closeAll();
       expect(MCPClientManager.closeAll).toHaveBeenCalled();
     });
   });

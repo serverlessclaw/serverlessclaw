@@ -13,7 +13,7 @@ vi.mock('../safety/safety-engine', () => {
       evaluateAction = vi.fn().mockImplementation(async (config, action) => {
         if (action === 'deleteDatabase') {
           return {
-            allowed: false,
+            allowed: true,
             requiresApproval: true,
             reason: 'APPROVAL_REQUIRED:call-high-risk',
           };

@@ -1,6 +1,6 @@
 import { ITool, ToolResult } from '../../lib/types/index';
 import { proposeAutonomyUpdate as proposeLogic } from '../../lib/agent/tools/governance';
-import { MCPBridge } from '../../lib/mcp';
+import { MCPMultiplexer } from '../../lib/mcp';
 import { systemSchema as schema } from './schema';
 import { logger } from '../../lib/logger';
 
@@ -29,9 +29,9 @@ export const scanMetabolism: ITool = {
   execute: async (_args: Record<string, unknown>): Promise<ToolResult> => {
     try {
       // 1. Discover Metabolism-related tools from the AIReady (AST) MCP suite
-      const astTools = await MCPBridge.getToolsFromServer('ast', '');
+      const astTools = await MCPMultiplexer.getToolsFromServer('ast', '');
       const auditTool = astTools.find(
-        (t) =>
+        (t: { name: string }) =>
           t.name === 'metabolism_audit' ||
           t.name === 'codebase_audit' ||
           t.name.includes('metabolism')

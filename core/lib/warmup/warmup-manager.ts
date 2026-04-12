@@ -262,17 +262,30 @@ export class WarmupManager extends BaseMemoryProvider {
   }
 
   /**
-   * Smart warmup: only warm servers/agents that are cold based on intent.
+   * Smart warmup: only warm servers/agents that are cold based on intent or explicit requests.
    * Returns list of actually warmed servers (skips warm ones).
    */
   async smartWarmup(options: {
     servers?: string[];
     agents?: string[];
     intent?: string;
+    sessionState?: any;
     warmedBy?: 'webhook' | 'scheduler' | 'recovery';
   }): Promise<{ servers: string[]; agents: string[] }> {
     const warmedServers: string[] = [];
     const warmedAgents: string[] = [];
+
+    const agentsToWarm = options.agents ? [...options.agents] : [];
+
+    // If intent is provided, proactively identify agent tiers to warm
+    if (options.intent) {
+      const identifiedTiers = await this.identifyTargets(options.intent, options.sessionState);
+      identifiedTiers.forEach((tier) => {
+        if (!agentsToWarm.includes(tier)) {
+          agentsToWarm.push(tier);
+        }
+      });
+    }
 
     // Warm MCP servers
     if (options.servers) {
@@ -292,8 +305,8 @@ export class WarmupManager extends BaseMemoryProvider {
     }
 
     // Warm agents
-    if (options.agents) {
-      for (const agent of options.agents) {
+    if (agentsToWarm.length > 0) {
+      for (const agent of agentsToWarm) {
         const isWarm = await this.isServerWarm(agent);
         if (!isWarm) {
           try {

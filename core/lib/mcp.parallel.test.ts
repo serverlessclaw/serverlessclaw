@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { MCPBridge } from './mcp';
+import { MCPMultiplexer } from './mcp';
 import { AgentRegistry } from './registry';
 import { MCPClientManager } from './mcp/client-manager';
 
@@ -34,7 +34,7 @@ vi.mock('./lock/lock-manager', () => ({
   },
 }));
 
-describe('MCPBridge Parallel Discovery', () => {
+describe('MCPMultiplexer Parallel Discovery', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -71,7 +71,7 @@ describe('MCPBridge Parallel Discovery', () => {
     });
 
     // We only request tools from srv1, srv2, and srv3 to keep the test focused
-    const tools = await MCPBridge.getExternalTools(['srv1_tool1', 'srv2_tool2', 'srv3_tool3']);
+    const tools = await MCPMultiplexer.getExternalTools(['srv1_tool1', 'srv2_tool2', 'srv3_tool3']);
 
     // Should have tool1 and tool3, but tool2 should be missing due to srv2 failure
     expect(tools.length).toBe(2);
@@ -113,7 +113,7 @@ describe('MCPBridge Parallel Discovery', () => {
     };
     vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
 
-    await MCPBridge.getExternalTools(['srv1_tool']);
+    await MCPMultiplexer.getExternalTools(['srv1_tool']);
 
     // First call should be to hubURL
     expect(MCPClientManager.connect).toHaveBeenCalledWith(
@@ -138,7 +138,7 @@ describe('MCPBridge Parallel Discovery', () => {
     vi.mocked(MCPClientManager.connect).mockResolvedValue(mockClient as any);
 
     // Only request tools from srv1
-    await MCPBridge.getExternalTools(['srv1_tool']);
+    await MCPMultiplexer.getExternalTools(['srv1_tool']);
 
     // Should only connect to srv1
     expect(MCPClientManager.connect).toHaveBeenCalledTimes(1);

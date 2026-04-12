@@ -11,6 +11,7 @@ import { logger } from '../logger';
 import { AgentRegistry } from '../registry';
 import { ClawTracer } from '../tracer';
 import { TRACE_TYPES } from '../constants';
+import { SafetyEngine, getCircuitBreaker } from '../safety';
 
 export interface ToolExecutionContext {
   traceId: string;
@@ -196,31 +197,74 @@ export class ToolExecutor {
       .update(`${toolCall.function.name}:${toolCall.function.arguments}`)
       .digest('hex');
 
-    // Centralized Sensitive Check
-    const isSensitive = await this.isSensitiveTool(tool, toolCall, args);
-    const requiresApproval = tool.requiresApproval || isSensitive;
-    const requiredPermissions = isSensitive
-      ? [...new Set([...(tool.requiredPermissions || []), 'admin'])]
-      : tool.requiredPermissions || [];
+    // 1.5 Safety Engine Evaluation (The Shield) - Centralized enforcement
+    const safety = new SafetyEngine();
+    const resourcePath = (args.path ||
+      args.filePath ||
+      args.resource ||
+      args.destination ||
+      args.source) as string | undefined;
+
+    const safetyResult = await safety.evaluateAction(execContext.agentConfig, tool.name, {
+      toolName: tool.name,
+      resource: resourcePath,
+      traceId: execContext.traceId,
+      userId: execContext.userId,
+      args, // Full arguments for heuristic scanning
+      pathKeys: tool.pathKeys,
+    });
+
+    // 1.6 Circuit Breaker Check (System-level protection)
+    const cb = getCircuitBreaker();
+    const cbResult = await cb.canProceed('autonomous');
+    if (!cbResult.allowed) {
+      logger.error(`[EXECUTOR] System Circuit Breaker is OPEN: ${cbResult.reason}`);
+      messages.push({
+        role: MessageRole.TOOL,
+        tool_call_id: toolCall.id,
+        name: toolCall.function.name,
+        content: `FAILED: System-level safety block active (Circuit Breaker OPEN). ${cbResult.reason}`,
+        traceId: execContext.traceId,
+        messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      });
+      return { toolCallCount: 0 };
+    }
 
     const isApproved =
       approvedToolCalls?.includes(toolCall.id) || approvedToolCalls?.includes(toolCallFingerprint);
 
-    // If evolutionMode is AUTO, we treat it as approved unless it's explicitly blocked (Class D check happens in fs-security)
-    const effectiveApproved = isApproved || evolutionMode === EvolutionMode.AUTO;
-
-    // CRITICAL SECURITY: Clear any self-approval attempt by the agent immediately if not in AUTO mode and not already approved.
-    // Agents must not be able to bypass security gates by injecting this parameter in HITL mode.
-    // We also block self-approval for SENSITIVE tools even in AUTO mode if not explicitly approved by human.
-    if (args.manuallyApproved === true && (!effectiveApproved || isSensitive)) {
+    // Hard block check: if not allowed and not explicitly approved by user
+    if (!safetyResult.allowed && !isApproved) {
       logger.warn(
-        `[SECURITY] Agent '${execContext.agentId}' attempted to self-approve tool '${tool.name}'. (Sensitive: ${isSensitive})`
+        `[SECURITY] Action blocked for agent '${execContext.agentId}': ${safetyResult.reason}`
       );
       messages.push({
         role: MessageRole.TOOL,
         tool_call_id: toolCall.id,
         name: toolCall.function.name,
-        content: `FAILED: PERMISSION_DENIED - Self-approval is not allowed for sensitive tools or in current mode.`,
+        content: `FAILED: PERMISSION_DENIED - ${safetyResult.reason}`,
+        traceId: execContext.traceId,
+        messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      });
+      return { toolCallCount: 0 };
+    }
+
+    const requiresApproval = safetyResult.requiresApproval || tool.requiresApproval;
+
+    // If evolutionMode is AUTO, we treat it as approved if the Safety Engine allowed it (bypassing approval requirements)
+    const effectiveApproved =
+      isApproved || (evolutionMode === EvolutionMode.AUTO && safetyResult.allowed);
+
+    // CRITICAL SECURITY: Clear any self-approval attempt by the agent immediately if not in AUTO mode and not already approved.
+    if (args.manuallyApproved === true && !effectiveApproved) {
+      logger.warn(
+        `[SECURITY] Agent '${execContext.agentId}' attempted to self-approve tool '${tool.name}'.`
+      );
+      messages.push({
+        role: MessageRole.TOOL,
+        tool_call_id: toolCall.id,
+        name: toolCall.function.name,
+        content: `FAILED: PERMISSION_DENIED - Self-approval is not allowed for this tool in current mode.`,
         traceId: execContext.traceId,
         messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       });
@@ -228,40 +272,32 @@ export class ToolExecutor {
     }
 
     if (requiresApproval && !effectiveApproved) {
-      console.log(
-        'PAUSING. requiresApproval:',
-        requiresApproval,
-        'effectiveApproved:',
-        effectiveApproved,
-        'isSensitive:',
-        isSensitive
-      );
       logger.info(
-        `Tool ${tool.name} (Fingerprint: ${toolCallFingerprint}) requires human approval. Pausing...`
+        `Tool ${tool.name} (Fingerprint: ${toolCallFingerprint}) requires human approval. Reason: ${safetyResult.reason}. Pausing...`
       );
       return {
         asyncWait: true,
         toolCallCount: 0,
         paused: true,
+        responseText: safetyResult.reason,
       };
     }
 
-    // 1.5 RBAC Check
-    if (requiredPermissions && requiredPermissions.length > 0) {
+    // 1.7 RBAC Check
+    if (tool.requiredPermissions && tool.requiredPermissions.length > 0) {
       let hasPermission = false;
       try {
         const { BaseMemoryProvider } = await import('../memory/base');
         const { IdentityManager } = await import('../session/identity');
         const identity = new IdentityManager(new BaseMemoryProvider());
+
         // System-initiated calls or AUTO mode (if system-owned) bypass initial RBAC
         if (!execContext.userId || execContext.userId === 'SYSTEM') {
           hasPermission = true;
         } else {
-          for (const perm of requiredPermissions) {
+          for (const perm of tool.requiredPermissions) {
             hasPermission = await identity.hasPermission(execContext.userId, perm as any);
-            if (!hasPermission) {
-              break;
-            }
+            if (!hasPermission) break;
           }
         }
       } catch (error) {
@@ -275,7 +311,7 @@ export class ToolExecutor {
           role: MessageRole.TOOL,
           tool_call_id: toolCall.id,
           name: toolCall.function.name,
-          content: `FAILED: Unauthorized. You do not have the required permissions (${requiredPermissions.join(', ')}) to execute this tool.`,
+          content: `FAILED: Unauthorized. You do not have the required permissions (${tool.requiredPermissions.join(', ')}) to execute this tool.`,
           traceId: execContext.traceId,
           messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         });
@@ -283,18 +319,10 @@ export class ToolExecutor {
       }
     }
 
-    // 2. Context Injection (Args already parsed)
-    const { checkArgumentsForSecurity } = await import('../utils/fs-security');
-    const isSecurityViolation = !!checkArgumentsForSecurity(
-      args,
-      `Security Pre-flight (${tool.name})`,
-      tool.pathKeys
-    );
-
     if (evolutionMode === EvolutionMode.AUTO || effectiveApproved) {
-      if (args.manuallyApproved !== true && !isSecurityViolation) {
+      if (args.manuallyApproved !== true && safetyResult.allowed) {
         logger.info(
-          `[SECURITY] Activating 'manuallyApproved: true' for tool ${tool.name} (AUTO/Approved mode and no security violation).`
+          `[SECURITY] Activating 'manuallyApproved: true' for tool ${tool.name} (AUTO/Approved mode and safety cleared).`
         );
         args.manuallyApproved = true;
       }
@@ -327,25 +355,6 @@ export class ToolExecutor {
     });
     args.userId = args.userId ?? execContext.userId;
     args.sessionId = args.sessionId ?? execContext.sessionId;
-
-    // 2.2 Centralized File Security Check (G2)
-    const securityError = checkArgumentsForSecurity(
-      args,
-      `Tool execution (${tool.name})`,
-      tool.pathKeys
-    );
-    if (securityError) {
-      logger.warn(`File security violation blocked for tool ${tool.name}: ${securityError}`);
-      messages.push({
-        role: MessageRole.TOOL,
-        tool_call_id: toolCall.id,
-        name: toolCall.function.name,
-        content: securityError,
-        traceId: execContext.traceId,
-        messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      });
-      return { toolCallCount: 0 };
-    }
 
     // 2.5 Structural Enforcement (Zod Validation)
     if (tool.argSchema) {
@@ -465,51 +474,5 @@ export class ToolExecutor {
       toolCallCount: 1,
       ui_blocks: ui_blocks.length > 0 ? ui_blocks : undefined,
     };
-  }
-
-  /**
-   * Helper to detect if a tool or tool call is sensitive based on names, descriptions, and arguments.
-   */
-  private static async isSensitiveTool(
-    tool: ITool,
-    toolCall: ToolCall,
-    _args?: Record<string, unknown>
-  ): Promise<boolean> {
-    // 0. Explicit sensitivity (Authoritative)
-    if (tool.sensitive !== undefined) {
-      return tool.sensitive;
-    }
-
-    const sensitiveKeywords = [
-      'aws',
-      'delete',
-      'remove',
-      'terminate',
-      'write',
-      'update',
-      'create',
-      'put',
-      'iam',
-      'policy',
-      'permission',
-      'secret',
-      'password',
-      'token',
-      'key',
-      'grant',
-      'revoke',
-      'execute',
-      'eval',
-      'shell',
-      'command',
-      'drop',
-      'truncate',
-    ];
-
-    const contentToCheck = [tool.name, tool.description, toolCall.function.name]
-      .map((s) => (s ?? '').toLowerCase())
-      .join(' ');
-
-    return sensitiveKeywords.some((kw) => contentToCheck.includes(kw));
   }
 }

@@ -14,7 +14,7 @@ vi.mock('@claw/core/lib/registry/index', () => ({
 }));
 
 vi.mock('@claw/core/lib/mcp', () => ({
-  MCPBridge: {
+  MCPMultiplexer: {
     getExternalTools: vi.fn(),
     getCachedTools: vi.fn(),
   },
@@ -64,8 +64,8 @@ describe('tool-utils', () => {
 
   describe('getAllTools', () => {
     it('returns local tools with usage stats', async () => {
-      const { MCPBridge } = await import('@claw/core/lib/mcp');
-      (MCPBridge.getCachedTools as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      const { MCPMultiplexer } = await import('@claw/core/lib/mcp');
+      (MCPMultiplexer.getCachedTools as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       const usage = {
         dispatchTask: { count: 3, lastUsed: 1700000000 },
@@ -91,8 +91,8 @@ describe('tool-utils', () => {
     });
 
     it('includes MCP tools from cache', async () => {
-      const { MCPBridge } = await import('@claw/core/lib/mcp');
-      (MCPBridge.getCachedTools as ReturnType<typeof vi.fn>).mockResolvedValue([
+      const { MCPMultiplexer } = await import('@claw/core/lib/mcp');
+      (MCPMultiplexer.getCachedTools as ReturnType<typeof vi.fn>).mockResolvedValue([
         { name: 'mcp_tool_1', description: 'External tool 1' },
       ]);
 
@@ -109,14 +109,14 @@ describe('tool-utils', () => {
     });
 
     it('uses forceRefresh to bypass cache', async () => {
-      const { MCPBridge } = await import('@claw/core/lib/mcp');
-      (MCPBridge.getExternalTools as ReturnType<typeof vi.fn>).mockResolvedValue([
+      const { MCPMultiplexer } = await import('@claw/core/lib/mcp');
+      (MCPMultiplexer.getExternalTools as ReturnType<typeof vi.fn>).mockResolvedValue([
         { name: 'fresh_tool', description: 'Fresh tool' },
       ]);
 
       const result = await getAllTools({}, { forceRefresh: true });
 
-      expect(MCPBridge.getExternalTools).toHaveBeenCalled();
+      expect(MCPMultiplexer.getExternalTools).toHaveBeenCalled();
       expect(result).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
@@ -128,23 +128,23 @@ describe('tool-utils', () => {
     });
 
     it('falls back to skipConnection when cache is empty', async () => {
-      const { MCPBridge } = await import('@claw/core/lib/mcp');
-      (MCPBridge.getCachedTools as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-      (MCPBridge.getExternalTools as ReturnType<typeof vi.fn>).mockResolvedValue([
+      const { MCPMultiplexer } = await import('@claw/core/lib/mcp');
+      (MCPMultiplexer.getCachedTools as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (MCPMultiplexer.getExternalTools as ReturnType<typeof vi.fn>).mockResolvedValue([
         { name: 'fallback_tool', description: 'Fallback' },
       ]);
 
       const result = await getAllTools({});
 
-      expect(MCPBridge.getExternalTools).toHaveBeenCalledWith(undefined, true);
+      expect(MCPMultiplexer.getExternalTools).toHaveBeenCalledWith(undefined, true);
       expect(result).toEqual(
         expect.arrayContaining([expect.objectContaining({ name: 'fallback_tool' })])
       );
     });
 
     it('returns only local tools on error', async () => {
-      const { MCPBridge } = await import('@claw/core/lib/mcp');
-      (MCPBridge.getCachedTools as ReturnType<typeof vi.fn>).mockRejectedValue(
+      const { MCPMultiplexer } = await import('@claw/core/lib/mcp');
+      (MCPMultiplexer.getCachedTools as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error('MCP error')
       );
 

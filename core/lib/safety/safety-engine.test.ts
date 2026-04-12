@@ -45,6 +45,10 @@ vi.mock('../registry/config', () => ({
   },
 }));
 
+vi.mock('../utils/bus', () => ({
+  emitEvent: vi.fn().mockResolvedValue(undefined),
+}));
+
 describe('SafetyEngine', () => {
   let engine: SafetyEngine;
 

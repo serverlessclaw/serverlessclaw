@@ -63,6 +63,85 @@ export class SafetyEngine extends SafetyBase {
   }
 
   /**
+   * System-level protected paths that are always blocked unless manually approved.
+   * Moved from fs-security.ts for consolidation.
+   */
+  public static getSystemProtectedPaths(): string[] {
+    return [
+      'core/**',
+      'infra/**',
+      'docs/governance/**',
+      '.github/**',
+      '.antigravity/**',
+      'sst.config.ts',
+      'package.json',
+      'package-lock.json',
+      'pnpm-lock.yaml',
+      'yarn.lock',
+      '.env',
+    ];
+  }
+
+  /**
+   * Checks if a resource path matches any system-level protection rules.
+   */
+  public isSystemProtected(resource: string): boolean {
+    const protectedPaths = SafetyEngine.getSystemProtectedPaths();
+    return protectedPaths.some((pattern) => this.matchesGlob(resource, pattern));
+  }
+
+  /**
+   * Heuristic scan of arguments for hidden file paths.
+   * Logic migrated from fs-security.ts.
+   */
+  private scanArgumentsForPaths(args: Record<string, unknown>, pathKeys: string[] = []): string[] {
+    const foundPaths = new Set<string>();
+    const defaultPathKeys = [
+      'path',
+      'path_to_file',
+      'file_path',
+      'filePath',
+      'source',
+      'destination',
+      'dir',
+      'dir_path',
+      'dirPath',
+      'filename',
+      'file',
+    ];
+    const allKeys = [...new Set([...defaultPathKeys, ...pathKeys])];
+
+    // Explicit scan
+    for (const key of allKeys) {
+      const val = args[key];
+      if (
+        typeof val === 'string' &&
+        (val.includes('/') || val.includes('\\') || val.includes('.'))
+      ) {
+        foundPaths.add(val);
+      }
+    }
+
+    // Recursive heuristic scan
+    const scanRecursive = (obj: any) => {
+      if (!obj || typeof obj !== 'object') return;
+      for (const [_key, value] of Object.entries(obj)) {
+        if (typeof value === 'string') {
+          const isPathLike = value.includes('/') || value.includes('\\') || value.includes('.');
+          if (isPathLike && this.isSystemProtected(value)) {
+            foundPaths.add(value);
+          }
+        } else if (typeof value === 'object') {
+          scanRecursive(value);
+        }
+      }
+    };
+    scanRecursive(args);
+
+    return Array.from(foundPaths);
+  }
+
+  /**
    * Evaluate whether an action is allowed based on the agent's safety tier.
    */
   async evaluateAction(
@@ -73,9 +152,19 @@ export class SafetyEngine extends SafetyBase {
       resource?: string;
       traceId?: string;
       userId?: string;
+      args?: Record<string, unknown>;
+      pathKeys?: string[];
     }
   ): Promise<SafetyEvaluationResult> {
     const tier = agentConfig?.safetyTier ?? SafetyTier.PROD;
+
+    // 0. Pre-flight: Heuristic Discovery if args are provided
+    const resourcesToCheck = new Set<string>();
+    if (context?.resource) resourcesToCheck.add(context.resource);
+    if (context?.args) {
+      const discovered = this.scanArgumentsForPaths(context.args, context.pathKeys);
+      discovered.forEach((p) => resourcesToCheck.add(p));
+    }
 
     // 1. Fetch current policies (DDB with fallback)
     const policies = await SafetyConfigManager.getPolicies();
@@ -126,18 +215,38 @@ export class SafetyEngine extends SafetyBase {
       }
     }
 
-    // Check resource-level controls
-    if (context?.resource) {
-      const resourceResult = await this.checkResourceAccess(
-        policy,
-        context.resource,
-        action,
-        tier,
-        {
-          ...context,
-          agentId: agentConfig?.id,
+    // 2. Check resource-level controls for all identified paths
+    for (const resource of resourcesToCheck) {
+      const resourceResult = await this.checkResourceAccess(policy, resource, action, tier, {
+        ...context,
+        agentId: agentConfig?.id,
+      });
+
+      // Check against hardcoded system protection as well
+      if (resourceResult.allowed && !agentConfig?.manuallyApproved) {
+        if (this.isSystemProtected(resource)) {
+          const violation = this.createViolation(
+            agentConfig?.id ?? 'unknown',
+            tier,
+            action,
+            context?.toolName,
+            resource,
+            `System-level protection violation: '${resource}'`,
+            'blocked',
+            context?.traceId,
+            context?.userId
+          );
+          await this.logViolation(violation);
+
+          return {
+            allowed: false,
+            requiresApproval: false,
+            reason: `Access to protected system resource '${resource}' is blocked. Direct manipulation requires manual approval via 'manuallyApproved: true'.`,
+            appliedPolicy: 'system_protection',
+          };
         }
-      );
+      }
+
       if (!resourceResult.allowed || resourceResult.requiresApproval) {
         return resourceResult;
       }
@@ -204,6 +313,19 @@ export class SafetyEngine extends SafetyBase {
         logger.info(
           `[SafetyEngine] Principle 9: Self-promoting action '${action}' for agent ${agentConfig?.id} (TrustScore: ${agentConfig?.trustScore}, Mode: AUTO)`
         );
+
+        const { emitEvent } = await import('../utils/bus');
+        const { EventType } = await import('../types/agent');
+        await emitEvent('safety.principle9', EventType.SYSTEM_AUDIT_TRIGGER, {
+          agentId: agentConfig?.id,
+          action,
+          trustScore: agentConfig?.trustScore,
+          previousMode: 'hitl',
+          newMode: 'auto',
+          reason: `Trust-based autonomous promotion: trustScore >= 95`,
+          timestamp: Date.now(),
+        });
+
         return {
           allowed: true,
           requiresApproval: false,

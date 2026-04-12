@@ -202,6 +202,8 @@ export interface IAgentConfig {
   costLimit?: number;
   /** Current trust score (0-100) based on cognitive health performance. */
   trustScore?: number;
+  /** Whether this agent has been manually approved for protected resource access. */
+  manuallyApproved?: boolean;
 }
 
 /**

@@ -7,12 +7,12 @@ import { MCPToolMapper } from './mcp/tool-mapper';
 import { LockManager } from './lock/lock-manager';
 
 /**
- * MCPBridge coordinates connections to external Model Context Protocol (MCP) servers.
+ * MCPMultiplexer coordinates connections to external Model Context Protocol (MCP) servers.
  * It provides a unified interface for agents to discover and execute external tools
  * while maintaining a modular architecture for scalability and AI readiness.
  * Supports hub-priority routing and local command-based execution.
  */
-export class MCPBridge {
+export class MCPMultiplexer {
   private static discovering: Map<string, Promise<ITool[]>> = new Map();
   private static lastFailures: Map<string, number> = new Map();
   private static readonly FAILURE_BACKOFF_MS = 30000; // 30 seconds

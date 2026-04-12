@@ -8,7 +8,7 @@
 import { logger } from '../../lib/logger';
 import { emitEvent } from '../../lib/utils/bus';
 import { AgentType, EventType } from '../../lib/types/agent';
-import { MCPBridge } from '../../lib/mcp';
+import { MCPMultiplexer } from '../../lib/mcp';
 import { AuditSilo, AuditFinding, AuditReport, AUDIT_SILOS } from './lib/audit-definitions';
 
 /**
@@ -244,24 +244,34 @@ async function auditScales(memory: any): Promise<AuditFinding[]> {
 /**
  * Audits Silo 7: The Metabolism (Bloat & Debt)
  * Offloaded to AIReady (AST) MCP suite.
+ * BUG FIX: Now properly reports findings when MCP unavailable (was silent failure)
  */
 async function auditMetabolism(_memory: any): Promise<AuditFinding[]> {
   const findings: AuditFinding[] = [];
 
   try {
     // 1. Discover Metabolism-related tools from the AIReady (AST) MCP suite
-    const astTools = await MCPBridge.getToolsFromServer('ast', '');
+    const astTools = await MCPMultiplexer.getToolsFromServer('ast', '');
     const auditTool = astTools.find(
-      (t) =>
+      (t: { name: string }) =>
         t.name === 'metabolism_audit' ||
         t.name === 'codebase_audit' ||
         t.name.includes('metabolism')
     );
 
     if (!auditTool) {
+      // FIX: Report finding instead of silent return
       logger.warn(
         '[Audit] Metabolism: No specialized audit tool found in AIReady (AST) MCP suite.'
       );
+      findings.push({
+        silo: 'Metabolism',
+        expected: 'MCP-based metabolism audit available',
+        actual: 'No metabolism_audit or codebase_audit tool found in MCP server',
+        severity: 'P1',
+        recommendation:
+          'Ensure AIReady (AST) MCP server is deployed and contains metabolism audit tools, or implement native audit fallback.',
+      });
       return findings;
     }
 
@@ -303,7 +313,16 @@ async function auditMetabolism(_memory: any): Promise<AuditFinding[]> {
       }
     }
   } catch (e) {
+    // FIX: Report finding instead of silent return
     logger.error('[Audit] Metabolism: MCP-based audit failed:', e);
+    findings.push({
+      silo: 'Metabolism',
+      expected: 'MCP-based metabolism audit executes successfully',
+      actual: `Audit execution failed: ${e instanceof Error ? e.message : String(e)}`,
+      severity: 'P1',
+      recommendation:
+        'Check MCP server connectivity, ensure AST server is reachable, or implement native fallback audit mechanism.',
+    });
   }
 
   return findings;

@@ -44,10 +44,32 @@ For specialized or heavy integrations, adapters are maintained in separate repos
 
 ---
 
-## 🔌 Tool Protocols (MCP)
+## 🔌 Tool Protocols (MCPMultiplexer)
 
-Agents communicate with technical environments (Git, Shell, Browser) via the **Model Context Protocol (MCP)**. This ensures tools are structured, discovery-friendly, and secure.
+Agents communicate with technical environments (Git, Shell, Browser) via the **Model Context Protocol (MCP)**. Serverless Claw uses a **Unified Multiplexer** architecture to consolidate external servers into a single, high-performance execution environment.
 
-- **Registry**: See `core/tools/index.ts`.
+### Layered Transport Architecture
+
+To ensure high availability and low latency, the system employs a tiered approach to tool connection:
+
+```text
+    [ Call Tool ]
+          |
+    +-----v-----+
+    |  Unified  | (Primary - Lambda Invoke)
+    | Multiplexer [10s Timeout]
+    | (Lambda)  | [Routing: x-mcp-server + custom path]
+    +-----+-----+
+          |
+    (Fail / Timeout)
+          |
+    +-----v-----+
+    | Local NPX | (Fallback - Stdio)
+    | (Lambda)  | [30s Timeout] [Writable /tmp cache]
+    +-----------+
+```
+
+- **Identification**: The `MCPMultiplexer` handles server discovery and caches definitions in DynamoDB.
 - **Validation**: All tool inputs are validated against JSON schemas before execution.
-- **Safety**: Tools performing Class C actions require human approval (via `SafetyEngine`).
+- **Safety**: Tools performing Class C actions (Writes/Deletes) require human approval (via `SafetyEngine`).
+- **Telemetry**: Success rates and latencies are tracked in the `MemoryTable` to enable cost-aware reputation routing.

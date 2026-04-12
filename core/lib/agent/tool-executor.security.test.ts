@@ -22,14 +22,16 @@ const mockTracer = {
   addStep: vi.fn().mockResolvedValue(undefined),
 } as unknown as ClawTracer;
 
+const mockEvaluate = vi.fn().mockResolvedValue({
+  allowed: true,
+  requiresApproval: false,
+  reason: 'Authorized',
+});
+
 vi.mock('../safety/safety-engine', () => {
   return {
     SafetyEngine: class {
-      evaluateAction = vi.fn().mockResolvedValue({
-        allowed: true,
-        requiresApproval: false,
-        reason: 'Authorized',
-      });
+      evaluateAction = mockEvaluate;
     },
   };
 });
@@ -86,8 +88,6 @@ describe('ToolExecutor Security', () => {
     const messages: any[] = [];
     const attachments: any[] = [];
 
-    const { SafetyEngine } = await import('../safety/safety-engine');
-    const mockEvaluate = vi.mocked(new SafetyEngine().evaluateAction);
     mockEvaluate.mockResolvedValueOnce({
       allowed: false,
       requiresApproval: true,

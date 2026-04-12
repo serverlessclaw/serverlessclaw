@@ -24,6 +24,17 @@ vi.mock('./safety/safety-engine', () => ({
   },
 }));
 
+const { mockSmartWarmup } = vi.hoisted(() => ({
+  mockSmartWarmup: vi.fn().mockResolvedValue({ servers: [], agents: [] }),
+}));
+
+vi.mock('./warmup/warmup-manager', () => ({
+  WarmupManager: vi.fn().mockImplementation(function (this: any) {
+    this.smartWarmup = mockSmartWarmup;
+    return this;
+  }),
+}));
+
 // Create persistent mock functions
 const mockGetTraceId = vi.fn();
 const mockGetNodeId = vi.fn();
@@ -480,6 +491,79 @@ describe('Agent Trace Propagation', () => {
         'user-1',
         expect.objectContaining({ content: 'New strategy designed.' })
       );
+    });
+  });
+
+  describe('Smart Warmup Triggers', () => {
+    let mockMemory: IMemory;
+    let mockProvider: IProvider;
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      vi.stubEnv('LAMBDA_TASK_ROOT', '/var/task');
+      vi.stubEnv('MCP_SERVER_ARNS', JSON.stringify({ 'mcp-github': 'arn' }));
+
+      mockMemory = {
+        getHistory: vi.fn().mockResolvedValue([]),
+        addMessage: vi.fn(),
+        getDistilledMemory: vi.fn().mockResolvedValue(''),
+        getLessons: vi.fn().mockResolvedValue([]),
+        getGlobalLessons: vi.fn().mockResolvedValue([]),
+        searchInsights: vi.fn().mockResolvedValue({ items: [] }),
+        getSummary: vi.fn().mockResolvedValue(null),
+        updateSummary: vi.fn().mockResolvedValue(undefined),
+      } as unknown as IMemory;
+
+      mockProvider = {
+        call: vi.fn().mockResolvedValue({ role: MessageRole.ASSISTANT, content: 'Hi' }),
+        getCapabilities: vi.fn().mockResolvedValue({
+          supportedReasoningProfiles: [],
+        }),
+      } as unknown as IProvider;
+    });
+
+    it('should trigger proactive smart warmup at depth 0 in Lambda environment', async () => {
+      const agent = new Agent(mockMemory, mockProvider, [], 'System', {
+        id: 'test',
+        name: 'Test',
+        enabled: true,
+        systemPrompt: 'System',
+        description: 'test',
+        category: AgentCategory.SYSTEM,
+        icon: 'test',
+        tools: [],
+      });
+
+      await agent.process('user-1', 'Need to fix a bug in github', { depth: 0 });
+
+      // Wait for the dynamic import and async trigger
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      expect(mockSmartWarmup).toHaveBeenCalledWith(
+        expect.objectContaining({
+          intent: 'Need to fix a bug in github',
+          warmedBy: 'webhook',
+        })
+      );
+    });
+
+    it('should NOT trigger proactive smart warmup when depth > 0', async () => {
+      const agent = new Agent(mockMemory, mockProvider, [], 'System', {
+        id: 'test',
+        name: 'Test',
+        enabled: true,
+        systemPrompt: 'System',
+        description: 'test',
+        category: AgentCategory.SYSTEM,
+        icon: 'test',
+        tools: [],
+      });
+
+      await agent.process('user-1', 'hi', { depth: 1 });
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      expect(mockSmartWarmup).not.toHaveBeenCalled();
     });
   });
 });

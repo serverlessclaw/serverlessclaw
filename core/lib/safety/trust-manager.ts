@@ -156,10 +156,12 @@ export class TrustManager {
 
   /**
    * Updates an agent's trust score atomically using DynamoDB conditional updates.
-   * Implements retry loop for race-condition safety when concurrent updates occur.
+   * Uses retry loop for race-condition safety when concurrent updates occur.
+   * NOTE: The retry mechanism handles race conditions - if another update changes the score
+   * between our read and write, we'll retry with the fresh value.
    */
   private static async updateTrustScore(agentId: string, delta: number): Promise<number> {
-    const MAX_RETRIES = 3;
+    const MAX_RETRIES = 5;
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
@@ -167,7 +169,17 @@ export class TrustManager {
         const currentScore = fullConfig?.trustScore ?? 80;
         const newScore = Math.min(this.MAX_SCORE, Math.max(this.MIN_SCORE, currentScore + delta));
 
-        await AgentRegistry.atomicUpdateAgentField(agentId, 'trustScore', newScore);
+        if (newScore === currentScore) {
+          await this.recordHistory(agentId, newScore);
+          return newScore;
+        }
+
+        await AgentRegistry.atomicUpdateAgentFieldWithCondition(
+          agentId,
+          'trustScore',
+          newScore,
+          currentScore
+        );
 
         await this.recordHistory(agentId, newScore);
         return newScore;
@@ -175,9 +187,11 @@ export class TrustManager {
         if (
           attempt < MAX_RETRIES - 1 &&
           e instanceof Error &&
-          e.name === 'ConditionalCheckFailedException'
+          (e.name === 'ConditionalCheckFailedException' || e.message.includes('conditional'))
         ) {
-          logger.debug(`Retry updateTrustScore for ${agentId}, attempt ${attempt + 1}`);
+          logger.debug(
+            `Retry updateTrustScore for ${agentId}, attempt ${attempt + 1} - score changed`
+          );
           continue;
         }
         logger.error(`Failed to update trust score for ${agentId}:`, e);
