@@ -97,7 +97,11 @@ export class SafetyBase {
 
     const resource = Resource as { ConfigTable?: { name: string } };
     if (!('ConfigTable' in resource)) {
-      logger.warn('ConfigTable not linked. Skipping violation persistence.');
+      // Sh2 FIX: Violating Principle 11 (Telemetry Blindness) if we skip silently.
+      // We still skip but ensure it's a visible warning in logs.
+      logger.error(
+        '[CRITICAL] SafetyEngine telemetry blindness: ConfigTable not linked. Violations will NOT be persisted.'
+      );
       return;
     }
 
@@ -121,11 +125,11 @@ export class SafetyBase {
           })
         );
       } catch (e) {
-        logger.error(`Failed to persist safety violations batch ${i}:`, e);
+        logger.error(`[SafetyEngine] Failed to persist safety violations batch ${i}:`, e);
       }
     }
 
-    logger.info(`[SafetyEngine] Persisted ${violationsToPersist.length} violations to DynamoDB`);
+    logger.debug(`[SafetyEngine] Persisted ${violationsToPersist.length} violations to DynamoDB`);
   }
 
   /**
@@ -150,6 +154,33 @@ export class SafetyBase {
       resource,
       totalCount: existing.count + 1,
     });
+  }
+
+  /**
+   * Enforces blast radius limits for Class C actions.
+   * Returns an error message if the limit is exceeded, otherwise null.
+   */
+  protected enforceClassCBlastRadius(action: string): string | null {
+    const LIMIT_PER_HOUR = 5;
+    const windowMs = 3600000; // 1 hour
+    const now = Date.now();
+
+    const stats = this.classCBlastRadius.get(action);
+    if (!stats) return null;
+
+    // Reset if window passed
+    if (now - stats.lastAction > windowMs) {
+      this.classCBlastRadius.delete(action);
+      return null;
+    }
+
+    if (stats.count >= LIMIT_PER_HOUR) {
+      const errorMsg = `BLAST_RADIUS_EXCEEDED: Action '${action}' has reached its safety limit (${stats.count}/${LIMIT_PER_HOUR} in 1h). Further execution blocked for safety.`;
+      logger.error(`[SafetyEngine] ${errorMsg}`);
+      return errorMsg;
+    }
+
+    return null;
   }
 
   /**

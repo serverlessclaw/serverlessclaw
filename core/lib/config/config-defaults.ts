@@ -458,6 +458,14 @@ export const CONFIG_DEFAULTS = {
     description: 'Days to retain strategic gaps beforeTTL expiry.',
   },
 
+  /** TTL for reputation/trust data (days). Default: 365 */
+  REPUTATION_RETENTION_DAYS: {
+    code: 365,
+    hotSwappable: true,
+    configKey: 'reputation_retention_days',
+    description: 'Days to retain reputation and trust score history.',
+  },
+
   /** Cache TTL for user data (ms). Default: 300000 (5 min) */
   CACHE_TTL_USER_DATA_MS: {
     code: 300000,

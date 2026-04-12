@@ -13,6 +13,17 @@ import {
 } from './types/index';
 import { SYSTEM } from './constants';
 
+vi.mock('./safety/safety-engine', () => ({
+  SafetyEngine: class {
+    evaluateAction = vi.fn().mockResolvedValue({
+      allowed: true,
+      requiresApproval: false,
+      reason: 'Authorized',
+    });
+    getClassCBlastRadius = vi.fn().mockReturnValue({});
+  },
+}));
+
 // Create persistent mock functions
 const mockGetTraceId = vi.fn();
 const mockGetNodeId = vi.fn();

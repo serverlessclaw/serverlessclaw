@@ -23,8 +23,32 @@ vi.mock('../tracer', () => ({
   }),
 }));
 
+vi.mock('../safety/safety-engine', () => {
+  return {
+    SafetyEngine: class {
+      evaluateAction = vi.fn().mockImplementation(async (config, action, params) => {
+        if (params?.resource === 'sst.config.ts') {
+          return {
+            allowed: false,
+            requiresApproval: true,
+            reason: 'PERMISSION_DENIED: protected path',
+            appliedPolicy: 'protected_resource',
+          };
+        }
+        return {
+          allowed: true,
+          requiresApproval: false,
+          reason: 'Authorized',
+        };
+      });
+      getClassCBlastRadius = vi.fn().mockReturnValue({});
+    },
+  };
+});
+
 vi.mock('../constants', () => ({
   TRACE_TYPES: { TOOL_CALL: 'tool_call', TOOL_RESULT: 'tool_result' },
+  TIME: { MS_PER_MINUTE: 60000, MS_PER_HOUR: 3600000 },
 }));
 
 function createTool(overrides: Partial<any> = {}) {

@@ -155,30 +155,36 @@ export class TrustManager {
   }
 
   /**
-   * Updates an agent's trust score atomically.
+   * Updates an agent's trust score atomically using DynamoDB conditional updates.
+   * Implements retry loop for race-condition safety when concurrent updates occur.
    */
   private static async updateTrustScore(agentId: string, delta: number): Promise<number> {
-    // 1. Resolve current score
-    const fullConfig = await AgentRegistry.getAgentConfig(agentId);
-    const currentScore = fullConfig?.trustScore ?? 80;
+    const MAX_RETRIES = 3;
 
-    const newScore = Math.min(this.MAX_SCORE, Math.max(this.MIN_SCORE, currentScore + delta));
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const fullConfig = await AgentRegistry.getAgentConfig(agentId);
+        const currentScore = fullConfig?.trustScore ?? 80;
+        const newScore = Math.min(this.MAX_SCORE, Math.max(this.MIN_SCORE, currentScore + delta));
 
-    // 2. Atomic update in AGENTS_CONFIG
-    try {
-      await AgentRegistry.atomicUpdateAgentField(agentId, 'trustScore', newScore);
-    } catch (e) {
-      // Fallback: If atomic update fails (e.g. agent doesn't exist in registry yet)
-      // we might need to create the agent config first, but trust manager
-      // usually works on existing agents.
-      logger.error(`Failed to update trust score for ${agentId} via atomic field update`, e);
-      throw e;
+        await AgentRegistry.atomicUpdateAgentField(agentId, 'trustScore', newScore);
+
+        await this.recordHistory(agentId, newScore);
+        return newScore;
+      } catch (e) {
+        if (
+          attempt < MAX_RETRIES - 1 &&
+          e instanceof Error &&
+          e.name === 'ConditionalCheckFailedException'
+        ) {
+          logger.debug(`Retry updateTrustScore for ${agentId}, attempt ${attempt + 1}`);
+          continue;
+        }
+        logger.error(`Failed to update trust score for ${agentId}:`, e);
+        throw e;
+      }
     }
-
-    // 3. Record in history for trend analysis
-    await this.recordHistory(agentId, newScore);
-
-    return newScore;
+    throw new Error(`Failed to update trust score for ${agentId} after ${MAX_RETRIES} retries`);
   }
 
   /**

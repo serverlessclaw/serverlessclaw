@@ -316,12 +316,30 @@ Each silo represents a core functional domain. Reviews within a silo should adop
 - **Resource Leak Check**: Monitor connection pool under load
 - **Error Path Test**: Trigger failures at each layer, verify error handling
 
-### 3. The Shield (Survival & Perimeter)
+#### 🛡️ Silo 3: The Shield (Security & Baseline) [STABILIZED 2026-04-12]
 
-**Perspective**: _What happens when things break or the perimeter is breached?_
+The Shield has been unified. The `SafetyEngine` now acts as the authoritative gate for all tool executions, enforcing least-privilege resource access and Class C blast-radius limits.
 
-- **Angle**: Stress-test the "survival instincts" of the platform. Audit IAM least-privilege policies and the effectiveness of **Proactive Trunk Evolution** for autonomous infrastructure changes.
-- **Key Concepts**: Safety guardrails, recovery logic (Dead Man's Switch), Class C blast-radius limits, and real-time security signaling.
+**Key Achievements**:
+- **Unified Gateway**: ToolExecutor now delegates all security decisions to the SafetyEngine (Principle 3).
+- **Blast Radius Enforcement**: Hard limit of 5 Class C actions per hour per agent (Principle 10).
+- **Loop Interdiction**: Reasoning loops are caught by the `SemanticLoopDetector` and result in trust penalties (Principle 22).
+
+#### 🩻 Unified Shield Flow
+```text
+  [ Agent Output ] -> [ SemanticLoopDetector ] -- (Loop Found) --> [ SafetyBase.recordFailure ]
+          |                                                             (Trust Penalty)
+          v
+  [ Tool Call ] -> [ Shield (SafetyEngine) ] -- (Class C) --> [ EvolutionScheduler ]
+          |                  |                                   (Schedule HITL)
+          |                  +------- (Trust >= 95 & AUTO) -> [ Principle 9 Promotion ]
+          |                                                      (Bypass Approval)
+          v
+  [ Circuit Breaker ] -- (Tripped?) --> [ Execution Blocked ]
+          |
+          v
+  [ Tool Execution ] -> [ Failure? ] -> [ SafetyBase.recordFailure ] -> [ Trip Breaker ]
+```
 
 #### What to Look For
 
@@ -502,7 +520,7 @@ Each silo represents a core functional domain. Reviews within a silo should adop
 
 - **Dead Code**: Functions never called, exports never used, conditional code for removed features
 - **Architectural Fractures**: Modules with diverging patterns, inconsistent abstractions, or broken contracts
-- **Pattern Duplication**: Same logic copied in multiple places没有得到提取
+- **Pattern Duplication**: Same logic copied in multiple places
 - **Configuration Drift**: Hardcoded values that should be external, or config not being used
 
 #### Common Finding Patterns

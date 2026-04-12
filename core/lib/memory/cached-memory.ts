@@ -405,6 +405,8 @@ export class CachedMemory implements IMemory {
     meta: Partial<ConversationMeta>
   ): Promise<void> {
     await this.underlying.saveConversationMeta(userId, sessionId, meta);
+    MemoryCaches.conversation.delete(CacheKeys.history(userId));
+    MemoryCaches.conversation.delete(CacheKeys.summary(userId));
   }
 
   async getMemoryByTypePaginated(

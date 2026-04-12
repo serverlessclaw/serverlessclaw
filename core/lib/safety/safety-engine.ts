@@ -158,8 +158,30 @@ export class SafetyEngine extends SafetyBase {
       agentId: agentConfig?.id,
     });
 
-    // If action requires approval and is Class C, schedule for proactive evolution
-    if (approvalResult.requiresApproval && this.isClassCAction(action)) {
+    // Enforce Class C blast radius (Sh2 Fix: Enforcement missing)
+    if (this.isClassCAction(action)) {
+      const blastRadiusError = this.enforceClassCBlastRadius(action);
+      if (blastRadiusError) {
+        const violation = this.createViolation(
+          agentConfig?.id ?? 'unknown',
+          tier,
+          action,
+          context?.toolName,
+          context?.resource,
+          blastRadiusError,
+          'blocked',
+          context?.traceId,
+          context?.userId
+        );
+        await this.logViolation(violation);
+        return {
+          allowed: false,
+          requiresApproval: false,
+          reason: blastRadiusError,
+          appliedPolicy: 'blast_radius_limit',
+        };
+      }
+
       await this.evolutionScheduler.scheduleAction({
         agentId: agentConfig?.id ?? 'unknown',
         action,
@@ -169,12 +191,28 @@ export class SafetyEngine extends SafetyBase {
         traceId: context?.traceId,
         userId: context?.userId,
       });
-      // Sh2 Fix: Track blast radius for Class C actions
       this.trackClassCBlastRadius(action, context?.resource);
     }
 
-    if (approvalResult.requiresApproval && (agentConfig?.trustScore ?? 0) >= 95) {
-      approvalResult.reason = `${approvalResult.reason} [ADVISORY: Candidate for trust-based autonomy promotion (TrustScore >= 95)]`;
+    // Principle 9: Trust-Driven Mode Shifting (Sh2 FIX: Implementation was half-baked)
+    // If TrustScore >= 95 and mode is AUTO, we bypass human approval for Class B/C actions.
+    const hasPromotionTrust = (agentConfig?.trustScore ?? 0) >= 95;
+    const isAutoMode = agentConfig?.evolutionMode === 'auto';
+
+    if (approvalResult.requiresApproval && hasPromotionTrust) {
+      if (isAutoMode) {
+        logger.info(
+          `[SafetyEngine] Principle 9: Self-promoting action '${action}' for agent ${agentConfig?.id} (TrustScore: ${agentConfig?.trustScore}, Mode: AUTO)`
+        );
+        return {
+          allowed: true,
+          requiresApproval: false,
+          reason: `${approvalResult.reason} [AUTONOMOUS PROMOTION: TrustScore >= 95 & AUTO mode]`,
+          appliedPolicy: 'principle_9_promotion',
+        };
+      } else {
+        approvalResult.reason = `${approvalResult.reason} [ADVISORY: Candidate for trust-based autonomy promotion (TrustScore >= 95). Shift to AUTO mode to enable.]`;
+      }
     }
 
     if (!approvalResult.allowed || approvalResult.requiresApproval) {
@@ -206,9 +244,12 @@ export class SafetyEngine extends SafetyBase {
       'tool_permission',
       'deployment',
       'security_guardrail',
-      'code_change', // Code changes that pass quality gates can be Class B or C; here we treat them as evolution candidates
+      'code_change',
+      'audit_override',
+      'trust_manipulation',
+      'mode_shift',
     ];
-    return classCActions.includes(action);
+    return classCActions.includes(action.toLowerCase());
   }
 
   /**

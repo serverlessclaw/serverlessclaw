@@ -22,6 +22,18 @@ const mockTracer = {
   addStep: vi.fn().mockResolvedValue(undefined),
 } as unknown as ClawTracer;
 
+vi.mock('../safety/safety-engine', () => {
+  return {
+    SafetyEngine: class {
+      evaluateAction = vi.fn().mockResolvedValue({
+        allowed: true,
+        requiresApproval: false,
+        reason: 'Authorized',
+      });
+    },
+  };
+});
+
 describe('ToolExecutor Security', () => {
   const execContext: ToolExecutionContext = {
     traceId: 'trace-1',
@@ -73,6 +85,15 @@ describe('ToolExecutor Security', () => {
 
     const messages: any[] = [];
     const attachments: any[] = [];
+
+    const { SafetyEngine } = await import('../safety/safety-engine');
+    const mockEvaluate = vi.mocked(new SafetyEngine().evaluateAction);
+    mockEvaluate.mockResolvedValueOnce({
+      allowed: false,
+      requiresApproval: true,
+      reason: 'PERMISSION_DENIED: protected path',
+      appliedPolicy: 'protected_resource',
+    });
 
     const result = await ToolExecutor.executeToolCalls(
       toolCalls,

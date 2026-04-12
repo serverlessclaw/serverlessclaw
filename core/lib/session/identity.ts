@@ -333,15 +333,26 @@ export class IdentityManager {
    * Get user identity. Loads from storage.
    * Note: Fallback owner IDs no longer auto-grant OWNER role for security.
    * They default to MEMBER like all new users. Admin must explicitly promote.
+   * @param userId - The user ID to retrieve
+   * @param callerId - Optional caller ID for permission validation. If provided, validates caller has access.
    */
-  async getUser(userId: string): Promise<UserIdentity | undefined> {
+  async getUser(userId: string, callerId?: string): Promise<UserIdentity | undefined> {
+    if (callerId && callerId !== userId) {
+      const hasAccess = await this.hasResourceAccess(callerId, 'agent', userId);
+      if (!hasAccess) {
+        logger.warn(`Permission denied: ${callerId} attempted to access user ${userId}`);
+        return undefined;
+      }
+    }
     return this.loadUser(userId);
   }
 
   /**
    * Get session from storage.
+   * @param sessionId - The session ID to retrieve
+   * @param callerId - Optional caller ID for permission validation. If provided, validates caller has access.
    */
-  async getSession(sessionId: string): Promise<Session | undefined> {
+  async getSession(sessionId: string, callerId?: string): Promise<Session | undefined> {
     try {
       const items = await this.base.queryItems({
         KeyConditionExpression: 'userId = :pk AND #ts = :zero',
@@ -354,9 +365,19 @@ export class IdentityManager {
 
       if (items.length > 0) {
         const item = items[0];
+        const sessionUserId = item.sessionUserId as string;
+
+        if (callerId && callerId !== sessionUserId) {
+          const hasAccess = await this.hasResourceAccess(callerId, 'trace', sessionUserId);
+          if (!hasAccess) {
+            logger.warn(`Permission denied: ${callerId} attempted to access session ${sessionId}`);
+            return undefined;
+          }
+        }
+
         return {
           sessionId,
-          userId: item.sessionUserId as string,
+          userId: sessionUserId,
           workspaceId: item.workspaceId as string | undefined,
           startTime: item.startTime as number,
           lastActivityTime: item.lastActivityTime as number,

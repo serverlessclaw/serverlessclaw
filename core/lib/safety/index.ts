@@ -11,3 +11,5 @@ export {
   resetSemanticLoopDetector,
 } from './semantic-loop-detector';
 export type { LoopDetectionResult } from './semantic-loop-detector';
+export { TrustManager } from './trust-manager';
+export type { TrustPenalty, TrustSnapshot } from './trust-manager';

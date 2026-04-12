@@ -292,23 +292,18 @@ export class AgentRouter {
   ): Promise<string> {
     if (candidates.length === 0) throw new Error('No candidate agents provided');
 
-    // Sh1: Filter candidates against AgentRegistry to respect "enabled" status
-    // Note: This is a "check-then-act" pattern with a narrow race window between
-    // the enabled check and final selection. For strict atomicity, this would
-    // require DynamoDB conditional writes or batch queries, which adds latency.
-    // The current implementation balances correctness with performance - if an
-    // agent becomes disabled after this check, the next execution will pick up
-    // the change. This aligns with PRINCIPLES.md "Selection Integrity" as the
-    // initial filter does enforce enabled status before selection.
     const { AgentRegistry } = await import('../registry/AgentRegistry');
-    const enabledCandidates: string[] = [];
 
-    for (const id of candidates) {
-      const config = await AgentRegistry.getAgentConfig(id);
+    // Fetch all candidate configs in parallel for atomic selection
+    const configs = await Promise.all(candidates.map((id) => AgentRegistry.getAgentConfig(id)));
+
+    const enabledCandidates: string[] = [];
+    for (let i = 0; i < candidates.length; i++) {
+      const config = configs[i];
       if (config && config.enabled !== false) {
-        enabledCandidates.push(id);
+        enabledCandidates.push(candidates[i]);
       } else {
-        logger.warn(`[AgentRouter] Skipping disabled or non-existent agent: ${id}`);
+        logger.warn(`[AgentRouter] Skipping disabled or non-existent agent: ${candidates[i]}`);
       }
     }
 
@@ -316,11 +311,14 @@ export class AgentRouter {
       logger.warn(
         `[AgentRouter] All target agents disabled: ${candidates.join(', ')}. Falling back to backbone agents.`
       );
+      const fallbackConfigs = await Promise.all(
+        BACKBONE_FALLBACK_AGENTS.map((id) => AgentRegistry.getAgentConfig(id))
+      );
       const fallbackCandidates: string[] = [];
-      for (const agentId of BACKBONE_FALLBACK_AGENTS) {
-        const config = await AgentRegistry.getAgentConfig(agentId);
+      for (let i = 0; i < BACKBONE_FALLBACK_AGENTS.length; i++) {
+        const config = fallbackConfigs[i];
         if (config && config.enabled !== false) {
-          fallbackCandidates.push(agentId);
+          fallbackCandidates.push(BACKBONE_FALLBACK_AGENTS[i]);
         }
       }
       if (fallbackCandidates.length === 0) {

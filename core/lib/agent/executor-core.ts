@@ -21,6 +21,7 @@ import {
 } from './executor-types';
 import { ExecutorHelper } from './executor-helper';
 import { ToolExecutor } from './tool-executor';
+import { getSemanticLoopDetector, TrustManager } from '../safety';
 
 /**
  * Core implementation of the iterative execution loop.
@@ -103,6 +104,30 @@ export class ExecutorCore {
       const aiResponse = await this.callLLM(messages, options, usage);
       lastAiResponse = aiResponse;
       this.updateUsage(usage, aiResponse, options.activeProvider);
+
+      // Sh2 FIX: Semantic Loop Detection Integration
+      if (aiResponse.content && options.sessionId) {
+        const loopDetector = getSemanticLoopDetector();
+        const loopResult = loopDetector.check(options.sessionId, aiResponse.content);
+        if (loopResult.isLoop) {
+          logger.warn(
+            `[${this.agentId}] Semantic loop detected (count: ${loopResult.consecutiveCount}). Penalizing trust.`
+          );
+          await TrustManager.recordFailure(
+            this.agentId,
+            `Semantic reasoning loop detected (${loopResult.consecutiveCount} turns).`,
+            2
+          );
+
+          if (loopResult.action === 'escalate' || loopResult.action === 'switch_agent') {
+            return {
+              responseText: `[LOOP_DETECTED] I'm stuck in a reasoning loop. Escalating for intervention.`,
+              paused: false,
+              usage,
+            };
+          }
+        }
+      }
 
       const postCallBudget = this.checkBudgetEnforcement(options, usage);
       if (postCallBudget && !postCallBudget.isWarning) {
@@ -355,6 +380,20 @@ export class ExecutorCore {
 
         if (chunk.content || chunk.thought || chunk.tool_calls || chunk.usage) {
           yield chunk;
+        }
+      }
+
+      // Sh2 FIX: Semantic Loop Detection for Stream
+      if (fullContent && options.sessionId) {
+        const loopDetector = getSemanticLoopDetector();
+        const loopResult = loopDetector.check(options.sessionId, fullContent);
+        if (loopResult.isLoop) {
+          logger.warn(`[${this.agentId}] Stream semantic loop detected. Penalizing trust.`);
+          await TrustManager.recordFailure(
+            this.agentId,
+            `Semantic reasoning loop detected in stream.`,
+            1
+          );
         }
       }
 
@@ -694,7 +733,7 @@ export class ExecutorCore {
     approvedToolCalls?: string[],
     ui_blocks?: Message['ui_blocks']
   ): LoopResult {
-    const isApproval = toolResult.asyncWait && !toolResult.responseText;
+    const isApproval = toolResult.asyncWait && !toolResult.responseText?.startsWith('TASK_PAUSED');
     const pendingToolName = this.getPendingToolName(aiResponse, approvedToolCalls);
     const toolIndex = Math.max(0, toolResult.toolCallCount - 1);
     const callId = aiResponse.tool_calls![toolIndex].id;

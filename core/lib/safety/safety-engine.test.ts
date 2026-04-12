@@ -340,8 +340,24 @@ describe('SafetyEngine', () => {
 
       expect(result.requiresApproval).toBe(true);
       expect(result.reason).toContain(
-        '[ADVISORY: Candidate for trust-based autonomy promotion (TrustScore >= 95)]'
+        '[ADVISORY: Candidate for trust-based autonomy promotion (TrustScore >= 95). Shift to AUTO mode to enable.]'
       );
+    });
+
+    it('should grant autonomous promotion for high-trust agents in AUTO mode', async () => {
+      const { EvolutionMode } = await import('../types/agent');
+      const config = {
+        id: 'high-trust-auto-agent',
+        safetyTier: SafetyTier.PROD,
+        trustScore: 98,
+        evolutionMode: EvolutionMode.AUTO,
+      } as IAgentConfig;
+
+      const result = await engine.evaluateAction(config, 'deployment');
+
+      expect(result.allowed).toBe(true);
+      expect(result.requiresApproval).toBe(false);
+      expect(result.reason).toContain('[AUTONOMOUS PROMOTION: TrustScore >= 95 & AUTO mode]');
     });
 
     it('should NOT add advisory tag for high-trust agents on Class C (IAM) actions', async () => {
@@ -375,6 +391,24 @@ describe('SafetyEngine', () => {
     it('should return empty map initially', async () => {
       const radius = engine.getClassCBlastRadius();
       expect(radius).toEqual({});
+    });
+
+    it('should enforce blast radius limits after 5 Class C actions', async () => {
+      const config = {
+        id: 'aggressive-agent',
+        safetyTier: SafetyTier.PROD,
+      } as IAgentConfig;
+
+      // First 5 should succeed (schedule evolution / approval)
+      for (let i = 0; i < 5; i++) {
+        await engine.evaluateAction(config, 'iam_change');
+      }
+
+      // 6th should be blocked by blast radius
+      const result = await engine.evaluateAction(config, 'iam_change');
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('BLAST_RADIUS_EXCEEDED');
+      expect(result.appliedPolicy).toBe('blast_radius_limit');
     });
   });
 

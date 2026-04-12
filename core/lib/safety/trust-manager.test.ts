@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TrustManager } from './trust-manager';
 import { DYNAMO_KEYS } from '../constants';
 
-const { mockAgentRegistry } = vi.hoisted(() => ({
+const { mockAgentRegistry, mockDefaultDocClient } = vi.hoisted(() => ({
   mockAgentRegistry: {
     getRawConfig: vi.fn(),
     saveRawConfig: vi.fn().mockResolvedValue(undefined),
@@ -10,6 +9,19 @@ const { mockAgentRegistry } = vi.hoisted(() => ({
     getAllConfigs: vi.fn().mockResolvedValue({}),
     atomicUpdateAgentField: vi.fn().mockResolvedValue(undefined),
   },
+  mockDefaultDocClient: {
+    send: vi.fn().mockResolvedValue({}),
+  },
+}));
+
+vi.mock('sst', () => ({
+  Resource: {
+    ConfigTable: { name: 'test-table' },
+  },
+}));
+
+vi.mock('../registry/config', () => ({
+  defaultDocClient: mockDefaultDocClient,
 }));
 
 vi.mock('../registry', () => ({
@@ -27,6 +39,35 @@ vi.mock('../logger', () => ({
 
 vi.mock('../utils/bus', () => ({
   emitEvent: vi.fn().mockResolvedValue(undefined),
+}));
+
+import { TrustManager } from './trust-manager';
+
+vi.mock('../registry', () => ({
+  AgentRegistry: mockAgentRegistry,
+}));
+
+vi.mock('../logger', () => ({
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
+vi.mock('../utils/bus', () => ({
+  emitEvent: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../registry/config', () => ({
+  defaultDocClient: {
+    send: vi.fn().mockResolvedValue({}),
+  },
+}));
+
+vi.mock('sst', () => ({
+  Resource: {},
 }));
 
 describe('TrustManager', () => {

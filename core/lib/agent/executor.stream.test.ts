@@ -7,6 +7,19 @@ vi.mock('../../handlers/events/cancellation-handler', () => ({
   handleTaskCancellation: vi.fn(),
 }));
 
+vi.mock('../safety/safety-engine', () => {
+  return {
+    SafetyEngine: class {
+      evaluateAction = vi.fn().mockResolvedValue({
+        allowed: true,
+        requiresApproval: false,
+        reason: 'Authorized',
+      });
+      getClassCBlastRadius = vi.fn().mockReturnValue({});
+    },
+  };
+});
+
 describe('AgentExecutor.streamLoop', () => {
   let mockProvider: any;
   let mockTracer: any;
