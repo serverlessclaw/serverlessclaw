@@ -630,13 +630,13 @@ export async function getGapTrack(
 export async function updateGapMetadata(
   base: BaseMemoryProvider,
   gapId: string,
-  metadata: Record<string, unknown>
+  metadata: Record<string, unknown>,
+  workspaceId?: string
 ): Promise<void> {
   const normalizedId = normalizeGapId(gapId);
-  const numericId = normalizedId.match(/(\d+)$/)?.[1] ?? normalizedId;
   const gapTimestamp = getGapTimestamp(normalizedId);
 
-  const userId = getGapIdPK(normalizedId);
+  const userId = base.getScopedUserId(getGapIdPK(normalizedId), workspaceId);
   const timestamp = gapTimestamp;
 
   const setClauses: string[] = ['updatedAt = :now'];
@@ -673,6 +673,7 @@ export async function updateGapMetadata(
       logger.warn(
         `[GapMetadata] Primary key lookup failed for gap ${gapId}, searching all statuses...`
       );
+      const numericId = normalizedId.match(/(\d+)$/)?.[1] ?? normalizedId;
       const allStatuses = Object.values(GapStatus);
       for (const s of allStatuses) {
         const gaps = await getAllGaps(base, s);

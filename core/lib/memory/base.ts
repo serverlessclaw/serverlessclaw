@@ -336,4 +336,18 @@ export class BaseMemoryProvider {
       expiresAt: item.expiresAt as number | undefined,
     }));
   }
+  /**
+   * Generates a scoped userId based on the current context.
+   * Format: userId#workspaceId
+   *
+   * @param userId - The base user or entity ID.
+   * @param workspaceId - Optional workspace identifier.
+   * @returns The scoped partition key string.
+   */
+  public getScopedUserId(userId: string, workspaceId?: string): string {
+    if (!workspaceId) return userId;
+    // If the userId already contains the workspaceId suffix, don't re-append it
+    if (userId.includes(`#${workspaceId}`)) return userId;
+    return `${userId}#${workspaceId}`;
+  }
 }

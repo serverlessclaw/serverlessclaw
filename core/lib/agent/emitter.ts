@@ -20,6 +20,7 @@ export type ContinuationMetadata = {
   initiatorId?: string;
   depth?: number;
   sessionId?: string;
+  workspaceId?: string;
   nodeId?: string;
   parentId?: string;
   attachments?: Array<{

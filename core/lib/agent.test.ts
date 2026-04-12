@@ -89,6 +89,7 @@ describe('Agent Trace Propagation', () => {
       updateGapStatus: vi.fn().mockResolvedValue(undefined),
       getSummary: vi.fn().mockResolvedValue(null),
       updateSummary: vi.fn().mockResolvedValue(undefined),
+      getScopedUserId: vi.fn().mockImplementation((uid, wid) => (wid ? `${uid}#${wid}` : uid)),
     } as unknown as IMemory;
 
     mockProvider = {
@@ -334,7 +335,8 @@ describe('Agent Trace Propagation', () => {
       expect.objectContaining({
         role: MessageRole.USER,
         attachments,
-      })
+      }),
+      undefined
     );
 
     // Check provider call
@@ -450,7 +452,8 @@ describe('Agent Trace Propagation', () => {
       // Verify intelligent extraction of the "message" field for the chat history
       expect(mockMemory.addMessage).toHaveBeenCalledWith(
         'user-1',
-        expect.objectContaining({ content: 'Task completed successfully' })
+        expect.objectContaining({ content: 'Task completed successfully' }),
+        undefined
       );
     });
 
@@ -489,7 +492,8 @@ describe('Agent Trace Propagation', () => {
 
       expect(mockMemory.addMessage).toHaveBeenCalledWith(
         'user-1',
-        expect.objectContaining({ content: 'New strategy designed.' })
+        expect.objectContaining({ content: 'New strategy designed.' }),
+        undefined
       );
     });
   });
@@ -506,6 +510,7 @@ describe('Agent Trace Propagation', () => {
       mockMemory = {
         getHistory: vi.fn().mockResolvedValue([]),
         addMessage: vi.fn(),
+        getScopedUserId: vi.fn().mockImplementation((uid, wid) => (wid ? `${uid}#${wid}` : uid)),
         getDistilledMemory: vi.fn().mockResolvedValue(''),
         getLessons: vi.fn().mockResolvedValue([]),
         getGlobalLessons: vi.fn().mockResolvedValue([]),

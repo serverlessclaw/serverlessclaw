@@ -26,6 +26,7 @@ describe('memory/utils', () => {
     mockBase = {
       queryItems: vi.fn().mockResolvedValue([]),
       queryItemsPaginated: vi.fn().mockResolvedValue({ items: [], lastEvaluatedKey: undefined }),
+      getScopedUserId: vi.fn().mockImplementation((uid, wid) => (wid ? `${uid}#${wid}` : uid)),
     } as unknown as BaseMemoryProvider;
   });
 

@@ -67,6 +67,7 @@ vi.mock('../lib/utils/agent-helpers', async () => {
         updateGapStatus: vi.fn(),
         getFailurePatterns: vi.fn().mockResolvedValue([]),
         acquireGapLock: vi.fn().mockResolvedValue(true),
+        getScopedUserId: vi.fn().mockImplementation((uid, wid) => (wid ? `${uid}#${wid}` : uid)),
       },
       provider: {
         getProvider: vi.fn().mockReturnValue({
@@ -83,7 +84,10 @@ vi.mock('../lib/utils/agent-helpers', async () => {
     }),
     initAgent: vi.fn().mockResolvedValue({
       config: { id: 'coder', name: 'TestAgent', enabled: true },
-      memory: { updateGapStatus: vi.fn() },
+      memory: {
+        updateGapStatus: vi.fn(),
+        getScopedUserId: vi.fn().mockImplementation((uid, wid) => (wid ? `${uid}#${wid}` : uid)),
+      },
       agent: {
         process: vi.fn().mockResolvedValue({
           responseText: '{"status":"SUCCESS", "response":"Code fixed"}',

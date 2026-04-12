@@ -63,8 +63,9 @@ export async function pushRecursionEntry(
     );
 
     logger.info(`[RECURSION] Pushed entry for trace ${traceId}: depth=${depth}, agent=${agentId}`);
-  } catch (error: any) {
-    if (error.name === 'ConditionalCheckFailedException') {
+  } catch (error: unknown) {
+    const err = error as { name?: string };
+    if (err.name === 'ConditionalCheckFailedException') {
       logger.debug(`[RECURSION] Skip push for ${traceId}: existing depth is already >= ${depth}`);
       return;
     }
@@ -111,6 +112,7 @@ export async function clearRecursionStack(traceId: string): Promise<void> {
       new DeleteCommand({
         TableName: process.env.MEMORY_TABLE_NAME ?? 'MemoryTable',
         Key: { userId: key, timestamp: 0 },
+        ConditionExpression: 'attribute_exists(depth)',
       })
     );
 

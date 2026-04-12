@@ -67,16 +67,19 @@ export async function getMemoryByTypePaginated(
   base: BaseMemoryProvider,
   type: string,
   limit: number = 100,
-  lastEvaluatedKey?: Record<string, unknown>
+  lastEvaluatedKey?: Record<string, unknown>,
+  workspaceId?: string
 ): Promise<{ items: Record<string, unknown>[]; lastEvaluatedKey?: Record<string, unknown> }> {
   const result = await base.queryItemsPaginated({
     IndexName: 'TypeTimestampIndex',
     KeyConditionExpression: '#tp = :type',
+    FilterExpression: workspaceId ? 'workspaceId = :workspaceId' : undefined,
     ExpressionAttributeNames: {
       '#tp': 'type',
     },
     ExpressionAttributeValues: {
       ':type': type,
+      ...(workspaceId ? { ':workspaceId': workspaceId } : {}),
     },
     ScanIndexForward: false,
     Limit: limit,
@@ -100,9 +103,10 @@ export async function getMemoryByTypePaginated(
 export async function getMemoryByType(
   base: BaseMemoryProvider,
   type: string,
-  limit: number = 100
+  limit: number = 100,
+  workspaceId?: string
 ): Promise<Record<string, unknown>[]> {
-  const { items } = await getMemoryByTypePaginated(base, type, limit);
+  const { items } = await getMemoryByTypePaginated(base, type, limit, undefined, workspaceId);
   return items;
 }
 
@@ -136,17 +140,20 @@ export async function getRegisteredMemoryTypes(base: BaseMemoryProvider): Promis
  * @param base - The base memory provider instance.
  * @param userId - The userId value to query.
  * @param limit - Maximum number of items to return (default 1).
+ * @param workspaceId - Optional workspace identifier for isolation.
  * @returns A promise resolving to an array of content strings.
  */
 export async function queryLatestContentByUserId(
   base: BaseMemoryProvider,
   userId: string,
-  limit: number = 1
+  limit: number = 1,
+  workspaceId?: string
 ): Promise<string[]> {
+  const scopedUserId = base.getScopedUserId(userId, workspaceId);
   const items = await base.queryItems({
     KeyConditionExpression: 'userId = :userId',
     ExpressionAttributeValues: {
-      ':userId': userId,
+      ':userId': scopedUserId,
     },
     Limit: limit,
     ScanIndexForward: false,
@@ -168,13 +175,15 @@ export async function queryByTypeAndGetContent(
   base: BaseMemoryProvider,
   type: string,
   limit: number = 10,
-  userId?: string
+  userId?: string,
+  workspaceId?: string
 ): Promise<string[]> {
   const params: {
     Limit: number;
     ScanIndexForward: boolean;
     IndexName?: string;
     KeyConditionExpression?: string;
+    FilterExpression?: string;
     ExpressionAttributeNames?: Record<string, string>;
     ExpressionAttributeValues?: Record<string, unknown>;
   } = {
@@ -183,15 +192,20 @@ export async function queryByTypeAndGetContent(
   };
 
   if (userId) {
+    const scopedUserId = base.getScopedUserId(userId, workspaceId);
     params.IndexName = 'UserInsightIndex';
     params.KeyConditionExpression = 'userId = :userId AND #tp = :type';
     params.ExpressionAttributeNames = { '#tp': 'type' };
-    params.ExpressionAttributeValues = { ':userId': userId, ':type': type };
+    params.ExpressionAttributeValues = { ':userId': scopedUserId, ':type': type };
   } else {
     params.IndexName = 'TypeTimestampIndex';
     params.KeyConditionExpression = '#tp = :type';
     params.ExpressionAttributeNames = { '#tp': 'type' };
     params.ExpressionAttributeValues = { ':type': type };
+    if (workspaceId) {
+      params.FilterExpression = 'workspaceId = :workspaceId';
+      params.ExpressionAttributeValues[':workspaceId'] = workspaceId;
+    }
   }
 
   const items = await base.queryItems(params);
@@ -217,7 +231,8 @@ export async function queryByTypeAndMap(
   limit: number = 100,
   filterExpression?: string,
   expressionAttributeValues?: Record<string, unknown>,
-  userId?: string
+  userId?: string,
+  workspaceId?: string
 ): Promise<MemoryInsight[]> {
   const params: {
     Limit: number;
@@ -236,20 +251,27 @@ export async function queryByTypeAndMap(
   };
 
   if (userId) {
+    const scopedUserId = base.getScopedUserId(userId, workspaceId);
     params.IndexName = 'UserInsightIndex';
     params.KeyConditionExpression = 'userId = :userId AND #tp = :type';
     params.ExpressionAttributeNames = { '#tp': 'type' };
-    params.ExpressionAttributeValues[':userId'] = userId;
+    params.ExpressionAttributeValues[':userId'] = scopedUserId;
     params.ExpressionAttributeValues[':type'] = type;
   } else {
     params.IndexName = 'TypeTimestampIndex';
     params.KeyConditionExpression = '#tp = :type';
     params.ExpressionAttributeNames = { '#tp': 'type' };
     params.ExpressionAttributeValues[':type'] = type;
-  }
-
-  if (filterExpression) {
-    params.FilterExpression = filterExpression;
+    if (workspaceId) {
+      params.FilterExpression = workspaceId
+        ? filterExpression
+          ? `${filterExpression} AND workspaceId = :workspaceId`
+          : 'workspaceId = :workspaceId'
+        : filterExpression;
+      params.ExpressionAttributeValues[':workspaceId'] = workspaceId;
+    } else if (filterExpression) {
+      params.FilterExpression = filterExpression;
+    }
   }
 
   const items = await base.queryItems(params);
@@ -258,6 +280,7 @@ export async function queryByTypeAndMap(
     id: item.userId as string,
     content: item.content as string,
     timestamp: item.timestamp as number | string,
+    workspaceId: item.workspaceId as string | undefined,
     createdAt:
       (item.createdAt as number) ??
       (item.metadata as { createdAt?: number } | undefined)?.createdAt ??

@@ -85,6 +85,7 @@ const createMockBase = () => ({
   clearHistory: vi.fn().mockResolvedValue(undefined),
   getDistilledMemory: vi.fn().mockResolvedValue(''),
   listConversations: vi.fn().mockResolvedValue([]),
+  getScopedUserId: vi.fn().mockImplementation((uid, wid) => (wid ? `${uid}#${wid}` : uid)),
 });
 
 describe('MetricsCollector', () => {

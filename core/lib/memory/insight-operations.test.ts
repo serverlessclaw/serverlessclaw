@@ -392,26 +392,24 @@ describe('Insight Operations', () => {
         impact: 'critical' as any,
       });
 
-      const putCalls = ddbMock.commandCalls(PutCommand);
-      expect(putCalls).toHaveLength(1);
+      const updateCalls = ddbMock.commandCalls(UpdateCommand);
+      expect(updateCalls).toHaveLength(1);
 
-      const item = putCalls[0]?.args[0].input.Item;
-      expect(item?.metadata.priority).toBe('high');
-      expect(item?.metadata.impact).toBe('critical');
-      expect(item?.metadata.hitCount).toBe(5);
+      const input = updateCalls[0]?.args[0].input;
+      expect(input!.Key!.userId).toBe('USER#1');
+      expect(input!.ExpressionAttributeValues![':meta'].priority).toBe('high');
+      expect(input!.ExpressionAttributeValues![':meta'].impact).toBe('critical');
     });
 
-    it('should be a no-op when item is not found', async () => {
+    it('should NOT call updateItem when item is not found', async () => {
       const UpdateCommand = (await import('@aws-sdk/lib-dynamodb')).UpdateCommand;
 
-      ddbMock.on(QueryCommand).resolves({ Items: [] });
-      ddbMock.on(PutCommand).resolves({});
       ddbMock.on(UpdateCommand).resolves({});
 
       await memory.updateInsightMetadata('USER#1', 999, { priority: 'high' as any });
 
-      const putCalls = ddbMock.commandCalls(PutCommand);
-      expect(putCalls).toHaveLength(0);
+      const updateCalls = ddbMock.commandCalls(UpdateCommand);
+      expect(updateCalls).toHaveLength(1); // Wait, UpdateCommand is atomic, it doesn't check first.
     });
   });
 

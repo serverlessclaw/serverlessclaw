@@ -118,8 +118,8 @@ export async function saveConversationMeta(
   if (isPinned) {
     // B1 Fix: Enforce maximum pinned session duration to prevent unbounded storage growth
     // Pinned sessions now have a max TTL of 365 days (configurable via RETENTION.MAX_PINNED_SESSION_DAYS)
-    const maxPinnedTTL = RETENTION.MAX_PINNED_SESSION_DAYS * 24 * 60 * 60 * 1000;
-    expiresAt = Date.now() + maxPinnedTTL;
+    const maxPinnedTTLSeconds = RETENTION.MAX_PINNED_SESSION_DAYS * 24 * 60 * 60;
+    expiresAt = Math.floor(Date.now() / 1000) + maxPinnedTTLSeconds;
     logger.info(
       `[Session] Pinned session will auto-expire in ${RETENTION.MAX_PINNED_SESSION_DAYS} days`,
       {

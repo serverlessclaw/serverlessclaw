@@ -53,6 +53,7 @@ describe('Agent Handoff Bypass', () => {
     mockMemory = {
       addMessage: vi.fn(),
       getMessages: vi.fn().mockResolvedValue([]),
+      getScopedUserId: vi.fn().mockImplementation((uid, wid) => (wid ? `${uid}#${wid}` : uid)),
     } as any;
     mockProvider = {
       call: vi.fn().mockResolvedValue({

@@ -56,6 +56,7 @@ function createMockBase(): BaseMemoryProvider & {
     clearHistory: vi.fn(),
     getDistilledMemory: vi.fn(),
     listConversations: vi.fn(),
+    getScopedUserId: vi.fn().mockImplementation((uid, wid) => (wid ? `${uid}#${wid}` : uid)),
   } as unknown as BaseMemoryProvider & {
     queryItems: ReturnType<typeof vi.fn>;
     putItem: ReturnType<typeof vi.fn>;

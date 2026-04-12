@@ -29,7 +29,7 @@ export class LockManager {
     const dbClient = client || new DynamoDBClient({});
     this.docClient = DynamoDBDocumentClient.from(dbClient);
     try {
-      this.tableName = (Resource as Record<string, any>).MemoryTable.name;
+      this.tableName = (Resource as Record<string, { name: string }>).MemoryTable?.name || 'MemoryTable';
     } catch {
       this.tableName = process.env.MEMORY_TABLE_NAME || 'MemoryTable';
     }
@@ -71,17 +71,8 @@ export class LockManager {
     const expiresAt = now + options.ttlSeconds;
 
     const state = await this.getLockState(fullId);
-    const isExpired = state.expiresAt !== undefined && state.expiresAt < now;
-    const hasOwner = state.ownerId !== undefined && state.ownerId !== null;
 
-    let conditionExpression: string;
-    if (!hasOwner) {
-      conditionExpression = 'attribute_not_exists(ownerId) OR ownerId = :null';
-    } else if (isExpired) {
-      conditionExpression = 'ownerId = :null OR expiresAt < :now';
-    } else {
-      conditionExpression = 'attribute_not_exists(ownerId)';
-    }
+    const conditionExpression = 'attribute_not_exists(ownerId) OR ownerId = :null OR expiresAt < :now';
 
     try {
       await this.docClient.send(
@@ -106,7 +97,7 @@ export class LockManager {
       logger.debug(`Lock [${fullId}] acquired by ${options.ownerId}`);
       return true;
     } catch (error: unknown) {
-      if ((error as any).name === 'ConditionalCheckFailedException') {
+      if ((error as Error).name === 'ConditionalCheckFailedException') {
         logger.debug(`Lock [${fullId}] acquisition failed: already held or not expired.`);
         return false;
       }
@@ -142,7 +133,7 @@ export class LockManager {
       );
       return true;
     } catch (error: unknown) {
-      if ((error as any).name === 'ConditionalCheckFailedException') {
+      if ((error as Error).name === 'ConditionalCheckFailedException') {
         logger.warn(`Lock [${fullId}] renewal failed: owner mismatch or lock lost.`);
         return false;
       }
@@ -175,7 +166,7 @@ export class LockManager {
       logger.debug(`Lock [${fullId}] released by ${ownerId}`);
       return true;
     } catch (error: unknown) {
-      if ((error as any).name === 'ConditionalCheckFailedException') {
+      if ((error as Error).name === 'ConditionalCheckFailedException') {
         logger.debug(`Lock [${fullId}] release rejected: owner mismatch or lock already expired.`);
         return false;
       }

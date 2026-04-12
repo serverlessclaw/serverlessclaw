@@ -91,6 +91,7 @@ export class Agent {
       nodeId: incomingNodeId,
       parentId: incomingParentId,
       sessionId,
+      workspaceId,
       attachments: incomingAttachments,
       source = TraceSource.UNKNOWN,
       responseFormat: initialResponseFormat,
@@ -216,14 +217,18 @@ export class Agent {
       activeModel = finalModel;
       activeProvider = finalProvider;
 
-      await this.memory.addMessage(storageId, {
-        role: MessageRole.USER,
-        content: userText,
-        attachments: incomingAttachments as Attachment[],
-        pageContext,
-        traceId,
-        messageId: traceId,
-      });
+      await this.memory.addMessage(
+        storageId,
+        {
+          role: MessageRole.USER,
+          content: userText,
+          attachments: incomingAttachments as Attachment[],
+          pageContext,
+          traceId,
+          messageId: traceId,
+        },
+        workspaceId
+      );
 
       const { AgentExecutor, AGENT_DEFAULTS } = await import('./agent/executor');
       const executor = new AgentExecutor(
@@ -331,20 +336,25 @@ export class Agent {
       }
 
       if (paused) {
-        await this.memory.addMessage(storageId, {
-          role: MessageRole.ASSISTANT,
-          content: responseText,
-          agentName: this.config?.name ?? 'SuperClaw',
-          traceId,
-          messageId: this.config?.id === 'superclaw' ? traceId : `${traceId}-${this.config?.id}`,
-          tool_calls: resultToolCalls,
-        });
+        await this.memory.addMessage(
+          storageId,
+          {
+            role: MessageRole.ASSISTANT,
+            content: responseText,
+            agentName: this.config?.name ?? 'SuperClaw',
+            traceId,
+            messageId: this.config?.id === 'superclaw' ? traceId : `${traceId}-${this.config?.id}`,
+            tool_calls: resultToolCalls,
+          },
+          workspaceId
+        );
 
         if (!asyncWait) {
           await this.emitter.emitContinuation(userId, userText, tracer.getTraceId() ?? 'unknown', {
             initiatorId: currentInitiator,
             depth,
             sessionId,
+            workspaceId,
             nodeId: nodeId ?? 'unknown',
             parentId: parentId ?? 'unknown',
             priorInputTokens: loopUsage?.totalInputTokens ?? 0,
@@ -356,14 +366,18 @@ export class Agent {
           });
         }
       } else {
-        await this.memory.addMessage(storageId, {
-          role: MessageRole.ASSISTANT,
-          content: responseText,
-          thought: resultThought,
-          agentName: this.config?.name ?? 'SuperClaw',
-          traceId,
-          messageId: this.config?.id === 'superclaw' ? traceId : `${traceId}-${this.config?.id}`,
-        });
+        await this.memory.addMessage(
+          storageId,
+          {
+            role: MessageRole.ASSISTANT,
+            content: responseText,
+            thought: resultThought,
+            agentName: this.config?.name ?? 'SuperClaw',
+            traceId,
+            messageId: this.config?.id === 'superclaw' ? traceId : `${traceId}-${this.config?.id}`,
+          },
+          workspaceId
+        );
       }
 
       await tracer.endTrace(responseText);
@@ -398,6 +412,7 @@ export class Agent {
       nodeId: incomingNodeId,
       parentId: incomingParentId,
       sessionId,
+      workspaceId,
       attachments: incomingAttachments,
       source = TraceSource.UNKNOWN,
       responseFormat: initialResponseFormat,
@@ -485,14 +500,18 @@ export class Agent {
       }
     );
 
-    await this.memory.addMessage(storageId, {
-      role: MessageRole.USER,
-      content: userText,
-      attachments: incomingAttachments as Attachment[],
-      pageContext,
-      traceId,
-      messageId: traceId,
-    });
+    await this.memory.addMessage(
+      storageId,
+      {
+        role: MessageRole.USER,
+        content: userText,
+        attachments: incomingAttachments as Attachment[],
+        pageContext,
+        traceId,
+        messageId: traceId,
+      },
+      workspaceId
+    );
 
     const executor = new (await import('./agent/executor')).AgentExecutor(
       this.provider,
@@ -568,14 +587,18 @@ export class Agent {
       }
     }
 
-    await this.memory.addMessage(storageId, {
-      role: MessageRole.ASSISTANT,
-      content: finalResponseText,
-      thought: fullThought,
-      agentName: this.config?.name ?? 'SuperClaw',
-      traceId,
-      messageId: this.config?.id === 'superclaw' ? traceId : `${traceId}-${this.config?.id}`,
-    });
+    await this.memory.addMessage(
+      storageId,
+      {
+        role: MessageRole.ASSISTANT,
+        content: finalResponseText,
+        thought: fullThought,
+        agentName: this.config?.name ?? 'SuperClaw',
+        traceId,
+        messageId: this.config?.id === 'superclaw' ? traceId : `${traceId}-${this.config?.id}`,
+      },
+      workspaceId
+    );
     await tracer.endTrace(fullContent);
   }
 }

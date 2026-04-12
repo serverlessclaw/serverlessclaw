@@ -34,6 +34,7 @@ describe('Multi-Modal Integration', () => {
     setGap: vi.fn().mockResolvedValue(undefined),
     getFailedPlans: vi.fn().mockResolvedValue([]),
     updateDistilledMemory: vi.fn().mockResolvedValue(undefined),
+    getScopedUserId: vi.fn().mockImplementation((uid, wid) => (wid ? `${uid}#${wid}` : uid)),
   };
 
   const mockProvider = {

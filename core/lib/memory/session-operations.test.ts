@@ -57,6 +57,7 @@ describe('session-operations', () => {
       listConversations: vi.fn().mockResolvedValue([]),
       clearHistory: vi.fn().mockResolvedValue(undefined),
       queryItems: vi.fn().mockResolvedValue([]),
+      getScopedUserId: vi.fn().mockImplementation((uid, wid) => (wid ? `${uid}#${wid}` : uid)),
     } as unknown as BaseMemoryProvider;
   });
 
@@ -199,16 +200,23 @@ describe('session-operations', () => {
       expect(mockBase.deleteItem).not.toHaveBeenCalled();
     });
 
-    it('should set expiresAt to max TTL (365 days) for pinned items', async () => {
+    it('should set expiresAt to max TTL (365 days) for pinned items in SECONDS', async () => {
       await saveConversationMeta(mockBase, 'user123', 'sess1', { isPinned: true });
 
       expect(mockBase.updateItem).toHaveBeenCalledWith(
         expect.objectContaining({
           ExpressionAttributeValues: expect.objectContaining({
             ':pinned': true,
+            ':exp': expect.any(Number),
           }),
         })
       );
+
+      const expValue = (mockBase.updateItem as any).mock.calls[0][0].ExpressionAttributeValues[':exp'];
+      // Current epoch seconds is ~1.7e9. Milliseconds is ~1.7e12.
+      // 1e11 is a safe threshold to distinguish seconds from milliseconds.
+      expect(expValue).toBeLessThan(100000000000);
+      expect(expValue).toBeGreaterThan(1000000000); // Greater than year 2001
     });
 
     it('should use stable timestamp derived from sessionId', async () => {

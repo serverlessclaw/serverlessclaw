@@ -252,7 +252,8 @@ describe('Agent.stream()', () => {
         role: MessageRole.USER,
         content: 'What is this?',
         attachments,
-      })
+      }),
+      undefined
     );
   });
 
@@ -396,7 +397,8 @@ describe('Agent.stream()', () => {
     // storageId should remain 'CONV#dashboard-user#sess-1' (non-isolated uses userId directly)
     expect(mockMemory.addMessage).toHaveBeenCalledWith(
       'CONV#dashboard-user#sess-1',
-      expect.objectContaining({ role: MessageRole.USER })
+      expect.objectContaining({ role: MessageRole.USER }),
+      undefined
     );
     expect(mockMemory.getHistory).toHaveBeenCalledWith('CONV#dashboard-user#sess-1');
   });

@@ -34,6 +34,7 @@ describe('clarification-operations', () => {
       putItem: vi.fn().mockResolvedValue(undefined),
       queryItems: vi.fn().mockResolvedValue([]),
       updateItem: vi.fn().mockResolvedValue({ retryCount: 2 }),
+      getScopedUserId: vi.fn().mockImplementation((uid, wid) => (wid ? `${uid}#${wid}` : uid)),
     } as unknown as BaseMemoryProvider;
   });
 

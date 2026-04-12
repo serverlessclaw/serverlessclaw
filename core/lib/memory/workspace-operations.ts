@@ -109,9 +109,9 @@ export async function inviteMember(
   const workspace = await getWorkspace(workspaceId);
   if (!workspace) throw new Error(`Workspace not found: ${workspaceId}`);
 
-  // Check inviter permissions (must be admin or owner)
+  // Check inviter permissions (must be admin or owner) and active
   const inviter = workspace.members.find((m) => m.memberId === inviterId);
-  if (!inviter || !hasPermission(inviter.role, 'admin')) {
+  if (!inviter || !inviter.active || !hasPermission(inviter.role, 'admin')) {
     throw new Error(`Insufficient permissions: ${inviterId} cannot invite members`);
   }
 
@@ -161,7 +161,7 @@ export async function updateMemberRole(
   if (!workspace) throw new Error(`Workspace not found: ${workspaceId}`);
 
   const updater = workspace.members.find((m) => m.memberId === updaterId);
-  if (!updater || !hasPermission(updater.role, 'admin')) {
+  if (!updater || !updater.active || !hasPermission(updater.role, 'admin')) {
     throw new Error(`Insufficient permissions: ${updaterId} cannot update roles`);
   }
 
@@ -197,7 +197,7 @@ export async function removeMember(
   if (!workspace) throw new Error(`Workspace not found: ${workspaceId}`);
 
   const remover = workspace.members.find((m) => m.memberId === removerId);
-  if (!remover || !hasPermission(remover.role, 'admin')) {
+  if (!remover || !remover.active || !hasPermission(remover.role, 'admin')) {
     throw new Error(`Insufficient permissions: ${removerId} cannot remove members`);
   }
 

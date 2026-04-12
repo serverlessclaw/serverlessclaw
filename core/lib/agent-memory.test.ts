@@ -45,6 +45,8 @@ describe('Agent Memory Recall Regression', () => {
       updateDistilledMemory: vi.fn().mockResolvedValue(undefined),
       searchInsights: vi.fn().mockResolvedValue({ items: [] }),
       getSummary: vi.fn().mockResolvedValue(null),
+      updateSummary: vi.fn().mockResolvedValue(undefined),
+      getScopedUserId: vi.fn().mockImplementation((uid, wid) => (wid ? `${uid}#${wid}` : uid)),
     } as unknown as IMemory;
 
     mockProvider = {

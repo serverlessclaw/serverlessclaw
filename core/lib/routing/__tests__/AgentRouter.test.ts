@@ -206,7 +206,7 @@ describe('AgentRouter', () => {
       });
 
       await expect(AgentRouter.selectBestAgent(['test'])).rejects.toThrow(
-        'All target agents and backbone fallba'
+        'Critical: All target and backbone fallback agents are disabled.'
       );
     });
   });

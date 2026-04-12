@@ -308,26 +308,13 @@ export class AgentRouter {
     }
 
     if (enabledCandidates.length === 0) {
-      logger.warn(
-        `[AgentRouter] All target agents disabled: ${candidates.join(', ')}. Falling back to backbone agents.`
-      );
-      const fallbackConfigs = await Promise.all(
-        BACKBONE_FALLBACK_AGENTS.map((id) => AgentRegistry.getAgentConfig(id))
-      );
-      const fallbackCandidates: string[] = [];
-      for (let i = 0; i < BACKBONE_FALLBACK_AGENTS.length; i++) {
-        const config = fallbackConfigs[i];
-        if (config && config.enabled !== false) {
-          fallbackCandidates.push(BACKBONE_FALLBACK_AGENTS[i]);
-        }
+      logger.warn(`[AgentRouter] Target agents disabled: ${candidates.join(', ')}. Using backbone fallback.`);
+      const fallbackConfigs = await Promise.all(BACKBONE_FALLBACK_AGENTS.map(id => AgentRegistry.getAgentConfig(id)));
+      enabledCandidates.push(...BACKBONE_FALLBACK_AGENTS.filter((id, i) => fallbackConfigs[i]?.enabled !== false));
+      
+      if (enabledCandidates.length === 0) {
+        throw new Error(`Critical: All target and backbone fallback agents are disabled.`);
       }
-      if (fallbackCandidates.length === 0) {
-        throw new Error(
-          `All target agents and backbone fallback agents are disabled: ${[...candidates, ...BACKBONE_FALLBACK_AGENTS].join(', ')}`
-        );
-      }
-      enabledCandidates.push(...fallbackCandidates);
-      logger.info(`[AgentRouter] Using backbone fallback agents: ${fallbackCandidates.join(', ')}`);
     }
 
     if (enabledCandidates.length === 1) return enabledCandidates[0];
@@ -343,6 +330,7 @@ export class AgentRouter {
 
   /**
    * Synchronous version for selecting best agent when rollups are already available.
+   * NOTE: Candidates must be pre-filtered for 'enabled: true' status before calling.
    *
    * @param candidates - Array of performance rollups.
    * @param capabilityMatchFn - Optional function to compute capability match for an agent.
@@ -372,6 +360,7 @@ export class AgentRouter {
 
   /**
    * Selects the best agent from candidates, incorporating reputation data.
+   * NOTE: Candidates must be pre-filtered for 'enabled: true' status before calling.
    *
    * Formula: (0.6 * performanceScore) + (0.4 * reputationScore)
    *
