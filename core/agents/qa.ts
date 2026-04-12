@@ -8,7 +8,7 @@ import {
 } from '../lib/types/agent';
 import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
-import { extractPayload, initAgent, extractBaseUserId } from '../lib/utils/agent-helpers';
+import { extractPayload, initAgent, extractBaseUserId, detectFailure } from '../lib/utils/agent-helpers';
 import { emitTaskEvent } from '../lib/utils/agent-helpers/event-emitter';
 import { sendOutboundMessage } from '../lib/outbound';
 
@@ -40,44 +40,37 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
 
   const baseUserId = extractBaseUserId(userId);
 
-  // 1. Discovery & Initialization
+  // 0. Discovery & Initialization
   const { config, memory } = await initAgent(AgentType.QA);
-  const { LLMJudge } = await import('../lib/verify/judge');
 
-  // Perform semantic evaluation using LLM-as-a-Judge
-  const judgeResult = await LLMJudge.evaluate(
-    `Verify and audit the following gaps: ${gapIds.join(', ')}`,
-    implementationResponse || 'No implementation response provided.',
-    [
-      'The code matches the architectural spirit of Serverless Claw (Stateless, AI-Native, Event-Driven).',
-      'The implementation actually solves the identified gaps.',
-      'No new security risks or technical debt were introduced.',
-      'Code is idiomatically complete and follows system-wide conventions.',
-    ],
-    { gapIds, traceId, sessionId }
-  );
-
-  logger.info('LLM-as-a-Judge Result:', JSON.stringify(judgeResult, null, 2));
-
-  const status = judgeResult.satisfied ? AgentStatus.SUCCESS : AgentStatus.REOPEN;
-  const auditReport = judgeResult.reasoning;
-  let validatedFeedback: import('../lib/schema/orchestration').QAFailureFeedback | null = null;
-
-  if (status === AgentStatus.REOPEN && judgeResult.issues && judgeResult.issues.length > 0) {
-    // Attempt to map issues to structured feedback format if possible
-    validatedFeedback = {
-      failureType: 'LOGIC_ERROR',
-      issues: judgeResult.issues.map((issue) => ({
-        file: 'multiple',
-        line: 0,
-        description: issue,
-        expected: 'Requirement satisfied',
-        actual: 'Requirement failed',
-      })),
-    };
+  // 1. Process QA Audit via unified lifecycle (Session Locking + Heartbeat)
+  const { processEventWithAgent } = await import('../handlers/events/shared');
+  
+  const qaPrompt = `Verify and audit the following gaps: ${gapIds.join(', ')}\n\nImplementation Output:\n${implementationResponse || 'No implementation response provided.'}`;
+  
+  let auditReport = '';
+  try {
+    const result = await processEventWithAgent(userId, AgentType.QA, qaPrompt, {
+      context: _context,
+      traceId,
+      taskId: traceId,
+      sessionId,
+      depth,
+      initiatorId,
+      isContinuation: true,
+      handlerTitle: 'QA Auditor',
+      outboundHandlerName: AgentType.QA,
+      formatResponse: (text) => text,
+    });
+    auditReport = result.responseText;
+  } catch (err) {
+    logger.error('Unexpected error in QA Agent processing:', err);
+    return; // Failure handled by wrapper
   }
 
-  const isSatisfied = status === AgentStatus.SUCCESS;
+  // 2. Evolution Management (Post-Audit Logic)
+  const isSatisfied = !detectFailure(auditReport) && auditReport.toLowerCase().includes('satisfied');
+  const status = isSatisfied ? AgentStatus.SUCCESS : AgentStatus.REOPEN;
 
   // Resolve evolution mode
   let evolutionMode = EvolutionMode.HITL;
@@ -90,7 +83,7 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
   }
 
   if (isSatisfied) {
-    // Mirror Silo 5: Record success and increment trust score for the implementing agent
+    // Record success and increment trust score
     if (initiatorId) {
       try {
         const { SafetyEngine } = await import('../lib/safety/safety-engine');
@@ -103,66 +96,29 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
 
     if (evolutionMode === EvolutionMode.AUTO) {
       logger.info('Verification successful. Auto-closing gaps.');
-      const { EVOLUTION_METRICS } = await import('../lib/metrics/evolution-metrics');
-
       for (const gapId of gapIds) {
-        // DEPLOYED -> DONE: Acquire lock before transition
         const lockAcquired = await memory.acquireGapLock(gapId, AgentType.QA);
-        if (!lockAcquired) {
-          logger.warn(`[QA] Could not acquire lock for gap ${gapId}, skipping transition to DONE.`);
-          EVOLUTION_METRICS.recordLockContention(gapId, AgentType.QA);
-          continue;
-        }
-
-        try {
-          const result = await memory.updateGapStatus(gapId, GapStatus.DONE);
-          if (!result.success) {
-            logger.warn(`[QA] Failed to transition gap ${gapId} to DONE: ${result.error}`);
-            EVOLUTION_METRICS.recordTransitionRejection(
-              gapId,
-              GapStatus.DEPLOYED,
-              GapStatus.DONE,
-              result.error || 'unknown'
-            );
+        if (lockAcquired) {
+          try {
+            await memory.updateGapStatus(gapId, GapStatus.DONE);
+          } finally {
+            await memory.releaseGapLock(gapId, AgentType.QA);
           }
-        } finally {
-          await memory.releaseGapLock(gapId, AgentType.QA);
         }
       }
     } else {
-      // HITL mode: Transition gaps to PENDING_APPROVAL and notify user
       logger.info('Verification successful. Awaiting human confirmation (HITL).');
-      const { EVOLUTION_METRICS } = await import('../lib/metrics/evolution-metrics');
-
       for (const gapId of gapIds) {
         const lockAcquired = await memory.acquireGapLock(gapId, AgentType.QA);
-        if (!lockAcquired) {
-          logger.warn(
-            `[QA] Could not acquire lock for gap ${gapId}, skipping transition to PENDING_APPROVAL.`
-          );
-          EVOLUTION_METRICS.recordLockContention(gapId, AgentType.QA);
-          continue;
-        }
-
-        try {
-          const result = await memory.updateGapStatus(gapId, GapStatus.PENDING_APPROVAL);
-          if (!result.success) {
-            logger.warn(
-              `[QA] Failed to transition gap ${gapId} to PENDING_APPROVAL: ${result.error}`
-            );
-            EVOLUTION_METRICS.recordTransitionRejection(
-              gapId,
-              GapStatus.DEPLOYED,
-              GapStatus.PENDING_APPROVAL,
-              result.error || 'unknown'
-            );
+        if (lockAcquired) {
+          try {
+            await memory.updateGapStatus(gapId, GapStatus.PENDING_APPROVAL);
+          } finally {
+            await memory.releaseGapLock(gapId, AgentType.QA);
           }
-        } finally {
-          await memory.releaseGapLock(gapId, AgentType.QA);
         }
       }
-
-      // Send confirmation request to user
+      
       await sendOutboundMessage(
         AgentType.QA,
         userId,
@@ -173,153 +129,47 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
       );
     }
   } else {
-    // Mirror Silo 5: Record failure and penalize trust score for the implementing agent
+    // Record failure and penalize trust score
     if (initiatorId) {
       try {
         const { SafetyEngine } = await import('../lib/safety/safety-engine');
         const safety = new SafetyEngine();
-        await safety.recordFailure(
-          initiatorId,
-          `QA Verification Failed for Gaps: ${gapIds.join(', ')} - ${judgeResult.reasoning.substring(0, 150)}`
-        );
+        await safety.recordFailure(initiatorId, `QA Verification Failed: ${auditReport.substring(0, 150)}`);
       } catch (e) {
         logger.warn(`Failed to record trust penalty for ${initiatorId}:`, e);
       }
     }
 
-    // Reopen failed verification. Track attempt count and escalate to FAILED if cap reached.
-    const MAX_REOPEN_ATTEMPTS = 3;
-    logger.warn('Verification failed. Checking reopen attempt counts.');
     const { EVOLUTION_METRICS } = await import('../lib/metrics/evolution-metrics');
-
-    const results: Array<{ gapId: string; status: 'escalated' | 'retry' | 'skipped' }> = [];
+    const retryGaps: string[] = [];
 
     for (const gapId of gapIds) {
-      // DEPLOYED -> OPEN/FAILED: Acquire lock before transition
       const lockAcquired = await memory.acquireGapLock(gapId, AgentType.QA);
-      if (!lockAcquired) {
-        logger.warn(`[QA] Could not acquire lock for gap ${gapId}, skipping failure transition.`);
-        EVOLUTION_METRICS.recordLockContention(gapId, AgentType.QA);
-        results.push({ gapId, status: 'skipped' });
-        continue;
-      }
-
-      try {
-        const attempts = await memory.incrementGapAttemptCount(gapId);
-        if (attempts >= MAX_REOPEN_ATTEMPTS) {
-          logger.warn(`Gap ${gapId} has been reopened ${attempts} times. Escalating to FAILED.`);
-          const result = await memory.updateGapStatus(gapId, GapStatus.FAILED);
-          if (!result.success) {
-            logger.warn(`[QA] Failed to transition gap ${gapId} to FAILED: ${result.error}`);
-            EVOLUTION_METRICS.recordTransitionRejection(
-              gapId,
-              GapStatus.DEPLOYED,
-              GapStatus.FAILED,
-              result.error || 'unknown'
-            );
+      if (lockAcquired) {
+        try {
+          const attempts = await memory.incrementGapAttemptCount(gapId);
+          if (attempts >= 3) {
+            await memory.updateGapStatus(gapId, GapStatus.FAILED);
+          } else {
+            await memory.updateGapStatus(gapId, GapStatus.OPEN);
+            retryGaps.push(gapId);
           }
-          results.push({ gapId, status: 'escalated' });
-        } else {
-          logger.info(`Gap ${gapId} reopen attempt ${attempts}/${MAX_REOPEN_ATTEMPTS}.`);
-          EVOLUTION_METRICS.recordGapReopen(gapId, attempts);
-          const result = await memory.updateGapStatus(gapId, GapStatus.OPEN);
-          if (!result.success) {
-            logger.warn(`[QA] Failed to transition gap ${gapId} to OPEN: ${result.error}`);
-            EVOLUTION_METRICS.recordTransitionRejection(
-              gapId,
-              GapStatus.DEPLOYED,
-              GapStatus.OPEN,
-              result.error || 'unknown'
-            );
-          }
-          results.push({ gapId, status: 'retry' });
+        } finally {
+          await memory.releaseGapLock(gapId, AgentType.QA);
         }
-      } finally {
-        await memory.releaseGapLock(gapId, AgentType.QA);
       }
     }
 
-    const escalatedGaps = results.filter((r) => r.status === 'escalated').map((r) => r.gapId);
-    const retryGaps = results.filter((r) => r.status === 'retry').map((r) => r.gapId);
-
-    if (escalatedGaps.length > 0) {
-      await sendOutboundMessage(
-        AgentType.QA,
-        userId,
-        `⚠️ **Evolution Escalation Required**\n\nGaps ${escalatedGaps.join(', ')} have failed QA verification ${MAX_REOPEN_ATTEMPTS} times and cannot be autonomously resolved.\n\nPlease review the implementation manually and re-approve when ready.`,
-        [baseUserId],
-        sessionId,
-        config.name
-      );
-    }
-
-    // GAP #2 FIX: Record failed plan as anti-pattern for the swarm to learn from
-    try {
-      const planHash = `qa-reject-${gapIds.join('-')}-${Date.now()}`;
-      await memory.recordFailedPlan(
-        planHash,
-        implementationResponse || 'No implementation response provided',
-        gapIds,
-        `QA_REJECTED: ${auditReport.substring(0, 300)}`
-      );
-      logger.info(`Recorded failed plan for gaps ${gapIds.join(', ')} in negative memory.`);
-    } catch (e) {
-      logger.warn('Failed to record failed plan in negative memory:', e);
-    }
-
-    // Notify Initiator about the failure so they can decide on the next course of action
-    const feedbackContext = validatedFeedback
-      ? `\n\nStructured Feedback (${validatedFeedback.failureType}):\n${validatedFeedback.issues.map((i) => `- ${i.file}:${i.line} - ${i.description}`).join('\n')}`
-      : '';
-    if (initiatorId) {
+    if (retryGaps.length > 0 && initiatorId) {
       const { wakeupInitiator } = await import('../handlers/events/shared');
       await wakeupInitiator(
         baseUserId,
         initiatorId,
-        `QA_VERIFICATION_FAILED: The changes for gaps ${retryGaps.join(', ')} failed verification.\n\nAudit Report:\n${auditReport}${feedbackContext}\n\n⚠️ TDD MANDATE: Before attempting another fix, you MUST first write a failing regression test that reproduces this specific QA failure. Then, fix the code to make the test pass.`,
+        `QA_VERIFICATION_FAILED: The changes for gaps ${retryGaps.join(', ')} failed verification.\n\nAudit Report:\n${auditReport}\n\n⚠️ TDD MANDATE: Before attempting another fix, you MUST first write a failing regression test.`,
         traceId,
         sessionId,
         depth
       );
-    } else {
-      // Fallback: direct dispatch to coder if no initiator
-      const { TOOLS } = await import('../tools/index');
-      const dispatcher = TOOLS.dispatchTask;
-      await dispatcher.execute({
-        agentId: AgentType.CODER,
-        userId: baseUserId,
-        task: `QA verification failed for gaps: ${retryGaps.join(', ')}.\n\nAudit Report:\n${auditReport}${feedbackContext}\n\n⚠️ TDD MANDATE: Before attempting another fix, you MUST first write a failing regression test that reproduces this specific QA failure. Only after the test fails should you implement the fix and redeploy.`,
-        metadata: { gapIds: retryGaps },
-        traceId,
-        sessionId,
-        initiatorId: AgentType.QA,
-        depth: (depth ?? 0) + 1,
-      });
     }
   }
-
-  // 1. Notify user directly in the chat session
-  await sendOutboundMessage(
-    AgentType.QA,
-    userId,
-    `🔍 **QA Audit Complete**\n\n${auditReport}`,
-    [baseUserId],
-    sessionId,
-    config.name,
-    []
-  );
-
-  // 2. Universal Coordination: Notify Initiator (if any)
-  await emitTaskEvent({
-    source: AgentType.QA,
-    agentId: AgentType.QA,
-    userId: baseUserId,
-    task: `Audit gaps: ${gapIds.join(', ')}`,
-    response: auditReport,
-    attachments: [],
-    traceId,
-    sessionId,
-    initiatorId,
-    depth,
-  });
 };

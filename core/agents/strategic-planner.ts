@@ -1,4 +1,4 @@
-import { AgentType, TraceSource } from '../lib/types/agent';
+import { AgentType, TraceSource, Attachment, AgentPayload } from '../lib/types/agent';
 import { ReasoningProfile } from '../lib/types/llm';
 import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
@@ -173,116 +173,99 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
     }
   }
 
-  // 3. Process with High Reasoning
-  let rawResponse = '';
-  let planId: string;
-
+  // 3. Process with High Reasoning via unified lifecycle (Session Locking + Heartbeat)
+  const { processEventWithAgent } = await import('../handlers/events/shared');
+  
+  let responseText = '';
+  let attachments: Attachment[] = [];
+  
   try {
-    try {
-      const stream = plannerAgent.stream(userId, plannerPrompt, {
-        profile: ReasoningProfile.DEEP,
-        isIsolated: isProactive,
-        initiatorId,
-        depth,
-        traceId,
-        sessionId,
-        source: TraceSource.DASHBOARD,
-        communicationMode: isProactive ? 'json' : 'text',
-        responseFormat: isProactive
-          ? {
-              type: 'json_schema',
-              json_schema: {
-                name: 'strategic_plan',
-                strict: true,
-                schema: StrategicPlanSchema,
-              },
-            }
-          : undefined,
-      });
-
-      for await (const chunk of stream) {
-        if (chunk.content) rawResponse += chunk.content;
-      }
-    } catch (error) {
-      const errorDetail = error instanceof Error ? error.message : String(error);
-      logger.error(`[StrategicPlanner] Streaming failure: ${errorDetail}`, error);
-      rawResponse = AGENT_ERRORS.PROCESS_FAILURE;
-    }
-
-    planId = `PLAN-${Date.now()}-${randomUUID().substring(0, 8)}`;
-    logger.info(`[PLANNER] Generated Plan ID: ${planId}`);
-
-    logger.info('Strategic Plan Raw Response:', rawResponse);
-
-    const isSystemFailure = rawResponse === AGENT_ERRORS.PROCESS_FAILURE;
-
-    let status = 'SUCCESS';
-    let plan = rawResponse;
-    let coveredGapIds: string[] = [];
-    let toolOptimizations: Array<{ action: string; toolName: string; reason: string }> = [];
-
-    let structuredTasks: Array<{ agentId: string; task: string; gapIds: string[] }> | undefined;
-    if (!isSystemFailure && isProactive) {
-      try {
-        const parsed = parseStructuredResponse<{
-          status: string;
-          plan: string;
-          coveredGapIds: string[];
-          tasks?: Array<{ agentId: string; task: string; gapIds: string[] }>;
-          toolOptimizations?: Array<{ action: string; toolName: string; reason: string }>;
-        }>(rawResponse);
-        status = parsed.status || 'SUCCESS';
-        plan = parsed.plan || rawResponse;
-        coveredGapIds = parsed.coveredGapIds ?? [];
-        structuredTasks = parsed.tasks;
-        toolOptimizations = parsed.toolOptimizations ?? [];
-        logger.info(
-          `Parsed Strategic Plan. Status: ${status}, Gaps: ${coveredGapIds.join(', ')}, StructuredTasks: ${structuredTasks?.length ?? 0}`
-        );
-      } catch (e) {
-        logger.warn('Failed to parse Planner structured response, falling back to raw text.', e);
-      }
-    }
-
-    // B2: Validate plan before coder dispatch
-    const validation = validatePlan(plan, coveredGapIds);
-    if (!validation.isValid && status === 'SUCCESS') {
-      logger.warn(`[PLANNER] Plan validation failed: ${validation.reason}`);
-      status = 'FAILED';
-    }
-
-    const isFailure = status === 'FAILED' || !validation.isValid;
-
-    // Use post-processing submodule
-    const { postProcessPlan } = await import('./strategic-planner/processing');
-    return await postProcessPlan(memory, {
-      plan,
-      planId,
-      status,
-      coveredGapIds,
-      toolOptimizations,
-      structuredTasks,
-      isFailure,
-      baseUserId,
-      userId,
-      sessionId: sessionId || '',
-      traceId: traceId || '',
-      initiatorId: initiatorId || '',
-      depth: depth || 0,
-      gapId,
-      task: task || 'Strategic Review',
-      isScheduledReview: isScheduledReview || false,
-      config,
-      metadata: (metadata as unknown as Record<string, unknown>) || {},
+    const result = await processEventWithAgent(userId, AgentType.STRATEGIC_PLANNER, plannerPrompt, {
+      context: _context,
+      traceId,
+      taskId: traceId,
+      sessionId,
+      depth,
+      initiatorId,
+      isContinuation: isProactive,
+      attachments: (metadata as unknown as AgentPayload | undefined)?.attachments as Attachment[],
+      handlerTitle: 'Strategic Planner',
+      outboundHandlerName: AgentType.STRATEGIC_PLANNER,
+      formatResponse: (text) => text,
+      tokenBudget: config.tokenBudget,
+      costLimit: config.costLimit,
     });
-  } finally {
-    // Release gap lock after all processing is complete
-    if (gapId) {
-      try {
-        await memory.releaseGapLock(gapId, AgentType.STRATEGIC_PLANNER);
-      } catch (e) {
-        logger.warn(`Failed to release gap lock for ${gapId}:`, e);
-      }
+    responseText = result.responseText;
+    attachments = result.attachments;
+  } catch (error) {
+    const errorDetail = error instanceof Error ? error.message : String(error);
+    logger.error(`[StrategicPlanner] Unified execution failure: ${errorDetail}`, error);
+    responseText = AGENT_ERRORS.PROCESS_FAILURE;
+  }
+
+  const planId = `PLAN-${Date.now()}-${randomUUID().substring(0, 8)}`;
+  logger.info(`[PLANNER] Generated Plan ID: ${planId}`);
+  logger.info('Strategic Plan Raw Response:', responseText);
+
+  const isSystemFailure = responseText === AGENT_ERRORS.PROCESS_FAILURE;
+
+  let status = 'SUCCESS';
+  let plan = responseText;
+  let coveredGapIds: string[] = [];
+  let toolOptimizations: Array<{ action: string; toolName: string; reason: string }> = [];
+  let structuredTasks: Array<{ agentId: string; task: string; gapIds: string[] }> | undefined;
+
+  if (!isSystemFailure && isProactive) {
+    try {
+      const parsed = parseStructuredResponse<{
+        status: string;
+        plan: string;
+        coveredGapIds: string[];
+        tasks?: Array<{ agentId: string; task: string; gapIds: string[] }>;
+        toolOptimizations?: Array<{ action: string; toolName: string; reason: string }>;
+      }>(responseText);
+      status = parsed.status || 'SUCCESS';
+      plan = parsed.plan || responseText;
+      coveredGapIds = parsed.coveredGapIds ?? [];
+      structuredTasks = parsed.tasks;
+      toolOptimizations = parsed.toolOptimizations ?? [];
+      logger.info(
+        `Parsed Strategic Plan. Status: ${status}, Gaps: ${coveredGapIds.join(', ')}, StructuredTasks: ${structuredTasks?.length ?? 0}`
+      );
+    } catch (e) {
+      logger.warn('Failed to parse Planner structured response, falling back to raw text.', e);
     }
   }
+
+  // B2: Validate plan before coder dispatch
+  const validation = validatePlan(plan, coveredGapIds);
+  if (!validation.isValid && status === 'SUCCESS') {
+    logger.warn(`[PLANNER] Plan validation failed: ${validation.reason}`);
+    status = 'FAILED';
+  }
+
+  const isFailure = status === 'FAILED' || !validation.isValid;
+
+  // Use post-processing submodule
+  const { postProcessPlan } = await import('./strategic-planner/processing');
+  return await postProcessPlan(memory, {
+    plan,
+    planId,
+    status,
+    coveredGapIds,
+    toolOptimizations,
+    structuredTasks,
+    isFailure,
+    baseUserId,
+    userId,
+    sessionId: sessionId || '',
+    traceId: traceId || '',
+    initiatorId: initiatorId || '',
+    depth: depth || 0,
+    gapId,
+    task: task || 'Strategic Review',
+    isScheduledReview: isScheduledReview || false,
+    config,
+    metadata: (metadata as unknown as Record<string, unknown>) || {},
+  });
 }

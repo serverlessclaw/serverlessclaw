@@ -33,7 +33,6 @@ export const scanMetabolism: ITool = {
       const auditTool = astTools.find(
         (t) =>
           t.name === 'metabolism_audit' ||
-          t.name === 'scythe_audit' ||
           t.name === 'codebase_audit' ||
           t.name.includes('metabolism')
       );

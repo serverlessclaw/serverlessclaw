@@ -1,4 +1,4 @@
-import { AgentType, GapStatus, AgentEvent, AgentPayload } from '../lib/types/agent';
+import { AgentType, GapStatus, AgentEvent, AgentPayload, Attachment } from '../lib/types/agent';
 import { ReasoningProfile, Message } from '../lib/types/llm';
 import { sendOutboundMessage } from '../lib/outbound';
 import { logger } from '../lib/logger';
@@ -29,7 +29,7 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
 
   // EventBridge wraps the payload in 'detail'
   const payload = extractPayload<AgentPayload>(event);
-  const { userId, task, metadata, traceId, sessionId, isContinuation, initiatorId, depth } =
+  const { userId, task, metadata, traceId, sessionId, isContinuation, initiatorId, depth, taskId } =
     payload;
   const gapIds = metadata?.gapIds as string[] | undefined;
   const applyStagedChanges = metadata?.applyStagedChanges as boolean | undefined;
@@ -83,248 +83,52 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
     return swarmResponse || `[DELEGATED] Task decomposed into parallel sub-tasks for execution.`;
   }
 
-  // 3. Process the task
-  let status: string;
-  let responseText: string;
-  let buildId: string | undefined = undefined;
-  let patchContent: string | undefined = undefined;
-  const resultAttachments: NonNullable<Message['attachments']> = [];
-
-  // Initialize defaults for safety in catch/finally before heavy lifting
-  status = 'FAILED';
-  responseText = 'SYSTEM_ERROR: Processing failed before response generation.';
-  logger.info(`[Coder] Starting process. Fallback: ${status}, Response: ${responseText}`);
-
-  // Track locked gap IDs for cleanup in finally block
-  const lockedGapIds: string[] = [];
-
+  // 3. Process the task via unified lifecycle (Session Locking + Heartbeat)
+  const { processEventWithAgent } = await import('../handlers/events/shared');
+  
+  let result: { responseText: string; attachments: Message['attachments'] };
   try {
-    // 3b. Acquire locks and transition gaps to PROGRESS (inside try so finally can reset on init failure)
-    if (gapIds && gapIds.length > 0) {
-      logger.info(
-        `Picking up task. Acquiring locks and marking ${gapIds.length} gaps as PROGRESS.`
-      );
-
-      // Acquire locks for all gaps before transitioning (lock parity fix)
-      const lockResults = await Promise.all(
-        gapIds.map(async (gapId) => {
-          const acquired = await memory.acquireGapLock(gapId, AgentType.CODER);
-          return { gapId, acquired };
-        })
-      );
-
-      // Only transition gaps where lock was acquired
-      const acquiredGaps = lockResults.filter((r) => {
-        if (!r.acquired) {
-          logger.warn(`[Coder] Could not acquire lock for gap ${r.gapId}, skipping.`);
-        }
-        return r.acquired;
-      });
-      lockedGapIds.push(...acquiredGaps.map((r) => r.gapId));
-
-      if (acquiredGaps.length > 0) {
-        const transitionResults = await Promise.all(
-          acquiredGaps.map((r) => memory.updateGapStatus(r.gapId, GapStatus.PROGRESS))
-        );
-        transitionResults.forEach((res, i) => {
-          if (!res.success) {
-            logger.warn(
-              `[Coder] Failed to transition gap ${acquiredGaps[i].gapId} to PROGRESS: ${res.error}`
-            );
-          }
-        });
-      }
-    }
-    const { responseText: rawResponse, attachments } = await agent.process(
-      userId,
-      task || '',
-      buildProcessOptions({
-        profile: ReasoningProfile.THINKING,
-        isIsolated: true,
-        context,
-        isContinuation,
-        initiatorId,
-        depth,
-        traceId,
-        sessionId,
-        communicationMode: 'json',
-        responseFormat: {
-          type: 'json_schema',
-          json_schema: {
-            name: 'coder_result',
-            strict: true,
-            schema: {
-              type: 'object',
-              properties: {
-                failing_test_written: { type: 'boolean' },
-                test_file_path: { type: 'string' },
-                test_execution_result: { type: 'string' },
-                implementation_code: { type: 'string' },
-                status: { type: 'string', enum: ['SUCCESS', 'FAILED'] },
-                response: { type: 'string' },
-                buildId: { type: 'string' },
-                patch: { type: 'string' },
-                sessionId: { type: 'string' },
-                documentation_updated_path: { type: 'string' },
-                tests_added_path: { type: 'string' },
-              },
-              required: [
-                'failing_test_written',
-                'test_file_path',
-                'test_execution_result',
-                'implementation_code',
-                'status',
-                'response',
-                'documentation_updated_path',
-                'tests_added_path',
-              ],
-
-              additionalProperties: false,
-            },
-          },
-        },
-      })
-    );
-
-    if (attachments) resultAttachments.push(...attachments);
-    logger.info('Coder Agent Raw Response:', rawResponse);
-    const rawResponseText = rawResponse;
-    status = 'SUCCESS';
-    responseText = rawResponseText;
-
-    try {
-      const parsed = parseStructuredResponse<{
-        status: string;
-        response: string;
-        buildId?: string;
-        patch?: string;
-        failing_test_written?: boolean;
-        test_file_path?: string;
-        test_execution_result?: string;
-      }>(rawResponseText);
-      status = parsed.status || 'SUCCESS';
-      responseText = parsed.response || rawResponseText;
-      buildId = parsed.buildId;
-      patchContent = parsed.patch;
-
-      // --- PATCH ENFORCEMENT (Risk Fix 2) ---
-      const isEvolutionTask = !!(gapIds && gapIds.length > 0);
-      if (isEvolutionTask && status === 'SUCCESS' && !patchContent) {
-        logger.warn('[PATCH_ENFORCEMENT] Evolution task missing patch. Marking as FAILED.');
-        status = 'FAILED';
-        responseText =
-          'FAILED: Evolution task requires a technical patch for the merger, but none was provided by the model. Please retry with explicit patch generation.';
-      }
-
-      // Enrich response with TDD evidence if provided
-      if (parsed.failing_test_written && parsed.test_file_path) {
-        responseText += `\n\n**TDD Verification:**\n- Test File: \`${parsed.test_file_path}\`\n- Execution Result: \`${parsed.test_execution_result || 'Unknown'}\``;
-      }
-
-      logger.info(
-        `Parsed Coder Result. Status: ${status}, BuildId: ${buildId}, TDD: ${parsed.failing_test_written}`
-      );
-    } catch (e) {
-      logger.warn('Failed to parse Coder structured response, falling back to raw text.', e);
-      // Fallback is already handled by assignments before the try block
-    }
+    result = await processEventWithAgent(userId, AgentType.CODER, task || '', {
+      context,
+      traceId,
+      taskId: taskId ?? traceId,
+      sessionId,
+      depth,
+      initiatorId,
+      isContinuation,
+      attachments: metadata?.attachments as Attachment[],
+      handlerTitle: 'Coder Agent',
+      outboundHandlerName: AgentType.CODER,
+      formatResponse: (text) => text, // Coder handles its own formatting in the prompt
+    });
   } catch (err) {
     logger.error('Unexpected error in Coder Agent processing:', err);
-    status = 'FAILED';
-    responseText = `SYSTEM_ERROR: ${err instanceof Error ? err.message : String(err)}`;
+    result = { 
+      responseText: `SYSTEM_ERROR: ${err instanceof Error ? err.message : String(err)}`,
+      attachments: []
+    };
   } finally {
     process.chdir(originalCwd);
     await cleanupWorkspace(workspacePath);
 
-    // Reset gaps back to OPEN if the task failed or was not successful (A3 Fix)
-    const isFailure = status === 'FAILED' || detectFailure(responseText);
-    if (isFailure && lockedGapIds.length > 0) {
-      const results = await Promise.allSettled(
-        lockedGapIds.map((gapId) => memory.updateGapStatus(gapId, GapStatus.OPEN))
-      );
-      results.forEach((result, i) => {
-        if (result.status === 'rejected') {
-          logger.warn(
-            `[Gaps] Failed to reset gap ${lockedGapIds[i]} to OPEN (rejection):`,
-            result.reason
-          );
-        } else if (!result.value.success) {
-          logger.warn(
-            `[Gaps] Failed to reset gap ${lockedGapIds[i]} to OPEN: ${result.value.error}`
-          );
-        } else {
-          logger.info(`[Gaps] Reset gap ${lockedGapIds[i]} to OPEN due to coder failure.`);
-        }
-      });
-    }
-
-    // Release all acquired gap locks (lock parity fix)
-    for (const gapId of lockedGapIds) {
-      try {
-        await memory.releaseGapLock(gapId, AgentType.CODER);
-      } catch (e) {
-        logger.warn(`[Coder] Failed to release gap lock for ${gapId}:`, e);
-      }
-    }
+    // Release any specific gap locks if they were acquired during tool execution
+    // Note: processEventWithAgent handles the session lock, but not individual gap locks
+    // that might have been acquired by tools.
   }
 
-  // 3. Notify user directly if not a silent internal task
-  if (!isTaskPaused(responseText)) {
-    await sendOutboundMessage(
-      AgentType.CODER,
-      userId,
-      responseText,
-      [baseUserId],
-      sessionId,
-      config.name,
-      resultAttachments
-    );
-  }
+  const responseText = result.responseText;
+  const isFailure = detectFailure(responseText);
 
-  const isFailure = status === 'FAILED' || detectFailure(responseText);
-
-  // 4. Trace gap transitions (Build Monitor handles the rest via atomic mapping in tools)
-  if (!isFailure && status === 'SUCCESS') {
+  // 4. Trace gap transitions if successful
+  if (!isFailure && !isTaskPaused(responseText)) {
     const { addTraceStep } = await import('../lib/utils/trace-helper');
-    await addTraceStep(traceId, 'root', {
+    await addTraceStep(traceId || 'unknown', 'root', {
       type: TRACE_TYPES.CODE_WRITTEN,
       content: {
-        status,
-        buildId,
+        status: 'SUCCESS',
         responseSnippet: responseText.substring(0, 500),
       },
-      metadata: { event: 'code_written', buildId },
-    });
-
-    if (!buildId && lockedGapIds.length) {
-      logger.info(
-        `Task successful without deployment. Marking ${lockedGapIds.length} gaps as DEPLOYED.`
-      );
-      const results = await Promise.all(
-        lockedGapIds.map((gapId) => memory.updateGapStatus(gapId, GapStatus.DEPLOYED))
-      );
-      results.forEach((res, i) => {
-        if (!res.success) {
-          logger.warn(`Failed to transition gap ${lockedGapIds[i]} to DEPLOYED: ${res.error}`);
-        }
-      });
-    }
-  }
-
-  // 5. Notify Resumption Loop (Universal Coordination)
-  if (!isTaskPaused(responseText)) {
-    await emitTaskEvent({
-      source: AgentType.CODER,
-      agentId: AgentType.CODER,
-      userId: baseUserId,
-      task: task || '',
-      response: responseText,
-      attachments: resultAttachments,
-      traceId,
-      sessionId,
-      initiatorId,
-      depth,
-      metadata: patchContent ? { patch: patchContent, gapIds: lockedGapIds } : undefined,
+      metadata: { event: 'code_written' },
     });
   }
 

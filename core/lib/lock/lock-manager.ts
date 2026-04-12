@@ -97,7 +97,7 @@ export class LockManager {
           ExpressionAttributeValues: {
             ':owner': options.ownerId,
             ':exp': expiresAt,
-            ':now': Date.now(),
+            ':now': now,
           },
         })
       );

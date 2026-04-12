@@ -170,6 +170,15 @@ export async function handler(
     emitMetrics([METRICS.dlqEvents(1)]).catch(() => {});
     return;
   }
+
+  // Authoritative update: Push the entry to DynamoDB for cross-session tracking
+  await (await import('../lib/recursion-tracker')).pushRecursionEntry(
+    traceId,
+    currentDepth,
+    (eventDetail.sessionId as string) || 'unknown',
+    'system.spine'
+  );
+
   // Propagate updated depth to downstream handlers via eventDetail
   (eventDetail as Record<string, unknown>).depth = currentDepth;
 
