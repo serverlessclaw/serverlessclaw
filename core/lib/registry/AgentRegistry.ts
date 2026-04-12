@@ -417,11 +417,6 @@ export class AgentRegistry {
       return;
     }
 
-    const agentExists = await this.agentExists(id);
-    if (!agentExists) {
-      throw new Error(`Agent '${id}' does not exist in registry. Cannot update field '${field}'.`);
-    }
-
     const { UpdateCommand } = await import('@aws-sdk/lib-dynamodb');
     try {
       await defaultDocClient.send(
@@ -429,6 +424,7 @@ export class AgentRegistry {
           TableName: resource.ConfigTable.name,
           Key: { key: DYNAMO_KEYS.AGENTS_CONFIG },
           UpdateExpression: 'SET #val.#id.#field = :value',
+          ConditionExpression: 'attribute_exists(#val.#id)',
           ExpressionAttributeNames: {
             '#val': 'value',
             '#id': id,
@@ -438,7 +434,15 @@ export class AgentRegistry {
         })
       );
     } catch (e: unknown) {
-      if (e instanceof Error && e.name === 'ValidationException') {
+      if (
+        e instanceof Error &&
+        (e.name === 'ValidationException' || e.name === 'ConditionalCheckFailedException')
+      ) {
+        if (!this.backboneConfigs[id]) {
+          throw new Error(
+            `Agent '${id}' does not exist in registry. Cannot update field '${field}'.`
+          );
+        }
         try {
           await defaultDocClient.send(
             new UpdateCommand({

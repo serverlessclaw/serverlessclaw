@@ -258,8 +258,10 @@ Each silo represents a core functional domain. Reviews within a silo should adop
   [ EventBridge ]
          |
          v
-  [ Event Handler ] -- (Trace Context) --> [ Recursion Tracker ] -- (Atomic Push) --> [ MemoryTable ]
-         |                                                                           (depth check)
+  [ Event Handler ] -- (Atomic Check) --> [ DynamoDB Rate Limiter & Circuit Breaker ]
+         |
+         |-- (Trace Context) --> [ Recursion Tracker ] -- (Atomic Push) --> [ MemoryTable ]
+         |                                                                   (depth check)
          v
   [ Agent Router ] -- (Selection Guard) --> [ Agent Registry ]
          |                                   (check config.enabled)
@@ -321,11 +323,13 @@ Each silo represents a core functional domain. Reviews within a silo should adop
 The Shield has been unified. The `SafetyEngine` now acts as the authoritative gate for all tool executions, enforcing least-privilege resource access and Class C blast-radius limits.
 
 **Key Achievements**:
+
 - **Unified Gateway**: ToolExecutor now delegates all security decisions to the SafetyEngine (Principle 3).
 - **Blast Radius Enforcement**: Hard limit of 5 Class C actions per hour per agent (Principle 10).
 - **Loop Interdiction**: Reasoning loops are caught by the `SemanticLoopDetector` and result in trust penalties (Principle 22).
 
 #### 🩻 Unified Shield Flow
+
 ```text
   [ Agent Output ] -> [ SemanticLoopDetector ] -- (Loop Found) --> [ SafetyBase.recordFailure ]
           |                                                             (Trust Penalty)
@@ -441,10 +445,30 @@ The Shield has been unified. The `SafetyEngine` now acts as the authoritative ga
 
 #### Verification Methods
 
-- **ConsistencyProbe**: Compare backend state to dashboard display
+- **ConsistencyProbe**: Compare backend state to dashboard display. Implemented with trace table cross-reference for drift detection.
 - **Trace Audit**: Verify correlation IDs, trace completeness
 - **Latency Measurement**: Time from event to dashboard
-- **SLO Calculation**: Recalculate SLOs independently, compare
+- **SLO Calculation**: Recalculate SLOs independently, compare. **Note**: p95_latency uses actual `avgDurationMs` from TokenRollup, not token counts.
+
+#### 🩻 Eye Metrics Flow
+
+```text
+   [ Agent Execution ]
+          |
+          v
+   [ ClawTracer ] -- (endTrace/failTrace) --> [ Metrics Emission ]
+          |                                    (agentInvoked, agentDuration)
+          v                                    |
+   [ TraceTable ]                             v
+          |                            [ CloudWatch / DynamoDB ]
+          |                                    |
+          v                                    |
+   [ ConsistencyProbe ] <---------------------+
+   (verifyTraceConsistency)
+          |
+          v
+   [ Dashboard Trace Intelligence ]
+```
 
 ### 6. The Scales (Trust & Calibration)
 

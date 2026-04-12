@@ -29,9 +29,12 @@ export async function GET() {
       )
       .map((item) => {
         const record = item as Record<string, unknown>;
+        const rawUserId = (record.userId as string) ?? '';
+        const agentId = rawUserId.startsWith('HEALTH#METRIC#')
+          ? rawUserId.replace('HEALTH#METRIC#', '')
+          : rawUserId.replace('HEALTH#', '');
         return {
-          agentId:
-            typeof record.userId === 'string' ? record.userId.replace('HEALTH#', '') : 'unknown',
+          agentId: agentId || 'unknown',
           score: typeof record.score === 'number' ? record.score : 0,
           taskCompletionRate:
             typeof record.taskCompletionRate === 'number' ? record.taskCompletionRate : 0,

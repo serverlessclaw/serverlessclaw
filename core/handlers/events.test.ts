@@ -130,7 +130,7 @@ describe('EventHandler', () => {
     it('should route SYSTEM_HEALTH_REPORT to health-handler', async () => {
       const event = {
         'detail-type': EventType.SYSTEM_HEALTH_REPORT,
-        detail: { userId: 'u1' },
+        detail: { userId: 'u1', sessionId: 'test', traceId: 'test' },
       };
       await handler(event as any, {} as any);
       const { handleHealthReport } = await import('./events/health-handler');
@@ -140,7 +140,7 @@ describe('EventHandler', () => {
     it('should route SYSTEM_BUILD_FAILED to build-handler', async () => {
       const event = {
         'detail-type': EventType.SYSTEM_BUILD_FAILED,
-        detail: { userId: 'u1' },
+        detail: { userId: 'u1', sessionId: 'test', traceId: 'test' },
       };
       await handler(event as any, {} as any);
       const { handleBuildFailure } = await import('./events/build-handler');
@@ -150,7 +150,7 @@ describe('EventHandler', () => {
     it('should route TASK_COMPLETED to task-result-handler', async () => {
       const event = {
         'detail-type': EventType.TASK_COMPLETED,
-        detail: { userId: 'u1' },
+        detail: { userId: 'u1', sessionId: 'test', traceId: 'test' },
       };
       await handler(event as any, {} as any);
       const { handleTaskResult } = await import('./events/task-result-handler');
@@ -160,7 +160,7 @@ describe('EventHandler', () => {
     it('should route CONTINUATION_TASK to continuation-handler', async () => {
       const event = {
         'detail-type': EventType.CONTINUATION_TASK,
-        detail: { userId: 'u1' },
+        detail: { userId: 'u1', sessionId: 'test', traceId: 'test' },
       };
       await handler(event as any, {} as any);
       const { handleContinuationTask } = await import('./events/continuation-handler');
@@ -183,7 +183,7 @@ describe('EventHandler', () => {
 
       const event = {
         'detail-type': EventType.SYSTEM_HEALTH_REPORT,
-        detail: { userId: 'user-safe' },
+        detail: { userId: 'user-safe', sessionId: 'test', traceId: 'test' },
       };
 
       await handler(event as any, {} as any);

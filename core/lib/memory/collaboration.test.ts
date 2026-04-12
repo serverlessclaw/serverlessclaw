@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mockClient } from 'aws-sdk-client-mock';
-import { DynamoDBDocumentClient, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import {
+  DynamoDBDocumentClient,
+  PutCommand,
+  QueryCommand,
+  UpdateCommand,
+} from '@aws-sdk/lib-dynamodb';
 import { DynamoMemory } from './dynamo-memory';
 
 // Mock AgentRegistry
@@ -70,6 +75,7 @@ describe('DynamoMemory Collaboration', () => {
     };
 
     ddbMock.on(QueryCommand).resolves({ Items: [existingCollab] });
+    ddbMock.on(UpdateCommand).resolves({});
     ddbMock.on(PutCommand).resolves({});
 
     await memory.addCollaborationParticipant(collabId, 'agent-1', 'agent', {
@@ -78,14 +84,14 @@ describe('DynamoMemory Collaboration', () => {
       role: 'editor',
     });
 
+    // 1 for updating collab metadata (UpdateCommand), 1 for new participant index (PutCommand)
+    const updateCalls = ddbMock.commandCalls(UpdateCommand);
     const putCalls = ddbMock.commandCalls(PutCommand);
-    // 1 for updating collab metadata, 1 for new participant index
-    expect(putCalls.length).toBe(2);
+    expect(updateCalls.length).toBe(1);
+    expect(putCalls.length).toBe(1);
 
-    const updatedCollab = putCalls.find((c) => c.args[0].input.Item?.type === 'COLLABORATION')
-      ?.args[0].input.Item;
-    expect(updatedCollab?.participants).toHaveLength(2);
-    expect(updatedCollab?.participants.some((p: any) => p.id === 'agent-2')).toBe(true);
+    const indexItem = putCalls[0].args[0].input.Item;
+    expect(indexItem?.userId).toBe('COLLAB_INDEX#agent#agent-2');
   });
 
   it('should list collaborations for participant', async () => {
@@ -151,11 +157,11 @@ describe('DynamoMemory Collaboration', () => {
     };
 
     ddbMock.on(QueryCommand).resolves({ Items: [existingCollab] });
-    ddbMock.on(PutCommand).resolves({});
+    ddbMock.on(UpdateCommand).resolves({});
 
     await memory.closeCollaboration(collabId, 'agent-1', 'agent');
 
-    const putCall = ddbMock.commandCalls(PutCommand)[0];
-    expect(putCall.args[0].input.Item?.status).toBe('closed');
+    const updateCall = ddbMock.commandCalls(UpdateCommand)[0];
+    expect(updateCall.args[0].input.UpdateExpression).toContain('#status = :closed');
   });
 });

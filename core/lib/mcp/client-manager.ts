@@ -244,18 +244,24 @@ export class MCPClientManager {
           timestamp: lastFailure,
         });
 
-        // 1.5 Ensure transport and client are closed on timeout or failure
+        // P1 Fix: Explicitly close transport and client on ANY failure to prevent zombie processes
         logger.error(`Failed to connect to MCP server ${serverName}:`, error);
+
+        // Ensure child processes are killed for stdio transport
         try {
+          // If the transport has a 'close' method, call it.
+          // StdioClientTransport in @modelcontextprotocol/sdk correctly kills the child process on close().
           await transport.close();
         } catch (closeError) {
-          logger.warn(`Error closing transport after failed connection:`, closeError);
+          logger.warn(`[MCP] Error closing transport after failure for ${serverName}:`, closeError);
         }
+
         try {
           await newClient.close();
         } catch (closeError) {
-          logger.warn(`Error closing client after failed connection:`, closeError);
+          logger.warn(`[MCP] Error closing client after failure for ${serverName}:`, closeError);
         }
+
         throw error;
       }
 

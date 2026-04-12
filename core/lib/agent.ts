@@ -313,6 +313,7 @@ export class Agent {
             outputTokens: loopUsage.totalOutputTokens,
             toolCalls: loopUsage.toolCallCount,
             success: !paused,
+            durationMs: loopUsage.durationMs,
           });
         } catch {
           logger.warn('Failed to emit agent metrics or persist token usage');

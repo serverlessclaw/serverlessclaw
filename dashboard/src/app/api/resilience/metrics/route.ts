@@ -1,6 +1,10 @@
 /**
  * @module ResilienceMetricsAPI
  * Returns aggregated resilience metrics for the dashboard gauge HUD.
+ *
+ * Note: Resilience metrics tracks recovery operations (DISTILLED#RECOVERY).
+ * Task success rate is tracked separately via SLOTracker in core.
+ * These are complementary - resilience tracks recovery, SLO tracks task completion.
  */
 import { withApiHandler } from '@/lib/api-handler';
 

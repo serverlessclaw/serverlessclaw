@@ -138,6 +138,8 @@ describe('Event Router Integration', () => {
           response: 'Fixed',
           initiatorId: 'superclaw',
           depth: 1,
+          traceId: 'test-trace',
+          sessionId: 'test-session',
         },
       },
       {} as any
@@ -188,6 +190,8 @@ describe('Event Router Integration', () => {
           issue: 'Test issue',
           severity: 'low',
           userId: 'user-1',
+          traceId: 'test',
+          sessionId: 'test',
         },
         id: 'envelope-123',
       },
@@ -204,7 +208,6 @@ describe('Event Router Integration', () => {
 
     vi.doUnmock('./events/health-handler');
   });
-
   it('should pass Lambda context when passContext is true', async () => {
     const mockHandler = vi.fn().mockResolvedValue(undefined);
     vi.doMock('./events/health-handler', () => ({
@@ -223,13 +226,17 @@ describe('Event Router Integration', () => {
           issue: 'Test',
           severity: 'low',
           userId: 'user-1',
+          traceId: 'test',
+          sessionId: 'test',
         },
       },
       mockContext
     );
 
     expect(mockHandler).toHaveBeenCalledWith(
-      expect.anything(),
+      expect.objectContaining({
+        component: 'TestComp',
+      }),
       mockContext,
       'system_health_report'
     );

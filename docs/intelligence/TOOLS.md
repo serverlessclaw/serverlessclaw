@@ -235,9 +235,9 @@ To prevent "Context Window Bloat" and maintain high reasoning performance, Serve
 
 ---
 
-## 🛡️ MCP Reliability & Transport (May 2026 Refresh)
+## 🛡️ Distributed MCP Resilience & Process Lifecycle (May 2026 Refresh)
 
-To ensure tools are always available even in unstable network conditions or Lambda cold-starts, the system employs a **Layered Transport Architecture**.
+To ensure tools are always available even in unstable network conditions or Lambda cold-starts, the system employs a **Layered Transport & Distributed Safety Architecture**.
 
 ```text
     [ Call Tool ]
@@ -246,7 +246,7 @@ To ensure tools are always available even in unstable network conditions or Lamb
     |  Unified  | (Primary - Lambda Invoke)
     | Multiplexer [10s Timeout]
     | (Lambda)  | [Routing: x-mcp-server]
-    +-----+-----+
+    +-----v-----+
           |
     (Fail / Timeout)
           |
@@ -258,10 +258,21 @@ To ensure tools are always available even in unstable network conditions or Lamb
 
 ### Reliability Guardrails:
 
-1. **Physical Resource Headroom**: The Unified Multiplexer is provisioned with `MEDIUM_LARGE` (1024MB) memory to accommodate concurrent tool executions (e.g., Git + Filesystem).
-2. **Persistence Safeguards**: Tool results are cached in the `MemoryTable` via the `mcp_tools_cache_<server>` key to avoid redundant discovery calls.
-3. **Environment Hardening**: Writable cache paths in `/tmp` prevent `npm` from crashing when attempting to write to the read-only Lambda home directory.
-4. **Log Consolidation**: All tool invocations are logged with a `[MCP-MULTIPLEXER]` prefix, enabling unified tracing of complex tool sequences.
+1.  **Distributed Discovery Backoff (P1 Fix)**: MCP server failure states and backoff windows are now synchronized via DynamoDB (`mcp_health_<server>`). This prevents "Discovery Blindness" where different Lambda instances repeatedly attempt to connect to a failing server, exhausting resources.
+2.  **Explicit Process Lifecycle (P1 Fix)**: The `MCPClientManager` now enforces explicit cleanup of `StdioClientTransport` and `Client` instances on every failure path. This prevents **Zombie Process Bloat** in reused Lambda containers, ensuring that orphaned child processes are strictly killed.
+3.  **Trace-Isolated Filesystem Access (P1 Fix)**: All `mcp-filesystem-*` operations are now routed to a strictly isolated, per-trace workspace located at `/tmp/claw-workspaces/<traceId>`. This eliminates **Workspace Cross-Talk** and ensures that concurrent agents in the same container cannot corrupt each other's files.
+4.  **Proactive Resource Pruning (P2 Fix)**: Stale workspaces in `/tmp` are proactively pruned if they exceed 24 hours of age or a total size threshold (300MB), maintaining a healthy "Metabolism" and preventing disk exhaustion.
+5.  **Physical Resource Headroom**: The Unified Multiplexer is provisioned with `MEDIUM_LARGE` (1024MB) memory to accommodate concurrent tool executions (e.g., Git + Filesystem).
+
+---
+
+## ⚡ Dynamic Selection & Selection Integrity (Active)
+
+The system now enforces **Selection Integrity** at the gateway level. 
+
+1.  **Mandatory Enabled Check (P0 Fix)**: The `AgentMultiplexer` verifies the `enabled` status of every agent in the `AgentRegistry` before invocation. Any attempt to route a task to a disabled agent is rejected immediately.
+2.  **Reputation-Aware Routing (P1 Fix)**: Dynamic routing is now active in production. When multiple agents are candidates for a task, the system uses the `AgentRouter` to select the best performer based on historical success rates, latency, and cost: `CapabilityMatch * SuccessRate - (AvgTokens / 10000)`.
+3.  **Atomic Trust Orchestration (P1 Fix)**: Agent reputation and `TrustScore` updates utilize atomic DynamoDB operations (`list_append`). This ensures that the feedback loop from Silo 5 (The Eye) to Silo 6 (The Scales) remains consistent even under extreme concurrency.
 
 ---
 

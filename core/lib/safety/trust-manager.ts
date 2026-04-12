@@ -202,56 +202,35 @@ export class TrustManager {
   }
 
   /**
-   * Logs a penalty event for audit trails.
+   * Logs a penalty event for audit trails atomically.
    */
   private static async logPenalty(penalty: TrustPenalty): Promise<void> {
-    const log =
-      ((await AgentRegistry.getRawConfig(DYNAMO_KEYS.TRUST_PENALTY_LOG)) as TrustPenalty[]) || [];
-    log.push(penalty);
-
-    // Cap log size
-    const cappedLog = log.slice(-200);
-    await AgentRegistry.saveRawConfig(DYNAMO_KEYS.TRUST_PENALTY_LOG, cappedLog, {
-      author: 'system:trust-manager',
-      skipVersioning: true,
-    });
+    const { ConfigManager } = await import('../registry/config');
+    await ConfigManager.appendToList(DYNAMO_KEYS.TRUST_PENALTY_LOG, penalty, { limit: 200 });
   }
 
   /**
-   * Records a trust score snapshot in history.
+   * Records a trust score snapshot in history atomically.
    * Uses per-agent keys for scalability.
    */
   private static async recordHistory(agentId: string, score: number): Promise<void> {
+    const { ConfigManager } = await import('../registry/config');
     const historyKey = `${DYNAMO_KEYS.REPUTATION_PREFIX}HISTORY#${agentId}`;
 
-    // Fetch agent-specific history
-    const history = ((await AgentRegistry.getRawConfig(historyKey)) as TrustSnapshot[]) || [];
+    await ConfigManager.appendToList(
+      historyKey,
+      { agentId, score, timestamp: Date.now() },
+      { limit: 200 }
+    );
 
-    history.push({ agentId, score, timestamp: Date.now() });
-
-    // Cap per-agent history (last 200 snapshots)
-    const cappedHistory = history.slice(-200);
-
-    await AgentRegistry.saveRawConfig(historyKey, cappedHistory, {
-      author: 'system:trust-manager',
-      skipVersioning: true,
-      description: `Trust history snapshot for ${agentId}`,
-    });
-
-    // Backward compatibility: also update the legacy global log if it's small
-    // (We'll phase this out eventually)
+    // Backward compatibility: also update the legacy global log atomically
     try {
       const legacyKey = DYNAMO_KEYS.TRUST_SCORE_HISTORY;
-      const legacyHistory =
-        ((await AgentRegistry.getRawConfig(legacyKey)) as Array<
-          TrustSnapshot & { agentId: string }
-        >) || [];
-      legacyHistory.push({ agentId, score, timestamp: Date.now() });
-      const cappedLegacy = legacyHistory.slice(-100); // Smaller cap for global log
-      await AgentRegistry.saveRawConfig(legacyKey, cappedLegacy, {
-        author: 'system:trust-manager',
-        skipVersioning: true,
-      });
+      await ConfigManager.appendToList(
+        legacyKey,
+        { agentId, score, timestamp: Date.now() },
+        { limit: 100 }
+      );
     } catch {
       // Ignore legacy errors
     }

@@ -151,6 +151,76 @@ export class ConfigManager {
   }
 
   /**
+   * Atomically appends a value to a list configuration.
+   * Uses DynamoDB list_append to avoid lost update bugs.
+   *
+   * @param key - The unique configuration key.
+   * @param item - The item to append.
+   * @param options - Optional capping for the list (e.g., last 200 items).
+   * @returns A promise that resolves when the append is complete.
+   */
+  public static async appendToList(
+    key: string,
+    item: unknown,
+    options?: { limit?: number }
+  ): Promise<void> {
+    const resource = Resource as { ConfigTable?: { name: string } };
+    if (!('ConfigTable' in resource)) {
+      logger.warn(`ConfigTable not linked. Skipping append for ${key}`);
+      return;
+    }
+
+    try {
+      const { limit } = options || {};
+
+      // Phase 1: Ensure value is initialized as a list if it doesn't exist
+      await getDocClient().send(
+        new UpdateCommand({
+          TableName: resource.ConfigTable!.name,
+          Key: { key },
+          UpdateExpression: 'SET #val = if_not_exists(#val, :empty_list)',
+          ExpressionAttributeNames: { '#val': 'value' },
+          ExpressionAttributeValues: { ':empty_list': [] },
+        })
+      );
+
+      // Phase 2: Append the item
+      const result = await getDocClient().send(
+        new UpdateCommand({
+          TableName: resource.ConfigTable!.name,
+          Key: { key },
+          UpdateExpression: 'SET #val = list_append(#val, :items)',
+          ExpressionAttributeNames: { '#val': 'value' },
+          ExpressionAttributeValues: { ':items': [item] },
+          ReturnValues: 'ALL_NEW',
+        })
+      );
+
+      // Phase 3: Optional capping (best effort, not perfectly atomic with the append)
+      // Since list_append + truncation can't be one atomic op in DDB without knowing length,
+      // we do it if ReturnValues shows it's too long.
+      const currentList = result.Attributes?.value as unknown[];
+      if (limit && currentList && currentList.length > limit) {
+        const excess = currentList.length - limit;
+        // Truncate from the beginning
+        await getDocClient()
+          .send(
+            new UpdateCommand({
+              TableName: resource.ConfigTable!.name,
+              Key: { key },
+              UpdateExpression: `REMOVE ${Array.from({ length: excess }, (_, i) => `#val[${i}]`).join(', ')}`,
+              ExpressionAttributeNames: { '#val': 'value' },
+            })
+          )
+          .catch((e) => logger.debug(`List capping failed for ${key}:`, e));
+      }
+    } catch (e) {
+      logger.error(`Failed to append to list ${key} in DDB:`, e);
+      throw e;
+    }
+  }
+
+  /**
    * Resolves the table name for the configured ConfigTable.
    *
    * @returns A promise resolving to the table name or undefined.

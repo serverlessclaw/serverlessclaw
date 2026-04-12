@@ -107,14 +107,6 @@ export async function clearRecursionStack(traceId: string): Promise<void> {
   try {
     const key = `${RECURSION_STACK_PREFIX}${traceId}`;
 
-    const currentDepth = await getRecursionDepth(traceId);
-    if (currentDepth > 0) {
-      logger.warn(
-        `[RECURSION] Skipping clear for ${traceId}: recursion still active with depth ${currentDepth}`
-      );
-      return;
-    }
-
     await docClient.send(
       new DeleteCommand({
         TableName: process.env.MEMORY_TABLE_NAME ?? 'MemoryTable',

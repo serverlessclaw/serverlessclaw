@@ -168,51 +168,46 @@ For detailed fork strategies, see [FORK_STRATEGY.md](docs/governance/FORK_STRATE
 
 ---
 
-## High-Level System Diagram
+## High-Level System Diagram: The Distributed Spine & Shield
+
+The system architecture follows a **Distributed Spine** model where all critical state (routing, safety, trust) is synchronized via DynamoDB to ensure consistency across serverless execution boundaries.
 
 ```text
-+-------------------+       +-----------------------+       +-------------------+
-| Messaging Client  +<----->+   AWS API Gateway     +------>+   Input Adapters  |
-| (Telegram/Slack/  |       | (Webhook Endpoint)    |       | (Telegram, GitHub,|
-|  GitHub/Jira)     |       |                       |       |  Jira, Generic)   |
-+-------------------+       +-----------+-----------+       +---------|---------+
-                                        |                             |
-                                        v                             v
-                            +-----------+-----------+       +---------|---------+
-                            |                       |       |   AWS Lambda      |
-                            |      ClawCenter       |       | Agent Multiplexer |
-                            | (Intelligence Sector) |       | [ High | Std | Lt]|
-                            |                       |       |         +         |
-                            +-----------+-----------+       +---------|---------+
-                                        |                             |
-                                        v                             |
-                            +-----------+-----------+                 |
-                            |                       |                 |
-                            |   EventBridge Bus     |<----------------+
-                            |     (AgentBus)        |                 |
-                            |           +           |                 |
-                            +-----------|-----------+                 |
-                                        |                             |
-                                        v                             |
-                            +-----------+-----------+                 |
-                                        |                             |
-                                        v                             |
-              +-------------------------+-------------------------+   |
-              |                         |                         |   |
-    +---------v---------+     +---------v---------+     +---------v---v-----+
-    |                   |     |                   |     |                   |
-    |  Managed Services |     |   AWS Scheduler   +<----+  HeartbeatHandler |
-    | (DynamoDB / S3)   |     | (Dynamic Goals)   |     | (Proactive Pulse) |
-    |                   |     |                   |     |                   |
-    +---------+---------+     +-------------------+     +-------------------+
-              |                         |                             |
-              v                         v                             |
-    +---------+---------+   +-----------+-----------+                 |
-    |                   |   |                       |                 |
-    |   Observability   |   |  IoT Core (Realtime)  |<----------------+
-    | (CloudWatch/SLO)  |   |     (Dashboard)       |
-    |                   |   |                       |
-    +-------------------+   +-----------------------+
+  [ Inbound Event ] 
+          |
+          v
+  [ Silo 1: The Spine (EventHandler) ] 
+          |-- (1) Distributed Safety Check (Rate Limit / Circuit Breaker)
+          |-- (2) Trace-Aware Recursion Guard (Atomic Increment)
+          v
+  [ Agent Multiplexer (Gateway) ]
+          |-- (3) Dynamic Selection (AgentRouter.selectBestAgent)
+          |-- (4) Selection Integrity (Verify agent.enabled === true)
+          v
+  [ Agent Execution (Silo 2: The Hand) ]
+          |-- (5) Isolated Workspace (/tmp/claw-workspaces/<traceId>)
+          |-- (6) Unified MCP Tool Discovery (Distributed Backoff)
+          v
+  [ Outcome (Success/Failure) ]
+          |
+          v
+  [ Silo 6: The Scales (TrustManager) ]
+          |-- (7) Quality-Weighted Reputation Update
+          |-- (8) Atomic History Recording (list_append)
+          v
+  [ ConfigTable (DDB) ] <--- (Feedback Loop for Selection Integrity)
+```
+
+---
+
+## ⚡ Distributed Safety & Selection Integrity
+
+To maintain a **Stateless Core** (Principle 1) while ensuring systemic safety, the system externalizes all operational state:
+
+1.  **DistributedSafetyControl**: Circuit breakers and rate limiters use DynamoDB atomic counters. This prevents "phantom safety" where different Lambda instances have divergent views of system health.
+2.  **Selection Integrity**: The `AgentMultiplexer` acts as the authoritative gateway. It performs a mandatory configuration check for every agent before invocation, ensuring that `enabled: false` status is strictly enforced regardless of the event source.
+3.  **Dynamic Routing**: The `AgentRouter` uses historical performance metrics (success rate, latency, cost) to dynamically select the best agent-model combination for a given task. This "dark logic" is now active in the production multiplexer path.
+4.  **Workspace Isolation**: Each agent execution is assigned a unique, trace-specific subdirectory within `/tmp/claw-workspaces/`. This prevents concurrent agents in the same Lambda container from corrupting shared files (Workspace Cross-Talk).
 
 ---
 

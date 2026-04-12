@@ -154,7 +154,15 @@ export async function handler(
   // Retrieve configured recursion limit (default is 15 if not set)
   const recursionLimit = await ConfigManager.getTypedConfig('recursion_limit', 15);
   // Get traceId from event detail for unified tracking
-  const traceId = (eventDetail.traceId as string) || `evt-${Date.now()}`;
+  const traceId = eventDetail.traceId as string;
+
+  if (!traceId) {
+    logger.warn(`[RECURSION] Missing traceId in event ${detailType}`);
+    await routeToDlq(event, detailType, 'SYSTEM', 'unknown', `Missing traceId`);
+    emitMetrics([METRICS.dlqEvents(1)]).catch(() => {});
+    return;
+  }
+
   // Get current depth from DynamoDB (authoritative source)
   const existingDepth = await getRecursionDepth(traceId);
   const currentDepth = existingDepth + 1;
@@ -200,7 +208,7 @@ export async function handler(
   );
 
   // Rate limiting
-  if (!consumeToken(detailType, rateCapacity, rateRefill)) {
+  if (!(await consumeToken(detailType, rateCapacity, rateRefill))) {
     logger.warn(`[RATE_LIMIT] Rate limit exceeded for ${detailType}`);
     await routeToDlq(event, detailType, 'SYSTEM', 'unknown', 'Rate limit exceeded');
     emitMetrics([METRICS.rateLimitExceeded(detailType), METRICS.dlqEvents(1)]).catch(() => {});

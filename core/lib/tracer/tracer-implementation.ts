@@ -13,6 +13,7 @@ import { logger } from '../logger';
 import { filterPIIFromObject } from '../utils/pii';
 import { getDocClient } from '../utils/ddb-client';
 import type { TraceStep, Trace } from './types';
+import { METRICS } from '../metrics/metrics';
 
 // Removed local doc client management in favor of shared utility
 
@@ -214,6 +215,9 @@ export class ClawTracer {
    * @returns A promise that resolves when the trace is closed.
    */
   async endTrace(finalResponse: string, metadata?: Record<string, unknown>): Promise<void> {
+    const endTime = Date.now();
+    const durationMs = endTime - this.startTime;
+
     await this.docClient.send(
       new UpdateCommand({
         TableName: this.getTableName(),
@@ -224,11 +228,24 @@ export class ClawTracer {
         ExpressionAttributeValues: {
           ':status': TRACE_STATUS.COMPLETED,
           ':resp': finalResponse,
-          ':end': Date.now(),
+          ':end': endTime,
           ':meta': metadata ?? {},
         },
       })
     );
+
+    // Emit metrics for trace completion
+    if (this.agentId) {
+      try {
+        const { emitMetrics } = await import('../metrics/metrics');
+        await emitMetrics([
+          METRICS.agentInvoked(this.agentId),
+          METRICS.agentDuration(this.agentId, durationMs),
+        ]);
+      } catch (e) {
+        logger.debug('Failed to emit trace completion metrics:', e);
+      }
+    }
 
     // Mark the summary as completed as well (root-only) when enabled.
     const summariesEnabledEnd = process.env.TRACE_SUMMARIES_ENABLED === 'true';
@@ -242,7 +259,7 @@ export class ClawTracer {
             ExpressionAttributeNames: { '#status': 'status', '#ts': 'timestamp' },
             ExpressionAttributeValues: {
               ':status': TRACE_STATUS.COMPLETED,
-              ':ts': Date.now(),
+              ':ts': endTime,
               ':resp': finalResponse,
             },
           })
@@ -262,6 +279,8 @@ export class ClawTracer {
    */
   async failTrace(reason: string, metadata?: Record<string, unknown>): Promise<void> {
     const finalMetadata = { ...metadata, failureReason: reason };
+    const endTime = Date.now();
+    const durationMs = endTime - this.startTime;
 
     await this.docClient.send(
       new UpdateCommand({
@@ -273,11 +292,25 @@ export class ClawTracer {
         ExpressionAttributeValues: {
           ':status': TRACE_STATUS.FAILED,
           ':reason': reason,
-          ':end': Date.now(),
+          ':end': endTime,
           ':meta': finalMetadata,
         },
       })
     );
+
+    // Emit metrics for trace failure
+    if (this.agentId) {
+      try {
+        const { emitMetrics } = await import('../metrics/metrics');
+        await emitMetrics([
+          METRICS.agentInvoked(this.agentId),
+          METRICS.agentDuration(this.agentId, durationMs),
+          METRICS.toolExecuted('trace', false),
+        ]);
+      } catch (e) {
+        logger.debug('Failed to emit trace failure metrics:', e);
+      }
+    }
 
     // Mark the summary as failed as well
     const summariesEnabledFail = process.env.TRACE_SUMMARIES_ENABLED === 'true';
@@ -291,7 +324,7 @@ export class ClawTracer {
             ExpressionAttributeNames: { '#status': 'status', '#ts': 'timestamp' },
             ExpressionAttributeValues: {
               ':status': TRACE_STATUS.FAILED,
-              ':ts': Date.now(),
+              ':ts': endTime,
               ':reason': reason,
             },
           })

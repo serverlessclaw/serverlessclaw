@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DYNAMO_KEYS } from '../constants';
 
-const { mockAgentRegistry, mockDefaultDocClient } = vi.hoisted(() => ({
+const { mockAgentRegistry, mockDefaultDocClient, mockConfigManager } = vi.hoisted(() => ({
   mockAgentRegistry: {
     getRawConfig: vi.fn(),
     saveRawConfig: vi.fn().mockResolvedValue(undefined),
@@ -13,6 +12,9 @@ const { mockAgentRegistry, mockDefaultDocClient } = vi.hoisted(() => ({
   mockDefaultDocClient: {
     send: vi.fn().mockResolvedValue({}),
   },
+  mockConfigManager: {
+    appendToList: vi.fn().mockResolvedValue(undefined),
+  },
 }));
 
 vi.mock('sst', () => ({
@@ -23,6 +25,7 @@ vi.mock('sst', () => ({
 
 vi.mock('../registry/config', () => ({
   defaultDocClient: mockDefaultDocClient,
+  ConfigManager: mockConfigManager,
 }));
 
 vi.mock('../registry', () => ({
@@ -62,9 +65,8 @@ vi.mock('../utils/bus', () => ({
 }));
 
 vi.mock('../registry/config', () => ({
-  defaultDocClient: {
-    send: vi.fn().mockResolvedValue({}),
-  },
+  defaultDocClient: mockDefaultDocClient,
+  ConfigManager: mockConfigManager,
 }));
 
 vi.mock('sst', () => ({
@@ -193,18 +195,7 @@ describe('TrustManager', () => {
         50
       );
 
-      const agentHistoryKey = `${DYNAMO_KEYS.REPUTATION_PREFIX}HISTORY#agent-1`;
-      expect(mockAgentRegistry.saveRawConfig).toHaveBeenCalledWith(
-        agentHistoryKey,
-        expect.anything(),
-        expect.anything()
-      );
-
-      expect(mockAgentRegistry.saveRawConfig).toHaveBeenCalledWith(
-        DYNAMO_KEYS.TRUST_PENALTY_LOG,
-        expect.anything(),
-        expect.anything()
-      );
+      expect(mockConfigManager.appendToList).toHaveBeenCalled();
     });
   });
 

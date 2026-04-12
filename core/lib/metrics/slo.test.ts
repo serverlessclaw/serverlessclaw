@@ -12,6 +12,8 @@ describe('SLOTracker', () => {
     toolCalls: 5,
     avgTokensPerInvocation: 15,
     successCount: 9,
+    totalDurationMs: 1000,
+    avgDurationMs: 100,
     expiresAt: Date.now() + 86400000,
     ...overrides,
   });

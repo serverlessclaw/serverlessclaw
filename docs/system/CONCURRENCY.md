@@ -233,7 +233,7 @@ Since multiple agents may attempt to write to the same session simultaneously, t
 
 ## ⚙️ Agent Configuration Atomicity
 
-Traditional configuration management risks "Last Write Wins" race conditions where one agent's update (e.g., a trust score penalty) is overwritten by another's simultaneous change (e.g., a success bump). 
+Traditional configuration management risks "Last Write Wins" race conditions where one agent's update (e.g., a trust score penalty) is overwritten by another's simultaneous change (e.g., a success bump).
 
 Serverless Claw enforces atomicity through **Field-Level `UpdateItem` Operations**:
 
@@ -249,10 +249,26 @@ static async atomicUpdateAgentField(agentId: string, field: string, value: any) 
 }
 ```
 
+For operations requiring read-modify-write semantics (like TrustScore updates), the system uses **`atomicUpdateAgentFieldWithCondition`** which adds a conditional expression:
+
+```typescript
+// Ensures update only succeeds if current value matches expected
+static async atomicUpdateAgentFieldWithCondition(
+  id: string,
+  field: string,
+  value: unknown,
+  expectedCurrentValue: unknown
+): Promise<void> {
+  // ConditionExpression: "attribute_not_exists(#val.#id.#field) OR #val.#id.#field = :expected"
+}
+```
+
 ### Benefits
+
 - **No Conflict Resolution Needed**: Concurrent updates to different agents, or even different fields of the same agent, are handled natively by DynamoDB.
 - **Improved Performance**: Smaller payload sizes (only the field/value being updated) reduce throughput consumption and latency.
 - **Consistent Trust History**: Ensures that every `TrustScore` modification is accurately recorded even during high-frequency maintenance cycles (e.g., Trust Decay).
+- **Race Condition Prevention**: The conditional update pattern prevents lost updates when multiple processes read the same value simultaneously.
 
 ## 🪢 Cross-Session Recursion Safety
 
@@ -265,8 +281,8 @@ In a distributed swarm, preventing infinite loops requires more than a local cou
 
 To maintain environment hygiene without risking race conditions, the system follows a **Relaxed Release** pattern in the `LockManager`:
 
-- **Ownership Over Expiry**: An owner is permitted to release a lock `ConditionExpression: "ownerId = :owner"` regardless of whether the lock has already expired. 
-- **Metadata Hygiene**: This allows processes that finish *exactly* as a wall-clock timeout occurs to still clean up their lock metadata, ensuring that audit logs and telemetry remain clear for the next execution cycle.
+- **Ownership Over Expiry**: An owner is permitted to release a lock `ConditionExpression: "ownerId = :owner"` regardless of whether the lock has already expired.
+- **Metadata Hygiene**: This allows processes that finish _exactly_ as a wall-clock timeout occurs to still clean up their lock metadata, ensuring that audit logs and telemetry remain clear for the next execution cycle.
 
 ## Comparison: Lock vs Queue vs Parallel
 

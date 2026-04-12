@@ -56,9 +56,7 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<Work
   await ConfigManager.saveRawConfig(workspaceKey(workspaceId), workspace);
 
   // Register in workspace index for listing
-  const index = ((await ConfigManager.getRawConfig(WORKSPACE_INDEX)) as string[]) ?? [];
-  index.push(workspaceId);
-  await ConfigManager.saveRawConfig(WORKSPACE_INDEX, index);
+  await ConfigManager.appendToList(WORKSPACE_INDEX, workspaceId);
 
   logger.info(`[Workspace] Created: ${workspaceId} (${input.name}) by ${input.ownerId}`);
   return workspace;
@@ -66,10 +64,26 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<Work
 
 /**
  * Retrieves a workspace by ID.
+ *
+ * @param workspaceId - The ID of the workspace.
+ * @param requesterId - Optional ID of the member requesting access (for RBAC check).
  */
-export async function getWorkspace(workspaceId: string): Promise<Workspace | null> {
+export async function getWorkspace(
+  workspaceId: string,
+  requesterId?: string
+): Promise<Workspace | null> {
   const data = await ConfigManager.getRawConfig(workspaceKey(workspaceId));
-  return (data as Workspace) ?? null;
+  const workspace = (data as Workspace) ?? null;
+
+  if (workspace && requesterId) {
+    const isMember = workspace.members.some((m) => m.memberId === requesterId && m.active);
+    if (!isMember) {
+      logger.warn(`[Workspace] Access denied: ${requesterId} to ${workspaceId}`);
+      throw new Error(`Access denied to workspace: ${workspaceId}`);
+    }
+  }
+
+  return workspace;
 }
 
 /**
@@ -99,6 +113,11 @@ export async function inviteMember(
   const inviter = workspace.members.find((m) => m.memberId === inviterId);
   if (!inviter || !hasPermission(inviter.role, 'admin')) {
     throw new Error(`Insufficient permissions: ${inviterId} cannot invite members`);
+  }
+
+  // Prevent multiple owners
+  if (input.role === 'owner' && workspace.members.some((m) => m.role === 'owner')) {
+    throw new Error(`Workspace already has an owner. Cannot invite ${input.memberId} as owner.`);
   }
 
   // Check for duplicate

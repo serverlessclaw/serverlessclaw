@@ -13,10 +13,13 @@ import { hasPermission } from '../types/workspace';
 const mockGetRawConfig = vi.fn();
 const mockSaveRawConfig = vi.fn();
 
+const mockAppendToList = vi.fn();
+
 vi.mock('../registry/config', () => ({
   ConfigManager: {
     getRawConfig: (...args: unknown[]) => mockGetRawConfig(...args),
     saveRawConfig: (...args: unknown[]) => mockSaveRawConfig(...args),
+    appendToList: (...args: unknown[]) => mockAppendToList(...args),
   },
 }));
 
@@ -33,6 +36,7 @@ describe('Workspace Operations', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSaveRawConfig.mockResolvedValue(undefined);
+    mockAppendToList.mockResolvedValue(undefined);
   });
 
   describe('createWorkspace', () => {
@@ -54,7 +58,7 @@ describe('Workspace Operations', () => {
       expect(workspace.status).toBe('active');
 
       // Should save workspace and update index
-      expect(mockSaveRawConfig).toHaveBeenCalledTimes(2);
+      expect(mockSaveRawConfig).toHaveBeenCalledTimes(1);
     });
 
     it('should set TTL when provided', async () => {

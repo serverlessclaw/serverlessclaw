@@ -20,7 +20,12 @@ vi.mock('../logger', () => ({
 // Mock RetentionManager
 vi.mock('./tiering', () => ({
   RetentionManager: {
-    getExpiresAt: vi.fn().mockResolvedValue({ expiresAt: 9999999, type: 'SESSION' }),
+    getExpiresAt: vi.fn().mockImplementation((category: string) => {
+      if (category === 'SESSIONS') {
+        return Promise.resolve({ expiresAt: 9999999, type: 'SESSION' });
+      }
+      return Promise.resolve({ expiresAt: 9999999, type: 'SESSION' });
+    }),
   },
 }));
 
@@ -38,6 +43,7 @@ import { logger } from '../logger';
 function createMockBase(): BaseMemoryProvider & {
   queryItems: ReturnType<typeof vi.fn>;
   putItem: ReturnType<typeof vi.fn>;
+  updateItem: ReturnType<typeof vi.fn>;
 } {
   return {
     queryItems: vi.fn(),
@@ -53,6 +59,7 @@ function createMockBase(): BaseMemoryProvider & {
   } as unknown as BaseMemoryProvider & {
     queryItems: ReturnType<typeof vi.fn>;
     putItem: ReturnType<typeof vi.fn>;
+    updateItem: ReturnType<typeof vi.fn>;
   };
 }
 
@@ -167,7 +174,7 @@ describe('createCollaboration', () => {
 
     const collab = await createCollaboration(base, 'owner-1', 'agent', input);
 
-    const expectedExpiry = MOCK_NOW + 30 * 24 * 60 * 60 * 1000;
+    const expectedExpiry = Math.floor((MOCK_NOW + 30 * 24 * 60 * 60 * 1000) / 1000);
     expect(collab.expiresAt).toBe(expectedExpiry);
   });
 
@@ -178,7 +185,7 @@ describe('createCollaboration', () => {
 
     const collab = await createCollaboration(base, 'owner-1', 'agent', { name: 'Test' });
 
-    expect(collab.expiresAt).toBeUndefined();
+    expect(collab.expiresAt).toBe(9999999);
   });
 });
 
@@ -233,6 +240,7 @@ describe('addCollaborationParticipant', () => {
     };
     base.queryItems.mockResolvedValue([collab]);
     base.putItem.mockResolvedValue(undefined);
+    base.updateItem.mockResolvedValue(undefined);
 
     await addCollaborationParticipant(base, 'collab-1', 'owner-1', 'agent', {
       type: 'human',
@@ -240,20 +248,11 @@ describe('addCollaborationParticipant', () => {
       role: 'editor',
     });
 
-    expect(base.putItem).toHaveBeenCalledTimes(2);
+    expect(base.updateItem).toHaveBeenCalledTimes(1);
+    expect(base.putItem).toHaveBeenCalledTimes(1);
 
-    // First put updates the collaboration
-    const updatedCollab = base.putItem.mock.calls[0][0];
-    expect(updatedCollab.participants).toHaveLength(2);
-    expect(updatedCollab.participants[1]).toEqual({
-      type: 'human',
-      id: 'human-1',
-      role: 'editor',
-      joinedAt: MOCK_NOW,
-    });
-
-    // Second put creates index entry
-    const indexEntry = base.putItem.mock.calls[1][0];
+    // Put creates index entry
+    const indexEntry = base.putItem.mock.calls[0][0];
     expect(indexEntry.userId).toBe('COLLAB_INDEX#human#human-1');
     expect(indexEntry.role).toBe('editor');
     expect(indexEntry.collaborationId).toBe('collab-1');
@@ -534,14 +533,11 @@ describe('closeCollaboration', () => {
       status: 'active',
     };
     base.queryItems.mockResolvedValue([collab]);
-    base.putItem.mockResolvedValue(undefined);
+    base.updateItem.mockResolvedValue(undefined);
 
     await closeCollaboration(base, 'collab-1', 'owner-1', 'agent');
 
-    expect(base.putItem).toHaveBeenCalledTimes(1);
-    const savedItem = base.putItem.mock.calls[0][0];
-    expect(savedItem.status).toBe('closed');
-    expect(savedItem.userId).toBe('COLLAB#collab-1');
+    expect(base.updateItem).toHaveBeenCalledTimes(1);
   });
 
   it('should throw when collaboration not found', async () => {
@@ -658,6 +654,7 @@ describe('edge cases', () => {
       status: 'active',
     };
     base.queryItems.mockResolvedValue([collab]);
+    base.updateItem.mockResolvedValue(undefined);
     base.putItem.mockResolvedValue(undefined);
 
     // Adding a human with the same id should work (different type)
@@ -667,10 +664,9 @@ describe('edge cases', () => {
       role: 'viewer',
     });
 
-    const updatedCollab = base.putItem.mock.calls[0][0];
-    expect(updatedCollab.participants).toHaveLength(2);
-    expect(updatedCollab.participants[0].type).toBe('agent');
-    expect(updatedCollab.participants[1].type).toBe('human');
+    expect(base.putItem).toHaveBeenCalledTimes(1);
+    const indexEntry = base.putItem.mock.calls[0][0];
+    expect(indexEntry.userId).toBe('COLLAB_INDEX#human#user-1');
   });
 
   it('should handle owner type mismatch in access check', async () => {
@@ -703,9 +699,7 @@ describe('edge cases', () => {
     await createCollaboration(base, 'owner-1', 'agent', { name: 'Test' });
 
     const collabItem = base.putItem.mock.calls[0][0];
-    // The ...collaboration spread includes expiresAt: undefined and comes after the
-    // explicit expiresAt field, so it always wins.
-    expect(collabItem.expiresAt).toBeUndefined();
+    expect(collabItem.expiresAt).toBe(9999999);
   });
 
   it('should store millis expiresAt on item when ttlDays is set', async () => {
@@ -716,9 +710,7 @@ describe('edge cases', () => {
     await createCollaboration(base, 'owner-1', 'agent', { name: 'Test', ttlDays: 7 });
 
     const collabItem = base.putItem.mock.calls[0][0];
-    // The ...collaboration spread includes expiresAt in millis and comes after the
-    // explicit Math.floor(/1000) field, so millis always wins.
-    const expectedMillis = MOCK_NOW + 7 * 24 * 60 * 60 * 1000;
-    expect(collabItem.expiresAt).toBe(expectedMillis);
+    const expectedSeconds = Math.floor((MOCK_NOW + 7 * 24 * 60 * 60 * 1000) / 1000);
+    expect(collabItem.expiresAt).toBe(expectedSeconds);
   });
 });

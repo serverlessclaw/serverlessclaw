@@ -43,6 +43,8 @@ export interface TokenRollup {
   toolCalls: number;
   avgTokensPerInvocation: number;
   successCount: number;
+  totalDurationMs: number;
+  avgDurationMs: number;
   expiresAt: number;
 }
 
@@ -110,7 +112,13 @@ export class TokenTracker {
 
   static async updateRollup(
     agentId: string,
-    usage: { inputTokens: number; outputTokens: number; toolCalls: number; success: boolean }
+    usage: {
+      inputTokens: number;
+      outputTokens: number;
+      toolCalls: number;
+      success: boolean;
+      durationMs?: number;
+    }
   ): Promise<void> {
     const ts = dayStart();
     const userId = `TOKEN_ROLLUP#${agentId}`;
@@ -127,6 +135,7 @@ export class TokenTracker {
             'invocationCount = if_not_exists(invocationCount, :zero) + :one, ' +
             'toolCalls = if_not_exists(toolCalls, :zero) + :tools, ' +
             'successCount = if_not_exists(successCount, :zero) + :success, ' +
+            'totalDurationMs = if_not_exists(totalDurationMs, :zero) + :dur, ' +
             'expiresAt = :expires',
           ExpressionAttributeValues: {
             ':inTok': usage.inputTokens,
@@ -134,6 +143,7 @@ export class TokenTracker {
             ':one': 1,
             ':tools': usage.toolCalls,
             ':success': usage.success ? 1 : 0,
+            ':dur': usage.durationMs ?? 0,
             ':zero': 0,
             ':expires': expiresAt,
           },
@@ -141,17 +151,17 @@ export class TokenTracker {
         })
       );
 
-      // Second pass: compute avgTokensPerInvocation in memory and update
       const updated = result.Attributes;
       if (updated && updated.invocationCount > 0) {
-        const avg =
+        const avgTokens =
           (updated.totalInputTokens + updated.totalOutputTokens) / updated.invocationCount;
+        const avgDuration = (updated.totalDurationMs ?? 0) / updated.invocationCount;
         await docClient.send(
           new UpdateCommand({
             TableName: getTableName(),
             Key: { userId, timestamp: ts },
-            UpdateExpression: 'SET avgTokensPerInvocation = :avg',
-            ExpressionAttributeValues: { ':avg': avg },
+            UpdateExpression: 'SET avgTokensPerInvocation = :avgTokens, avgDurationMs = :avgDur',
+            ExpressionAttributeValues: { ':avgTokens': avgTokens, ':avgDur': avgDuration },
             ConditionExpression: 'attribute_exists(invocationCount)',
           })
         );

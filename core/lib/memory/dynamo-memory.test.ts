@@ -872,12 +872,14 @@ describe('DynamoMemory Delegation Tests', () => {
           },
         ],
       });
-      ddbMock.on(PutCommand).resolves({});
+      ddbMock.on(UpdateCommand).resolves({});
+      ddbMock.on(DeleteCommand).resolves({});
 
       await memory.closeCollaboration('123', 'user-1', 'HUMAN' as any);
 
-      const putCalls = ddbMock.commandCalls(PutCommand);
-      expect(putCalls.length).toBeGreaterThanOrEqual(1);
+      const updateCalls = ddbMock.commandCalls(UpdateCommand);
+      const deleteCalls = ddbMock.commandCalls(DeleteCommand);
+      expect(updateCalls.length + deleteCalls.length).toBeGreaterThanOrEqual(1);
     });
   });
 

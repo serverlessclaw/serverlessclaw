@@ -211,8 +211,10 @@ describe('TokenTracker', () => {
 
       expect(mockSend).toHaveBeenCalledTimes(2);
       const secondCall = mockSend.mock.calls[1][0] as UpdateCommand;
-      expect(secondCall.input.UpdateExpression).toBe('SET avgTokensPerInvocation = :avg');
-      expect(secondCall.input.ExpressionAttributeValues?.[':avg']).toBe(150);
+      expect(secondCall.input.UpdateExpression).toBe(
+        'SET avgTokensPerInvocation = :avgTokens, avgDurationMs = :avgDur'
+      );
+      expect(secondCall.input.ExpressionAttributeValues?.[':avgTokens']).toBe(150);
     });
 
     it('should skip second pass when invocationCount is 0', async () => {

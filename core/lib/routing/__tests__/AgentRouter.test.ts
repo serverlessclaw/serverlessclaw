@@ -1,14 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
-import { AgentRouter, ModelTier } from './routing/AgentRouter';
-import { ReasoningProfile } from './types/llm';
+import { AgentRouter, ModelTier } from '../AgentRouter';
+import { ReasoningProfile } from '../../types/llm';
 
-vi.mock('./registry/AgentRegistry', () => ({
+vi.mock('../../registry/AgentRegistry', () => ({
   AgentRegistry: {
     getAgentConfig: vi.fn(),
   },
 }));
 
-vi.mock('./metrics/token-usage', () => ({
+vi.mock('../../metrics/token-usage', () => ({
   TokenTracker: {
     getRollupRange: vi.fn().mockResolvedValue([]),
   },
@@ -178,7 +178,7 @@ describe('AgentRouter', () => {
 
   describe('async selectBestAgent [Sh1]', () => {
     it('should filter out disabled agents during selection', async () => {
-      const { AgentRegistry } = await import('./registry/AgentRegistry');
+      const { AgentRegistry } = await import('../../registry/AgentRegistry');
       const mockResult = (id: string, enabled: boolean) =>
         ({
           id,
@@ -197,7 +197,7 @@ describe('AgentRouter', () => {
     });
 
     it('should throw Error if no enabled agents remain', async () => {
-      const { AgentRegistry } = await import('./registry/AgentRegistry');
+      const { AgentRegistry } = await import('../../registry/AgentRegistry');
       vi.mocked(AgentRegistry.getAgentConfig).mockImplementation(async (id: string) => {
         if (id === 'test') {
           return { id: 'test', enabled: false } as any;

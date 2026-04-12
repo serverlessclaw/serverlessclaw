@@ -56,6 +56,15 @@ export async function createCollaboration(
 
   const syntheticUserId = getSyntheticUserId(collaborationId);
 
+  // Standardize expiresAt to seconds (Unix timestamp)
+  const { expiresAt: ttlExpiresAt } = await RetentionManager.getExpiresAt(
+    'SESSIONS',
+    collaborationId
+  );
+  const finalExpiresAt = input.ttlDays
+    ? Math.floor((now + input.ttlDays * 24 * 60 * 60 * 1000) / 1000)
+    : ttlExpiresAt;
+
   const collaboration: Collaboration = {
     collaborationId,
     name: input.name,
@@ -67,23 +76,17 @@ export async function createCollaboration(
     createdAt: now,
     updatedAt: now,
     lastActivityAt: now,
-    expiresAt: input.ttlDays ? now + input.ttlDays * 24 * 60 * 60 * 1000 : undefined,
+    expiresAt: finalExpiresAt,
     timeoutMs: input.timeoutMs,
     status: 'active',
     tags: input.tags,
     workspaceId: input.workspaceId,
   };
 
-  // Store collaboration metadata
-  const { expiresAt: ttlExpiresAt, type: _type } = await RetentionManager.getExpiresAt(
-    'SESSIONS',
-    collaborationId
-  );
   await base.putItem({
     userId: `${COLLAB_PREFIX}${collaborationId}`,
     timestamp: 0,
     type: 'COLLABORATION',
-    expiresAt: collaboration.expiresAt ? Math.floor(collaboration.expiresAt / 1000) : ttlExpiresAt,
     ...collaboration,
   });
 
@@ -133,22 +136,26 @@ export async function addCollaborationParticipant(
 
   const now = Date.now();
 
-  // Add to collaboration
-  collaboration.participants.push({
+  const participant: CollaborationParticipant = {
     type: newParticipant.type,
     id: newParticipant.id,
     role: newParticipant.role,
     joinedAt: now,
-  });
-  collaboration.updatedAt = now;
-  collaboration.lastActivityAt = now;
+  };
 
-  // Update collaboration
-  await base.putItem({
-    userId: `${COLLAB_PREFIX}${collaborationId}`,
-    timestamp: 0,
-    type: 'COLLABORATION',
-    ...collaboration,
+  // Update collaboration metadata atomically (Principle 13)
+  await base.updateItem({
+    Key: {
+      userId: `${COLLAB_PREFIX}${collaborationId}`,
+      timestamp: 0,
+    },
+    UpdateExpression:
+      'SET participants = list_append(participants, :newParticipant), updatedAt = :now, lastActivityAt = :now',
+    ConditionExpression: 'attribute_exists(userId)',
+    ExpressionAttributeValues: {
+      ':newParticipant': [participant],
+      ':now': now,
+    },
   });
 
   // Add index entry for new participant
@@ -266,15 +273,20 @@ export async function closeCollaboration(
     throw new Error('Only owners can close collaborations');
   }
 
-  collaboration.status = 'closed';
-  collaboration.updatedAt = Date.now();
-  collaboration.lastActivityAt = Date.now();
+  const now = Date.now();
 
-  await base.putItem({
-    userId: `${COLLAB_PREFIX}${collaborationId}`,
-    timestamp: 0,
-    type: 'COLLABORATION',
-    ...collaboration,
+  // Atomic update status (Principle 13)
+  await base.updateItem({
+    Key: {
+      userId: `${COLLAB_PREFIX}${collaborationId}`,
+      timestamp: 0,
+    },
+    UpdateExpression: 'SET #status = :closed, updatedAt = :now, lastActivityAt = :now',
+    ExpressionAttributeNames: { '#status': 'status' },
+    ExpressionAttributeValues: {
+      ':closed': 'closed',
+      ':now': now,
+    },
   });
 
   // Clean up ALL participant index entries to prevent orphaned records

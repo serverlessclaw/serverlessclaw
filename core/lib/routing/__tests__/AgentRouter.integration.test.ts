@@ -1,16 +1,16 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-vi.mock('./metrics/token-usage', () => ({
+vi.mock('../../metrics/token-usage', () => ({
   TokenTracker: {
     getRollupRange: vi.fn().mockResolvedValue([]),
   },
 }));
 
-vi.mock('./logger', () => ({
+vi.mock('../../logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-vi.mock('./registry/AgentRegistry', () => ({
+vi.mock('../../registry/AgentRegistry', () => ({
   AgentRegistry: {
     getAgentConfig: vi.fn().mockImplementation((id: string) =>
       Promise.resolve({
@@ -21,8 +21,8 @@ vi.mock('./registry/AgentRegistry', () => ({
   },
 }));
 
-import { AgentRouter } from './routing/AgentRouter';
-import { TokenTracker } from './metrics/token-usage';
+import { AgentRouter } from '../AgentRouter';
+import { TokenTracker } from '../../metrics/token-usage';
 
 describe('AgentRouter', () => {
   beforeEach(() => {
