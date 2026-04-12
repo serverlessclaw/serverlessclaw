@@ -23,6 +23,31 @@ The system architecture follows ten foundational philosophies:
 13. **Atomic State Integrity:** In a stateless, serverless environment with high concurrency, the system MUST prioritize field-level atomic updates over object-level overwrites. Every agent configuration change (TrustScore, EvolutionMode, Enabled status) must utilize conditional DynamoDB operations (`atomicUpdateAgentField`) to prevent race conditions during simultaneous agent or handler activity.
 14. **Selection Integrity:** Operational state must be enforced at the gateway. Any system entity responsible for delegating or routing tasks MUST verify the active status (`enabled === true`) of candidates in the registry before selection. No history or reputation score can override an explicit "disabled" flag.
 
+---
+
+## 🎯 Audit Alignment
+
+Each design principle has associated audit verification questions. Auditors should verify compliance with these principles during reviews.
+
+### Audit Questions by Principle
+
+| Principle                 | Audit Questions                                                                                                                      |
+| :------------------------ | :----------------------------------------------------------------------------------------------------------------------------------- |
+| **Stateless Core**        | Is any state local to function instances? Are there race conditions from in-memory state? Is persistence always to managed services? |
+| **AI-Native**             | Are prompts clear and unambiguous? Do schema definitions match actual behavior? Are there unnecessary boilerplates?                  |
+| **Safety-First**          | Are all guardrails implemented? Is there defense in depth? Are safety failures testable?                                             |
+| **Proactive & Efficient** | Are there unnecessary scheduled jobs? Is warm-up triggered on actual need? Is idling minimized?                                      |
+| **Low Latency**           | Are latency targets declared with percentile? Is SLO verified? Are there latent slow paths?                                          |
+| **Extensible**            | Are components swappable? Are interfaces defined? Is there tight coupling that prevents extension?                                   |
+| **Multi-Lingual**         | Are core prompts in English? Is safety policy consistent across languages? Are there localization gaps?                              |
+| **Stable Addressing**     | Is FNV-1a used deterministically? Is collision handling implemented? Are namespace boundaries enforced?                              |
+| **Trust-Driven Mode**     | Is trust score calculated correctly? Does >=95 enable AUTO? Is mode shifting logged?                                                 |
+| **Lean Evolution**        | Is there duplicated code? Can patterns be extracted? Is there unused code?                                                           |
+| **Durable Observability** | Are signals flushed immediately? Is telemetry lost on crashes? Is there 'telemetry blindness'?                                       |
+| **Quality-Weighted**      | Are quality scores 0-10? Are increments weighted? Are penalties severity-adjusted?                                                   |
+| **Atomic State**          | Are updates using conditional writes? Is there object-level overwrites? Can race conditions occur?                                   |
+| **Selection Integrity**   | Is enabled checked before selection? Can disabled agent be selected? Is there gateway enforcement?                                   |
+
 ## ⚖️ Governance and Autonomy Boundaries
 
 Autonomy is a capability, not a blanket permission. Every proposed change is risk-classified before execution.
@@ -35,6 +60,26 @@ Autonomy is a capability, not a blanket permission. Every proposed change is ris
 | **B** | Dynamic Auto | `TrustScore >= 80` | Autonomous if high trust; else HITL.                    | New feature implementation, logic branch updates.     |
 | **C** | Trust-Gated  | `TrustScore >= 95` | Human Approval (timeout allows auto if trust high).     | IAM changes, infra topology, security guardrails.     |
 | **D** | Blocked      | Policy Protected   | Permanently Blocked (unless Facilitator `Trust >= 90`). | Policy core overrides, blast-radius limit violations. |
+
+### Audit Findings to Risk Class Mapping
+
+Audit findings should be mapped to risk classes to enable appropriate response prioritization.
+
+| Finding Category     |          P0           |        P1         |        P2        |      P3       |
+| :------------------- | :-------------------: | :---------------: | :--------------: | :-----------: |
+| **Security Breach**  |    Active exploit     | Potential exploit |    Discovery     |       -       |
+| **Data Loss**        |      Active loss      |   Risk of loss    |        -         |       -       |
+| **System Failure**   |        Outage         |    Degradation    | Risk of failure  |       -       |
+| **Trust Integrity**  |  Score manipulation   |  Update bypassed  |   Decay issues   | Display drift |
+| **Safety Violation** | Protected scope write |    RBAC bypass    |  Missing check   |       -       |
+| **Performance**      |      SLA breach       |     Near SLA      | Degradation risk |  Observation  |
+
+**Mapping Guidance**:
+
+- **Class A** findings (P3): Can be addressed autonomously
+- **Class B** findings (P2): Should be scheduled in sprint
+- **Class C** findings (P1): Require sprint priority, may need HITL
+- **Class D** findings (P0): Block deployment, require immediate fix
 
 ---
 
@@ -85,6 +130,27 @@ To remain competitive in agentic orchestration, quality gates must map to live r
 - **Recovery SLO:** Maximum rollback completion time objective and verified rollback drills.
 - **Latency SLO:** p50/p95/p99 targets for orchestration cycle stages (route, plan, execute, verify).
 - **Observability SLO:** 100% traceability for autonomous actions from proposal to deployment decision.
+
+### SLO Audit Verification
+
+Auditors should verify SLO compliance by checking actual measurements against targets.
+
+| SLO               | What to Verify                                            | Detection Method                              |
+| :---------------- | :-------------------------------------------------------- | :-------------------------------------------- |
+| **Task Success**  | Calculate actual 7-day rate, verify exclusions documented | Query completion events, verify calculation   |
+| **Safety**        | Protected scope writes logged as Sev-0                    | Review security events, verify classification |
+| **Regression**    | Post-merge failure rate within threshold                  | Track post-merge failures vs total merges     |
+| **Recovery**      | Rollback time within objective                            | Test rollback procedure with timing           |
+| **Latency**       | p50/p95/p99 meet targets                                  | Measure actual latencies at each stage        |
+| **Observability** | Full trace from proposal to decision                      | Verify decision logs exist end-to-end         |
+
+**SLO Violation Detection**:
+
+- Query metrics to calculate actual vs target
+- Check for missing data affecting calculations
+- Verify exclusions properly documented
+- Test edge cases in SLO calculations
+- Compare dashboard vs backend metrics
 
 ## 🔐 Model and Supply-Chain Governance
 

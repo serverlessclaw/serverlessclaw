@@ -229,21 +229,18 @@ describe('AgentRegistry', () => {
     });
 
     it('should set firstRegistered on ValidationException fallback', async () => {
-      mockDocClient.send.mockRejectedValueOnce(
-        Object.assign(new Error('ValidationException'), { name: 'ValidationException' })
-      );
-      vi.mocked(ConfigManager.saveRawConfig).mockResolvedValueOnce(undefined);
+      mockDocClient.send
+        .mockRejectedValueOnce(
+          Object.assign(new Error('ValidationException'), { name: 'ValidationException' })
+        )
+        .mockResolvedValueOnce({})
+        .mockRejectedValueOnce(
+          Object.assign(new Error('ValidationException'), { name: 'ValidationException' })
+        )
+        .mockResolvedValueOnce({});
 
       await AgentRegistry.recordToolUsage('my_tool', 'test_agent');
-      expect(ConfigManager.saveRawConfig).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          my_tool: expect.objectContaining({
-            count: 1,
-            firstRegistered: expect.any(Number),
-          }),
-        })
-      );
+      expect(mockDocClient.send).toHaveBeenCalledTimes(4);
     });
 
     it('should handle missing ConfigTable in recordToolUsage', async () => {

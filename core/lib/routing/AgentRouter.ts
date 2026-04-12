@@ -13,9 +13,19 @@ import { logger } from '../logger';
 import type { IAgentConfig } from '../types/agent';
 import { LLMProvider, OpenAIModel, MiniMaxModel, ReasoningProfile } from '../types/llm';
 import type { AgentReputation } from '../types/reputation';
+import { AgentType } from '../types/agent';
 import { computeReputationScore } from '../memory/reputation-operations';
 import { TokenTracker } from '../metrics/token-usage';
 import { ConfigManager } from '../registry/config';
+
+/**
+ * Essential backbone agents that can be used as fallback when user-defined agents fail.
+ */
+const BACKBONE_FALLBACK_AGENTS = [
+  AgentType.SUPERCLAW,
+  AgentType.CODER,
+  AgentType.STRATEGIC_PLANNER,
+];
 
 /**
  * Performance metrics for an agent.
@@ -296,7 +306,23 @@ export class AgentRouter {
     }
 
     if (enabledCandidates.length === 0) {
-      throw new Error(`All target agents are disabled: ${candidates.join(', ')}`);
+      logger.warn(
+        `[AgentRouter] All target agents disabled: ${candidates.join(', ')}. Falling back to backbone agents.`
+      );
+      const fallbackCandidates: string[] = [];
+      for (const agentId of BACKBONE_FALLBACK_AGENTS) {
+        const config = await AgentRegistry.getAgentConfig(agentId);
+        if (config && config.enabled !== false) {
+          fallbackCandidates.push(agentId);
+        }
+      }
+      if (fallbackCandidates.length === 0) {
+        throw new Error(
+          `All target agents and backbone fallback agents are disabled: ${[...candidates, ...BACKBONE_FALLBACK_AGENTS].join(', ')}`
+        );
+      }
+      enabledCandidates.push(...fallbackCandidates);
+      logger.info(`[AgentRouter] Using backbone fallback agents: ${fallbackCandidates.join(', ')}`);
     }
 
     if (enabledCandidates.length === 1) return enabledCandidates[0];

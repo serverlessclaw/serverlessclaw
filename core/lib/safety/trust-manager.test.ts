@@ -7,6 +7,7 @@ const { mockAgentRegistry } = vi.hoisted(() => ({
     getRawConfig: vi.fn(),
     saveRawConfig: vi.fn().mockResolvedValue(undefined),
     getAgentConfig: vi.fn(),
+    getAllConfigs: vi.fn().mockResolvedValue({}),
     atomicUpdateAgentField: vi.fn().mockResolvedValue(undefined),
   },
 }));
@@ -169,8 +170,8 @@ describe('TrustManager', () => {
         'mid-trust': { id: 'mid-trust', trustScore: 70.2 },
       };
 
-      mockAgentRegistry.getRawConfig.mockImplementation(async (key) => {
-        if (key === DYNAMO_KEYS.AGENTS_CONFIG) return mockConfigs;
+      mockAgentRegistry.getAllConfigs = vi.fn().mockResolvedValue(mockConfigs);
+      mockAgentRegistry.getRawConfig.mockImplementation(async (_key: string) => {
         return [];
       });
 

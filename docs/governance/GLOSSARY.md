@@ -27,6 +27,20 @@ Definitions of core concepts, metrics, and protocols used in the self-evolving g
 | **Strategic Tie-break** | The final decision-making process used by the Facilitator to resolve conflicting instructions when autonomy thresholds are met. | Facilitator       |
 | **Atomic Sync**         | The non-interruptible process of committing verified code and metadata updates to the repository state in a single transaction. | QA Auditor        |
 
+## Audit Terms
+
+| Term                     | Definition                                                                                                                                       |
+| :----------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Silo**                 | A focused audit domain (Spine, Hand, Shield, Brain, Eye, Scales, Metabolism) representing a functional area.                                     |
+| **Finding Type**         | Classification of audit findings: Bug (functional failure), Gap (missing functionality), Inconsistency (state drift), Refactor (technical debt). |
+| **Severity (P0-P3)**     | Priority classification: P0 (immediate fix), P1 (current sprint), P2 (scheduled), P3 (future consideration).                                     |
+| **Risk Class (A-D)**     | Autonomous action classification: A (auto-allowed), B (trust-gated), C (human approval), D (blocked).                                            |
+| **Cross-Silo**           | Audit perspective spanning multiple silos to identify integration gaps.                                                                          |
+| **Probe**                | A verification method (static, dynamic, holistic, security, performance, consistency, dependency).                                               |
+| **Angle**                | The investigative lens for a silo audit.                                                                                                         |
+| **Dead End**             | Event or path with no handler, causing silent failures.                                                                                          |
+| **Atomic Field Pattern** | Using DynamoDB conditional writes for field-level updates to prevent race conditions.                                                            |
+
 ---
 
 > [!NOTE]

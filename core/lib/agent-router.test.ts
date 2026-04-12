@@ -198,13 +198,15 @@ describe('AgentRouter', () => {
 
     it('should throw Error if no enabled agents remain', async () => {
       const { AgentRegistry } = await import('./registry/AgentRegistry');
-      vi.mocked(AgentRegistry.getAgentConfig).mockResolvedValue({
-        id: 'test',
-        enabled: false,
-      } as any);
+      vi.mocked(AgentRegistry.getAgentConfig).mockImplementation(async (id: string) => {
+        if (id === 'test') {
+          return { id: 'test', enabled: false } as any;
+        }
+        return { id, enabled: false } as any;
+      });
 
       await expect(AgentRouter.selectBestAgent(['test'])).rejects.toThrow(
-        'All target agents are disabled: test'
+        'All target agents and backbone fallba'
       );
     });
   });

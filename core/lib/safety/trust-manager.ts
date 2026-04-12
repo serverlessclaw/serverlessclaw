@@ -7,7 +7,7 @@
 import { AgentRegistry } from '../registry';
 import { DYNAMO_KEYS } from '../constants';
 import { logger } from '../logger';
-import { IAgentConfig, EventType } from '../types/agent';
+import { EventType } from '../types/agent';
 import { CognitiveAnomaly, AnomalySeverity } from '../types/metrics';
 import { emitEvent } from '../utils/bus';
 
@@ -241,11 +241,7 @@ export class TrustManager {
    * This should be called by a scheduled process (e.g. Metabolism).
    */
   static async decayTrustScores(): Promise<void> {
-    const configs =
-      ((await AgentRegistry.getRawConfig(DYNAMO_KEYS.AGENTS_CONFIG)) as Record<
-        string,
-        Partial<IAgentConfig>
-      >) || {};
+    const configs = await AgentRegistry.getAllConfigs();
 
     const decayPromises: Promise<void>[] = [];
 

@@ -318,9 +318,49 @@ export class AgentRegistry {
       } catch (e: unknown) {
         if (e instanceof Error && e.name === 'ValidationException') {
           const now = Date.now();
-          await this.saveRawConfig(key, {
-            [toolName]: { count: 1, lastUsed: now, firstRegistered: now },
-          });
+          const toolObj = { count: 1, lastUsed: now, firstRegistered: now };
+          try {
+            await defaultDocClient.send(
+              new UpdateCommand({
+                TableName: ConfigTable.name,
+                Key: { key },
+                UpdateExpression: 'SET #usage.#tool = :toolObj',
+                ConditionExpression: 'attribute_not_exists(#usage.#tool)',
+                ExpressionAttributeNames: {
+                  '#usage': 'value',
+                  '#tool': toolName,
+                },
+                ExpressionAttributeValues: { ':toolObj': toolObj },
+              })
+            );
+          } catch (innerError: unknown) {
+            if (innerError instanceof Error && innerError.name === 'ValidationException') {
+              try {
+                await defaultDocClient.send(
+                  new UpdateCommand({
+                    TableName: ConfigTable.name,
+                    Key: { key },
+                    UpdateExpression: 'SET #usage = :rootObj',
+                    ConditionExpression: 'attribute_not_exists(#usage)',
+                    ExpressionAttributeNames: { '#usage': 'value' },
+                    ExpressionAttributeValues: { ':rootObj': { [toolName]: toolObj } },
+                  })
+                );
+              } catch (rootError: unknown) {
+                if (
+                  rootError instanceof Error &&
+                  rootError.name === 'ConditionalCheckFailedException'
+                ) {
+                  return updateUsage(key);
+                }
+              }
+            } else if (
+              innerError instanceof Error &&
+              innerError.name === 'ConditionalCheckFailedException'
+            ) {
+              return updateUsage(key);
+            }
+          }
         }
       }
     };
@@ -398,6 +438,59 @@ export class AgentRegistry {
         })
       );
     } catch (e: unknown) {
+      if (e instanceof Error && e.name === 'ValidationException') {
+        try {
+          await defaultDocClient.send(
+            new UpdateCommand({
+              TableName: resource.ConfigTable.name,
+              Key: { key: DYNAMO_KEYS.AGENTS_CONFIG },
+              UpdateExpression: 'SET #val.#id = :agentObj',
+              ConditionExpression: 'attribute_not_exists(#val.#id)',
+              ExpressionAttributeNames: {
+                '#val': 'value',
+                '#id': id,
+              },
+              ExpressionAttributeValues: { ':agentObj': { [field]: value } },
+            })
+          );
+          return;
+        } catch (innerError: unknown) {
+          if (innerError instanceof Error && innerError.name === 'ValidationException') {
+            try {
+              await defaultDocClient.send(
+                new UpdateCommand({
+                  TableName: resource.ConfigTable.name,
+                  Key: { key: DYNAMO_KEYS.AGENTS_CONFIG },
+                  UpdateExpression: 'SET #val = :rootObj',
+                  ConditionExpression: 'attribute_not_exists(#val)',
+                  ExpressionAttributeNames: {
+                    '#val': 'value',
+                  },
+                  ExpressionAttributeValues: { ':rootObj': { [id]: { [field]: value } } },
+                })
+              );
+              return;
+            } catch (rootError: unknown) {
+              if (
+                rootError instanceof Error &&
+                rootError.name === 'ConditionalCheckFailedException'
+              ) {
+                return this.atomicUpdateAgentField(id, field, value);
+              }
+              logger.error(`Failed to initialize root object for agent ${id}:`, rootError);
+              throw rootError;
+            }
+          }
+          if (
+            innerError instanceof Error &&
+            innerError.name === 'ConditionalCheckFailedException'
+          ) {
+            return this.atomicUpdateAgentField(id, field, value);
+          }
+          logger.error(`Failed to initialize nested object for agent ${id}:`, innerError);
+          throw innerError;
+        }
+      }
       logger.error(`Failed to atomically update ${field} for agent ${id}:`, e);
       throw e;
     }
