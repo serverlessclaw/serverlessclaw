@@ -33,9 +33,55 @@ export class SafetyBase {
   }
 
   /**
+   * System-level protected paths that are always blocked unless manually approved.
+   */
+  public static getSystemProtectedPaths(): string[] {
+    return [
+      'core/**',
+      'infra/**',
+      'docs/governance/**',
+      '.github/**',
+      '.antigravity/**',
+      'sst.config.ts',
+      'package.json',
+      'package-lock.json',
+      'pnpm-lock.yaml',
+      'yarn.lock',
+      '.env',
+    ];
+  }
+
+  /**
+   * Checks if a resource path matches any system-level protection rules.
+   */
+  public isSystemProtected(resource: string): boolean {
+    const protectedPaths = SafetyBase.getSystemProtectedPaths();
+    return protectedPaths.some((pattern) => this.matchesGlob(resource, pattern));
+  }
+
+  /**
+   * Determine if an action is Class C (sensitive change).
+   */
+  public isClassCAction(action: string): boolean {
+    const classCActions = [
+      'iam_change',
+      'infra_topology',
+      'memory_retention',
+      'tool_permission',
+      'deployment',
+      'security_guardrail',
+      'code_change',
+      'audit_override',
+      'trust_manipulation',
+      'mode_shift',
+    ];
+    return classCActions.includes(action.toLowerCase());
+  }
+
+  /**
    * Create a safety violation record.
    */
-  protected createViolation(
+  public createViolation(
     agentId: string,
     safetyTier: SafetyTier,
     action: string,
@@ -64,7 +110,7 @@ export class SafetyBase {
   /**
    * Log a safety violation.
    */
-  protected async logViolation(violation: SafetyViolation): Promise<void> {
+  public async logViolation(violation: SafetyViolation): Promise<void> {
     this.violations.push(violation);
 
     // Keep only last 1000 violations in memory
@@ -225,7 +271,7 @@ export class SafetyBase {
    * Simple glob pattern matching.
    * Handles ** (match any path including /), * (match except /), and ? (single char).
    */
-  protected matchesGlob(path: string, pattern: string): boolean {
+  public matchesGlob(path: string, pattern: string): boolean {
     const regexSource = pattern
       .replace(/[.+^${}()|[\]\\]/g, '\\$&') // Escape regex special chars
       .replace(/\*\*\//g, '___DIR___')

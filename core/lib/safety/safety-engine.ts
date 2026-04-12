@@ -5,13 +5,7 @@
  * resource-level controls, time-based windows, and comprehensive violation logging.
  */
 
-import {
-  SafetyTier,
-  IAgentConfig,
-  SafetyPolicy,
-  TimeRestriction,
-  SafetyEvaluationResult,
-} from '../types/agent';
+import { SafetyTier, IAgentConfig, SafetyPolicy, SafetyEvaluationResult } from '../types/agent';
 import { logger } from '../logger';
 import type { BaseMemoryProvider } from '../memory/base';
 import { SafetyRateLimiter, ToolSafetyOverride } from './safety-limiter';
@@ -19,14 +13,17 @@ import { SafetyConfigManager } from './safety-config-manager';
 import { EvolutionScheduler } from './evolution-scheduler';
 import { CONFIG_DEFAULTS } from '../config/config-defaults';
 import { SafetyBase } from './safety-base';
+import { PolicyValidator } from './policy-validator';
 
 /**
  * Safety Engine for evaluating actions against granular policies.
+ * Refactored to comply with AIReady file length standards.
  */
 export class SafetyEngine extends SafetyBase {
   private policies: Map<SafetyTier, Partial<SafetyPolicy>>;
   private toolOverrides: Map<string, ToolSafetyOverride>;
   private limiter: SafetyRateLimiter;
+  private validator: PolicyValidator;
   private evolutionScheduler: EvolutionScheduler;
 
   constructor(
@@ -38,9 +35,9 @@ export class SafetyEngine extends SafetyBase {
     this.policies = new Map();
     this.toolOverrides = new Map();
     this.limiter = new SafetyRateLimiter(base);
+    this.validator = new PolicyValidator(this);
     this.evolutionScheduler = new EvolutionScheduler(base!);
 
-    // Apply custom policy overrides if provided at construction
     if (customPolicies) {
       for (const [tier, overrides] of Object.entries(customPolicies)) {
         if (overrides) {
@@ -49,7 +46,6 @@ export class SafetyEngine extends SafetyBase {
       }
     }
 
-    // Initialize tool overrides
     if (toolOverrides) {
       for (const override of toolOverrides) {
         this.toolOverrides.set(override.toolName, override);
@@ -63,55 +59,13 @@ export class SafetyEngine extends SafetyBase {
   }
 
   /**
-   * System-level protected paths that are always blocked unless manually approved.
-   * Moved from fs-security.ts for consolidation.
-   */
-  public static getSystemProtectedPaths(): string[] {
-    return [
-      'core/**',
-      'infra/**',
-      'docs/governance/**',
-      '.github/**',
-      '.antigravity/**',
-      'sst.config.ts',
-      'package.json',
-      'package-lock.json',
-      'pnpm-lock.yaml',
-      'yarn.lock',
-      '.env',
-    ];
-  }
-
-  /**
-   * Checks if a resource path matches any system-level protection rules.
-   */
-  public isSystemProtected(resource: string): boolean {
-    const protectedPaths = SafetyEngine.getSystemProtectedPaths();
-    return protectedPaths.some((pattern) => this.matchesGlob(resource, pattern));
-  }
-
-  /**
    * Heuristic scan of arguments for hidden file paths.
-   * Logic migrated from fs-security.ts.
    */
-  private scanArgumentsForPaths(args: Record<string, unknown>, pathKeys: string[] = []): string[] {
+  public scanArgumentsForPaths(args: Record<string, unknown>, pathKeys: string[] = []): string[] {
     const foundPaths = new Set<string>();
-    const defaultPathKeys = [
-      'path',
-      'path_to_file',
-      'file_path',
-      'filePath',
-      'source',
-      'destination',
-      'dir',
-      'dir_path',
-      'dirPath',
-      'filename',
-      'file',
-    ];
+    const defaultPathKeys = ['path', 'filePath', 'source', 'destination', 'dir', 'file'];
     const allKeys = [...new Set([...defaultPathKeys, ...pathKeys])];
 
-    // Explicit scan
     for (const key of allKeys) {
       const val = args[key];
       if (
@@ -122,7 +76,6 @@ export class SafetyEngine extends SafetyBase {
       }
     }
 
-    // Recursive heuristic scan
     const scanRecursive = (obj: any) => {
       if (!obj || typeof obj !== 'object') return;
       for (const [_key, value] of Object.entries(obj)) {
@@ -158,7 +111,6 @@ export class SafetyEngine extends SafetyBase {
   ): Promise<SafetyEvaluationResult> {
     const tier = agentConfig?.safetyTier ?? SafetyTier.PROD;
 
-    // 0. Pre-flight: Heuristic Discovery if args are provided
     const resourcesToCheck = new Set<string>();
     if (context?.resource) resourcesToCheck.add(context.resource);
     if (context?.args) {
@@ -166,11 +118,8 @@ export class SafetyEngine extends SafetyBase {
       discovered.forEach((p) => resourcesToCheck.add(p));
     }
 
-    // 1. Fetch current policies (DDB with fallback)
     const policies = await SafetyConfigManager.getPolicies();
     const basePolicy = policies[tier];
-
-    // 2. Merge with local overrides if any
     const localPolicy = this.policies.get(tier);
     const policy = localPolicy ? { ...basePolicy, ...localPolicy } : basePolicy;
 
@@ -183,7 +132,6 @@ export class SafetyEngine extends SafetyBase {
       };
     }
 
-    // Check tool-specific overrides first
     if (context?.toolName) {
       const toolOverride = this.toolOverrides.get(context.toolName);
       if (toolOverride?.requireApproval) {
@@ -199,7 +147,6 @@ export class SafetyEngine extends SafetyBase {
           context.userId
         );
         await this.logViolation(violation);
-
         return {
           allowed: true,
           requiresApproval: true,
@@ -207,67 +154,56 @@ export class SafetyEngine extends SafetyBase {
           appliedPolicy: 'tool_override',
         };
       }
-
-      // Check tool rate limits
       const rateLimitResult = await this.limiter.checkToolRateLimit(toolOverride, context.toolName);
-      if (!rateLimitResult.allowed) {
-        return rateLimitResult;
-      }
+      if (!rateLimitResult.allowed) return rateLimitResult;
     }
 
-    // 2. Check resource-level controls for all identified paths
     for (const resource of resourcesToCheck) {
-      const resourceResult = await this.checkResourceAccess(policy, resource, action, tier, {
-        ...context,
-        agentId: agentConfig?.id,
-      });
-
-      // Check against hardcoded system protection as well
-      if (resourceResult.allowed && !agentConfig?.manuallyApproved) {
-        if (this.isSystemProtected(resource)) {
-          const violation = this.createViolation(
-            agentConfig?.id ?? 'unknown',
-            tier,
-            action,
-            context?.toolName,
-            resource,
-            `System-level protection violation: '${resource}'`,
-            'blocked',
-            context?.traceId,
-            context?.userId
-          );
-          await this.logViolation(violation);
-
-          return {
-            allowed: false,
-            requiresApproval: false,
-            reason: `Access to protected system resource '${resource}' is blocked. Direct manipulation requires manual approval via 'manuallyApproved: true'.`,
-            appliedPolicy: 'system_protection',
-          };
-        }
+      const resourceResult = await this.validator.checkResourceAccess(
+        policy,
+        resource,
+        action,
+        tier,
+        { ...context, agentId: agentConfig?.id }
+      );
+      if (
+        resourceResult.allowed &&
+        !agentConfig?.manuallyApproved &&
+        this.isSystemProtected(resource)
+      ) {
+        const violation = this.createViolation(
+          agentConfig?.id ?? 'unknown',
+          tier,
+          action,
+          context?.toolName,
+          resource,
+          `System-level protection violation: '${resource}'`,
+          'blocked',
+          context?.traceId,
+          context?.userId
+        );
+        await this.logViolation(violation);
+        return {
+          allowed: false,
+          requiresApproval: false,
+          reason: `Access to protected system resource '${resource}' is blocked. Direct manipulation requires manual approval via 'manuallyApproved: true'.`,
+          appliedPolicy: 'system_protection',
+        };
       }
-
-      if (!resourceResult.allowed || resourceResult.requiresApproval) {
-        return resourceResult;
-      }
+      if (!resourceResult.allowed || resourceResult.requiresApproval) return resourceResult;
     }
 
-    // Check time-based restrictions
-    const timeResult = await this.checkTimeRestrictions(policy, action, tier, {
+    const timeResult = await this.validator.checkTimeRestrictions(policy, action, tier, {
       ...context,
       agentId: agentConfig?.id,
     });
-    if (!timeResult.allowed || timeResult.requiresApproval) {
-      return timeResult;
-    }
+    if (!timeResult.allowed || timeResult.requiresApproval) return timeResult;
 
-    // Check action-specific approval requirements
-    const approvalResult = await this.checkApprovalRequirements(policy, action, tier, {
+    const approvalResult = await this.validator.checkApprovalRequirements(policy, action, tier, {
       ...context,
       agentId: agentConfig?.id,
     });
 
-    // Enforce Class C blast radius (Sh2 Fix: Enforcement missing)
     if (this.isClassCAction(action)) {
       const blastRadiusError = this.enforceClassCBlastRadius(action);
       if (blastRadiusError) {
@@ -303,29 +239,23 @@ export class SafetyEngine extends SafetyBase {
       this.trackClassCBlastRadius(action, context?.resource);
     }
 
-    // Principle 9: Trust-Driven Mode Shifting (Sh2 FIX: Implementation was half-baked)
-    // If TrustScore >= 95 and mode is AUTO, we bypass human approval for Class B/C actions.
     const hasPromotionTrust = (agentConfig?.trustScore ?? 0) >= 95;
     const isAutoMode = agentConfig?.evolutionMode === 'auto';
 
     if (approvalResult.requiresApproval && hasPromotionTrust) {
       if (isAutoMode) {
         logger.info(
-          `[SafetyEngine] Principle 9: Self-promoting action '${action}' for agent ${agentConfig?.id} (TrustScore: ${agentConfig?.trustScore}, Mode: AUTO)`
+          `[SafetyEngine] Principle 9: Self-promoting action '${action}' (TrustScore: ${agentConfig?.trustScore}, Mode: AUTO)`
         );
-
         const { emitEvent } = await import('../utils/bus');
         const { EventType } = await import('../types/agent');
         await emitEvent('safety.principle9', EventType.SYSTEM_AUDIT_TRIGGER, {
           agentId: agentConfig?.id,
           action,
           trustScore: agentConfig?.trustScore,
-          previousMode: 'hitl',
-          newMode: 'auto',
           reason: `Trust-based autonomous promotion: trustScore >= 95`,
           timestamp: Date.now(),
         });
-
         return {
           allowed: true,
           requiresApproval: false,
@@ -337,424 +267,42 @@ export class SafetyEngine extends SafetyBase {
       }
     }
 
-    if (!approvalResult.allowed || approvalResult.requiresApproval) {
-      return approvalResult;
-    }
-
-    // Check rate limits
+    if (!approvalResult.allowed || approvalResult.requiresApproval) return approvalResult;
     const rateLimitResult = await this.limiter.checkRateLimits(policy, action);
-    if (!rateLimitResult.allowed) {
-      return rateLimitResult;
-    }
+    if (!rateLimitResult.allowed) return rateLimitResult;
 
-    return {
-      allowed: true,
-      requiresApproval: false,
-      appliedPolicy: `${tier}_default`,
-    };
+    return { allowed: true, requiresApproval: false, appliedPolicy: `${tier}_default` };
   }
 
-  /**
-   * Determine if an action is Class C (sensitive change).
-   * Class C changes involve IAM, infra, retention, or security guardrails.
-   */
-  private isClassCAction(action: string): boolean {
-    const classCActions = [
-      'iam_change',
-      'infra_topology',
-      'memory_retention',
-      'tool_permission',
-      'deployment',
-      'security_guardrail',
-      'code_change',
-      'audit_override',
-      'trust_manipulation',
-      'mode_shift',
-    ];
-    return classCActions.includes(action.toLowerCase());
-  }
-
-  /**
-   * Check if a file path is allowed for the given policy.
-   */
-  private async checkResourceAccess(
-    policy: SafetyPolicy,
-    resource: string,
-    action: string,
-    tier: SafetyTier,
-    context?: { traceId?: string; userId?: string; toolName?: string; agentId?: string }
-  ): Promise<SafetyEvaluationResult> {
-    // Check blocked paths first
-    if (policy.blockedFilePaths) {
-      for (const pattern of policy.blockedFilePaths) {
-        if (this.matchesGlob(resource, pattern)) {
-          const violation = this.createViolation(
-            context?.agentId ?? 'unknown',
-            tier,
-            action,
-            context?.toolName,
-            resource,
-            `Resource '${resource}' matches blocked pattern '${pattern}'`,
-            'blocked',
-            context?.traceId,
-            context?.userId
-          );
-          await this.logViolation(violation);
-
-          return {
-            allowed: false,
-            requiresApproval: false,
-            reason: `Access to '${resource}' is blocked`,
-            appliedPolicy: 'blocked_resource',
-            suggestion: 'Choose a different file path that is not protected',
-          };
-        }
-      }
-    }
-
-    // Check allowed paths (if specified, resource must match at least one)
-    if (policy.allowedFilePaths && policy.allowedFilePaths.length > 0) {
-      const isAllowed = policy.allowedFilePaths.some((pattern) =>
-        this.matchesGlob(resource, pattern)
-      );
-
-      if (!isAllowed) {
-        const violation = this.createViolation(
-          context?.agentId ?? 'unknown',
-          tier,
-          action,
-          context?.toolName,
-          resource,
-          `Resource '${resource}' not in allowed paths`,
-          'blocked',
-          context?.traceId,
-          context?.userId
-        );
-        await this.logViolation(violation);
-
-        return {
-          allowed: false,
-          requiresApproval: false,
-          reason: `Resource '${resource}' is not in the allowed list`,
-          appliedPolicy: 'resource_not_allowed',
-        };
-      }
-    }
-
-    return { allowed: true, requiresApproval: false };
-  }
-
-  /**
-   * Check time-based restrictions.
-   */
-  private async checkTimeRestrictions(
-    policy: SafetyPolicy,
-    action: string,
-    tier: SafetyTier,
-    context?: { traceId?: string; userId?: string; toolName?: string; agentId?: string }
-  ): Promise<SafetyEvaluationResult> {
-    if (!policy.timeRestrictions || policy.timeRestrictions.length === 0) {
-      return { allowed: true, requiresApproval: false };
-    }
-
-    const now = new Date();
-
-    for (const restriction of policy.timeRestrictions) {
-      if (!restriction.restrictedActions.includes(action)) {
-        continue;
-      }
-
-      // Check if current time falls within restriction window
-      const isRestricted = this.isTimeInWindow(now, restriction);
-
-      if (isRestricted) {
-        if (restriction.restrictionType === 'block') {
-          const violation = this.createViolation(
-            context?.agentId ?? 'unknown',
-            tier,
-            action,
-            context?.toolName,
-            undefined,
-            `Action '${action}' blocked during restricted time window`,
-            'blocked',
-            context?.traceId,
-            context?.userId
-          );
-          await this.logViolation(violation);
-
-          return {
-            allowed: false,
-            requiresApproval: false,
-            reason: `Action '${action}' is not allowed during this time window`,
-            appliedPolicy: 'time_restriction',
-          };
-        } else {
-          // require_approval
-          const violation = this.createViolation(
-            context?.agentId ?? 'unknown',
-            tier,
-            action,
-            context?.toolName,
-            undefined,
-            `Action '${action}' requires approval during restricted time window`,
-            'approval_required',
-            context?.traceId,
-            context?.userId
-          );
-          await this.logViolation(violation);
-
-          return {
-            allowed: true,
-            requiresApproval: true,
-            reason: `Action '${action}' requires approval during business hours`,
-            appliedPolicy: 'time_restriction_approval',
-          };
-        }
-      }
-    }
-
-    return { allowed: true, requiresApproval: false };
-  }
-
-  /**
-   * Check approval requirements based on action type and policy.
-   */
-  private async checkApprovalRequirements(
-    policy: SafetyPolicy,
-    action: string,
-    tier: SafetyTier,
-    _context?: { traceId?: string; userId?: string; toolName?: string; agentId?: string }
-  ): Promise<SafetyEvaluationResult> {
-    switch (action) {
-      case 'code_change':
-        if (policy.requireCodeApproval) {
-          const violation = this.createViolation(
-            _context?.agentId ?? 'unknown',
-            tier,
-            action,
-            _context?.toolName,
-            undefined,
-            'Code changes require approval in this safety tier',
-            'approval_required',
-            _context?.traceId,
-            _context?.userId
-          );
-          await this.logViolation(violation);
-          return {
-            allowed: true,
-            requiresApproval: true,
-            reason: 'Code changes require approval in this safety tier',
-            appliedPolicy: `${tier}_${action}_approval`,
-          };
-        }
-        break;
-      case 'deployment':
-        if (policy.requireDeployApproval) {
-          const violation = this.createViolation(
-            _context?.agentId ?? 'unknown',
-            tier,
-            action,
-            _context?.toolName,
-            undefined,
-            'Deployments require approval in this safety tier',
-            'approval_required',
-            _context?.traceId,
-            _context?.userId
-          );
-          await this.logViolation(violation);
-          return {
-            allowed: true,
-            requiresApproval: true,
-            reason: 'Deployments require approval in this safety tier',
-            appliedPolicy: `${tier}_${action}_approval`,
-          };
-        }
-        break;
-      case 'file_operation':
-        if (policy.requireFileApproval) {
-          const violation = this.createViolation(
-            _context?.agentId ?? 'unknown',
-            tier,
-            action,
-            _context?.toolName,
-            undefined,
-            'File operations require approval in this safety tier',
-            'approval_required',
-            _context?.traceId,
-            _context?.userId
-          );
-          await this.logViolation(violation);
-          return {
-            allowed: true,
-            requiresApproval: true,
-            reason: 'File operations require approval in this safety tier',
-            appliedPolicy: `${tier}_${action}_approval`,
-          };
-        }
-        break;
-      case 'shell_command':
-        if (policy.requireShellApproval) {
-          const violation = this.createViolation(
-            _context?.agentId ?? 'unknown',
-            tier,
-            action,
-            _context?.toolName,
-            undefined,
-            'Shell commands require approval in this safety tier',
-            'approval_required',
-            _context?.traceId,
-            _context?.userId
-          );
-          await this.logViolation(violation);
-          return {
-            allowed: true,
-            requiresApproval: true,
-            reason: 'Shell commands require approval in this safety tier',
-            appliedPolicy: `${tier}_${action}_approval`,
-          };
-        }
-        break;
-      case 'mcp_tool':
-        if (policy.requireMcpApproval) {
-          const violation = this.createViolation(
-            _context?.agentId ?? 'unknown',
-            tier,
-            action,
-            _context?.toolName,
-            undefined,
-            'MCP tool calls require approval in this safety tier',
-            'approval_required',
-            _context?.traceId,
-            _context?.userId
-          );
-          await this.logViolation(violation);
-          return {
-            allowed: true,
-            requiresApproval: true,
-            reason: 'MCP tool calls require approval in this safety tier',
-            appliedPolicy: `${tier}_${action}_approval`,
-          };
-        }
-        break;
-      default: {
-        // Unknown actions require approval by default
-        const violation = this.createViolation(
-          _context?.agentId ?? 'unknown',
-          tier,
-          action,
-          _context?.toolName,
-          undefined,
-          `Unknown action '${action}' requires approval`,
-          'approval_required',
-          _context?.traceId,
-          _context?.userId
-        );
-        await this.logViolation(violation);
-        return {
-          allowed: true,
-          requiresApproval: true,
-          reason: `Unknown action '${action}' requires approval`,
-          appliedPolicy: `${tier}_${action}_approval`,
-        };
-      }
-    }
-
-    return { allowed: true, requiresApproval: false };
-  }
-
-  /**
-   * Check if current time falls within a time restriction window.
-   */
-  private isTimeInWindow(date: Date, restriction: TimeRestriction): boolean {
-    // Get day/hour in the restriction's timezone using Intl.DateTimeFormat
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: restriction.timezone,
-      hour: 'numeric',
-      weekday: 'short',
-      hour12: false,
-    });
-    const parts = formatter.formatToParts(date);
-    const hour = parseInt(parts.find((p) => p.type === 'hour')?.value ?? '0', 10);
-    const weekdayStr = parts.find((p) => p.type === 'weekday')?.value ?? 'Sun';
-    const dayMap: Record<string, number> = {
-      Sun: 0,
-      Mon: 1,
-      Tue: 2,
-      Wed: 3,
-      Thu: 4,
-      Fri: 5,
-      Sat: 6,
-    };
-    const dayOfWeek = dayMap[weekdayStr] ?? 0;
-
-    // Check if today is a restricted day
-    if (!restriction.daysOfWeek.includes(dayOfWeek)) {
-      return false;
-    }
-
-    // Check if current hour is within restriction window
-    if (restriction.startHour <= restriction.endHour) {
-      return hour >= restriction.startHour && hour < restriction.endHour;
-    } else {
-      return hour >= restriction.startHour || hour < restriction.endHour;
-    }
-  }
-
-  /**
-   * Get safety statistics.
-   */
-  getStats(): {
-    totalViolations: number;
-    blockedActions: number;
-    approvalRequired: number;
-    byTier: Record<SafetyTier, number>;
-    byAction: Record<string, number>;
-  } {
+  getStats() {
     const stats = {
       totalViolations: this.violations.length,
       blockedActions: 0,
       approvalRequired: 0,
-      byTier: {
-        [SafetyTier.LOCAL]: 0,
-        [SafetyTier.PROD]: 0,
-      },
+      byTier: { [SafetyTier.LOCAL]: 0, [SafetyTier.PROD]: 0 },
       byAction: {} as Record<string, number>,
     };
 
     for (const violation of this.violations) {
-      if (violation.outcome === 'blocked') {
-        stats.blockedActions++;
-      } else if (violation.outcome === 'approval_required') {
-        stats.approvalRequired++;
-      }
-
+      if (violation.outcome === 'blocked') stats.blockedActions++;
+      else if (violation.outcome === 'approval_required') stats.approvalRequired++;
       stats.byTier[violation.safetyTier]++;
       stats.byAction[violation.action] = (stats.byAction[violation.action] || 0) + 1;
     }
-
     return stats;
   }
 
-  /**
-   * Update policy for a specific tier.
-   */
   updatePolicy(tier: SafetyTier, updates: Partial<SafetyPolicy>): void {
     const existing = this.policies.get(tier) || {};
     this.policies.set(tier, { ...existing, ...updates });
     logger.info('Safety policy updated', { tier, updates });
   }
 
-  /**
-   * Add or update a tool override.
-   */
   setToolOverride(override: ToolSafetyOverride): void {
     this.toolOverrides.set(override.toolName, override);
     logger.info('Tool safety override set', { toolName: override.toolName });
   }
 
-  /**
-   * Remove a tool override.
-   */
   removeToolOverride(toolName: string): void {
     this.toolOverrides.delete(toolName);
     logger.info('Tool safety override removed', { toolName });
