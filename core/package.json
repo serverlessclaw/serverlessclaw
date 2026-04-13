@@ -33,7 +33,7 @@
     "mcp-fetch-server": "^0.1.0",
     "mcp-aws-devops-server": "^0.1.0",
     "@geunoh/s3-mcp-server": "^0.1.0",
-    "@aiready/ast-mcp-server": "0.1.6",
+    "@aiready/ast-mcp-server": "0.8.1",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "@openai/agents-core": "^0.8.0",
     "@serverlessclaw/integration-github": "workspace:*",
