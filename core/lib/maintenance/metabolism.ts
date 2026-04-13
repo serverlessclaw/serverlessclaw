@@ -2,7 +2,11 @@ import { logger } from '../logger';
 import { AuditFinding } from '../../agents/cognition-reflector/lib/audit-definitions';
 import { MCPMultiplexer } from '../mcp';
 import { AgentRegistry } from '../registry/AgentRegistry';
-import { archiveStaleGaps, cullResolvedGaps } from '../memory/gap-operations';
+import { archiveStaleGaps, cullResolvedGaps, setGap } from '../memory/gap-operations';
+import { InsightCategory } from '../types/memory';
+import { EvolutionScheduler } from '../safety/evolution-scheduler';
+import { FailureEventPayload } from '../schema/events';
+import { BaseMemoryProvider } from '../memory';
 
 /**
  * MetabolismService coordinates the "Regenerative Metabolism" silo.
@@ -18,7 +22,7 @@ export class MetabolismService {
    * @returns A promise resolving to an array of audit findings.
    */
   static async runMetabolismAudit(
-    memory: any,
+    memory: BaseMemoryProvider,
     options: { repair?: boolean } = {}
   ): Promise<AuditFinding[]> {
     const findings: AuditFinding[] = [];
@@ -48,7 +52,7 @@ export class MetabolismService {
   /**
    * Executes autonomous repairs on system state.
    */
-  private static async executeRepairs(memory: any): Promise<AuditFinding[]> {
+  private static async executeRepairs(memory: BaseMemoryProvider): Promise<AuditFinding[]> {
     const repairFindings: AuditFinding[] = [];
 
     // Repair 1: Agent Registry Low-Utilization Tools (Principle 10)
@@ -119,15 +123,24 @@ export class MetabolismService {
       });
 
       if (result && typeof result === 'object') {
-        const data = ('metadata' in result ? (result.metadata as any) : result) as any;
-        const mcpFindings = data.findings || data.results || [];
+        const data = (
+          'metadata' in result ? (result.metadata as Record<string, unknown>) : result
+        ) as Record<string, unknown>;
+        const mcpFindings = (data.findings || data.results || []) as Array<{
+          expected?: string;
+          actual?: string;
+          message?: string;
+          severity?: string;
+          recommendation?: string;
+          fix?: string;
+        }>;
         if (Array.isArray(mcpFindings)) {
           for (const f of mcpFindings) {
             findings.push({
               silo: 'Metabolism',
               expected: f.expected || 'Lean, optimized system state',
               actual: f.actual || f.message || 'Bloat/Debt detected by AIReady',
-              severity: f.severity || 'P2',
+              severity: (f.severity as any) || 'P2',
               recommendation: f.recommendation || f.fix || 'Review AIReady report for details.',
             });
           }
@@ -137,6 +150,69 @@ export class MetabolismService {
       logger.warn('[Metabolism] MCP audit failed, will trigger native fallback:', e);
     }
     return findings;
+  }
+
+  /**
+   * Performs immediate remediation for a detected dashboard failure.
+   * Sh7: Live remediation bridge for real-time system stability.
+   */
+  static async remediateDashboardFailure(
+    memory: BaseMemoryProvider,
+    failure: FailureEventPayload
+  ): Promise<AuditFinding | undefined> {
+    logger.info(`[Metabolism] Attempting immediate remediation for trace ${failure.traceId}`);
+
+    const error = failure.error.toLowerCase();
+
+    // Strategy 1: Registry mismatch/stale overrides (Common dashboard issue)
+    if (error.includes('tool') || error.includes('registry') || error.includes('override')) {
+      const pruned = await AgentRegistry.pruneLowUtilizationTools(0); // Force prune
+      if (pruned > 0) {
+        return {
+          silo: 'Metabolism',
+          expected: 'Consistent agent registry',
+          actual: `Real-time repair: Pruned stale tool overrides triggered by dashboard failure.`,
+          severity: 'P2',
+          recommendation: 'Autonomous repair executed successfully.',
+        };
+      }
+    }
+
+    // Strategy 2: Memory/Gap inconsistencies
+    if (error.includes('memory') || error.includes('gap')) {
+      await cullResolvedGaps(memory);
+      return {
+        silo: 'Metabolism',
+        expected: 'Clean memory state',
+        actual: `Real-time repair: Culled resolved gaps to resolve memory inconsistency.`,
+        severity: 'P2',
+        recommendation: 'Autonomous repair executed successfully.',
+      };
+    }
+
+    // Fallback: Schedule HITL evolution for complex/unknown errors
+    logger.warn(
+      `[Metabolism] Complex error detected, scheduling HITL remediation: ${failure.error}`
+    );
+    const scheduler = new EvolutionScheduler(memory);
+    await scheduler.scheduleAction({
+      agentId: failure.agentId || 'unknown',
+      action: 'REMEDIATION',
+      reason: `Unresolved dashboard error: ${failure.error}`,
+      timeoutMs: 3600000, // 1 hour
+      traceId: failure.traceId,
+      userId: failure.userId,
+    });
+
+    // Also propagate as a strategic gap for visibility
+    await setGap(
+      memory,
+      `REMEDIATION-${failure.traceId}`,
+      `Immediate remediation required: ${failure.error}`,
+      { category: InsightCategory.STRATEGIC_GAP, urgency: 5, impact: 8 }
+    );
+
+    return undefined;
   }
 
   /**

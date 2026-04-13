@@ -151,8 +151,12 @@ export const DEFAULT_EVENT_ROUTING: EventRoutingTable = {
     module: './events/audit-handler',
     function: 'handleSystemAuditTrigger',
   },
+  [EventType.DASHBOARD_FAILURE_DETECTED]: {
+    module: './events/dashboard-failure-handler',
+    function: 'handleDashboardFailure',
+  },
   [EventType.DLQ_ROUTE]: {
     module: './events/dlq-handler',
     function: 'handleDlqRoute',
   },
-};
+} as const;

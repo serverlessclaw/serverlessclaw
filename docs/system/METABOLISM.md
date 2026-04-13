@@ -1,11 +1,16 @@
-# System Vertical: Silo 7 — Regenerative Metabolism
+# System Vertical: Regeneration & Technical Debt Metabolism
+
+> **Navigation**: [← Index Hub](../../INDEX.md) | [Audit Framework](../governance/AUDIT.md#7-the-metabolism-regenerative-repair--bloat-management)
 
 Silo 7 is the **Regenerative Repair Engine** of the Serverless Claw swarm. It ensures architectural longevity by autonomously identifying and recycling "Metabolic Waste" (stale state, dead code, and technical debt).
 
 ## The Regenerative Cycle
 
-The metabolism operates on a continuous feedback loop that bridges observation (Audit) and action (Repair), ensuring the system remains lean and self-correcting.
+The metabolism operates on two distinct loops:
+1. **Periodic Audit Cycle**: A continuous feedback loop that bridges observation (Audit) and action (Repair), ensuring the system remains lean.
+2. **Live Remediation Path**: An event-driven bridge that triggers repairs *immediately* upon failure detection in critical surfaces (like the Dashboard).
 
+#### 1. Periodic Audit (Continuous)
 ```text
           .-----------------------------------------.
          /        REGENERATIVE METABOLISM         \
@@ -36,6 +41,25 @@ The metabolism operates on a continuous feedback loop that bridges observation (
            |                  |
            '------------------'
            (Architectural Decay Recycled)
+```
+
+#### 2. Live Remediation (Event-Driven)
+```text
+ [ Dashboard Interaction ]
+          |
+          v
+ [ ClawTracer.failTrace() ]
+          |
+    (TASK_FAILED Event)
+          |
+          v
+ [ DashboardFailureHandler ]
+          |
+          v
+ [ MetabolismService ] -- (Analyze/Auto-Fix) --> [ System State Repair ]
+          |
+          '----------- (Complex/HITL) ---------> [ EvolutionScheduler ]
+                                                   (Awaiting Human)
 ```
 
 ## Metabolic State Transitions
@@ -73,7 +97,7 @@ Silo 7 is the primary enforcement mechanism for Principle 10. By treating techni
 ## Interaction Topology
 
 ```text
-[ Governance Tool ] <--- Trigger --- [ Human/Operator ]
+[ Governance Tool ] <--- Trigger --- [ Human/Operator ]  (Manual/Scheduled)
         |
         v
 [ Metabolism Service ]
@@ -84,6 +108,18 @@ Silo 7 is the primary enforcement mechanism for Principle 10. By treating techni
     |
     v
 [ Audit Findings ] ---> [ Strategic Planner ] (if P1/P2)
+
+----------------------------------------------------------------------
+[ Real-time Failure ] --- Trigger --- [ Dashboard/Agent ] (Immediate)
+        |
+        v
+[ DashboardFailureHandler ]
+    |
+    v
+[ MetabolismService ] : remediateDashboardFailure()
+    |
+    |-- (Fixable?) ----> [ Autonomous Repair ]
+    '-- (Complex?) ----> [ EvolutionScheduler ] (HITL)
 ```
 
 ## Operational Safeguards

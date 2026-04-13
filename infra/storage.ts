@@ -37,6 +37,10 @@ export function createStorage() {
       // index with nodeId='__summary__' to retrieve trace summaries ordered
       // by timestamp.
       SummaryByNode: { hashKey: FIELDS.NODE_ID, rangeKey: FIELDS.TIMESTAMP },
+      // AgentIdIndex: Support efficient trace counting by agentId for
+      // Silo 5 consistency probing. Query this index with agentId to get
+      // all trace nodes for a specific agent within a time range.
+      AgentIdIndex: { hashKey: 'agentId', rangeKey: FIELDS.TIMESTAMP },
     },
     ttl: 'expiresAt',
   });

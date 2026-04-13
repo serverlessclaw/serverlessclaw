@@ -199,15 +199,15 @@ A poor path is:
 
 Use this table to map high-level silos to the primary code areas that should be investigated.
 
-| Silo  | Name           | Primary Code Focus                                                                                                                                              |
-| :---- | :------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **1** | The Spine      | [routing/AgentRouter.ts](../../core/lib/routing/AgentRouter.ts), [backbone.ts](../../core/lib/backbone.ts)                                                      |
-| **2** | The Hand       | [mcp.ts](../../core/lib/mcp.ts), [executor.ts](../../core/lib/agent/executor.ts)                                                                                |
-| **3** | The Shield     | [safety-engine.ts](../../core/lib/safety/safety-engine.ts), [circuit-breaker.ts](../../core/lib/safety/circuit-breaker.ts)                                      |
-| **4** | The Brain      | `core/lib/memory/`, `core/lib/rag/`                                                                                                                             |
-| **5** | The Eye        | `core/lib/metrics/`, `core/lib/tracer/` (Trace Intelligence)                                                                                                    |
-| **6** | The Scales     | [judge.ts](../../core/lib/verify/judge.ts), [trust-manager.ts](../../core/lib/safety/trust-manager.ts)                                                          |
-| **7** | The Metabolism | [metabolism.ts](../../core/lib/maintenance/metabolism.ts) (Regenerative Audit & Repair), [AgentRegistry.ts](../../core/lib/registry/AgentRegistry.ts) (Pruning) |
+| Silo  | Name           | Primary Code Focus                               | Implementation Vertical             |
+| :---- | :------------- | :----------------------------------------------- | :---------------------------------- |
+| **1** | The Spine      | `core/lib/routing/`, `core/lib/backbone.ts`      | [EVENTS.md](../interface/EVENTS.md#atomic-backbone--flow-control) |
+| **2** | The Hand       | `core/lib/mcp.ts`, `core/lib/agent/executor.ts` | [PROTOCOL.md](../interface/PROTOCOL.md#tool-protocols--multi-server-orchestration) |
+| **3** | The Shield     | `core/lib/safety/safety-engine.ts`               | [RESILIENCE.md](../system/RESILIENCE.md#security--baseline-control) |
+| **4** | The Brain      | `core/lib/memory/`, `core/lib/rag/`              | [MEMORY.md](../intelligence/MEMORY.md#extended-memory-lifecycle--continuity) |
+| **5** | The Eye        | `core/lib/metrics/`, `core/lib/tracer/`          | [DASHBOARD.md](../interface/DASHBOARD.md#observation--metrics-integrity) |
+| **6** | The Scales     | `core/lib/verify/judge.ts`                       | [SAFETY.md](../intelligence/SAFETY.md#agent-trust--calibration) |
+| **7** | The Metabolism | `core/lib/maintenance/metabolism.ts`             | [METABOLISM.md](../system/METABOLISM.md) |
 
 ---
 
@@ -247,10 +247,11 @@ Each silo represents a core functional domain. Reviews within a silo should adop
 
 #### Verification Methods
 
-- **Atomic Recursion Check**: Verify that `RECURSION_ENTRY` updates use monotonic depth guards (`depth < :newDepth`) to prevent loop bypass.
-- **Selection Integrity**: Assert that `selectBestAgent` filters out candidates with `enabled: false` regardless of reputation scores, with backbone fallback for graceful degradation.
-- **Dead-End Discovery**: Scan `event-routing.ts` for unhandled or explicitly excluded agent task events that lack multiplexer subscriptions. Runtime verification via `verifyEventRoutingConfiguration()` runs at module load to catch misconfigurations.
-- **Atomic Field Updates**: Verify that `atomicUpdateAgentField` checks agent existence before updating to prevent orphan field creation.
+Review the implementation details in [EVENTS.md](../interface/EVENTS.md#atomic-backbone--flow-control):
+- **Atomic Recursion Check**: Verify that recursion updates use monotonic guards to prevent loop bypass.
+- **Selection Integrity**: Assert that dormant agents are correctly filtered out regardless of reputation scores.
+- **Dead-End Discovery**: Scan event routing for unhandled agent task events or misconfigurations.
+- **Atomic Field Updates**: Verify existence-checks before metadata writes to prevent storage corruption.
 
 #### 🩻 Spine Event Flow
 
@@ -258,28 +259,25 @@ Each silo represents a core functional domain. Reviews within a silo should adop
   [ EventBridge ]
          |
          v
-  [ Event Handler ] -- (Atomic Check) --> [ DynamoDB Rate Limiter & Circuit Breaker ]
+  [ Event Handler ] -- (Atomic Check) --> [ Rate Limiter & Circuit Breaker ]
          |
-         |-- (Trace Context) --> [ Recursion Tracker ] -- (Atomic Push) --> [ MemoryTable ]
-         |                                                                   (depth check)
+         |-- (Trace Context) --> [ Recursion Tracker ] --> [ State Store ]
+         |                                                   (depth check)
          v
   [ Agent Router ] -- (Selection Guard) --> [ Agent Registry ]
-         |                                   (check config.enabled)
-         v
-  [ Lock Manager ] -- (Cond. Update) --> [ MemoryTable ]
-         |                                (userId: LOCK#<id>)
-         v
-  [ Agent Executor ] -- (Action) --> [ Unified MCP Multiplexer ]
          |
          v
-  [ Lock Manager ] -- (Relaxed Release) --> [ MemoryTable ]
+  [ Lock Manager ] -- (Atomic Lease) --> [ State Store ]
+         |
+         v
+  [ Agent Executor ] -- (Action) --> [ Skill Multiplexer ]
+         |
+         v
+  [ Lock Manager ] -- (Release) --> [ State Store ]
 ```
 
 - **Verification Methods**:
-  - **Atomic Recursion Check**: Verify that `RECURSION_ENTRY` updates use monotonic depth guards (`depth < :newDepth`) to prevent loop bypass.
-  - **Selection Integrity**: Assert that `selectBestAgent` filters out candidates with `enabled: false` regardless of reputation scores, with backbone fallback for graceful degradation.
-  - **Dead-End Discovery**: Scan `event-routing.ts` for unhandled or explicitly excluded agent task events that lack multiplexer subscriptions. Runtime verification via `verifyEventRoutingConfiguration()` runs at module load to catch misconfigurations.
-  - **Atomic Field Updates**: Verify that `atomicUpdateAgentField` checks agent existence before updating to prevent orphan field creation.
+  - Refer to [EVENTS.md](../interface/EVENTS.md#atomic-backbone--flow-control) for specifics on atomic recursion and selection guards.
 
 ### 2. The Hand (Agency & Skill Mastery)
 
@@ -313,10 +311,11 @@ Each silo represents a core functional domain. Reviews within a silo should adop
 
 #### Verification Methods
 
-- **Prompt Audit**: Run persona prompts with known inputs, verify output quality
-- **Tool Schema Test**: Validate all tools against their schemas with boundary inputs
-- **Resource Leak Check**: Monitor connection pool under load
-- **Error Path Test**: Trigger failures at each layer, verify error handling
+Review the implementation details in [PROTOCOL.md](../interface/PROTOCOL.md#tool-protocols--multi-server-orchestration):
+- **Prompt Audit**: Evaluate persona prompts (Coder, Planner, etc.) against known complex inputs.
+- **Tool Schema Test**: Validate skills against their interface declarations with boundary inputs.
+- **Resource Leak Check**: Monitor client/connection pools for proper lifecycle management.
+- **Error Path Test**: Trigger failures at the skill layer to verify graceful context recovery.
 
 #### 🛡️ Silo 3: The Shield (Security & Baseline) [STABILIZED 2026-04-12]
 
@@ -331,18 +330,18 @@ The Shield has been unified. The `SafetyEngine` now acts as the authoritative ga
 #### 🩻 Unified Shield Flow
 
 ```text
-  [ Agent Output ] -> [ SemanticLoopDetector ] -- (Loop Found) --> [ SafetyBase.recordFailure ]
-          |                                                             (Trust Penalty)
+  [ Agent Output ] -> [ Loop Detector ] -- (Found) --> [ Failure Recorded ]
+          |                                              (Trust Penalty)
           v
-  [ Tool Call ] -> [ Shield (SafetyEngine) ] -- (Class C) --> [ EvolutionScheduler ]
-          |                  |                                   (Schedule HITL)
-          |                  +------- (Trust >= 95 & AUTO) -> [ Principle 9 Promotion ]
+  [ Tool Call ] -> [ Shield (SafetyEngine) ] -- (Class C) --> [ HITL Scheduler ]
+          |                  |                                   (Await Approval)
+          |                  +------- (High Trust & AUTO) -> [ Safe Promotion ]
           |                                                      (Bypass Approval)
           v
   [ Circuit Breaker ] -- (Tripped?) --> [ Execution Blocked ]
           |
           v
-  [ Tool Execution ] -> [ Failure? ] -> [ SafetyBase.recordFailure ] -> [ Trip Breaker ]
+  [ Tool Execution ] -> [ Failure? ] -> [ Record Failure ] -> [ Trip Breaker ]
 ```
 
 #### What to Look For
@@ -407,11 +406,12 @@ The Shield has been unified. The `SafetyEngine` now acts as the authoritative ga
 - New endpoints without RBAC checks
 
 #### Verification Methods
+Review the implementation details in [MEMORY.md](../intelligence/MEMORY.md#extended-memory-lifecycle--continuity):
 
-- **Isolation Test**: Attempt cross-workspace access, verify rejection
-- **TTL Audit**: Query old records, verify TTL enforcement
-- **Cache Analysis**: Monitor hit rates, identify misses
-- **RBAC Audit**: Test each role across all endpoints
+- **Isolation Test**: Attempt cross-workspace session access to verify boundary rejection.
+- **Retention Audit**: Query historical records to verify automatic cleanup/recycling.
+- **Hot-Recall Analysis**: Monitor hit rates for tiered memory structures.
+- **ID Propagation**: Trace user identity and role assignment across multiple context turns.
 
 ### 5. The Eye (Observation & Consistency)
 
@@ -424,6 +424,7 @@ The Shield has been unified. The `SafetyEngine` now acts as the authoritative ga
 
 - **Metrics Drift**: Backend counts don't match dashboard, lost events in flight
 - **Trace Gaps**: Incomplete traces, missing spans, broken correlations
+- **Proactive Tracing**: Verify that `ClawTracer.failTrace` correctly emits `DASHBOARD_FAILURE_DETECTED` events for real-time remediation.
 - **Reporting Latency**: Events appearing late, real-time claims false
 - **SLO Violations**: Measurements not matching targets, thresholds wrong
 
@@ -445,10 +446,11 @@ The Shield has been unified. The `SafetyEngine` now acts as the authoritative ga
 
 #### Verification Methods
 
-- **ConsistencyProbe**: Compare backend state to dashboard display. Implemented with trace table cross-reference for drift detection.
-- **Trace Audit**: Verify correlation IDs, trace completeness
-- **Latency Measurement**: Time from event to dashboard
-- **SLO Calculation**: Recalculate SLOs independently, compare. **Note**: p95_latency uses actual `avgDurationMs` from TokenRollup, not token counts.
+Review the implementation details in [DASHBOARD.md](../interface/DASHBOARD.md#observation--metrics-integrity):
+- **Consistency Verification**: Compare state between localized metrics and raw trace logs.
+- **Trace Audit**: Verify correlation IDs and audit for "broken chains" in spans.
+- **Optics Latency**: Measure the time elapsed between event emission and dashboard reporting.
+- **SLO Recalculation**: Independently recalculate performance SLOs to verify tracker accuracy.
 
 #### 🩻 Eye Metrics Flow
 
@@ -456,18 +458,21 @@ The Shield has been unified. The `SafetyEngine` now acts as the authoritative ga
    [ Agent Execution ]
           |
           v
-   [ ClawTracer ] -- (endTrace/failTrace) --> [ Metrics Emission ]
-          |                                    (agentInvoked, agentDuration)
+   [ Tracer ] -- (Trace Event) --> [ Metrics Emission ]
+          |                       (Duration, Invocation)
           v                                    |
-   [ TraceTable ]                             v
-          |                            [ CloudWatch / DynamoDB ]
+   [ State Store ]                            v
+   (Trace GSI)                         [ CloudWatch / Metrics Table ]
           |                                    |
+          | (Search by ID)                    |
           v                                    |
-   [ ConsistencyProbe ] <---------------------+
-   (verifyTraceConsistency)
+   [ Consistency Probe ] <---------------------+
           |
           v
-   [ Dashboard Trace Intelligence ]
+   [ Dashboard Intelligence ]
+          |
+          v
+   [ Health API ]
 ```
 
 ### 6. The Scales (Trust & Calibration)
@@ -502,35 +507,34 @@ The Shield has been unified. The `SafetyEngine` now acts as the authoritative ga
 
 #### Verification Methods
 
-- **Trust Trace**: Follow trust changes through lifecycle
-- **Judge Audit**: Test judge on known good/bad outputs
-- **Decay Test**: Verify time-based decay application
-- **Atomic Test**: Concurrent updates don't cause drift
+Review the implementation details in [SAFETY.md](../intelligence/SAFETY.md#agent-trust--calibration):
+- **Trust Journey**: Trace the progression of trust scores through multiple success/failure events.
+- **Judge Audit**: Periodically blind-test the semantic evaluator against known good/bad outputs.
+- **Decay Verification**: Verify that time-based trust decay parameters align with system spirit.
+- **Atomic Integrity**: Test concurrent calibration events to ensure no state drift occurs.
 
 #### 🔄 Trust Anomaly Feedback Loop
 
 ```text
- [ Silo 5: The Eye ]           [ Silo 6: The Scales ]
+ [ Observation ]               [ Trust Calibration ]
          |                            ^
- (Anomaly Detected)                   |
+  (Anomaly Found)                     |
          |                            |
          v                            |
- [ DegradationDetector ]              |
+ [ Degradation Detection ]            |
          |                            |
-  (Batch Anomalies)                   |
-         |                            |
-         v                            |
- [ CognitiveHealthMonitor ]           |
-         |                            |
-   (AwaitForBatch)                    |
+  (Batch Processing)                  |
          |                            |
          v                            |
- [ TrustManager ] --------------------+
+ [ Cognitive Health Monitor ]         |
+         |                            |
+         v                            |
+ [ Trust Manager ] -------------------'
          |
-  (Atomic Update)
+  (Atomic Write)
          |
          v
- [ AgentRegistry (DDB) ]
+ [ Registry Storage ]
 ```
 
 ### 7. The Metabolism (Regenerative Repair & Bloat Management)
@@ -539,6 +543,7 @@ The Shield has been unified. The `SafetyEngine` now acts as the authoritative ga
 
 - **Angle**: Audit the system through the lens of **Regenerative Metabolism**. Unlike passive audits, Silo 7 operates on the "Perform while Auditing" philosophy — identifying metabolic waste (dead overrides, memory bloat) and executing repairs in real-time.
 - **Detailed Framework**: Refer to the exhaustive [METABOLISM.md](../../docs/system/METABOLISM.md) for architecture and diagrams.
+- **Live Remediation**: Audit the effectiveness of the `DashboardFailureHandler` and `remediateDashboardFailure` loop in resolving real-time dashboard failures.
 - **Key Concepts**: Regenerative repair, tool pruning, memory culling, strategic propagation, and metabolic efficiency.
 
 #### What to Look For
@@ -566,10 +571,11 @@ The Shield has been unified. The `SafetyEngine` now acts as the authoritative ga
 
 #### Verification Methods
 
-- **Dead Code Detection**: Static analysis for uncalled functions, unused exports
-- **Pattern Audit**: Search for repeated implementations of same functionality
-- **Dependency Graph**: Visualize and audit for anomalies
-- **Code Churn Analysis**: Files frequently changed, may indicate fragile code
+Review the implementation details in [METABOLISM.md](../system/METABOLISM.md):
+- **Debt Detection**: Verify automated analysis tools correctly identify unreachable logic or stale overrides.
+- **Repair Integrity**: Trace the resolution of a metabolic gap into a strategic evolution plan.
+- **Remediation Speed**: Verify response times for real-time dashboard failures triggered via the "Live" path.
+- **State Recycling**: Audit the archival process for resolved knowledge gaps and stale memory.
 
 ---
 

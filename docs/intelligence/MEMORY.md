@@ -94,10 +94,25 @@ Serverless Claw uses a tiered, evolutionary memory system designed to provide co
 |    concurrency control for evolution, and anti-pattern learning.     |
 |  - Note: GAPS_RETENTION_DAYS configurable via configDefaults           |
 |                                                                     |
-|  [ TIER 2: HUMAN CONVERSATION ] -------> Retain: 30 Days            |
-|  - Key: CONV# (30d) / SESSIONS# (90d) / SUMMARY# (30d)              |
-|  - Purpose: Recent user chat history and session metadata.           |
-|                                                                     |
+## Extended Memory Lifecycle & Continuity
+
+Beyond raw chat history, the **Brain** manages the continuity of system identity and strategic maturity.
+
+### 1. Tiered Retention Model
+The system enforces specialized retention policies based on the semantic value of data:
+- **Strategic Gaps (`GAP#`)**: Retained for 60 days to allow for metabolic resolution.
+- **Cognitive Lessons (`LESSON#`)**: Retained for 90 days to reinforce successful patterns.
+- **Identity/Fidelity (`FACT#`, `DISTILLED#`)**: Retained for 365 days as the "stable core" of agent performance.
+- **Trace History**: TTL configured via `HISTORY_RETENTION_DAYS` (default 30d).
+
+### 2. Knowledge Gaps & Strategic Continuity
+The system tracks "missing pieces" or unresolved sub-tasks as **Knowledge Gaps**.
+- **Lifecycle**: Created -> Active (Strategic Lock) -> Resolved (Cycled to Lesson) -> Metabolized (Pruned).
+- **Session Integrity**: Metadata is injected into active sessions to ensure agents are aware of pending strategic gaps within their workspace.
+
+### 3. Multi-Tenant Boundary Enforcement
+As described in [Workspace Scoping](#workspace-scoping--multi-tenancy), identity and isolation are enforced at the service level:
+- Cross-tenant access is rejected at the PK generation layer, ensuring data fidelity within complex swarms.
 |  [ TIER 3: AGENT OPERATIONAL TRACES ] -> Retain: 30 Days            |
 |  - Key: CODER# / PLANNER# / REFLECTOR#                              |
 |  - Purpose: Mechanical execution logs for background agent loops.    |

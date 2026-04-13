@@ -200,13 +200,14 @@ describe('TrustManager', () => {
   });
 
   describe('decay', () => {
-    it('applies decay to all agents above minimum score with tiered rates', async () => {
+    it('applies decay to all agents above DECAY_BASELINE with tiered rates', async () => {
       const mockConfigs = {
         'high-trust': { id: 'high-trust', trustScore: 96 },
         'autonomy-trust': { id: 'autonomy-trust', trustScore: 95 },
         'mid-trust': { id: 'mid-trust', trustScore: 85 },
-        'low-trust': { id: 'low-trust', trustScore: 70 },
-        'below-threshold': { id: 'below-threshold', trustScore: 50 },
+        'above-baseline': { id: 'above-baseline', trustScore: 72 }, // Above baseline - should decay
+        'at-baseline': { id: 'at-baseline', trustScore: 70 }, // At baseline (==70) - should NOT decay
+        'below-baseline': { id: 'below-baseline', trustScore: 50 }, // Below baseline - should NOT decay
       };
 
       mockAgentRegistry.getAllConfigs = vi.fn().mockResolvedValue(mockConfigs);
@@ -234,16 +235,23 @@ describe('TrustManager', () => {
         'trustScore',
         84.4
       );
-      // Regular decay: 0.5
+      // Above baseline (72 > 70): 0.5 decay -> 71.5
       expect(mockAgentRegistry.atomicUpdateAgentField).toHaveBeenCalledWith(
-        'low-trust',
+        'above-baseline',
         'trustScore',
-        69.5
+        71.5
       );
-      expect(mockAgentRegistry.atomicUpdateAgentField).toHaveBeenCalledWith(
-        'below-threshold',
+      // At baseline (70 == 70): NOT > 70, should NOT decay
+      expect(mockAgentRegistry.atomicUpdateAgentField).not.toHaveBeenCalledWith(
+        'at-baseline',
         'trustScore',
-        49.5
+        expect.any(Number)
+      );
+      // Below baseline (50 < 70): should NOT decay
+      expect(mockAgentRegistry.atomicUpdateAgentField).not.toHaveBeenCalledWith(
+        'below-baseline',
+        'trustScore',
+        expect.any(Number)
       );
     });
   });

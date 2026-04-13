@@ -44,9 +44,26 @@ For specialized or heavy integrations, adapters are maintained in separate repos
 
 ---
 
-## 🔌 Tool Protocols (MCPMultiplexer)
+## 🔌 Tool Protocols & Multi-Server Orchestration
 
-Agents communicate with technical environments (Git, Shell, Browser) via the **Model Context Protocol (MCP)**. Serverless Claw uses a **Unified Multiplexer** architecture to consolidate external servers into a single, high-performance execution environment.
+The Hand represents the agency silo of Serverless Claw, managed through the **Model Context Protocol (MCP)**. Serverless Claw uses a **Unified Multiplexer** architecture to consolidate external servers into a single, high-performance execution environment.
+
+### 1. Unified MCP Multiplexer
+The Multiplexer provides a standardized interface for interacting with multiple MCP servers (AST, WebSearch, Memory):
+- **Resource Management**: Efficiently pools connections and resolves tools across distributed servers.
+- **Tool Mapping**: Maps LLM tool calls to MCP protocol requests, ensuring multi-modal data fidelity.
+- **Proactive Warm-up**: Minimize cold-start latency through smart warm-up triggers during agent resolution.
+
+### 2. Persona Prompting (Skill Strategies)
+Agents use specialized persona prompts to maintain consistency and expertise within their manipulated environments:
+- **Coder**: Focused on structural integrity, TDD, and modularity.
+- **Strategic Planner**: High-level orchestration, dependency management, and milestone tracking.
+- **Cognition Reflector**: Self-auditing and finding detection.
+
+### 3. Skill Discovery
+Skills are dynamically discovered and registered in the `AgentRegistry`:
+- **Heuristic Scanning**: Persona descriptions are scanned to automatically identify and provision required tools.
+- **Schema Validation**: All tool calls are validated against JSON schemas before execution.
 
 ### Layered Transport Architecture
 

@@ -33,7 +33,7 @@ describe('MetabolismService', () => {
     it('should skip repairs if repair option is false', async () => {
       vi.mocked(MCPMultiplexer.getToolsFromServer).mockResolvedValue([]);
 
-      await MetabolismService.runMetabolismAudit(mockMemory, { repair: false });
+      await MetabolismService.runMetabolismAudit(mockMemory as any, { repair: false });
 
       expect(AgentRegistry.pruneLowUtilizationTools).not.toHaveBeenCalled();
       expect(GapOps.archiveStaleGaps).not.toHaveBeenCalled();
@@ -46,7 +46,9 @@ describe('MetabolismService', () => {
       vi.mocked(GapOps.cullResolvedGaps).mockResolvedValue(3);
       vi.mocked(MCPMultiplexer.getToolsFromServer).mockResolvedValue([]);
 
-      const findings = await MetabolismService.runMetabolismAudit(mockMemory, { repair: true });
+      const findings = await MetabolismService.runMetabolismAudit(mockMemory as any, {
+        repair: true,
+      });
       expect(AgentRegistry.pruneLowUtilizationTools).toHaveBeenCalledWith(30);
       expect(GapOps.archiveStaleGaps).toHaveBeenCalledWith(mockMemory);
       expect(GapOps.cullResolvedGaps).toHaveBeenCalledWith(mockMemory);
@@ -65,7 +67,9 @@ describe('MetabolismService', () => {
     it('should trigger native audit fallback if MCP is unavailable', async () => {
       vi.mocked(MCPMultiplexer.getToolsFromServer).mockRejectedValue(new Error('MCP Down'));
 
-      const findings = await MetabolismService.runMetabolismAudit(mockMemory, { repair: false });
+      const findings = await MetabolismService.runMetabolismAudit(mockMemory as any, {
+        repair: false,
+      });
 
       expect(findings).toEqual(
         expect.arrayContaining([
@@ -86,7 +90,9 @@ describe('MetabolismService', () => {
         } as any,
       ]);
 
-      const findings = await MetabolismService.runMetabolismAudit(mockMemory, { repair: false });
+      const findings = await MetabolismService.runMetabolismAudit(mockMemory as any, {
+        repair: false,
+      });
 
       expect(findings).toEqual(
         expect.arrayContaining([expect.objectContaining({ expected: 'Target A', severity: 'P2' })])
@@ -98,7 +104,9 @@ describe('MetabolismService', () => {
         { name: 'some_other_tool', execute: vi.fn() } as any,
       ]);
 
-      const findings = await MetabolismService.runMetabolismAudit(mockMemory, { repair: false });
+      const findings = await MetabolismService.runMetabolismAudit(mockMemory as any, {
+        repair: false,
+      });
 
       expect(findings).toEqual(
         expect.arrayContaining([

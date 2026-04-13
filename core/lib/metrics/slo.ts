@@ -68,9 +68,19 @@ export class SLOTracker {
         break;
       }
       case 'avg_latency': {
-        const totalInvocations = rollups.reduce((s, r) => s + r.invocationCount, 0);
-        const totalDuration = rollups.reduce((s, r) => s + (r.totalDurationMs || 0), 0);
-        current = totalInvocations > 0 ? totalDuration / totalInvocations : 0;
+        // Use p95 latency for SLO tracking as per design principles
+        const p95Values = rollups
+          .filter((r) => r.p95DurationMs !== undefined && r.p95DurationMs > 0)
+          .map((r) => r.p95DurationMs);
+        if (p95Values.length > 0) {
+          // Average of p95 values across rollups
+          current = p95Values.reduce((s, v) => s + v, 0) / p95Values.length;
+        } else {
+          // Fallback to simple average if p95 not available
+          const totalInvocations = rollups.reduce((s, r) => s + r.invocationCount, 0);
+          const totalDuration = rollups.reduce((s, r) => s + (r.totalDurationMs || 0), 0);
+          current = totalInvocations > 0 ? totalDuration / totalInvocations : 0;
+        }
         break;
       }
     }
@@ -119,10 +129,20 @@ export class SLOTracker {
         const total = rollups.reduce((s, r) => s + r.invocationCount, 0);
         const successes = rollups.reduce((s, r) => s + r.successCount, 0);
         current = total > 0 ? successes / total : 1;
+      } else if (slo.metric === 'avg_latency') {
+        // Use p95 latency for SLO tracking as per design principles
+        const p95Values = rollups
+          .filter((r) => r.p95DurationMs !== undefined && r.p95DurationMs > 0)
+          .map((r) => r.p95DurationMs);
+        if (p95Values.length > 0) {
+          current = p95Values.reduce((s, v) => s + v, 0) / p95Values.length;
+        } else {
+          const totalInvocations = rollups.reduce((s, r) => s + r.invocationCount, 0);
+          const totalDuration = rollups.reduce((s, r) => s + (r.totalDurationMs || 0), 0);
+          current = totalInvocations > 0 ? totalDuration / totalInvocations : 0;
+        }
       } else {
-        const totalInvocations = rollups.reduce((s, r) => s + r.invocationCount, 0);
-        const totalDuration = rollups.reduce((s, r) => s + (r.totalDurationMs || 0), 0);
-        current = totalInvocations > 0 ? totalDuration / totalInvocations : 0;
+        current = 0;
       }
 
       await emitSLOStatusMetrics(slo.name, current, slo.target, withinBudget);

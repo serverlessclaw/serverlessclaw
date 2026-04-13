@@ -251,7 +251,7 @@ export class TrustManager {
 
     for (const agentId of Object.keys(configs)) {
       const config = configs[agentId];
-      if (config.trustScore !== undefined && config.trustScore > TRUST.MIN_SCORE) {
+      if (config.trustScore !== undefined && config.trustScore > TRUST.DECAY_BASELINE) {
         let decayAmount = this.DECAY_RATE;
 
         if (config.trustScore >= TRUST.AUTONOMY_THRESHOLD) {
@@ -260,7 +260,7 @@ export class TrustManager {
           decayAmount = this.DECAY_RATE * 1.2;
         }
 
-        const newScore = Math.max(TRUST.MIN_SCORE, config.trustScore - decayAmount);
+        const newScore = Math.max(TRUST.DECAY_BASELINE, config.trustScore - decayAmount);
 
         if (newScore < config.trustScore) {
           decayDetails.push({ agentId, oldScore: config.trustScore, newScore });

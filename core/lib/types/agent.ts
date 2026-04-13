@@ -368,6 +368,8 @@ export enum EventType {
   DELEGATION_TASK = 'delegation_task',
   /** Trigger for system audit based on code growth threshold or event. */
   SYSTEM_AUDIT_TRIGGER = 'system_audit_trigger',
+  /** Event emitted when a dashboard failure is detected for immediate remediation. */
+  DASHBOARD_FAILURE_DETECTED = 'dashboard_failure_detected',
   /** Route an event to the Dead Letter Queue. */
   DLQ_ROUTE = 'dlq_route',
 }

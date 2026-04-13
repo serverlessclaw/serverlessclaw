@@ -37,6 +37,7 @@ describe('event-routing', () => {
       EventType.STRATEGIC_TIE_BREAK,
       EventType.REPORT_BACK,
       EventType.SYSTEM_AUDIT_TRIGGER,
+      EventType.DASHBOARD_FAILURE_DETECTED,
     ];
 
     it.each(REQUIRED_EVENT_TYPES)('should have routing entry for %s', (eventType) => {
@@ -47,8 +48,8 @@ describe('event-routing', () => {
 
     it('should have exactly the expected number of routing entries', () => {
       // This test will fail if someone adds a new event type without adding routing
-      // Update this count when adding new routable event types (currently 23: 22 required + DLQ)
-      expect(Object.keys(DEFAULT_EVENT_ROUTING)).toHaveLength(23);
+      // Update this count when adding new routable event types (currently 24: 23 required + DLQ)
+      expect(Object.keys(DEFAULT_EVENT_ROUTING)).toHaveLength(24);
     });
   });
 
@@ -90,6 +91,7 @@ describe('event-routing', () => {
         'dag-supervisor-handler',
         'agent-multiplexer',
         'dlq-handler',
+        'dashboard-failure-handler',
       ];
 
       for (const [, routing] of Object.entries(DEFAULT_EVENT_ROUTING)) {

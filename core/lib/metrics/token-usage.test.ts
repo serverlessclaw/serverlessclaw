@@ -212,7 +212,7 @@ describe('TokenTracker', () => {
       expect(mockSend).toHaveBeenCalledTimes(2);
       const secondCall = mockSend.mock.calls[1][0] as UpdateCommand;
       expect(secondCall.input.UpdateExpression).toBe(
-        'SET avgTokensPerInvocation = :avgTokens, avgDurationMs = :avgDur'
+        'SET avgTokensPerInvocation = :avgTokens, avgDurationMs = :avgDur, p50DurationMs = :p50, p95DurationMs = :p95, p99DurationMs = :p99, durationSamples = :samples'
       );
       expect(secondCall.input.ExpressionAttributeValues?.[':avgTokens']).toBe(150);
     });

@@ -8,6 +8,28 @@
 
 Serverless Claw uses AWS EventBridge as the central nervous system for inter-agent communication. The `emitEvent` utility provides reliable event delivery with retry logic, idempotency, priority levels, and automatic Dead Letter Queue (DLQ) handling.
 
+## Atomic Backbone & Flow Control
+
+The Event Bus acts as the **Spine** of Serverless Claw, ensuring robust signal propagation and atomic control across the swarm.
+
+### 1. Atomic Recursion Control
+To prevent infinite reasoning loops or event storms, the Spine enforces strict depth limits using **Atomic Recursion Guards**:
+- **Mechanism**: The `RECURSION_ENTRY` in DynamoDB tracks the current depth for a specific `traceId`.
+- **Constraint**: Updates must use monotonic depth guards (`depth < :newDepth`) to prevent out-of-order event bypass.
+- **Limit**: Standard tasks are capped at a depth of 10 unless explicitly promoted.
+
+### 2. Agent Selection & Routing
+The `AgentRouter` selects the best candidate from the `AgentRegistry` based on trust scores and capability matching.
+- **Selection Guard**: `selectBestAgent` explicitly filters out agents with `enabled: false`.
+- **Fallback**: If no high-trust agent is available, the backbone falls back to a deterministic supervisor for graceful degradation.
+
+### 3. Distributed Lock Management
+Concurrency is handled via the `LockManager`, which uses conditional DynamoDB updates:
+- **Lock Key**: `LOCK#<userId>#<resourceId>`
+- **TTL**: Locks automatically expire to prevent deadlocks during Lambda timeouts or failures (default 5-30m).
+
+---
+
 ## Event Priority System
 
 Events are classified into four priority levels to ensure critical events are processed appropriately:

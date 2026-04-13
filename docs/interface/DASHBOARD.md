@@ -78,13 +78,24 @@ The theme is entirely driven by CSS variables defined in [`dashboard/src/globals
 
 ---
 
-## 📈 Visualizing the Swarm
+## Observation & Metrics Integrity
 
-The dashboard uses several specialized components for agent observability:
+The dashboard enables high-fidelity observation of system internals, ensuring the backend trace state matches external reporting.
 
-- **System Pulse**: A real-time topology map showing agent connections and throughput.
-- **Trace Explorer**: A DAG-based view of recursive agent executions.
-- **Neural Reserve**: An interactive list of distilled knowledge and memory health.
+### 1. Consistency Probing
+To detect drift between raw metrics and visual reporting, the **ConsistencyProbe** cross-references independent data sources:
+- **Source A**: CloudWatch Metrics / DynamoDB Rollups (`TokenRollup`).
+- **Source B**: The `TraceTable` (queried via `AgentIdIndex` GSI).
+- **Goal**: Ensure completion counts, success rates, and `p95DurationMs` latency metrics match across the stack.
+
+### 2. Trace Performance Tracking
+Execution latency and token consumption are tracked per-agent and per-trace:
+- **Metrics**: Percentiles (p50, p95) are calculated via the `CognitiveMetrics` background handlers and visualized in the System Pulse.
+
+### 3. Proactive Failure Emission
+Dashboard errors are emitted immediately for live remediation:
+- **Signal**: `DASHBOARD_FAILURE_DETECTED` event.
+- **Optics**: The `CognitiveHealthAPI` reads from the `HEALTH#SNAPSHOT#` prefix to provide instant system health visualization.
 
 ---
 

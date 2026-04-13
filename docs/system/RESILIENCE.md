@@ -1,10 +1,26 @@
 # System Resilience: Recovery & Stability
 
-> **Navigation**: [← Index Hub](../../INDEX.md)
+> **Navigation**: [← Index Hub](../../INDEX.md) | [Audit Framework](../governance/AUDIT.md#3-the-shield-security--baseline)
 
-This document describes the high-availability and self-healing mechanisms that ensure Serverless Claw remains operational even during partial failures or "autonomous logic loops."
+This document describes the high-availability, self-healing, and security mechanisms that ensure Serverless Claw remains operational and safe.
 
-## 🛡️ Circuit Breaker (Persistent Logic)
+## 🛡️ Security & Baseline Control
+
+The Shield acts as the authoritative gate for all tool executions, enforcing least-privilege resource access and blast-radius limits.
+
+### Layer 1: Unified Security Gateway
+The `ToolExecutor` delegates all security decisions to the `SafetyEngine`. No tool can execute without an explicit policy allowance.
+
+### Layer 2: Blast Radius Enforcement
+The system enforces hard limits on high-impact actions to prevent runaway costs or destructive propagation:
+- **Class C Limit**: Hard cap of 5 Class C actions per hour per agent (Principle 10).
+- **Promotion**: Class C actions require human approval unless an agent is in `EVOLUTION_MODE="AUTO"` and has a `TrustScore >= 95`.
+
+### Layer 3: Loop Interdiction
+Reasoning loops and repetitive "semantic grinding" are caught by the **SemanticLoopDetector**.
+- **Penalty**: Detected loops result in automatic trust penalties recorded via `SafetyBase.recordFailure`.
+
+## 🔄 Circuit Breaker (Persistent Logic)
 
 Serverless Claw employs a persistent circuit breaker to prevent runaway deployments and cost spikes.
 
@@ -50,6 +66,23 @@ When a deployment fails, the system automatically attempts a repair before escal
     | Deployer  | <-------- | Coder     |
     | (Fail)    |           | (Repair)  |
     +-----------+           +-----------+
+```
+
+## Security Interaction Flow
+
+```text
+  [ Agent Output ] -> [ SemanticLoopDetector ] -- (Loop Found) --> [ SafetyBase.recordFailure ]
+          |                                                             (Trust Penalty)
+          v
+  [ Tool Call ] -> [ Shield (SafetyEngine) ] -- (Class C) --> [ EvolutionScheduler ]
+          |                  |                                   (Schedule HITL)
+          |                  +------- (Trust >= 95 & AUTO) -> [ Principle 9 Promotion ]
+          |                                                      (Bypass Approval)
+          v
+  [ Circuit Breaker ] -- (Tripped?) --> [ Execution Blocked ]
+          |
+          v
+  [ Tool Execution ] -> [ Failure? ] -> [ SafetyBase.recordFailure ] -> [ Trip Breaker ]
 ```
 
 ### Self-Healing Flow:

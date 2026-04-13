@@ -18,6 +18,22 @@ The system employs a multi-layered safety architecture:
 
 ---
 
+## ⚖️ Agent Trust & Calibration
+
+The Scales silo ensures that the system accurately rewards success and penalizes failure through semantic evaluation.
+
+### 1. LLM-as-a-Judge
+The system uses a high-trust persona (the Judge) to semantically evaluate agent outputs based on quality, accuracy, and security adherence.
+- **Scoring**: A numerical quality score (0-10) is assigned to each completed task, which weights the subsequent trust bump.
+
+### 2. Trust Calibration Loop
+Trust scores are dynamically updated via the **Atomic Field Pattern** in DynamoDB to prevent race conditions:
+- **Success Bumps**: Weighted by the Judge's quality score.
+- **Failure Penalties**: SLO breaches, QA failures, or anomalies detected result in immediate trust decay.
+- **Anomaly Feedback**: Batched anomalies from the `DegradationDetector` are processed into trust penalties.
+
+---
+
 ## 🚦 Granular Safety Tiers
 
 Agents operate under different trust levels, defining which actions require explicit human approval. Serverless Claw uses a trunk-based development model with two primary tiers:

@@ -45,6 +45,9 @@ export interface TokenRollup {
   successCount: number;
   totalDurationMs: number;
   avgDurationMs: number;
+  p50DurationMs: number;
+  p95DurationMs: number;
+  p99DurationMs: number;
   expiresAt: number;
 }
 
@@ -125,6 +128,9 @@ export class TokenTracker {
     const expiresAt = Math.floor(Date.now() / 1000) + TTL_DAYS_ROLLUP * SECONDS_IN_DAY;
 
     try {
+      // Store individual duration for percentile calculation (keep last 1000)
+      const durationSample = usage.durationMs ?? 0;
+
       const result = await docClient.send(
         new UpdateCommand({
           TableName: getTableName(),
@@ -136,6 +142,7 @@ export class TokenTracker {
             'toolCalls = if_not_exists(toolCalls, :zero) + :tools, ' +
             'successCount = if_not_exists(successCount, :zero) + :success, ' +
             'totalDurationMs = if_not_exists(totalDurationMs, :zero) + :dur, ' +
+            'durationSamples = if_not_exists(durationSamples, :empty) & :sample, ' +
             'expiresAt = :expires',
           ExpressionAttributeValues: {
             ':inTok': usage.inputTokens,
@@ -146,6 +153,8 @@ export class TokenTracker {
             ':dur': usage.durationMs ?? 0,
             ':zero': 0,
             ':expires': expiresAt,
+            ':sample': [durationSample],
+            ':empty': [],
           },
           ReturnValues: 'ALL_NEW',
         })
@@ -156,12 +165,32 @@ export class TokenTracker {
         const avgTokens =
           (updated.totalInputTokens + updated.totalOutputTokens) / updated.invocationCount;
         const avgDuration = (updated.totalDurationMs ?? 0) / updated.invocationCount;
+
+        // Calculate percentiles from duration samples
+        const samples = (updated.durationSamples as number[]) || [];
+        const sortedSamples = samples.slice(-1000).sort((a, b) => a - b);
+        const p50Idx = Math.floor(sortedSamples.length * 0.5);
+        const p95Idx = Math.floor(sortedSamples.length * 0.95);
+        const p99Idx = Math.floor(sortedSamples.length * 0.99);
+
+        const p50Duration = sortedSamples.length > 0 ? (sortedSamples[p50Idx] ?? 0) : 0;
+        const p95Duration = sortedSamples.length > 0 ? (sortedSamples[p95Idx] ?? 0) : 0;
+        const p99Duration = sortedSamples.length > 0 ? (sortedSamples[p99Idx] ?? 0) : 0;
+
         await docClient.send(
           new UpdateCommand({
             TableName: getTableName(),
             Key: { userId, timestamp: ts },
-            UpdateExpression: 'SET avgTokensPerInvocation = :avgTokens, avgDurationMs = :avgDur',
-            ExpressionAttributeValues: { ':avgTokens': avgTokens, ':avgDur': avgDuration },
+            UpdateExpression:
+              'SET avgTokensPerInvocation = :avgTokens, avgDurationMs = :avgDur, p50DurationMs = :p50, p95DurationMs = :p95, p99DurationMs = :p99, durationSamples = :samples',
+            ExpressionAttributeValues: {
+              ':avgTokens': avgTokens,
+              ':avgDur': avgDuration,
+              ':p50': p50Duration,
+              ':p95': p95Duration,
+              ':p99': p99Duration,
+              ':samples': sortedSamples.slice(-1000),
+            },
             ConditionExpression: 'attribute_exists(invocationCount)',
           })
         );

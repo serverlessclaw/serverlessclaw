@@ -13,6 +13,10 @@ import { TrustManager } from '../safety/trust-manager';
 import { SafetyConfigManager } from '../safety/safety-config-manager';
 import { AgentRegistry } from '../registry/AgentRegistry';
 import { SafetyTier } from '../types/agent';
+import { Resource } from 'sst';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { SSTResource } from '../types/system';
 import {
   MetricsWindow,
   AnomalySeverity,
@@ -553,9 +557,11 @@ export class CognitiveHealthMonitor {
   private analyzer: HealthTrendAnalyzer;
   private base: BaseMemoryProvider;
   private anomalies: CognitiveAnomaly[] = [];
+  private config: CognitiveMetricsConfig;
 
   constructor(base: BaseMemoryProvider, config?: Partial<CognitiveMetricsConfig>) {
     this.base = base;
+    this.config = { ...DEFAULT_CONFIG, ...config };
     this.collector = new MetricsCollector(base, config);
     this.collector.start();
     this.detector = new DegradationDetector(config);
@@ -644,7 +650,7 @@ export class CognitiveHealthMonitor {
       selfCorrectionRate: totalAgentTasks > 0 ? totalSelfCorrections / totalAgentTasks : 0,
     };
 
-    return {
+    const snapshot: CognitiveHealthSnapshot = {
       timestamp: now,
       overallScore,
       reasoning,
@@ -652,6 +658,37 @@ export class CognitiveHealthMonitor {
       anomalies: allAnomalies,
       agentMetrics,
     };
+
+    await this.persistSnapshot(snapshot);
+
+    return snapshot;
+  }
+
+  /**
+   * Persist cognitive health snapshot to DynamoDB for dashboard consumption.
+   */
+  private async persistSnapshot(snapshot: CognitiveHealthSnapshot): Promise<void> {
+    try {
+      const expiresAt = Math.floor(
+        (Date.now() + this.config.retentionDays * TIME.MS_PER_DAY) / 1000
+      );
+
+      for (const metrics of snapshot.agentMetrics) {
+        await this.base.putItem({
+          userId: `${MEMORY_KEYS.HEALTH_PREFIX}SNAPSHOT#${metrics.agentId}`,
+          timestamp: snapshot.timestamp,
+          type: 'COGNITIVE_SNAPSHOT',
+          overallScore: snapshot.overallScore,
+          taskCompletionRate: metrics.taskCompletionRate,
+          reasoningCoherence: metrics.reasoningCoherence,
+          errorRate: metrics.errorRate,
+          memoryFragmentation: snapshot.memory.fragmentationScore,
+          expiresAt,
+        });
+      }
+    } catch (error) {
+      logger.error('Failed to persist cognitive health snapshot', { error });
+    }
   }
 
   /**
@@ -770,18 +807,40 @@ export class ConsistencyProbe {
   }
 
   /**
-   * Query TraceTable for actual trace counts within the time window.
+   * Query TraceTable for actual trace counts within the time window using AgentIdIndex GSI.
    */
   private async getTraceCountFromTable(
-    _agentId: string,
-    _windowStart: number,
-    _windowEnd: number
+    agentId: string,
+    windowStart: number,
+    windowEnd: number
   ): Promise<number> {
     try {
-      // Note: ClawTracer.getTrace() requires a traceId, so we need a different approach
-      // For now, we'll use a placeholder that can be enhanced when trace querying is available
-      // The ideal approach would be a GSI on agentId + timestamp, but that's a future enhancement
-      return 0; // Placeholder: requires TraceTable GSI on agentId for efficient query
+      const typedResource = Resource as unknown as SSTResource;
+      const tableName = typedResource.TraceTable?.name;
+      if (!tableName) {
+        logger.debug('TraceTable not available in resources');
+        return 0;
+      }
+
+      const client = new DynamoDBClient({});
+      const docClient = DynamoDBDocumentClient.from(client);
+
+      const response = await docClient.send(
+        new QueryCommand({
+          TableName: tableName,
+          IndexName: 'AgentIdIndex',
+          KeyConditionExpression: 'agentId = :agentId AND #ts BETWEEN :start AND :end',
+          ExpressionAttributeNames: { '#ts': 'timestamp' },
+          ExpressionAttributeValues: {
+            ':agentId': agentId,
+            ':start': windowStart,
+            ':end': windowEnd,
+          },
+          Select: 'COUNT',
+        })
+      );
+
+      return response.Count ?? 0;
     } catch (e) {
       logger.debug('Failed to query TraceTable for consistency check:', e);
       return 0;
@@ -828,7 +887,7 @@ export class ConsistencyProbe {
    */
   static async detectDrift(agentId: string, memory?: BaseMemoryProvider): Promise<boolean> {
     const provider = memory ?? new DynamoMemory();
-    const probe = new ConsistencyProbe(provider as any);
+    const probe = new ConsistencyProbe(provider);
     const now = Date.now();
     const result = await probe.verifyTraceConsistency(agentId, now - 3600000, now);
 
