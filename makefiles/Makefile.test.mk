@@ -60,11 +60,11 @@ verify-deploy: ## Full post-deploy verification: API, dashboard, CSS, JS
 	fi ; \
 	\
 	if [ -n "$$DASHBOARD_URL" ]; then \
-		STATUS=$$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$$DASHBOARD_URL") ; \
+		STATUS=$$(curl -s -L -o /dev/null -w "%{http_code}" --max-time 15 "$$DASHBOARD_URL") ; \
 		if [ "$$STATUS" = "200" ]; then printf "  ✅ Dashboard HTML:     HTTP %s\n" "$$STATUS"; else printf "  ❌ Dashboard HTML:     HTTP %s\n" "$$STATUS"; FAIL=1; fi ; \
 		\
 		if [ "$$STATUS" = "200" ]; then \
-			HTML=$$(curl -s --max-time 15 "$$DASHBOARD_URL") ; \
+			HTML=$$(curl -s -L --max-time 15 "$$DASHBOARD_URL") ; \
 			CSS_PATHS=$$(echo "$$HTML" | grep -o 'href="/_next/static/css/[^"]*\.css"' | sed 's/href="//;s/"//' | sort -u) ; \
 			JS_PATHS=$$(echo "$$HTML" | grep -o 'src="/_next/static/[^"]*\.js"' | sed 's/src="//;s/"//' | sort -u) ; \
 			\

@@ -64,16 +64,6 @@ export const DYNAMO_KEYS = {
   CONTEXT_SUMMARY_RATIO: 'context_summary_ratio',
   CONTEXT_ACTIVE_WINDOW_RATIO: 'context_active_window_ratio',
   REPUTATION_PREFIX: 'REPUTATION#',
-  FIELDS: {
-    USER_ID: 'userId',
-    TIMESTAMP: 'timestamp',
-    TYPE: 'type',
-    TRACE_ID: 'traceId',
-    NODE_ID: 'nodeId',
-    KEY: 'key',
-    STRING: 'string',
-    NUMBER: 'number',
-  },
 } as const;
 
 /**

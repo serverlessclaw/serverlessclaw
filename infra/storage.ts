@@ -3,44 +3,41 @@
  *
  * @returns An object containing the created DynamoDB tables, S3 buckets, and secrets.
  */
-import { DYNAMO_KEYS } from '../core/lib/constants';
-
 export function createStorage() {
-  const { FIELDS } = DYNAMO_KEYS;
-
   const memoryTable = new sst.aws.Dynamo('MemoryTable', {
     fields: {
-      [FIELDS.USER_ID]: FIELDS.STRING,
-      [FIELDS.TIMESTAMP]: FIELDS.STRING,
-      [FIELDS.TYPE]: FIELDS.STRING,
+      userId: 'string',
+      timestamp: 'string',
+      type: 'string',
     },
-    primaryIndex: { hashKey: FIELDS.USER_ID, rangeKey: FIELDS.TIMESTAMP },
+    primaryIndex: { hashKey: 'userId', rangeKey: 'timestamp' },
     globalIndexes: {
-      TypeTimestampIndex: { hashKey: FIELDS.TYPE, rangeKey: FIELDS.TIMESTAMP },
-      UserInsightIndex: { hashKey: FIELDS.USER_ID, rangeKey: FIELDS.TYPE },
+      TypeTimestampIndex: { hashKey: 'type', rangeKey: 'timestamp' },
+      UserInsightIndex: { hashKey: 'userId', rangeKey: 'type' },
     },
     ttl: 'expiresAt',
   });
 
   const traceTable = new sst.aws.Dynamo('TraceTable', {
     fields: {
-      [FIELDS.TRACE_ID]: FIELDS.STRING,
-      [FIELDS.NODE_ID]: FIELDS.STRING,
-      [FIELDS.USER_ID]: FIELDS.STRING,
-      [FIELDS.TIMESTAMP]: FIELDS.NUMBER,
+      traceId: 'string',
+      nodeId: 'string',
+      userId: 'string',
+      timestamp: 'number',
+      agentId: 'string',
     },
-    primaryIndex: { hashKey: FIELDS.TRACE_ID, rangeKey: FIELDS.NODE_ID },
+    primaryIndex: { hashKey: 'traceId', rangeKey: 'nodeId' },
     globalIndexes: {
-      UserIndex: { hashKey: FIELDS.USER_ID, rangeKey: FIELDS.TIMESTAMP },
+      UserIndex: { hashKey: 'userId', rangeKey: 'timestamp' },
       // Support efficient one-row-per-trace listing by partitioning on nodeId
       // for the reserved summary rows (nodeId = '__summary__'). Query this
       // index with nodeId='__summary__' to retrieve trace summaries ordered
       // by timestamp.
-      SummaryByNode: { hashKey: FIELDS.NODE_ID, rangeKey: FIELDS.TIMESTAMP },
+      SummaryByNode: { hashKey: 'nodeId', rangeKey: 'timestamp' },
       // AgentIdIndex: Support efficient trace counting by agentId for
       // Silo 5 consistency probing. Query this index with agentId to get
       // all trace nodes for a specific agent within a time range.
-      AgentIdIndex: { hashKey: 'agentId', rangeKey: FIELDS.TIMESTAMP },
+      AgentIdIndex: { hashKey: 'agentId', rangeKey: 'timestamp' },
     },
     ttl: 'expiresAt',
   });
@@ -63,9 +60,9 @@ export function createStorage() {
 
   const configTable = new sst.aws.Dynamo('ConfigTable', {
     fields: {
-      [FIELDS.KEY]: FIELDS.STRING,
+      key: 'string',
     },
-    primaryIndex: { hashKey: FIELDS.KEY },
+    primaryIndex: { hashKey: 'key' },
   });
 
   const knowledgeBucket = new sst.aws.Bucket('KnowledgeBucket', {

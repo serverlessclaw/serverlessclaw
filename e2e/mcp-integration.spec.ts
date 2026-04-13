@@ -51,7 +51,8 @@ test.describe('MCP Integration (Capabilities)', () => {
 
     // Look for tool execution badges or indicators
     const executionBadge = page
-      .locator('[class*="Badge"], [class*="badge"], text=/LOCAL|MCP/i')
+      .locator('[class*="Badge"], [class*="badge"]')
+      .filter({ hasText: /LOCAL|MCP/i })
       .first();
     await expect(executionBadge).toBeVisible({ timeout: 10000 });
   });
