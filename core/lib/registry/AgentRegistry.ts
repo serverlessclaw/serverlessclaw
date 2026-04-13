@@ -373,30 +373,38 @@ export class AgentRegistry {
    * Initializes firstRegistered timestamp for tools that have no stats yet.
    * This is used by the pruner to ensure grace periods are respected for never-used tools.
    */
-  static async initializeToolStats(toolNames: string[]): Promise<void> {
+  static async initializeToolStats(toolNames: string[], agentId?: string): Promise<void> {
     const { ConfigTable } = (await import('sst')).Resource as { ConfigTable?: { name: string } };
     if (!ConfigTable?.name || toolNames.length === 0) return;
 
     const { UpdateCommand } = await import('@aws-sdk/lib-dynamodb');
     const now = Date.now();
 
-    for (const toolName of toolNames) {
-      try {
-        await defaultDocClient.send(
-          new UpdateCommand({
-            TableName: ConfigTable.name,
-            Key: { key: DYNAMO_KEYS.TOOL_USAGE },
-            UpdateExpression: 'SET #usage.#tool.#first = if_not_exists(#usage.#tool.#first, :now)',
-            ExpressionAttributeNames: {
-              '#usage': 'value',
-              '#tool': toolName,
-              '#first': 'firstRegistered',
-            },
-            ExpressionAttributeValues: { ':now': now },
-          })
-        );
-      } catch (e) {
-        logger.debug(`[REGISTRY] Failed to initialize stats for ${toolName}: ${e}`);
+    const keys: string[] = [DYNAMO_KEYS.TOOL_USAGE];
+    if (agentId) {
+      keys.push(`tool_usage_${agentId}` as string);
+    }
+
+    for (const key of keys) {
+      for (const toolName of toolNames) {
+        try {
+          await defaultDocClient.send(
+            new UpdateCommand({
+              TableName: ConfigTable.name,
+              Key: { key },
+              UpdateExpression:
+                'SET #usage.#tool.#first = if_not_exists(#usage.#tool.#first, :now)',
+              ExpressionAttributeNames: {
+                '#usage': 'value',
+                '#tool': toolName,
+                '#first': 'firstRegistered',
+              },
+              ExpressionAttributeValues: { ':now': now },
+            })
+          );
+        } catch (e) {
+          logger.debug(`[REGISTRY] Failed to initialize stats for ${toolName} in ${key}: ${e}`);
+        }
       }
     }
   }
@@ -575,51 +583,81 @@ export class AgentRegistry {
 
   /**
    * Performs metabolic pruning of low-utilization tools.
-   * Tools with 0 usage and registered > 30 days ago are removed from agent configs.
+   * Tools with 0 usage and registered > threshold days ago are removed from agent configs.
    *
    * @param daysThreshold - Days of inactivity before a never-used tool is pruned.
    * @returns A promise resolving to the number of tools pruned.
    */
   static async pruneLowUtilizationTools(daysThreshold: number = 30): Promise<number> {
-    const usage = (await ConfigManager.getRawConfig(DYNAMO_KEYS.TOOL_USAGE)) as Record<
-      string,
-      { count: number; firstRegistered: number }
-    >;
-    if (!usage) return 0;
-
     const thresholdMs = daysThreshold * 24 * 60 * 60 * 1000;
     const now = Date.now();
-    const lowUtilTools = Object.entries(usage)
-      .filter(([_, stats]) => stats.count === 0 && now - stats.firstRegistered > thresholdMs)
-      .map(([name]) => name);
-
-    if (lowUtilTools.length === 0) return 0;
-
-    logger.info(`[REGISTRY] Found ${lowUtilTools.length} low-utilization tools for pruning.`);
 
     const allConfigs = await this.getAllConfigs();
+    const batchOverrides =
+      ((await ConfigManager.getRawConfig(DYNAMO_KEYS.AGENT_TOOL_OVERRIDES)) as Record<
+        string,
+        (string | import('../types/agent').InstalledSkill)[]
+      >) ?? {};
+
     let totalPruned = 0;
+    const updatedBatchOverrides = { ...batchOverrides };
+    let batchModified = false;
 
     for (const [agentId, config] of Object.entries(allConfigs)) {
       if (!config.tools) continue;
 
-      const toolsToPrune = config.tools.filter((t) => lowUtilTools.includes(t));
-      if (toolsToPrune.length === 0) continue;
+      // 1. Fetch per-agent usage stats for more accurate pruning
+      const usage = (await ConfigManager.getRawConfig(`tool_usage_${agentId}`)) as Record<
+        string,
+        { count: number; firstRegistered: number }
+      >;
 
       // Only prune dynamic tool overrides, not backbone tools
       const backboneTools =
         (this.backboneConfigs as Record<string, IAgentConfig>)[agentId]?.tools ?? [];
       const dynamicTools = config.tools.filter((t) => !backboneTools.includes(t));
-      const pruneTargets = dynamicTools.filter((t) => toolsToPrune.includes(t));
+
+      const pruneTargets = dynamicTools.filter((toolName) => {
+        const stats = usage?.[toolName];
+        if (!stats) return false; // If no stats yet, it might not have been initialized or used
+        return stats.count === 0 && now - stats.firstRegistered > thresholdMs;
+      });
 
       if (pruneTargets.length > 0) {
-        const remainingTools = config.tools.filter((t) => !pruneTargets.includes(t));
-        // Note: This logic assumes per-agent tools. In a real system, we'd also check batch overrides.
-        // For Silo 7 Deep Dive, we focus on the per-agent tool list.
-        await ConfigManager.saveRawConfig(`${agentId}_tools`, remainingTools);
-        totalPruned += pruneTargets.length;
-        logger.info(`[REGISTRY] Pruned ${pruneTargets.length} tools from agent ${agentId}`);
+        // Prune from per-agent overrides
+        const perAgentTools = (await ConfigManager.getRawConfig(`${agentId}_tools`)) as Array<
+          string | import('../types/agent').InstalledSkill
+        >;
+        if (Array.isArray(perAgentTools)) {
+          const remainingPerAgent = perAgentTools.filter((t) => {
+            const name = typeof t === 'string' ? t : t.name;
+            return !pruneTargets.includes(name);
+          });
+          if (remainingPerAgent.length < perAgentTools.length) {
+            await ConfigManager.saveRawConfig(`${agentId}_tools`, remainingPerAgent);
+            totalPruned += perAgentTools.length - remainingPerAgent.length;
+          }
+        }
+
+        // Prune from batch overrides
+        if (Array.isArray(updatedBatchOverrides[agentId])) {
+          const originalCount = updatedBatchOverrides[agentId].length;
+          updatedBatchOverrides[agentId] = updatedBatchOverrides[agentId].filter((t) => {
+            const name = typeof t === 'string' ? t : t.name;
+            return !pruneTargets.includes(name);
+          });
+          if (updatedBatchOverrides[agentId].length < originalCount) {
+            batchModified = true;
+            totalPruned += originalCount - updatedBatchOverrides[agentId].length;
+          }
+        }
+
+        logger.info(`[REGISTRY] Pruned tools from agent ${agentId}: ${pruneTargets.join(', ')}`);
       }
+    }
+
+    if (batchModified) {
+      await ConfigManager.saveRawConfig(DYNAMO_KEYS.AGENT_TOOL_OVERRIDES, updatedBatchOverrides);
     }
 
     return totalPruned;

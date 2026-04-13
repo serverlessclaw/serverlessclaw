@@ -28,13 +28,7 @@ export class LockManager {
   constructor(client?: DynamoDBClient) {
     const dbClient = client || new DynamoDBClient({});
     this.docClient = DynamoDBDocumentClient.from(dbClient);
-    try {
-      this.tableName =
-        (Resource as unknown as Record<string, { name: string }>).MemoryTable?.name ||
-        'MemoryTable';
-    } catch {
-      this.tableName = process.env.MEMORY_TABLE_NAME || 'MemoryTable';
-    }
+    this.tableName = (Resource as any).MemoryTable.name;
   }
 
   private getFullId(lockId: string, prefix?: string): string {
@@ -84,14 +78,17 @@ export class LockManager {
             timestamp: 0,
           },
           UpdateExpression:
-            'SET ownerId = :owner, expiresAt = :exp, acquiredAt = :now, lockType = :type',
+            'SET ownerId = :owner, expiresAt = :exp, acquiredAt = :now, lockType = :type, #tp = :type',
           ConditionExpression: conditionExpression,
+          ExpressionAttributeNames: {
+            '#tp': 'type',
+          },
           ExpressionAttributeValues: {
             ':owner': options.ownerId,
             ':exp': expiresAt,
             ':now': now,
             ':null': null,
-            ':type': 'DISTRIBUTED_LOCK',
+            ':type': 'LOCK',
           },
         })
       );

@@ -101,54 +101,63 @@ export class MiniMaxProvider implements IProvider {
     }
 
     // Make the API call
-    const response = await client.messages.create(
-      requestParams as unknown as Anthropic.MessageCreateParamsNonStreaming
-    );
+    try {
+      const response = await client.messages.create(
+        requestParams as unknown as Anthropic.MessageCreateParamsNonStreaming
+      );
 
-    // Handle response with thinking blocks
-    const content = response.content;
-    if (!content || content.length === 0) {
-      throw new Error('MiniMax provider call failed: No content in response');
-    }
-
-    // Extract text content and log thinking content
-    let textContent = '';
-    const tool_calls: ToolCall[] = [];
-
-    for (const block of content) {
-      if (block.type === 'thinking') {
-        logger.debug(
-          `[MiniMax Thinking] for ${activeModel}:`,
-          (block as { thinking?: string }).thinking ?? ''
-        );
-      } else if (block.type === 'text') {
-        textContent += block.text;
-      } else if (block.type === 'tool_use') {
-        tool_calls.push({
-          id: block.id,
-          type: 'function',
-          function: {
-            name: block.name,
-            arguments: JSON.stringify(block.input),
-          },
-        });
+      // Handle response with thinking blocks
+      const content = response.content;
+      if (!content || content.length === 0) {
+        throw new Error('MiniMax provider call failed: No content in response');
       }
-    }
 
-    return {
-      role: MessageRole.ASSISTANT,
-      content: textContent || undefined,
-      tool_calls: tool_calls.length > 0 ? tool_calls : undefined,
-      traceId: messages[0]?.traceId ?? 'unknown-trace',
-      messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      usage: response.usage
-        ? {
-            prompt_tokens: response.usage.input_tokens,
-            completion_tokens: response.usage.output_tokens,
-            total_tokens: response.usage.input_tokens + response.usage.output_tokens,
-          }
-        : undefined,
-    } as unknown as Message;
+      // Extract text content and log thinking content
+      let textContent = '';
+      const tool_calls: ToolCall[] = [];
+
+      for (const block of content) {
+        if (block.type === 'thinking') {
+          logger.debug(
+            `[MiniMax Thinking] for ${activeModel}:`,
+            (block as { thinking?: string }).thinking ?? ''
+          );
+        } else if (block.type === 'text') {
+          textContent += block.text;
+        } else if (block.type === 'tool_use') {
+          tool_calls.push({
+            id: block.id,
+            type: 'function',
+            function: {
+              name: block.name,
+              arguments: JSON.stringify(block.input),
+            },
+          });
+        }
+      }
+
+      return {
+        role: MessageRole.ASSISTANT,
+        content: textContent || undefined,
+        tool_calls: tool_calls.length > 0 ? tool_calls : undefined,
+        traceId: messages[0]?.traceId ?? 'unknown-trace',
+        messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        usage: response.usage
+          ? {
+              prompt_tokens: response.usage.input_tokens,
+              completion_tokens: response.usage.output_tokens,
+              total_tokens: response.usage.input_tokens + response.usage.output_tokens,
+            }
+          : undefined,
+      } as unknown as Message;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error(`[MiniMax] API call failed: ${errorMsg}`, {
+        status: (error as any)?.status,
+        name: (error as any)?.name,
+      });
+      throw error;
+    }
   }
 
   async *stream(

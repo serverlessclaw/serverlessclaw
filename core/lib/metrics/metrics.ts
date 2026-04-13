@@ -59,7 +59,16 @@ export async function emitMetrics(metrics: MetricDatum[]): Promise<void> {
     });
     await cw.send(command);
   } catch (error) {
-    console.error('[METRICS] Failed to emit CloudWatch metrics:', error);
+    const err = error as { code?: string; hostname?: string };
+    if (err.code === 'ENOTFOUND') {
+      // Don't flood logs with DNS errors in local dev/offline environments
+      if (!(global as any)._cw_dns_error_logged) {
+        console.warn(`[METRICS] CloudWatch endpoint unreachable (${err.hostname}). Metrics will be dropped silently.`);
+        (global as any)._cw_dns_error_logged = true;
+      }
+    } else {
+      console.error('[METRICS] Failed to emit CloudWatch metrics:', error);
+    }
   }
 }
 

@@ -2,6 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { LockManager } from './lock-manager';
 import { UpdateCommand } from '@aws-sdk/lib-dynamodb';
 
+vi.mock('sst', () => ({
+  Resource: {
+    MemoryTable: { name: 'test-memory-table' },
+  },
+}));
+
 // Mock docClient.send
 const mockSend = vi.fn();
 vi.mock('@aws-sdk/lib-dynamodb', async (importOriginal) => {

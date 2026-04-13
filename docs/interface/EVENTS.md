@@ -48,18 +48,9 @@ The `emitEvent` utility is the primary interface for sending events. It supports
 - **Implementation**: [`core/lib/utils/bus.ts`](../../core/lib/utils/bus.ts)
 - **Available Methods**: `emitEvent`, `emitCriticalEvent`, `emitHighPriorityEvent`, `emitLowPriorityEvent`.
 
-## Idempotency (Reserve-then-Commit)
+The system uses a **Reserve-then-Commit** atomic pattern to ensure that even under high concurrency, an event is only processed once. 
 
-To prevent duplicate event processing even under high concurrency, the system uses a **Reserve-then-Commit** atomic pattern:
-
-1.  **RESERVE**: `emitEvent` attempts an atomic `PutCommand` with `attribute_not_exists(userId)`.
-2.  **EMIT**: If reservation succeeds, it calls EventBridge `PutEvents`.
-3.  **COMMIT**: Upon success, it updates the record to `COMMITTED` status and attaches the `eventId`.
-
-This ensures that if two agents try to emit the same task simultaneously, one will fail the reservation and the system will correctly return `DUPLICATE`.
-
-The system uses a **Reserve-then-Commit** atomic pattern to ensure that even under high concurrency, an event is only processed once.
-
+- **Storage**: Entries are stored in the `MemoryTable` with a numeric `timestamp: 0` Sort Key to ensure schema consistency across all distributed primitives.
 - **Helper**: `emitEventWithIdempotency` in [`core/lib/utils/bus.ts`](../../core/lib/utils/bus.ts)
 
 **Note**: Idempotency keys are stored in DynamoDB with a 1-hour TTL.
@@ -124,10 +115,10 @@ Standard event types and their default priority levels are centrally defined to 
               +---> UNKNOWN?   --> Retry, then store in DLQ
 ```
 
-## Best Practices
+### Event Schema Validation
 
-1. **Use appropriate priorities**: User-facing events should be HIGH or CRITICAL.
-2. **Include correlation IDs**: Link related events together with `correlationId`.
-3. **Set idempotency keys**: Prevent duplicate processing for idempotent operations.
-4. **Monitor the DLQ**: Failed events should be reviewed and retried or purged.
-5. **Use convenience methods**: `emitCriticalEvent()`, `emitHighPriorityEvent()` for common cases.
+All events must adhere to the base schema defined in `core/lib/schema/base.ts`.
+
+- **Required Fields**: `traceId` is mandatory for all events to maintain the execution chain.
+- **Session ID**: `sessionId` is required for user-interactive events but can be omitted or set to `'N/A'` for system-level background events (e.g., health reports).
+- **Depth**: The `depth` field is automatically managed by the `Spine` to prevent recursion loops.

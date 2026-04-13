@@ -1,13 +1,15 @@
+// @vitest-environment jsdom
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import '../test-setup';
 import React from 'react';
 import { render, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { RealtimeProvider } from '../components/Providers/RealtimeProvider';
 
 // Provide a mocked mqtt.connect and expose it via globalThis for assertions.
 vi.mock('mqtt', () => {
   const connect = vi.fn(() => ({ on: vi.fn(), subscribe: vi.fn(), end: vi.fn() }));
   (globalThis as any).__MQTT_CONNECT_MOCK = connect;
-  // Provide a default export shape that matches `import mqtt from 'mqtt'` usage
   return { default: { connect } };
 });
 
@@ -15,16 +17,13 @@ import { useRealtime } from './useRealtime';
 
 describe('useRealtime MQTT URL and token', () => {
   beforeEach(() => {
-    // Reset mocked connect
     const connectMock = (globalThis as any).__MQTT_CONNECT_MOCK as ReturnType<typeof vi.fn>;
     connectMock.mockReset();
-    // Ensure localStorage appears empty so the hook will generate and persist a token
     (localStorage.getItem as unknown as any).mockReturnValue(null);
     (localStorage.setItem as unknown as any).mockClear();
   });
 
-  it('includes authorizer name and token query param in websocket URL', async () => {
-    // Mock config fetch to return an authorizer and endpoint
+  it('includes authorizer name and token query param in websocket URL via RealtimeProvider', async () => {
     (global as any).fetch = vi.fn(() =>
       Promise.resolve({
         json: () =>
@@ -39,7 +38,9 @@ describe('useRealtime MQTT URL and token', () => {
       return null;
     }
 
-    render(React.createElement(TestComp));
+    render(
+      React.createElement(RealtimeProvider, null, React.createElement(TestComp))
+    );
 
     await waitFor(() => {
       const connectMock = (globalThis as any).__MQTT_CONNECT_MOCK as ReturnType<typeof vi.fn>;

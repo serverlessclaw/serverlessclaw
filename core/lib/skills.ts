@@ -98,6 +98,9 @@ export class SkillRegistry {
     // Also persist per-agent tools for compatibility with existing consumers/tests
     await AgentRegistry.saveRawConfig(`${agentId}_tools`, [...perAgentTools, newTool]);
 
+    // Metabolism Gap: Initialize tool stats so pruner knows when they were assigned
+    await AgentRegistry.initializeToolStats([skillName], agentId);
+
     logger.info(
       `Skill '${skillName}' installed for ${agentId}${ttlMinutes ? ` (Expires in ${ttlMinutes}m)` : ''}`
     );

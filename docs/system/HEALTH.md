@@ -19,7 +19,9 @@ Beyond build failures, Serverless Claw monitors its own operational integrity th
         ______________V______________
        |                             |
        |     EVENT_HANDLER           | (SuperClaw)
-       |     (Triage Brain)          |
+       |   +---------------------+   |
+       |   | Recursion Breaker   |   | (Stops health-report loops)
+       |   +---------------------+   |
        |_____________________________|
               |
       (Reason & Dispatch)

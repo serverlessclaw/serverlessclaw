@@ -84,10 +84,15 @@ function startExecutionTimeout(timeoutMs: number): AbortController {
 /**
  * Simple schema validation for incoming event details.
  */
-function validateEvent(eventDetail: Record<string, unknown>): {
+function validateEvent(detailType: string, eventDetail: Record<string, unknown>): {
   valid: boolean;
   errors?: string[];
 } {
+  // Allow system health reports to pass without sessionId for now
+  if (detailType === 'system_health_report') {
+    return { valid: true };
+  }
+
   const requiredFields = ['sessionId', 'traceId'];
   const missing = requiredFields.filter((field) => !(field in eventDetail));
   if (missing.length > 0) {
@@ -145,7 +150,7 @@ export async function handler(
   ]);
 
   // Validate payload
-  const validation = validateEvent(eventDetail);
+  const validation = validateEvent(detailType, eventDetail);
   if (!validation.valid) {
     logger.warn(`[VALIDATION] Missing required fields: ${validation.errors?.join(', ')}`);
   }
@@ -365,14 +370,19 @@ export async function handler(
       logger.warn(`Metrics emission failed for ${detailType} error:`, err)
     );
 
-    await reportHealthIssue({
-      component: 'EventHandler',
-      issue: `Failed to process event ${detailType}: ${errorMessage}`,
-      severity: 'high',
-      userId: 'SYSTEM',
-      traceId: 'unknown',
-      context: { detailType, error: errorMessage },
-    });
+    // Break recursion loop: Don't report health issues about health reports
+    if (detailType === 'system_health_report') {
+      logger.error('[RECURSION_DEBT] Suppressing health report for failed health report processing');
+    } else {
+      await reportHealthIssue({
+        component: 'EventHandler',
+        issue: `Failed to process event ${detailType}: ${errorMessage}`,
+        severity: 'high',
+        userId: 'SYSTEM',
+        traceId: 'unknown',
+        context: { detailType, error: errorMessage },
+      });
+    }
 
     throw error instanceof Error ? error : new Error(String(error));
   }

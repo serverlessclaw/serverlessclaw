@@ -219,7 +219,7 @@ export class SessionStateManager {
     const pendingMessage: PendingMessage = {
       id: messageId,
       content,
-      attachments,
+      attachments: attachments ?? [],
       timestamp: now,
     };
 

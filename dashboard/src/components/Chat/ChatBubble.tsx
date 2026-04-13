@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { usePathname } from 'next/navigation';
-import { MessageSquare, X, Minimize2, Maximize2, Activity } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { MessageSquare, X, Minimize2, Maximize2, Activity, Plus } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
@@ -12,16 +12,20 @@ import { useChatConnection } from './useChatConnection';
 import { useChatMessages } from './useChatMessages';
 import { usePageContext } from '@/components/Providers/PageContextProvider';
 import { PageContextData } from './types';
+import { useTranslations } from '@/components/Providers/TranslationsProvider';
 
 /**
  * Global Chat Bubble component that floats on all pages.
  * Allows quick interaction with SuperClaw from anywhere in the dashboard.
  */
 export default function ChatBubble() {
+  const { t } = useTranslations();
   const pathname = usePathname();
+  const router = useRouter();
   const { context: pageContext } = usePageContext();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [attachContext, setAttachContext] = useState(true);
   const [activeSessionId, setActiveSessionId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
@@ -43,9 +47,11 @@ export default function ChatBubble() {
 
   const {
     messages,
+    setMessages,
     sendMessage,
     handleFiles,
     attachments,
+    setAttachments,
     removeAttachment,
   } = useChatMessages(
     activeSessionId,
@@ -66,10 +72,24 @@ export default function ChatBubble() {
   const toggleOpen = () => {
     setIsOpen(!isOpen);
     setIsMinimized(false);
+    setIsExpanded(false);
   };
 
   const toggleMinimized = () => {
     setIsMinimized(!isMinimized);
+  };
+
+  const toggleExpanded = () => {
+    setIsExpanded(!isExpanded);
+  };
+
+  const handleNewChat = () => {
+    seenMessageIds.current.clear();
+    setActiveSessionId('');
+    activeSessionRef.current = '';
+    setMessages([]);
+    setAttachments([]);
+    setInput('');
   };
 
   const handleSendMessage = (e: React.FormEvent) => {
@@ -87,16 +107,16 @@ export default function ChatBubble() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4">
+    <div className={`fixed z-50 transition-all duration-300 ease-in-out ${isExpanded ? 'inset-6' : 'bottom-6 right-6 flex flex-col items-end gap-4'}`}>
       {/* Chat Window */}
       {isOpen && !isMinimized && (
         <Card
           variant="glass"
-          className="w-[400px] h-[600px] flex flex-col shadow-2xl border-cyber-green/30 animate-in fade-in slide-in-from-bottom-4 duration-300 overflow-hidden"
+          className={`${isExpanded ? 'w-full h-full' : 'w-[450px] md:w-[550px] h-[700px] max-h-[85vh]'} flex flex-col shadow-2xl border-cyber-green/30 animate-in fade-in slide-in-from-bottom-4 duration-300 overflow-hidden`}
           padding="none"
         >
           {/* Header */}
-          <div className="p-4 border-b border-border bg-card flex items-center justify-between">
+          <div className="p-4 border-b border-border bg-card flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-cyber-green animate-pulse" />
               <Typography variant="h3" weight="bold" className="text-sm uppercase tracking-wider">
@@ -104,6 +124,14 @@ export default function ChatBubble() {
               </Typography>
             </div>
             <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleNewChat}
+                icon={<Plus size={16} />}
+                title={t('CHAT_SIDEBAR_NEW_CHAT')}
+                className="hover:text-cyber-green"
+              />
               {pageContext && (
                 <Button
                   variant="ghost"
@@ -117,10 +145,20 @@ export default function ChatBubble() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={toggleMinimized}
-                icon={<Minimize2 size={16} />}
+                onClick={toggleExpanded}
+                icon={isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                title={isExpanded ? "Restore size" : "Expand window"}
                 className="hover:text-cyber-green"
               />
+              {!isExpanded && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleMinimized}
+                  icon={<Minimize2 size={16} />}
+                  className="hover:text-cyber-green"
+                />
+              )}
               <Button
                 variant="ghost"
                 size="sm"

@@ -48,9 +48,9 @@ The dashboard connects to AWS IoT using a WebSocket `wss://.../mqtt` URL returne
 
 - Token constraints: the custom authorizer requires a token string (server-side logic expects at least 10 characters). The token is not a credential with IAM rights; it is a lightweight client identifier used by the custom authorizer for session scoping.
 
-- Implementation notes: The `useRealtime` hook constructs the full `mqtt.connect(...)` WebSocket URL (adds the authorizer name when present and the `token` query param), uses `protocol: 'wss'` and a generated `clientId`, and manages default subscriptions to `users/{userId}/#`.
+- Implementation notes: The `RealtimeProvider` constructs the full `mqtt.connect(...)` WebSocket URL (adds the authorizer name when present and the `token` query param), uses `protocol: 'wss'` and a stabilized `clientId`. Components consume this shared connection via the `useRealtime` hook.
 
-- Important: do **not** rely on HTTP Basic username/password placeholders for IoT WebSocket auth — the correct contract is the query-parameter `token` (and optional custom authorizer name) as implemented by `useRealtime` and validated by `core/handlers/realtime-auth.ts`.
+- Important: do **not** rely on HTTP Basic username/password placeholders for IoT WebSocket auth — the correct contract is the query-parameter `token` (validated by `core/handlers/realtime-auth.ts`, which includes backend-side caching).
 
 ---
 

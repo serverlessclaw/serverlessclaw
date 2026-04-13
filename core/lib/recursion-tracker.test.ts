@@ -2,6 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { pushRecursionEntry, getRecursionDepth, clearRecursionStack } from './recursion-tracker';
 import { UpdateCommand, GetCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 
+vi.mock('sst', () => ({
+  Resource: {
+    MemoryTable: { name: 'test-memory-table' },
+  },
+}));
+
 // Mock the DynamoDB document client send method
 const mockSend = vi.fn();
 vi.mock('@aws-sdk/lib-dynamodb', () => {
@@ -38,7 +44,8 @@ describe('recursion-tracker', () => {
 
       expect(mockSend).toHaveBeenCalledWith(expect.any(UpdateCommand));
       const cmd = mockSend.mock.calls[0][0];
-      expect(cmd.input.ConditionExpression).toBe('attribute_not_exists(depth) OR depth < :depth');
+      expect(cmd.input.ConditionExpression).toBe('attribute_not_exists(#depth) OR #depth < :depth');
+      expect(cmd.input.ExpressionAttributeNames['#depth']).toBe('depth');
       expect(cmd.input.ExpressionAttributeValues[':depth']).toBe(5);
     });
 
@@ -71,7 +78,8 @@ describe('recursion-tracker', () => {
 
       expect(mockSend).toHaveBeenCalledWith(expect.any(DeleteCommand));
       const cmd = mockSend.mock.calls[0][0];
-      expect(cmd.input.ConditionExpression).toBe('attribute_exists(depth)');
+      expect(cmd.input.ConditionExpression).toBe('attribute_exists(#depth)');
+      expect(cmd.input.ExpressionAttributeNames['#depth']).toBe('depth');
     });
   });
 });

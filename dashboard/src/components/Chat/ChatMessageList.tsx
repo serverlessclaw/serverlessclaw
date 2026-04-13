@@ -467,49 +467,51 @@ export function ChatMessageList({
 
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-4 pt-12 space-y-3 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/[0.02] via-transparent to-transparent custom-scrollbar"
+        className="flex-1 overflow-y-auto p-4 pt-12 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/[0.02] via-transparent to-transparent custom-scrollbar"
       >
-        {filteredMessages.length === 0 && !isLoading && (
-          <div className="flex-1 flex flex-col items-center justify-center text-white/80 px-8 min-h-0">
-            <Terminal size={48} className="mb-4 opacity-10" />
-            <Typography variant="h3" weight="normal" color="white" className="opacity-80">
-              {msgSearchQuery
-                ? 'No matching signals found'
-                : 'System Ready // Waiting for Input Command/File'}
-            </Typography>
-            <Typography variant="mono" color="muted" className="mt-2 block">
-              {msgSearchQuery
-                ? 'Try a different search query'
-                : 'Initialise interaction by sending a message'}
-            </Typography>
-          </div>
-        )}
-
-        {filteredMessages.map((m, i) => (
-          <ChatMessageRow
-            key={m.messageId ? `${m.role}-${m.messageId}` : `local-${i}`}
-            message={m}
-            index={i}
-            onOptionClick={onOptionClick}
-            showThinking={showThinking}
-            isLast={i === messages.length - 1}
-            isLoading={isLoading}
-          />
-        ))}
-
-        {isLoading && !msgSearchQuery && (
-          <div className="flex gap-3 justify-start">
-            <div className="w-8 h-8 rounded shrink-0 flex items-center justify-center border bg-cyber-green/10 border-cyber-green/30 text-cyber-green animate-pulse">
-              <Bot size={16} />
-            </div>
-            <Card variant="glass" padding="sm" className="flex items-center gap-2">
-              <Loader2 size={14} className="animate-spin text-cyber-green" />
-              <Typography variant="caption" weight="bold" color="primary" className="animate-pulse">
-                Processing...
+        <div className="max-w-6xl mx-auto space-y-3 w-full">
+          {filteredMessages.length === 0 && !isLoading && (
+            <div className="flex-1 flex flex-col items-center justify-center text-white/80 px-8 py-20 min-h-0">
+              <Terminal size={48} className="mb-4 opacity-10" />
+              <Typography variant="h3" weight="normal" color="white" className="opacity-80">
+                {msgSearchQuery
+                  ? 'No matching signals found'
+                  : 'System Ready // Waiting for Input Command/File'}
               </Typography>
-            </Card>
-          </div>
-        )}
+              <Typography variant="mono" color="muted" className="mt-2 block">
+                {msgSearchQuery
+                  ? 'Try a different search query'
+                  : 'Initialise interaction by sending a message'}
+              </Typography>
+            </div>
+          )}
+
+          {filteredMessages.map((m, i) => (
+            <ChatMessageRow
+              key={m.messageId ? `${m.role}-${m.messageId}` : `local-${i}`}
+              message={m}
+              index={i}
+              onOptionClick={onOptionClick}
+              showThinking={showThinking}
+              isLast={i === messages.length - 1}
+              isLoading={isLoading}
+            />
+          ))}
+
+          {isLoading && !msgSearchQuery && (
+            <div className="flex gap-3 justify-start">
+              <div className="w-8 h-8 rounded shrink-0 flex items-center justify-center border bg-cyber-green/10 border-cyber-green/30 text-cyber-green animate-pulse">
+                <Bot size={16} />
+              </div>
+              <Card variant="glass" padding="sm" className="flex items-center gap-2">
+                <Loader2 size={14} className="animate-spin text-cyber-green" />
+                <Typography variant="caption" weight="bold" color="primary" className="animate-pulse">
+                  Processing...
+                </Typography>
+              </Card>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

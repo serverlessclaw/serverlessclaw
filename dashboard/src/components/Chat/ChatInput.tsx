@@ -62,7 +62,7 @@ export function ChatInput({
 
   return (
     <div className="p-4 border-t border-white/5 bg-black/40 shrink-0">
-      <form onSubmit={handleSend} className="max-w-4xl mx-auto relative group">
+      <form onSubmit={handleSend} className="max-w-6xl mx-auto relative group">
         {/* Attachment Previews */}
         {attachments.length > 0 && (
           <div className="flex flex-wrap gap-3 mb-4 p-4 bg-white/5 rounded-lg border border-white/10 animate-in fade-in slide-in-from-bottom-2">
@@ -126,7 +126,7 @@ export function ChatInput({
                 }
               }}
               placeholder={t('CHAT_PLACEHOLDER')}
-              className={`w-full h-full bg-white/[0.02] border rounded-lg py-[15px] px-4 pr-12 text-sm text-white outline-none transition-all placeholder:text-white/20 resize-none max-h-[200px] overflow-hidden leading-5 box-border ${shouldShake ? 'border-cyber-green shadow-[0_0_15px_rgba(0,255,163,0.5)]' : 'border-white/5 focus:border-cyber-green/40'}`}
+              className={`w-full h-full bg-white/[0.02] border rounded-lg py-3 px-4 pr-12 text-sm text-white outline-none transition-all placeholder:text-white/20 resize-none max-h-[200px] overflow-hidden leading-relaxed box-border ${shouldShake ? 'border-cyber-green shadow-[0_0_15px_rgba(0,255,163,0.5)]' : 'border-white/5 focus:border-cyber-green/40'}`}
               rows={1}
               style={{ height: '52px' }}
               onInput={(e) => {
@@ -137,7 +137,7 @@ export function ChatInput({
                 }
               }}
             />
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[8px] font-mono text-white/10 uppercase pointer-events-none group-focus-within:text-cyber-green/40 transition-colors">
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[8px] font-mono text-white/10 uppercase pointer-events-none group-focus-within:text-cyber-green/40 transition-colors hidden sm:block">
               {t('CHAT_CMD_ENTER')}
             </div>
           </div>
@@ -145,7 +145,7 @@ export function ChatInput({
           <Button
             type="submit"
             disabled={(!input.trim() && attachments.length === 0) || isLoading}
-            className={`h-[52px] px-6 !rounded-lg self-center transition-all ${
+            className={`h-[52px] px-4 md:px-6 !rounded-lg self-center transition-all ${
               (!input.trim() && attachments.length === 0) || isLoading
                 ? 'opacity-50 cursor-not-allowed'
                 : 'shadow-[0_0_20px_rgba(0,255,163,0.1)] group-hover:shadow-[0_0_30px_rgba(0,255,163,0.2)]'
@@ -153,7 +153,9 @@ export function ChatInput({
             variant="primary"
             icon={<Send size={18} className={isLoading ? 'animate-ping' : ''} />}
           >
-            {isLoading ? t('CHAT_EXECUTING') : t('CHAT_SEND')}
+            <span className="hidden md:inline">
+              {isLoading ? t('CHAT_EXECUTING') : t('CHAT_SEND')}
+            </span>
           </Button>
         </div>
       </form>

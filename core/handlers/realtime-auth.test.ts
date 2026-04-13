@@ -41,7 +41,15 @@ describe('Realtime Auth Handler', () => {
 
     const connectStatement = policy.Statement.find((s: any) => s.Action === 'iot:Connect');
     expect(connectStatement.Effect).toBe('Allow');
-    expect(connectStatement.Resource).toContain(response.principalId);
+    const connectResource = connectStatement.Resource;
+    if (typeof connectResource === 'string') {
+      expect(connectResource).toContain(response.principalId);
+    } else {
+      expect(
+        connectResource.some((r: string) => r.includes(response.principalId))
+      ).toBe(true);
+      expect(connectResource).toContain('arn:aws:iot:*:*:client/dashboard-*');
+    }
 
     const pubRecvStatement = policy.Statement.find(
       (s: any) =>
@@ -63,5 +71,44 @@ describe('Realtime Auth Handler', () => {
             s.Resource.some((r: string) => r.includes(response.principalId)))
     );
     expect(subStatement).toBeDefined();
+  });
+
+  it('supports Enhanced Authorizer structure with protocolData', async () => {
+    const event = {
+      protocolData: {
+        http: {
+          queryString: 'token=enhanced-token-12345&other=param',
+          headers: {},
+          method: 'GET',
+          path: '/mqtt'
+        }
+      },
+      protocols: ['mqtt', 'http'],
+      signatureVerified: false,
+      connectionMetadata: {}
+    };
+
+    const response = await handler(event);
+
+    expect(response.isAuthenticated).toBe(true);
+    expect(response.principalId).toBe('user-enhancedtoken1');
+  });
+
+  it('supports token in MQTT password (base64) over username', async () => {
+    const token = 'mqtt-pass-token-long';
+    const event = {
+      protocolData: {
+        mqtt: {
+          clientId: 'test-client',
+          username: 'test-user',
+          password: Buffer.from(token).toString('base64')
+        }
+      }
+    };
+
+    const response = await handler(event);
+
+    expect(response.isAuthenticated).toBe(true);
+    expect(response.principalId).toBe('user-mqttpasstoken');
   });
 });

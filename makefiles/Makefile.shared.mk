@@ -85,8 +85,8 @@ define load_env
 		fi; \
 	done; \
 	if [ -n "$$AWS_PROFILE" ]; then \
-		if [ -n "$$AWS_ACCESS_KEY_ID" ] || [ -n "$$AWS_SECRET_ACCESS_KEY" ]; then \
-			$(call log_warning,Multiple AWS credential sources detected (AWS_PROFILE and static keys). Unsetting static keys to favor PROFILE.); \
+		if [ -n "$$AWS_ACCESS_KEY_ID" ] || [ -n "$$AWS_SECRET_ACCESS_KEY" ] || [ -n "$$AWS_SESSION_TOKEN" ]; then \
+			$(call log_warning,Multiple AWS credential sources (PROFILE + STATIC) detected. Unsetting static keys to suppress SDK warnings.); \
 			unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN; \
 		fi; \
 	fi; \

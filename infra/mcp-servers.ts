@@ -25,7 +25,7 @@ export interface MCPServerResources {
  * @returns The created MCP multiplexer functions.
  */
 export function createMCPServers(ctx: SharedContext): MCPServerResources {
-  const { memoryTable, configTable, secrets, stagingBucket } = ctx;
+  const { memoryTable, configTable, secrets, stagingBucket, deployer, deployerLink } = ctx;
   const validSecrets = getValidSecrets(secrets);
 
   const baseEnv = {
@@ -82,9 +82,9 @@ export function createMCPServers(ctx: SharedContext): MCPServerResources {
 
   // 3. DevOps Multiplexer (aws, aws-s3)
   // Higher privilege: access to CodeBuild and S3.
-  const devOpsMultiplexer = new sst.aws.Function('DevOpsMCPMultiplexer', {
+  const devOpsMultiplexer = new sst.aws.Function('DevOpsMultiplexer', {
     ...commonProps,
-    link: [memoryTable, configTable, stagingBucket, ...validSecrets],
+    link: [memoryTable, configTable, stagingBucket, deployerLink || deployer, ...validSecrets],
     permissions: [
       {
         actions: ['cloudwatch:PutMetricData'],

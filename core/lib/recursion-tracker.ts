@@ -11,6 +11,7 @@ import {
   DeleteCommand,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
+import { Resource } from 'sst';
 
 const RECURSION_STACK_PREFIX = 'RECURSION_STACK#';
 const RECURSION_TTL_SECONDS = 3600; // 1 hour - matches typical mission lifetime
@@ -40,15 +41,16 @@ export async function pushRecursionEntry(
     // Sh1: Use UpdateCommand to ensure atomic depth increment and prevent concurrent "resets"
     await docClient.send(
       new UpdateCommand({
-        TableName: process.env.MEMORY_TABLE_NAME ?? 'MemoryTable',
+        TableName: (Resource as any).MemoryTable.name,
         Key: {
           userId: key,
           timestamp: 0,
         },
         UpdateExpression:
-          'SET depth = :depth, sessionId = :sessionId, agentId = :agentId, createdAt = :now, expiresAt = :exp, #type = :type',
-        ConditionExpression: 'attribute_not_exists(depth) OR depth < :depth',
+          'SET #depth = :depth, sessionId = :sessionId, agentId = :agentId, createdAt = :now, expiresAt = :exp, #type = :type',
+        ConditionExpression: 'attribute_not_exists(#depth) OR #depth < :depth',
         ExpressionAttributeNames: {
+          '#depth': 'depth',
           '#type': 'type',
         },
         ExpressionAttributeValues: {
@@ -83,7 +85,7 @@ export async function getRecursionDepth(traceId: string): Promise<number> {
     const key = `${RECURSION_STACK_PREFIX}${traceId}`;
     const result = await docClient.send(
       new GetCommand({
-        TableName: process.env.MEMORY_TABLE_NAME ?? 'MemoryTable',
+        TableName: (Resource as any).MemoryTable.name,
         Key: { userId: key, timestamp: 0 },
       })
     );
@@ -112,7 +114,10 @@ export async function clearRecursionStack(traceId: string): Promise<void> {
       new DeleteCommand({
         TableName: process.env.MEMORY_TABLE_NAME ?? 'MemoryTable',
         Key: { userId: key, timestamp: 0 },
-        ConditionExpression: 'attribute_exists(depth)',
+        ConditionExpression: 'attribute_exists(#depth)',
+        ExpressionAttributeNames: {
+          '#depth': 'depth',
+        },
       })
     );
 
