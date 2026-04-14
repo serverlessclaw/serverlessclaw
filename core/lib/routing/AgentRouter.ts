@@ -347,10 +347,10 @@ export class AgentRouter {
     candidates: AgentPerformanceRollup[],
     capabilityMatchFn?: (agentId: string) => number
   ): string | undefined {
-    // Filter by enabled status if provided in any candidate
+    // Filter by enabled status if provided in any candidate - must be strictly true
     const hasEnabledField = candidates.some((c) => c.enabled !== undefined);
     const enabledCandidates = hasEnabledField
-      ? candidates.filter((c) => c.enabled !== false)
+      ? candidates.filter((c) => c.enabled === true)
       : candidates;
 
     if (enabledCandidates.length === 0) return undefined;
@@ -387,10 +387,10 @@ export class AgentRouter {
     reputations: Map<string, AgentReputation>,
     capabilityMatchFn?: (agentId: string) => number
   ): string | undefined {
-    // Filter by enabled status if provided in any candidate
+    // Filter by enabled status if provided in any candidate - must be strictly true
     const hasEnabledField = candidates.some((c) => c.enabled !== undefined);
     const enabledCandidates = hasEnabledField
-      ? candidates.filter((c) => c.enabled !== false)
+      ? candidates.filter((c) => c.enabled === true)
       : candidates;
 
     if (enabledCandidates.length === 0) return undefined;

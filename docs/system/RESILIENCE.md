@@ -9,15 +9,20 @@ This document describes the high-availability, self-healing, and security mechan
 The Shield acts as the authoritative gate for all tool executions, enforcing least-privilege resource access and blast-radius limits.
 
 ### Layer 1: Unified Security Gateway
+
 The `ToolExecutor` delegates all security decisions to the `SafetyEngine`. No tool can execute without an explicit policy allowance.
 
 ### Layer 2: Blast Radius Enforcement
+
 The system enforces hard limits on high-impact actions to prevent runaway costs or destructive propagation:
+
 - **Class C Limit**: Hard cap of 5 Class C actions per hour per agent (Principle 10).
 - **Promotion**: Class C actions require human approval unless an agent is in `EVOLUTION_MODE="AUTO"` and has a `TrustScore >= 95`.
 
 ### Layer 3: Loop Interdiction
+
 Reasoning loops and repetitive "semantic grinding" are caught by the **SemanticLoopDetector**.
+
 - **Penalty**: Detected loops result in automatic trust penalties recorded via `SafetyBase.recordFailure`.
 
 ## 🔄 Circuit Breaker (Persistent Logic)

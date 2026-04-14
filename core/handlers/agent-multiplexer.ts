@@ -3,11 +3,6 @@ import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
 import { handleWarmup } from '../lib/utils/agent-helpers';
 import { SessionStateManager } from '../lib/session/session-state';
-import {
-  pushRecursionEntry,
-  clearRecursionStack,
-  getRecursionDepth,
-} from '../lib/recursion-tracker';
 import { checkCollaborationTimeout } from '../lib/conflict-resolution';
 
 /**
@@ -170,28 +165,28 @@ export const handler = async (
     }, 60000);
   }
 
-  const { isMissionContext, getRecursionLimit } = await import('./events/shared');
+  const { isMissionContext, checkAndPushRecursion } = await import('./events/shared');
   const isMission = isMissionContext(detailType, detail as Record<string, unknown>);
-  const MAX_RECURSION_LIMIT = await getRecursionLimit(isMission);
 
   if (_traceId && targetAgent) {
-    const currentDepth = await getRecursionDepth(_traceId);
-    if (currentDepth >= MAX_RECURSION_LIMIT) {
-      logger.error(
-        `[MULTIPLEXER] Recursion limit exceeded for trace ${_traceId} at depth ${currentDepth}`
-      );
+    const currentDepth = await checkAndPushRecursion(
+      _traceId,
+      sessionId || 'unknown',
+      targetAgent,
+      (detail.depth as number) ?? 0,
+      isMission
+    );
+
+    if (currentDepth === null) {
       if (lockAcquired && sessionId) {
         if (heartbeatInterval) clearInterval(heartbeatInterval);
         await sessionStateManager.releaseProcessing(sessionId, targetAgent);
       }
       return `Error: Recursion limit exceeded for trace ${_traceId}`;
     }
-    await pushRecursionEntry(
-      _traceId,
-      ((detail.depth as number) ?? 0) + 1,
-      sessionId || 'unknown',
-      targetAgent
-    );
+
+    // Propagate updated depth to downstream handlers via eventDetail (if mutated further)
+    (detail as Record<string, unknown>).depth = currentDepth;
   }
 
   try {
@@ -214,9 +209,6 @@ export const handler = async (
     }
     if (lockAcquired && sessionId && targetAgent) {
       await sessionStateManager.releaseProcessing(sessionId, targetAgent);
-    }
-    if (_traceId) {
-      await clearRecursionStack(_traceId);
     }
   }
 };

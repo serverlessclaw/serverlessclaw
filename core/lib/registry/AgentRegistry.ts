@@ -137,29 +137,9 @@ export class AgentRegistry {
     activeOverrides.push(...filteredPerAgent.map((t) => (typeof t === 'string' ? t : t.name)));
 
     if (prunedCount > 0) {
-      logger.info(`[REGISTRY] Pruned ${prunedCount} expired tools for agent ${id}`);
-
-      // Persist pruned lists back to DDB
-      if (
-        batchOverrides &&
-        Array.isArray(batchOverrides[id]) &&
-        activeBatch.length < (batchOverrides[id] as unknown[]).length
-      ) {
-        const update = this.saveRawConfig(DYNAMO_KEYS.AGENT_TOOL_OVERRIDES, {
-          ...batchOverrides,
-          [id]: activeBatch,
-        });
-        if (update instanceof Promise) {
-          update.catch((e) => logger.error(`Failed to persist pruned batch tools for ${id}:`, e));
-        }
-      }
-
-      if (Array.isArray(perAgentOverrides) && activePerAgent.length < perAgentOverrides.length) {
-        const update = this.saveRawConfig(`${id}_tools`, activePerAgent);
-        if (update instanceof Promise) {
-          update.catch((e) => logger.error(`Failed to persist pruned tools for ${id}:`, e));
-        }
-      }
+      logger.info(
+        `[REGISTRY] Found ${prunedCount} expired tools for agent ${id} (filtered from active list)`
+      );
     }
 
     if (activeOverrides.length > 0) {

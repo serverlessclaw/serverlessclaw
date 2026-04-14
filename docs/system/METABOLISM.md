@@ -7,10 +7,12 @@ Silo 7 is the **Regenerative Repair Engine** of the Serverless Claw swarm. It en
 ## The Regenerative Cycle
 
 The metabolism operates on two distinct loops:
+
 1. **Periodic Audit Cycle**: A continuous feedback loop that bridges observation (Audit) and action (Repair), ensuring the system remains lean.
-2. **Live Remediation Path**: An event-driven bridge that triggers repairs *immediately* upon failure detection in critical surfaces (like the Dashboard).
+2. **Live Remediation Path**: An event-driven bridge that triggers repairs _immediately_ upon failure detection in critical surfaces (like the Dashboard).
 
 #### 1. Periodic Audit (Continuous)
+
 ```text
           .-----------------------------------------.
          /        REGENERATIVE METABOLISM         \
@@ -37,13 +39,14 @@ The metabolism operates on two distinct loops:
     |  - Cull Gaps   |  | |    Maintenance |  |
     |  - AIReady MCP |  / |    Gaps        |  /
     +----------------+ /  +----------------+ /
-           ^                  | 
+           ^                  |
            |                  |
            '------------------'
            (Architectural Decay Recycled)
 ```
 
 #### 2. Live Remediation (Event-Driven)
+
 ```text
  [ Dashboard Interaction ]
           |

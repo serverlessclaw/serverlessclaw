@@ -106,6 +106,7 @@ export class ExecutorCore {
       this.updateUsage(usage, aiResponse, options.activeProvider);
 
       // Sh2 FIX: Semantic Loop Detection Integration
+      // Use severity=3 (CRITICAL) for loops - matches AnomalySeverity.CRITICAL penalty multiplier
       if (aiResponse.content && options.sessionId) {
         const loopDetector = getSemanticLoopDetector();
         const loopResult = loopDetector.check(options.sessionId, aiResponse.content);
@@ -116,7 +117,7 @@ export class ExecutorCore {
           await TrustManager.recordFailure(
             this.agentId,
             `Semantic reasoning loop detected (${loopResult.consecutiveCount} turns).`,
-            2
+            3 // CRITICAL severity - aligns with AnomalySeverity.CRITICAL
           );
 
           if (loopResult.action === 'escalate' || loopResult.action === 'switch_agent') {
@@ -384,6 +385,7 @@ export class ExecutorCore {
       }
 
       // Sh2 FIX: Semantic Loop Detection for Stream
+      // Use severity=3 (CRITICAL) for loops - matches AnomalySeverity.CRITICAL penalty multiplier
       if (fullContent && options.sessionId) {
         const loopDetector = getSemanticLoopDetector();
         const loopResult = loopDetector.check(options.sessionId, fullContent);
@@ -392,7 +394,7 @@ export class ExecutorCore {
           await TrustManager.recordFailure(
             this.agentId,
             `Semantic reasoning loop detected in stream.`,
-            1
+            3 // CRITICAL severity - aligns with AnomalySeverity.CRITICAL
           );
         }
       }

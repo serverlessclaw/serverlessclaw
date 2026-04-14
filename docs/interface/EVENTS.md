@@ -13,18 +13,32 @@ Serverless Claw uses AWS EventBridge as the central nervous system for inter-age
 The Event Bus acts as the **Spine** of Serverless Claw, ensuring robust signal propagation and atomic control across the swarm.
 
 ### 1. Atomic Recursion Control
-To prevent infinite reasoning loops or event storms, the Spine enforces strict depth limits using **Atomic Recursion Guards**:
-- **Mechanism**: The `RECURSION_ENTRY` in DynamoDB tracks the current depth for a specific `traceId`.
-- **Constraint**: Updates must use monotonic depth guards (`depth < :newDepth`) to prevent out-of-order event bypass.
-- **Limit**: Standard tasks are capped at a depth of 10 unless explicitly promoted.
 
-### 2. Agent Selection & Routing
+To prevent infinite reasoning loops or event storms, the Spine enforces strict depth limits using a unified **Atomic Recursion Guard** (`checkAndPushRecursion`):
+
+- **Mechanism**: The `RECURSION_ENTRY` in DynamoDB tracks the current depth for a specific `traceId`.
+- **Unified Guard**: Both the `EventHandler` and `AgentMultiplexer` utilize a centralized check to ensure consistency across different entry points.
+- **Monotonic Safety**: Updates use monotonic depth guards (`ConditionExpression: 'attribute_not_exists(depth) OR depth < :depth'`) to prevent depth resets during asynchronous handoffs or concurrent executions.
+- **Limit**: Standard tasks are capped at a depth of 15 (configurable via `recursion_limit`). Mission-critical tasks (swarms, DAGs) use a stricter limit (default 10, via `mission_recursion_limit`).
+
+### 2. Distributed Resilience (Circuit Breaker & Rate Limiting)
+
+The Spine maintains system stability through distributed state management:
+
+- **DistributedState**: Circuit breakers and rate limiters are grounded in `MemoryTable` rather than in-memory volatile state. This ensures protection is enforced consistently across all concurrent Lambda execution environments.
+- **Config Caching**: To minimize DynamoDB overhead, static configuration thresholds (limits, timeouts) are cached in-memory with a 1-minute TTL (`getCachedConfig`), balancing performance with operational flexibility.
+
+### 3. Agent Selection & Routing
+
 The `AgentRouter` selects the best candidate from the `AgentRegistry` based on trust scores and capability matching.
+
 - **Selection Guard**: `selectBestAgent` explicitly filters out agents with `enabled: false`.
 - **Fallback**: If no high-trust agent is available, the backbone falls back to a deterministic supervisor for graceful degradation.
 
 ### 3. Distributed Lock Management
+
 Concurrency is handled via the `LockManager`, which uses conditional DynamoDB updates:
+
 - **Lock Key**: `LOCK#<userId>#<resourceId>`
 - **TTL**: Locks automatically expire to prevent deadlocks during Lambda timeouts or failures (default 5-30m).
 

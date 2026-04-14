@@ -199,15 +199,15 @@ A poor path is:
 
 Use this table to map high-level silos to the primary code areas that should be investigated.
 
-| Silo  | Name           | Primary Code Focus                               | Implementation Vertical             |
-| :---- | :------------- | :----------------------------------------------- | :---------------------------------- |
-| **1** | The Spine      | `core/lib/routing/`, `core/lib/backbone.ts`      | [EVENTS.md](../interface/EVENTS.md#atomic-backbone--flow-control) |
+| Silo  | Name           | Primary Code Focus                              | Implementation Vertical                                                            |
+| :---- | :------------- | :---------------------------------------------- | :--------------------------------------------------------------------------------- |
+| **1** | The Spine      | `core/lib/routing/`, `core/lib/backbone.ts`     | [EVENTS.md](../interface/EVENTS.md#atomic-backbone--flow-control)                  |
 | **2** | The Hand       | `core/lib/mcp.ts`, `core/lib/agent/executor.ts` | [PROTOCOL.md](../interface/PROTOCOL.md#tool-protocols--multi-server-orchestration) |
-| **3** | The Shield     | `core/lib/safety/safety-engine.ts`               | [RESILIENCE.md](../system/RESILIENCE.md#security--baseline-control) |
-| **4** | The Brain      | `core/lib/memory/`, `core/lib/rag/`              | [MEMORY.md](../intelligence/MEMORY.md#extended-memory-lifecycle--continuity) |
-| **5** | The Eye        | `core/lib/metrics/`, `core/lib/tracer/`          | [DASHBOARD.md](../interface/DASHBOARD.md#observation--metrics-integrity) |
-| **6** | The Scales     | `core/lib/verify/judge.ts`                       | [SAFETY.md](../intelligence/SAFETY.md#agent-trust--calibration) |
-| **7** | The Metabolism | `core/lib/maintenance/metabolism.ts`             | [METABOLISM.md](../system/METABOLISM.md) |
+| **3** | The Shield     | `core/lib/safety/safety-engine.ts`              | [RESILIENCE.md](../system/RESILIENCE.md#security--baseline-control)                |
+| **4** | The Brain      | `core/lib/memory/`, `core/lib/rag/`             | [MEMORY.md](../intelligence/MEMORY.md#extended-memory-lifecycle--continuity)       |
+| **5** | The Eye        | `core/lib/metrics/`, `core/lib/tracer/`         | [DASHBOARD.md](../interface/DASHBOARD.md#observation--metrics-integrity)           |
+| **6** | The Scales     | `core/lib/verify/judge.ts`                      | [SAFETY.md](../intelligence/SAFETY.md#agent-trust--calibration)                    |
+| **7** | The Metabolism | `core/lib/maintenance/metabolism.ts`            | [METABOLISM.md](../system/METABOLISM.md)                                           |
 
 ---
 
@@ -248,19 +248,20 @@ Each silo represents a core functional domain. Reviews within a silo should adop
 #### Verification Methods
 
 Review the implementation details in [EVENTS.md](../interface/EVENTS.md#atomic-backbone--flow-control):
+
 - **Atomic Recursion Check**: Verify that recursion updates use monotonic guards to prevent loop bypass.
 - **Selection Integrity**: Assert that dormant agents are correctly filtered out regardless of reputation scores.
 - **Dead-End Discovery**: Scan event routing for unhandled agent task events or misconfigurations.
 - **Atomic Field Updates**: Verify existence-checks before metadata writes to prevent storage corruption.
-
 #### 🩻 Spine Event Flow
 
 ```text
   [ EventBridge ]
          |
          v
-  [ Event Handler ] -- (Atomic Check) --> [ Rate Limiter & Circuit Breaker ]
-         |
+  [ Event Handler ] -- (Atomic Guard) --+--> [ Distributed State Store ]
+         |                              |     (Rate Limit & Circuit State)
+         |                              v
          |-- (Trace Context) --> [ Recursion Tracker ] --> [ State Store ]
          |                                                   (depth check)
          v
@@ -312,6 +313,7 @@ Review the implementation details in [EVENTS.md](../interface/EVENTS.md#atomic-b
 #### Verification Methods
 
 Review the implementation details in [PROTOCOL.md](../interface/PROTOCOL.md#tool-protocols--multi-server-orchestration):
+
 - **Prompt Audit**: Evaluate persona prompts (Coder, Planner, etc.) against known complex inputs.
 - **Tool Schema Test**: Validate skills against their interface declarations with boundary inputs.
 - **Resource Leak Check**: Monitor client/connection pools for proper lifecycle management.
@@ -406,6 +408,7 @@ The Shield has been unified. The `SafetyEngine` now acts as the authoritative ga
 - New endpoints without RBAC checks
 
 #### Verification Methods
+
 Review the implementation details in [MEMORY.md](../intelligence/MEMORY.md#extended-memory-lifecycle--continuity):
 
 - **Isolation Test**: Attempt cross-workspace session access to verify boundary rejection.
@@ -447,6 +450,7 @@ Review the implementation details in [MEMORY.md](../intelligence/MEMORY.md#exten
 #### Verification Methods
 
 Review the implementation details in [DASHBOARD.md](../interface/DASHBOARD.md#observation--metrics-integrity):
+
 - **Consistency Verification**: Compare state between localized metrics and raw trace logs.
 - **Trace Audit**: Verify correlation IDs and audit for "broken chains" in spans.
 - **Optics Latency**: Measure the time elapsed between event emission and dashboard reporting.
@@ -508,6 +512,7 @@ Review the implementation details in [DASHBOARD.md](../interface/DASHBOARD.md#ob
 #### Verification Methods
 
 Review the implementation details in [SAFETY.md](../intelligence/SAFETY.md#agent-trust--calibration):
+
 - **Trust Journey**: Trace the progression of trust scores through multiple success/failure events.
 - **Judge Audit**: Periodically blind-test the semantic evaluator against known good/bad outputs.
 - **Decay Verification**: Verify that time-based trust decay parameters align with system spirit.
@@ -572,6 +577,7 @@ Review the implementation details in [SAFETY.md](../intelligence/SAFETY.md#agent
 #### Verification Methods
 
 Review the implementation details in [METABOLISM.md](../system/METABOLISM.md):
+
 - **Debt Detection**: Verify automated analysis tools correctly identify unreachable logic or stale overrides.
 - **Repair Integrity**: Trace the resolution of a metabolic gap into a strategic evolution plan.
 - **Remediation Speed**: Verify response times for real-time dashboard failures triggered via the "Live" path.

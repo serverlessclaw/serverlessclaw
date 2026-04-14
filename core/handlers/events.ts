@@ -7,73 +7,25 @@ import { emitMetrics, METRICS } from '../lib/metrics';
 import { ConfigManager } from '../lib/registry/config';
 import { DEFAULT_EVENT_ROUTING, verifyEventRoutingConfiguration } from '../lib/event-routing';
 import { performance } from 'perf_hooks';
-import { getRecursionDepth } from '../lib/recursion-tracker';
 import { CONFIG_DEFAULTS } from '../lib/config/config-defaults';
+import { DistributedState } from '../lib/utils/distributed-state';
+
+// Configuration cache to reduce DDB calls (Phase B5: Persistence Integrity)
+const configCache = new Map<string, { value: any; expiresAt: number }>();
+const CACHE_TTL_MS = 60000; // 1 minute
+
+async function getCachedConfig<T>(key: string, defaultValue: T): Promise<T> {
+  const cached = configCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value as T;
+  }
+  const value = await ConfigManager.getTypedConfig(key, defaultValue);
+  configCache.set(key, { value, expiresAt: Date.now() + CACHE_TTL_MS });
+  return value;
+}
 
 // Verify event routing configuration on module load
 verifyEventRoutingConfiguration();
-
-// In‑memory state (distributed state migration planned for Sprint 2)
-const failureState = new Map<string, { count: number; openedAt?: number }>();
-const rateBuckets = new Map<string, { tokens: number; lastRefill: number }>();
-
-function getRateBucket(key: string, capacity: number, refillMs: number) {
-  const now = Date.now();
-  let bucket = rateBuckets.get(key);
-  if (!bucket) {
-    bucket = { tokens: capacity, lastRefill: now };
-    rateBuckets.set(key, bucket);
-    return bucket;
-  }
-  const elapsed = now - bucket.lastRefill;
-  const refillInterval = refillMs / capacity;
-  if (elapsed >= refillInterval) {
-    // Refill proportionally to elapsed time
-    const refillTokens = Math.floor(elapsed / refillInterval);
-    bucket.tokens = Math.min(capacity, bucket.tokens + refillTokens);
-    bucket.lastRefill = now - Math.floor(elapsed % refillInterval); // Preserve precision
-  }
-  return bucket;
-}
-
-function consumeToken(key: string, capacity: number, refillMs: number): boolean {
-  const bucket = getRateBucket(key, capacity, refillMs);
-  if (bucket.tokens > 0) {
-    bucket.tokens--;
-    return true;
-  }
-  return false;
-}
-
-function isCircuitOpen(key: string, threshold: number, timeoutMs: number): boolean {
-  const state = failureState.get(key);
-  if (!state) return false;
-  if (state.count >= threshold) {
-    const now = Date.now();
-    if (state.openedAt && now - state.openedAt < timeoutMs) {
-      return true;
-    }
-    // Timeout elapsed – reset
-    failureState.delete(key);
-    return false;
-  }
-  return false;
-}
-
-function recordFailure(key: string, threshold: number) {
-  const now = Date.now();
-  let state = failureState.get(key);
-  if (!state) {
-    state = { count: 1 };
-    failureState.set(key, state);
-  } else {
-    state.count++;
-  }
-
-  if (state.count >= threshold && !state.openedAt) {
-    state.openedAt = now;
-  }
-}
 
 function startExecutionTimeout(timeoutMs: number): AbortController {
   const controller = new AbortController();
@@ -109,7 +61,7 @@ export async function handler(
   const eventDetail = event.detail;
   const envelopeId = event.id;
 
-  // Load configuration thresholds
+  // Load configuration thresholds with caching to reduce DDB load
   const [
     circuitThreshold,
     circuitTimeout,
@@ -118,27 +70,27 @@ export async function handler(
     maxRetryCount,
     executionTimeout,
   ] = await Promise.all([
-    ConfigManager.getTypedConfig(
+    getCachedConfig(
       CONFIG_DEFAULTS.EVENT_CIRCUIT_THRESHOLD.configKey!,
       CONFIG_DEFAULTS.EVENT_CIRCUIT_THRESHOLD.code
     ),
-    ConfigManager.getTypedConfig(
+    getCachedConfig(
       CONFIG_DEFAULTS.EVENT_CIRCUIT_TIMEOUT_MS.configKey!,
       CONFIG_DEFAULTS.EVENT_CIRCUIT_TIMEOUT_MS.code
     ),
-    ConfigManager.getTypedConfig(
+    getCachedConfig(
       CONFIG_DEFAULTS.EVENT_RATE_BUCKET_CAPACITY.configKey!,
       CONFIG_DEFAULTS.EVENT_RATE_BUCKET_CAPACITY.code
     ),
-    ConfigManager.getTypedConfig(
+    getCachedConfig(
       CONFIG_DEFAULTS.EVENT_RATE_BUCKET_REFILL_MS.configKey!,
       CONFIG_DEFAULTS.EVENT_RATE_BUCKET_REFILL_MS.code
     ),
-    ConfigManager.getTypedConfig(
+    getCachedConfig(
       CONFIG_DEFAULTS.EVENT_MAX_RETRY_COUNT.configKey!,
       CONFIG_DEFAULTS.EVENT_MAX_RETRY_COUNT.code
     ),
-    ConfigManager.getTypedConfig(
+    getCachedConfig(
       CONFIG_DEFAULTS.EVENT_EXECUTION_TIMEOUT_MS.configKey!,
       CONFIG_DEFAULTS.EVENT_EXECUTION_TIMEOUT_MS.code
     ),
@@ -151,9 +103,7 @@ export async function handler(
   }
 
   // Recursion depth enforcement using unified DynamoDB-based recursion tracker
-  // Retrieve configured recursion limit (default is 15 if not set)
-  const recursionLimit = await ConfigManager.getTypedConfig('recursion_limit', 15);
-  // Get traceId from event detail for unified tracking
+  const { isMissionContext, checkAndPushRecursion } = await import('./events/shared');
   const traceId = eventDetail.traceId as string;
 
   if (!traceId) {
@@ -163,34 +113,21 @@ export async function handler(
     return;
   }
 
-  // Get current depth from DynamoDB (authoritative source)
-  const existingDepth = await getRecursionDepth(traceId);
-  const currentDepth = existingDepth + 1;
+  const isMission = isMissionContext(detailType, eventDetail as Record<string, unknown>);
+  const currentDepth = await checkAndPushRecursion(
+    traceId,
+    (eventDetail.sessionId as string) || 'unknown',
+    'system.spine',
+    (eventDetail.retryCount as number) ?? 0, // Using retryCount as a hint for depth if depth missing
+    isMission
+  );
 
-  if (typeof recursionLimit === 'number' && currentDepth > recursionLimit) {
-    logger.warn(
-      `[RECURSION] Depth ${currentDepth} exceeds limit ${recursionLimit} for trace ${traceId}`
-    );
-    await routeToDlq(
-      event,
-      detailType,
-      'SYSTEM',
-      'unknown',
-      `Recursion limit exceeded (${currentDepth}/${recursionLimit})`
-    );
+  if (currentDepth === null) {
+    logger.warn(`[RECURSION] Limit exceeded for trace ${traceId}`);
+    await routeToDlq(event, detailType, 'SYSTEM', 'unknown', `Recursion limit exceeded`);
     emitMetrics([METRICS.dlqEvents(1)]).catch(() => {});
     return;
   }
-
-  // Authoritative update: Push the entry to DynamoDB for cross-session tracking
-  await (
-    await import('../lib/recursion-tracker')
-  ).pushRecursionEntry(
-    traceId,
-    currentDepth,
-    (eventDetail.sessionId as string) || 'unknown',
-    'system.spine'
-  );
 
   // Propagate updated depth to downstream handlers via eventDetail
   (eventDetail as Record<string, unknown>).depth = currentDepth;
@@ -207,16 +144,16 @@ export async function handler(
     logger.warn(`Metrics emission failed for ${detailType}:`, err)
   );
 
-  // Rate limiting
-  if (!(await consumeToken(detailType, rateCapacity, rateRefill))) {
+  // Rate limiting (Distributed state for cross-Lambda enforcement)
+  if (!(await DistributedState.consumeToken(detailType, rateCapacity, rateRefill))) {
     logger.warn(`[RATE_LIMIT] Rate limit exceeded for ${detailType}`);
     await routeToDlq(event, detailType, 'SYSTEM', 'unknown', 'Rate limit exceeded');
     emitMetrics([METRICS.rateLimitExceeded(detailType), METRICS.dlqEvents(1)]).catch(() => {});
     return;
   }
 
-  // Circuit breaker
-  if (isCircuitOpen(detailType, circuitThreshold, circuitTimeout)) {
+  // Circuit breaker (Distributed state for cross-Lambda enforcement)
+  if (await DistributedState.isCircuitOpen(detailType, circuitThreshold, circuitTimeout)) {
     logger.warn(`[CIRCUIT] Circuit open for ${detailType}`);
     await routeToDlq(event, detailType, 'SYSTEM', 'unknown', 'Circuit breaker open');
     emitMetrics([METRICS.circuitBreakerTriggered('event'), METRICS.dlqEvents(1)]).catch(() => {});
@@ -353,8 +290,8 @@ export async function handler(
 
     logger.error(`EventHandler failed for ${detailType}: ${errorMessage}`, error);
 
-    // Record failure for circuit breaker
-    recordFailure(detailType, circuitThreshold);
+    // Record failure for circuit breaker (Distributed state)
+    await DistributedState.recordFailure(detailType, circuitThreshold, circuitTimeout);
 
     // Route to DLQ
     await routeToDlq(event, detailType, 'SYSTEM', 'unknown', errorMessage);

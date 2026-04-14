@@ -166,7 +166,7 @@ export class MetabolismService {
 
     // Strategy 1: Registry mismatch/stale overrides (Common dashboard issue)
     if (error.includes('tool') || error.includes('registry') || error.includes('override')) {
-      const pruned = await AgentRegistry.pruneLowUtilizationTools(0); // Force prune
+      const pruned = await AgentRegistry.pruneLowUtilizationTools(1); // 1-day min threshold
       if (pruned > 0) {
         return {
           silo: 'Metabolism',

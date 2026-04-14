@@ -5,7 +5,6 @@
 
 import { logger } from './logger';
 import { getConfigValue } from './config';
-import { getConfigValue as getEBConfig } from './config'; // for retry config
 
 export interface ConflictResolutionState {
   sessionId: string;
@@ -37,14 +36,16 @@ export async function getConflictRemainingTime(startedAt: number): Promise<numbe
 }
 
 /**
- * Emit timeout event for conflict resolution
- * Called when tie-break timeout is exceeded
- *
- * Added retry logic with exponential backoff based on EB_MAX_RETRIES and EB_INITIAL_BACKOFF_MS.
+ * Helper to emit an event with exponential backoff retry for reliability
  */
-export async function emitConflictTimeoutEvent(sessionId: string, traceId: string): Promise<void> {
+async function emitEventWithRetry(
+  source: string,
+  eventType: any,
+  payload: any,
+  traceId: string
+): Promise<void> {
   const { emitEvent } = await import('./utils/bus');
-  const { EventType } = await import('./types/agent');
+  const { getConfigValue: getEBConfig } = await import('./config');
 
   const maxRetries = getEBConfig('EB_MAX_RETRIES') ?? 3;
   const initialBackoff = getEBConfig('EB_INITIAL_BACKOFF_MS') ?? 100;
@@ -52,37 +53,53 @@ export async function emitConflictTimeoutEvent(sessionId: string, traceId: strin
   let attempt = 0;
   while (true) {
     try {
-      await emitEvent('facilitator', EventType.STRATEGIC_TIE_BREAK, {
-        userId: sessionId,
-        agentId: 'facilitator',
-        task: 'conflict-resolution-timeout',
-        error: `Tie-break timeout exceeded for session ${sessionId}. Performing strategic tie-break.`,
+      await emitEvent(source, eventType, {
+        ...payload,
         traceId,
-        sessionId,
-        initiatorId: 'facilitator',
-        metadata: {
-          timeoutMs: getConfigValue('TIE_BREAK_TIMEOUT_MS'),
-          timestamp: Date.now(),
-        },
       });
-      break; // success
+      return;
     } catch (err) {
       attempt++;
       if (attempt > maxRetries) {
         logger.error(
-          `[CONFLICT_RESOLUTION] Failed to emit timeout event after ${maxRetries} retries:`,
+          `[CONFLICT_RESOLUTION] Failed to emit ${eventType} after ${maxRetries} retries:`,
           err
         );
         throw err;
       }
       const backoff = initialBackoff * Math.pow(2, attempt - 1);
       logger.warn(
-        `[CONFLICT_RESOLUTION] Emit event failed (attempt ${attempt}/${maxRetries}), retrying in ${backoff}ms`,
-        err
+        `[CONFLICT_RESOLUTION] Emit ${eventType} failed (attempt ${attempt}/${maxRetries}), retrying in ${backoff}ms`
       );
       await new Promise((resolve) => setTimeout(resolve, backoff));
     }
   }
+}
+
+/**
+ * Emit timeout event for conflict resolution
+ * Called when tie-break timeout is exceeded
+ */
+export async function emitConflictTimeoutEvent(sessionId: string, traceId: string): Promise<void> {
+  const { EventType } = await import('./types/agent');
+
+  await emitEventWithRetry(
+    'facilitator',
+    EventType.STRATEGIC_TIE_BREAK,
+    {
+      userId: sessionId,
+      agentId: 'facilitator',
+      task: 'conflict-resolution-timeout',
+      error: `Tie-break timeout exceeded for session ${sessionId}. Performing strategic tie-break.`,
+      sessionId,
+      initiatorId: 'facilitator',
+      metadata: {
+        timeoutMs: getConfigValue('TIE_BREAK_TIMEOUT_MS'),
+        timestamp: Date.now(),
+      },
+    },
+    traceId
+  );
 
   logger.warn(
     `[CONFLICT_RESOLUTION] Timeout exceeded for session ${sessionId}, triggering tie-break`
@@ -114,46 +131,29 @@ export async function checkCollaborationTimeout(
         `(${elapsed}ms > ${timeoutMs}ms). Triggering strategic tie-break.`
     );
 
-    const { emitEvent } = await import('./utils/bus');
     const { EventType } = await import('./types/agent');
 
-    // Use emission with retry for reliability
-    let attempt = 0;
-    const maxRetries = 3;
-    const initialBackoff = 100;
+    await emitEventWithRetry(
+      'facilitator',
+      EventType.STRATEGIC_TIE_BREAK,
+      {
+        userId: collaboration.userId || collaboration.sessionId,
+        agentId: collaboration.agentId || 'facilitator',
+        task: collaboration.task || 'Collaboration Timeout',
+        originalTask: collaboration.task || 'unknown',
+        sessionId: collaboration.sessionId,
+        initiatorId: 'system.supervisor',
+        depth: 0,
+        metadata: {
+          timeoutMs,
+          elapsedMs: elapsed,
+          timestamp: Date.now(),
+        },
+      },
+      traceId
+    );
 
-    while (attempt <= maxRetries) {
-      try {
-        await emitEvent('facilitator', EventType.STRATEGIC_TIE_BREAK, {
-          userId: collaboration.userId || collaboration.sessionId,
-          agentId: collaboration.agentId || 'facilitator',
-          task: collaboration.task || 'Collaboration Timeout',
-          originalTask: collaboration.task || 'unknown',
-          traceId,
-          sessionId: collaboration.sessionId,
-          initiatorId: 'system.supervisor',
-          depth: 0,
-          metadata: {
-            timeoutMs,
-            elapsedMs: elapsed,
-            timestamp: Date.now(),
-          },
-        });
-        return true;
-      } catch (err) {
-        attempt++;
-        if (attempt > maxRetries) {
-          logger.error(
-            `[COLLABORATION] Final failure to emit tie-break for ${collaboration.sessionId}:`,
-            err
-          );
-          break;
-        }
-        const backoff = initialBackoff * Math.pow(2, attempt - 1);
-        await new Promise((resolve) => setTimeout(resolve, backoff));
-      }
-    }
-    return true; // Return true even if emission failed, as timeout was indeed exceeded
+    return true;
   }
 
   return false;

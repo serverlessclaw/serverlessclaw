@@ -45,8 +45,46 @@ export function isMissionContext(eventType?: string, metadata?: Record<string, u
 }
 
 /**
- * Wake up the initiator agent when a delegated task or system event completes.
+ * Unified recursion guard for event handlers and multiplexers.
+ * Checks the cross-session recursion depth and pushes a new entry if within limits.
  *
+ * @param traceId - The trace ID for the execution chain.
+ * @param sessionId - The session ID for the execution.
+ * @param agentId - The agent ID performing the task.
+ * @param depthFromEvent - The depth passed in the event payload (as a hint).
+ * @param isMission - Whether this is a mission-critical context.
+ * @returns A promise resolving to the current depth if successful, or null if limit exceeded.
+ */
+export async function checkAndPushRecursion(
+  traceId: string,
+  sessionId: string,
+  agentId: string,
+  depthFromEvent?: number,
+  isMission: boolean = false
+): Promise<number | null> {
+  const { getRecursionDepth, pushRecursionEntry } = await import('../../lib/recursion-tracker');
+
+  const RECURSION_LIMIT = await getRecursionLimit(isMission);
+  const currentDepth = await getRecursionDepth(traceId);
+
+  if (currentDepth >= RECURSION_LIMIT) {
+    logger.error(
+      `[RECURSION] Limit exceeded for trace ${traceId} at depth ${currentDepth} (limit: ${RECURSION_LIMIT})`
+    );
+    return null;
+  }
+
+  // Use the event hint if it's deeper, but monotonic guard in pushRecursionEntry
+  // handles the actual safety in DynamoDB.
+  const targetDepth = Math.max(currentDepth + 1, (depthFromEvent ?? 0) + 1);
+
+  await pushRecursionEntry(traceId, targetDepth, sessionId, agentId);
+  return targetDepth;
+}
+
+/**
+ * Wake up the initiator agent when a delegated task or system event completes.
+...
  * @param userId - The ID of the user.
  * @param initiatorId - The ID of the agent that initiated the task.
  * @param task - The task name or identifier.
