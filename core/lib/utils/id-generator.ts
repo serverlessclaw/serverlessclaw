@@ -75,12 +75,12 @@ export function fnv1aHash(input: string): string {
  * @param sessionId - Session ID to convert
  * @returns Stable sort key (numeric string)
  */
-export function sessionIdToSortKey(sessionId: string): string {
+export function sessionIdToSortKey(sessionId: string): number {
   const parsedTimestamp = Number.parseInt(sessionId.split('_')[1] || sessionId, 10);
   if (!Number.isNaN(parsedTimestamp)) {
-    return String(parsedTimestamp);
+    return parsedTimestamp;
   }
-  return fnv1aHash(sessionId);
+  return Number(fnv1aHash(sessionId));
 }
 
 function generateHex(length: number): string {

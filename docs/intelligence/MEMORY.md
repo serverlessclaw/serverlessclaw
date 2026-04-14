@@ -54,15 +54,16 @@ In multi-tenant environments, logical isolation is enforced via the `userId` par
 
 ```text
 [ Record Root ]
- ├── userId (PK)         <-- Scoped partition (WS#ws-abc#user-123)
-...
- ├── timestamp (SK)      <-- Unique ID
- ├── type (GSI-PK)       <-- Category
- ├── tags (GSI-Filter)   <-- Consolidated keywords
- ├── orgId               <-- Organizational isolation
- ├── workspaceId         <-- Workspace-specific isolation
- ├── createdAt           <-- Immutable source
- └── [ metadata ]        <-- Strategic scores (confidence, priority)
+  ├── userId (PK)         <-- Scoped partition (WS#ws-abc#user-123)
+  ├── timestamp (SK)      <-- Unique ID or numeric 0 for singletons
+  ├── type (GSI-PK)       <-- Category
+  ├── tags (GSI-Filter)   <-- Consolidated keywords
+  ├── orgId               <-- Organizational isolation
+  ├── workspaceId         <-- Workspace-specific isolation
+  ├── createdAt           <-- Immutable source
+  └── [ metadata ]        <-- Strategic scores (confidence, priority)
+ 
+**Singleton Records**: For global state or unique metadata (e.g., `REPUTATION#<id>`, `SESSION_STATE#<id>`), the `timestamp` sort key is set to exactly `0` to ensure O(1) retrieval without range scanning.
 ```
 
 This architecture ensures that agents can perform complex keyword and category searches without expensive table scans or deep-nested attribute filtering.
@@ -267,6 +268,31 @@ The memory system exports operations for each tier. These are available via `cor
 | `updateReputation(agentId, metrics)` | Update rolling 7-day reputation  | Intelligence |
 | `getReputation(agentId)`             | Retrieve agent reputation score  | Intelligence |
 | `computeCompositeScore(metrics)`     | Calculate reputation score (0-1) | Intelligence |
+
+### 6. Session Safety & Truncation
+To prevent sessions from exceeding DynamoDB's 400KB item size limit (which causes `ValidationException`), the `SessionStateManager` enforces a **Sliding Window Buffer**.
+
+- **Cap**: The system retains only the **last 50 pending messages** in the `pendingMessages` list.
+- **Mechanism**: On every `addPendingMessage` call, if the list exceeds 50 items, the oldest messages are automatically pruned.
+- **Circuit Breaker**: This prevents "Neural Bloat" in long-running autonomous tasks while ensuring the most recent context is always available.
+
+#### Session Buffer Truncation Logic
+```text
+[ Incoming Message ]
+       |
+       v
+[ addPendingMessage ]
+       |
+       +--> (Update DynamoDB item)
+       |
+       +--> (Check Length > 50)
+       |          |
+       |          +-- YES --> [ Neural Pruning ]
+       |          |           (Remove oldest messages)
+       |          |           (Keep last 50 only)
+       |          |
+       |          +-- NO  --> [ Continue ]
+```
 
 ### Clarification Operations (`clarification-operations.ts`)
 

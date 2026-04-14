@@ -225,7 +225,7 @@ export const handler = async (
 
             // Targeted lookup instead of scanning all gaps (P1-7 Optimization)
             let existing: MemoryInsight | undefined = undefined;
-            if (sk !== '0') {
+            if (sk !== 0) {
               try {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const items = await (memory as any).base.queryItems({

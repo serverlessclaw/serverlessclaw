@@ -96,7 +96,7 @@ describe('DynamoMemory Retention', () => {
         TableName: 'test-memory-table',
         Key: {
           userId: `GAP#${timestamp}`,
-          timestamp: String(timestamp),
+          timestamp: timestamp,
         },
         UpdateExpression: 'SET #status = :status, updatedAt = :now',
         ConditionExpression: 'attribute_exists(userId) AND #status = :expectedStatus',

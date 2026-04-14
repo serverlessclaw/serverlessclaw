@@ -36,7 +36,7 @@ export async function saveClarificationRequest(
   const item: ClarificationState = {
     ...state,
     userId: pk,
-    timestamp: '0', // Force timestamp 0 string for easier updates by PK (userId)
+    timestamp: 0, // Force timestamp 0 string for easier updates by PK (userId)
     createdAt: Date.now(),
     type: 'CLARIFICATION_PENDING',
     expiresAt: Math.floor(Date.now() / TIME.MS_PER_SECOND) + ttlBufferSeconds,
@@ -100,7 +100,7 @@ export async function saveEscalationState(
   const item = {
     ...state,
     userId: pk,
-    timestamp: '0',
+    timestamp: 0,
     createdAt: Date.now(),
     type: 'ESCALATION_STATE',
     expiresAt: Math.floor(Date.now() / TIME.MS_PER_SECOND) + ESCALATION_TTL_BUFFER_SECONDS,
@@ -167,7 +167,7 @@ export async function updateClarificationStatus(
   const pk = base.getScopedUserId(basePk, workspaceId);
 
   await base.updateItem({
-    Key: { userId: pk, timestamp: '0' },
+    Key: { userId: pk, timestamp: 0 },
     UpdateExpression: 'SET #status = :status',
     ExpressionAttributeNames: {
       '#status': 'status',
@@ -238,7 +238,7 @@ export async function incrementClarificationRetry(
   const pk = base.getScopedUserId(basePk, workspaceId);
 
   const result = await base.updateItem({
-    Key: { userId: pk, timestamp: '0' },
+    Key: { userId: pk, timestamp: 0 },
     UpdateExpression: 'SET retryCount = if_not_exists(retryCount, :zero) + :one',
     ExpressionAttributeValues: {
       ':one': 1,

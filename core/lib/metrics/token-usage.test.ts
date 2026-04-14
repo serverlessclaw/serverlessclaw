@@ -321,6 +321,8 @@ describe('TokenTracker', () => {
 
       const cmd = mockSend.mock.calls[0][0] as QueryCommand;
       expect(cmd.input.ExpressionAttributeValues?.[':pk']).toBe('TOKEN_ROLLUP#test-agent');
+      expect(cmd.input.KeyConditionExpression).toContain('#ts BETWEEN :start AND :end');
+      expect(cmd.input.ExpressionAttributeNames).toEqual({ '#ts': 'timestamp' });
     });
 
     it('should return empty array on error', async () => {
@@ -396,6 +398,8 @@ describe('TokenTracker', () => {
 
       const cmd = mockSend.mock.calls[0][0] as QueryCommand;
       expect(cmd.input.ExpressionAttributeValues?.[':pk']).toMatch(/^TOOL_TOKEN#web_search#/);
+      expect(cmd.input.KeyConditionExpression).toContain('#ts BETWEEN :start AND :end');
+      expect(cmd.input.ExpressionAttributeNames).toEqual({ '#ts': 'timestamp' });
     });
 
     it('should return empty array on error', async () => {

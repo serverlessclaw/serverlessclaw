@@ -17,7 +17,9 @@ import { SSTResource } from './types/system';
 const typedResource = Resource as unknown as SSTResource;
 
 const client = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(client);
+const docClient = DynamoDBDocumentClient.from(client, {
+  marshallOptions: { removeUndefinedValues: true },
+});
 
 // Idempotency key TTL: 24 hours
 const IDEMPOTENCY_TTL_HOURS = 24;

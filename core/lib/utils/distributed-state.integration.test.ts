@@ -38,7 +38,7 @@ describe('DistributedState Integration (Command Structure)', () => {
 
       expect(mockSend).toHaveBeenCalledWith(expect.any(GetCommand));
       const command = mockSend.mock.calls[0][0] as GetCommand;
-      expect(command.input.Key).toEqual({ userId: 'CIRCUIT#test-circuit', timestamp: '0' });
+      expect(command.input.Key).toEqual({ userId: 'CIRCUIT#test-circuit', timestamp: 0 });
     });
   });
 

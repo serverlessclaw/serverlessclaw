@@ -183,4 +183,64 @@ describe('SessionStateManager', () => {
       });
     });
   });
+
+  describe('addPendingMessage', () => {
+    it('should add message to pending list and truncate if over 50', async () => {
+      // Mock initial state: 51 messages (to simulate having just added one, as addPendingMessage appends then checks)
+      const longList = Array.from({ length: 51 }, (_, i) => ({
+        id: i === 50 ? 'new-id' : `msg-${i}`,
+        content: i === 50 ? 'New message' : `msg ${i}`,
+        attachments: [],
+        timestamp: Date.now(),
+      }));
+
+      // 1. First UpdateCommand (list_append)
+      ddbMock.on(UpdateCommand).resolves({});
+
+      // 2. Subsequent GetCommand calls (getPendingMessages) return 51 items
+      ddbMock.on(GetCommand).resolves({
+        Item: {
+          pendingMessages: longList,
+        },
+      });
+
+      // 3. Second UpdateCommand (clearPendingMessages) - should be called because length > 50
+      // We expect it to try to remove the oldest message (msg-0)
+
+      await sessionStateManager.addPendingMessage('session-123', 'New message');
+
+      const updateCalls = ddbMock.calls().filter((c) => c.args[0] instanceof UpdateCommand);
+      // expect at least 2 update calls: 1 for append, 1 for truncation
+      expect(updateCalls.length).toBeGreaterThanOrEqual(2);
+
+      const truncationUpdate = updateCalls.find((c) => {
+        const input = c.args[0].input as UpdateCommandInput;
+        return input.UpdateExpression?.includes('SET pendingMessages = :remaining');
+      });
+
+      expect(truncationUpdate).toBeDefined();
+      const filteredList = (truncationUpdate?.args[0].input as UpdateCommandInput)
+        .ExpressionAttributeValues?.[':remaining'];
+      expect(filteredList).toHaveLength(50);
+      expect(filteredList[0].id).toBe('msg-1');
+      expect(filteredList[49].content).toBe('New message');
+    });
+
+    it('should handle small lists without truncation', async () => {
+      ddbMock.on(UpdateCommand).resolves({});
+      ddbMock.on(GetCommand).resolves({
+        Item: {
+          pendingMessages: [{ id: 'msg-1', content: 'Existing', attachments: [] }],
+        },
+      });
+
+      await sessionStateManager.addPendingMessage('session-123', 'New message');
+
+      const updateCalls = ddbMock.calls().filter((c) => c.args[0] instanceof UpdateCommand);
+      // Should ONLY have the append call, NO truncation call
+      expect(updateCalls.length).toBe(1);
+      const appendCall = updateCalls[0].args[0].input as UpdateCommandInput;
+      expect(appendCall.UpdateExpression).toContain('list_append');
+    });
+  });
 });

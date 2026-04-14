@@ -9,14 +9,15 @@ import { logger } from '../logger';
 import { PutCommand } from '@aws-sdk/lib-dynamodb';
 import { defaultDocClient } from '../registry/config';
 import { Resource } from 'sst';
+import { getBlastRadiusStore, BlastRadiusStore } from './blast-radius-store';
 
 export class SafetyBase {
   protected violations: SafetyViolation[] = [];
-  // Sh2 Fix: Track blast radius for Class C actions
-  protected classCBlastRadius: Map<
-    string,
-    { count: number; affectedResources: number; lastAction: number }
-  > = new Map();
+  protected blastRadiusStore: BlastRadiusStore;
+
+  constructor() {
+    this.blastRadiusStore = getBlastRadiusStore();
+  }
 
   /**
    * Records a failure for an agent and penalizes its trust score.
@@ -184,52 +185,37 @@ export class SafetyBase {
   /**
    * Track blast radius for Class C actions.
    * Per AUDIT.md requirement: tracked per-agent per-action.
+   * Now uses DynamoDB-backed BlastRadiusStore for persistence across cold starts.
    */
-  protected trackClassCBlastRadius(agentId: string, action: string, resource?: string): void {
-    const key = `${agentId}:${action}`;
-    const existing = this.classCBlastRadius.get(key) || {
-      count: 0,
-      affectedResources: 0,
-      lastAction: 0,
-    };
-
-    this.classCBlastRadius.set(key, {
-      count: existing.count + 1,
-      affectedResources: existing.affectedResources + (resource ? 1 : 0),
-      lastAction: Date.now(),
-    });
+  protected async trackClassCBlastRadius(
+    agentId: string,
+    action: string,
+    resource?: string
+  ): Promise<void> {
+    const entry = await this.blastRadiusStore.incrementBlastRadius(agentId, action, resource);
 
     logger.info('[SafetyEngine] Class C action tracked for blast radius', {
       agentId,
       action,
       resource,
-      totalCount: existing.count + 1,
+      totalCount: entry.count,
     });
   }
 
   /**
    * Enforces blast radius limits for Class C actions per agent.
    * Returns an error message if the limit is exceeded, otherwise null.
+   * Now uses DynamoDB-backed BlastRadiusStore for persistence.
    */
-  protected enforceClassCBlastRadius(agentId: string, action: string): string | null {
-    const LIMIT_PER_HOUR = 5;
-    const windowMs = 3600000; // 1 hour
-    const now = Date.now();
+  protected async enforceClassCBlastRadius(
+    agentId: string,
+    action: string
+  ): Promise<string | null> {
+    const result = await this.blastRadiusStore.canExecute(agentId, action);
 
-    const key = `${agentId}:${action}`;
-    const stats = this.classCBlastRadius.get(key);
-    if (!stats) return null;
-
-    // Reset if window passed
-    if (now - stats.lastAction > windowMs) {
-      this.classCBlastRadius.delete(key);
-      return null;
-    }
-
-    if (stats.count >= LIMIT_PER_HOUR) {
-      const errorMsg = `BLAST_RADIUS_EXCEEDED: Action '${action}' has reached its safety limit (${stats.count}/${LIMIT_PER_HOUR} in 1h). Further execution blocked for safety.`;
-      logger.error(`[SafetyEngine] ${errorMsg}`);
-      return errorMsg;
+    if (!result.allowed && result.error) {
+      logger.error(`[SafetyEngine] ${result.error}`);
+      return result.error;
     }
 
     return null;
@@ -242,7 +228,17 @@ export class SafetyBase {
     string,
     { count: number; affectedResources: number; lastAction: number }
   > {
-    return Object.fromEntries(this.classCBlastRadius);
+    const stats = this.blastRadiusStore.getLocalStats();
+    const result: Record<string, { count: number; affectedResources: number; lastAction: number }> =
+      {};
+    for (const [key, entry] of Object.entries(stats)) {
+      result[key] = {
+        count: entry.count,
+        affectedResources: entry.resourceCount,
+        lastAction: entry.lastAction,
+      };
+    }
+    return result;
   }
 
   /**

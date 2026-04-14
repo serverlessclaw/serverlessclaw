@@ -15,7 +15,10 @@ export function createDashboard(ctx: SharedContext): { dashboard: sst.aws.Nextjs
     knowledgeBucket,
     bus,
     deployer,
+    deployerLink,
     api,
+    schedulerRole,
+    heartbeatHandler,
   } = ctx;
 
   const dashboard = new sst.aws.Nextjs('ClawCenter', {
@@ -28,7 +31,7 @@ export function createDashboard(ctx: SharedContext): { dashboard: sst.aws.Nextjs
       stagingBucket,
       knowledgeBucket,
       bus,
-      deployer, // Added for topology discovery
+      deployerLink, // Added for topology discovery
       ...(api ? [api] : []),
       ...(ctx.realtime ? [ctx.realtime] : []),
       ...(ctx.multiplexer ? [ctx.multiplexer] : []), // Added for topology discovery
@@ -36,12 +39,13 @@ export function createDashboard(ctx: SharedContext): { dashboard: sst.aws.Nextjs
     ],
     environment: {
       DEPLOYER_NAME: deployer.name,
-      DYNAMIC_SCHEDULER_ROLE_ARN: ctx.schedulerRole!.arn,
-      HEARTBEAT_HANDLER_ARN: ctx.heartbeatHandler!.arn,
+      DYNAMIC_SCHEDULER_ROLE_ARN: schedulerRole!.arn,
+      HEARTBEAT_HANDLER_ARN: heartbeatHandler!.arn,
       API_URL: api?.url || '',
       STAGING_BUCKET_NAME: stagingBucket.name,
       KNOWLEDGE_BUCKET_NAME: knowledgeBucket.name,
       BUS_NAME: bus.name,
+      AWS_PROFILE: '', // Clear profile to avoid conflict warning as SST injects static credentials
     },
     server: {
       memory: AGENT_CONFIG.memory.LARGE,
@@ -52,15 +56,15 @@ export function createDashboard(ctx: SharedContext): { dashboard: sst.aws.Nextjs
       {
         actions: ['s3:GetObject', 's3:PutObject', 's3:ListBucket', 's3:DeleteObject'],
         resources: [
-          ctx.stagingBucket.arn,
-          $util.interpolate`${ctx.stagingBucket.arn}/*`,
-          ctx.knowledgeBucket.arn,
-          $util.interpolate`${ctx.knowledgeBucket.arn}/*`,
+          stagingBucket.arn,
+          $util.interpolate`${stagingBucket.arn}/*`,
+          knowledgeBucket.arn,
+          $util.interpolate`${knowledgeBucket.arn}/*`,
         ],
       },
       {
         actions: ['events:PutEvents'],
-        resources: [ctx.bus.arn],
+        resources: [bus.arn],
       },
       {
         actions: [
@@ -74,7 +78,7 @@ export function createDashboard(ctx: SharedContext): { dashboard: sst.aws.Nextjs
       },
       {
         actions: ['iam:PassRole'],
-        resources: [ctx.schedulerRole!.arn],
+        resources: [schedulerRole!.arn],
       },
       {
         actions: ['cloudwatch:PutMetricData'],

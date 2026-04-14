@@ -82,10 +82,11 @@ async function handleParallelCancellation(
     const result = await db.send(
       new QueryCommand({
         TableName: typedResource.MemoryTable.name,
-        KeyConditionExpression: 'userId = :uid AND timestamp = :ts',
+        KeyConditionExpression: 'userId = :uid AND #ts = :zero',
+        ExpressionAttributeNames: { '#ts': 'timestamp' },
         ExpressionAttributeValues: {
-          ':uid': `USER#${userId}`,
-          ':ts': `${PARALLEL_PREFIX}${parallelDispatchId}`,
+          ':uid': `${PARALLEL_PREFIX}${userId}#${parallelDispatchId}`,
+          ':zero': 0,
         },
       })
     );

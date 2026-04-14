@@ -61,7 +61,10 @@ function getEventBridgeClient(): EventBridgeClient {
 
 function getDynamoDbClient(): DynamoDBDocumentClient {
   if (injectedDynamoDbDoc) return injectedDynamoDbDoc;
-  if (!defaultDynamoDbDoc) defaultDynamoDbDoc = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+  if (!defaultDynamoDbDoc)
+    defaultDynamoDbDoc = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
+      marshallOptions: { removeUndefinedValues: true },
+    });
   return defaultDynamoDbDoc;
 }
 
@@ -128,7 +131,10 @@ export async function checkTraceCoherence(): Promise<CoherenceResult> {
     const scanResult = await getDynamoDbClient().send(
       new ScanCommand({
         TableName: typedResource.TraceTable.name,
-        FilterExpression: 'timestamp > :recentWindow',
+        FilterExpression: '#ts > :recentWindow',
+        ExpressionAttributeNames: {
+          '#ts': 'timestamp',
+        },
         ExpressionAttributeValues: {
           ':recentWindow': Math.floor(recentWindow / 1000),
         } as Record<string, unknown>,
@@ -364,8 +370,8 @@ export async function checkProviderHealth(): Promise<ProbeResult> {
       ok: true,
       latencyMs: Date.now() - start,
       details: {
-        provider: providerManager.getActiveProviderName(),
-        model: providerManager.getActiveModelName(),
+        provider: await providerManager.getActiveProviderName(),
+        model: await providerManager.getActiveModelName(),
         supportsStructuredOutput: capabilities.supportsStructuredOutput,
       },
     };

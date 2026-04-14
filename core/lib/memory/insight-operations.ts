@@ -103,7 +103,7 @@ async function addRecord(
   // 2. Register usage type
   try {
     await base.updateItem({
-      Key: { userId: 'SYSTEM#REGISTRY', timestamp: '0' },
+      Key: { userId: 'SYSTEM#REGISTRY', timestamp: 0 },
       UpdateExpression: 'ADD activeTypes :type',
       ExpressionAttributeValues: { ':type': new Set([fullType]) },
     });

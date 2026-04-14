@@ -19,6 +19,7 @@ Serverless Claw is built on AWS using the **SST (Serverless Stack)** framework. 
 | **Secrets**   | SM / SST Secrets | Secure storage for API keys and tokens  |
 | **Storage**   | Amazon S3        | Knowledge vectors and trace archival    |
 | **UI**        | Next.js (SST)    | The ClawCenter dashboard                |
+| **CI/CD**    | AWS CodeBuild    | The autonomous `Deployer` for recovery  |
 
 ---
 
@@ -54,6 +55,26 @@ All resources are managed via the `infra/` directory.
 1. **Tagging**: All resources are tagged with `Project: serverlessclaw` for cost tracking.
 2. **Access Control**: Agents only have the minimum IAM permissions required for their specific role (defined in `infra/agents.ts`).
 3. **Encryption**: All data at rest is encrypted using AWS-managed CMKs.
+
+### Linkable Resource Architecture
+To balance strict IAM security with developer experience, sensitive resources like the `Deployer` are split into two channels:
+
+1. **Raw Resource**: Used for infrastructure-level rules (EventBridge) and IAM policies.
+2. **SST Linkable**: Wrapped for application-level access via `Resource.[Name]`.
+
+```text
+ [ CodeBuild Project ] <--- (Raw ARN) --- [ IAM Policy ]
+          |                                     ^
+   (Wrapped in)                                 |
+          |                              [ DeadMansSwitch ]
+          v                                     |
+    [ sst.Linkable ] <--- (Reference) ----------+
+          |
+    (Injected as)
+          |
+          v
+   [ Resource.Deployer ]
+```
 
 ---
 
@@ -108,7 +129,7 @@ npx sst secret set TelegramBotToken 123456:ABC-DEF
 ---
 
 > [!IMPORTANT]
-> **No CI/CD**: To ensure maximum intentionality and security, automatic deployments via GitHub Actions are disabled. All infrastructure changes must be performed through the local `make deploy` workflow after local verification.
+> **Controlled CI/CD**: To ensure maximum intentionality and security, automatic deployments on GitHub push are disabled. However, an **autonomous `Deployer`** (CodeBuild) exists within the stack to perform emergency rollbacks and self-healing when triggered by the [Dead Man's Switch](./RESILIENCE.md).
 
 > [!TIP]
 > Use `make help` to see all available environment management commands.

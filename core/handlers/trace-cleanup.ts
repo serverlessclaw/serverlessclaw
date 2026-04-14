@@ -34,8 +34,8 @@ export async function cleanupOrphanTraces(): Promise<TraceCleanupResult> {
       new QueryCommand({
         TableName: TRACE_TABLE_NAME,
         IndexName: 'status-index',
-        KeyConditionExpression: '#status = :status AND timestamp < :threshold',
-        ExpressionAttributeNames: { '#status': 'status' },
+        KeyConditionExpression: '#status = :status AND #ts < :threshold',
+        ExpressionAttributeNames: { '#status': 'status', '#ts': 'timestamp' },
         ExpressionAttributeValues: {
           ':status': 'started',
           ':threshold': threshold,

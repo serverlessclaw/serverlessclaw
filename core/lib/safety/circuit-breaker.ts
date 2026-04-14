@@ -1,13 +1,11 @@
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
-import { Resource } from 'sst';
+import { GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { logger } from '../logger';
+import { getDocClient, getConfigTableName } from '../utils/ddb-client';
 import { CONFIG_DEFAULTS } from '../config/config-defaults';
 import { reportHealthIssue } from '../lifecycle/health';
 import { addTraceStep } from '../utils/trace-helper';
 import { TRACE_TYPES } from '../constants';
 
-const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const STATE_KEY = 'circuit_breaker_state';
 
 export type CircuitBreakerStates = 'closed' | 'open' | 'half_open';
@@ -36,11 +34,6 @@ export interface CanProceedResult {
   failureCount: number;
 }
 
-function getTableName(): string {
-  const resource = Resource as { ConfigTable?: { name?: string } };
-  return resource.ConfigTable?.name ?? 'ConfigTable';
-}
-
 function freshState(): CircuitBreakerStateData {
   return {
     state: 'closed',
@@ -55,10 +48,11 @@ function freshState(): CircuitBreakerStateData {
 }
 
 async function loadState(): Promise<CircuitBreakerStateData> {
+  const db = getDocClient();
   try {
     const { Item } = await db.send(
       new GetCommand({
-        TableName: getTableName(),
+        TableName: getConfigTableName(),
         Key: { key: STATE_KEY },
       })
     );
@@ -82,13 +76,14 @@ async function loadState(): Promise<CircuitBreakerStateData> {
 }
 
 async function saveState(state: CircuitBreakerStateData): Promise<void> {
+  const db = getDocClient();
   const oldVersion = state.version;
   state.version += 1;
 
   try {
     await db.send(
       new PutCommand({
-        TableName: getTableName(),
+        TableName: getConfigTableName(),
         Item: { key: STATE_KEY, value: state },
         ConditionExpression: 'attribute_not_exists(#v) OR #v.version = :oldVersion',
         ExpressionAttributeNames: {

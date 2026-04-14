@@ -62,7 +62,7 @@ describe('clarification-operations', () => {
           traceId: 'trace-123',
           agentId: 'coder-agent',
           type: 'CLARIFICATION_PENDING',
-          timestamp: '0',
+          timestamp: 0,
           createdAt: expect.any(Number),
         })
       );
@@ -130,7 +130,7 @@ describe('clarification-operations', () => {
 
       expect(mockBase.updateItem).toHaveBeenCalledWith(
         expect.objectContaining({
-          Key: { userId: 'CLARIFICATION#trace-123#coder-agent', timestamp: '0' },
+          Key: { userId: 'CLARIFICATION#trace-123#coder-agent', timestamp: 0 },
           UpdateExpression: 'SET #status = :status',
           ExpressionAttributeValues: expect.objectContaining({
             ':status': ClarificationStatus.ANSWERED,
@@ -181,7 +181,7 @@ describe('clarification-operations', () => {
       expect(result).toBe(3);
       expect(mockBase.updateItem).toHaveBeenCalledWith(
         expect.objectContaining({
-          Key: { userId: 'CLARIFICATION#trace-123#coder-agent', timestamp: '0' },
+          Key: { userId: 'CLARIFICATION#trace-123#coder-agent', timestamp: 0 },
           UpdateExpression: 'SET retryCount = if_not_exists(retryCount, :zero) + :one',
           ExpressionAttributeValues: expect.objectContaining({
             ':one': 1,
@@ -289,7 +289,7 @@ describe('clarification-operations', () => {
 
       expect(mockBase.putItem).toHaveBeenCalledWith(
         expect.objectContaining({
-          timestamp: '0',
+          timestamp: 0,
           createdAt: expect.any(Number),
         })
       );

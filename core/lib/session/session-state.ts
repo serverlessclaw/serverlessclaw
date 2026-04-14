@@ -241,6 +241,17 @@ export class SessionStateManager {
           },
         })
       );
+
+      // MITIGATION: If pendingMessages exceeds a safe limit (e.g., 50), truncate it.
+      // This prevents "Item size to update has exceeded the maximum allowed size" errors.
+      const state = await this.getPendingMessages(sessionId);
+      if (state.length > 50) {
+        logger.warn(`Session ${sessionId}: Truncating pending messages (current: ${state.length})`);
+        await this.clearPendingMessages(
+          sessionId,
+          state.slice(0, state.length - 50).map((m) => m.id)
+        );
+      }
       logger.info(`Session ${sessionId}: Added pending message ${messageId}`);
     } catch (error) {
       logger.error(`Session ${sessionId}: Failed to add pending message:`, error);

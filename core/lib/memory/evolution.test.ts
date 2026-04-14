@@ -46,7 +46,7 @@ describe('DynamoMemory Evolution — Hit Tracking & Registry', () => {
       const updateCalls = ddbMock.commandCalls(UpdateCommand);
       expect(updateCalls).toHaveLength(1);
       expect(updateCalls[0].args[0].input).toMatchObject({
-        Key: { userId: 'SYSTEM#REGISTRY', timestamp: '0' },
+        Key: { userId: 'SYSTEM#REGISTRY', timestamp: 0 },
         UpdateExpression: 'ADD activeTypes :type',
       });
       // The Set is handled by the marshaller, but we can check the value

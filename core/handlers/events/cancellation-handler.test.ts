@@ -157,7 +157,13 @@ describe('cancellation-handler', () => {
       expect(mockDdbSend).toHaveBeenCalledWith(
         expect.objectContaining({
           input: expect.objectContaining({
-            KeyConditionExpression: 'userId = :uid AND timestamp = :ts',
+            TableName: 'test-memorytable',
+            KeyConditionExpression: 'userId = :uid AND #ts = :zero',
+            ExpressionAttributeNames: { '#ts': 'timestamp' },
+            ExpressionAttributeValues: {
+              ':uid': 'PARALLEL#user-123#dispatch-456',
+              ':zero': 0,
+            },
           }),
         })
       );

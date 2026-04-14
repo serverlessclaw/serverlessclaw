@@ -40,7 +40,7 @@ export function configureApiRoutes(api: sst.aws.ApiGatewayV2, ctx: SharedContext
     knowledgeBucket,
     secrets,
     bus,
-    deployer,
+    deployerLink,
   } = ctx;
 
   const validSecrets = getValidSecrets(secrets);
@@ -84,7 +84,7 @@ export function configureApiRoutes(api: sst.aws.ApiGatewayV2, ctx: SharedContext
       stagingBucket,
       knowledgeBucket,
       ...validSecrets,
-      deployer,
+      deployerLink,
       bus,
       ...criticalAgents,
     ],

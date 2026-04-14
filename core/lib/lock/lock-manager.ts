@@ -27,7 +27,9 @@ export class LockManager {
 
   constructor(client?: DynamoDBClient) {
     const dbClient = client || new DynamoDBClient({});
-    this.docClient = DynamoDBDocumentClient.from(dbClient);
+    this.docClient = DynamoDBDocumentClient.from(dbClient, {
+      marshallOptions: { removeUndefinedValues: true },
+    });
     try {
       this.tableName =
         (Resource as unknown as Record<string, { name: string }>).MemoryTable?.name ||

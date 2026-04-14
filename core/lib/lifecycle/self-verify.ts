@@ -7,7 +7,9 @@ import { runDeepHealthCheck } from './health';
 
 // Default client for backward compatibility - can be overridden via constructor for testing
 const defaultDdbClient = new DynamoDBClient({});
-const defaultDocClient = DynamoDBDocumentClient.from(defaultDdbClient);
+const defaultDocClient = DynamoDBDocumentClient.from(defaultDdbClient, {
+  marshallOptions: { removeUndefinedValues: true },
+});
 
 // Cast Resource to SSTResource type to access infrastructure resources
 const typedResource = Resource as unknown as SSTResource;

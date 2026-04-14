@@ -65,7 +65,8 @@ endif
 
 # Environment file resolution
 # Strictly load only the specified file for 'local' and 'prod' stages.
-ENV_FILES = $(if $(filter local,$(ENV)),.env.local,$(if $(filter prod,$(ENV)),.env,.env.$(ENV).local .env.$(ENV) .env.local .env))
+# For local dev, we load .env.local first (overrides) then .env.
+ENV_FILES = $(if $(filter local,$(ENV)),.env.local .env,$(if $(filter prod,$(ENV)),.env,.env.$(ENV).local .env.$(ENV) .env.local .env))
 
 # Usage: $(call load_env)
 # Loads available env files and exports variables.
@@ -86,8 +87,9 @@ define load_env
 	done; \
 	if [ -n "$$AWS_PROFILE" ]; then \
 		if [ -n "$$AWS_ACCESS_KEY_ID" ] || [ -n "$$AWS_SECRET_ACCESS_KEY" ]; then \
-			$(call log_warning,Multiple AWS credential sources detected (AWS_PROFILE and static keys). Unsetting static keys to favor PROFILE.); \
+			$(call log_warning,Multiple AWS credential sources detected (PROFILE and static keys). Unsetting static keys to favor PROFILE.); \
 			unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN; \
+			export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN; \
 		fi; \
 	fi; \
 	if [ "$(ENV)" = "local" ]; then \

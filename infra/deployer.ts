@@ -113,7 +113,13 @@ export function createDeployer(ctx: DeployerContext) {
     },
   });
 
-  // Note: SST v4 support for direct link on aws.codebuild.Project is being tracked,
-  // but we return it for consistency in context.
-  return { deployer };
+  // Linkable wrapper to expose Deployer.name and Deployer.arn to other resources via Resource.Deployer
+  const linkable = new sst.Linkable('Deployer', {
+    properties: {
+      name: deployer.name,
+      arn: deployer.arn,
+    },
+  });
+
+  return { deployer, linkable };
 }

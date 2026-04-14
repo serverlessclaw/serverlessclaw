@@ -13,7 +13,7 @@ import { filterPIIFromObject } from '../utils/pii';
 import { queryLatestContentByUserId } from './utils';
 import { RETENTION } from '../constants/memory';
 import { logger } from '../logger';
-import { sessionIdToSortKey } from '../utils/id-generator';
+import { sessionIdToSortKey, fnv1aHash } from '../utils/id-generator';
 
 /**
  * Appends a new message with tiered retention.
@@ -167,8 +167,9 @@ export async function saveConversationMeta(
     const existing = existingItems[0];
     const existingSessionId = existing.sessionId as string | undefined;
     if (existingSessionId && existingSessionId !== sessionId) {
-      const collisionSuffix = `_${Date.now()}`;
-      stableSortKey = stableSortKey + collisionSuffix;
+      // Collision detected (same timestamp part, different sessionId)
+      // Resolve by using the stable hash of the full sessionId
+      stableSortKey = Number(fnv1aHash(sessionId));
     }
   }
 

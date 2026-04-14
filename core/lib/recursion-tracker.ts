@@ -46,10 +46,11 @@ export async function pushRecursionEntry(
           timestamp: 0,
         },
         UpdateExpression:
-          'SET depth = :depth, sessionId = :sessionId, agentId = :agentId, createdAt = :now, expiresAt = :exp, #type = :type',
-        ConditionExpression: 'attribute_not_exists(depth) OR depth < :depth',
+          'SET #depth = :depth, sessionId = :sessionId, agentId = :agentId, createdAt = :now, expiresAt = :exp, #type = :type',
+        ConditionExpression: 'attribute_not_exists(#depth) OR #depth < :depth',
         ExpressionAttributeNames: {
           '#type': 'type',
+          '#depth': 'depth',
         },
         ExpressionAttributeValues: {
           ':depth': depth,
@@ -112,7 +113,10 @@ export async function clearRecursionStack(traceId: string): Promise<void> {
       new DeleteCommand({
         TableName: process.env.MEMORY_TABLE_NAME ?? 'MemoryTable',
         Key: { userId: key, timestamp: 0 },
-        ConditionExpression: 'attribute_exists(depth)',
+        ConditionExpression: 'attribute_exists(#depth)',
+        ExpressionAttributeNames: {
+          '#depth': 'depth',
+        },
       })
     );
 

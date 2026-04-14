@@ -212,7 +212,10 @@ export class SafetyEngine extends SafetyBase {
     });
 
     if (this.isClassCAction(action)) {
-      const blastRadiusError = this.enforceClassCBlastRadius(agentConfig?.id ?? 'unknown', action);
+      const blastRadiusError = await this.enforceClassCBlastRadius(
+        agentConfig?.id ?? 'unknown',
+        action
+      );
       if (blastRadiusError) {
         const violation = this.createViolation(
           agentConfig?.id ?? 'unknown',
@@ -243,7 +246,7 @@ export class SafetyEngine extends SafetyBase {
         traceId: context?.traceId,
         userId: context?.userId,
       });
-      this.trackClassCBlastRadius(agentConfig?.id ?? 'unknown', action, context?.resource);
+      await this.trackClassCBlastRadius(agentConfig?.id ?? 'unknown', action, context?.resource);
     }
 
     const hasPromotionTrust =

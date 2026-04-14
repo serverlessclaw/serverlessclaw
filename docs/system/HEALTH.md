@@ -88,7 +88,7 @@ The DMS runs on a disciplined 15-minute cadence via a recurring EventBridge sche
 Unlike basic uptime checks, the DMS verifies the entire **Cognitive Stack**:
 
 - **Bus Health**: Emits a test event and verifies delivery.
-- **Provider Health**: Calls a lightweight agent to verify LLM reachability.
+- **Provider Health**: Calls the active LLM provider to verify connectivity and ensures active model configurations are valid and resolvable.
 - **Tool Integrity**: Verifies that the the `AgentRegistry` can be successfully read from DynamoDB.
 
 ## Triage & Recovery

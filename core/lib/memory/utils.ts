@@ -127,7 +127,7 @@ export async function getRegisteredMemoryTypes(base: BaseMemoryProvider): Promis
     },
     ExpressionAttributeValues: {
       ':userId': 'SYSTEM#REGISTRY',
-      ':ts': '0',
+      ':ts': 0,
     },
   });
 
@@ -329,9 +329,9 @@ export function getGapIdPK(gapId: string): string {
  * @param gapId - The gap ID.
  * @returns The numeric timestamp or 0.
  */
-export function getGapTimestamp(gapId: string): string {
+export function getGapTimestamp(gapId: string): number {
   const normalized = normalizeGapId(gapId);
   const numericMatch = normalized.match(/(\d+)$/);
-  if (!numericMatch) return '0';
-  return numericMatch[1];
+  if (!numericMatch) return 0;
+  return parseInt(numericMatch[1], 10);
 }

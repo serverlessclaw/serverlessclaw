@@ -1,5 +1,6 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
+import { Resource } from 'sst';
 
 /**
  * Shared DynamoDB document client instance for tracing and other utilities.
@@ -31,4 +32,13 @@ export function getDocClient(): DynamoDBDocumentClient {
  */
 export function resetDocClient(): void {
   _docClient = undefined;
+}
+/**
+ * Returns the name of the ConfigTable resource.
+ *
+ * @returns The table name string.
+ */
+export function getConfigTableName(): string {
+  const resource = Resource as { ConfigTable?: { name?: string } };
+  return resource.ConfigTable?.name ?? 'ConfigTable';
 }

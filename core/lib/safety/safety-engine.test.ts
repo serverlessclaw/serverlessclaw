@@ -49,6 +49,58 @@ vi.mock('../utils/bus', () => ({
   emitEvent: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('./blast-radius-store', () => {
+  const createMockStore = () => {
+    const blastState: Record<string, { count: number; lastAction: number; resourceCount: number }> =
+      {};
+    return {
+      getLocalStats: vi.fn(() => {
+        const result: Record<
+          string,
+          { count: number; affectedResources: number; lastAction: number }
+        > = {};
+        for (const [key, val] of Object.entries(blastState)) {
+          result[key] = {
+            count: val.count,
+            affectedResources: val.resourceCount,
+            lastAction: val.lastAction,
+          };
+        }
+        return result;
+      }),
+      getBlastRadius: vi.fn((agentId: string, action: string) => {
+        const key = `safety:blast_radius:${agentId}:${action}`;
+        return blastState[key] ? { key, ...blastState[key] } : null;
+      }),
+      canExecute: vi.fn((agentId: string, action: string) => {
+        const key = `safety:blast_radius:${agentId}:${action}`;
+        const count = blastState[key]?.count ?? 0;
+        if (count >= 5) {
+          return {
+            allowed: false,
+            error: `BLAST_RADIUS_EXCEEDED: Action '${action}' has reached its safety limit (${count}/5 in 1h).`,
+          };
+        }
+        return { allowed: true };
+      }),
+      incrementBlastRadius: vi.fn((agentId: string, action: string) => {
+        const key = `safety:blast_radius:${agentId}:${action}`;
+        const current = blastState[key]?.count ?? 0;
+        blastState[key] = { count: current + 1, lastAction: Date.now(), resourceCount: 0 };
+        return { key, ...blastState[key] };
+      }),
+      clearLocalCache: vi.fn(() => {
+        Object.keys(blastState).forEach((k) => delete blastState[k]);
+      }),
+    };
+  };
+
+  return {
+    getBlastRadiusStore: () => createMockStore(),
+    resetBlastRadiusStore: vi.fn(),
+  };
+});
+
 describe('SafetyEngine', () => {
   let engine: SafetyEngine;
 

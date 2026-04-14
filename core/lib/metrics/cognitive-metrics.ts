@@ -823,7 +823,9 @@ export class ConsistencyProbe {
       }
 
       const client = new DynamoDBClient({});
-      const docClient = DynamoDBDocumentClient.from(client);
+      const docClient = DynamoDBDocumentClient.from(client, {
+        marshallOptions: { removeUndefinedValues: true },
+      });
 
       const response = await docClient.send(
         new QueryCommand({

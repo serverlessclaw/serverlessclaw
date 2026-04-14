@@ -114,6 +114,7 @@ export function createAgents(
     secrets,
     bus,
     deployer,
+    deployerLink,
     dlq,
   } = ctx;
 
@@ -245,7 +246,7 @@ export function createAgents(
   const highPowerMultiplexer = new sst.aws.Function('HighPowerMultiplexer', {
     handler: 'core/handlers/agent-multiplexer.handler',
     dev: liveInLocalOnly,
-    link: [...baseLink, stagingBucket],
+    link: [...baseLink, stagingBucket, deployerLink],
     permissions: [...basePermissions, ...schedulerPermissions],
     architecture: LAMBDA_ARCHITECTURE,
     nodejs: { loader: NODEJS_LOADERS },
@@ -271,7 +272,7 @@ export function createAgents(
   const standardMultiplexer = new sst.aws.Function('StandardMultiplexer', {
     handler: 'core/handlers/agent-multiplexer.handler',
     dev: liveInLocalOnly,
-    link: baseLink,
+    link: [...baseLink, deployerLink],
     permissions: [...basePermissions, ...schedulerPermissions],
     architecture: LAMBDA_ARCHITECTURE,
     nodejs: { loader: NODEJS_LOADERS },
@@ -297,7 +298,7 @@ export function createAgents(
   const lightMultiplexer = new sst.aws.Function('LightMultiplexer', {
     handler: 'core/handlers/agent-multiplexer.handler',
     dev: liveInLocalOnly,
-    link: [...baseLink, stagingBucket], // Merger needs staging
+    link: [...baseLink, stagingBucket, deployerLink],
     permissions: [...basePermissions, ...schedulerPermissions],
     architecture: LAMBDA_ARCHITECTURE,
     nodejs: { loader: NODEJS_LOADERS },
@@ -332,7 +333,7 @@ export function createAgents(
   const buildMonitor = new sst.aws.Function('BuildMonitor', {
     handler: 'core/handlers/monitor.handler',
     dev: liveInLocalOnly,
-    link: [...baseLink, stagingBucket, deployer, ...(ctx.multiplexer ? [ctx.multiplexer] : [])],
+    link: [...baseLink, stagingBucket, deployerLink, ...(ctx.multiplexer ? [ctx.multiplexer] : [])],
     architecture: LAMBDA_ARCHITECTURE,
     nodejs: { loader: NODEJS_LOADERS },
     environment: { TRACE_SUMMARIES_ENABLED: 'true' },
@@ -345,7 +346,10 @@ export function createAgents(
       {
         actions: ['logs:GetLogEvents'],
         resources: [
-          $util.interpolate`arn:aws:logs:${aws.getRegionOutput().name}:${aws.getCallerIdentityOutput().accountId}:log-group:/aws/codebuild/${deployer.name}:*`,
+          deployer.name.apply(
+            (name) =>
+              $util.interpolate`arn:aws:logs:${aws.getRegionOutput().name}:${aws.getCallerIdentityOutput().accountId}:log-group:/aws/codebuild/${name}:*`
+          ),
         ],
       },
     ],
@@ -360,7 +364,7 @@ export function createAgents(
   const deadMansSwitch = new sst.aws.Function('DeadMansSwitch', {
     handler: 'core/handlers/recovery.handler',
     dev: liveInLocalOnly,
-    link: [...baseLink, deployer, ctx.api],
+    link: [...baseLink, deployerLink, ctx.api],
     permissions: [
       ...basePermissions,
       {
@@ -428,7 +432,16 @@ export function createAgents(
     handler: 'core/handlers/events.handler',
     dev: liveInLocalOnly,
     link: baseLink,
-    permissions: basePermissions,
+    permissions: [
+      ...basePermissions,
+      {
+        actions: ['dynamodb:*'],
+        resources: [
+          memoryTable.nodes.table.arn,
+          memoryTable.nodes.table.arn.apply((arn) => `${arn}/index/*`),
+        ],
+      },
+    ],
     architecture: LAMBDA_ARCHITECTURE,
     nodejs: { loader: NODEJS_LOADERS },
     memory: AGENT_CONFIG.memory.MEDIUM,

@@ -24,7 +24,7 @@ export class DistributedState {
       const result = await docClient.send(
         new GetCommand({
           TableName: TABLE_NAME,
-          Key: { userId: fullKey, timestamp: '0' },
+          Key: { userId: fullKey, timestamp: 0 },
         })
       );
 
@@ -57,7 +57,7 @@ export class DistributedState {
       await docClient.send(
         new UpdateCommand({
           TableName: TABLE_NAME,
-          Key: { userId: fullKey, timestamp: '0' },
+          Key: { userId: fullKey, timestamp: 0 },
           UpdateExpression:
             'SET #count = if_not_exists(#count, :zero) + :one, #type = :type, expiresAt = :exp, updatedAt = :now',
           ExpressionAttributeNames: { '#count': 'count', '#type': 'type' },
@@ -76,7 +76,7 @@ export class DistributedState {
       const result = await docClient.send(
         new GetCommand({
           TableName: TABLE_NAME,
-          Key: { userId: fullKey, timestamp: '0' },
+          Key: { userId: fullKey, timestamp: 0 },
         })
       );
 
@@ -85,7 +85,7 @@ export class DistributedState {
           .send(
             new UpdateCommand({
               TableName: TABLE_NAME,
-              Key: { userId: fullKey, timestamp: '0' },
+              Key: { userId: fullKey, timestamp: 0 },
               UpdateExpression: 'SET openedAt = :now',
               ConditionExpression: 'attribute_not_exists(openedAt)',
               ExpressionAttributeValues: { ':now': now },
@@ -112,7 +112,7 @@ export class DistributedState {
       const result = await docClient.send(
         new GetCommand({
           TableName: TABLE_NAME,
-          Key: { userId: fullKey, timestamp: '0' },
+          Key: { userId: fullKey, timestamp: 0 },
         })
       );
 
@@ -123,7 +123,7 @@ export class DistributedState {
           await docClient.send(
             new UpdateCommand({
               TableName: TABLE_NAME,
-              Key: { userId: fullKey, timestamp: '0' },
+              Key: { userId: fullKey, timestamp: 0 },
               UpdateExpression:
                 'SET #tokens = :tokens, lastRefill = :now, #type = :type, expiresAt = :exp',
               ConditionExpression: 'attribute_not_exists(userId)',
@@ -143,7 +143,7 @@ export class DistributedState {
           const retry = await docClient.send(
             new GetCommand({
               TableName: TABLE_NAME,
-              Key: { userId: fullKey, timestamp: '0' },
+              Key: { userId: fullKey, timestamp: 0 },
             })
           );
           state = retry.Item;
@@ -168,7 +168,7 @@ export class DistributedState {
         await docClient.send(
           new UpdateCommand({
             TableName: TABLE_NAME,
-            Key: { userId: fullKey, timestamp: '0' },
+            Key: { userId: fullKey, timestamp: 0 },
             UpdateExpression: 'SET #tokens = :newTokens, lastRefill = :newRefill, expiresAt = :exp',
             ConditionExpression: '#tokens = :expectedTokens AND lastRefill = :expectedRefill',
             ExpressionAttributeNames: { '#tokens': 'tokens' },

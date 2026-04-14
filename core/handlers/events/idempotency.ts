@@ -42,7 +42,7 @@ export async function checkAndMarkIdempotent(
         TableName: process.env.MEMORY_TABLE_NAME ?? 'MemoryTable',
         Item: {
           userId: key,
-          timestamp: '0',
+          timestamp: 0,
           type: 'IDEMPOTENCY',
           eventType,
           processedAt: now,

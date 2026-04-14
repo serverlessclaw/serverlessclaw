@@ -187,7 +187,7 @@ describe('memory/utils', () => {
           KeyConditionExpression: 'userId = :userId AND #ts = :ts',
           ExpressionAttributeValues: expect.objectContaining({
             ':userId': 'SYSTEM#REGISTRY',
-            ':ts': '0',
+            ':ts': 0,
           }),
         })
       );
@@ -330,24 +330,24 @@ describe('memory/utils', () => {
   });
 
   describe('getGapTimestamp', () => {
-    it('should return numeric string for valid numeric gap ID', () => {
-      expect(getGapTimestamp('GAP#123')).toBe('123');
+    it('should return numeric value for valid numeric gap ID', () => {
+      expect(getGapTimestamp('GAP#123')).toBe(123);
     });
 
-    it('should return 0 as string for non-numeric normalized ID', () => {
-      expect(getGapTimestamp('GAP#abc')).toBe('0');
+    it('should return 0 for non-numeric normalized ID', () => {
+      expect(getGapTimestamp('GAP#abc')).toBe(0);
     });
 
-    it('should handle NaN by returning 0 as string', () => {
-      expect(getGapTimestamp('GAP#')).toBe('0');
+    it('should handle NaN by returning 0', () => {
+      expect(getGapTimestamp('GAP#')).toBe(0);
     });
 
-    it('should strip prefixes before parsing and return as string', () => {
-      expect(getGapTimestamp('PROC#GAP#456')).toBe('456');
+    it('should strip prefixes before parsing and return as number', () => {
+      expect(getGapTimestamp('PROC#GAP#456')).toBe(456);
     });
 
-    it('should return 0 as string for empty string', () => {
-      expect(getGapTimestamp('')).toBe('0');
+    it('should return 0 for empty string', () => {
+      expect(getGapTimestamp('')).toBe(0);
     });
   });
 

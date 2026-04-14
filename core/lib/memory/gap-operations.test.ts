@@ -55,9 +55,9 @@ describe('Gap Operations', () => {
       expect(calls).toHaveLength(1);
 
       const item = calls[0].args[0].input.Item;
-      expect(item?.timestamp).toBe('1710240000000');
-      expect(String(item?.createdAt)).toBe('1710240000000');
-      expect(String(item?.metadata?.lastAccessed)).toBe('1710240000000');
+      expect(item?.timestamp).toBe(1710240000000);
+      expect(item?.createdAt).toBe(1710240000000);
+      expect(item?.metadata?.lastAccessed).toBe(1710240000000);
     });
 
     it('should use Date.now() as timestamp when gapId is non-numeric', async () => {
@@ -69,7 +69,7 @@ describe('Gap Operations', () => {
 
       const calls = ddbMock.commandCalls(PutCommand);
       const item = calls[0].args[0].input.Item;
-      expect(item?.timestamp).toBe('0');
+      expect(item?.timestamp).toBe(0);
       vi.useRealTimers();
     });
 
@@ -82,7 +82,7 @@ describe('Gap Operations', () => {
       const item = calls[0].args[0].input.Item;
       // Should extract trailing digits (42), not the full compound ID
       expect(item?.userId).toBe('GAP#42');
-      expect(item?.timestamp).toBe('42');
+      expect(item?.timestamp).toBe(42);
     });
 
     it('should store correct metadata fields', async () => {
@@ -117,7 +117,7 @@ describe('Gap Operations', () => {
       expect(calls).toHaveLength(1);
 
       const input = calls[0].args[0].input;
-      expect(input.Key).toEqual({ userId: 'GAP#42', timestamp: '42' });
+      expect(input.Key).toEqual({ userId: 'GAP#42', timestamp: 42 });
       expect(input.UpdateExpression).toContain('metadata.impact = :impact');
       expect(input.UpdateExpression).toContain('metadata.priority = :priority');
       expect(input.ExpressionAttributeValues?.[':impact']).toBe(9);
@@ -132,7 +132,7 @@ describe('Gap Operations', () => {
       const calls = ddbMock.commandCalls(UpdateCommand);
       expect(calls[0].args[0].input.Key).toEqual({
         userId: 'GAP#42',
-        timestamp: '42',
+        timestamp: 42,
       });
     });
 
@@ -186,7 +186,7 @@ describe('Gap Operations', () => {
       // Should normalize to trailing digits (42), matching setGap's storage
       expect(calls[0].args[0].input.Key).toEqual({
         userId: 'GAP#42',
-        timestamp: '42',
+        timestamp: 42,
       });
     });
 
@@ -200,7 +200,7 @@ describe('Gap Operations', () => {
       const calls = ddbMock.commandCalls(UpdateCommand);
       expect(calls[0].args[0].input.Key).toEqual({
         userId: 'GAP#1710240000000',
-        timestamp: '1710240000000',
+        timestamp: 1710240000000,
       });
     });
 
@@ -252,8 +252,8 @@ describe('Gap Operations', () => {
 
       ddbMock.on(QueryCommand).resolves({
         Items: [
-          { userId: 'GAP#1', timestamp: String(staleTime), type: 'GAP', status: GapStatus.OPEN },
-          { userId: 'GAP#2', timestamp: String(now), type: 'GAP', status: GapStatus.PLANNED },
+          { userId: 'GAP#1', timestamp: staleTime, type: 'GAP', status: GapStatus.OPEN },
+          { userId: 'GAP#2', timestamp: now, type: 'GAP', status: GapStatus.PLANNED },
         ],
       });
       ddbMock.on(UpdateCommand).resolves({});
@@ -279,7 +279,7 @@ describe('Gap Operations', () => {
       expect(updateCalls).toHaveLength(1);
       expect(updateCalls[0].args[0].input.Key).toEqual({
         userId: 'GAP#1',
-        timestamp: String(staleTime),
+        timestamp: staleTime,
       });
     });
   });
@@ -337,7 +337,7 @@ describe('Gap-Track Assignment', () => {
   describe('getGapTrack', () => {
     it('should return track assignment', async () => {
       ddbMock.on(QueryCommand).resolves({
-        Items: [{ userId: 'TRACK#gap-42', timestamp: '0', track: 'security', priority: 1 }],
+        Items: [{ userId: 'TRACK#gap-42', timestamp: 0, track: 'security', priority: 1 }],
       });
 
       const result = await getGapTrack(base, 'gap-42');
@@ -404,7 +404,7 @@ describe('Gap Lock Operations', () => {
       const calls = ddbMock.commandCalls(UpdateCommand);
       expect(calls).toHaveLength(1);
       const input = calls[0].args[0].input;
-      expect(input.Key).toEqual({ userId: 'GAP_LOCK#42', timestamp: '0' });
+      expect(input.Key).toEqual({ userId: 'GAP_LOCK#42', timestamp: 0 });
       expect(input.ExpressionAttributeValues).toEqual(
         expect.objectContaining({
           ':type': 'GAP_LOCK',
@@ -450,7 +450,7 @@ describe('Gap Lock Operations', () => {
       // normalizeGapId strips GAP# prefix but does NOT extract trailing digits
       expect(calls[0].args[0].input.Key).toEqual({
         userId: 'GAP_LOCK#TOOLOPT-1710240000000-42',
-        timestamp: '0',
+        timestamp: 0,
       });
     });
   });
@@ -464,7 +464,7 @@ describe('Gap Lock Operations', () => {
       const calls = ddbMock.commandCalls(DeleteCommand);
       expect(calls).toHaveLength(1);
       const input = calls[0].args[0].input;
-      expect(input.Key).toEqual({ userId: 'GAP_LOCK#42', timestamp: '0' });
+      expect(input.Key).toEqual({ userId: 'GAP_LOCK#42', timestamp: 0 });
       expect(input.ConditionExpression).toBe('#content = :agentId');
       expect(input.ExpressionAttributeValues).toEqual({ ':agentId': 'agent-planner-1' });
     });
@@ -492,7 +492,7 @@ describe('Gap Lock Operations', () => {
       const calls = ddbMock.commandCalls(DeleteCommand);
       expect(calls[0].args[0].input.Key).toEqual({
         userId: 'GAP_LOCK#TOOLOPT-1710240000000-42',
-        timestamp: '0',
+        timestamp: 0,
       });
     });
   });
@@ -504,7 +504,7 @@ describe('Gap Lock Operations', () => {
         Items: [
           {
             userId: 'GAP_LOCK#42',
-            timestamp: '0',
+            timestamp: 0,
             agentId: 'agent-planner-1',
             expiresAt: futureExpiresAt,
           },
@@ -526,7 +526,7 @@ describe('Gap Lock Operations', () => {
         Items: [
           {
             userId: 'GAP_LOCK#42',
-            timestamp: '0',
+            timestamp: 0,
             agentId: 'agent-planner-1',
             expiresAt: pastExpiresAt,
           },
