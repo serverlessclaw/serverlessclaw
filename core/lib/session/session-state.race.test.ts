@@ -62,4 +62,41 @@ describe('SessionStateManager Race Conditions', () => {
     expect(updateCall.ConditionExpression).toBe('pendingMessages = :old');
     expect(updateCall.ExpressionAttributeValues?.[':old']).toEqual(initialMessages);
   });
+
+  it('fix verified: addPendingMessage uses atomic conditional to prevent exceeding 50 messages', async () => {
+    ddbMock.on(UpdateCommand).rejects({
+      name: 'ConditionalCheckFailedException',
+      message: 'Queue full',
+    });
+
+    const sessionStateManager = new SessionStateManager();
+
+    // Attempting to add the 51st message should throw PENDING_QUEUE_FULL
+    await expect(
+      sessionStateManager.addPendingMessage('session-full', 'new-message')
+    ).rejects.toThrow('PENDING_QUEUE_FULL');
+
+    // Verify the conditional check was used
+    const updateCall = ddbMock.calls()[0]?.args[0]?.input as UpdateCommandInput;
+    expect(updateCall).toBeDefined();
+    expect(updateCall.ConditionExpression).toContain('size(pendingMessages) < :max');
+    expect(updateCall.ExpressionAttributeValues?.[':max']).toBe(50);
+  });
+
+  it('should allow adding messages when queue has room', async () => {
+    const messages = Array.from({ length: 49 }, (_, i) => ({
+      id: `msg-${i}`,
+      content: `content-${i}`,
+      timestamp: Date.now() + i,
+    }));
+
+    ddbMock.on(UpdateCommand).resolves({ Attributes: { pendingMessages: messages } });
+
+    const sessionStateManager = new SessionStateManager();
+
+    // Should succeed - queue has room for 1 more
+    await expect(
+      sessionStateManager.addPendingMessage('session-not-full', 'new-message')
+    ).resolves.not.toThrow();
+  });
 });

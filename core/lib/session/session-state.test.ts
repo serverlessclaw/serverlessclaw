@@ -185,45 +185,27 @@ describe('SessionStateManager', () => {
   });
 
   describe('addPendingMessage', () => {
-    it('should add message to pending list and truncate if over 50', async () => {
-      // Mock initial state: 51 messages (to simulate having just added one, as addPendingMessage appends then checks)
-      const longList = Array.from({ length: 51 }, (_, i) => ({
-        id: i === 50 ? 'new-id' : `msg-${i}`,
-        content: i === 50 ? 'New message' : `msg ${i}`,
-        attachments: [],
-        timestamp: Date.now(),
-      }));
+    it('should add message to pending list and reject when queue is full (atomic conditional)', async () => {
+      // With atomic conditional, when the queue already has 50 messages,
+      // the conditional check fails and the append is rejected
 
-      // 1. First UpdateCommand (list_append)
-      ddbMock.on(UpdateCommand).resolves({});
-
-      // 2. Subsequent GetCommand calls (getPendingMessages) return 51 items
-      ddbMock.on(GetCommand).resolves({
-        Item: {
-          pendingMessages: longList,
-        },
+      // The UpdateCommand should fail with ConditionalCheckFailedException when queue is full
+      ddbMock.on(UpdateCommand).rejects({
+        name: 'ConditionalCheckFailedException',
+        message: 'Queue full',
       });
 
-      // 3. Second UpdateCommand (clearPendingMessages) - should be called because length > 50
-      // We expect it to try to remove the oldest message (msg-0)
-
-      await sessionStateManager.addPendingMessage('session-123', 'New message');
+      // Attempting to add when queue is at capacity should reject
+      await expect(
+        sessionStateManager.addPendingMessage('session-123', 'New message')
+      ).rejects.toThrow('PENDING_QUEUE_FULL');
 
       const updateCalls = ddbMock.calls().filter((c) => c.args[0] instanceof UpdateCommand);
-      // expect at least 2 update calls: 1 for append, 1 for truncation
-      expect(updateCalls.length).toBeGreaterThanOrEqual(2);
+      expect(updateCalls.length).toBe(1);
 
-      const truncationUpdate = updateCalls.find((c) => {
-        const input = c.args[0].input as UpdateCommandInput;
-        return input.UpdateExpression?.includes('SET pendingMessages = :remaining');
-      });
-
-      expect(truncationUpdate).toBeDefined();
-      const filteredList = (truncationUpdate?.args[0].input as UpdateCommandInput)
-        .ExpressionAttributeValues?.[':remaining'];
-      expect(filteredList).toHaveLength(50);
-      expect(filteredList[0].id).toBe('msg-1');
-      expect(filteredList[49].content).toBe('New message');
+      const rejectedCall = updateCalls[0].args[0].input as UpdateCommandInput;
+      expect(rejectedCall.ConditionExpression).toContain('size(pendingMessages) < :max');
+      expect(rejectedCall.ExpressionAttributeValues?.[':max']).toBe(50);
     });
 
     it('should handle small lists without truncation', async () => {

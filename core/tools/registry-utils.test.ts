@@ -96,6 +96,24 @@ describe('registry-utils', () => {
       expect(tools).toContain(mockExternalTool);
     });
 
+    it('should deduplicate tools, giving local tools priority', async () => {
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
+        id: 'a1',
+        tools: ['localTool1'],
+      });
+      // Mock an external tool with the same name
+      const mockExternalTool = {
+        name: 'localTool1',
+        description: 'external version',
+        parameters: {},
+      } as ITool;
+      mockMCPMultiplexer.getExternalTools.mockResolvedValueOnce([mockExternalTool]);
+
+      const tools = await getAgentTools('a1');
+      expect(tools).toHaveLength(1);
+      expect(tools[0].description).toBe('desc1'); // Original local description
+    });
+
     it('should trigger smart warmup if MCP_SERVER_ARNS is present', async () => {
       process.env.MCP_SERVER_ARNS = JSON.stringify({ myServer: 'arn:xxx' });
       mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({

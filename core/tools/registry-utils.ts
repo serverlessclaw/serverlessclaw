@@ -37,14 +37,27 @@ export async function getAgentTools(agentId: string): Promise<ITool[]> {
 
   // 2. Resolve external MCP tools if any match the requested tool names
   const externalTools = await MCPMultiplexer.getExternalTools(config.tools);
-  const matchedExternal = externalTools.filter((t: ITool) =>
-    config.tools!.some((req) => t.name === req || t.name.startsWith(`${req}_`))
-  );
 
-  if (matchedExternal.length > 0) {
-    logger.info(
-      `[TOOLS] External MCP tools found: ${matchedExternal.map((t) => t.name).join(', ')}`
-    );
+  // 3. Merge and deduplicate (Local tools take priority)
+  const allToolsMap = new Map<string, ITool>();
+
+  // Add external tools first
+  for (const t of externalTools) {
+    if (config.tools!.some((req) => t.name === req || t.name.startsWith(`${req}_`))) {
+      allToolsMap.set(t.name, t);
+    }
+  }
+
+  // Add local tools (overwriting external if name collision occurs)
+  for (const t of localTools) {
+    allToolsMap.set(t.name, t);
+  }
+
+  const finalTools = Array.from(allToolsMap.values());
+
+  if (finalTools.length > localTools.length) {
+    const externalAdded = finalTools.filter((ft) => !localTools.find((lt) => lt.name === ft.name));
+    logger.info(`[TOOLS] External MCP tools added: ${externalAdded.map((t) => t.name).join(', ')}`);
 
     // Smart Warmup: Trigger background warmup for these servers if in a Lambda environment
     if (process.env.MCP_SERVER_ARNS) {
@@ -52,7 +65,7 @@ export async function getAgentTools(agentId: string): Promise<ITool[]> {
         const { WarmupManager } = await import('../lib/warmup');
         const serverArns = JSON.parse(process.env.MCP_SERVER_ARNS);
         const serversToWarm = Array.from(
-          new Set(matchedExternal.map((t) => t.name.split('_')[0]))
+          new Set(externalAdded.map((t) => t.name.split('_')[0]))
         ).filter((name) => serverArns[name]);
 
         if (serversToWarm.length > 0) {
@@ -76,7 +89,7 @@ export async function getAgentTools(agentId: string): Promise<ITool[]> {
     }
   }
 
-  return [...localTools, ...matchedExternal];
+  return finalTools;
 }
 
 /**

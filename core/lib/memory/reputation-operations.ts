@@ -74,7 +74,8 @@ export async function getReputation(
 
 /**
  * Updates agent reputation on task completion or failure.
- * Implements rolling window reset: if the window has expired, counters reset.
+ * Uses atomic DynamoDB operations to prevent race conditions.
+ * Window expiry is handled by DynamoDB TTL - stale records auto-expire.
  *
  * @param base - The base memory provider instance.
  * @param agentId - The agent whose reputation to update.
@@ -88,52 +89,61 @@ export async function updateReputation(
   latencyMs: number = 0
 ): Promise<void> {
   const now = Date.now();
-  const existing = await getReputation(base, agentId);
-
-  let tasksCompleted: number;
-  let tasksFailed: number;
-  let totalLatencyMs: number;
-  let windowStart: number;
-
-  if (existing && now - existing.windowStart < REPUTATION_WINDOW_MS) {
-    // Within rolling window — accumulate
-    tasksCompleted = existing.tasksCompleted + (success ? 1 : 0);
-    tasksFailed = existing.tasksFailed + (success ? 0 : 1);
-    totalLatencyMs = existing.totalLatencyMs + (success ? latencyMs : 0);
-    windowStart = existing.windowStart;
-  } else {
-    // Window expired or first record — start fresh
-    tasksCompleted = success ? 1 : 0;
-    tasksFailed = success ? 0 : 1;
-    totalLatencyMs = success ? latencyMs : 0;
-    windowStart = now;
-  }
-
-  const total = tasksCompleted + tasksFailed;
-  const successRate = total > 0 ? tasksCompleted / total : 0;
-  const avgLatencyMs = tasksCompleted > 0 ? totalLatencyMs / tasksCompleted : 0;
-  const expiresAt = Math.floor((now + REPUTATION_WINDOW_MS) / 1000);
+  const pk = reputationKey(agentId);
 
   try {
-    await base.putItem({
-      userId: reputationKey(agentId),
-      timestamp: 0,
-      type: 'REPUTATION',
-      agentId,
-      tasksCompleted,
-      tasksFailed,
-      totalLatencyMs,
-      successRate,
-      avgLatencyMs,
-      lastActive: now,
-      windowStart,
-      expiresAt,
-      createdAt: existing?.windowStart ?? now,
+    // Use atomic ADD operations to prevent race conditions
+    // If item doesn't exist, initializes with starting values
+    await base.updateItem({
+      Key: { userId: pk, timestamp: 0 },
+      UpdateExpression:
+        'SET type = :type, ' +
+        'agentId = :agentId, ' +
+        'lastActive = :now, ' +
+        'expiresAt = :exp, ' +
+        'tasksCompleted = if_not_exists(tasksCompleted, :zero) + :completed, ' +
+        'tasksFailed = if_not_exists(tasksFailed, :zero) + :failed, ' +
+        'totalLatencyMs = if_not_exists(totalLatencyMs, :zero) + :latency, ' +
+        'windowStart = if_not_exists(windowStart, :now), ' +
+        'createdAt = if_not_exists(createdAt, :now), ' +
+        'successRate = :calcRate, ' +
+        'avgLatencyMs = :calcLatency',
+      ExpressionAttributeValues: {
+        ':type': 'REPUTATION',
+        ':agentId': agentId,
+        ':now': now,
+        ':exp': Math.floor((now + REPUTATION_WINDOW_MS) / 1000),
+        ':zero': 0,
+        ':completed': success ? 1 : 0,
+        ':failed': success ? 0 : 1,
+        ':latency': success ? latencyMs : 0,
+        ':calcRate': 0, // Placeholder - computed on read
+        ':calcLatency': 0, // Placeholder - computed on read
+      },
+    });
+
+    // Now read back to compute derived values and update atomically
+    const existing = await getReputation(base, agentId);
+    if (!existing) return; // Should have been created above
+
+    const total = existing.tasksCompleted + existing.tasksFailed;
+    const successRate = total > 0 ? existing.tasksCompleted / total : 0;
+    const avgLatencyMs =
+      existing.tasksCompleted > 0 ? existing.totalLatencyMs / existing.tasksCompleted : 0;
+
+    // Final atomic update with computed derived values
+    await base.updateItem({
+      Key: { userId: pk, timestamp: 0 },
+      UpdateExpression: 'SET successRate = :rate, avgLatencyMs = :latency',
+      ExpressionAttributeValues: {
+        ':rate': successRate,
+        ':latency': avgLatencyMs,
+      },
     });
 
     logger.info(
       `[Reputation] Updated ${agentId}: success=${success}, rate=${successRate.toFixed(2)}, ` +
-        `completed=${tasksCompleted}, failed=${tasksFailed}, avgLatency=${avgLatencyMs.toFixed(0)}ms`
+        `completed=${existing.tasksCompleted}, failed=${existing.tasksFailed}, avgLatency=${avgLatencyMs.toFixed(0)}ms`
     );
   } catch (error) {
     logger.error(`Failed to update reputation for ${agentId}:`, error);

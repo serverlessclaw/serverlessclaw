@@ -18,7 +18,7 @@ The system enforces hard limits on high-impact actions to prevent runaway costs 
 
 - **Class C Limit**: Hard cap of 5 Class C actions per hour per agent (Principle 10).
 - **Promotion**: Class C actions require human approval unless an agent is in `EVOLUTION_MODE="AUTO"` and has a `TrustScore >= 95`.
-- **Persistence**: The `BlastRadiusStore` uses DynamoDB to persist counts across Lambda cold starts, with local cache for performance within the same instance.
+- **Persistence**: The `BlastRadiusStore` uses DynamoDB with atomic `ADD` operations to persist counts safely across Lambda cold starts, with a local cache for performance within the same instance.
 
 ```text
    [ Class C Action ]
@@ -42,14 +42,16 @@ The system enforces hard limits on high-impact actions to prevent runaway costs 
         [count>=5]  [count=0]
                |    |
           [BLOCKED] [ALLOWED]
+          (Error:   (Atomic
+          EXCEEDED)  Increment)
 ```
 
 **Key Features**:
 
 - DynamoDB-backed storage with key pattern `safety:blast_radius:{agentId}:{action}`
+- **Atomic Integrity**: Uses DynamoDB `ADD` to prevent race conditions during concurrent agent activity (Principle 13).
 - Local cache for performance within same Lambda instance
-- 1-hour TTL (WINDOW_MS) with automatic cleanup
-- Atomic increments prevent race conditions
+- 1-hour TTL (WINDOW_MS) with automatic cleanup via `expiresAt` GSI.
 
 ### Layer 3: Loop Interdiction
 

@@ -79,6 +79,20 @@ describe('MCPToolMapper', () => {
       expect(tools[0].name).toBe('myserver_tool_a');
     });
 
+    it('marks git and filesystem tools as sequential', () => {
+      const client = makeMockClient();
+      const rawTools = [{ name: 'status', inputSchema: { type: 'object', properties: {} } }];
+
+      const gitTools = MCPToolMapper.mapTools('git', client, rawTools);
+      expect(gitTools[0].sequential).toBe(true);
+
+      const fsTools = MCPToolMapper.mapTools('filesystem', client, rawTools);
+      expect(fsTools[0].sequential).toBe(true);
+
+      const otherTools = MCPToolMapper.mapTools('other', client, rawTools);
+      expect(otherTools[0].sequential).toBe(false);
+    });
+
     it('uses default description when missing', () => {
       const client = makeMockClient();
       const rawTools = [{ name: 'tool_a', inputSchema: { type: 'object', properties: {} } }];

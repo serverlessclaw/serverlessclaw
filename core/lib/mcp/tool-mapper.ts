@@ -36,7 +36,11 @@ export class MCPToolMapper {
     mcpTool: any,
     clientProvider: () => Promise<Client>
   ): ITool {
-    const isFilesystemTool = serverName === 'filesystem' || mcpTool.name.startsWith('filesystem_');
+    const isSequentialTool =
+      serverName === 'filesystem' ||
+      serverName === 'git' ||
+      mcpTool.name.startsWith('filesystem_') ||
+      mcpTool.name.startsWith('git_');
     const toolName = `${serverName}_${mcpTool.name}`;
 
     const parameters = (mcpTool.inputSchema as JsonSchema) || {
@@ -101,7 +105,7 @@ export class MCPToolMapper {
       auth: { type: 'api_key', resource_id: '' },
       requiresApproval: mcpTool.requiresApproval ?? false, // Defaults to false, overridden by executor if sensitive
       requiredPermissions: mcpTool.requiredPermissions ?? [],
-      sequential: isFilesystemTool, // Filesystem operations usually need to be sequential
+      sequential: isSequentialTool, // Filesystem and Git operations usually need to be sequential
       pathKeys: pathKeys.length > 0 ? pathKeys : undefined,
       execute: async (toolArgs: Record<string, unknown>) => {
         try {

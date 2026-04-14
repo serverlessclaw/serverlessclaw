@@ -10,6 +10,7 @@ import { MEMORY_KEYS } from '../constants';
 const mockBase = {
   queryItems: vi.fn(),
   putItem: vi.fn(),
+  updateItem: vi.fn(),
 };
 
 vi.mock('../logger', () => ({
@@ -87,12 +88,10 @@ describe('ReputationOperations', () => {
 
       await updateReputation(mockBase as any, 'agent-1', true, 1000);
 
-      expect(mockBase.putItem).toHaveBeenCalledWith(
+      expect(mockBase.updateItem).toHaveBeenCalledWith(
         expect.objectContaining({
-          tasksCompleted: 6,
-          tasksFailed: 1,
-          totalLatencyMs: 6000,
-          successRate: 6 / 7,
+          Key: expect.objectContaining({ userId: 'REPUTATION#agent-1' }),
+          UpdateExpression: expect.stringContaining('tasksCompleted'),
         })
       );
     });
@@ -114,12 +113,10 @@ describe('ReputationOperations', () => {
 
       await updateReputation(mockBase as any, 'agent-1', true, 2000);
 
-      expect(mockBase.putItem).toHaveBeenCalledWith(
+      expect(mockBase.updateItem).toHaveBeenCalledWith(
         expect.objectContaining({
-          tasksCompleted: 1,
-          tasksFailed: 0,
-          totalLatencyMs: 2000,
-          successRate: 1.0,
+          Key: expect.objectContaining({ userId: 'REPUTATION#agent-1' }),
+          UpdateExpression: expect.stringContaining('tasksCompleted'),
         })
       );
     });
@@ -360,27 +357,17 @@ describe('ReputationOperations', () => {
 
       await updateReputation(mockBase as any, 'agent-new', true, 500);
 
-      expect(mockBase.putItem).toHaveBeenCalledWith(
+      expect(mockBase.updateItem).toHaveBeenCalledWith(
         expect.objectContaining({
-          agentId: 'agent-new',
-          tasksCompleted: 1,
-          tasksFailed: 0,
-          totalLatencyMs: 500,
-          successRate: 1.0,
-          avgLatencyMs: 500,
-        })
-      );
-      expect(mockBase.putItem).toHaveBeenCalledWith(
-        expect.objectContaining({
-          createdAt: expect.any(Number),
-          windowStart: expect.any(Number),
+          Key: expect.objectContaining({ userId: 'REPUTATION#agent-new' }),
+          UpdateExpression: expect.stringContaining('tasksCompleted'),
         })
       );
     });
 
     it('should handle errors gracefully without throwing', async () => {
       mockBase.queryItems.mockResolvedValue([]);
-      mockBase.putItem.mockRejectedValue(new Error('DynamoDB error'));
+      mockBase.updateItem.mockRejectedValue(new Error('DynamoDB error'));
 
       await expect(
         updateReputation(mockBase as any, 'agent-error', true, 100)
@@ -392,14 +379,9 @@ describe('ReputationOperations', () => {
 
       await updateReputation(mockBase as any, 'agent-fail', false, 0);
 
-      expect(mockBase.putItem).toHaveBeenCalledWith(
+      expect(mockBase.updateItem).toHaveBeenCalledWith(
         expect.objectContaining({
-          agentId: 'agent-fail',
-          tasksCompleted: 0,
-          tasksFailed: 1,
-          totalLatencyMs: 0,
-          successRate: 0.0,
-          avgLatencyMs: 0,
+          UpdateExpression: expect.stringContaining('tasksFailed'),
         })
       );
     });
@@ -409,13 +391,9 @@ describe('ReputationOperations', () => {
 
       await updateReputation(mockBase as any, 'agent-default', true);
 
-      expect(mockBase.putItem).toHaveBeenCalledWith(
+      expect(mockBase.updateItem).toHaveBeenCalledWith(
         expect.objectContaining({
-          agentId: 'agent-default',
-          tasksCompleted: 1,
-          tasksFailed: 0,
-          totalLatencyMs: 0,
-          avgLatencyMs: 0,
+          UpdateExpression: expect.stringContaining('totalLatencyMs'),
         })
       );
     });

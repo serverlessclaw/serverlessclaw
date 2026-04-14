@@ -76,7 +76,16 @@ Agents use specialized persona prompts to maintain consistency and expertise wit
 Skills are dynamically discovered and registered in the `AgentRegistry`:
 
 - **Heuristic Scanning**: Persona descriptions are scanned to automatically identify and provision required tools.
+- **Deduplication**: Local tools always take priority over external MCP tools with the same name to ensure system stability.
 - **Schema Validation**: All tool calls are validated against JSON schemas before execution.
+
+### 4. Tool Resilience & Concurrency
+
+To ensure stability in high-concurrency swarm environments, the system enforces strict execution rules:
+
+- **Sequential Execution**: Tools from the `git` and `filesystem` servers are automatically marked as `sequential`. The `ToolExecutor` will never run these in parallel, preventing repository lock failures and file-system race conditions.
+- **Discovery Locks**: MCP tool discovery is protected by a distributed lock with a 60-second TTL and stable `ownerId` (Lambda log stream). This prevents "Thundering Herd" API calls to the Hub while ensuring quick recovery if a node crashes.
+- **Global Circuit Breaker**: MCP connections utilize a global failure counter in DynamoDB. If a server fails 3 times within 1 minute, it is marked as `down` globally, preventing cascading timeouts across the fleet.
 
 ### Layered Transport Architecture
 

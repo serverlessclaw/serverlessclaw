@@ -79,46 +79,55 @@ export class BlastRadiusStore {
     const now = Date.now();
     const expiresAt = now + WINDOW_MS;
 
-    const existing = await this.getBlastRadius(agentId, action);
-    const newCount = (existing?.count ?? 0) + 1;
-    const newResourceCount = (existing?.resourceCount ?? 0) + (resource ? 1 : 0);
-
-    const entry: BlastRadiusEntry = {
-      key,
-      count: newCount,
-      lastAction: now,
-      resourceCount: newResourceCount,
-      expiresAt,
-    };
-
-    this.localCache.set(key, entry);
-
     const db = getDocClient();
     try {
-      await db.send(
+      // Use atomic UpdateCommand to increment counts safely
+      const response = await db.send(
         new UpdateCommand({
           TableName: getConfigTableName(),
           Key: { key },
-          UpdateExpression: 'SET #val = :value, #exp = :expires',
+          UpdateExpression: 'ADD #cnt :one, #rcnt :resCnt SET #la = :now, #exp = :expires',
           ExpressionAttributeNames: {
-            '#val': 'value',
+            '#cnt': 'count',
+            '#rcnt': 'resourceCount',
+            '#la': 'lastAction',
             '#exp': 'expiresAt',
           },
           ExpressionAttributeValues: {
-            ':value': {
-              count: newCount,
-              lastAction: now,
-              resourceCount: newResourceCount,
-            },
+            ':one': 1,
+            ':resCnt': resource ? 1 : 0,
+            ':now': now,
             ':expires': expiresAt,
           },
+          ReturnValues: 'ALL_NEW',
         })
       );
-    } catch (e) {
-      logger.warn(`[BlastRadiusStore] Failed to persist blast radius for ${key}:`, e);
-    }
 
-    return entry;
+      const val = response.Attributes?.value || response.Attributes;
+      const entry: BlastRadiusEntry = {
+        key,
+        count: val.count ?? 1,
+        lastAction: val.lastAction ?? now,
+        resourceCount: val.resourceCount ?? (resource ? 1 : 0),
+        expiresAt: val.expiresAt ?? expiresAt,
+      };
+
+      this.localCache.set(key, entry);
+      return entry;
+    } catch (e) {
+      logger.warn(`[BlastRadiusStore] Failed to atomically increment blast radius for ${key}:`, e);
+      // Fallback to local cache if DB fails
+      const existing = this.localCache.get(key);
+      const entry: BlastRadiusEntry = {
+        key,
+        count: (existing?.count ?? 0) + 1,
+        lastAction: now,
+        resourceCount: (existing?.resourceCount ?? 0) + (resource ? 1 : 0),
+        expiresAt,
+      };
+      this.localCache.set(key, entry);
+      return entry;
+    }
   }
 
   async checkLimit(agentId: string, action: string): Promise<{ allowed: boolean; count: number }> {

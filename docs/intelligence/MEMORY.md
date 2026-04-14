@@ -28,6 +28,7 @@ In multi-tenant environments, logical isolation is enforced via the `userId` par
 - **Isolation**: Prevents data leakage between different workspaces even if they share the same `userId`.
 - **Consistency**: This scoping is applied transparently across all memory tiers (History, Lessons, Gaps).
 - **Fallback**: If no `workspaceId` is provided, the system defaults to the raw `userId`.
+
 #### Isolated Memory Flow
 
 ```text
@@ -62,7 +63,7 @@ In multi-tenant environments, logical isolation is enforced via the `userId` par
   ├── workspaceId         <-- Workspace-specific isolation
   ├── createdAt           <-- Immutable source
   └── [ metadata ]        <-- Strategic scores (confidence, priority)
- 
+
 **Singleton Records**: For global state or unique metadata (e.g., `REPUTATION#<id>`, `SESSION_STATE#<id>`), the `timestamp` sort key is set to exactly `0` to ensure O(1) retrieval without range scanning.
 ```
 
@@ -270,28 +271,27 @@ The memory system exports operations for each tier. These are available via `cor
 | `computeCompositeScore(metrics)`     | Calculate reputation score (0-1) | Intelligence |
 
 ### 6. Session Safety & Truncation
-To prevent sessions from exceeding DynamoDB's 400KB item size limit (which causes `ValidationException`), the `SessionStateManager` enforces a **Sliding Window Buffer**.
+
+To prevent sessions from exceeding DynamoDB's 400KB item size limit (which causes `ValidationException`), the `SessionStateManager` enforces a **Sliding Window Buffer** via atomic conditional updates.
 
 - **Cap**: The system retains only the **last 50 pending messages** in the `pendingMessages` list.
-- **Mechanism**: On every `addPendingMessage` call, if the list exceeds 50 items, the oldest messages are automatically pruned.
-- **Circuit Breaker**: This prevents "Neural Bloat" in long-running autonomous tasks while ensuring the most recent context is always available.
+- **Mechanism**: Uses atomic `ConditionExpression: 'size(pendingMessages) < :max'` - new messages are rejected if queue is full, preventing race conditions under concurrent load.
+- **Circuit Breaker**: This prevents race conditions where two concurrent adds could both exceed 50 before truncation, ensuring consistent behavior under load.
 
-#### Session Buffer Truncation Logic
+#### Session Buffer Truncation Logic (Atomic)
+
 ```text
 [ Incoming Message ]
        |
        v
 [ addPendingMessage ]
        |
-       +--> (Update DynamoDB item)
+       v
+[ Atomic Append with Conditional ]
        |
-       +--> (Check Length > 50)
-       |          |
-       |          +-- YES --> [ Neural Pruning ]
-       |          |           (Remove oldest messages)
-       |          |           (Keep last 50 only)
-       |          |
-       |          +-- NO  --> [ Continue ]
+       +--> (size(pendingMessages) < 50) -- YES --> [ Append Message ]
+       |
+       +--> (size(pendingMessages) < 50) -- NO  --> [ REJECT: PENDING_QUEUE_FULL ]
 ```
 
 ### Clarification Operations (`clarification-operations.ts`)

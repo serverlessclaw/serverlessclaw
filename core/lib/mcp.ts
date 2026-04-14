@@ -65,7 +65,10 @@ export class MCPMultiplexer {
         // 1. Check Distributed Lock (Thundering Herd Protection across Fleet)
         lockManager = new LockManager();
         lockId = `mcp_discovery_lock_${serverName}`;
-        ownerId = `node_${Math.random().toString(36).substring(7)}`;
+        // Use a more stable ownerId based on the execution context (Lambda log stream or PID)
+        ownerId =
+          process.env.AWS_LAMBDA_LOG_STREAM_NAME ||
+          `node_${process.pid}_${Math.random().toString(36).substring(7)}`;
 
         const hubUrl = process.env.MCP_HUB_URL;
         const isLocalCommand = !connectionString.startsWith('http');
@@ -112,9 +115,9 @@ export class MCPMultiplexer {
       // Only acquire lock if not recursive
       if (!options?.isRecursive && lockManager) {
         // Acquire lock with retries
-        // P1 Fix: Increase TTL to 300s to handle heavy cold starts (e.g. npx downloads)
+        // P1 Fix: Use a safer TTL (60s) for discovery to avoid long blocks if a node crashes
         for (let i = 0; i < 3; i++) {
-          acquired = await lockManager.acquire(lockId, { ttlSeconds: 300, ownerId });
+          acquired = await lockManager.acquire(lockId, { ttlSeconds: 60, ownerId });
           if (acquired) break;
 
           logger.info(`[MCP] Discovery lock for ${serverName} held by another node, waiting...`);

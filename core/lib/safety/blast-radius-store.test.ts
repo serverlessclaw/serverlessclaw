@@ -63,18 +63,52 @@ describe('BlastRadiusStore', () => {
 
   describe('incrementBlastRadius', () => {
     it('should increment count on first call', async () => {
+      mockSend.mockResolvedValueOnce({
+        Attributes: {
+          count: 1,
+          lastAction: Date.now(),
+          resourceCount: 0,
+          expiresAt: Date.now() + 3600000,
+        },
+      });
+
       const result = await store.incrementBlastRadius('agent-1', 'deployment');
       expect(result.count).toBe(1);
       expect(result.lastAction).toBeGreaterThan(0);
     });
 
     it('should increment existing count', async () => {
+      mockSend.mockResolvedValueOnce({
+        Attributes: {
+          count: 1,
+          lastAction: Date.now(),
+          resourceCount: 0,
+          expiresAt: Date.now() + 3600000,
+        },
+      });
       await store.incrementBlastRadius('agent-1', 'deployment');
+
+      mockSend.mockResolvedValueOnce({
+        Attributes: {
+          count: 2,
+          lastAction: Date.now(),
+          resourceCount: 0,
+          expiresAt: Date.now() + 3600000,
+        },
+      });
       const result = await store.incrementBlastRadius('agent-1', 'deployment');
       expect(result.count).toBe(2);
     });
 
     it('should track resource count when resource provided', async () => {
+      mockSend.mockResolvedValueOnce({
+        Attributes: {
+          count: 1,
+          lastAction: Date.now(),
+          resourceCount: 1,
+          expiresAt: Date.now() + 3600000,
+        },
+      });
       const result = await store.incrementBlastRadius('agent-1', 'deployment', 'some-resource');
       expect(result.resourceCount).toBe(1);
     });

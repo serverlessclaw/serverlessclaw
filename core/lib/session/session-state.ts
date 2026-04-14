@@ -141,7 +141,7 @@ export class SessionStateManager {
 
           const { emitEvent } = await import('../utils/bus');
 
-          await emitEvent(`${agentId}.session-release`, `dynamic_${targetAgentId}_task` as any, {
+          await emitEvent(`${agentId}.session-release`, `dynamic_${targetAgentId}_task`, {
             userId: attributes.userId?.replace(SESSION_PREFIX, '') || 'unknown',
             task: taskContent,
             sessionId,
@@ -206,6 +206,7 @@ export class SessionStateManager {
 
   /**
    * Adds a message to the pending queue.
+   * Uses atomic conditional to prevent exceeding 50 messages - no race condition.
    */
   async addPendingMessage(
     sessionId: string,
@@ -223,7 +224,12 @@ export class SessionStateManager {
       timestamp: now,
     };
 
+    const MAX_PENDING = 50;
+
     try {
+      // Atomic append with conditional: only append if list size < MAX_PENDING
+      // This prevents the race condition where two concurrent adds could both append
+      // before either truncates, exceeding the limit
       await this.docClient.send(
         new UpdateCommand({
           TableName: this.tableName,
@@ -233,27 +239,32 @@ export class SessionStateManager {
           },
           UpdateExpression:
             'SET pendingMessages = list_append(if_not_exists(pendingMessages, :empty), :msg), lastMessageAt = :now, expiresAt = :exp',
+          ConditionExpression:
+            'attribute_not_exists(pendingMessages) OR size(pendingMessages) < :max',
+          ExpressionAttributeNames: {
+            '#pm': 'pendingMessages',
+          },
           ExpressionAttributeValues: {
             ':empty': [],
             ':msg': [pendingMessage],
             ':now': now,
             ':exp': this.getSessionExpiresAt(),
+            ':max': MAX_PENDING,
           },
         })
       );
 
-      // MITIGATION: If pendingMessages exceeds a safe limit (e.g., 50), truncate it.
-      // This prevents "Item size to update has exceeded the maximum allowed size" errors.
-      const state = await this.getPendingMessages(sessionId);
-      if (state.length > 50) {
-        logger.warn(`Session ${sessionId}: Truncating pending messages (current: ${state.length})`);
-        await this.clearPendingMessages(
-          sessionId,
-          state.slice(0, state.length - 50).map((m) => m.id)
+      logger.info(`Session ${sessionId}: Added pending message ${messageId}`);
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
+        // Queue is full - this is expected under high load, not an error
+        logger.warn(
+          `Session ${sessionId}: Pending message queue full (${MAX_PENDING}), rejecting new message`
+        );
+        throw new Error(
+          `PENDING_QUEUE_FULL: Session ${sessionId} has ${MAX_PENDING} pending messages`
         );
       }
-      logger.info(`Session ${sessionId}: Added pending message ${messageId}`);
-    } catch (error) {
       logger.error(`Session ${sessionId}: Failed to add pending message:`, error);
       throw error;
     }
