@@ -22,17 +22,35 @@ export const EVENTBRIDGE_ONLY_EVENTS: EventType[] = [
 /**
  * Verifies that event types expected to be handled by EventBridge are not
  * present in the DEFAULT_EVENT_ROUTING (to prevent silent event loss).
- * @returns Array of event types that have unexpected handlers in fallback routing
+ * Also checks for event types defined in EventType enum but missing handlers.
+ * @returns Array of event types that have issues
  */
 export function verifyEventRoutingConfiguration(): EventType[] {
   const mismatches: EventType[] = [];
 
+  // Check 1: EventBridge-only events should not be in fallback routing
   for (const eventType of EVENTBRIDGE_ONLY_EVENTS) {
     if (eventType in DEFAULT_EVENT_ROUTING) {
       logger.error(
         `[EventRouting] CRITICAL: ${eventType} found in DEFAULT_EVENT_ROUTING but should only be handled via EventBridge. This will cause duplicate processing.`
       );
       mismatches.push(eventType);
+    }
+  }
+
+  // Check 2: Log warning for unhandled event types (gap detection)
+  // These events are defined but have no handler - they will be silently dropped
+  const allDefinedEvents = Object.keys(EventType).filter((k) => isNaN(Number(k)));
+  const handledEvents = new Set([
+    ...Object.keys(DEFAULT_EVENT_ROUTING),
+    ...EVENTBRIDGE_ONLY_EVENTS,
+  ]);
+
+  for (const eventType of allDefinedEvents) {
+    if (!handledEvents.has(eventType)) {
+      logger.warn(
+        `[EventRouting] GAP: ${eventType} has no handler in DEFAULT_EVENT_ROUTING or EVENTBRIDGE_ONLY_EVENTS. Events will be silently dropped.`
+      );
     }
   }
 

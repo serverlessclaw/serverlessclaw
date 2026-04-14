@@ -207,7 +207,7 @@ Use this table to map high-level silos to the primary code areas that should be 
 
 Each silo represents a core functional domain. Reviews within a silo should adopt a specific "Angle" to uncover both explicit bugs and latent architectural weaknesses.
 
-### 1. The Spine (Nervous System & Flow)
+### 1. The Spine (Nervous System & Flow) [STABILIZED 2026-04-14]
 
 **Perspective**: _How does the system ensure the signal never dies?_
 
@@ -250,6 +250,8 @@ Review the implementation details in [EVENTS.md](../interface/EVENTS.md#atomic-b
 ```text
   [ Event Handler (Lambda) ] --+
                                |
+  [ Session Lock (Atomic) ] <--+ (Acquire via sessionId)
+                               |
   [ Agent Multiplexer (Core) ] +--> [ Atomic Recursion Guard ] -- (Update) -> [ State Store ]
                                |    (checkAndPushRecursion)               (Shared Depth)
                                |
@@ -260,7 +262,10 @@ Review the implementation details in [EVENTS.md](../interface/EVENTS.md#atomic-b
   [ Agent Router ] -- (Selection Guard) --> [ Agent Registry ]
          |
          v
-  [ Lock Manager ] -- (Atomic Lease) --> [ State Store ]
+  [ Facilitator Trust Gate ] -- (Score >= 90?) --> [ Tie-break Handler ]
+         |                                              |
+         v                                              v
+  [ Lock Manager ] -- (Atomic Lease) --------------> [ State Store ]
          |
          v
   [ Agent Executor ] -- (Action) --> [ Skill Multiplexer ]
@@ -311,7 +316,7 @@ Review the implementation details in [PROTOCOL.md](../interface/PROTOCOL.md#tool
 - **Resource Leak Check**: Monitor client/connection pools for proper lifecycle management.
 - **Error Path Test**: Trigger failures at the skill layer to verify graceful context recovery.
 
-#### 🛡️ Silo 3: The Shield (Security & Baseline) [STABILIZED 2026-04-12]
+#### 🛡️ Silo 3: The Shield (Security & Baseline) [STABILIZED 2026-04-14]
 
 The Shield has been unified. The `SafetyEngine` now acts as the authoritative gate for all tool executions, enforcing least-privilege resource access and Class C blast-radius limits.
 

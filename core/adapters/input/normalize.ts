@@ -12,6 +12,7 @@
 import { InboundMessage } from './types';
 import { z } from 'zod';
 import { AttachmentSchema } from './types';
+import { fnv1aHash } from '../../lib/utils/id-generator';
 
 /**
  * NormalizedMessage is the canonical representation of an inbound message.
@@ -20,7 +21,7 @@ import { AttachmentSchema } from './types';
 export interface NormalizedMessage {
   source: string; // e.g. 'telegram', 'slack', 'github'
   userId: string; // unique identifier for the user (or channel)
-  sessionId: string; // conversation/session identifier
+  sessionId: string; // conversation/session identifier (FNV-1a hashed for stable addressing)
   text: string; // user supplied text (or empty string for non‑text events)
   attachments: z.infer<typeof AttachmentSchema>[];
   metadata: Record<string, unknown>;
@@ -40,12 +41,16 @@ export function normalizeMessage(raw: InboundMessage): NormalizedMessage {
   const {
     source = 'unknown',
     userId = 'unknown',
-    sessionId = userId,
+    sessionId,
     text = '',
     attachments = [],
     metadata = {},
     timestamp,
   } = raw;
+
+  // Use FNV-1a hash for stable session addressing (Principle 18)
+  // If sessionId is provided, hash it; otherwise hash userId as fallback
+  const stableSessionId = sessionId ? fnv1aHash(sessionId) : fnv1aHash(userId);
 
   // Preserve the original timestamp if provided; otherwise generate now.
   const isoTimestamp = timestamp ?? new Date().toISOString();
@@ -53,7 +58,7 @@ export function normalizeMessage(raw: InboundMessage): NormalizedMessage {
   return {
     source,
     userId,
-    sessionId,
+    sessionId: stableSessionId,
     text,
     attachments,
     metadata,

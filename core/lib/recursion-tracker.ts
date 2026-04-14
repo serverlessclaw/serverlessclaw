@@ -14,6 +14,7 @@ import {
 
 const RECURSION_STACK_PREFIX = 'RECURSION_STACK#';
 const RECURSION_TTL_SECONDS = 3600; // 1 hour - matches typical mission lifetime
+const MISSION_RECURSION_TTL_SECONDS = 1800; // 30 minutes - stricter for mission-critical flows
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client, {
@@ -26,18 +27,21 @@ const docClient = DynamoDBDocumentClient.from(client, {
  * @param depth - Current recursion depth
  * @param sessionId - Current session ID
  * @param agentId - Current agent ID
+ * @param isMission - Whether this is a mission-critical workflow (uses shorter TTL)
  */
 export async function pushRecursionEntry(
   traceId: string,
   depth: number,
   sessionId: string,
-  agentId: string
+  agentId: string,
+  isMission: boolean = false
 ): Promise<void> {
+  const key = `${RECURSION_STACK_PREFIX}${traceId}`;
+  const ttlSeconds = isMission ? MISSION_RECURSION_TTL_SECONDS : RECURSION_TTL_SECONDS;
   try {
-    const key = `${RECURSION_STACK_PREFIX}${traceId}`;
-    const expiresAt = Math.floor(Date.now() / 1000) + RECURSION_TTL_SECONDS;
+    const expiresAt = Math.floor(Date.now() / 1000) + ttlSeconds;
 
-    // Sh1: Use UpdateCommand to ensure atomic depth increment and prevent concurrent "resets"
+    // Use UpdateCommand with existence check - first entry sets the depth
     await docClient.send(
       new UpdateCommand({
         TableName: process.env.MEMORY_TABLE_NAME ?? 'MemoryTable',
@@ -47,7 +51,7 @@ export async function pushRecursionEntry(
         },
         UpdateExpression:
           'SET #depth = :depth, sessionId = :sessionId, agentId = :agentId, createdAt = :now, expiresAt = :exp, #type = :type',
-        ConditionExpression: 'attribute_not_exists(#depth) OR #depth < :depth',
+        ConditionExpression: 'attribute_not_exists(#depth)',
         ExpressionAttributeNames: {
           '#type': 'type',
           '#depth': 'depth',
@@ -63,11 +67,43 @@ export async function pushRecursionEntry(
       })
     );
 
-    logger.info(`[RECURSION] Pushed entry for trace ${traceId}: depth=${depth}, agent=${agentId}`);
+    logger.info(
+      `[RECURSION] Pushed entry for trace ${traceId}: depth=${depth}, agent=${agentId}, mission=${isMission}`
+    );
   } catch (error: unknown) {
     const err = error as { name?: string };
     if (err.name === 'ConditionalCheckFailedException') {
-      logger.debug(`[RECURSION] Skip push for ${traceId}: existing depth is already >= ${depth}`);
+      // Entry exists - try to update depth atomically with increment
+      // This handles concurrent pushes at the same level properly
+      try {
+        const currentDepth = await getRecursionDepth(traceId);
+        const newDepth = Math.max(currentDepth + 1, depth);
+        await docClient.send(
+          new UpdateCommand({
+            TableName: process.env.MEMORY_TABLE_NAME ?? 'MemoryTable',
+            Key: {
+              userId: key,
+              timestamp: 0,
+            },
+            UpdateExpression: 'SET #depth = :depth, agentId = :agentId, createdAt = :now',
+            ConditionExpression: '#depth = :currentDepth',
+            ExpressionAttributeNames: {
+              '#depth': 'depth',
+            },
+            ExpressionAttributeValues: {
+              ':depth': newDepth,
+              ':agentId': agentId,
+              ':now': Date.now(),
+              ':currentDepth': currentDepth,
+            },
+          })
+        );
+        logger.info(
+          `[RECURSION] Incremented depth for trace ${traceId}: ${currentDepth} -> ${newDepth}`
+        );
+      } catch {
+        logger.debug(`[RECURSION] Concurrent update for ${traceId}: another branch updated first`);
+      }
       return;
     }
     logger.warn(`[RECURSION] Failed to push entry for ${traceId}:`, error);
@@ -77,7 +113,7 @@ export async function pushRecursionEntry(
 /**
  * Get the current recursion depth for a trace
  * @param traceId - The trace ID for the execution chain
- * @returns Current depth or 0 if no entry exists
+ * @returns Current depth, -1 on error (sentinel value to distinguish from no entry)
  */
 export async function getRecursionDepth(traceId: string): Promise<number> {
   try {
@@ -96,7 +132,7 @@ export async function getRecursionDepth(traceId: string): Promise<number> {
     return 0;
   } catch (error) {
     logger.warn(`[RECURSION] Failed to get depth for ${traceId}:`, error);
-    return 0;
+    return -1; // Return -1 to distinguish errors from no-entry (0)
   }
 }
 

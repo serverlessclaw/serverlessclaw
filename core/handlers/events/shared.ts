@@ -75,10 +75,10 @@ export async function checkAndPushRecursion(
   }
 
   // Use the event hint if it's deeper, but monotonic guard in pushRecursionEntry
-  // handles the actual safety in DynamoDB.
+  // handles the actual safety in DynamoDB. Pass isMission for TTL handling.
   const targetDepth = Math.max(currentDepth + 1, (depthFromEvent ?? 0) + 1);
 
-  await pushRecursionEntry(traceId, targetDepth, sessionId, agentId);
+  await pushRecursionEntry(traceId, targetDepth, sessionId, agentId, isMission);
   return targetDepth;
 }
 

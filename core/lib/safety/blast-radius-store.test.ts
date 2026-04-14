@@ -65,10 +65,12 @@ describe('BlastRadiusStore', () => {
     it('should increment count on first call', async () => {
       mockSend.mockResolvedValueOnce({
         Attributes: {
-          count: 1,
-          lastAction: Date.now(),
-          resourceCount: 0,
-          expiresAt: Date.now() + 3600000,
+          value: {
+            count: 1,
+            lastAction: Date.now(),
+            resourceCount: 0,
+            expiresAt: Date.now() + 3600000,
+          },
         },
       });
 
@@ -80,20 +82,24 @@ describe('BlastRadiusStore', () => {
     it('should increment existing count', async () => {
       mockSend.mockResolvedValueOnce({
         Attributes: {
-          count: 1,
-          lastAction: Date.now(),
-          resourceCount: 0,
-          expiresAt: Date.now() + 3600000,
+          value: {
+            count: 1,
+            lastAction: Date.now(),
+            resourceCount: 0,
+            expiresAt: Date.now() + 3600000,
+          },
         },
       });
       await store.incrementBlastRadius('agent-1', 'deployment');
 
       mockSend.mockResolvedValueOnce({
         Attributes: {
-          count: 2,
-          lastAction: Date.now(),
-          resourceCount: 0,
-          expiresAt: Date.now() + 3600000,
+          value: {
+            count: 2,
+            lastAction: Date.now(),
+            resourceCount: 0,
+            expiresAt: Date.now() + 3600000,
+          },
         },
       });
       const result = await store.incrementBlastRadius('agent-1', 'deployment');
@@ -103,14 +109,40 @@ describe('BlastRadiusStore', () => {
     it('should track resource count when resource provided', async () => {
       mockSend.mockResolvedValueOnce({
         Attributes: {
-          count: 1,
-          lastAction: Date.now(),
-          resourceCount: 1,
-          expiresAt: Date.now() + 3600000,
+          value: {
+            count: 1,
+            lastAction: Date.now(),
+            resourceCount: 1,
+            expiresAt: Date.now() + 3600000,
+          },
         },
       });
       const result = await store.incrementBlastRadius('agent-1', 'deployment', 'some-resource');
       expect(result.resourceCount).toBe(1);
+    });
+
+    it('REPRO/FIX: should use atomic UpdateCommand with value wrapper for schema compliance', async () => {
+      mockSend.mockResolvedValueOnce({
+        Attributes: {
+          value: {
+            count: 5,
+            lastAction: Date.now(),
+            resourceCount: 1,
+            expiresAt: Date.now() + 3600000,
+          },
+        },
+      });
+
+      await store.incrementBlastRadius('agent-1', 'deployment', 'res-1');
+
+      const lastCall = mockSend.mock.calls[mockSend.mock.calls.length - 1][0];
+      const params = lastCall.input;
+
+      // Verify schema compliance
+      expect(params.UpdateExpression).toContain('#val.#cnt');
+      expect(params.UpdateExpression).toContain('#val.#rcnt');
+      expect(params.ExpressionAttributeNames).toHaveProperty('#val', 'value');
+      expect(params.ExpressionAttributeNames).toHaveProperty('#cnt', 'count');
     });
   });
 
