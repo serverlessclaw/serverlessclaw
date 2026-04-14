@@ -87,7 +87,7 @@ const NodeContainer: React.FC<{
 
 type TaskNode = Node<TaskNodeData>;
 type DagStatusNode = Node<{ completed: number; total: number; failed: number; ready: number; pending: number }>;
-type InitiatorNode = Node<{ initiatorId: string; initialQuery: string }>;
+type InitiatorNode = Node<{ initiatorId: string; initialQuery: string; attachments?: unknown[] }>;
 type AggregatorNode = Node<{ type: string }>;
 type AgentActivityNode = Node<{ agentId: string; activeTasks: unknown[] }>;
 
@@ -202,12 +202,12 @@ export const nodeTypes = {
         </div>
         <div className="p-2 bg-background/40 rounded border border-cyber-blue/10 space-y-2">
           <Typography variant="body" className="text-[10px] italic text-cyber-blue/80 line-clamp-2 leading-tight">
-            &ldquo;{(data as Record<string, any>).initialQuery}&rdquo;
+            &ldquo;{data.initialQuery}&rdquo;
           </Typography>
-          {(data as Record<string, any>).attachments && (data as Record<string, any>).attachments.length > 0 && (
+          {data.attachments && data.attachments.length > 0 && (
             <div className="flex items-center gap-1.5 border-t border-cyber-blue/10 pt-1.5">
                 <Paperclip size={10} className="text-cyber-blue/50" />
-                <span className="text-[9px] font-black text-cyber-blue/50">{(data as Record<string, any>).attachments.length} ATTACHED_FILES</span>
+                <span className="text-[9px] font-black text-cyber-blue/50">{data.attachments.length} ATTACHED_FILES</span>
             </div>
           )}
         </div>

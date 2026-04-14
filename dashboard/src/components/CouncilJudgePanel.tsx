@@ -32,9 +32,9 @@ export default function CouncilJudgePanel({ requestId, onJudgement }: CouncilJud
             <Typography variant="h3" uppercase glow>Human_Judge_Intervention</Typography>
           </div>
           
-          <Typography variant="body" color="muted" className="text-sm">
-            As the Human-in-the-Middle, you can overrule the swarm's current stalemate or consensus. Your directive will be injected into the high-priority memory segment of the mission facilitator.
-          </Typography>
+            <Typography variant="body" color="muted" className="text-sm">
+              As the Human-in-the-Middle, you can overrule the swarm&apos;s current stalemate or consensus. Your directive will be injected into the high-priority memory segment of the mission facilitator.
+            </Typography>
 
           <div className="space-y-2">
             <Typography variant="mono" className="text-[10px] uppercase font-black opacity-40 flex items-center gap-2">

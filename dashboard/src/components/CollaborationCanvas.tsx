@@ -29,8 +29,8 @@ import Badge from '@/components/ui/Badge';
 import { useRealtime, RealtimeMessage } from '@/hooks/useRealtime';
 
 import { 
-  TaskNodeData, 
-  HandoffData 
+  TaskNodeData,
+  HandoffData
 } from '@/lib/collaboration-utils';
 import { nodeTypes } from '@/components/CollaborationNodes';
 import { HandoffPanel } from '@/components/HandoffPanel';

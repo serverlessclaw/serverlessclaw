@@ -130,7 +130,7 @@ export default function CollaborationPage() {
            <div className="glass-card p-6 border-white/5 h-full flex flex-col justify-center">
              <Typography variant="h3" glow color="white" uppercase className="mb-2">Operational Summary</Typography>
              <Typography variant="body" color="muted" className="text-sm italic">
-               The swarm is currently operating at optimal capacity. Trust score remains high despite a minor bottleneck in the Planner agent's reasoning depth. Security and Architect critics are active in the consensus pool.
+               The swarm is currently operating at optimal capacity. Trust score remains high despite a minor bottleneck in the Planner agent&apos;s reasoning depth. Security and Architect critics are active in the consensus pool.
              </Typography>
              <div className="mt-6 flex gap-4">
                 <div className="flex items-center gap-2">

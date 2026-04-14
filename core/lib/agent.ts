@@ -267,6 +267,10 @@ export class Agent {
         priorTokenUsage,
       });
 
+      if (sessionId && sessionStateManager) {
+        await sessionStateManager.autoRenew(sessionId, this.config?.id ?? 'unknown');
+      }
+
       if (!process.env.VITEST && loopUsage) {
         try {
           const { emitMetrics, METRICS } = await import('./metrics');
@@ -544,6 +548,9 @@ export class Agent {
     let totalOutputTokens = 0;
 
     for await (const chunk of stream) {
+      if (options.sessionId && sessionStateManager) {
+        await sessionStateManager.autoRenew(options.sessionId, this.config?.id ?? 'unknown');
+      }
       if (chunk.content) fullContent += chunk.content;
       if (chunk.thought) fullThought += chunk.thought;
       if (chunk.usage) {

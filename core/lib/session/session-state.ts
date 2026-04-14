@@ -33,6 +33,7 @@ export interface SessionState {
 export class SessionStateManager {
   private docClient: DynamoDBDocumentClient;
   private lockManager: LockManager;
+  private lastRenewedAt: Map<string, number> = new Map();
 
   constructor(docClient?: DynamoDBDocumentClient) {
     this.docClient = docClient ?? defaultDocClient;
@@ -67,6 +68,7 @@ export class SessionStateManager {
     });
 
     if (acquired) {
+      this.lastRenewedAt.set(sessionId, Date.now());
       // Also update the session record to reflect who is processing (B3 Awareness)
       const key = this.getKey(sessionId);
       try {
@@ -101,6 +103,7 @@ export class SessionStateManager {
    */
   async releaseProcessing(sessionId: string, agentId: string): Promise<void> {
     const lockId = `${LOCK_PREFIX}${sessionId}`;
+    this.lastRenewedAt.delete(sessionId);
     // 1. Release the lock item itself
     await this.lockManager.release(lockId, agentId, '');
 
@@ -180,6 +183,7 @@ export class SessionStateManager {
     });
 
     if (renewed) {
+      this.lastRenewedAt.set(sessionId, Date.now());
       // Sync the new expiry into the session record for B3 Awareness
       const key = this.getKey(sessionId);
       try {
@@ -202,6 +206,23 @@ export class SessionStateManager {
     }
 
     return renewed;
+  }
+
+  /**
+   * Automatically renews the processing lock if it's nearing expiration.
+   * Uses a threshold (default 50% of TTL) to avoid excessive DDB calls.
+   */
+  async autoRenew(sessionId: string, agentId: string, force: boolean = false): Promise<void> {
+    const lastRenewed = this.lastRenewedAt.get(sessionId);
+    if (!lastRenewed && !force) return;
+
+    const now = Date.now();
+    const thresholdMs = (LOCK_TTL_SECONDS * 1000) / 2; // Renew at 50% mark
+
+    if (force || now - (lastRenewed ?? 0) > thresholdMs) {
+      logger.debug(`[AUTO_RENEW] Nearing lock expiration for session ${sessionId}. Renewing...`);
+      await this.renewProcessing(sessionId, agentId);
+    }
   }
 
   /**
