@@ -26,7 +26,8 @@
     "type-check": "turbo run type-check",
     "format-check": "turbo run format-check",
     "check": "turbo run check",
-    "gate": "turbo run gate"
+    "gate": "turbo run gate",
+    "aiready": "aiready scan"
   },
   "keywords": [
     "openclaw",

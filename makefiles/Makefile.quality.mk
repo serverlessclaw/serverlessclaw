@@ -63,8 +63,8 @@ type-check: ## Run TypeScript type checking
 	@$(PNPM) run type-check
 
 aiready: ## Run AIReady scan to evaluate agent-friendliness
-	@$(call log_info,Running AIReady scan via Turbo...)
-	@$(PNPM) exec turbo run aiready
+	@$(call log_info,Running AIReady scan...)
+	@$(PNPM) run aiready
 
 lint-staged: ## Run lint-staged for partial checks
 	@$(call log_info,Running lint-staged...)

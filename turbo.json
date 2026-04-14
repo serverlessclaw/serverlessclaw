@@ -27,7 +27,7 @@
       "outputs": ["coverage/**"]
     },
     "aiready": {
-      "cache": true
+      "cache": false
     },
     "security-scan": {
       "cache": true
