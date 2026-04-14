@@ -17,9 +17,9 @@ The Event Bus acts as the **Spine** of Serverless Claw, ensuring robust signal p
 To prevent infinite reasoning loops or event storms, the Spine enforces strict depth limits using a unified **Atomic Recursion Guard** (`checkAndPushRecursion`):
 
 - **Mechanism**: The `RECURSION_ENTRY` in DynamoDB tracks the current depth for a specific `traceId`.
-- **Trace-level Continuity (Principle 15)**: Recursion depth is monotonic across the entire life of a trace. Unlike local counters, this stack is **never reset** by individual agent runners, preventing bypass in parallel swarm scenarios.
+- **Atomic Monotonic Increment**: Depth tracking uses an atomic monotonic increment via `SET #depth = if_not_exists(#depth, :zero) + :one`. This ensures that every entry point into the system correctly advances the global depth counter, preventing race conditions or bypass in parallel swarm scenarios.
+- **Trace-level Continuity (Principle 15)**: Recursion depth is monotonic across the entire life of a trace. Unlike local counters, this stack is **never reset** by individual agent runners.
 - **Unified Guard**: Both the `EventHandler` and `AgentMultiplexer` utilize a centralized check to ensure consistency across different entry points.
-- **Monotonic Safety**: Updates use monotonic depth guards (`ConditionExpression: 'attribute_not_exists(depth) OR depth < :depth'`) to prevent depth resets during asynchronous handoffs or concurrent executions.
 - **Limit**: Standard tasks are capped at a depth of 15 (configurable via `recursion_limit`). Mission-critical tasks (swarms, DAGs) use a stricter limit (default 10, via `mission_recursion_limit`).
 
 ### 2. Distributed Resilience (Tie-breaks & Circuit Breakers)
@@ -129,8 +129,8 @@ Standard event types and their default priority levels are centrally defined to 
   [ Agent Router ] -- (Principle 14 Guard) -> [ Selection Integrity ] -- FAIL --> [ Fallback ]
           |                                         (Verify Enabled)
           v
-  [ Recursion Guard ] -- (Principle 15) -> [ Atomic Push ] -- FAIL --> [ Increment Retry ]
-          |                                (Existence Check)         (Concurrent Safety)
+  [ Recursion Guard ] -- (Principle 15) -> [ Atomic Increment ] -- FAIL --> [ Reject & Notify ]
+          |                                (Monotonic Safety)        (Limit Exceeded)
           |                                         |
           v                                         v
   [ Agent Executor ] -- (Lock Acquisition) -> [ Session Lock ]
@@ -144,8 +144,8 @@ Standard event types and their default priority levels are centrally defined to 
 
 **Recursion Flow Details:**
 
-- **First Entry**: Uses `attribute_not_exists(#depth)` to atomically set initial depth
-- **Concurrent Pushes**: On `ConditionalCheckFailedException`, attempts atomic increment with `depth = :currentDepth` condition
+- **Atomic Guard**: Uses `UpdateCommand` with `if_not_exists` to increment depth in a single atomic database trip.
+- **Safety Enforcement**: Returns the _new_ depth value immediately; calling code rejects any operation where `newDepth > RECURSION_LIMIT`.
 - **TTL**: Normal traces use 1-hour TTL; mission-critical contexts use 30-minute TTL
 - **Error Handling**: Database failures return `-1` (sentinel) to distinguish from no-entry (`0`)
 

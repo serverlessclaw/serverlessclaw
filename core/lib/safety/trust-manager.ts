@@ -277,7 +277,7 @@ export class TrustManager {
           decayAmount = this.DECAY_RATE * 1.2;
         }
 
-        const newScore = Math.max(TRUST.DECAY_BASELINE, config.trustScore - decayAmount);
+        const newScore = config.trustScore - decayAmount;
 
         if (newScore < config.trustScore) {
           decayDetails.push({ agentId, oldScore: config.trustScore, newScore });

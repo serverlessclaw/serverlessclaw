@@ -274,7 +274,7 @@ static async atomicUpdateAgentFieldWithCondition(
 
 In a distributed swarm, preventing infinite loops requires more than a local counter. Serverless Claw uses an atomic **Recursion Tracker** to enforce safety across long-lived trace chains:
 
-- **Atomic Increments**: Depth is updated via DynamoDB `UpdateItem` with a `ConditionExpression: "depth < :newDepth"`. This ensures that even if concurrent branches of a swarm attempt to "reset" the depth, only the deepest record persists. (See [recursion-tracker.ts](../../core/lib/recursion-tracker.ts))
+- **Atomic Increments**: Depth is updated via DynamoDB `UpdateItem` with `SET #depth = if_not_exists(#depth, :zero) + :one`. This ensures a single monotonic counter across all concurrent branches of a swarm. (See [recursion-tracker.ts](../../core/lib/recursion-tracker.ts))
 - **Fail-Fast**: Any agent found at a depth exceeding `backbone.maxIterations` must immediately emit a `TASK_FAILED` event with `LOOP_TERMINATION` reason.
 
 ## 🔓 Relaxed Lock Cleanup

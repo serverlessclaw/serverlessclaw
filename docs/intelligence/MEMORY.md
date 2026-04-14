@@ -51,7 +51,12 @@ In multi-tenant environments, logical isolation is enforced via the `userId` par
 ```
 
 - **Hardened Scoping**: The `getScopedUserId` utility explicitly validates base `userId` strings to prevent "prefix spoofing" where a user might attempt to inject their own `WS#` prefix to access unauthorized workspace data.
-- **Thundering Herd Protection**: The `CachedMemory` provider implements concurrent request coalescing (Promise Caching) for high-frequency operations like `getHistory`. This ensures that simultaneous cache misses for the same user only trigger a single DynamoDB read, maximizing metabolic efficiency.
+- **Modular Memory Architecture**: The `CachedMemory` provider is decomposed into specialized delegators to maintain AI context window clarity and separation of concerns:
+  - **MemoryGaps**: Manages strategic gap lifecycle, atomic status transitions, and planning locks.
+  - **MemoryCollaboration**: Orchestrates multi-party session access, participant roles, and shared context.
+  - **MemoryDelegator**: Handles low-level system operations, LKG hashes, and system-level metadata.
+- **Thundering Herd Protection**: Implements concurrent request coalescing (Promise Caching) for high-frequency operations like `getHistory`. This ensures that simultaneous cache misses for the same user only trigger a single DynamoDB read, maximizing metabolic efficiency.
+- **On-Demand Session Renewal**: The `SessionStateManager` utilizes an `autoRenew` pattern within agent execution loops. It automatically refreshes session locks (TTL) when they reach 50% expiration, eliminating the need for unreliable background heartbeats in Lambda environments.
 
 ```text
 [ Record Root ]

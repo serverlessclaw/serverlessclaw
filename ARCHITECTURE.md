@@ -115,9 +115,10 @@ The system prioritizes a **Trigger-on-Message** strategy to maintain $0 idle cos
 
 High-memory agents (Coder, Planner) remain idle and cost-free when no user interaction is occurring. Upon receiving a message:
 
-1. **Webhook Trigger**: The [Webhook Handler](./core/handlers/webhook.ts) immediately checks warm state
-2. **Smart Check**: Only warms servers/agents that are actually cold (expired TTL)
-3. **Fire-and-Forget**: Warmup signals are asynchronous to avoid blocking user requests
+1.  **Webhook Trigger**: The [Webhook Handler](./core/handlers/webhook.ts) immediately checks warm state.
+2.  **Proactive Agent Warmup**: The `Agent` class utilizes the unified `triggerSmartWarmup` helper across both `process()` and `stream()` modes to ensure downstream dependencies are ready.
+3.  **Smart Check**: Only warms servers/agents that are actually cold (expired TTL).
+4.  **Fire-and-Forget**: Warmup signals are asynchronous to avoid blocking user requests.
 
 ### 3. Recovery Warmup
 
@@ -201,23 +202,24 @@ The system architecture follows a **Distributed Spine** model where all critical
           |
           v
   [ Silo 1: The Spine (EventHandler) ]
-          |-- (1) Distributed Safety Check (Rate Limit / Circuit Breaker)
-          |-- (2) Trace-Aware Recursion Guard (Atomic Increment)
+          |-- (1) FlowControl (FlowController: Rate Limit / Circuit Breaker)
+          |-- (2) Trace-Aware Recursion Guard (Atomic monotonic increment)
           v
   [ Agent Multiplexer (Gateway) ]
           |-- (3) Dynamic Selection (AgentRouter.selectBestAgent)
           |-- (4) Selection Integrity (Verify agent.enabled === true)
           v
   [ Agent Execution (Silo 2: The Hand) ]
-          |-- (5) Isolated Workspace (/tmp/claw-workspaces/<traceId>)
-          |-- (6) Unified MCP Tool Discovery (Distributed Backoff)
+          |-- (5) Security Enforcement (ToolSecurityValidator: Safety/RBAC/Breaker)
+          |-- (6) Isolated Workspace (/tmp/claw-workspaces/<traceId>)
+          |-- (7) Unified MCP Tool Discovery (Distributed Backoff)
           v
   [ Outcome (Success/Failure) ]
           |
           v
   [ Silo 6: The Scales (TrustManager) ]
-          |-- (7) Quality-Weighted Reputation Update
-          |-- (8) Atomic History Recording (list_append)
+          |-- (8) Quality-Weighted Reputation Update
+          |-- (9) Atomic History Recording (list_append)
           v
   [ ConfigTable (DDB) ] <--- (Feedback Loop for Selection Integrity)
 ```
@@ -228,10 +230,11 @@ The system architecture follows a **Distributed Spine** model where all critical
 
 To maintain a **Stateless Core** (Principle 1) while ensuring systemic safety, the system externalizes all operational state:
 
-1.  **DistributedSafetyControl**: Circuit breakers and rate limiters use DynamoDB atomic counters. This prevents "phantom safety" where different Lambda instances have divergent views of system health.
-2.  **Selection Integrity**: The `AgentMultiplexer` acts as the authoritative gateway. It performs a mandatory configuration check for every agent before invocation, ensuring that `enabled: false` status is strictly enforced regardless of the event source.
-3.  **Dynamic Routing**: The `AgentRouter` uses historical performance metrics (success rate, latency, cost) to dynamically select the best agent-model combination for a given task. This "dark logic" is now active in the production multiplexer path.
-4.  **Workspace Isolation**: Each agent execution is assigned a unique, trace-specific subdirectory within `/tmp/claw-workspaces/`. This prevents concurrent agents in the same Lambda container from corrupting shared files (Workspace Cross-Talk).
+1.  **Distributed Flow Control**: The `FlowController` centralizes backbone circuit breakers and rate limiters using DynamoDB atomic counters. This prevents "phantom safety" where different Lambda instances have divergent views of system health.
+2.  **Surgical Security Enforcement**: The `ToolSecurityValidator` decouples security logic from tool execution. It enforces the "Shield" (SafetyEngine) rules, RBAC permissions, and system-level circuit breakers before any tool interaction occurs.
+3.  **Selection Integrity**: The `AgentMultiplexer` acts as the authoritative gateway. It performs a mandatory configuration check for every agent before invocation, ensuring that `enabled: false` status is strictly enforced regardless of the event source.
+4.  **Dynamic Routing**: The `AgentRouter` uses historical performance metrics (success rate, latency, cost) to dynamically select the best agent-model combination for a given task.
+5.  **Monotonic Recursion Tracking**: Cross-session recursion depth is managed via atomic increments in the `recursion-tracker`, preventing loop-bypass attacks in concurrent swarm scenarios.
 
 ---
 

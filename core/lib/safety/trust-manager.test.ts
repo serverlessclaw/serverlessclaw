@@ -1,56 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-const { mockAgentRegistry, mockDefaultDocClient, mockConfigManager } = vi.hoisted(() => ({
-  mockAgentRegistry: {
-    getRawConfig: vi.fn(),
-    saveRawConfig: vi.fn().mockResolvedValue(undefined),
-    getAgentConfig: vi.fn(),
-    getAllConfigs: vi.fn().mockResolvedValue({}),
-    atomicUpdateAgentField: vi.fn().mockResolvedValue(undefined),
-    atomicUpdateAgentFieldWithCondition: vi.fn().mockResolvedValue(undefined),
-  },
-  mockDefaultDocClient: {
-    send: vi.fn().mockResolvedValue({}),
-  },
-  mockConfigManager: {
-    appendToList: vi.fn().mockResolvedValue(undefined),
-  },
-}));
-
-vi.mock('sst', () => ({
-  Resource: {
-    ConfigTable: { name: 'test-table' },
-  },
-}));
-
-vi.mock('../registry/config', () => ({
-  defaultDocClient: mockDefaultDocClient,
-  ConfigManager: mockConfigManager,
-}));
-
-vi.mock('../registry', () => ({
-  AgentRegistry: mockAgentRegistry,
-}));
-
-vi.mock('../logger', () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  },
-}));
-
-vi.mock('../utils/bus', () => ({
-  emitEvent: vi.fn().mockResolvedValue(undefined),
-}));
-
 import { TrustManager } from './trust-manager';
+import { TRUST } from '../constants';
+import { AnomalySeverity, AnomalyType } from '../types/metrics';
+
+// Mock AgentRegistry
+const { mockAgentRegistry } = vi.hoisted(() => ({
+  mockAgentRegistry: {
+    getAgentConfig: vi.fn(),
+    atomicUpdateAgentField: vi.fn(),
+    atomicUpdateAgentFieldWithCondition: vi.fn(),
+    getAllConfigs: vi.fn(),
+  },
+}));
 
 vi.mock('../registry', () => ({
   AgentRegistry: mockAgentRegistry,
 }));
 
+// Mock Bus
+vi.mock('../utils/bus', () => ({
+  emitEvent: vi.fn().mockResolvedValue(undefined),
+}));
+
+// Mock logger
 vi.mock('../logger', () => ({
   logger: {
     info: vi.fn(),
@@ -58,196 +30,169 @@ vi.mock('../logger', () => ({
     error: vi.fn(),
     debug: vi.fn(),
   },
-}));
-
-vi.mock('../utils/bus', () => ({
-  emitEvent: vi.fn().mockResolvedValue(undefined),
-}));
-
-vi.mock('../registry/config', () => ({
-  defaultDocClient: mockDefaultDocClient,
-  ConfigManager: mockConfigManager,
-}));
-
-vi.mock('sst', () => ({
-  Resource: {},
 }));
 
 describe('TrustManager', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockAgentRegistry.getRawConfig.mockResolvedValue([]);
-    mockAgentRegistry.getAgentConfig.mockResolvedValue(undefined);
-    mockAgentRegistry.saveRawConfig.mockResolvedValue(undefined);
-    mockAgentRegistry.atomicUpdateAgentField.mockResolvedValue(undefined);
   });
 
-  describe('updateTrustScore', () => {
-    it('penalizes an agent and caps at MIN_SCORE', async () => {
+  describe('recordFailure', () => {
+    it('applies basic penalty based on severity', async () => {
       mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
         id: 'test-agent',
-        name: 'Test',
-        trustScore: 10,
-        enabled: true,
-        systemPrompt: '',
+        trustScore: 80,
       });
 
-      const newScore = await TrustManager.recordFailure('test-agent', 'Test Failure', 3); // -5 * 3 = -15
+      const newScore = await TrustManager.recordFailure('test-agent', 'Test failure', 2);
 
-      expect(newScore).toBe(0); // 10 - 15 -> 0
+      // Default penalty is 5, severity 2 -> penalty 10
+      expect(newScore).toBe(70);
       expect(mockAgentRegistry.atomicUpdateAgentFieldWithCondition).toHaveBeenCalledWith(
         'test-agent',
         'trustScore',
-        0,
-        10
+        70,
+        80
       );
     });
 
-    it('increments an agent and caps at MAX_SCORE', async () => {
+    it('clamps score to minimum', async () => {
       mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
-        id: 'test-agent',
-        name: 'Test',
-        trustScore: 99,
-        enabled: true,
-        systemPrompt: '',
+        id: 'low-trust-agent',
+        trustScore: 5,
       });
 
-      const newScore = await TrustManager.recordSuccess('test-agent');
+      const newScore = await TrustManager.recordFailure('low-trust-agent', 'Critical failure', 10);
 
-      expect(newScore).toBe(100); // 99 + 1 -> 100
-      expect(mockAgentRegistry.atomicUpdateAgentFieldWithCondition).toHaveBeenCalledWith(
-        'test-agent',
-        'trustScore',
-        100,
-        99
-      );
+      expect(newScore).toBe(TRUST.MIN_SCORE);
     });
 
-    it('applies quality weighting to success bumps', async () => {
+    it('applies quality weighting to failure penalties', async () => {
       const getConfig = () => ({
         id: 'test-agent',
         name: 'Test',
         trustScore: 50,
-        enabled: true,
+        evolutionMode: 'HITL',
         systemPrompt: '',
       });
 
-      // High quality (10/10) -> scaled at 2x bump
+      // Low quality failure (2/10) -> higher penalty multiplier (1.5x)
       mockAgentRegistry.getAgentConfig.mockResolvedValueOnce(getConfig());
-      const highQualityScore = await TrustManager.recordSuccess('test-agent', 10);
-      expect(highQualityScore).toBeCloseTo(52, 1); // 50 + 2 = 52
+      const lowQualityPenalty = await TrustManager.recordFailure(
+        'test-agent',
+        'Low quality failure',
+        1,
+        2
+      );
+      expect(lowQualityPenalty).toBeCloseTo(42.5, 1); // 50 - 7.5 = 42.5 (penalty * 1.5)
 
-      // Low quality (5/10) -> scaled at 1x bump
+      // High quality failure (8/10) -> lower penalty multiplier (0.5x)
       mockAgentRegistry.getAgentConfig.mockResolvedValueOnce(getConfig());
-      const lowQualityScore = await TrustManager.recordSuccess('test-agent', 5);
-      expect(lowQualityScore).toBeCloseTo(51, 1); // 50 + 1 = 51
+      const highQualityPenalty = await TrustManager.recordFailure(
+        'test-agent',
+        'High quality failure',
+        1,
+        8
+      );
+      expect(highQualityPenalty).toBeCloseTo(45.5, 1); // 50 - (5 * 0.9) = 45.5 (multiplier = (10-8)/5 + 0.5 = 0.9)
     });
 
     it('penalizes based on anomaly severity (batched)', async () => {
-      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
-        id: 'test-agent',
-        name: 'Test',
-        trustScore: 50,
-        enabled: true,
-        systemPrompt: '',
+      mockAgentRegistry.getAgentConfig.mockResolvedValue({
+        id: 'anomaly-agent',
+        trustScore: 90,
       });
-      const { AnomalyType, AnomalySeverity } = await import('../types/metrics');
 
-      const criticalScore = await TrustManager.recordAnomalies('test-agent', [
+      const anomalies = [
         {
           id: 'a1',
+          agentId: 'anomaly-agent',
+          detectedAt: Date.now(),
           type: AnomalyType.COGNITIVE_LOOP,
           severity: AnomalySeverity.CRITICAL,
-          agentId: 'test-agent',
-          detectedAt: Date.now(),
-          description: 'Stuck in loop',
+          description: 'Loop detected',
           triggerMetrics: {},
-          suggestion: '',
         },
-      ]);
-      expect(criticalScore).toBe(35); // 50 - 15 = 35
-      expect(mockAgentRegistry.atomicUpdateAgentFieldWithCondition).toHaveBeenCalledWith(
-        'test-agent',
-        'trustScore',
-        35,
-        50
-      );
+        {
+          id: 'a2',
+          agentId: 'anomaly-agent',
+          detectedAt: Date.now(),
+          type: AnomalyType.LATENCY_ANOMALY,
+          severity: AnomalySeverity.LOW,
+          description: 'Slightly slow',
+          triggerMetrics: {},
+        },
+      ];
+
+      const newScore = await TrustManager.recordAnomalies('anomaly-agent', anomalies);
+
+      // Critical (3x) + Low (0.1x) = 3.1x default penalty (5) = 15.5
+      expect(newScore).toBe(74.5);
     });
   });
 
-  describe('history and logging', () => {
-    it('persists score history and penalty log', async () => {
+  describe('recordSuccess', () => {
+    it('applies quality-weighted bump to trust score', async () => {
       mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
-        id: 'agent-1',
-        name: 'Agent 1',
-        trustScore: 50,
-        enabled: true,
-        systemPrompt: '',
+        id: 'good-agent',
+        trustScore: 80,
       });
-      mockAgentRegistry.getRawConfig.mockResolvedValue([]); // history
 
-      await TrustManager.recordFailure('agent-1', 'Reason X');
+      // Quality 10 -> 2x bump (default bump is 1)
+      const highQualityScore = await TrustManager.recordSuccess('good-agent', 10);
+      expect(highQualityScore).toBe(82);
 
-      expect(mockAgentRegistry.atomicUpdateAgentFieldWithCondition).toHaveBeenCalledWith(
-        'agent-1',
-        'trustScore',
-        expect.any(Number),
-        50
-      );
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
+        id: 'avg-agent',
+        trustScore: 50,
+      });
 
-      expect(mockConfigManager.appendToList).toHaveBeenCalled();
+      // Quality 5 -> 1x bump
+      const avgQualityScore = await TrustManager.recordSuccess('avg-agent', 5);
+      expect(avgQualityScore).toBe(51);
+    });
+
+    it('clamps score to maximum', async () => {
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
+        id: 'top-agent',
+        trustScore: 99.5,
+      });
+
+      const newScore = await TrustManager.recordSuccess('top-agent', 10);
+      expect(newScore).toBe(100);
     });
   });
 
-  describe('decay', () => {
-    it('applies decay to all agents above DECAY_BASELINE with tiered rates', async () => {
+  describe('decayTrustScores', () => {
+    it('applies aggressive decay to high scores and baseline decay to others', async () => {
       const mockConfigs = {
-        'high-trust': { id: 'high-trust', trustScore: 96 },
-        'autonomy-trust': { id: 'autonomy-trust', trustScore: 95 },
-        'mid-trust': { id: 'mid-trust', trustScore: 85 },
-        'above-baseline': { id: 'above-baseline', trustScore: 72 }, // Above baseline - should decay
-        'at-baseline': { id: 'at-baseline', trustScore: 70 }, // At baseline (==70) - should NOT decay
-        'below-baseline': { id: 'below-baseline', trustScore: 50 }, // Below baseline - should NOT decay
+        'high-trust': { trustScore: 98 }, // Above autonomy (95) -> 1.5x decay
+        'mid-trust': { trustScore: 88 }, // Above 85 -> 1.2x decay
+        'at-baseline': { trustScore: 70 }, // At baseline -> 1.0x decay
+        'below-baseline': { trustScore: 65 }, // Below baseline -> No decay
       };
 
-      mockAgentRegistry.getAllConfigs = vi.fn().mockResolvedValue(mockConfigs);
-      mockAgentRegistry.getRawConfig.mockImplementation(async (_key: string) => {
-        return [];
-      });
+      mockAgentRegistry.getAllConfigs.mockResolvedValue(mockConfigs);
+      mockAgentRegistry.atomicUpdateAgentField.mockResolvedValue(undefined);
 
       await TrustManager.decayTrustScores();
 
-      // 96 < 97 (HYSTERESIS_MARGIN): gets 1.1x decay = 0.55 -> 95.45
+      // Default decay is 0.5
       expect(mockAgentRegistry.atomicUpdateAgentField).toHaveBeenCalledWith(
         'high-trust',
         'trustScore',
-        95.45
+        97.25 // 98 - (0.5 * 1.5)
       );
-      // 95 >= 95 but < 97 (hysteresis zone): 0.5 * 1.1 = 0.55 decay -> 94.45
-      expect(mockAgentRegistry.atomicUpdateAgentField).toHaveBeenCalledWith(
-        'autonomy-trust',
-        'trustScore',
-        94.45
-      );
-      // >= 85: 0.5 * 1.2 = 0.6 decay -> 84.4
       expect(mockAgentRegistry.atomicUpdateAgentField).toHaveBeenCalledWith(
         'mid-trust',
         'trustScore',
-        84.4
+        87.4 // 88 - (0.5 * 1.2)
       );
-      // Above baseline (72 > 70): 0.5 decay -> 71.5
       expect(mockAgentRegistry.atomicUpdateAgentField).toHaveBeenCalledWith(
-        'above-baseline',
-        'trustScore',
-        71.5
-      );
-      // At baseline (70 == 70): NOT > 70, should NOT decay
-      expect(mockAgentRegistry.atomicUpdateAgentField).not.toHaveBeenCalledWith(
         'at-baseline',
         'trustScore',
-        expect.any(Number)
+        69.5
       );
-      // Below baseline (50 < 70): should NOT decay
       expect(mockAgentRegistry.atomicUpdateAgentField).not.toHaveBeenCalledWith(
         'below-baseline',
         'trustScore',

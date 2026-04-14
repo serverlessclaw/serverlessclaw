@@ -19,7 +19,7 @@ Serverless Claw is built on AWS using the **SST (Serverless Stack)** framework. 
 | **Secrets**   | SM / SST Secrets | Secure storage for API keys and tokens  |
 | **Storage**   | Amazon S3        | Knowledge vectors and trace archival    |
 | **UI**        | Next.js (SST)    | The ClawCenter dashboard                |
-| **CI/CD**    | AWS CodeBuild    | The autonomous `Deployer` for recovery  |
+| **CI/CD**     | AWS CodeBuild    | The autonomous `Deployer` for recovery  |
 
 ---
 
@@ -57,6 +57,7 @@ All resources are managed via the `infra/` directory.
 3. **Encryption**: All data at rest is encrypted using AWS-managed CMKs.
 
 ### Linkable Resource Architecture
+
 To balance strict IAM security with developer experience, sensitive resources like the `Deployer` are split into two channels:
 
 1. **Raw Resource**: Used for infrastructure-level rules (EventBridge) and IAM policies.

@@ -43,7 +43,7 @@ Every audit finding falls into one of four categories. Classifying findings corr
 
 **Audit Approach**: Compare actual behavior against documented requirements. Trace code paths through happy and error cases.
 
-###  gaps (Missing Functionality)
+### gaps (Missing Functionality)
 
 **Definition**: Something that should exist but doesn't—intentional or unintentional omissions that limit system capability.
 
@@ -199,15 +199,15 @@ A poor path is:
 
 Use this table to map high-level silos to the primary code areas that should be investigated.
 
-| Silo  | Name           | Primary Code Focus                               | Implementation Vertical             | Status |
-| :---- | :------------- | :----------------------------------------------- | :---------------------------------- | :----- |
-| **1** | The Spine      | `core/lib/routing/`, `core/lib/backbone.ts`      | [EVENTS.md](../interface/EVENTS.md) | **STABILIZED 2026-04-14** |
-| **2** | The Hand       | `core/lib/mcp.ts`, `core/lib/agent/executor.ts` | [PROTOCOL.md](../interface/PROTOCOL.md) | **STABILIZED 2026-04-14** |
-| **3** | The Shield     | `core/lib/safety/safety-engine.ts`               | [RESILIENCE.md](../system/RESILIENCE.md) | **STABILIZED 2026-04-14** |
-| **4** | The Brain      | `core/lib/memory/`, `core/lib/rag/`              | [MEMORY.md](../intelligence/MEMORY.md) | **STABILIZED 2026-04-14** |
-| **5** | The Eye        | `core/lib/metrics/`, `core/lib/tracer/`          | [DASHBOARD.md](../interface/DASHBOARD.md) | **STABILIZED 2026-04-14** |
-| **6** | The Scales     | `core/lib/safety/trust-manager.ts`               | [SAFETY.md](../intelligence/SAFETY.md) | **STABILIZED 2026-04-14** |
-| **7** | The Metabolism | `core/lib/maintenance/metabolism.ts`             | [METABOLISM.md](../system/METABOLISM.md) | OPERATIONAL |
+| Silo  | Name           | Primary Code Focus                              | Implementation Vertical                   | Status                    |
+| :---- | :------------- | :---------------------------------------------- | :---------------------------------------- | :------------------------ |
+| **1** | The Spine      | `core/lib/routing/`, `core/lib/backbone.ts`     | [EVENTS.md](../interface/EVENTS.md)       | **STABILIZED 2026-04-14** |
+| **2** | The Hand       | `core/lib/mcp.ts`, `core/lib/agent/executor.ts` | [PROTOCOL.md](../interface/PROTOCOL.md)   | **STABILIZED 2026-04-14** |
+| **3** | The Shield     | `core/lib/safety/safety-engine.ts`              | [RESILIENCE.md](../system/RESILIENCE.md)  | **STABILIZED 2026-04-14** |
+| **4** | The Brain      | `core/lib/memory/`, `core/lib/rag/`             | [MEMORY.md](../intelligence/MEMORY.md)    | **STABILIZED 2026-04-14** |
+| **5** | The Eye        | `core/lib/metrics/`, `core/lib/tracer/`         | [DASHBOARD.md](../interface/DASHBOARD.md) | **STABILIZED 2026-04-14** |
+| **6** | The Scales     | `core/lib/safety/trust-manager.ts`              | [SAFETY.md](../intelligence/SAFETY.md)    | **STABILIZED 2026-04-14** |
+| **7** | The Metabolism | `core/lib/maintenance/metabolism.ts`            | [METABOLISM.md](../system/METABOLISM.md)  | OPERATIONAL               |
 
 ---
 
@@ -240,6 +240,7 @@ Each silo represents a core functional domain. Reviews within a silo should adop
 The Shield has been unified. The `SafetyEngine` now acts as the authoritative gate for all tool executions, enforcing least-privilege resource access and Class C blast-radius limits.
 
 **Key Achievements**:
+
 - **Resource Discovery**: Optimized heuristic scan for protected resources.
 - **Policy Efficiency**: Streamlined policy lookup and configuration caching.
 - **Blast Radius**: Full persistence of Class C tracking across cold starts via DynamoDB.
