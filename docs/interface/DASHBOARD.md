@@ -8,6 +8,32 @@ This document describes the design system, real-time communication protocols, an
 
 The dashboard is built with **Next.js (App Router)** and **Tailwind CSS**. It serves as the primary visual interface for monitoring agent swarms and performing system audits.
 
+### Mission Control Mode
+A specialized, high-density dashboard state for human-agent collaboration, featuring real-time task visualization, trust monitoring, and human-in-the-loop (HITL) intervention gates.
+
+---
+
+## 🕹️ Mission Control Components
+
+The dashboard introduces a set of specialized interactive components for co-managing the swarm:
+
+### 1. Interactive Swarm Canvas (React Flow)
+Visualizes the execution DAG of the swarm in real-time.
+- **Node Deep-Dive**: Clicking a node opens the **TraceDetailSidebar**, providing real-time streaming logs (via AG-UI) and tool usage audit.
+- **Attachment Presence**: Visualizes staged media (📎) directly on the task nodes to show data flow.
+
+### 2. Council Judge Panel
+A decision-gate component that activates when the **Council of Agents** requires human governance.
+- **Synthesis Engine**: Merges conflicting reviews from Security, Architect, and Performance specialists.
+- **Action Suite**: Provides "Overrule", "Approve with Directives", or "Veto" capabilities.
+
+### 3. The Scales (Trust & Cognitive Health)
+A real-time metrics cluster showing the stability and reputation of the active swarm.
+- **Anomaly Highlight**: Triggers visual warnings when reasoning loops or cognitive degradation are detected.
+- **Autonomy Mode**: Allows global toggling between `AUTO` and `HITL` modes.
+
+---
+
 ### Real-time Communication (MQTT)
 
 ClawCenter uses **AWS IoT Core** to provide low-latency, bi-directional communication between the serverless backend and the browser.

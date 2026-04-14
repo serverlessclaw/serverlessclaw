@@ -7,31 +7,10 @@ import { emitMetrics, METRICS } from '../lib/metrics';
 import { ConfigManager } from '../lib/registry/config';
 import { DEFAULT_EVENT_ROUTING, verifyEventRoutingConfiguration } from '../lib/event-routing';
 import { performance } from 'perf_hooks';
-import { CONFIG_DEFAULTS } from '../lib/config/config-defaults';
-import { DistributedState } from '../lib/utils/distributed-state';
-
-// Configuration cache to reduce DDB calls (Phase B5: Persistence Integrity)
-const configCache = new Map<string, { value: any; expiresAt: number }>();
-const CACHE_TTL_MS = 60000; // 1 minute
-
-async function getCachedConfig<T>(key: string, defaultValue: T): Promise<T> {
-  const cached = configCache.get(key);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.value as T;
-  }
-  const value = await ConfigManager.getTypedConfig(key, defaultValue);
-  configCache.set(key, { value, expiresAt: Date.now() + CACHE_TTL_MS });
-  return value;
-}
+import { FlowController } from '../lib/routing/flow-controller';
 
 // Verify event routing configuration on module load
 verifyEventRoutingConfiguration();
-
-function startExecutionTimeout(timeoutMs: number): AbortController {
-  const controller = new AbortController();
-  setTimeout(() => controller.abort(), timeoutMs);
-  return controller;
-}
 
 /**
  * Simple schema validation for incoming event details.
@@ -61,41 +40,6 @@ export async function handler(
   const eventDetail = event.detail;
   const envelopeId = event.id;
 
-  // Load configuration thresholds with caching to reduce DDB load
-  const [
-    circuitThreshold,
-    circuitTimeout,
-    rateCapacity,
-    rateRefill,
-    maxRetryCount,
-    executionTimeout,
-  ] = await Promise.all([
-    getCachedConfig(
-      CONFIG_DEFAULTS.EVENT_CIRCUIT_THRESHOLD.configKey!,
-      CONFIG_DEFAULTS.EVENT_CIRCUIT_THRESHOLD.code
-    ),
-    getCachedConfig(
-      CONFIG_DEFAULTS.EVENT_CIRCUIT_TIMEOUT_MS.configKey!,
-      CONFIG_DEFAULTS.EVENT_CIRCUIT_TIMEOUT_MS.code
-    ),
-    getCachedConfig(
-      CONFIG_DEFAULTS.EVENT_RATE_BUCKET_CAPACITY.configKey!,
-      CONFIG_DEFAULTS.EVENT_RATE_BUCKET_CAPACITY.code
-    ),
-    getCachedConfig(
-      CONFIG_DEFAULTS.EVENT_RATE_BUCKET_REFILL_MS.configKey!,
-      CONFIG_DEFAULTS.EVENT_RATE_BUCKET_REFILL_MS.code
-    ),
-    getCachedConfig(
-      CONFIG_DEFAULTS.EVENT_MAX_RETRY_COUNT.configKey!,
-      CONFIG_DEFAULTS.EVENT_MAX_RETRY_COUNT.code
-    ),
-    getCachedConfig(
-      CONFIG_DEFAULTS.EVENT_EXECUTION_TIMEOUT_MS.configKey!,
-      CONFIG_DEFAULTS.EVENT_EXECUTION_TIMEOUT_MS.code
-    ),
-  ]);
-
   // Validate payload
   const validation = validateEvent(eventDetail);
   if (!validation.valid) {
@@ -118,7 +62,7 @@ export async function handler(
     traceId,
     (eventDetail.sessionId as string) || 'unknown',
     'system.spine',
-    (eventDetail.retryCount as number) ?? 0, // Using retryCount as a hint for depth if depth missing
+    (eventDetail.retryCount as number) ?? 0,
     isMission
   );
 
@@ -144,24 +88,14 @@ export async function handler(
     logger.warn(`Metrics emission failed for ${detailType}:`, err)
   );
 
-  // Rate limiting (Distributed state for cross-Lambda enforcement)
-  if (!(await DistributedState.consumeToken(detailType, rateCapacity, rateRefill))) {
-    logger.warn(`[RATE_LIMIT] Rate limit exceeded for ${detailType}`);
-    await routeToDlq(event, detailType, 'SYSTEM', 'unknown', 'Rate limit exceeded');
-    emitMetrics([METRICS.rateLimitExceeded(detailType), METRICS.dlqEvents(1)]).catch(() => {});
+  // Flow Control (Rate limiting & Circuit breaker)
+  const flowResult = await FlowController.canProceed(detailType);
+  if (!flowResult.allowed) {
+    logger.warn(`[FLOW_CONTROL] ${flowResult.reason} for ${detailType}`);
+    await routeToDlq(event, detailType, 'SYSTEM', 'unknown', flowResult.reason!);
+    emitMetrics([METRICS.dlqEvents(1)]).catch(() => {});
     return;
   }
-
-  // Circuit breaker (Distributed state for cross-Lambda enforcement)
-  if (await DistributedState.isCircuitOpen(detailType, circuitThreshold, circuitTimeout)) {
-    logger.warn(`[CIRCUIT] Circuit open for ${detailType}`);
-    await routeToDlq(event, detailType, 'SYSTEM', 'unknown', 'Circuit breaker open');
-    emitMetrics([METRICS.circuitBreakerTriggered('event'), METRICS.dlqEvents(1)]).catch(() => {});
-    return;
-  }
-
-  // Execution timeout guard (not currently used by downstream calls)
-  const _abortCtrl = startExecutionTimeout(executionTimeout);
 
   // Idempotency handling (deterministic key for events without envelopeId)
   let idempotencyKey = envelopeId;
@@ -179,6 +113,7 @@ export async function handler(
   }
 
   // Enforce maximum retry count
+  const maxRetryCount = await FlowController.getCachedConfig('event_max_retry_count', 3);
   const retryCount = (eventDetail.retryCount as number) ?? 0;
   if (retryCount > maxRetryCount) {
     logger.warn(`[RETRY] Exceeded max retries (${maxRetryCount}) for ${detailType}`);
@@ -290,8 +225,8 @@ export async function handler(
 
     logger.error(`EventHandler failed for ${detailType}: ${errorMessage}`, error);
 
-    // Record failure for circuit breaker (Distributed state)
-    await DistributedState.recordFailure(detailType, circuitThreshold, circuitTimeout);
+    // Record failure for flow control
+    await FlowController.recordFailure(detailType);
 
     // Route to DLQ
     await routeToDlq(event, detailType, 'SYSTEM', 'unknown', errorMessage);

@@ -1,10 +1,8 @@
-'use client';
-
-import React from 'react';
-import Typography from '@/components/ui/Typography';
-import Badge from '@/components/ui/Badge';
-import { Vote, CheckCircle2, XCircle, UserCheck, ShieldCheck, RefreshCw } from 'lucide-react';
+import { Vote, CheckCircle2, XCircle, UserCheck, ShieldCheck, RefreshCw, BarChart3 } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
+import Typography from '@/components/ui/Typography';
+import CouncilJudgePanel from './CouncilJudgePanel';
 
 interface ConsensusVote {
   agentId: string;
@@ -183,6 +181,19 @@ export default function SwarmConsensusView({ requests }: { requests: ConsensusRe
                 ))}
               </div>
             </div>
+
+            {/* Council Judge Panel - Active for Pending Requests */}
+            {req.status === 'PENDING' && (
+              <CouncilJudgePanel 
+                requestId={req.id} 
+                onJudgement={(decision, directive) => {
+                  console.log(`Human Judgement for ${req.id}: ${decision}`, directive);
+                  // In a real implementation, this would call the API:
+                  // fetch(`/api/consensus/${req.id}/judge`, { method: 'POST', body: JSON.stringify({ decision, directive }) });
+                  alert(`JUDGEMENT_RECORDED: ${decision}. Directive: "${directive}"`);
+                }} 
+              />
+            )}
           </div>
         );
       })}

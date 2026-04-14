@@ -189,4 +189,5 @@ export interface Trace {
   toolsUsed?: string[];
   model?: string;
   sessionId?: string;
+  durationMs?: number;
 }

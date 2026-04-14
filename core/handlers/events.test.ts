@@ -87,6 +87,13 @@ vi.mock('../lib/outbound', () => ({
   sendOutboundMessage: vi.fn().mockResolvedValue({}),
 }));
 
+// Mock recursion tracker
+vi.mock('../lib/recursion-tracker', () => ({
+  getRecursionDepth: vi.fn(async () => 0),
+  incrementRecursionDepth: vi.fn(async () => 1),
+  clearRecursionStack: vi.fn(async () => undefined),
+}));
+
 // Mock logger
 vi.mock('../lib/logger', () => ({
   logger: {

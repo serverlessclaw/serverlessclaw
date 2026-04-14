@@ -12,7 +12,7 @@ import {
 } from '../lib/utils/agent-helpers';
 import { emitTaskEvent } from '../lib/utils/agent-helpers/event-emitter';
 import { SessionStateManager } from '../lib/session/session-state';
-import { pushRecursionEntry, getRecursionDepth } from '../lib/recursion-tracker';
+import { incrementRecursionDepth, getRecursionDepth } from '../lib/recursion-tracker';
 
 interface WorkerEvent {
   'detail-type': string;
@@ -116,7 +116,7 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
       }
       return `Error: Recursion limit exceeded for trace ${traceId}`;
     }
-    await pushRecursionEntry(traceId, (payload.depth ?? 0) + 1, sessionId || 'unknown', agentId);
+    await incrementRecursionDepth(traceId, sessionId || 'unknown', agentId);
   }
 
   try {

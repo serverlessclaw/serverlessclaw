@@ -12,6 +12,7 @@ import {
   Activity,
   Bot,
   Terminal,
+  Paperclip,
   LucideIcon,
 } from 'lucide-react';
 import Typography from '@/components/ui/Typography';
@@ -129,11 +130,19 @@ export const nodeTypes = {
                 {data.agentId}
               </span>
             </div>
-            {data.latency && (
-              <span className="text-[9px] font-mono text-muted-foreground">
-                {data.latency.toFixed(0)}ms
-              </span>
-            )}
+            <div className="flex items-center gap-3">
+              {data.attachments && data.attachments.length > 0 && (
+                <div className="flex items-center gap-1 text-cyber-blue drop-shadow-[0_0_2px_rgba(6,182,212,0.5)]">
+                  <Paperclip size={10} />
+                  <span className="text-[9px] font-black">{data.attachments.length}</span>
+                </div>
+              )}
+              {data.latency && (
+                <span className="text-[9px] font-mono text-muted-foreground">
+                  {data.latency.toFixed(0)}ms
+                </span>
+              )}
+            </div>
           </div>
         </div>
         <Handle
@@ -191,10 +200,16 @@ export const nodeTypes = {
             Initiator: {data.initiatorId}
           </Typography>
         </div>
-        <div className="p-2 bg-background/40 rounded border border-cyber-blue/10">
-          <Typography variant="body" className="text-[10px] italic text-cyber-blue/80 line-clamp-2">
-            &ldquo;{data.initialQuery}&rdquo;
+        <div className="p-2 bg-background/40 rounded border border-cyber-blue/10 space-y-2">
+          <Typography variant="body" className="text-[10px] italic text-cyber-blue/80 line-clamp-2 leading-tight">
+            &ldquo;{(data as Record<string, any>).initialQuery}&rdquo;
           </Typography>
+          {(data as Record<string, any>).attachments && (data as Record<string, any>).attachments.length > 0 && (
+            <div className="flex items-center gap-1.5 border-t border-cyber-blue/10 pt-1.5">
+                <Paperclip size={10} className="text-cyber-blue/50" />
+                <span className="text-[9px] font-black text-cyber-blue/50">{(data as Record<string, any>).attachments.length} ATTACHED_FILES</span>
+            </div>
+          )}
         </div>
       </div>
       <Handle

@@ -17,6 +17,30 @@ This document covers the AWS topology and data flow. For operational instruction
 7.  **AI-Native**: Optimized for agent-human pair programming by prioritizing semantic transparency, strict neural typing, and direct schema definitions over traditional boilerplate indirection.
 8.  **Adaptive UI**: The dashboard implements a theme-agnostic design system using semantic CSS variables, ensuring full functional and aesthetic parity between Light and Dark modes while maintaining the signature "cyber" identity.
 9.  **Multi-Lingual**: Implements a "Baseline English Prompt" strategy. Agents maintain high reasoning quality via English core prompts while communicating in the user's preferred language (English/Chinese) via dynamic runtime instruction injection.
+10. **JIT File Staging**: Implements a Just-In-Time media pipeline that intercept uploads, stages them in S3, and provides optimized cognitive context (base64/URLs) to agents, ensuring peak vision performance and trace-aware file management.
+
+---
+
+## 📂 JIT File Staging Pipeline
+
+The system handles chat-uploaded media through a decoupled staging layer:
+
+```text
+[ User ]        [ Webhook ]        [ Adapter (TG/Slack) ]        [ S3 (Staging) ]        [ LLM Agent ]
+    |               |                       |                        |                      |
+    +--- Upload --->|                       |                        |                      |
+    |               +---- Process Media --->|                        |                      |
+    |               |                       +---- Download File ---->|                      |
+    |               |                       |                        |                      |
+    |               |                       +---- Upload to S3 ----->|                      |
+    |               |                       |      (chat-attachments/)|                      |
+    |               |                       |                        |                      |
+    |               |                       +---- Yield Attachment --+                      |
+    |               |                       |   (URL + b64 vision)   |                      |
+    |               |                       |                        |                      |
+    |               +---------------------> | --------------------- [ INJECT CONTEXT ] ---->|
+    |               |                       |                        |                      |
+```
 
 ---
 

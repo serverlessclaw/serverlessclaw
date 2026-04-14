@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { pushRecursionEntry, getRecursionDepth, clearRecursionStack } from './recursion-tracker';
+import {
+  incrementRecursionDepth,
+  getRecursionDepth,
+  clearRecursionStack,
+} from './recursion-tracker';
 import { UpdateCommand, GetCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 
 // Mock the DynamoDB document client send method
@@ -32,48 +36,46 @@ describe('recursion-tracker', () => {
     vi.clearAllMocks();
   });
 
-  describe('pushRecursionEntry', () => {
-    it('should use existence check for first entry', async () => {
-      await pushRecursionEntry('trace-1', 5, 'sess-1', 'agent-1');
+  describe('incrementRecursionDepth', () => {
+    it('should use atomic increment and return new depth', async () => {
+      mockSend.mockResolvedValueOnce({
+        Attributes: { depth: 1 },
+      });
 
+      const depth = await incrementRecursionDepth('trace-1', 'sess-1', 'agent-1');
+
+      expect(depth).toBe(1);
       expect(mockSend).toHaveBeenCalledWith(expect.any(UpdateCommand));
       const cmd = mockSend.mock.calls[0][0];
-      expect(cmd.input.ConditionExpression).toBe('attribute_not_exists(#depth)');
-      expect(cmd.input.ExpressionAttributeNames).toEqual({ '#depth': 'depth', '#type': 'type' });
-      expect(cmd.input.ExpressionAttributeValues[':depth']).toBe(5);
-      expect(cmd.input.Key.timestamp).toBe(0);
+      expect(cmd.input.UpdateExpression).toContain(
+        'SET #depth = if_not_exists(#depth, :zero) + :one'
+      );
+      expect(cmd.input.ExpressionAttributeValues[':zero']).toBe(0);
+      expect(cmd.input.ExpressionAttributeValues[':one']).toBe(1);
+      expect(cmd.input.ReturnValues).toBe('UPDATED_NEW');
     });
 
     it('should use shorter TTL for mission-critical contexts', async () => {
+      mockSend.mockResolvedValueOnce({
+        Attributes: { depth: 1 },
+      });
+
       // Mission context uses 30 min (1800s) TTL vs normal 1 hour (3600s)
-      await pushRecursionEntry('trace-1', 5, 'sess-1', 'agent-1', true);
+      await incrementRecursionDepth('trace-1', 'sess-1', 'agent-1', true);
 
       const cmd = mockSend.mock.calls[0][0];
-      // The expiresAt should be now + 1800 for isMission=true
       const expectedExpires = Math.floor(Date.now() / 1000) + 1800;
-      expect(cmd.input.ExpressionAttributeValues[':exp']).toBe(expectedExpires);
+      // Allow slight difference in time
+      expect(
+        Math.abs(cmd.input.ExpressionAttributeValues[':exp'] - expectedExpires)
+      ).toBeLessThanOrEqual(1);
     });
 
-    it('should handle ConditionalCheckFailedException by attempting increment', async () => {
-      // First call fails with conditional check
-      mockSend.mockRejectedValueOnce({ name: 'ConditionalCheckFailedException' });
-      // Second call (getRecursionDepth) returns current depth
-      mockSend.mockResolvedValueOnce({ Item: { depth: 3 } });
-      // Third call (increment update) succeeds
-      mockSend.mockResolvedValueOnce({});
-
-      // Should not throw
-      await expect(pushRecursionEntry('trace-1', 3, 'sess-1', 'agent-1')).resolves.not.toThrow();
-
-      // Should have attempted increment (3 calls total)
-      expect(mockSend).toHaveBeenCalledTimes(3);
-    });
-
-    it('should handle other errors and log warning', async () => {
+    it('should return -1 on error', async () => {
       mockSend.mockRejectedValue({ name: 'ValidationError', message: 'Invalid input' });
 
-      // Should not throw, should log warning
-      await expect(pushRecursionEntry('trace-1', 3, 'sess-1', 'agent-1')).resolves.not.toThrow();
+      const depth = await incrementRecursionDepth('trace-1', 'sess-1', 'agent-1');
+      expect(depth).toBe(-1);
     });
   });
 

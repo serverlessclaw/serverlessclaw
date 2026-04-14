@@ -34,6 +34,7 @@ import {
 } from '@/lib/collaboration-utils';
 import { nodeTypes } from '@/components/CollaborationNodes';
 import { HandoffPanel } from '@/components/HandoffPanel';
+import TraceDetailSidebar from '@/components/TraceDetailSidebar';
 
 export default function CollaborationCanvas() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -43,6 +44,8 @@ export default function CollaborationCanvas() {
   const [handoffData] = useState<HandoffData | null>(null);
   const [handoffResponse, setHandoffResponse] = useState('');
   const [submittingResponse, setSubmittingResponse] = useState(false);
+  const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
+  
   const { zoomIn, zoomOut, fitView } = useReactFlow();
   const handoffTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -343,6 +346,10 @@ export default function CollaborationCanvas() {
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
+          onNodeClick={(_event, node) => {
+            const traceId = node.data?.traceId;
+            if (traceId) setSelectedTraceId(traceId as string);
+          }}
           nodeTypes={nodeTypes}
           fitView
           className="bg-dot-pattern"
@@ -350,6 +357,12 @@ export default function CollaborationCanvas() {
           <Background color="#222" gap={20} />
         </ReactFlow>
       )}
+
+      {/* Trace Intelligence Sidebar */}
+      <TraceDetailSidebar 
+        traceId={selectedTraceId} 
+        onClose={() => setSelectedTraceId(null)} 
+      />
 
       {/* Control Panels */}
       <div className="absolute bottom-6 left-6 z-20 flex flex-col gap-2">

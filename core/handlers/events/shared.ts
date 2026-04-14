@@ -51,7 +51,6 @@ export function isMissionContext(eventType?: string, metadata?: Record<string, u
  * @param traceId - The trace ID for the execution chain.
  * @param sessionId - The session ID for the execution.
  * @param agentId - The agent ID performing the task.
- * @param depthFromEvent - The depth passed in the event payload (as a hint).
  * @param isMission - Whether this is a mission-critical context.
  * @returns A promise resolving to the current depth if successful, or null if limit exceeded.
  */
@@ -59,27 +58,24 @@ export async function checkAndPushRecursion(
   traceId: string,
   sessionId: string,
   agentId: string,
-  depthFromEvent?: number,
+  _depthFromEvent?: number,
   isMission: boolean = false
 ): Promise<number | null> {
-  const { getRecursionDepth, pushRecursionEntry } = await import('../../lib/recursion-tracker');
+  const { getRecursionDepth, incrementRecursionDepth } =
+    await import('../../lib/recursion-tracker');
 
   const RECURSION_LIMIT = await getRecursionLimit(isMission);
   const currentDepth = await getRecursionDepth(traceId);
 
   if (currentDepth >= RECURSION_LIMIT) {
     logger.error(
-      `[RECURSION] Limit exceeded for trace ${traceId} at depth ${currentDepth} (limit: ${RECURSION_LIMIT})`
+      `[RECURSION] Limit exceeded for trace ${traceId} at current depth ${currentDepth} (limit: ${RECURSION_LIMIT})`
     );
     return null;
   }
 
-  // Use the event hint if it's deeper, but monotonic guard in pushRecursionEntry
-  // handles the actual safety in DynamoDB. Pass isMission for TTL handling.
-  const targetDepth = Math.max(currentDepth + 1, (depthFromEvent ?? 0) + 1);
-
-  await pushRecursionEntry(traceId, targetDepth, sessionId, agentId, isMission);
-  return targetDepth;
+  const newDepth = await incrementRecursionDepth(traceId, sessionId, agentId, isMission);
+  return newDepth === -1 ? null : newDepth;
 }
 
 /**

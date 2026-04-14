@@ -49,7 +49,7 @@ vi.mock('../lib/session/session-state', () => ({
 }));
 
 vi.mock('../lib/recursion-tracker', () => ({
-  pushRecursionEntry: vi.fn(async () => undefined),
+  incrementRecursionDepth: vi.fn(async () => 1),
   getRecursionDepth: vi.fn(async () => 0),
   clearRecursionStack: vi.fn(async () => undefined),
 }));

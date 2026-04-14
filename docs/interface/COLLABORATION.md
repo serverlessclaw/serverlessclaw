@@ -224,6 +224,28 @@ The Council uses `agent_guided` aggregation with a prompt that synthesizes all t
 | `evolution_mode = HITL`                           | Council + Human Approval                  |
 | Any Critical finding                              | Auto-REJECT → back to Planner             |
 
+### 🛡️ Human-in-the-Middle (HITM) Override
+
+When the Council of Agents (Security, Architect, Performance) triggers a `REJECTED` or `CONDITIONAL` status on high-impact tasks, the system shifts into **HITM** mode. This allows the human "Judge" to review the swarm's debate and either enforce the rejection, approve with specific directives, or overrule the critics.
+
+```text
+  Swarm (Council)         Decision Engine       Dashboard (Judge UI)       Human (Judge)        Execution Layer
+        |                      |                      |                      |                     |
+        +---- [REJECTED] ----> |                      |                      |                     |
+        |                      +---- [PAUSE] -------->|                      |                     |
+        |                      |                      +--- [ALERT: Review] ->|                     |
+        |                      |                      |                      |                     |
+        |                      |                      |        [REVIEWS TRACE & DEBATE]            |
+        |                      |                      |                      |                     |
+        |                      |                      |<--- [DIRECTIVE: Proceed] ---+              |
+        |                      |                      |      (or Overrule)   |                     |
+        |                      |                      |                      |                     |
+        |                      |<--- [JUDGEMENT] -----+                      |                     |
+        |                      |                      |                      |                     |
+        |                      +-------------------- [RESUME/OVERRIDE] --------------------------->|
+        |                      |                      |                      |                     |
+```
+
 ### Multi-Party Collaboration (Shared Sessions)
 
 For complex tasks that require negotiation, peer review, or iterative brainstorming between multiple agents (and humans), the system provides a **Shared Collaboration Session** model. Unlike the default transactional handoff, this model allows all participants to share a persistent conversation history.

@@ -474,4 +474,22 @@ describe('SafetyEngine', () => {
       await expect(engine.persistViolations()).resolves.toBeUndefined();
     });
   });
+
+  describe('Class C / Class D Actions', () => {
+    it('should identify Class C actions', () => {
+      expect(engine.isClassCAction('deployment')).toBe(true);
+      expect(engine.isClassCAction('iam_change')).toBe(true);
+      expect(engine.isClassCAction('CODE_CHANGE')).toBe(true);
+    });
+
+    it('should identify Class D actions', () => {
+      expect(engine.isClassDAction('trust_manipulation')).toBe(true);
+      expect(engine.isClassDAction('mode_shift')).toBe(true);
+    });
+
+    it('should not confuse Class C and Class D', () => {
+      expect(engine.isClassCAction('trust_manipulation')).toBe(false);
+      expect(engine.isClassDAction('deployment')).toBe(false);
+    });
+  });
 });

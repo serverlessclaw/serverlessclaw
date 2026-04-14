@@ -24,6 +24,7 @@ export interface TaskNodeData extends Record<string, unknown> {
   startedAt?: number;
   completedAt?: number;
   latency?: number;
+  attachments?: { type: string; name: string; url: string }[];
 }
 export interface AgentActivity {
   agentId: string;

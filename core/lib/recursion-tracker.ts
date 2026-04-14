@@ -22,91 +22,56 @@ const docClient = DynamoDBDocumentClient.from(client, {
 });
 
 /**
- * Record a recursion entry in the cross-session stack
+ * Atomically increments the recursion depth for a trace and returns the new depth.
+ * Uses monotonic depth updates to prevent safety bypass in concurrent scenarios.
+ *
  * @param traceId - The trace ID for the execution chain
- * @param depth - Current recursion depth
  * @param sessionId - Current session ID
  * @param agentId - Current agent ID
- * @param isMission - Whether this is a mission-critical workflow (uses shorter TTL)
+ * @param isMission - Whether this is a mission-critical workflow
+ * @returns A promise resolving to the new depth if successful, or -1 on error.
  */
-export async function pushRecursionEntry(
+export async function incrementRecursionDepth(
   traceId: string,
-  depth: number,
   sessionId: string,
   agentId: string,
   isMission: boolean = false
-): Promise<void> {
+): Promise<number> {
   const key = `${RECURSION_STACK_PREFIX}${traceId}`;
   const ttlSeconds = isMission ? MISSION_RECURSION_TTL_SECONDS : RECURSION_TTL_SECONDS;
-  try {
-    const expiresAt = Math.floor(Date.now() / 1000) + ttlSeconds;
+  const expiresAt = Math.floor(Date.now() / 1000) + ttlSeconds;
+  const now = Date.now();
 
-    // Use UpdateCommand with existence check - first entry sets the depth
-    await docClient.send(
+  try {
+    const response = await docClient.send(
       new UpdateCommand({
         TableName: process.env.MEMORY_TABLE_NAME ?? 'MemoryTable',
-        Key: {
-          userId: key,
-          timestamp: 0,
-        },
+        Key: { userId: key, timestamp: 0 },
         UpdateExpression:
-          'SET #depth = :depth, sessionId = :sessionId, agentId = :agentId, createdAt = :now, expiresAt = :exp, #type = :type',
-        ConditionExpression: 'attribute_not_exists(#depth)',
+          'SET #depth = if_not_exists(#depth, :zero) + :one, sessionId = :sessionId, agentId = :agentId, updatedAt = :now, expiresAt = :exp, #type = :type',
         ExpressionAttributeNames: {
           '#type': 'type',
           '#depth': 'depth',
         },
         ExpressionAttributeValues: {
-          ':depth': depth,
+          ':zero': 0,
+          ':one': 1,
           ':sessionId': sessionId,
           ':agentId': agentId,
-          ':now': Date.now(),
+          ':now': now,
           ':exp': expiresAt,
           ':type': 'RECURSION_ENTRY',
         },
+        ReturnValues: 'UPDATED_NEW',
       })
     );
 
-    logger.info(
-      `[RECURSION] Pushed entry for trace ${traceId}: depth=${depth}, agent=${agentId}, mission=${isMission}`
-    );
+    const newDepth = response.Attributes?.depth as number;
+    logger.info(`[RECURSION] Incremented depth for ${traceId} to ${newDepth} (Agent: ${agentId})`);
+    return newDepth;
   } catch (error: unknown) {
-    const err = error as { name?: string };
-    if (err.name === 'ConditionalCheckFailedException') {
-      // Entry exists - try to update depth atomically with increment
-      // This handles concurrent pushes at the same level properly
-      try {
-        const currentDepth = await getRecursionDepth(traceId);
-        const newDepth = Math.max(currentDepth + 1, depth);
-        await docClient.send(
-          new UpdateCommand({
-            TableName: process.env.MEMORY_TABLE_NAME ?? 'MemoryTable',
-            Key: {
-              userId: key,
-              timestamp: 0,
-            },
-            UpdateExpression: 'SET #depth = :depth, agentId = :agentId, createdAt = :now',
-            ConditionExpression: '#depth = :currentDepth',
-            ExpressionAttributeNames: {
-              '#depth': 'depth',
-            },
-            ExpressionAttributeValues: {
-              ':depth': newDepth,
-              ':agentId': agentId,
-              ':now': Date.now(),
-              ':currentDepth': currentDepth,
-            },
-          })
-        );
-        logger.info(
-          `[RECURSION] Incremented depth for trace ${traceId}: ${currentDepth} -> ${newDepth}`
-        );
-      } catch {
-        logger.debug(`[RECURSION] Concurrent update for ${traceId}: another branch updated first`);
-      }
-      return;
-    }
-    logger.warn(`[RECURSION] Failed to push entry for ${traceId}:`, error);
+    logger.warn(`[RECURSION] Failed to increment depth for ${traceId}:`, error);
+    return -1;
   }
 }
 /**

@@ -6,8 +6,9 @@ import { EventType } from '../../lib/types/agent';
 const mockDepth = { value: 0 };
 vi.mock('../../lib/recursion-tracker', () => ({
   getRecursionDepth: vi.fn(async () => mockDepth.value),
-  pushRecursionEntry: vi.fn(async (_traceId, depth) => {
-    mockDepth.value = depth;
+  incrementRecursionDepth: vi.fn(async () => {
+    mockDepth.value += 1;
+    return mockDepth.value;
   }),
 }));
 
@@ -74,16 +75,6 @@ describe('EventHandler Shared Utilities', () => {
       const result = await checkAndPushRecursion(traceId, 'sess-1', 'agent-1', 0, true);
 
       expect(result).toBeNull();
-    });
-
-    it('should use event hint if it is deeper than current DDB depth', async () => {
-      mockDepth.value = 2;
-      const traceId = 'trace-hint';
-      const result = await checkAndPushRecursion(traceId, 'sess-1', 'agent-1', 5);
-
-      // (hint 5) + 1 = 6
-      expect(result).toBe(6);
-      expect(mockDepth.value).toBe(6);
     });
   });
 
