@@ -1,6 +1,7 @@
 import { logger } from '../../lib/logger';
 import { wakeupInitiator } from './shared';
 import { AgentType, EventType } from '../../lib/types/agent';
+import { clearRecursionStack } from '../../lib/recursion-tracker';
 
 interface ParallelTaskCompletedEvent {
   userId: string;
@@ -252,4 +253,11 @@ export async function handleParallelTaskCompleted(
     undefined,
     traceId
   );
+
+  // Clear recursion stack to prevent DynamoDB storage growth
+  if (traceId) {
+    await clearRecursionStack(traceId).catch((err) =>
+      logger.warn(`Failed to clear recursion stack for ${traceId}:`, err)
+    );
+  }
 }

@@ -48,8 +48,8 @@ describe('event-routing', () => {
 
     it('should have exactly the expected number of routing entries', () => {
       // This test will fail if someone adds a new event type without adding routing
-      // Update this count when adding new routable event types (currently 24: 23 required + DLQ)
-      expect(Object.keys(DEFAULT_EVENT_ROUTING)).toHaveLength(24);
+      // Update this count when adding new routable event types (currently 29)
+      expect(Object.keys(DEFAULT_EVENT_ROUTING)).toHaveLength(29);
     });
   });
 
@@ -92,6 +92,9 @@ describe('event-routing', () => {
         'agent-multiplexer',
         'dlq-handler',
         'dashboard-failure-handler',
+        'orchestration-handler',
+        'delegation-handler',
+        'handoff-handler',
       ];
 
       for (const [, routing] of Object.entries(DEFAULT_EVENT_ROUTING)) {

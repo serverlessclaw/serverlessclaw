@@ -84,13 +84,13 @@ export class SafetyEngine extends SafetyBase {
     }
 
     const scanRecursive = (obj: unknown) => {
-      if (!obj || typeof obj !== 'object') return;
+      if (!obj || typeof obj !== 'object' || obj === null) return;
 
       const record = obj as Record<string, unknown>;
       for (const value of Object.values(record)) {
         if (typeof value === 'string') {
           const isPathLike = value.includes('/') || value.includes('\\') || value.includes('.');
-          if (isPathLike && this.isSystemProtected(value)) {
+          if (isPathLike) {
             foundPaths.add(value);
           }
         } else if (typeof value === 'object' && value !== null) {
@@ -136,6 +136,28 @@ export class SafetyEngine extends SafetyBase {
   ): Promise<SafetyEvaluationResult> {
     const tier = agentConfig?.safetyTier ?? SafetyTier.PROD;
     const agentId = agentConfig?.id ?? 'unknown';
+
+    // 0. Class D Check (Permanently Blocked per Silo 3 mandate)
+    if (this.isClassDAction(action)) {
+      const violation = this.createViolation(
+        agentId,
+        tier,
+        action,
+        context?.toolName,
+        context?.resource,
+        `Class D action '${action}' is permanently blocked by policy.`,
+        'blocked',
+        context?.traceId,
+        context?.userId
+      );
+      await this.logViolation(violation);
+      return {
+        allowed: false,
+        requiresApproval: false,
+        reason: `Action '${action}' is a Class D (Policy Protected) operation and is permanently blocked.`,
+        appliedPolicy: 'class_d_blocked',
+      };
+    }
 
     // 1. Discover all resources involved
     const resourcesToCheck = this.discoverResources(action, context);

@@ -596,6 +596,16 @@ export class AgentRegistry {
     const allConfigs = await this.getAllConfigs();
     let totalPruned = 0;
 
+    const batchToolOverrides =
+      ((await ConfigManager.getRawConfig(DYNAMO_KEYS.AGENT_TOOL_OVERRIDES)) as Record<
+        string,
+        string[]
+      >) || {};
+    let batchModified = false;
+
+    const { DeleteCommand } = await import('@aws-sdk/lib-dynamodb');
+    const resource = (await import('sst')).Resource as { ConfigTable?: { name: string } };
+
     for (const [agentId, config] of Object.entries(allConfigs)) {
       if (!config.tools) continue;
 
@@ -609,13 +619,35 @@ export class AgentRegistry {
       const pruneTargets = dynamicTools.filter((t) => toolsToPrune.includes(t));
 
       if (pruneTargets.length > 0) {
-        const remainingTools = config.tools.filter((t) => !pruneTargets.includes(t));
-        // Note: This logic assumes per-agent tools. In a real system, we'd also check batch overrides.
-        // For Silo 7 Deep Dive, we focus on the per-agent tool list.
-        await ConfigManager.saveRawConfig(`${agentId}_tools`, remainingTools);
+        // 1. Delete legacy per-agent overrides if configured
+        if (resource.ConfigTable?.name) {
+          try {
+            await defaultDocClient.send(
+              new DeleteCommand({
+                TableName: resource.ConfigTable.name,
+                Key: { key: `${agentId}_tools` },
+              })
+            );
+          } catch (e) {
+            logger.warn(`Failed to delete legacy per-agent tools for ${agentId}:`, e);
+          }
+        }
+
+        // 2. Update batch overrides
+        if (batchToolOverrides[agentId]) {
+          batchToolOverrides[agentId] = batchToolOverrides[agentId].filter(
+            (t) => !pruneTargets.includes(t)
+          );
+          batchModified = true;
+        }
+
         totalPruned += pruneTargets.length;
         logger.info(`[REGISTRY] Pruned ${pruneTargets.length} tools from agent ${agentId}`);
       }
+    }
+
+    if (batchModified) {
+      await ConfigManager.saveRawConfig(DYNAMO_KEYS.AGENT_TOOL_OVERRIDES, batchToolOverrides);
     }
 
     return totalPruned;

@@ -1,6 +1,7 @@
 import { EventType } from '../../lib/types/agent';
 import { logger } from '../../lib/logger';
 import { aggregator } from '../../lib/agent/parallel-aggregator';
+import { clearRecursionStack } from '../../lib/recursion-tracker';
 import {
   buildDependencyGraph,
   completeTask,
@@ -153,6 +154,11 @@ export async function handleDagStep(
             aggregationType: currentState.aggregationType,
             aggregationPrompt: currentState.aggregationPrompt,
           });
+
+          // Clear recursion stack to prevent DynamoDB storage growth
+          await clearRecursionStack(traceId as string).catch((err) =>
+            logger.warn(`Failed to clear recursion stack for ${traceId}:`, err)
+          );
         }
       }
     } else {

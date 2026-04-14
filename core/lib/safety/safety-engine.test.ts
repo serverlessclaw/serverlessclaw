@@ -487,6 +487,32 @@ describe('SafetyEngine', () => {
       expect(engine.isClassDAction('mode_shift')).toBe(true);
     });
 
+    it('should permanently block Class D actions in evaluateAction', async () => {
+      const config = { id: 'test-agent', safetyTier: SafetyTier.LOCAL } as IAgentConfig;
+      const result = await engine.evaluateAction(config, 'trust_manipulation');
+
+      expect(result.allowed).toBe(false);
+      expect(result.appliedPolicy).toBe('class_d_blocked');
+      expect(result.reason).toContain('permanently blocked');
+    });
+
+    it('should scan for nested paths in arguments', async () => {
+      const config = { id: 'test-agent', safetyTier: SafetyTier.LOCAL } as IAgentConfig;
+      const args = {
+        nested: {
+          config: '.git/config',
+          other: 'src/main.ts',
+        },
+      };
+
+      const result = await engine.evaluateAction(config, 'file_operation', { args });
+
+      // .git/config is a protected resource
+      expect(result.allowed).toBe(false);
+      expect(result.appliedPolicy).toBe('blocked_resource');
+      expect(result.reason).toContain('.git/config');
+    });
+
     it('should not confuse Class C and Class D', () => {
       expect(engine.isClassCAction('trust_manipulation')).toBe(false);
       expect(engine.isClassDAction('deployment')).toBe(false);

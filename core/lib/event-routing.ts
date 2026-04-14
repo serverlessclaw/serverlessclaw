@@ -17,6 +17,20 @@ export const EVENTBRIDGE_ONLY_EVENTS: EventType[] = [
   EventType.QA_TASK,
   EventType.STRATEGIC_PLANNER_TASK,
   EventType.COGNITION_REFLECTOR_TASK,
+  EventType.CODER_TASK_COMPLETED,
+  EventType.OUTBOUND_MESSAGE,
+  EventType.RUN_STARTED,
+  EventType.RUN_FINISHED,
+  EventType.RUN_ERROR,
+  EventType.TEXT_MESSAGE_START,
+  EventType.TEXT_MESSAGE_CONTENT,
+  EventType.TEXT_MESSAGE_END,
+  EventType.TOOL_CALL_START,
+  EventType.TOOL_CALL_ARGS,
+  EventType.TOOL_CALL_END,
+  EventType.STATE_SNAPSHOT,
+  EventType.STATE_DELTA,
+  EventType.MESSAGES_SNAPSHOT,
 ];
 
 /**
@@ -176,5 +190,25 @@ export const DEFAULT_EVENT_ROUTING: EventRoutingTable = {
   [EventType.DLQ_ROUTE]: {
     module: './events/dlq-handler',
     function: 'handleDlqRoute',
+  },
+  [EventType.ORCHESTRATION_SIGNAL]: {
+    module: './events/orchestration-handler',
+    function: 'handleOrchestrationSignal',
+  },
+  [EventType.DELEGATION_TASK]: {
+    module: './events/delegation-handler',
+    function: 'handleDelegationTask',
+  },
+  [EventType.CONSENSUS_REACHED]: {
+    module: './events/consensus-handler',
+    function: 'handleConsensusReached',
+  },
+  [EventType.HANDOFF]: {
+    module: './events/handoff-handler',
+    function: 'handleHandoff',
+  },
+  [EventType.HEALTH_ALERT]: {
+    module: './events/health-handler',
+    function: 'handleHealthAlert',
   },
 } as const;

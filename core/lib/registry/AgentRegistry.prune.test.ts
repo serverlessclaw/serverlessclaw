@@ -3,8 +3,41 @@ import { AgentRegistry } from './AgentRegistry';
 import { ConfigManager } from './config';
 import { DYNAMO_KEYS } from '../constants';
 
+const { mockDocClient } = vi.hoisted(() => ({
+  mockDocClient: {
+    send: vi.fn().mockResolvedValue({}),
+  },
+}));
+
+vi.mock('./config', () => ({
+  ConfigManager: {
+    getRawConfig: vi.fn(),
+    saveRawConfig: vi.fn(),
+  },
+  defaultDocClient: mockDocClient,
+}));
+
+vi.mock('@aws-sdk/lib-dynamodb', () => ({
+  DynamoDBDocumentClient: {
+    from: vi.fn(() => ({
+      send: vi.fn(),
+    })),
+  },
+  DeleteCommand: vi.fn(),
+}));
+
+vi.mock('../utils/topology', () => ({
+  discoverSystemTopology: vi.fn(async () => ({})),
+}));
+
+vi.mock('sst', () => ({
+  Resource: {
+    ConfigTable: { name: 'mock-config-table' },
+  },
+}));
+
 // TODO: Fix or skip this test - it was added in same commit and is failing
-describe.skip('AgentRegistry Pruning', () => {
+describe('AgentRegistry Pruning', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -16,7 +49,7 @@ describe.skip('AgentRegistry Pruning', () => {
 
     // 1. Mock per-agent tool usage: toolA is unused and old for agent1
     vi.mocked(ConfigManager.getRawConfig).mockImplementation(async (key) => {
-      if (key === 'tool_usage_agent1') {
+      if (key === DYNAMO_KEYS.TOOL_USAGE) {
         return {
           toolA: { count: 0, firstRegistered: oldTimestamp },
         };
@@ -62,7 +95,7 @@ describe.skip('AgentRegistry Pruning', () => {
 
     // toolB was just registered (now)
     vi.mocked(ConfigManager.getRawConfig).mockImplementation(async (key) => {
-      if (key === 'tool_usage_agent1') {
+      if (key === DYNAMO_KEYS.TOOL_USAGE) {
         return {
           toolB: { count: 0, firstRegistered: now },
         };

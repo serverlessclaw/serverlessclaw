@@ -63,14 +63,34 @@ describe('DistributedState', () => {
     });
 
     it('should return false if count is above threshold but timeout elapsed', async () => {
-      mockSend.mockResolvedValue({
+      mockSend.mockResolvedValueOnce({
         Item: {
           count: 5,
           openedAt: Date.now() - 70000, // 70s ago
         },
       });
+      // The second call is the reset operation
+      mockSend.mockResolvedValueOnce({});
+
       const isOpen = await DistributedState.isCircuitOpen('test', 5, 60000);
       expect(isOpen).toBe(false);
+      // Verify reset was called to clear count
+      expect(mockSend).toHaveBeenCalledTimes(2);
+    });
+
+    it('should reset count when circuit timeout expires', async () => {
+      mockSend.mockResolvedValueOnce({
+        Item: {
+          count: 10,
+          openedAt: Date.now() - 70000, // timeout expired
+        },
+      });
+      mockSend.mockResolvedValueOnce({}); // reset succeeds
+
+      const isOpen = await DistributedState.isCircuitOpen('test', 5, 60000);
+      expect(isOpen).toBe(false);
+      // Verify reset was called - should have 2 calls (get + update)
+      expect(mockSend).toHaveBeenCalledTimes(2);
     });
   });
 

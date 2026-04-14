@@ -33,8 +33,30 @@ export class DistributedState {
 
       if ((state.count as number) >= threshold) {
         const now = Date.now();
-        if (state.openedAt && now - (state.openedAt as number) < timeoutMs) {
-          return true;
+        const openedAt = state.openedAt as number | undefined;
+
+        if (openedAt && now - openedAt < timeoutMs) {
+          return true; // Circuit is open and within timeout
+        }
+
+        // Circuit timeout has expired - explicitly reset count to prevent immediate re-open
+        // This ensures the circuit properly closes before allowing traffic again
+        if (openedAt) {
+          try {
+            await docClient.send(
+              new UpdateCommand({
+                TableName: TABLE_NAME,
+                Key: { userId: fullKey, timestamp: 0 },
+                UpdateExpression: 'SET #count = :zero, openedAt = :null',
+                ExpressionAttributeNames: { '#count': 'count' },
+                ExpressionAttributeValues: { ':zero': 0, ':null': null },
+              })
+            );
+            logger.info(`[DISTRIBUTED_STATE] Circuit ${key} reset after timeout`);
+          } catch (resetErr) {
+            // Race condition - another Lambda may have already handled it
+            logger.debug(`[DISTRIBUTED_STATE] Circuit reset race for ${key}:`, resetErr);
+          }
         }
         return false;
       }

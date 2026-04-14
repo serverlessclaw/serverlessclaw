@@ -174,7 +174,7 @@ describe('continuation-handler', () => {
     });
 
     it('should handle recursion limit exceeded', async () => {
-      mockGetRecursionLimit.mockResolvedValue(10);
+      mockGetRecursionLimit.mockResolvedValue(9);
       mockCheckAndPushRecursion.mockResolvedValue(null);
 
       const eventDetail = {

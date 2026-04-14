@@ -277,14 +277,25 @@ export class TrustManager {
           decayAmount = this.DECAY_RATE * 1.2;
         }
 
-        const newScore = config.trustScore - decayAmount;
+        const newScore = Math.max(TRUST.DECAY_BASELINE, config.trustScore - decayAmount);
 
         if (newScore < config.trustScore) {
           decayDetails.push({ agentId, oldScore: config.trustScore, newScore });
           decayPromises.push(
-            AgentRegistry.atomicUpdateAgentField(agentId, 'trustScore', newScore)
+            AgentRegistry.atomicUpdateAgentFieldWithCondition(
+              agentId,
+              'trustScore',
+              newScore,
+              config.trustScore
+            )
               .then(() => this.recordHistory(agentId, newScore))
-              .catch((e) => logger.error(`Failed to apply trust decay for agent ${agentId}`, e))
+              .catch((e) => {
+                if (e instanceof Error && e.name === 'ConditionalCheckFailedException') {
+                  logger.debug(`Skipped trust decay for agent ${agentId} due to concurrent update`);
+                } else {
+                  logger.error(`Failed to apply trust decay for agent ${agentId}`, e);
+                }
+              })
           );
         }
       }

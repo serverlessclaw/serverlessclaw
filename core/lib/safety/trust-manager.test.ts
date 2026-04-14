@@ -7,8 +7,8 @@ import { AnomalySeverity, AnomalyType } from '../types/metrics';
 const { mockAgentRegistry } = vi.hoisted(() => ({
   mockAgentRegistry: {
     getAgentConfig: vi.fn(),
-    atomicUpdateAgentField: vi.fn(),
-    atomicUpdateAgentFieldWithCondition: vi.fn(),
+    atomicUpdateAgentField: vi.fn().mockResolvedValue(undefined),
+    atomicUpdateAgentFieldWithCondition: vi.fn().mockResolvedValue(undefined),
     getAllConfigs: vi.fn(),
   },
 }));
@@ -178,24 +178,28 @@ describe('TrustManager', () => {
       await TrustManager.decayTrustScores();
 
       // Default decay is 0.5
-      expect(mockAgentRegistry.atomicUpdateAgentField).toHaveBeenCalledWith(
+      expect(mockAgentRegistry.atomicUpdateAgentFieldWithCondition).toHaveBeenCalledWith(
         'high-trust',
         'trustScore',
-        97.25 // 98 - (0.5 * 1.5)
+        97.25, // 98 - (0.5 * 1.5)
+        98
       );
-      expect(mockAgentRegistry.atomicUpdateAgentField).toHaveBeenCalledWith(
+      expect(mockAgentRegistry.atomicUpdateAgentFieldWithCondition).toHaveBeenCalledWith(
         'mid-trust',
         'trustScore',
-        87.4 // 88 - (0.5 * 1.2)
+        87.4, // 88 - (0.5 * 1.2)
+        88
       );
-      expect(mockAgentRegistry.atomicUpdateAgentField).toHaveBeenCalledWith(
+      expect(mockAgentRegistry.atomicUpdateAgentFieldWithCondition).not.toHaveBeenCalledWith(
         'at-baseline',
         'trustScore',
-        69.5
+        expect.any(Number),
+        expect.any(Number)
       );
-      expect(mockAgentRegistry.atomicUpdateAgentField).not.toHaveBeenCalledWith(
+      expect(mockAgentRegistry.atomicUpdateAgentFieldWithCondition).not.toHaveBeenCalledWith(
         'below-baseline',
         'trustScore',
+        expect.any(Number),
         expect.any(Number)
       );
     });
