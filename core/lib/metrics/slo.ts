@@ -70,16 +70,17 @@ export class SLOTracker {
       case 'avg_latency': {
         // Use p95 latency for SLO tracking as per design principles
         const p95Values = rollups
-          .filter((r) => r.p95DurationMs !== undefined && r.p95DurationMs > 0)
-          .map((r) => r.p95DurationMs);
+          .filter((r) => r.p95DurationMs !== undefined && (r.p95DurationMs as number) > 0)
+          .map((r) => r.p95DurationMs as number);
         if (p95Values.length > 0) {
           // Average of p95 values across rollups
           current = p95Values.reduce((s, v) => s + v, 0) / p95Values.length;
         } else {
-          // Fallback to simple average if p95 not available
+          // Fallback to proxy (1.25x avg) if p95 not available (Inconsistency 6 Fix)
           const totalInvocations = rollups.reduce((s, r) => s + r.invocationCount, 0);
           const totalDuration = rollups.reduce((s, r) => s + (r.totalDurationMs || 0), 0);
-          current = totalInvocations > 0 ? totalDuration / totalInvocations : 0;
+          const avg = totalInvocations > 0 ? totalDuration / totalInvocations : 0;
+          current = avg * 1.25;
         }
         break;
       }
@@ -132,14 +133,16 @@ export class SLOTracker {
       } else if (slo.metric === 'avg_latency') {
         // Use p95 latency for SLO tracking as per design principles
         const p95Values = rollups
-          .filter((r) => r.p95DurationMs !== undefined && r.p95DurationMs > 0)
-          .map((r) => r.p95DurationMs);
+          .filter((r) => r.p95DurationMs !== undefined && (r.p95DurationMs as number) > 0)
+          .map((r) => r.p95DurationMs as number);
         if (p95Values.length > 0) {
           current = p95Values.reduce((s, v) => s + v, 0) / p95Values.length;
         } else {
+          // Fallback to proxy (1.25x avg) if p95 not available (Inconsistency 6 Fix)
           const totalInvocations = rollups.reduce((s, r) => s + r.invocationCount, 0);
           const totalDuration = rollups.reduce((s, r) => s + (r.totalDurationMs || 0), 0);
-          current = totalInvocations > 0 ? totalDuration / totalInvocations : 0;
+          const avg = totalInvocations > 0 ? totalDuration / totalInvocations : 0;
+          current = avg * 1.25;
         }
       } else {
         current = 0;

@@ -78,8 +78,8 @@ export const handler = async (
       handlerPath = '../agents/merger';
       break;
     case EventType.QA_TASK:
-    case EventType.CODER_TASK_COMPLETED: // QA often triggers on coder completion
-    case EventType.SYSTEM_BUILD_SUCCESS: // QA also triggers on build success
+    case EventType.CODER_TASK_COMPLETED:
+    case EventType.SYSTEM_BUILD_SUCCESS:
       targetAgent = AgentType.QA;
       handlerPath = '../agents/qa';
       break;
@@ -94,12 +94,11 @@ export const handler = async (
       handlerPath = '../agents/cognition-reflector';
       break;
     default:
-      // Check if it's a dynamic agent or explicitly specified in the payload
-      targetAgent = detail.agentId as AgentType;
-      if (targetAgent) {
-        // Dynamic agents are still handled by Agent Runner usually,
-        // but the multiplexer could potentially handle them if imported.
-        // For now, we fall back to manual routing or error.
+      // Check if it's a dynamic agent or explicitly specified in the payload (P2 Gap Fix)
+      targetAgent = (detail.agentId as AgentType) || (event.agentId as AgentType);
+      if (targetAgent && detailType.startsWith('dynamic_')) {
+        logger.info(`[MULTIPLEXER] Routing dynamic agent ${targetAgent} to Agent Runner.`);
+        handlerPath = './agent-runner';
       }
   }
 
@@ -125,9 +124,12 @@ export const handler = async (
         _traceId
       );
       // If a timeout is triggered, the event is emitted by checkCollaborationTimeout
-      // We log but continue processing this task since the tie-break logic might need to see it
+      // We must STOP processing to avoid race conditions with the strategic tie-break (P1 Fix)
       if (isTimedOut) {
-        logger.info(`[MULTIPLEXER] Session ${sessionId} timed out, tie-break triggered.`);
+        logger.warn(
+          `[MULTIPLEXER] Session ${sessionId} timed out. Yielding to strategic tie-break.`
+        );
+        return { status: 'TIMEOUT', message: 'Task terminated due to session timeout.' };
       }
     }
   }

@@ -112,6 +112,7 @@ describe('AgentRouter', () => {
           successRate: 0.5,
           avgInputTokens: 100,
           avgOutputTokens: 100,
+          enabled: true,
         },
         {
           agentId: 'a2',
@@ -119,6 +120,7 @@ describe('AgentRouter', () => {
           successRate: 0.9,
           avgInputTokens: 100,
           avgOutputTokens: 100,
+          enabled: true,
         },
       ] as any[];
       expect(AgentRouter.selectBestAgentSync(candidates)).toBe('a2');
@@ -132,6 +134,7 @@ describe('AgentRouter', () => {
           successRate: 0.9,
           avgInputTokens: 100,
           avgOutputTokens: 100,
+          enabled: true,
         },
         {
           agentId: 'a2',
@@ -139,6 +142,7 @@ describe('AgentRouter', () => {
           successRate: 0.9,
           avgInputTokens: 100,
           avgOutputTokens: 100,
+          enabled: true,
         },
       ] as any[];
       const matchFn = (id: string) => (id === 'a2' ? 1.0 : 0.1);
@@ -199,6 +203,7 @@ describe('AgentRouter', () => {
           successRate: 0.9,
           avgInputTokens: 100,
           avgOutputTokens: 100,
+          enabled: true,
         },
         {
           agentId: 'a2',
@@ -206,6 +211,7 @@ describe('AgentRouter', () => {
           successRate: 0.9,
           avgInputTokens: 100,
           avgOutputTokens: 100,
+          enabled: true,
         },
       ] as any[];
       const reputations = new Map([

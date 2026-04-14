@@ -190,6 +190,13 @@ export const handler = async (_event?: { detail: Record<string, unknown> }): Pro
   // CRITICAL: Triggering Emergency Recovery
   logger.info("CRITICAL: Initiating Dead Man's Switch Recovery Flow...");
 
+  if (process.env.STAGE === 'local' && !process.env.RECOVERY_OVERRIDE) {
+    logger.info(
+      '[Local Mode] System check FAILED, but skipping remote CodeBuild recovery trigger for local development.'
+    );
+    return;
+  }
+
   const lockAcquired = await lockManager.acquire(RECOVERY_LOCK_ID, {
     ownerId: RECOVERY_LOCK_OWNER,
     ttlSeconds: RECOVERY_LOCK_TTL_SECONDS,

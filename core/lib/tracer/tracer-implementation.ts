@@ -311,23 +311,21 @@ export class ClawTracer {
       }
     }
 
-    // Emit immediate failure event for dashboard sources to trigger real-time remediation
-    if (this.source === TraceSource.DASHBOARD) {
-      try {
-        const { emitEvent } = await import('../utils/bus');
-        const { AgentType, EventType } = await import('../types/agent');
-        await emitEvent(AgentType.RECOVERY, EventType.DASHBOARD_FAILURE_DETECTED, {
-          userId: this.userId,
-          traceId: this.traceId,
-          agentId: this.agentId || 'unknown',
-          task: 'Dashboard Interaction',
-          error: reason,
-          metadata: finalMetadata,
-          source: this.source,
-        });
-      } catch (e) {
-        logger.warn('[Tracer] Failed to emit immediate dashboard failure event:', e);
-      }
+    // Emit immediate failure event for monitoring to trigger real-time remediation (Eye Silo Gap 5)
+    try {
+      const { emitEvent } = await import('../utils/bus');
+      const { AgentType, EventType } = await import('../types/agent');
+      await emitEvent(AgentType.RECOVERY, EventType.DASHBOARD_FAILURE_DETECTED, {
+        userId: this.userId,
+        traceId: this.traceId,
+        agentId: this.agentId || 'unknown',
+        task: 'System Operation',
+        error: reason,
+        metadata: finalMetadata,
+        source: this.source === TraceSource.DASHBOARD ? TraceSource.DASHBOARD : TraceSource.SYSTEM,
+      });
+    } catch (e) {
+      logger.warn('[Tracer] Failed to emit immediate failure event:', e);
     }
 
     // Mark the summary as failed as well

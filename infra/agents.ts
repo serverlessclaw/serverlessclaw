@@ -355,6 +355,10 @@ export function createAgents(
         resources: [deployer.arn],
       },
     ],
+    environment: {
+      ...agentEnv,
+      STAGE: $app.stage,
+    },
     architecture: LAMBDA_ARCHITECTURE,
     nodejs: { loader: NODEJS_LOADERS },
     memory: AGENT_CONFIG.memory.SMALL,
@@ -369,7 +373,7 @@ export function createAgents(
     name: `${$app.name}-${$app.stage}-Recovery`,
     description: "Dead man's switch — deep health checks and emergency rollback",
     scheduleExpression: RECOVERY_SCHEDULE_RATE,
-    state: 'ENABLED',
+    state: $app.stage === 'local' ? 'DISABLED' : 'ENABLED',
     flexibleTimeWindow: { mode: 'OFF' },
     target: {
       arn: deadMansSwitch.arn,

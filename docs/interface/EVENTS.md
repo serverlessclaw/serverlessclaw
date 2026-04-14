@@ -17,25 +17,27 @@ The Event Bus acts as the **Spine** of Serverless Claw, ensuring robust signal p
 To prevent infinite reasoning loops or event storms, the Spine enforces strict depth limits using a unified **Atomic Recursion Guard** (`checkAndPushRecursion`):
 
 - **Mechanism**: The `RECURSION_ENTRY` in DynamoDB tracks the current depth for a specific `traceId`.
+- **Trace-level Continuity (Principle 15)**: Recursion depth is monotonic across the entire life of a trace. Unlike local counters, this stack is **never reset** by individual agent runners, preventing bypass in parallel swarm scenarios.
 - **Unified Guard**: Both the `EventHandler` and `AgentMultiplexer` utilize a centralized check to ensure consistency across different entry points.
 - **Monotonic Safety**: Updates use monotonic depth guards (`ConditionExpression: 'attribute_not_exists(depth) OR depth < :depth'`) to prevent depth resets during asynchronous handoffs or concurrent executions.
 - **Limit**: Standard tasks are capped at a depth of 15 (configurable via `recursion_limit`). Mission-critical tasks (swarms, DAGs) use a stricter limit (default 10, via `mission_recursion_limit`).
 
-### 2. Distributed Resilience (Circuit Breaker & Rate Limiting)
+### 2. Distributed Resilience (Tie-breaks & Circuit Breakers)
 
-The Spine maintains system stability through distributed state management:
+The Spine maintains system stability through distributed state management and proactive conflict resolution:
 
+- **Yield to Tie-break**: The `AgentMultiplexer` monitors collaboration timeouts in real-time. If a session exceeds its `TIE_BREAK_TIMEOUT_MS`, the multiplexer **immediately halts processing** and yields to the Facilitator's strategic tie-break to prevent "split-brain" state corruption.
 - **DistributedState**: Circuit breakers and rate limiters are grounded in `MemoryTable` rather than in-memory volatile state. This ensures protection is enforced consistently across all concurrent Lambda execution environments.
 - **Config Caching**: To minimize DynamoDB overhead, static configuration thresholds (limits, timeouts) are cached in-memory with a 1-minute TTL (`getCachedConfig`), balancing performance with operational flexibility.
 
-### 3. Agent Selection & Routing
+### 3. Agent Selection & Routing (Selection Integrity)
 
 The `AgentRouter` selects the best candidate from the `AgentRegistry` based on trust scores and capability matching.
 
-- **Selection Guard**: `selectBestAgent` explicitly filters out agents with `enabled: false`.
-- **Fallback**: If no high-trust agent is available, the backbone falls back to a deterministic supervisor for graceful degradation.
+- **Selection Integrity (Principle 14)**: Operational status (`enabled === true`) is verified at the gateway for **all** selection paths. No reputation score or historical performance can override a "disabled" flag.
+- **Fallback**: If no high-trust agent is available, the backbone falls back to a deterministic supervisor (SuperClaw) for graceful degradation.
 
-### 3. Distributed Lock Management
+### 4. Distributed Lock Management
 
 Concurrency is handled via the `LockManager`, which uses conditional DynamoDB updates:
 
@@ -114,28 +116,53 @@ Standard event types and their default priority levels are centrally defined to 
 - **Enum**: `EventType` in [`core/lib/types/agent.ts`](../../core/lib/types/agent.ts).
 - **Mapping**: `EVENT_PRIORITY_MAP` in [`core/lib/utils/bus.ts`](../../core/lib/utils/bus.ts).
 
-## Event Flow
+## Spine Event Flow
 
+```text
+  [ EventBridge Event ]
+          |
+          v
+  [ Agent Multiplexer ] -- (Check Timeout) -> [ Timed Out? ] -- YES --> [ HALT & Yield ]
+          |                                                             (Tie-break)
+          | (NO)
+          v
+  [ Agent Router ] -- (Principle 14 Guard) -> [ Selection Integrity ] -- FAIL --> [ Fallback ]
+          |                                         (Verify Enabled)
+          v
+  [ Recursion Guard ] -- (Principle 15) -> [ Atomic Push ] -- LIMIT HIT --> [ FAIL SAFE ]
+          |                                (Trace Depth)
+          v
+  [ Agent Executor ] -- (Lock Acquisition) -> [ Session Lock ]
+          |
+          v
+  [ Tool Executor ] -- (Shield Gate) -> [ Safety Engine ]
+          |
+          v
+  [ Trace Table ] -- (Unified failTrace) -> [ Recovery Event ]
 ```
+
+## Bus Lifecycle (Reserve-then-Commit)
+
+```text
 [Agent/Tool]
      |
      v
 [emitEvent()]
      |
-     +---> [Check Idempotency] --> DUPLICATE? --> Return
+     +---> [Check Idempotency] --> DUPLICATE? --> [ Return ]
      |
      v
 [EventBridge PutEvents]
      |
-     +---> SUCCESS --> Return event ID
+     +---> SUCCESS --> [ Commit Status ] --> [ Return ID ]
      |
      +---> FAILURE
               |
-              +---> PERMANENT? --> Store in DLQ immediately
+              +---> PERMANENT? --> [ Store in DLQ ]
               |
-              +---> TRANSIENT? --> Retry with backoff
+              +---> TRANSIENT? --> [ Retry Backoff ]
               |
-              +---> UNKNOWN?   --> Retry, then store in DLQ
+              +---> UNKNOWN?   --> [ Retry -> DLQ ]
 ```
 
 ## Best Practices

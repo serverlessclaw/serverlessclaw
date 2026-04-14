@@ -337,7 +337,7 @@ export class AgentRouter {
 
   /**
    * Synchronous version for selecting best agent when rollups are already available.
-   * If candidates include 'enabled' field, will filter out disabled agents.
+   * MUST verify 'enabled' status (Principle 14) to be selected.
    *
    * @param candidates - Array of performance rollups.
    * @param capabilityMatchFn - Optional function to compute capability match for an agent.
@@ -347,13 +347,17 @@ export class AgentRouter {
     candidates: AgentPerformanceRollup[],
     capabilityMatchFn?: (agentId: string) => number
   ): string | undefined {
-    // Filter by enabled status if provided in any candidate - must be strictly true
-    const hasEnabledField = candidates.some((c) => c.enabled !== undefined);
-    const enabledCandidates = hasEnabledField
-      ? candidates.filter((c) => c.enabled === true)
-      : candidates;
+    // Selection Integrity (Principle 14): status MUST be verified at the gateway
+    const enabledCandidates = candidates.filter((c) => c.enabled === true);
 
-    if (enabledCandidates.length === 0) return undefined;
+    if (enabledCandidates.length === 0) {
+      if (candidates.length > 0) {
+        logger.warn(
+          `[AgentRouter] Selection Integrity check failed: ${candidates.length} candidates provided, but none verified as 'enabled: true'. Refusing selection.`
+        );
+      }
+      return undefined;
+    }
 
     let bestAgent: string | undefined;
     let bestScore = -Infinity;
@@ -373,7 +377,7 @@ export class AgentRouter {
 
   /**
    * Selects the best agent from candidates, incorporating reputation data.
-   * If candidates include 'enabled' field, will filter out disabled agents.
+   * MUST verify 'enabled' status (Principle 14) to be selected.
    *
    * Formula: (0.6 * performanceScore) + (0.4 * reputationScore)
    *
@@ -387,13 +391,17 @@ export class AgentRouter {
     reputations: Map<string, AgentReputation>,
     capabilityMatchFn?: (agentId: string) => number
   ): string | undefined {
-    // Filter by enabled status if provided in any candidate - must be strictly true
-    const hasEnabledField = candidates.some((c) => c.enabled !== undefined);
-    const enabledCandidates = hasEnabledField
-      ? candidates.filter((c) => c.enabled === true)
-      : candidates;
+    // Selection Integrity (Principle 14): status MUST be verified at the gateway
+    const enabledCandidates = candidates.filter((c) => c.enabled === true);
 
-    if (enabledCandidates.length === 0) return undefined;
+    if (enabledCandidates.length === 0) {
+      if (candidates.length > 0) {
+        logger.warn(
+          `[AgentRouter] Selection Integrity (with reputation) failed: ${candidates.length} candidates, 0 verified as enabled.`
+        );
+      }
+      return undefined;
+    }
 
     let bestAgent: string | undefined;
     let bestScore = -Infinity;

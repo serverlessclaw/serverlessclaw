@@ -12,11 +12,7 @@ import {
 } from '../lib/utils/agent-helpers';
 import { emitTaskEvent } from '../lib/utils/agent-helpers/event-emitter';
 import { SessionStateManager } from '../lib/session/session-state';
-import {
-  pushRecursionEntry,
-  clearRecursionStack,
-  getRecursionDepth,
-} from '../lib/recursion-tracker';
+import { pushRecursionEntry, getRecursionDepth } from '../lib/recursion-tracker';
 
 interface WorkerEvent {
   'detail-type': string;
@@ -283,9 +279,6 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
     if (heartbeatInterval) clearInterval(heartbeatInterval);
     if (lockAcquired && sessionId && agentId) {
       await sessionStateManager.releaseProcessing(sessionId, agentId);
-    }
-    if (traceId) {
-      await clearRecursionStack(traceId);
     }
   }
 }

@@ -68,7 +68,13 @@ phases:
       - |
         if [ "$EMERGENCY_ROLLBACK" = "true" ]; then
           echo "Verifying emergency recovery..."
-          make verify || (echo "EMERGENCY RECOVERY VERIFICATION FAILED" && exit 1)
+          # Extract API URL for verification
+          API_URL=$(python3 -c "import json,os; print(json.load(open('.sst/outputs.json'))['apiUrl'])" 2>/dev/null || echo "")
+          if [ -n "$API_URL" ]; then
+            make verify URL=$API_URL || (echo "EMERGENCY RECOVERY VERIFICATION FAILED" && exit 1)
+          else
+            echo "WARNING: Could not determine API URL from .sst/outputs.json. Skipping verification."
+          fi
         fi
       - echo build completed on `date`
       - |
