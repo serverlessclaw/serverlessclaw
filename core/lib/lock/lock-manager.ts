@@ -147,26 +147,10 @@ export class LockManager {
 
   /**
    * Explicitly releases a lock if the owner still holds it.
-   * Allows release if: (a) owner matches, OR (b) lock has expired and we're the last known owner.
    */
   async release(lockId: string, ownerId: string, prefix?: string): Promise<boolean> {
     const fullId = this.getFullId(lockId, prefix);
-
     try {
-      // First check current state - allow release if we own it or it's expired
-      const state = await this.getLockState(fullId);
-      const now = Math.floor(Date.now() / 1000);
-      const isExpired = state.expiresAt !== undefined && state.expiresAt < now;
-      const ownedByUs = state.ownerId === ownerId;
-
-      // Allow release if: (1) we own it and not expired, OR (2) we owned it and it's expired
-      const canRelease = ownedByUs || (isExpired && state.ownerId === null);
-
-      if (!canRelease && !isExpired) {
-        logger.debug(`Lock [${fullId}] release rejected: not owned by ${ownerId}`);
-        return false;
-      }
-
       await this.docClient.send(
         new UpdateCommand({
           TableName: this.tableName,
@@ -175,15 +159,18 @@ export class LockManager {
             timestamp: 0,
           },
           UpdateExpression: 'REMOVE ownerId, expiresAt, acquiredAt, lockType, renewedAt',
-          // Allow release if owner matches OR if item exists (expired locks can be cleaned up)
-          ConditionExpression: 'attribute_exists(ownerId) OR attribute_not_exists(ownerId)',
+          // Sh1: Allow the owner to release the lock even if it has expired to ensure clean setup
+          ConditionExpression: 'ownerId = :owner',
+          ExpressionAttributeValues: {
+            ':owner': ownerId,
+          },
         })
       );
       logger.debug(`Lock [${fullId}] released by ${ownerId}`);
       return true;
     } catch (error: unknown) {
       if ((error as Error).name === 'ConditionalCheckFailedException') {
-        logger.debug(`Lock [${fullId}] release rejected: item not found or condition failed.`);
+        logger.debug(`Lock [${fullId}] release rejected: owner mismatch or lock already expired.`);
         return false;
       }
       logger.error(`Error releasing lock [${fullId}]:`, error);

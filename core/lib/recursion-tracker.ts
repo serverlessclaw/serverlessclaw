@@ -51,7 +51,7 @@ export async function pushRecursionEntry(
         },
         UpdateExpression:
           'SET #depth = :depth, sessionId = :sessionId, agentId = :agentId, createdAt = :now, expiresAt = :exp, #type = :type',
-        ConditionExpression: 'attribute_not_exists(#depth)',
+        ConditionExpression: 'attribute_not_exists(#depth) OR #depth < :depth',
         ExpressionAttributeNames: {
           '#type': 'type',
           '#depth': 'depth',
@@ -109,33 +109,33 @@ export async function pushRecursionEntry(
     logger.warn(`[RECURSION] Failed to push entry for ${traceId}:`, error);
   }
 }
-
 /**
  * Get the current recursion depth for a trace
  * @param traceId - The trace ID for the execution chain
- * @returns Current depth, -1 on error (sentinel value to distinguish from no entry)
+ * @returns Current depth or 0 if no entry exists
  */
 export async function getRecursionDepth(traceId: string): Promise<number> {
   try {
     const key = `${RECURSION_STACK_PREFIX}${traceId}`;
-    const result = await docClient.send(
+    const response = await docClient.send(
       new GetCommand({
         TableName: process.env.MEMORY_TABLE_NAME ?? 'MemoryTable',
-        Key: { userId: key, timestamp: 0 },
+        Key: {
+          userId: key,
+          timestamp: 0,
+        },
       })
     );
 
-    if (result.Item) {
-      return (result.Item.depth as number) ?? 0;
+    if (response.Item && response.Item.depth !== undefined) {
+      return response.Item.depth as number;
     }
-
     return 0;
   } catch (error) {
     logger.warn(`[RECURSION] Failed to get depth for ${traceId}:`, error);
-    return -1; // Return -1 to distinguish errors from no-entry (0)
+    return 0;
   }
 }
-
 /**
  * Clear recursion entries for a trace after completion.
  * Uses conditional delete to prevent clearing while another agent chain is actively using it.
