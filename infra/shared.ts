@@ -1,4 +1,29 @@
 /**
+ * Represents the record of autonomous agent function resources.
+ * Defined here to avoid circular dependencies between agents.ts and shared.ts.
+ */
+export interface AgentFunctionResources {
+  coderAgent: sst.aws.Function;
+  buildMonitor: sst.aws.Function;
+  eventHandler: sst.aws.Function;
+  deadMansSwitch: sst.aws.Function;
+  plannerAgent: sst.aws.Function;
+  reflectorAgent: sst.aws.Function;
+  criticAgent: sst.aws.Function;
+  notifier: sst.aws.Function;
+  agentRunner: sst.aws.Function;
+  bridge: sst.aws.Function;
+  heartbeatHandler: sst.aws.Function;
+  concurrencyMonitor: sst.aws.Function;
+  maintenanceHandler: sst.aws.Function;
+  mergerAgent: sst.aws.Function;
+  qaAgent: sst.aws.Function;
+  researcherAgent: sst.aws.Function;
+  schedulerRole: aws.iam.Role;
+  dlqHandler?: sst.aws.Function;
+}
+
+/**
  * Represents the shared resource context passed between infrastructure modules.
  */
 export interface SharedContext {
@@ -17,7 +42,7 @@ export interface SharedContext {
   schedulerRole?: aws.iam.Role;
   dlq?: sst.aws.Queue;
   multiplexer?: sst.aws.Function;
-  agents?: unknown; // Generic for now to avoid circular deps with createAgents return type
+  agents?: AgentFunctionResources;
 }
 
 /**

@@ -6,6 +6,7 @@ import {
   LAMBDA_ARCHITECTURE,
   NODEJS_LOADERS,
   LOG_RETENTION_PERIOD,
+  AgentFunctionResources,
 } from './shared';
 import { MCPServerResources } from './mcp-servers';
 
@@ -86,25 +87,7 @@ function createScheduledInvocation(
 export function createAgents(
   ctx: SharedContext,
   mcpServers?: MCPServerResources
-): {
-  coderAgent: sst.aws.Function;
-  buildMonitor: sst.aws.Function;
-  eventHandler: sst.aws.Function;
-  deadMansSwitch: sst.aws.Function;
-  plannerAgent: sst.aws.Function;
-  reflectorAgent: sst.aws.Function;
-  criticAgent: sst.aws.Function;
-  notifier: sst.aws.Function;
-  agentRunner: sst.aws.Function;
-  bridge: sst.aws.Function;
-  heartbeatHandler: sst.aws.Function;
-  concurrencyMonitor: sst.aws.Function;
-  mergerAgent: sst.aws.Function;
-  qaAgent: sst.aws.Function;
-  researcherAgent: sst.aws.Function;
-  schedulerRole: aws.iam.Role;
-  dlqHandler?: sst.aws.Function;
-} {
+): AgentFunctionResources {
   const {
     memoryTable,
     traceTable,
@@ -138,7 +121,7 @@ export function createAgents(
 
   const basePermissions = [
     {
-      actions: ['cloudwatch:PutMetricData'],
+      actions: ['cloudwatch:PutMetricData', 'iot:Publish'],
       resources: ['*'],
     },
     ...(mcpServers
@@ -649,6 +632,7 @@ export function createAgents(
     bridge,
     heartbeatHandler,
     concurrencyMonitor,
+    maintenanceHandler,
     mergerAgent,
     qaAgent,
     researcherAgent,

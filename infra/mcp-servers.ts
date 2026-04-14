@@ -92,7 +92,12 @@ export function createMCPServers(ctx: SharedContext): MCPServerResources {
       },
       {
         actions: ['s3:GetObject', 's3:PutObject', 's3:ListBucket', 's3:DeleteObject'],
-        resources: [stagingBucket.arn, $util.interpolate`${stagingBucket.arn}/*`],
+        resources: [
+          stagingBucket.arn,
+          $util.interpolate`${stagingBucket.arn}/*`,
+          ctx.knowledgeBucket.arn,
+          $util.interpolate`${ctx.knowledgeBucket.arn}/*`,
+        ],
       },
       {
         actions: [

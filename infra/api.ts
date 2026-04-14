@@ -54,7 +54,7 @@ export function configureApiRoutes(api: sst.aws.ApiGatewayV2, ctx: SharedContext
   ];
 
   // Main Webhook
-  const agents = ctx.agents as Record<string, sst.aws.Function> | undefined;
+  const agents = ctx.agents;
   const criticalAgents = agents
     ? [
         agents.plannerAgent,
