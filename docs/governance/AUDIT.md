@@ -111,21 +111,29 @@ Every audit finding falls into one of four categories. Classifying findings corr
 
 ### What This Is
 
-- A set of **provocations** to guide your exploration.
-- A way to discover **latent weaknesses** that tests won't catch.
-- An invitation to **question assumptions** baked into the architecture.
-- A framework for **cross-disciplinary thinking** — the best findings live between silos.
-- A **directional compass**, not a destination.
+- A set of **provocations** to guide your exploration
+- A way to discover **latent weaknesses** that tests won't catch
+- An invitation to **question assumptions** baked into the architecture
+- A framework for **cross-disciplinary thinking** — the best findings live between silos
+
+### What This Is Not
+
+- A pass/fail checklist
+- A list of files to read
+- Something you "complete" and move on from
+- A substitute for running `make check` and `make test`
 
 ### Recommended Approach
 
-1. **Pick one silo** that matches your current curiosity or recent system friction.
-2. **Adopt the perspective** — literally think from that angle. If you are The Spine, what makes you feel vulnerable?
-3. **Follow the vibe** — if something feels "off" or "too easy," chase it even if it leads outside the silo. 
-4. **Document the drift** in `reports/audit-<YYYY-MM-DD>-<topic>.md`. Don't just report bugs; report the **architectural soul** as it currently stands.
-
-> [!CAUTION]
-> Avoid checklists. A checklist is a cage for the creative mind. If you find yourself checking boxes, you have already failed the audit. Seek the **unspoken contradictions**.
+1. **Pick one silo** that matches your current context or curiosity
+2. **Adopt the perspective** — literally think from that angle
+3. **Follow the evidence** — if you find something interesting, chase it even if it leads outside the silo
+4. **Document findings** in `reports/audit-<YYYY-MM-DD>-<topic>.md` with:
+   - What you looked at
+   - What you expected to find
+   - What you actually found
+   - Severity assessment (P0/P1/P2/P3)
+   - Recommended action or further investigation
 
 ---
 
@@ -191,15 +199,15 @@ A poor path is:
 
 Use this table to map high-level silos to the primary code areas that should be investigated.
 
-| Silo  | Name           | Primary Code Focus                              | Implementation Vertical                                                            |
-| :---- | :------------- | :---------------------------------------------- | :--------------------------------------------------------------------------------- |
-| **1** | The Spine      | `core/lib/routing/`, `core/lib/backbone.ts`     | [EVENTS.md](../interface/EVENTS.md#atomic-backbone--flow-control)                  |
+| Silo  | Name           | Primary Code Focus                               | Implementation Vertical             |
+| :---- | :------------- | :----------------------------------------------- | :---------------------------------- |
+| **1** | The Spine      | `core/lib/routing/`, `core/lib/backbone.ts`      | [EVENTS.md](../interface/EVENTS.md#atomic-backbone--flow-control) |
 | **2** | The Hand       | `core/lib/mcp.ts`, `core/lib/agent/executor.ts` | [PROTOCOL.md](../interface/PROTOCOL.md#tool-protocols--multi-server-orchestration) |
-| **3** | The Shield     | `core/lib/safety/safety-engine.ts`              | [RESILIENCE.md](../system/RESILIENCE.md#security--baseline-control)                |
-| **4** | The Brain      | `core/lib/memory/`, `core/lib/rag/`             | [MEMORY.md](../intelligence/MEMORY.md#extended-memory-lifecycle--continuity)       |
-| **5** | The Eye        | `core/lib/metrics/`, `core/lib/tracer/`         | [DASHBOARD.md](../interface/DASHBOARD.md#observation--metrics-integrity)           |
-| **6** | The Scales     | `core/lib/verify/judge.ts`                      | [SAFETY.md](../intelligence/SAFETY.md#agent-trust--calibration)                    |
-| **7** | The Metabolism | `core/lib/maintenance/metabolism.ts`            | [METABOLISM.md](../system/METABOLISM.md)                                           |
+| **3** | The Shield     | `core/lib/safety/safety-engine.ts`               | [RESILIENCE.md](../system/RESILIENCE.md#security--baseline-control) |
+| **4** | The Brain      | `core/lib/memory/`, `core/lib/rag/`              | [MEMORY.md](../intelligence/MEMORY.md#extended-memory-lifecycle--continuity) |
+| **5** | The Eye        | `core/lib/metrics/`, `core/lib/tracer/`          | [DASHBOARD.md](../interface/DASHBOARD.md#observation--metrics-integrity) |
+| **6** | The Scales     | `core/lib/verify/judge.ts`                       | [SAFETY.md](../intelligence/SAFETY.md#agent-trust--calibration) |
+| **7** | The Metabolism | `core/lib/maintenance/metabolism.ts`             | [METABOLISM.md](../system/METABOLISM.md) |
 
 ---
 
@@ -207,7 +215,7 @@ Use this table to map high-level silos to the primary code areas that should be 
 
 Each silo represents a core functional domain. Reviews within a silo should adopt a specific "Angle" to uncover both explicit bugs and latent architectural weaknesses.
 
-### 1. The Spine (Nervous System & Flow) [STABILIZED 2026-04-14]
+### 1. The Spine (Nervous System & Flow)
 
 **Perspective**: _How does the system ensure the signal never dies?_
 
@@ -240,32 +248,26 @@ Each silo represents a core functional domain. Reviews within a silo should adop
 #### Verification Methods
 
 Review the implementation details in [EVENTS.md](../interface/EVENTS.md#atomic-backbone--flow-control):
-
 - **Atomic Recursion Check**: Verify that recursion updates use monotonic guards to prevent loop bypass.
 - **Selection Integrity**: Assert that dormant agents are correctly filtered out regardless of reputation scores.
 - **Dead-End Discovery**: Scan event routing for unhandled agent task events or misconfigurations.
 - **Atomic Field Updates**: Verify existence-checks before metadata writes to prevent storage corruption.
+
 #### 🩻 Spine Event Flow
 
 ```text
-  [ Event Handler (Lambda) ] --+
-                               |
-  [ Session Lock (Atomic) ] <--+ (Acquire via sessionId)
-                               |
-  [ Agent Multiplexer (Core) ] +--> [ Atomic Recursion Guard ] -- (Update) -> [ State Store ]
-                               |    (checkAndPushRecursion)               (Shared Depth)
-                               |
-                               +--> [ Resilience Guard ] -- (Check) -> [ DistributedState ]
-                                    (Circuit Breaker / Rate Limit)     (Shared Resilience)
+  [ EventBridge ]
          |
+         v
+  [ Event Handler ] -- (Atomic Check) --> [ Rate Limiter & Circuit Breaker ]
+         |
+         |-- (Trace Context) --> [ Recursion Tracker ] --> [ State Store ]
+         |                                                   (depth check)
          v
   [ Agent Router ] -- (Selection Guard) --> [ Agent Registry ]
          |
          v
-  [ Facilitator Trust Gate ] -- (Score >= 90?) --> [ Tie-break Handler ]
-         |                                              |
-         v                                              v
-  [ Lock Manager ] -- (Atomic Lease) --------------> [ State Store ]
+  [ Lock Manager ] -- (Atomic Lease) --> [ State Store ]
          |
          v
   [ Agent Executor ] -- (Action) --> [ Skill Multiplexer ]
@@ -310,13 +312,12 @@ Review the implementation details in [EVENTS.md](../interface/EVENTS.md#atomic-b
 #### Verification Methods
 
 Review the implementation details in [PROTOCOL.md](../interface/PROTOCOL.md#tool-protocols--multi-server-orchestration):
-
 - **Prompt Audit**: Evaluate persona prompts (Coder, Planner, etc.) against known complex inputs.
 - **Tool Schema Test**: Validate skills against their interface declarations with boundary inputs.
 - **Resource Leak Check**: Monitor client/connection pools for proper lifecycle management.
 - **Error Path Test**: Trigger failures at the skill layer to verify graceful context recovery.
 
-#### 🛡️ Silo 3: The Shield (Security & Baseline) [STABILIZED 2026-04-14]
+#### 🛡️ Silo 3: The Shield (Security & Baseline) [STABILIZED 2026-04-12]
 
 The Shield has been unified. The `SafetyEngine` now acts as the authoritative gate for all tool executions, enforcing least-privilege resource access and Class C blast-radius limits.
 
@@ -405,7 +406,6 @@ The Shield has been unified. The `SafetyEngine` now acts as the authoritative ga
 - New endpoints without RBAC checks
 
 #### Verification Methods
-
 Review the implementation details in [MEMORY.md](../intelligence/MEMORY.md#extended-memory-lifecycle--continuity):
 
 - **Isolation Test**: Attempt cross-workspace session access to verify boundary rejection.
@@ -447,7 +447,6 @@ Review the implementation details in [MEMORY.md](../intelligence/MEMORY.md#exten
 #### Verification Methods
 
 Review the implementation details in [DASHBOARD.md](../interface/DASHBOARD.md#observation--metrics-integrity):
-
 - **Consistency Verification**: Compare state between localized metrics and raw trace logs.
 - **Trace Audit**: Verify correlation IDs and audit for "broken chains" in spans.
 - **Optics Latency**: Measure the time elapsed between event emission and dashboard reporting.
@@ -509,7 +508,6 @@ Review the implementation details in [DASHBOARD.md](../interface/DASHBOARD.md#ob
 #### Verification Methods
 
 Review the implementation details in [SAFETY.md](../intelligence/SAFETY.md#agent-trust--calibration):
-
 - **Trust Journey**: Trace the progression of trust scores through multiple success/failure events.
 - **Judge Audit**: Periodically blind-test the semantic evaluator against known good/bad outputs.
 - **Decay Verification**: Verify that time-based trust decay parameters align with system spirit.
@@ -574,7 +572,6 @@ Review the implementation details in [SAFETY.md](../intelligence/SAFETY.md#agent
 #### Verification Methods
 
 Review the implementation details in [METABOLISM.md](../system/METABOLISM.md):
-
 - **Debt Detection**: Verify automated analysis tools correctly identify unreachable logic or stale overrides.
 - **Repair Integrity**: Trace the resolution of a metabolic gap into a strategic evolution plan.
 - **Remediation Speed**: Verify response times for real-time dashboard failures triggered via the "Live" path.
@@ -764,20 +761,14 @@ Future reviews should utilize a "Probe and Verify" method rather than a simple p
 - **Breaking Changes**: Test after upgrades
 
 ---
+
 ## 📝 Documenting Your Findings
 
-Use the following template when creating reporting artifacts in the `reports/` directory. 
-
-> [!IMPORTANT]
-> **Retention Policy**: Audit Reports are transient artifacts. They MUST be cleared 3 days after creation to prevent context bloat and stale guidance. The system's Metabolism (Silo 7) autonomously prunes these reports.
-
-### The Investigative Spirit
-When documenting, do not simply list files. Describe the **vibe** of the failure. Focus on the **directional drift** between the system's intent (Principles) and its current reality. Use this template as a loose guide, not a rigid cage.
+Use the following template when creating reporting artifacts in the `reports/` directory.
 
 ```markdown
 # Audit Report: [Topic/Silo] - [YYYY-MM-DD]
-...
-```
+
 ## 🎯 Objective
 
 Brief description of what you were looking for.
