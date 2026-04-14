@@ -50,7 +50,6 @@ export const handler = async (
 
   // Session lock management
   const sessionStateManager = new SessionStateManager();
-  let heartbeatInterval: ReturnType<typeof setInterval> | undefined;
 
   // 3. Identify Target Agent
   let targetAgent: AgentType | undefined;
@@ -136,7 +135,6 @@ export const handler = async (
 
   // Acquire session lock if sessionId is available (B3: Prevent Mutual Exclusion Violation)
   let lockAcquired = false;
-  const abortController = new AbortController();
 
   if (sessionId && targetAgent) {
     lockAcquired = await sessionStateManager.acquireProcessing(sessionId, targetAgent);
@@ -149,22 +147,6 @@ export const handler = async (
         message: `Session busy. Task added to pending queue for ${targetAgent}.`,
       };
     }
-
-    // Start heartbeat to renew lock (B3: Real-time Shared Awareness)
-    // Renew every 60 seconds for tasks that may take longer (e.g., Coder)
-    heartbeatInterval = setInterval(async () => {
-      try {
-        if (!lockAcquired) return;
-        const renewed = await sessionStateManager.renewProcessing(sessionId, targetAgent!);
-        if (!renewed) {
-          logger.warn(`[MULTIPLEXER] Failed to renew lock for ${sessionId}. Lock lost.`);
-          lockAcquired = false;
-          abortController.abort(new Error('LockLostError: Session lock was lost or expired.'));
-        }
-      } catch (err) {
-        logger.error(`[MULTIPLEXER] Heartbeat error for ${sessionId}:`, err);
-      }
-    }, 60000);
   }
 
   const { isMissionContext, checkAndPushRecursion } = await import('./events/shared');
@@ -175,13 +157,11 @@ export const handler = async (
       _traceId,
       sessionId || 'unknown',
       targetAgent,
-      (detail.depth as number) ?? 0,
       isMission
     );
 
     if (currentDepth === null) {
       if (lockAcquired && sessionId) {
-        if (heartbeatInterval) clearInterval(heartbeatInterval);
         await sessionStateManager.releaseProcessing(sessionId, targetAgent);
       }
       return `Error: Recursion limit exceeded for trace ${_traceId}`;
@@ -194,6 +174,12 @@ export const handler = async (
   try {
     // 4. Dispatch to Agent Logic
     logger.info(`[MULTIPLEXER] Dispatching to ${targetAgent}...`);
+
+    // Ensure lock is renewed just before dispatch to give the next handler full TTL
+    if (lockAcquired && sessionId && targetAgent) {
+      await sessionStateManager.renewProcessing(sessionId, targetAgent);
+    }
+
     const agentModule = await import(handlerPath);
 
     if (typeof agentModule.handler === 'function') {
@@ -205,10 +191,7 @@ export const handler = async (
     logger.error(`[MULTIPLEXER] Failed to execute agent ${targetAgent}:`, error);
     throw error;
   } finally {
-    // Cleanup: Clear heartbeat and release lock
-    if (heartbeatInterval) {
-      clearInterval(heartbeatInterval);
-    }
+    // Cleanup: release lock
     if (lockAcquired && sessionId && targetAgent) {
       await sessionStateManager.releaseProcessing(sessionId, targetAgent);
     }

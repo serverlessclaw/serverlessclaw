@@ -96,7 +96,7 @@ To ensure high availability and low latency, the system employs a tiered approac
           |
     +-----v-----+
     |  Unified  | (Primary - Lambda Invoke)
-    | Multiplexer [10s Timeout]
+    | Multiplexer [15s Timeout / 5s Hub]
     | (Lambda)  | [Routing: x-mcp-server + custom path]
     +-----+-----+
           |
@@ -104,10 +104,12 @@ To ensure high availability and low latency, the system employs a tiered approac
           |
     +-----v-----+
     | Local NPX | (Fallback - Stdio)
-    | (Lambda)  | [30s Timeout] [Writable /tmp cache]
+    | (Lambda)  | [15s Timeout] [Connection TTL: 15min]
     +-----------+
 ```
 
+- **Timeouts**: Connection timeout is 15s for standard servers, 5s for MCP Hub. Tool execution has a 2-minute timeout (configurable via `TOOL_EXECUTION_TIMEOUT_MS`).
+- **Connection Lifecycle**: MCP clients are cached with a 15-minute TTL (configurable via `MCP_CONNECTION_TTL_MS`). Stale connections are automatically evicted.
 - **Identification**: The `MCPMultiplexer` handles server discovery and caches definitions in DynamoDB.
 - **Validation**: All tool inputs are validated against JSON schemas before execution.
 - **Safety**: Tools performing Class C actions (Writes/Deletes) require human approval (via `SafetyEngine`).

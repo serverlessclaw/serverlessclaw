@@ -1,29 +1,23 @@
 import { EventType } from '../../lib/types/index';
 import { sendOutboundMessage } from '../../lib/outbound';
 import { logger } from '../../lib/logger';
-import { SYSTEM, DYNAMO_KEYS } from '../../lib/constants';
-import { ConfigManager } from '../../lib/registry/config';
 import { emitEvent } from '../../lib/utils/bus';
 import { TraceSource, Attachment } from '../../lib/types/index';
 import { Context } from 'aws-lambda';
-import { parseConfigInt } from '../../lib/providers/utils';
 import { isTaskPaused } from '../../lib/utils/agent-helpers';
 import { SessionStateManager } from '../../lib/session/session-state';
+import { incrementRecursionDepth, getRecursionLimit } from '../../lib/recursion-tracker';
 
 /**
  * Event types that indicate mission-critical workflows with stricter recursion limits.
  * These include DAG/swarm executions and parallel task dispatches.
- *
- * NOTE: DAG dispatch is handled via PARALLEL_TASK_DISPATCH with DAG mode enabled
- * (hasDependencies=true). There is no separate DAG_TASK_DISPATCH event type -
- * the same handler serves both parallel and DAG modes for consistency.
  */
 const MISSION_EVENT_TYPES = [
   EventType.DAG_TASK_COMPLETED,
   EventType.DAG_TASK_FAILED,
   EventType.PARALLEL_TASK_DISPATCH,
   EventType.PARALLEL_TASK_COMPLETED,
-  EventType.PARALLEL_BARRIER_TIMEOUT, // Barrier timeout is critical for DAG recovery
+  EventType.PARALLEL_BARRIER_TIMEOUT,
 ];
 
 /**
@@ -32,11 +26,9 @@ const MISSION_EVENT_TYPES = [
  * @param metadata - Optional metadata that might indicate mission context
  */
 export function isMissionContext(eventType?: string, metadata?: Record<string, unknown>): boolean {
-  // Check if event type indicates a mission
   if (eventType && MISSION_EVENT_TYPES.includes(eventType as EventType)) {
     return true;
   }
-  // Check metadata for mission flag
   if (metadata?.isMission === true) {
     return true;
   }
@@ -45,7 +37,7 @@ export function isMissionContext(eventType?: string, metadata?: Record<string, u
 
 /**
  * Unified recursion guard for event handlers and multiplexers.
- * Checks the cross-session recursion depth and pushes a new entry if within limits.
+ * Uses atomic monotonic increment to prevent bypass.
  *
  * @param traceId - The trace ID for the execution chain.
  * @param sessionId - The session ID for the execution.
@@ -57,39 +49,23 @@ export async function checkAndPushRecursion(
   traceId: string,
   sessionId: string,
   agentId: string,
-  _depthFromEvent?: number,
   isMission: boolean = false
 ): Promise<number | null> {
-  const { getRecursionDepth, incrementRecursionDepth } =
-    await import('../../lib/recursion-tracker');
-
   const RECURSION_LIMIT = await getRecursionLimit(isMission);
-  const currentDepth = await getRecursionDepth(traceId);
+  const newDepth = await incrementRecursionDepth(traceId, sessionId, agentId, isMission);
 
-  if (currentDepth >= RECURSION_LIMIT) {
+  if (newDepth > RECURSION_LIMIT || newDepth === -1) {
     logger.error(
-      `[RECURSION] Limit exceeded for trace ${traceId} at current depth ${currentDepth} (limit: ${RECURSION_LIMIT})`
+      `[RECURSION] Limit exceeded for trace ${traceId} at depth ${newDepth} (limit: ${RECURSION_LIMIT})`
     );
     return null;
   }
 
-  const newDepth = await incrementRecursionDepth(traceId, sessionId, agentId, isMission);
-  return newDepth === -1 ? null : newDepth;
+  return newDepth;
 }
 
 /**
  * Wake up the initiator agent when a delegated task or system event completes.
-...
- * @param userId - The ID of the user.
- * @param initiatorId - The ID of the agent that initiated the task.
- * @param task - The task name or identifier.
- * @param traceId - Optional trace ID for tracking.
- * @param sessionId - Optional session identifier.
- * @param depth - Current recursion depth.
- * @param userNotified - Whether the user has already been notified of this task completion.
- * @param options - Optional array of interactive button options to include in the wakeup message.
- * @param taskId - Optional stable task ID to maintain identity across continuation.
- * @param eventType - Optional event type to use (defaults to CONTINUATION_TASK).
  */
 export async function wakeupInitiator(
   userId: string,
@@ -107,7 +83,6 @@ export async function wakeupInitiator(
 
   const finalTask = userNotified ? `${task}\n(USER_ALREADY_NOTIFIED: true)` : task;
 
-  // Determine if the initiator is a human (user) or another agent.
   const isHuman =
     initiatorId === userId || initiatorId === 'dashboard-user' || /^\d+$/.test(initiatorId);
 
@@ -126,9 +101,6 @@ export async function wakeupInitiator(
     return;
   }
 
-  // Detect mission context and use appropriate recursion limit
-  // Boundary: depth starts at 0. If limit is 15, allow depth 0-14, block at 15+.
-  // This uses >= for safety to prevent runaway recursion in agent handoffs.
   const missionContext = isMissionContext(eventType as string);
   const RECURSION_LIMIT = await getRecursionLimit(missionContext);
 
@@ -161,63 +133,7 @@ export async function wakeupInitiator(
 }
 
 /**
- * Get the recursion limit from config or use default.
- * Validates that mission_recursion_limit <= recursion_limit to prevent limit bypass.
- * @param isMission - Whether this is a mission-critical workflow (uses stricter limit)
- */
-export async function getRecursionLimit(isMission: boolean = false): Promise<number> {
-  const { CONFIG_DEFAULTS } = await import('../../lib/config/config-defaults');
-
-  // Get general recursion limit (upper bound)
-  let generalLimit: number = SYSTEM.DEFAULT_RECURSION_LIMIT;
-  try {
-    const customLimit = await ConfigManager.getRawConfig(DYNAMO_KEYS.RECURSION_LIMIT);
-    if (customLimit !== undefined) {
-      generalLimit = parseConfigInt(customLimit, SYSTEM.DEFAULT_RECURSION_LIMIT);
-    }
-  } catch {
-    logger.warn('Failed to fetch recursion_limit from DDB, using default.');
-  }
-
-  // Use mission-specific limit if this is a mission context
-  if (isMission) {
-    let missionLimit: number = CONFIG_DEFAULTS.MISSION_RECURSION_LIMIT.code;
-    try {
-      const customMissionLimit = await ConfigManager.getRawConfig('mission_recursion_limit');
-      if (customMissionLimit !== undefined) {
-        missionLimit = parseConfigInt(
-          customMissionLimit,
-          CONFIG_DEFAULTS.MISSION_RECURSION_LIMIT.code
-        );
-      }
-    } catch {
-      logger.warn('Failed to fetch mission_recursion_limit from DDB, using default.');
-    }
-
-    // Validate: mission limit cannot exceed general limit (prevents limit bypass)
-    if (missionLimit > generalLimit) {
-      logger.warn(
-        `mission_recursion_limit (${missionLimit}) exceeds recursion_limit (${generalLimit}). ` +
-          `Using general limit for mission context.`
-      );
-      return generalLimit;
-    }
-
-    return missionLimit;
-  }
-
-  return generalLimit;
-}
-
-/**
  * Handle recursion limit exceeded scenario by informing the user and emitting a failure event.
- *
- * @param userId - The ID of the user.
- * @param sessionId - Optional session identifier.
- * @param handlerName - The name of the handler reporting the limit.
- * @param reason - The reason for recursion limit.
- * @param traceId - Trace ID of the failed operation.
- * @param initiatorId - The agent that was supposed to be woken up.
  */
 export async function handleRecursionLimitExceeded(
   userId: string,
@@ -229,7 +145,6 @@ export async function handleRecursionLimitExceeded(
 ): Promise<void> {
   const finalMessage = `⚠️ **Recursion Limit Exceeded**\n\n${reason}`;
 
-  // 1. Inform user
   await sendOutboundMessage(
     handlerName,
     userId,
@@ -241,7 +156,6 @@ export async function handleRecursionLimitExceeded(
     traceId
   );
 
-  // 2. Emit failure event for automated system awareness
   try {
     const { emitTypedEvent } = await import('../../lib/utils/typed-emit');
     await emitTypedEvent(handlerName, EventType.TASK_FAILED, {
@@ -252,7 +166,7 @@ export async function handleRecursionLimitExceeded(
       traceId,
       sessionId,
       initiatorId: 'system.supervisor',
-      depth: 99, // Sentinel for limit hit
+      depth: 99,
     });
   } catch (err) {
     logger.error('Failed to emit TASK_FAILED for recursion limit:', err);
@@ -261,12 +175,6 @@ export async function handleRecursionLimitExceeded(
 
 /**
  * Encapsulates the core agent processing logic for event handlers.
- *
- * @param userId - The ID of the user.
- * @param agentId - The ID of the agent to process the event.
- * @param taskContent - The content of the task to perform.
- * @param options - Additional options for execution.
- * @returns A promise resolving to the agent response and attachments.
  */
 export async function processEventWithAgent(
   userId: string,
@@ -293,13 +201,17 @@ export async function processEventWithAgent(
       totalTokens: number;
     };
   }
-): Promise<{ responseText: string; attachments: Attachment[]; parsedData?: any }> {
-  // Heavy SDK dependencies loaded lazily to keep this module's static import depth low.
+): Promise<{
+  responseText: string;
+  attachments: Attachment[];
+  parsedData?: Record<string, unknown> | null;
+}> {
   const { Agent } = await import('../../lib/agent');
   const { getAgentContext } = await import('../../lib/utils/agent-helpers');
   const { memory, provider } = await getAgentContext();
   const { AgentRegistry } = await import('../../lib/registry');
   const config = await AgentRegistry.getAgentConfig(agentId);
+
   if (!config) {
     logger.error(`Agent configuration for '${agentId}' not found during event processing.`);
     throw new Error(`Agent configuration for '${agentId}' not found.`);
@@ -309,7 +221,6 @@ export async function processEventWithAgent(
   const agentTools = await loadAgentTools(agentId);
   const agent = new Agent(memory, provider, agentTools, config.systemPrompt, config);
 
-  // 0. Concurrency Control (Phase B3: Real-time Shared Awareness)
   const sessionStateManager = new SessionStateManager();
   if (options.sessionId) {
     const lockAcquired = await sessionStateManager.acquireProcessing(
@@ -355,14 +266,13 @@ export async function processEventWithAgent(
     let responseText = '';
     const attachments: Attachment[] = [];
 
-    // resultAttachments from agent.stream are not directly returned as a single array,
-    // they are usually added to memory or yielded in chunks if the provider/executor supports it.
     const isValidAttachment = (rawAtt: unknown): rawAtt is Attachment => {
       if (!rawAtt || typeof rawAtt !== 'object') return false;
       const a = rawAtt as Record<string, unknown>;
-      if (typeof a.url === 'string' && a.url.length > 0) return true;
-      if (typeof a.base64 === 'string' && a.base64.length > 0) return true;
-      return false;
+      return (
+        (typeof a.url === 'string' && a.url.length > 0) ||
+        (typeof a.base64 === 'string' && a.base64.length > 0)
+      );
     };
 
     for await (const chunk of stream) {
@@ -370,26 +280,27 @@ export async function processEventWithAgent(
       if (chunk.attachments && Array.isArray(chunk.attachments)) {
         for (const rawAtt of chunk.attachments) {
           if (isValidAttachment(rawAtt)) attachments.push(rawAtt as Attachment);
-          else logger.warn('[EVENTS.SHARED] Skipping invalid stream attachment');
         }
       }
     }
 
     const isPaused = isTaskPaused(responseText);
-
-    // 1. Extract message if JSON (Phase B3: Real-time Shared Awareness)
     let finalMessage = responseText;
-    let parsedData: any = null;
+    let parsedData: Record<string, unknown> | null = null;
+
     try {
       if (responseText.trim().startsWith('{')) {
         parsedData = JSON.parse(responseText);
-        finalMessage = parsedData.message || parsedData.plan || parsedData.response || responseText;
+        finalMessage =
+          (parsedData?.message as string) ||
+          (parsedData?.plan as string) ||
+          (parsedData?.response as string) ||
+          responseText;
       }
     } catch {
-      // Fallback to raw response if not valid JSON
+      // Fallback
     }
 
-    // 1. Notify user (unless it's a background pause/continuation or skip requested)
     if (!isPaused && responseText.trim().length > 0 && !options.skipOutbound) {
       const formattedMessage = options.formatResponse
         ? options.formatResponse(finalMessage, attachments)
@@ -409,7 +320,6 @@ export async function processEventWithAgent(
       );
     }
 
-    // 2. Notify initiator if it's another agent (Closing the completion gap)
     if (
       !isPaused &&
       options.initiatorId &&
@@ -428,9 +338,7 @@ export async function processEventWithAgent(
         initiatorId: options.initiatorId,
         depth: (options.depth ?? 0) + 1,
         sessionId: options.sessionId,
-        metadata: {
-          durationMs: Date.now() - startTime,
-        },
+        metadata: { durationMs: Date.now() - startTime },
       });
     }
 

@@ -4,6 +4,7 @@ import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js';
 import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 import { logger } from '../logger';
+import { MCP } from '../constants/tools';
 
 const lambdaClient = new LambdaClient({});
 
@@ -15,8 +16,8 @@ export class MCPClientManager {
   private static connecting: Map<string, Promise<Client>> = new Map();
   private static connectionTimestamps: Map<string, number> = new Map();
   private static readonly CONNECTION_TTL_MS = parseInt(
-    process.env.MCP_CONNECTION_TTL_MS ?? '900000'
-  ); // 15 min default
+    process.env.MCP_CONNECTION_TTL_MS ?? String(MCP.CONNECTION_TTL_MS)
+  );
 
   static getClient(name: string): Client | undefined {
     // Check for exact match or cwd-prefixed match
@@ -172,9 +173,7 @@ export class MCPClientManager {
       const hubUrl = process.env.MCP_HUB_URL ?? '';
       const isHub =
         connectionString.startsWith('http') && hubUrl !== '' && connectionString.includes(hubUrl);
-      // Reduce timeout for local/remote MCP servers to prevent Lambda and dashboard timeouts
-      // 15s allows the application to handle failure before a 30s Lambda timeout
-      const connectTimeout = isHub ? 5000 : 15000;
+      const connectTimeout = isHub ? MCP.HUB_CONNECT_TIMEOUT_MS : MCP.DEFAULT_CONNECT_TIMEOUT_MS;
       let timeoutId: ReturnType<typeof setTimeout>;
       const timeoutPromise = new Promise<never>((_, reject) => {
         timeoutId = setTimeout(

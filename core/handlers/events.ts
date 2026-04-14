@@ -47,7 +47,8 @@ export async function handler(
   }
 
   // Recursion depth enforcement using unified DynamoDB-based recursion tracker
-  const { isMissionContext, checkAndPushRecursion } = await import('./events/shared');
+  const { isMissionContext } = await import('./events/shared');
+  const { incrementRecursionDepth, getRecursionLimit } = await import('../lib/recursion-tracker');
   const traceId = eventDetail.traceId as string;
 
   if (!traceId) {
@@ -58,16 +59,18 @@ export async function handler(
   }
 
   const isMission = isMissionContext(detailType, eventDetail as Record<string, unknown>);
-  const currentDepth = await checkAndPushRecursion(
+  const recursionLimit = await getRecursionLimit(isMission);
+  const currentDepth = await incrementRecursionDepth(
     traceId,
     (eventDetail.sessionId as string) || 'unknown',
     'system.spine',
-    (eventDetail.retryCount as number) ?? 0,
     isMission
   );
 
-  if (currentDepth === null) {
-    logger.warn(`[RECURSION] Limit exceeded for trace ${traceId}`);
+  if (currentDepth > recursionLimit || currentDepth === -1) {
+    logger.warn(
+      `[RECURSION] Limit exceeded for trace ${traceId} (Depth: ${currentDepth}, Limit: ${recursionLimit})`
+    );
     await routeToDlq(event, detailType, 'SYSTEM', 'unknown', `Recursion limit exceeded`);
     emitMetrics([METRICS.dlqEvents(1)]).catch(() => {});
     return;

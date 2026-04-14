@@ -9,7 +9,7 @@ import { MemoryInsight, InsightMetadata, InsightCategory } from '../types/memory
 import { GapStatus, EvolutionTrack, GapTransitionResult } from '../types/agent';
 import { logger } from '../logger';
 import { RetentionManager } from './tiering';
-import { LIMITS, TIME, MEMORY_KEYS } from '../constants';
+import { LIMITS, TIME, MEMORY_KEYS, RETENTION } from '../constants';
 import type { BaseMemoryProvider } from './base';
 import {
   createMetadata,
@@ -130,7 +130,7 @@ export async function archiveStaleGaps(
 
 export async function cullResolvedGaps(
   base: BaseMemoryProvider,
-  thresholdDays: number = 90,
+  thresholdDays: number = RETENTION.GAPS_DAYS,
   workspaceId?: string
 ): Promise<number> {
   const cutoffTime = Date.now() - thresholdDays * TIME.SECONDS_IN_DAY * TIME.MS_PER_SECOND;

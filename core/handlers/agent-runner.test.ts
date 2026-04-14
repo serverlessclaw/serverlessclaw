@@ -52,6 +52,7 @@ vi.mock('../lib/recursion-tracker', () => ({
   incrementRecursionDepth: vi.fn(async () => 1),
   getRecursionDepth: vi.fn(async () => 0),
   clearRecursionStack: vi.fn(async () => undefined),
+  getRecursionLimit: vi.fn(async () => 15),
 }));
 
 vi.mock('../lib/logger', () => ({

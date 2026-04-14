@@ -34,13 +34,24 @@ export class TrustManager {
 
   /**
    * Records a failure for an agent and penalizes its trust score.
+   * Optionally takes a quality score (0-10) to weight the trust adjustment.
    */
   static async recordFailure(
     agentId: string,
     reason: string,
-    severity: number = 1
+    severity: number = 1,
+    qualityScore?: number
   ): Promise<number> {
-    const penalty = this.DEFAULT_PENALTY * severity;
+    let penalty = this.DEFAULT_PENALTY * severity;
+
+    if (qualityScore !== undefined) {
+      // Quality-weighted failure penalty (Principle 12)
+      // Lower quality failures (0-5) get higher penalty multiplier, higher quality (6-10) get lower
+      // formula: (10 - qualityScore) / 10 gives range [0, 1] then scale
+      const multiplier = Math.min(1.5, Math.max(0.5, (10 - qualityScore) / 5 + 0.5));
+      penalty *= multiplier;
+    }
+
     const newScore = await this.updateTrustScore(agentId, penalty);
 
     await this.logPenalty({
@@ -252,7 +263,7 @@ export class TrustManager {
 
     for (const agentId of Object.keys(configs)) {
       const config = configs[agentId];
-      if (config.trustScore !== undefined && config.trustScore > TRUST.DECAY_BASELINE) {
+      if (config.trustScore !== undefined && config.trustScore >= TRUST.DECAY_BASELINE) {
         let decayAmount = this.DECAY_RATE;
 
         if (config.trustScore >= TRUST.AUTONOMY_THRESHOLD) {

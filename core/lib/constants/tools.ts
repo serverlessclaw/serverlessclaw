@@ -151,3 +151,17 @@ export const STORAGE = {
   WORKSPACE_BASE: '/tmp/workspace',
   MERGE_BASE: '/tmp/merge',
 } as const;
+
+/**
+ * MCP (Model Context Protocol) configuration.
+ */
+export const MCP = {
+  DEFAULT_CACHE_TTL_MS: 900000, // 15 minutes
+  FAILURE_BACKOFF_MS: 30000, // 30 seconds
+  DEFAULT_CONNECT_TIMEOUT_MS: 15000, // 15 seconds
+  HUB_CONNECT_TIMEOUT_MS: 5000, // 5 seconds
+  CONNECTION_TTL_MS: 900000, // 15 minutes
+  TOOL_EXECUTION_TIMEOUT_MS: 120000, // 2 minutes
+  LOCK_ACQUIRE_TIMEOUT_MS: 60000, // 60 seconds
+  LOCK_ACQUIRE_RETRIES: 3,
+} as const;

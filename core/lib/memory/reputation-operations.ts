@@ -75,6 +75,8 @@ export async function getReputation(
 /**
  * Updates agent reputation on task completion or failure.
  * Uses atomic DynamoDB operations to prevent race conditions.
+ * Derived values (successRate, avgLatencyMs) are computed on read in getReputation()
+ * to avoid race conditions from read-modify-write patterns.
  * Window expiry is handled by DynamoDB TTL - stale records auto-expire.
  *
  * @param base - The base memory provider instance.
@@ -92,8 +94,6 @@ export async function updateReputation(
   const pk = reputationKey(agentId);
 
   try {
-    // Use atomic ADD operations to prevent race conditions
-    // If item doesn't exist, initializes with starting values
     await base.updateItem({
       Key: { userId: pk, timestamp: 0 },
       UpdateExpression:
@@ -105,9 +105,7 @@ export async function updateReputation(
         'tasksFailed = if_not_exists(tasksFailed, :zero) + :failed, ' +
         'totalLatencyMs = if_not_exists(totalLatencyMs, :zero) + :latency, ' +
         'windowStart = if_not_exists(windowStart, :now), ' +
-        'createdAt = if_not_exists(createdAt, :now), ' +
-        'successRate = :calcRate, ' +
-        'avgLatencyMs = :calcLatency',
+        'createdAt = if_not_exists(createdAt, :now)',
       ExpressionAttributeValues: {
         ':type': 'REPUTATION',
         ':agentId': agentId,
@@ -117,34 +115,10 @@ export async function updateReputation(
         ':completed': success ? 1 : 0,
         ':failed': success ? 0 : 1,
         ':latency': success ? latencyMs : 0,
-        ':calcRate': 0, // Placeholder - computed on read
-        ':calcLatency': 0, // Placeholder - computed on read
       },
     });
 
-    // Now read back to compute derived values and update atomically
-    const existing = await getReputation(base, agentId);
-    if (!existing) return; // Should have been created above
-
-    const total = existing.tasksCompleted + existing.tasksFailed;
-    const successRate = total > 0 ? existing.tasksCompleted / total : 0;
-    const avgLatencyMs =
-      existing.tasksCompleted > 0 ? existing.totalLatencyMs / existing.tasksCompleted : 0;
-
-    // Final atomic update with computed derived values
-    await base.updateItem({
-      Key: { userId: pk, timestamp: 0 },
-      UpdateExpression: 'SET successRate = :rate, avgLatencyMs = :latency',
-      ExpressionAttributeValues: {
-        ':rate': successRate,
-        ':latency': avgLatencyMs,
-      },
-    });
-
-    logger.info(
-      `[Reputation] Updated ${agentId}: success=${success}, rate=${successRate.toFixed(2)}, ` +
-        `completed=${existing.tasksCompleted}, failed=${existing.tasksFailed}, avgLatency=${avgLatencyMs.toFixed(0)}ms`
-    );
+    logger.info(`[Reputation] Updated ${agentId}: success=${success}, tasksUpdated`);
   } catch (error) {
     logger.error(`Failed to update reputation for ${agentId}:`, error);
   }

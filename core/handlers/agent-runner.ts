@@ -100,7 +100,8 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
     heartbeatInterval = setInterval(runHeartbeat, lastIntervalMs);
   }
 
-  const { isMissionContext, getRecursionLimit } = await import('./events/shared');
+  const { isMissionContext } = await import('./events/shared');
+  const { getRecursionLimit } = await import('../lib/recursion-tracker');
   const isMission = isMissionContext(detailType, payload.metadata as Record<string, unknown>);
   const MAX_RECURSION_LIMIT = await getRecursionLimit(isMission);
 

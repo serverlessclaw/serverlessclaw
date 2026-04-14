@@ -2,7 +2,8 @@ import { TASK_EVENT_SCHEMA } from '../../lib/schema/events';
 import { AgentType } from '../../lib/types/index';
 import { logger } from '../../lib/logger';
 import { Context } from 'aws-lambda';
-import { getRecursionLimit, handleRecursionLimitExceeded, processEventWithAgent } from './shared';
+import { handleRecursionLimitExceeded, processEventWithAgent } from './shared';
+import { getRecursionLimit } from '../../lib/recursion-tracker';
 
 /**
  * Handles continuation task events - resumes agent processing with context.
@@ -20,7 +21,6 @@ export async function handleContinuationTask(
     task,
     traceId,
     sessionId,
-    isContinuation,
     depth,
     initiatorId,
     attachments,
@@ -44,7 +44,9 @@ export async function handleContinuationTask(
       userId,
       sessionId,
       'continuation-handler',
-      `I have detected an infinite loop in task continuation (Depth: ${currentDepth}). I've intervened to stop the process. Please check the orchestration logic.`
+      `I have detected an infinite loop in task continuation (Depth: ${currentDepth}). I've intervened to stop the process. Please check the orchestration logic.`,
+      traceId,
+      agentId ?? 'superclaw'
     );
     return;
   }
@@ -66,7 +68,7 @@ export async function handleContinuationTask(
 
   await processEventWithAgent(userId, targetAgentId, task, {
     context,
-    isContinuation: isContinuation !== false,
+    isContinuation: true,
     traceId,
     sessionId,
     depth,

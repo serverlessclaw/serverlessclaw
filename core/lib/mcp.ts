@@ -5,6 +5,7 @@ import { AgentRegistry } from './registry';
 import { MCPClientManager } from './mcp/client-manager';
 import { MCPToolMapper } from './mcp/tool-mapper';
 import { LockManager } from './lock/lock-manager';
+import { MCP } from './constants/tools';
 
 /**
  * MCPMultiplexer coordinates connections to external Model Context Protocol (MCP) servers.
@@ -15,7 +16,7 @@ import { LockManager } from './lock/lock-manager';
 export class MCPMultiplexer {
   private static discovering: Map<string, Promise<ITool[]>> = new Map();
   private static lastFailures: Map<string, number> = new Map();
-  private static readonly FAILURE_BACKOFF_MS = 30000; // 30 seconds
+  private static readonly FAILURE_BACKOFF_MS = MCP.FAILURE_BACKOFF_MS;
 
   /**
    * Connects to an MCP server and returns its tools.
@@ -94,7 +95,7 @@ export class MCPMultiplexer {
         tools: any[];
         timestamp: number;
       }
-      const cacheTTL = parseInt(process.env.MCP_CACHE_TTL_MS ?? '900000');
+      const cacheTTL = parseInt(process.env.MCP_CACHE_TTL_MS ?? String(MCP.DEFAULT_CACHE_TTL_MS));
 
       const checkCache = async () => {
         const cached = (await AgentRegistry.getRawConfig(cacheKey)) as CachedTools | null;
@@ -150,6 +151,8 @@ export class MCPMultiplexer {
         logger.warn(`Failed to fetch tools from ${serverName}:`, e);
         this.lastFailures.set(cacheKey, Date.now());
         MCPClientManager.deleteClient(serverName);
+        // Invalidate cache on failure so stale data isn't served after recovery
+        await AgentRegistry.saveRawConfig(cacheKey, null).catch(() => {});
         return [];
       } finally {
         if (acquired) {

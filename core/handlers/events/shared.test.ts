@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { checkAndPushRecursion, getRecursionLimit, isMissionContext } from './shared';
+import { checkAndPushRecursion, isMissionContext } from './shared';
+import { getRecursionLimit } from '../../lib/recursion-tracker';
 import { EventType } from '../../lib/types/agent';
 
 // Mock recursion tracker
@@ -10,6 +11,7 @@ vi.mock('../../lib/recursion-tracker', () => ({
     mockDepth.value += 1;
     return mockDepth.value;
   }),
+  getRecursionLimit: vi.fn(async (isMission) => (isMission ? 5 : 15)),
 }));
 
 // Mock ConfigManager
@@ -61,7 +63,7 @@ describe('EventHandler Shared Utilities', () => {
     });
 
     it('should return null if recursion limit is exceeded', async () => {
-      mockDepth.value = 15; // Limit is 15 by default
+      mockDepth.value = 15; // Limit is 15 by default, current depth starts at 15
       const traceId = 'trace-limit';
       const result = await checkAndPushRecursion(traceId, 'sess-1', 'agent-1');
 
@@ -72,7 +74,7 @@ describe('EventHandler Shared Utilities', () => {
       // Mission limit is 5 by default
       mockDepth.value = 5;
       const traceId = 'trace-mission';
-      const result = await checkAndPushRecursion(traceId, 'sess-1', 'agent-1', 0, true);
+      const result = await checkAndPushRecursion(traceId, 'sess-1', 'agent-1', true);
 
       expect(result).toBeNull();
     });

@@ -12,6 +12,10 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 
+import { SYSTEM, DYNAMO_KEYS } from './constants';
+import { ConfigManager } from './registry/config';
+import { parseConfigInt } from './providers/utils';
+
 const RECURSION_STACK_PREFIX = 'RECURSION_STACK#';
 const RECURSION_TTL_SECONDS = 3600; // 1 hour - matches typical mission lifetime
 const MISSION_RECURSION_TTL_SECONDS = 1800; // 30 minutes - stricter for mission-critical flows
@@ -20,6 +24,55 @@ const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client, {
   marshallOptions: { removeUndefinedValues: true },
 });
+
+/**
+ * Get the recursion limit from config or use default.
+ * Validates that mission_recursion_limit <= recursion_limit to prevent limit bypass.
+ * @param isMission - Whether this is a mission-critical workflow (uses stricter limit)
+ */
+export async function getRecursionLimit(isMission: boolean = false): Promise<number> {
+  const { CONFIG_DEFAULTS } = await import('./config/config-defaults');
+
+  // Get general recursion limit (upper bound)
+  let generalLimit: number = SYSTEM.DEFAULT_RECURSION_LIMIT;
+  try {
+    const customLimit = await ConfigManager.getRawConfig(DYNAMO_KEYS.RECURSION_LIMIT);
+    if (customLimit !== undefined) {
+      generalLimit = parseConfigInt(customLimit, SYSTEM.DEFAULT_RECURSION_LIMIT);
+    }
+  } catch {
+    logger.warn('Failed to fetch recursion_limit from DDB, using default.');
+  }
+
+  // Use mission-specific limit if this is a mission context
+  if (isMission) {
+    let missionLimit: number = CONFIG_DEFAULTS.MISSION_RECURSION_LIMIT.code;
+    try {
+      const customMissionLimit = await ConfigManager.getRawConfig('mission_recursion_limit');
+      if (customMissionLimit !== undefined) {
+        missionLimit = parseConfigInt(
+          customMissionLimit,
+          CONFIG_DEFAULTS.MISSION_RECURSION_LIMIT.code
+        );
+      }
+    } catch {
+      logger.warn('Failed to fetch mission_recursion_limit from DDB, using default.');
+    }
+
+    // Validate: mission limit cannot exceed general limit (prevents limit bypass)
+    if (missionLimit > generalLimit) {
+      logger.warn(
+        `mission_recursion_limit (${missionLimit}) exceeds recursion_limit (${generalLimit}). ` +
+          `Using general limit for mission context.`
+      );
+      return generalLimit;
+    }
+
+    return missionLimit;
+  }
+
+  return generalLimit;
+}
 
 /**
  * Atomically increments the recursion depth for a trace and returns the new depth.

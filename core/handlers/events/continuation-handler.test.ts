@@ -1,4 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { handleContinuationTask } from './continuation-handler';
 
 // 1. Mock 'sst'
 vi.mock('sst', () => ({
@@ -77,72 +78,79 @@ vi.mock('../../lib/registry/config', () => ({
   },
 }));
 
-// 7. Mock shared functions
-const { mockGetRecursionLimit, mockHandleRecursionLimitExceeded, mockProcessEventWithAgent } =
+// 7. Mock recursion tracker
+const { mockGetRecursionLimit } = vi.hoisted(() => ({
+  mockGetRecursionLimit: vi.fn().mockResolvedValue(50),
+}));
+
+vi.mock('../../lib/recursion-tracker', () => ({
+  getRecursionLimit: mockGetRecursionLimit,
+  incrementRecursionDepth: vi.fn().mockResolvedValue(1),
+  getRecursionDepth: vi.fn().mockResolvedValue(0),
+}));
+
+// 8. Mock shared functions
+const { mockHandleRecursionLimitExceeded, mockProcessEventWithAgent, mockCheckAndPushRecursion } =
   vi.hoisted(() => ({
-    mockGetRecursionLimit: vi.fn().mockResolvedValue(50),
     mockHandleRecursionLimitExceeded: vi.fn().mockResolvedValue(undefined),
     mockProcessEventWithAgent: vi
       .fn()
       .mockResolvedValue({ responseText: 'test-response', attachments: [] }),
+    mockCheckAndPushRecursion: vi.fn().mockResolvedValue(1),
   }));
 
 vi.mock('./shared', () => ({
-  getRecursionLimit: mockGetRecursionLimit,
   handleRecursionLimitExceeded: mockHandleRecursionLimitExceeded,
   processEventWithAgent: mockProcessEventWithAgent,
+  checkAndPushRecursion: mockCheckAndPushRecursion,
+  isMissionContext: vi.fn().mockReturnValue(false),
 }));
 
-// 8. Mock schema
+// 9. Mock schema
 vi.mock('../../lib/schema/events', () => ({
   TASK_EVENT_SCHEMA: {
     parse: vi.fn().mockImplementation((data) => ({
       userId: data.userId ?? 'user-123',
       agentId: data.agentId,
-      task: data.task ?? 'test task',
-      traceId: data.traceId,
+      task: data.task,
+      traceId: data.traceId ?? 'trace-456',
       sessionId: data.sessionId,
-      isContinuation: data.isContinuation,
-      depth: data.depth ?? 1,
+      depth: data.depth ?? 0,
+      isContinuation: data.isContinuation ?? false,
       initiatorId: data.initiatorId,
       attachments: data.attachments,
     })),
   },
 }));
 
-// 9. Import code to test
-import { handleContinuationTask } from './continuation-handler';
-
 describe('continuation-handler', () => {
+  const mockContext: any = { awsRequestId: 'request-123' };
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetRecursionLimit.mockResolvedValue(50);
+    mockCheckAndPushRecursion.mockResolvedValue(1);
   });
 
   describe('handleContinuationTask', () => {
-    it('should process continuation task with default agent when agentId not provided', async () => {
+    it('should successfully handle a basic continuation task', async () => {
       const eventDetail = {
         userId: 'user-123',
-        task: 'Continue working on feature',
+        task: 'Continue doing the thing',
         traceId: 'trace-456',
         sessionId: 'session-789',
       };
-
-      const mockContext = {} as any;
 
       await handleContinuationTask(eventDetail, mockContext);
 
       expect(mockProcessEventWithAgent).toHaveBeenCalledWith(
         'user-123',
         'superclaw',
-        'Continue working on feature',
+        'Continue doing the thing',
         expect.objectContaining({
-          context: mockContext,
-          isContinuation: true,
           traceId: 'trace-456',
           sessionId: 'session-789',
-          handlerTitle: 'CONTINUATION_NOTIFICATION',
-          outboundHandlerName: 'continuation-handler',
+          isContinuation: true,
         })
       );
     });
@@ -154,8 +162,6 @@ describe('continuation-handler', () => {
         task: 'Fix the bug',
         sessionId: 'session-789',
       };
-
-      const mockContext = {} as any;
 
       await handleContinuationTask(eventDetail, mockContext);
 
@@ -169,6 +175,7 @@ describe('continuation-handler', () => {
 
     it('should handle recursion limit exceeded', async () => {
       mockGetRecursionLimit.mockResolvedValue(10);
+      mockCheckAndPushRecursion.mockResolvedValue(null);
 
       const eventDetail = {
         userId: 'user-123',
@@ -177,64 +184,43 @@ describe('continuation-handler', () => {
         sessionId: 'session-789',
       };
 
-      const mockContext = {} as any;
-
       await handleContinuationTask(eventDetail, mockContext);
 
       expect(mockHandleRecursionLimitExceeded).toHaveBeenCalledWith(
         'user-123',
         'session-789',
         'continuation-handler',
-        expect.stringContaining('infinite loop in task continuation')
+        expect.stringContaining('infinite loop in task continuation'),
+        'trace-456',
+        'superclaw'
       );
-
       expect(mockProcessEventWithAgent).not.toHaveBeenCalled();
     });
 
     it('should process task when depth is below recursion limit', async () => {
       mockGetRecursionLimit.mockResolvedValue(50);
+      mockCheckAndPushRecursion.mockResolvedValue(5);
 
       const eventDetail = {
         userId: 'user-123',
         task: 'Continue task',
-        depth: 5,
+        depth: 4,
         sessionId: 'session-789',
       };
 
-      const mockContext = {} as any;
-
       await handleContinuationTask(eventDetail, mockContext);
 
+      expect(mockProcessEventWithAgent).toHaveBeenCalled();
       expect(mockHandleRecursionLimitExceeded).not.toHaveBeenCalled();
-      expect(mockProcessEventWithAgent).toHaveBeenCalled();
-    });
-
-    it('should default depth to 1 when not provided', async () => {
-      const eventDetail = {
-        userId: 'user-123',
-        task: 'Continue task',
-        sessionId: 'session-789',
-      };
-
-      const mockContext = {} as any;
-
-      await handleContinuationTask(eventDetail, mockContext);
-
-      // Should process since 1 < 50 (default limit)
-      expect(mockProcessEventWithAgent).toHaveBeenCalled();
     });
 
     it('should pass attachments to processEventWithAgent', async () => {
-      const attachments = [{ type: 'image', url: 'https://example.com/image.png' }];
-
+      const attachments = [{ url: 'http://example.com/image.png' }];
       const eventDetail = {
         userId: 'user-123',
         task: 'Analyze this image',
         attachments,
-        sessionId: 'session-789',
       };
-
-      const mockContext = {} as any;
 
       await handleContinuationTask(eventDetail, mockContext);
 
@@ -255,8 +241,6 @@ describe('continuation-handler', () => {
         initiatorId: 'strategic-planner',
         sessionId: 'session-789',
       };
-
-      const mockContext = {} as any;
 
       await handleContinuationTask(eventDetail, mockContext);
 

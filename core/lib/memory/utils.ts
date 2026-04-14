@@ -1,4 +1,5 @@
 import { InsightMetadata, InsightCategory, MemoryInsight } from '../types/index';
+import { logger } from '../logger';
 import type { BaseMemoryProvider } from './base';
 
 /**
@@ -181,6 +182,12 @@ export async function queryByTypeAndGetContent(
   userId?: string,
   workspaceId?: string
 ): Promise<string[]> {
+  if (!userId && !workspaceId) {
+    logger.warn(
+      '[queryByTypeAndGetContent] Global query without workspaceId may leak cross-workspace data. Add workspaceId for tenant isolation.'
+    );
+  }
+
   const params: {
     Limit: number;
     ScanIndexForward: boolean;

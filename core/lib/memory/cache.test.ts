@@ -151,6 +151,27 @@ describe('MemoryCache', () => {
       expect(cache.has(CacheKeys.lessons('user123'))).toBe(false);
       expect(cache.has(CacheKeys.history('other'))).toBe(true);
     });
+
+    it('should handle userIds with regex special characters', () => {
+      const testCache = new MemoryCache<string>(100, 60000);
+
+      testCache.set('user+test:history', 'h1');
+      testCache.set('user+test:lessons', 'l1');
+      testCache.set('user+test:data', 'd1');
+      testCache.set('other:data', 'o1');
+
+      const count1 = testCache.invalidateUser('user+test');
+      expect(count1).toBe(3);
+      expect(testCache.has('user+test:history')).toBe(false);
+      expect(testCache.has('user+test:lessons')).toBe(false);
+      expect(testCache.has('user+test:data')).toBe(false);
+      expect(testCache.has('other:data')).toBe(true);
+
+      testCache.set('user*abc:data', 'd1');
+      const count2 = testCache.invalidateUser('user*abc');
+      expect(count2).toBe(1);
+      expect(testCache.has('user*abc:data')).toBe(false);
+    });
   });
 
   describe('batch operations', () => {

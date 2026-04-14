@@ -21,9 +21,15 @@ export class SafetyBase {
 
   /**
    * Records a failure for an agent and penalizes its trust score.
+   * Optionally takes a quality score (0-10) to weight the trust adjustment.
    */
-  async recordFailure(agentId: string, reason: string, severity?: number): Promise<number> {
-    return TrustManager.recordFailure(agentId, reason, severity);
+  async recordFailure(
+    agentId: string,
+    reason: string,
+    severity?: number,
+    qualityScore?: number
+  ): Promise<number> {
+    return TrustManager.recordFailure(agentId, reason, severity, qualityScore);
   }
 
   /**

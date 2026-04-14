@@ -11,6 +11,14 @@ import { logger } from '../logger';
 import { AgentRegistry } from '../registry';
 import { ClawTracer } from '../tracer';
 import { TRACE_TYPES } from '../constants';
+import { MCP } from '../constants/tools';
+
+function isToolExecutionSuccessful(rawResult: ToolResult | string, resultText: string): boolean {
+  if (typeof rawResult === 'string') {
+    return !resultText.startsWith('FAILED');
+  }
+  return !resultText.startsWith('FAILED');
+}
 
 export interface ToolExecutionContext {
   traceId: string;
@@ -276,7 +284,9 @@ export class ToolExecutor {
     });
 
     const toolStart = performance.now();
-    const timeoutMs = parseInt(process.env.TOOL_EXECUTION_TIMEOUT_MS ?? '120000');
+    const timeoutMs = parseInt(
+      process.env.TOOL_EXECUTION_TIMEOUT_MS ?? String(MCP.TOOL_EXECUTION_TIMEOUT_MS)
+    );
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error(`Tool execution timeout after ${timeoutMs}ms`)), timeoutMs);
     });
@@ -302,9 +312,8 @@ export class ToolExecutor {
         ? rawResult
         : (rawResult as ToolResult).text || JSON.stringify(rawResult) || '';
 
-    logger.info(
-      `[EXECUTOR] Tool Result: ${tool.name} | Success: ${!resultText.startsWith('FAILED')}`
-    );
+    const toolSuccess = isToolExecutionSuccessful(rawResult, resultText);
+    logger.info(`[EXECUTOR] Tool Result: ${tool.name} | Success: ${toolSuccess}`);
 
     const ui_blocks: Message['ui_blocks'] = [];
 
@@ -334,7 +343,7 @@ export class ToolExecutor {
     // 5. Metrics & Registry
     if (!process.env.VITEST) {
       await AgentRegistry.recordToolUsage(tool.name, execContext.agentId);
-      const toolSuccess = !resultText.startsWith('FAILED');
+      const toolSuccess = isToolExecutionSuccessful(rawResult, resultText);
       const estimatedInputTokens = Math.ceil(JSON.stringify(args).length / 4);
       const estimatedOutputTokens = Math.ceil(resultText.length / 4);
 

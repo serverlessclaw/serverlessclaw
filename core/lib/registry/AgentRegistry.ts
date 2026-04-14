@@ -390,7 +390,14 @@ export class AgentRegistry {
    * @param value - The new value for the field.
    * @throws Error if the agent does not exist in the registry
    */
-  static async atomicUpdateAgentField(id: string, field: string, value: unknown): Promise<void> {
+  private static readonly MAX_INIT_RETRIES = 3;
+
+  static async atomicUpdateAgentField(
+    id: string,
+    field: string,
+    value: unknown,
+    retryCount: number = 0
+  ): Promise<void> {
     const resource = (await import('sst')).Resource as { ConfigTable?: { name: string } };
     if (!resource.ConfigTable?.name) {
       logger.warn(`ConfigTable not linked. Skipping atomic update for ${id}`);
@@ -459,7 +466,12 @@ export class AgentRegistry {
                 rootError instanceof Error &&
                 rootError.name === 'ConditionalCheckFailedException'
               ) {
-                return this.atomicUpdateAgentField(id, field, value);
+                if (retryCount < this.MAX_INIT_RETRIES) {
+                  return this.atomicUpdateAgentField(id, field, value, retryCount + 1);
+                }
+                throw new Error(
+                  `Failed to initialize agent ${id} after ${this.MAX_INIT_RETRIES} retries`
+                );
               }
               logger.error(`Failed to initialize root object for agent ${id}:`, rootError);
               throw rootError;
@@ -469,7 +481,12 @@ export class AgentRegistry {
             innerError instanceof Error &&
             innerError.name === 'ConditionalCheckFailedException'
           ) {
-            return this.atomicUpdateAgentField(id, field, value);
+            if (retryCount < this.MAX_INIT_RETRIES) {
+              return this.atomicUpdateAgentField(id, field, value, retryCount + 1);
+            }
+            throw new Error(
+              `Failed to initialize nested object for agent ${id} after ${this.MAX_INIT_RETRIES} retries`
+            );
           }
           logger.error(`Failed to initialize nested object for agent ${id}:`, innerError);
           throw innerError;
@@ -531,8 +548,7 @@ export class AgentRegistry {
           TableName: resource.ConfigTable.name,
           Key: { key: DYNAMO_KEYS.AGENTS_CONFIG },
           UpdateExpression: 'SET #val.#id.#field = :value',
-          ConditionExpression:
-            'attribute_not_exists(#val.#id.#field) OR #val.#id.#field = :expected',
+          ConditionExpression: '#val.#id.#field = :expected',
           ExpressionAttributeNames: {
             '#val': 'value',
             '#id': id,
