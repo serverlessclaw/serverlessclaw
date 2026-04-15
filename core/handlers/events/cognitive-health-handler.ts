@@ -17,9 +17,12 @@ export async function handleCognitiveHealthCheck(
 
   const memory = new DynamoMemory();
   const monitor = new CognitiveHealthMonitor(memory as unknown as BaseMemoryProvider);
+  monitor.start();
 
   const agentIds = (eventDetail.agentIds as string[]) ?? undefined;
   const snapshot = await monitor.takeSnapshot(agentIds);
+
+  monitor.stop();
 
   logger.info(
     `Cognitive health snapshot: score=${snapshot.overallScore}, anomalies=${snapshot.anomalies.length}`

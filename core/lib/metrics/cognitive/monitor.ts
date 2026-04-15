@@ -25,14 +25,32 @@ export class CognitiveHealthMonitor {
   private base: BaseMemoryProvider;
   private anomalies: CognitiveAnomaly[] = [];
   private config: CognitiveMetricsConfig;
+  private started: boolean = false;
 
   constructor(base: BaseMemoryProvider, config?: Partial<CognitiveMetricsConfig>) {
     this.base = base;
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.collector = new MetricsCollector(base, this.config);
-    this.collector.start();
     this.detector = new DegradationDetector(this.config);
     this.analyzer = new HealthTrendAnalyzer(base);
+  }
+
+  /**
+   * Explicitly start the monitor. Must be called after construction.
+   * This replaces automatic start to prevent memory leaks in serverless environments.
+   */
+  start(): void {
+    if (this.started) return;
+    this.started = true;
+    this.collector.start();
+  }
+
+  /**
+   * Explicitly stop the monitor to clean up resources.
+   */
+  stop(): void {
+    this.started = false;
+    this.collector.destroy();
   }
 
   getCollector(): MetricsCollector {
@@ -180,6 +198,7 @@ export class CognitiveHealthMonitor {
   }
 
   destroy(): void {
+    this.started = false;
     this.collector.destroy();
   }
 }

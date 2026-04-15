@@ -17,31 +17,31 @@ describe('TokenBudgetEnforcer', () => {
   });
 
   describe('recordUsage', () => {
-    it('should allow operations within budget', () => {
-      const result = enforcer.recordUsage('session1', 1000, 500, 'agent1');
+    it('should allow operations within budget', async () => {
+      const result = await enforcer.recordUsage('session1', 1000, 500, 'agent1');
       expect(result.allowed).toBe(true);
       expect(result.sessionCostUsd).toBeGreaterThan(0);
       expect(result.sessionTokens).toBe(1500);
     });
 
-    it('should deny when session cost exceeds budget', () => {
+    it('should deny when session cost exceeds budget', async () => {
       // Record enough usage to exceed $1.00 budget
       // At $0.003/1K input + $0.012/1K output, we need a lot of tokens
       for (let i = 0; i < 100; i++) {
-        const result = enforcer.recordUsage('session1', 10_000, 5_000, 'agent1');
+        const result = await enforcer.recordUsage('session1', 10_000, 5_000, 'agent1');
         if (!result.allowed) {
           expect(result.reason).toContain('budget exhausted');
           return;
         }
       }
       // If we get here, the budget should have been exceeded
-      const finalCheck = enforcer.checkBudget('session1');
+      const finalCheck = await enforcer.checkBudget('session1');
       expect(finalCheck.allowed).toBe(false);
     });
 
-    it('should track multiple sessions independently', () => {
-      enforcer.recordUsage('session1', 10_000, 5_000, 'agent1');
-      enforcer.recordUsage('session2', 20_000, 10_000, 'agent2');
+    it('should track multiple sessions independently', async () => {
+      await enforcer.recordUsage('session1', 10_000, 5_000, 'agent1');
+      await enforcer.recordUsage('session2', 20_000, 10_000, 'agent2');
 
       const summary = enforcer.getSummary();
       expect(summary).toHaveLength(2);
@@ -49,31 +49,31 @@ describe('TokenBudgetEnforcer', () => {
       expect(summary[1].sessionId).toBe('session2');
     });
 
-    it('should calculate cost correctly', () => {
-      const result = enforcer.recordUsage('session1', 1000, 1000);
+    it('should calculate cost correctly', async () => {
+      const result = await enforcer.recordUsage('session1', 1000, 1000);
       // Cost = (1000/1000 * 0.003) + (1000/1000 * 0.012) = 0.015
       expect(result.sessionCostUsd).toBeCloseTo(0.015, 4);
     });
   });
 
   describe('checkBudget', () => {
-    it('should return current budget status without recording', () => {
-      enforcer.recordUsage('session1', 1000, 500);
-      const status = enforcer.checkBudget('session1');
+    it('should return current budget status without recording', async () => {
+      await enforcer.recordUsage('session1', 1000, 500);
+      const status = await enforcer.checkBudget('session1');
       expect(status.allowed).toBe(true);
       expect(status.sessionTokens).toBe(1500);
     });
 
-    it('should return allowed true for unknown sessions', () => {
-      const status = enforcer.checkBudget('unknown');
+    it('should return allowed true for unknown sessions', async () => {
+      const status = await enforcer.checkBudget('unknown');
       expect(status.allowed).toBe(true);
       expect(status.sessionCostUsd).toBe(0);
     });
   });
 
   describe('clearSession', () => {
-    it('should clear session tracking', () => {
-      enforcer.recordUsage('session1', 1000, 500);
+    it('should clear session tracking', async () => {
+      await enforcer.recordUsage('session1', 1000, 500);
       expect(enforcer.getSummary()).toHaveLength(1);
       enforcer.clearSession('session1');
       expect(enforcer.getSummary()).toHaveLength(0);

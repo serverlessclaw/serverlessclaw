@@ -1,5 +1,19 @@
+import { PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { Resource } from 'sst';
+import { SSTResource } from '../types/system';
 import { logger } from '../logger';
+import { getDocClient } from '../utils/ddb-client';
 import type { MetricsCollector } from './cognitive-metrics';
+
+const docClient = getDocClient();
+
+const TTL_DAYS_BUDGET = 30;
+const SECONDS_IN_DAY = 86400;
+
+function getTableName(): string {
+  const typedResource = Resource as unknown as SSTResource;
+  return typedResource.MemoryTable?.name ?? 'MemoryTable';
+}
 
 /**
  * Budget configuration for a session or agent.
@@ -71,10 +85,67 @@ export class TokenBudgetEnforcer {
   private sessions: Map<string, TokenUsageRecord[]> = new Map();
   private config: BudgetConfig;
   private metricsCollector?: MetricsCollector;
+  private initialized: boolean = false;
 
   constructor(config: Partial<BudgetConfig> = {}, metricsCollector?: MetricsCollector) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.metricsCollector = metricsCollector;
+  }
+
+  private async ensureInitialized(): Promise<void> {
+    if (this.initialized) return;
+    this.initialized = true;
+  }
+
+  private async persistSession(sessionId: string, history: TokenUsageRecord[]): Promise<void> {
+    try {
+      const userId = `BUDGET#${sessionId}`;
+      const now = Math.floor(Date.now() / 1000);
+      const expiresAt = now + TTL_DAYS_BUDGET * SECONDS_IN_DAY;
+      const totalCost = history.reduce((sum, r) => sum + r.estimatedCostUsd, 0);
+      const totalTokens = history.reduce((sum, r) => sum + r.promptTokens + r.completionTokens, 0);
+
+      await docClient.send(
+        new PutCommand({
+          TableName: getTableName(),
+          Item: {
+            userId,
+            timestamp: now,
+            sessionId,
+            history: history.slice(-100),
+            totalCostUsd: totalCost,
+            totalTokens,
+            callCount: history.length,
+            expiresAt,
+          },
+        })
+      );
+    } catch (e) {
+      logger.debug('[TokenBudgetEnforcer] Failed to persist session:', e);
+    }
+  }
+
+  /**
+   * Loads session state from DynamoDB for durability.
+   */
+  async loadSession(sessionId: string): Promise<TokenUsageRecord[] | null> {
+    try {
+      const userId = `BUDGET#${sessionId}`;
+      const { Items } = await docClient.send(
+        new QueryCommand({
+          TableName: getTableName(),
+          KeyConditionExpression: 'userId = :pk',
+          ExpressionAttributeValues: { ':pk': userId },
+          Limit: 1,
+        })
+      );
+      if (Items && Items.length > 0) {
+        return (Items[0].history as TokenUsageRecord[]) || [];
+      }
+    } catch (e) {
+      logger.debug('[TokenBudgetEnforcer] Failed to load session:', e);
+    }
+    return null;
   }
 
   /**
@@ -95,12 +166,22 @@ export class TokenBudgetEnforcer {
    * @param agentId - Optional agent identifier.
    * @returns Budget check result.
    */
-  recordUsage(
+  async recordUsage(
     sessionId: string,
     promptTokens: number,
     completionTokens: number,
     agentId?: string
-  ): BudgetCheckResult {
+  ): Promise<BudgetCheckResult> {
+    await this.ensureInitialized();
+
+    // Load from DynamoDB if not in memory (cold start recovery)
+    if (!this.sessions.has(sessionId)) {
+      const loaded = await this.loadSession(sessionId);
+      if (loaded && loaded.length > 0) {
+        this.sessions.set(sessionId, loaded);
+      }
+    }
+
     const estimatedCostUsd = this.estimateCost(promptTokens, completionTokens);
 
     // Get or create session history
@@ -193,6 +274,9 @@ export class TokenBudgetEnforcer {
       }
     }
 
+    // Persist to DynamoDB for durability
+    this.persistSession(sessionId, history).catch(() => {});
+
     return {
       allowed: true,
       sessionCostUsd,
@@ -204,7 +288,17 @@ export class TokenBudgetEnforcer {
   /**
    * Checks if a session is within budget without recording usage.
    */
-  checkBudget(sessionId: string): BudgetCheckResult {
+  async checkBudget(sessionId: string): Promise<BudgetCheckResult> {
+    await this.ensureInitialized();
+
+    // Load from DynamoDB if not in memory
+    if (!this.sessions.has(sessionId)) {
+      const loaded = await this.loadSession(sessionId);
+      if (loaded && loaded.length > 0) {
+        this.sessions.set(sessionId, loaded);
+      }
+    }
+
     const history = this.sessions.get(sessionId) ?? [];
     const sessionCostUsd = history.reduce((sum, r) => sum + r.estimatedCostUsd, 0);
     const sessionTokens = history.reduce((sum, r) => sum + r.promptTokens + r.completionTokens, 0);

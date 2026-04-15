@@ -178,6 +178,8 @@ describe('system tools', () => {
       vi.mocked(CognitiveHealthMonitor).prototype.takeSnapshot = vi
         .fn()
         .mockResolvedValue(mockSnapshot);
+      vi.mocked(CognitiveHealthMonitor).prototype.start = vi.fn();
+      vi.mocked(CognitiveHealthMonitor).prototype.stop = vi.fn();
 
       const result = await runCognitiveHealthCheck.execute({});
       expect(result).toContain('70/100');
@@ -201,6 +203,8 @@ describe('system tools', () => {
       vi.mocked(CognitiveHealthMonitor).prototype.takeSnapshot = vi
         .fn()
         .mockResolvedValue(mockSnapshot);
+      vi.mocked(CognitiveHealthMonitor).prototype.start = vi.fn();
+      vi.mocked(CognitiveHealthMonitor).prototype.stop = vi.fn();
 
       const result = await runCognitiveHealthCheck.execute({});
       expect(result).toContain('40/100');
@@ -213,6 +217,8 @@ describe('system tools', () => {
       vi.mocked(CognitiveHealthMonitor).prototype.takeSnapshot = vi
         .fn()
         .mockRejectedValue(new Error('Connection failed'));
+      vi.mocked(CognitiveHealthMonitor).prototype.start = vi.fn();
+      vi.mocked(CognitiveHealthMonitor).prototype.stop = vi.fn();
 
       const result = await runCognitiveHealthCheck.execute({});
       expect(result).toContain('Error executing cognitive health check');

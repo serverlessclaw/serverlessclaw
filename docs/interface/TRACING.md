@@ -402,7 +402,7 @@ The system implements a **Fail-Safe Finalization** strategy:
  [ Sweeps orphand STRATED nodes ]
 ```
 
-1. **`failTrace(reason)`**: Explicitly called in `finally` blocks or by the `TokenBudgetEnforcer` to close nodes on known exit paths.
+1. **`failTrace(reason)`**: Explicitly called in `finally` blocks or by error handlers to close nodes on known exit paths.
 2. **`TraceCleaner`**: A background utility that marks stale `STARTED` traces as `FAILED` if they exceed the maximum execution window.
 
 ## Dashboard Visualization

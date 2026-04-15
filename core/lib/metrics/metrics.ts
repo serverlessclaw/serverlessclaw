@@ -6,6 +6,7 @@
  *
  * NOTE: Requires @aws-sdk/client-cloudwatch to be installed for actual CloudWatch emission.
  * If not available, metrics are logged to console for debugging.
+ * CRITICAL metrics are also persisted to DynamoDB as fallback for durable observability.
  */
 
 const NAMESPACE = 'ServerlessClaw';
@@ -24,8 +25,51 @@ async function getCloudWatchClient(): Promise<CloudWatchClientType | null> {
     cloudwatch = new CloudWatchClient({}) as CloudWatchClientType;
     return cloudwatch;
   } catch {
-    // CloudWatch SDK unavailable in test/local environments
     return null;
+  }
+}
+
+const CRITICAL_METRICS = new Set([
+  'AgentInvocations',
+  'AgentDuration',
+  'DeploymentStarted',
+  'DeploymentCompleted',
+  'CircuitBreakerTriggered',
+  'RateLimitExceeded',
+]);
+
+async function persistToDynamoDB(metrics: MetricDatum[]): Promise<void> {
+  const critical = metrics.filter((m) => CRITICAL_METRICS.has(m.MetricName));
+  if (critical.length === 0) return;
+
+  try {
+    const { PutCommand } = await import('@aws-sdk/lib-dynamodb');
+    const { Resource } = await import('sst');
+    const { getDocClient } = await import('../utils/ddb-client');
+    const docClient = getDocClient();
+
+    const tableName = (Resource as { ConfigTable?: { name: string } }).ConfigTable?.name;
+    if (!tableName) return;
+
+    const now = Date.now();
+    for (const m of critical) {
+      await docClient.send(
+        new PutCommand({
+          TableName: tableName,
+          Item: {
+            key: `metric:${m.MetricName}:${now}:${Math.random().toString(36).slice(2, 9)}`,
+            metricName: m.MetricName,
+            value: m.Value,
+            unit: m.Unit ?? 'Count',
+            dimensions: m.Dimensions,
+            timestamp: now,
+            expiresAt: Math.floor(now / 1000) + 7 * 86400,
+          },
+        })
+      );
+    }
+  } catch (e) {
+    console.debug('[METRICS] DynamoDB fallback failed:', e);
   }
 }
 
@@ -41,7 +85,8 @@ export async function emitMetrics(metrics: MetricDatum[]): Promise<void> {
 
   const cw = await getCloudWatchClient();
   if (!cw) {
-    console.warn('[METRICS] CloudWatch not available, metrics dropped:', metrics.length, 'items');
+    console.warn('[METRICS] CloudWatch not available, persisting critical metrics to DynamoDB');
+    await persistToDynamoDB(metrics);
     return;
   }
 
@@ -59,7 +104,8 @@ export async function emitMetrics(metrics: MetricDatum[]): Promise<void> {
     });
     await cw.send(command);
   } catch (error) {
-    console.error('[METRICS] Failed to emit CloudWatch metrics:', error);
+    console.error('[METRICS] Failed to emit CloudWatch metrics, falling back to DynamoDB:', error);
+    await persistToDynamoDB(metrics);
   }
 }
 

@@ -397,17 +397,26 @@ export class ClawTracer {
   async detectDrift(immediate: boolean = false): Promise<void> {
     if (!this.agentId) return;
 
-    // Check drift once every 5 minutes per execution node, or immediately if triggered
+    if (immediate) {
+      await this.performDriftCheck();
+      return;
+    }
+
+    // Check drift once every 5 minutes per execution node
     const DRIFT_CHECK_THRESHOLD = 300000;
     const now = Date.now();
 
-    if (immediate || now - this.startTime > DRIFT_CHECK_THRESHOLD) {
-      try {
-        const { ConsistencyProbe } = await import('../metrics/cognitive-metrics');
-        await ConsistencyProbe.detectDrift(this.agentId);
-      } catch (e) {
-        logger.debug('[Tracer] Drift detection failed:', e);
-      }
+    if (now - this.startTime > DRIFT_CHECK_THRESHOLD) {
+      await this.performDriftCheck();
+    }
+  }
+
+  private async performDriftCheck(): Promise<void> {
+    try {
+      const { ConsistencyProbe } = await import('../metrics/cognitive-metrics');
+      await ConsistencyProbe.detectDrift(this.agentId!);
+    } catch (e) {
+      logger.debug('[Tracer] Drift detection failed:', e);
     }
   }
 

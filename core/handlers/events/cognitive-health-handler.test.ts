@@ -22,7 +22,11 @@ const { mockTakeSnapshot, mockEmitEvent } = vi.hoisted(() => ({
 
 vi.mock('../../lib/metrics/cognitive-metrics', () => ({
   CognitiveHealthMonitor: vi.fn().mockImplementation(function () {
-    return { takeSnapshot: mockTakeSnapshot };
+    return {
+      takeSnapshot: mockTakeSnapshot,
+      start: vi.fn(),
+      stop: vi.fn(),
+    };
   }),
 }));
 

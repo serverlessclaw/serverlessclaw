@@ -44,7 +44,9 @@ export const runCognitiveHealthCheck = {
 
       const memory = new DynamoMemory();
       const monitor = new CognitiveHealthMonitor(memory);
+      monitor.start();
       const snapshot = await monitor.takeSnapshot(agentIds);
+      monitor.stop();
 
       if (verbose) {
         return JSON.stringify(snapshot, null, 2);
