@@ -103,6 +103,32 @@ Connected via the **Model Context Protocol (MCP)**. This is the primary scaling 
   - **Memory/Timeout**: The Multiplexer is provisioned with **1024MB** and **10m** timeout to handle concurrent child processes and resource-heavy tools.
   - **Writable Cache**: Uses `/tmp/mcp-cache` and `/tmp/npm-cache` to ensure `npx` has a writable scratch space in the read-only Lambda environment.
 
+### MCP Unified Multiplexer Flow (Hand Silo)
+
+```text
+  [ Agent Task ]
+        |
+        v
+  [ MCPToolMapper ] <--- (PathKeyDiscoverer)
+        |
+        v
+  [ MCPClientManager ] <--- (Connection Caching/TTL)
+        |
+        +-------+-------+-------+
+        |               |       |
+        v               v       v
+ [ StdioTransport ] [ SSETransport ] [ LambdaTransport ]
+ (Local npx)        (Remote Hub)     (Multiplexer Lambda)
+```
+
+### 🔍 Automatic Safety Discovery (PathKeyDiscoverer)
+
+To ensure that MCP-driven tools (like `filesystem_write_file`) are subject to the same protection checks as native tools, the `MCPToolMapper` utilizes a **PathKeyDiscoverer**.
+
+- **Mechanism**: Scans the tool's `inputSchema` for parameters that semantically represent file paths or directories.
+- **Keywords**: Identifies parameters containing `path`, `file`, `dir`, `folder`, `src`, `dest`, etc.
+- **Enforcement**: Any identified "path keys" are automatically passed to the security interceptor, ensuring blocked files (e.g., `sst.config.ts`) cannot be modified via MCP tools without approval.
+
 ### 3. Built-in Skills (Model-Native)
 
 Native capabilities provided by the LLM provider (e.g., OpenAI's **Code Interpreter** or Gemini's **Grounded Search**).

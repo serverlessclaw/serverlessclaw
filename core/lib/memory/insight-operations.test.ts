@@ -412,7 +412,33 @@ describe('Insight Operations', () => {
       await memory.updateInsightMetadata('USER#1', 999, { priority: 'high' as any });
 
       const updateCalls = ddbMock.commandCalls(UpdateCommand);
-      expect(updateCalls).toHaveLength(1); // Wait, UpdateCommand is atomic, it doesn't check first.
+      expect(updateCalls).toHaveLength(1);
+    });
+
+    it('should correctly build UpdateExpression for varied metadata fields', async () => {
+      const UpdateCommand = (await import('@aws-sdk/lib-dynamodb')).UpdateCommand;
+      ddbMock.on(UpdateCommand).resolves({});
+
+      await memory.updateInsightMetadata('USER#1', 12345, {
+        hitCount: 10,
+        confidence: 0.95,
+        risk: 'low' as any,
+        lastAccessed: 1710000000000,
+      });
+
+      const calls = ddbMock.commandCalls(UpdateCommand);
+      const input = calls[0].args[0].input;
+
+      expect(input.UpdateExpression).toContain('metadata.hitCount = :hitCount');
+      expect(input.UpdateExpression).toContain('metadata.confidence = :confidence');
+      expect(input.UpdateExpression).toContain('metadata.risk = :risk');
+      expect(input.UpdateExpression).toContain('metadata.lastAccessed = :lastAccessed');
+      expect(input.UpdateExpression).toContain('updatedAt = :now');
+
+      expect(input.ExpressionAttributeValues?.[':hitCount']).toBe(10);
+      expect(input.ExpressionAttributeValues?.[':confidence']).toBe(0.95);
+      expect(input.ExpressionAttributeValues?.[':risk']).toBe('low');
+      expect(input.ExpressionAttributeValues?.[':now']).toBeDefined();
     });
   });
 

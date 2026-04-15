@@ -68,39 +68,44 @@ describe('TrustManager', () => {
     });
 
     it('applies quality weighting to failure penalties', async () => {
-      const getConfig = () => ({
+      const getConfig = (score: number) => ({
         id: 'test-agent',
         name: 'Test',
-        trustScore: 50,
-        evolutionMode: 'HITL',
+        trustScore: score,
+        evolutionMode: 'HITL' as const,
         systemPrompt: '',
+        enabled: true,
       });
 
-      // Low quality failure (2/10) -> higher penalty multiplier (1.5x)
-      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce(getConfig());
-      const lowQualityPenalty = await TrustManager.recordFailure(
-        'test-agent',
-        'Low quality failure',
-        1,
-        2
-      );
-      expect(lowQualityPenalty).toBeCloseTo(42.5, 1); // 50 - 7.5 = 42.5 (penalty * 1.5)
+      // Quality 0 -> 1.5x penalty. Base penalty = 5 * severity(1) = 5. Total = 7.5
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce(getConfig(50));
+      const q0 = await TrustManager.recordFailure('test-agent', 'Q0', 1, 0);
+      expect(q0).toBe(42.5);
 
-      // High quality failure (8/10) -> lower penalty multiplier (0.5x)
-      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce(getConfig());
-      const highQualityPenalty = await TrustManager.recordFailure(
-        'test-agent',
-        'High quality failure',
-        1,
-        8
-      );
-      expect(highQualityPenalty).toBeCloseTo(45.5, 1); // 50 - (5 * 0.9) = 45.5 (multiplier = (10-8)/5 + 0.5 = 0.9)
+      // Quality 5 -> 1.5 multiplier? Wait, (10-5)/5 + 0.5 = 1.0 + 0.5 = 1.5.
+      // Actually (10-5)/5 + 0.5 = 1.5? Let me re-calculate.
+      // (10 - 5) / 5 = 1. 1 + 0.5 = 1.5.
+      // Wait, the formula in code is (10 - qualityScore) / 5 + 0.5.
+      // For Q5: (10 - 5) / 5 + 0.5 = 1 + 0.5 = 1.5.
+      // For Q10: (10 - 10) / 5 + 0.5 = 0.5.
+      // For Q0: (10 - 0) / 5 + 0.5 = 2 + 0.5 = 2.5 (clamped to 1.5).
+
+      // Let's verify Q5: 50 - (5 * 1.5) = 42.5
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce(getConfig(50));
+      const q5 = await TrustManager.recordFailure('test-agent', 'Q5', 1, 5);
+      expect(q5).toBe(42.5);
+
+      // Quality 10 -> 0.5x penalty. 50 - (5 * 0.5) = 47.5
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce(getConfig(50));
+      const q10 = await TrustManager.recordFailure('test-agent', 'Q10', 1, 10);
+      expect(q10).toBe(47.5);
     });
 
     it('penalizes based on anomaly severity (batched)', async () => {
       mockAgentRegistry.getAgentConfig.mockResolvedValue({
         id: 'anomaly-agent',
         trustScore: 90,
+        enabled: true,
       });
 
       const anomalies = [
@@ -133,23 +138,26 @@ describe('TrustManager', () => {
 
   describe('recordSuccess', () => {
     it('applies quality-weighted bump to trust score', async () => {
-      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
-        id: 'good-agent',
-        trustScore: 80,
+      const getConfig = (score: number) => ({
+        id: 'test-agent',
+        trustScore: score,
+        enabled: true,
       });
 
-      // Quality 10 -> 2x bump (default bump is 1)
-      const highQualityScore = await TrustManager.recordSuccess('good-agent', 10);
+      // Quality 10 -> 2x bump. Default bump = 1. Total bump = 2.
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce(getConfig(80));
+      const highQualityScore = await TrustManager.recordSuccess('test-agent', 10);
       expect(highQualityScore).toBe(82);
 
-      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
-        id: 'avg-agent',
-        trustScore: 50,
-      });
+      // Quality 5 -> 1x bump. 5 * 0.2 = 1. Total bump = 1.
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce(getConfig(80));
+      const avgQualityScore = await TrustManager.recordSuccess('test-agent', 5);
+      expect(avgQualityScore).toBe(81);
 
-      // Quality 5 -> 1x bump
-      const avgQualityScore = await TrustManager.recordSuccess('avg-agent', 5);
-      expect(avgQualityScore).toBe(51);
+      // Quality 0 -> 0x bump. 0 * 0.2 = 0. Total bump = 0.
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce(getConfig(80));
+      const zeroQualityScore = await TrustManager.recordSuccess('test-agent', 0);
+      expect(zeroQualityScore).toBe(80);
     });
 
     it('clamps score to maximum', async () => {

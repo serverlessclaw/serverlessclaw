@@ -86,8 +86,9 @@ describe('ReputationOperations', () => {
       };
       mockBase.queryItems.mockResolvedValue([existing]);
 
-      await updateReputation(mockBase as any, 'agent-1', true, 1000);
+      const result = await updateReputation(mockBase as any, 'agent-1', true, 1000);
 
+      expect(result).toEqual({ success: true });
       expect(mockBase.updateItem).toHaveBeenCalledWith(
         expect.objectContaining({
           Key: expect.objectContaining({ userId: 'REPUTATION#agent-1' }),
@@ -111,8 +112,9 @@ describe('ReputationOperations', () => {
       };
       mockBase.queryItems.mockResolvedValue([expired]);
 
-      await updateReputation(mockBase as any, 'agent-1', true, 2000);
+      const result = await updateReputation(mockBase as any, 'agent-1', true, 2000);
 
+      expect(result).toEqual({ success: true });
       expect(mockBase.updateItem).toHaveBeenCalledWith(
         expect.objectContaining({
           Key: expect.objectContaining({ userId: 'REPUTATION#agent-1' }),
@@ -369,9 +371,9 @@ describe('ReputationOperations', () => {
       mockBase.queryItems.mockResolvedValue([]);
       mockBase.updateItem.mockRejectedValue(new Error('DynamoDB error'));
 
-      await expect(
-        updateReputation(mockBase as any, 'agent-error', true, 100)
-      ).resolves.not.toThrow();
+      const result = await updateReputation(mockBase as any, 'agent-error', true, 100);
+
+      expect(result).toEqual({ success: false, error: 'DynamoDB error' });
     });
 
     it('should track failed tasks correctly', async () => {

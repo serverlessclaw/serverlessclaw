@@ -631,10 +631,12 @@ describe('CognitiveHealthMonitor', () => {
   it('should use default agent IDs when none provided', async () => {
     mockBase.queryItems.mockResolvedValue([]);
 
+    const { BACKBONE_REGISTRY } = await import('../backbone');
+    const expectedCount = Object.keys(BACKBONE_REGISTRY).length;
+
     const snapshot = await monitor.takeSnapshot();
 
-    // Default agents: superclaw, coder, strategic-planner, cognition-reflector
-    expect(snapshot.agentMetrics).toHaveLength(4);
+    expect(snapshot.agentMetrics).toHaveLength(expectedCount);
     const agentIds = snapshot.agentMetrics.map((m) => m.agentId);
     expect(agentIds).toContain('superclaw');
     expect(agentIds).toContain('coder');

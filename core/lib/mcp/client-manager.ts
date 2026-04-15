@@ -1,11 +1,20 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
-import { JSONRPCMessage, Transport } from '@modelcontextprotocol/sdk/types.js';
+import { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js';
 import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 import { logger } from '../logger';
 import { MCP } from '../constants/tools';
 import { TRANSPORT_DEFAULTS } from './mcp-defaults';
+
+interface Transport {
+  onclose?: () => void;
+  onerror?: (error: Error) => void;
+  onmessage?: (message: JSONRPCMessage) => void;
+  start(): Promise<void>;
+  send(message: JSONRPCMessage): Promise<void>;
+  close(): Promise<void>;
+}
 
 const lambdaClient = new LambdaClient({});
 

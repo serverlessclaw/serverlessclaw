@@ -124,7 +124,7 @@ export class ExecutorCore {
           if (loopResult.action === 'escalate' || loopResult.action === 'switch_agent') {
             return {
               responseText: `[LOOP_DETECTED] I'm stuck in a reasoning loop. Escalating for intervention.`,
-              paused: false,
+              paused: true,
               usage,
             };
           }
@@ -397,6 +397,13 @@ export class ExecutorCore {
             `Semantic reasoning loop detected in stream.`,
             3 // CRITICAL severity - aligns with AnomalySeverity.CRITICAL
           );
+          if (loopResult.action === 'escalate' || loopResult.action === 'switch_agent') {
+            yield {
+              content: `[LOOP_DETECTED] I'm stuck in a reasoning loop. Escalating for intervention.`,
+              usage,
+            } as unknown as MessageChunk;
+            break; // Exit the iteration loop
+          }
         }
       }
 

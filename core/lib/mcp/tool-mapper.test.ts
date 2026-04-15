@@ -535,4 +535,65 @@ describe('MCPToolMapper', () => {
       expect(MCPClientManager.deleteClient).not.toHaveBeenCalled();
     });
   });
+
+  describe('PathKeyDiscoverer', () => {
+    it('identifies traditional path-like strings', () => {
+      const tool = {
+        name: 'test',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            filepath: { type: 'string', description: 'desc' },
+            target_dir: { type: 'string', description: 'desc' },
+            source: { type: 'string', description: 'desc' },
+            other: { type: 'string', description: 'desc' },
+          },
+        },
+      };
+
+      const tools = MCPToolMapper.mapTools('test', makeMockClient(), [tool]);
+      expect(tools[0].pathKeys).toContain('filepath');
+      expect(tools[0].pathKeys).toContain('target_dir');
+      expect(tools[0].pathKeys).toContain('source');
+      expect(tools[0].pathKeys).not.toContain('other');
+    });
+
+    it('identifies path-like arrays (plural forms)', () => {
+      const tool = {
+        name: 'test',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            files: { type: 'array', items: { type: 'string' }, description: 'desc' },
+            destinations: { type: 'array', items: { type: 'string' }, description: 'desc' },
+            names: { type: 'array', items: { type: 'string' }, description: 'desc' },
+          },
+        },
+      };
+
+      const tools = MCPToolMapper.mapTools('test', makeMockClient(), [tool]);
+      expect(tools[0].pathKeys).toContain('files');
+      expect(tools[0].pathKeys).toContain('destinations');
+      expect(tools[0].pathKeys).not.toContain('names');
+    });
+
+    it('identifies path-like parameters via description keywords', () => {
+      const tool = {
+        name: 'test',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            input: { type: 'string', description: 'The absolute path to the input file' },
+            output: { type: 'string', description: 'Where to save the folder' },
+            nonPath: { type: 'string', description: 'Just some text' },
+          },
+        },
+      };
+
+      const tools = MCPToolMapper.mapTools('test', makeMockClient(), [tool]);
+      expect(tools[0].pathKeys).toContain('input');
+      expect(tools[0].pathKeys).toContain('output');
+      expect(tools[0].pathKeys).not.toContain('nonPath');
+    });
+  });
 });

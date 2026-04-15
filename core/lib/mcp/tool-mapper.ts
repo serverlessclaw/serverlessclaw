@@ -164,12 +164,23 @@ class PathKeyDiscoverer {
       const propType = prop.type as string;
 
       const isPathLike = (type: string, description: string, keyName: string) => {
-        const matchesKeyword = this.PATH_KEYWORDS.some(
-          (kw) => description.includes(kw) || keyName.includes(kw)
-        );
+        const matchesKeyword = this.PATH_KEYWORDS.some((kw) => {
+          // 1. Check description with word boundaries (high signal)
+          if (new RegExp(`\\b${kw}s?\\b`, 'i').test(description)) return true;
+
+          // 2. Check key name (conservative)
+          if (keyName === kw || keyName === kw + 's') return true;
+          if (keyName.includes('_' + kw) || keyName.includes(kw + '_')) return true;
+
+          // 3. Allow specific common combined forms
+          if (['filepath', 'filename', 'dirname', 'folderpath'].includes(keyName)) return true;
+
+          return false;
+        });
+
         if (type === 'string') return matchesKeyword;
         if (type === 'array' && prop.items && (prop.items as any).type === 'string') {
-          return matchesKeyword || keyName.endsWith('s');
+          return matchesKeyword;
         }
         return false;
       };
