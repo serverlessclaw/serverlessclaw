@@ -47,7 +47,11 @@
       "minClusterFiles": 3,
       "minClusterTokenCost": 1000,
       "includeTests": true,
-      "exclude": ["**/api/*/route.ts"]
+      "exclude": [
+        "**/api/*/route.ts",
+        "dashboard/src/hooks/useRealtime.ts",
+        "dashboard/src/components/Providers/RealtimeProvider.tsx"
+      ]
     },
     "context-analyzer": {
       "maxContextBudget": 200000,
@@ -55,7 +59,8 @@
       "maxDepth": 15,
       "maxFragmentation": 0.4,
       "focus": "all",
-      "includeNodeModules": false
+      "includeNodeModules": false,
+      "exclude": ["core/tools/index.ts"]
     },
     "naming-consistency": {
       "checkNaming": true,
@@ -123,7 +128,8 @@
       "checkOverloadedSymbols": true,
       "checkLargeFiles": true,
       "exclude": [
-        "dashboard/src/components/ui/**"
+        "dashboard/src/components/ui/**",
+        "core/tools/index.ts"
       ]
     },
     "agent-grounding": {

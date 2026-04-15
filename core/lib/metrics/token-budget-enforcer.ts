@@ -1,8 +1,6 @@
 import { PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
-import { Resource } from 'sst';
-import { SSTResource } from '../types/system';
 import { logger } from '../logger';
-import { getDocClient } from '../utils/ddb-client';
+import { getDocClient, getMemoryTableName } from '../utils/ddb-client';
 import type { MetricsCollector } from './cognitive-metrics';
 
 const docClient = getDocClient();
@@ -10,9 +8,8 @@ const docClient = getDocClient();
 const TTL_DAYS_BUDGET = 30;
 const SECONDS_IN_DAY = 86400;
 
-function getTableName(): string {
-  const typedResource = Resource as unknown as SSTResource;
-  return typedResource.MemoryTable?.name ?? 'MemoryTable';
+function getBudgetTableName(): string {
+  return getMemoryTableName();
 }
 
 /**
@@ -107,7 +104,7 @@ export class TokenBudgetEnforcer {
 
       await docClient.send(
         new PutCommand({
-          TableName: getTableName(),
+          TableName: getBudgetTableName(),
           Item: {
             userId,
             timestamp: now,
@@ -133,7 +130,7 @@ export class TokenBudgetEnforcer {
       const userId = `BUDGET#${sessionId}`;
       const { Items } = await docClient.send(
         new QueryCommand({
-          TableName: getTableName(),
+          TableName: getBudgetTableName(),
           KeyConditionExpression: 'userId = :pk',
           ExpressionAttributeValues: { ':pk': userId },
           Limit: 1,

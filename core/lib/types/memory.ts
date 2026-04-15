@@ -1,6 +1,7 @@
 import { Message } from './llm';
 import { GapStatus, GapTransitionResult } from './agent';
-export { GapStatus, GapTransitionResult };
+export { GapStatus };
+export type { GapTransitionResult };
 import type { Collaboration, CollaborationRole, ParticipantType } from './collaboration';
 
 /**

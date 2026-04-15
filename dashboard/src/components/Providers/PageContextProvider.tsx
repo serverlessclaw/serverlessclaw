@@ -1,18 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
-
-/**
- * Interface for the context data that can be captured from a page.
- */
-export interface PageContextData {
-  url: string;
-  title?: string;
-  data?: Record<string, unknown>;
-  traceId?: string;
-  sessionId?: string;
-  agentId?: string;
-}
+import { PageContextData } from '../../types/page-context';
 
 interface PageContextType {
   context: PageContextData | null;

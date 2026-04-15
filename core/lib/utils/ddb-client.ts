@@ -1,6 +1,7 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
+import { SSTResource } from '../types/system';
 
 /**
  * Shared DynamoDB document client instance for tracing and other utilities.
@@ -33,12 +34,33 @@ export function getDocClient(): DynamoDBDocumentClient {
 export function resetDocClient(): void {
   _docClient = undefined;
 }
+
 /**
  * Returns the name of the ConfigTable resource.
  *
  * @returns The table name string.
  */
 export function getConfigTableName(): string {
-  const resource = Resource as { ConfigTable?: { name?: string } };
+  const resource = Resource as unknown as SSTResource;
   return resource.ConfigTable?.name ?? 'ConfigTable';
+}
+
+/**
+ * Returns the name of the MemoryTable resource.
+ *
+ * @returns The table name string.
+ */
+export function getMemoryTableName(): string {
+  const resource = Resource as unknown as SSTResource;
+  return resource.MemoryTable?.name ?? 'MemoryTable';
+}
+
+/**
+ * Returns the name of the TraceTable resource.
+ *
+ * @returns The table name string.
+ */
+export function getTraceTableName(): string {
+  const resource = Resource as unknown as SSTResource;
+  return resource.TraceTable?.name ?? 'TraceTable';
 }

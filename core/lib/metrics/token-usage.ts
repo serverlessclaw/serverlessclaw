@@ -1,8 +1,6 @@
 import { PutCommand, UpdateCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
-import { Resource } from 'sst';
-import { SSTResource } from '../types/system';
 import { logger } from '../logger';
-import { getDocClient } from '../utils/ddb-client';
+import { getDocClient, getMemoryTableName } from '../utils/ddb-client';
 
 const docClient = getDocClient();
 
@@ -56,8 +54,7 @@ export interface ToolTokenRollup {
 }
 
 function getTableName(): string {
-  const typedResource = Resource as unknown as SSTResource;
-  return typedResource.MemoryTable?.name ?? 'MemoryTable';
+  return getMemoryTableName();
 }
 
 function dayStart(ts: number = Date.now()): number {

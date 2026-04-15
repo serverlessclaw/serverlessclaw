@@ -2,19 +2,8 @@
  * Chat-specific types for the dashboard
  */
 import type { ToolCall } from '@claw/core/lib/types/llm';
-export type { ToolCall };
-
-/**
- * Interface for the context data that can be captured from a page.
- */
-export interface PageContextData {
-  url: string;
-  title?: string;
-  data?: Record<string, unknown>;
-  traceId?: string;
-  sessionId?: string;
-  agentId?: string;
-}
+import { PageContextData } from '../../types/page-context';
+export type { ToolCall, PageContextData };
 
 /**
  * Schema for dynamic operational components rendered in the chat.
