@@ -123,9 +123,7 @@
       "checkOverloadedSymbols": true,
       "checkLargeFiles": true,
       "exclude": [
-        "dashboard/src/components/ui/**",
-        "**/lib/agent/executor-core.ts",
-        "**/lib/metrics/cognitive-metrics.ts"
+        "dashboard/src/components/ui/**"
       ]
     },
     "agent-grounding": {
