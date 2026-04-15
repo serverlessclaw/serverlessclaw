@@ -40,6 +40,9 @@ export interface AgentPerformanceMetrics {
 
 /**
  * Performance rollup data for an agent-model combination.
+ * Note: The `enabled` field is optional. When provided, sync selection methods will enforce it.
+ * When not provided (undefined), ALL candidates pass through - this allows flexibility but
+ * callers must manually verify enabled status if Selection Integrity (Principle 14) is required.
  */
 export interface AgentPerformanceRollup {
   agentId: string;
@@ -342,6 +345,8 @@ export class AgentRouter {
    * @param candidates - Array of performance rollups.
    * @param capabilityMatchFn - Optional function to compute capability match for an agent.
    * @returns The best agent ID, or undefined if no candidates.
+   * @note When `enabled` field is undefined (not provided), candidate is INCLUDED in selection.
+   *       Callers must manually verify enabled status via AgentRegistry if strict filtering required.
    */
   static selectBestAgentSync(
     candidates: AgentPerformanceRollup[],
@@ -385,6 +390,8 @@ export class AgentRouter {
    * @param reputations - Map of agentId to reputation data.
    * @param capabilityMatchFn - Function to compute capability match for each candidate.
    * @returns The best agent ID, or undefined if no candidates are available.
+   * @note When `enabled` field is undefined (not provided), candidate is INCLUDED in selection.
+   *       Callers must manually verify enabled status via AgentRegistry if strict filtering required.
    */
   static selectBestAgentWithReputation(
     candidates: AgentPerformanceRollup[],

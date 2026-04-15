@@ -46,8 +46,7 @@ export class TrustManager {
 
     if (qualityScore !== undefined) {
       // Quality-weighted failure penalty (Principle 12)
-      // Lower quality failures (0-5) get higher penalty multiplier, higher quality (6-10) get lower
-      // formula: (10 - qualityScore) / 10 gives range [0, 1] then scale
+      // Range [0.5, 1.5]: low quality (0) = 1.5x penalty, high quality (10) = 0.5x penalty
       const multiplier = Math.min(1.5, Math.max(0.5, (10 - qualityScore) / 5 + 0.5));
       penalty *= multiplier;
     }
@@ -84,8 +83,8 @@ export class TrustManager {
     let bump = this.DEFAULT_SUCCESS_BUMP;
 
     if (qualityScore !== undefined) {
-      // Scale bump: 10/10 maps to 2x, 5/10 maps to 1x, 0/10 maps to 0x
-      // formula: qualityScore * 0.2 gives range [0, 2]
+      // Quality-weighted success bump (Principle 12)
+      // Range [0, 2]: quality 0 = 0x, quality 5 = 1x, quality 10 = 2x
       const multiplier = Math.min(2, Math.max(0, qualityScore * 0.2));
       bump *= multiplier;
     }
@@ -170,6 +169,8 @@ export class TrustManager {
    * Uses retry loop for race-condition safety when concurrent updates occur.
    * NOTE: The retry mechanism handles race conditions - if another update changes the score
    * between our read and write, we'll retry with the fresh value.
+   * NOTE: This method verifies that the agent is enabled before allowing trust updates
+   * to maintain Selection Integrity (Principle 14).
    */
   private static async updateTrustScore(agentId: string, delta: number): Promise<number> {
     const MAX_RETRIES = 5;
@@ -180,6 +181,15 @@ export class TrustManager {
         if (!fullConfig) {
           throw new Error(`Agent ${agentId} not found - cannot update trust score`);
         }
+
+        // Selection Integrity (Principle 14): Do not update trust for disabled agents
+        if (fullConfig.enabled === false) {
+          logger.warn(
+            `[TrustManager] Skipping trust update for disabled agent ${agentId}. Delta: ${delta}`
+          );
+          return fullConfig.trustScore ?? TRUST.DEFAULT_SCORE;
+        }
+
         const currentScore = fullConfig?.trustScore ?? TRUST.DEFAULT_SCORE;
         const newScore = Math.min(this.MAX_SCORE, Math.max(this.MIN_SCORE, currentScore + delta));
 
@@ -225,6 +235,8 @@ export class TrustManager {
   /**
    * Records a trust score snapshot in history atomically.
    * Uses per-agent keys for scalability.
+   * Note: Removed legacy global key write to simplify to single source of truth.
+   * The per-agent history key (REPUTATION_PREFIX + "HISTORY#" + agentId) is now the sole store.
    */
   private static async recordHistory(agentId: string, score: number): Promise<void> {
     const { ConfigManager } = await import('../registry/config');
@@ -235,18 +247,6 @@ export class TrustManager {
       { agentId, score, timestamp: Date.now() },
       { limit: 200 }
     );
-
-    // Backward compatibility: also update the legacy global log atomically
-    try {
-      const legacyKey = DYNAMO_KEYS.TRUST_SCORE_HISTORY;
-      await ConfigManager.appendToList(
-        legacyKey,
-        { agentId, score, timestamp: Date.now() },
-        { limit: 100 }
-      );
-    } catch {
-      // Ignore legacy errors
-    }
   }
 
   /**

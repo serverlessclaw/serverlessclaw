@@ -16,6 +16,7 @@ import type { CollaborationRole, ParticipantType } from '../types/collaboration'
 import { DynamoMemory } from '../memory';
 import { MemoryCaches, CacheKeys, getCacheStatsSummary } from './cache';
 import { logger } from '../logger';
+import { CACHE_TTL } from '../constants/memory';
 
 // Decomposed operation handlers
 import { MemoryDelegator } from './cached/delegator';
@@ -62,7 +63,7 @@ export class CachedMemory implements IMemory {
 
     this.historyPromises.set(cacheKey, promise);
     const history = await promise;
-    MemoryCaches.conversation.set(cacheKey, history, 2 * 60 * 1000);
+    MemoryCaches.conversation.set(cacheKey, history, CACHE_TTL.CONVERSATION);
     return history;
   }
 
@@ -82,7 +83,7 @@ export class CachedMemory implements IMemory {
     }
 
     const summary = await this.underlying.getSummary(userId, workspaceId);
-    MemoryCaches.conversation.set(cacheKey, summary, 2 * 60 * 1000);
+    MemoryCaches.conversation.set(cacheKey, summary, CACHE_TTL.CONVERSATION);
     return summary;
   }
 
@@ -120,7 +121,7 @@ export class CachedMemory implements IMemory {
     if (cached !== undefined) return cached;
 
     const distilled = await this.underlying.getDistilledMemory(userId, workspaceId);
-    MemoryCaches.userData.set(cacheKey, distilled, 5 * 60 * 1000);
+    MemoryCaches.userData.set(cacheKey, distilled, CACHE_TTL.USER_DATA);
     return distilled;
   }
 
@@ -136,7 +137,7 @@ export class CachedMemory implements IMemory {
     if (cached) return cached;
 
     const lessons = await this.underlying.getLessons(userId, workspaceId);
-    MemoryCaches.userData.set(cacheKey, lessons, 5 * 60 * 1000);
+    MemoryCaches.userData.set(cacheKey, lessons, CACHE_TTL.USER_DATA);
     return lessons;
   }
 
@@ -158,7 +159,7 @@ export class CachedMemory implements IMemory {
     if (cached) return cached;
 
     const lessons = await this.underlying.getGlobalLessons(effectiveLimit);
-    MemoryCaches.global.set(cacheKey, lessons, 15 * 60 * 1000);
+    MemoryCaches.global.set(cacheKey, lessons, CACHE_TTL.GLOBAL);
     return lessons;
   }
 
@@ -217,7 +218,7 @@ export class CachedMemory implements IMemory {
       orgId,
       workspaceId
     );
-    MemoryCaches.search.set(cacheKey, result, 3 * 60 * 1000);
+    MemoryCaches.search.set(cacheKey, result, CACHE_TTL.SEARCH);
     return result;
   }
 
@@ -268,8 +269,8 @@ export class CachedMemory implements IMemory {
     userId: string,
     workspaceId?: string
   ): Promise<{ prefixed: MemoryInsight[]; raw: MemoryInsight[] }> {
-    const prefixedKey = `${userId}-prefixed${workspaceId ? `-${workspaceId}` : ''}`;
-    const rawKey = `${userId}-raw${workspaceId ? `-${workspaceId}` : ''}`;
+    const prefixedKey = `prefs:${userId}:prefixed${workspaceId ? `:${workspaceId}` : ''}`;
+    const rawKey = `prefs:${userId}:raw${workspaceId ? `:${workspaceId}` : ''}`;
 
     const cachedPrefixed = MemoryCaches.userData.get(prefixedKey) as MemoryInsight[] | undefined;
     const cachedRaw = MemoryCaches.userData.get(rawKey) as MemoryInsight[] | undefined;
@@ -299,8 +300,8 @@ export class CachedMemory implements IMemory {
       ),
     ]);
 
-    MemoryCaches.userData.set(prefixedKey, prefixed.items, 5 * 60 * 1000);
-    MemoryCaches.userData.set(rawKey, raw.items, 5 * 60 * 1000);
+    MemoryCaches.userData.set(prefixedKey, prefixed.items, CACHE_TTL.USER_DATA);
+    MemoryCaches.userData.set(rawKey, raw.items, CACHE_TTL.USER_DATA);
     return { prefixed: prefixed.items, raw: raw.items };
   }
 

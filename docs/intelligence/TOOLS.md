@@ -235,34 +235,34 @@ To prevent "Context Window Bloat" and maintain high reasoning performance, Serve
 
 ---
 
-## 🛡️ Distributed MCP Resilience & Process Lifecycle (May 2026 Refresh)
+### 🛡️ Modular MCP Resilience & Transport Lifecycle (April 2026 Refactor)
 
-To ensure tools are always available even in unstable network conditions or Lambda cold-starts, the system employs a **Layered Transport & Distributed Safety Architecture**.
+The MCP vertical has been refactored into a **Layered Transport Architecture** to improve isolation and reduce cognitive load on the manager.
 
-```text
-    [ Call Tool ]
-          |
-    +-----v-----+
-    |  Unified  | (Primary - Lambda Invoke)
-    | Multiplexer [10s Timeout]
-    | (Lambda)  | [Routing: x-mcp-server]
-    +-----v-----+
-          |
-    (Fail / Timeout)
-          |
-    +-----v-----+
-    | Local NPX | (Fallback - Stdio)
-    | (Lambda)  | [30s Timeout]
-    +-----------+
+```mermaid
+graph TD
+    A[MCP Client Manager] --> B{Transport Factory}
+    B -->|arn:aws:lambda:*| C[Lambda Invoke Transport]
+    B -->|http/https| D[SSE Client Transport]
+    B -->|command| E[Stdio Client Transport]
+    
+    C --> F[Remote Multiplexer]
+    D --> G[Remote Server]
+    E --> H[Local Process (npx)]
+    
+    subgraph "Hand Silo (Lean Evolution)"
+    A
+    B
+    end
 ```
 
 ### Reliability Guardrails:
 
-1.  **Distributed Discovery Backoff (P1 Fix)**: MCP server failure states and backoff windows are now synchronized via DynamoDB (`mcp_health_<server>`). This prevents "Discovery Blindness" where different Lambda instances repeatedly attempt to connect to a failing server, exhausting resources.
-2.  **Explicit Process Lifecycle (P1 Fix)**: The `MCPClientManager` now enforces explicit cleanup of `StdioClientTransport` and `Client` instances on every failure path. This prevents **Zombie Process Bloat** in reused Lambda containers, ensuring that orphaned child processes are strictly killed.
-3.  **Trace-Isolated Filesystem Access (P1 Fix)**: All `mcp-filesystem-*` operations are now routed to a strictly isolated, per-trace workspace located at `/tmp/claw-workspaces/<traceId>`. This eliminates **Workspace Cross-Talk** and ensures that concurrent agents in the same container cannot corrupt each other's files.
-4.  **Proactive Resource Pruning (P2 Fix)**: Stale workspaces in `/tmp` are proactively pruned if they exceed 24 hours of age or a total size threshold (300MB), maintaining a healthy "Metabolism" and preventing disk exhaustion.
-5.  **Physical Resource Headroom**: The Unified Multiplexer is provisioned with `MEDIUM_LARGE` (1024MB) memory to accommodate concurrent tool executions (e.g., Git + Filesystem).
+1.  **Centralized Defaults**: All default servers (ast, git, filesystem) are now defined in `mcp-defaults.ts`. This prevents hardcoded "metabolic waste" from accumulating in the multiplexer logic.
+2.  **Transport Factory Isolation**: Decoupling transport creation from connection management ensures that new protocols (e.g., WebSocket) can be added without modifying the core lifecycle logic.
+3.  **Explicit Resource Disposal**: The `MCPClientManager` enforces strict cleanup of both the `Client` and its underlying `Transport` on every failure path, preventing socket leaks and zombie processes in reused Lambda environments.
+4.  **Discovery Backoff**: Failure states are synchronized via DynamoDB locks to prevent thundering herd scenarios during high-concurrency discovery phases.
+5.  **Memory Optimization**: The Multiplexer is provisioned with 1024MB to handle the resource-heavy `Puppeteer` and `AST` servers simultaneously.
 
 ---
 

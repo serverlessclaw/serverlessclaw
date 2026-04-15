@@ -204,4 +204,84 @@ describe('TrustManager', () => {
       );
     });
   });
+
+  describe('fallback behavior', () => {
+    it('uses default score when trustScore is missing from config', async () => {
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
+        id: 'incomplete-agent',
+        name: 'Incomplete',
+      });
+
+      const newScore = await TrustManager.recordSuccess('incomplete-agent', 10);
+
+      expect(newScore).toBe(92); // 90 (DEFAULT_SCORE) + 2 (bump with quality 10)
+    });
+
+    it('uses default score when config is null', async () => {
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce(null);
+
+      await expect(TrustManager.recordSuccess('missing-agent', 10)).rejects.toThrow(
+        'Agent missing-agent not found'
+      );
+    });
+  });
+
+  describe('Selection Integrity (Principle 14)', () => {
+    it('skips trust update when agent is disabled', async () => {
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
+        id: 'disabled-agent',
+        name: 'Disabled Agent',
+        trustScore: 75,
+        enabled: false,
+      });
+
+      const result = await TrustManager.recordSuccess('disabled-agent');
+
+      // Should return current score without updating
+      expect(result).toBe(75);
+      expect(mockAgentRegistry.atomicUpdateAgentFieldWithCondition).not.toHaveBeenCalled();
+    });
+
+    it('allows trust update when agent is enabled (explicit true)', async () => {
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
+        id: 'enabled-agent',
+        name: 'Enabled Agent',
+        trustScore: 80,
+        enabled: true,
+      });
+
+      const result = await TrustManager.recordSuccess('enabled-agent');
+
+      expect(result).toBe(81); // Default bump of 1
+      expect(mockAgentRegistry.atomicUpdateAgentFieldWithCondition).toHaveBeenCalled();
+    });
+
+    it('allows trust update when enabled is undefined (backward compat)', async () => {
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
+        id: 'legacy-agent',
+        name: 'Legacy Agent',
+        trustScore: 80,
+        // enabled not set - should allow updates for backward compatibility
+      });
+
+      const result = await TrustManager.recordSuccess('legacy-agent');
+
+      expect(result).toBe(81); // Default bump of 1
+      expect(mockAgentRegistry.atomicUpdateAgentFieldWithCondition).toHaveBeenCalled();
+    });
+
+    it('skips penalty update when agent is disabled', async () => {
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
+        id: 'disabled-agent',
+        name: 'Disabled Agent',
+        trustScore: 60,
+        enabled: false,
+      });
+
+      const result = await TrustManager.recordFailure('disabled-agent', 'Test failure');
+
+      expect(result).toBe(60);
+      expect(mockAgentRegistry.atomicUpdateAgentFieldWithCondition).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -36,6 +36,23 @@ Trust scores are dynamically updated via the **Atomic Field Pattern** in DynamoD
 - **Failure Penalties**: SLO breaches, QA failures, or anomalies detected result in immediate trust decay.
 - **Anomaly Feedback**: Batched anomalies from the `DegradationDetector` are processed into trust penalties.
 
+### 3. Quality-Weighted Trust Formulas
+
+The system applies a non-linear scaling to trust adjustments based on task quality (0-10):
+
+#### Failure Penalty (Decay)
+Multiplies the base penalty by a weight in the range **[0.5x, 1.5x]**:
+- **Quality 0**: 1.5x penalty (Major failure)
+- **Quality 10**: 0.5x penalty (Minor/Expected edge case)
+- `multiplier = Math.min(1.5, Math.max(0.5, (10 - qualityScore) / 5 + 0.5))`
+
+#### Success Bump (Growth)
+Multiplies the base bump by a weight in the range **[0.0x, 2.0x]**:
+- **Quality 0**: 0.0x bump (Low value)
+- **Quality 5**: 1.0x bump (Standard)
+- **Quality 10**: 2.0x bump (Exceptional)
+- `multiplier = Math.min(2, Math.max(0, qualityScore * 0.2))`
+
 ---
 
 ## 🚦 Granular Safety Tiers
@@ -89,5 +106,12 @@ Highly sensitive changes, such as IAM modifications or memory retention policy s
 ## 📡 Related Documentation
 
 - **[RESILIENCE.md](../system/RESILIENCE.md)**: Dead Man's Switch, Self-healing, and persistent Circuit Breakers.
+
+### Distributed Circuit Breakers & Jitter
+
+To prevent "Thundering Herd" scenarios in globally distributed agent swarms, the circuit breaker implements **Exponential Backoff with Jitter**:
+
+- **Retry Logic**: When a service is degraded, retries are delayed based on `2^retryCount * baseDelay`.
+- **Jitter**: A random jitter (up to 2x base delay) is added to ensure concurrent agents don't retry at the exact same millisecond, which could lead to secondary outages.
 - **[SWARM.md](./SWARM.md)**: Recursive task safety and depth limits.
 - **[STANDARDS.md](../governance/STANDARDS.md)**: Quality gates and audit standards.

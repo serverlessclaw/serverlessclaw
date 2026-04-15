@@ -72,6 +72,8 @@ export async function getReputation(
   }
 }
 
+export type UpdateReputationResult = { success: true } | { success: false; error: string };
+
 /**
  * Updates agent reputation on task completion or failure.
  * Uses atomic DynamoDB operations to prevent race conditions.
@@ -89,7 +91,7 @@ export async function updateReputation(
   agentId: string,
   success: boolean,
   latencyMs: number = 0
-): Promise<void> {
+): Promise<UpdateReputationResult> {
   const now = Date.now();
   const pk = reputationKey(agentId);
 
@@ -119,8 +121,11 @@ export async function updateReputation(
     });
 
     logger.info(`[Reputation] Updated ${agentId}: success=${success}, tasksUpdated`);
+    return { success: true };
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     logger.error(`Failed to update reputation for ${agentId}:`, error);
+    return { success: false, error: message };
   }
 }
 

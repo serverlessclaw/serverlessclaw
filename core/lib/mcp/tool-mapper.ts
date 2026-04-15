@@ -30,69 +30,19 @@ export class MCPToolMapper {
   /**
    * Core mapping logic shared between live and cached discovery.
    */
-
   private static mapMcpTool(
     serverName: string,
     mcpTool: any,
     clientProvider: () => Promise<Client>
   ): ITool {
-    const isSequentialTool =
-      serverName === 'filesystem' ||
-      serverName === 'git' ||
+    const isSequential =
+      ['filesystem', 'git'].includes(serverName) ||
       mcpTool.name.startsWith('filesystem_') ||
       mcpTool.name.startsWith('git_');
+
     const toolName = `${serverName}_${mcpTool.name}`;
-
-    const parameters = (mcpTool.inputSchema as JsonSchema) || {
-      type: 'object',
-      properties: {},
-    };
-
-    // Filesystem path key discovery - handles both string and string[] types
-    const pathKeys: string[] = [];
-    if (parameters.type === 'object' && parameters.properties) {
-      for (const [key, prop] of Object.entries(parameters.properties)) {
-        const desc = (prop.description ?? '').toLowerCase();
-        const lowKey = key.toLowerCase();
-        const propType = prop.type as string;
-
-        // Check if this is a path-like property (string or string[] type)
-        const isPathLikeString =
-          propType === 'string' &&
-          (desc.includes('path') ||
-            desc.includes('file') ||
-            desc.includes('directory') ||
-            desc.includes('dir') ||
-            desc.includes('folder') ||
-            lowKey.includes('path') ||
-            lowKey.includes('file') ||
-            lowKey.includes('dir') ||
-            lowKey === 'src' ||
-            lowKey === 'dest' ||
-            lowKey === 'source' ||
-            lowKey === 'destination');
-
-        // Also check for array of strings (e.g., paths: string[], files: string[])
-        const isPathLikeArray =
-          propType === 'array' &&
-          prop.items &&
-          ((prop.items as JsonSchema).type === 'string' ||
-            (Array.isArray(prop.items) &&
-              prop.items.some((item: JsonSchema) => item.type === 'string'))) &&
-          (desc.includes('path') ||
-            desc.includes('file') ||
-            desc.includes('directory') ||
-            desc.includes('files') ||
-            desc.includes('paths') ||
-            lowKey.includes('path') ||
-            lowKey.includes('file') ||
-            lowKey.endsWith('s')); // plural form like "paths", "files"
-
-        if (isPathLikeString || isPathLikeArray) {
-          pathKeys.push(key);
-        }
-      }
-    }
+    const parameters = (mcpTool.inputSchema as JsonSchema) || { type: 'object', properties: {} };
+    const pathKeys = PathKeyDiscoverer.discover(parameters);
 
     return {
       name: toolName,
@@ -103,96 +53,80 @@ export class MCPToolMapper {
       connectionProfile: [],
       connector_id: '',
       auth: { type: 'api_key', resource_id: '' },
-      requiresApproval: mcpTool.requiresApproval ?? false, // Defaults to false, overridden by executor if sensitive
+      requiresApproval: mcpTool.requiresApproval ?? false,
       requiredPermissions: mcpTool.requiredPermissions ?? [],
-      sequential: isSequentialTool, // Filesystem and Git operations usually need to be sequential
+      sequential: isSequential,
       pathKeys: pathKeys.length > 0 ? pathKeys : undefined,
       execute: async (toolArgs: Record<string, unknown>) => {
-        try {
-          const client = await clientProvider();
-          const { withMCPResilience, isConnectionError } =
-            await import('../lifecycle/error-recovery');
-          return await withMCPResilience(
-            toolName,
-            async () => {
-              const result = await client.callTool({
-                name: mcpTool.name,
-                arguments: toolArgs,
-              });
-              return this.parseMcpToolResult(result);
-            },
-            {
-              onFailure: (execError: Error) => {
-                if (isConnectionError(execError)) {
-                  logger.info(
-                    `[MCP] Resetting client for ${serverName} due to connection error: ${execError.message}`
-                  );
-                  MCPClientManager.deleteClient(serverName);
-                }
-              },
-            }
-          );
-        } catch (execError: unknown) {
-          logger.error(
-            `MCP Tool Execution Error (${serverName}:${mcpTool.name}):`,
-            execError instanceof Error ? execError.message : String(execError)
-          );
-          throw execError;
-        }
+        return this.executeMcpTool(serverName, mcpTool.name, toolName, toolArgs, clientProvider);
       },
     };
   }
 
+  private static async executeMcpTool(
+    serverName: string,
+    rawToolName: string,
+    prefixedName: string,
+    args: Record<string, unknown>,
+    clientProvider: () => Promise<Client>
+  ): Promise<ToolResult> {
+    try {
+      const client = await clientProvider();
+      const { withMCPResilience, isConnectionError } = await import('../lifecycle/error-recovery');
+
+      return await withMCPResilience(
+        prefixedName,
+        async () => {
+          const result = await client.callTool({ name: rawToolName, arguments: args });
+          return this.parseMcpToolResult(result);
+        },
+        {
+          onFailure: (error: Error) => {
+            if (isConnectionError(error)) {
+              logger.info(`[MCP] Resetting client for ${serverName} due to disconnection.`);
+              MCPClientManager.deleteClient(serverName);
+            }
+          },
+        }
+      );
+    } catch (e: unknown) {
+      logger.error(
+        `MCP Tool Execution Error (${serverName}:${rawToolName}):`,
+        e instanceof Error ? e.message : String(e)
+      );
+      throw e;
+    }
+  }
+
   /**
    * Parses MCP callTool result into a structured ToolResult.
-   * Handles TextContent, ImageContent, and other content types with high fidelity.
    */
   private static parseMcpToolResult(result: unknown): ToolResult {
-    const res = result as { content?: unknown[]; isError?: boolean };
+    const res = result as { content?: any[]; isError?: boolean };
     const images: string[] = [];
-    const resources: Array<{ uri: string; text?: string; mimeType?: string }> = [];
+    const resources: any[] = [];
     let text = '';
-    const metadata: Record<string, unknown> = {};
+    const metadata: Record<string, any> = {};
 
-    const content = res.content;
-
-    if (content && Array.isArray(content)) {
-      for (const item of content) {
-        const itemAny = item as Record<string, unknown>;
-        const itemType = itemAny.type as string | undefined;
-
-        if (itemType === 'text' || !itemType) {
-          const itemText = itemAny.text as string | undefined;
-          if (itemText) text += (text ? '\n' : '') + itemText;
-        } else if (itemType === 'resource') {
-          const itemText = itemAny.text as string | undefined;
-          const uri = itemAny.uri as string;
-          if (itemText) text += (text ? '\n' : '') + itemText;
-          resources.push({
-            uri,
-            text: itemText,
-            mimeType: itemAny.mimeType as string | undefined,
-          });
-        } else if (itemType === 'image') {
-          const imageData = itemAny.data as string | undefined;
-          if (imageData) {
-            images.push(imageData);
-            // Collect mime types for all images if available
-            if (itemAny.mimeType) {
-              const mimeTypes = (metadata.imageMimeTypes as string[]) ?? [];
-              mimeTypes.push(itemAny.mimeType as string);
-              metadata.imageMimeTypes = mimeTypes;
-            }
+    if (Array.isArray(res.content)) {
+      for (const item of res.content) {
+        if (item.type === 'text' || !item.type) {
+          text += (text ? '\n' : '') + (item.text || '');
+        } else if (item.type === 'resource') {
+          text += (text ? '\n' : '') + (item.text || '');
+          resources.push({ uri: item.uri, text: item.text, mimeType: item.mimeType });
+        } else if (item.type === 'image') {
+          if (item.data) images.push(item.data);
+          if (item.mimeType) {
+            metadata.imageMimeTypes = [...(metadata.imageMimeTypes || []), item.mimeType];
           }
         } else {
-          metadata[itemType || 'other'] = item;
+          metadata[item.type] = item;
         }
       }
     }
 
-    if (resources.length > 0) {
-      metadata.resources = resources;
-    }
+    if (resources.length > 0) metadata.resources = resources;
 
     let finalResultText =
       text || (res.isError ? 'Tool execution failed' : 'MCP tool executed successfully');
@@ -204,5 +138,46 @@ export class MCPToolMapper {
       images: images.length > 0 ? images : undefined,
       metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
     });
+  }
+}
+
+class PathKeyDiscoverer {
+  private static readonly PATH_KEYWORDS = [
+    'path',
+    'file',
+    'directory',
+    'dir',
+    'folder',
+    'src',
+    'dest',
+    'source',
+    'destination',
+  ];
+
+  static discover(params: JsonSchema): string[] {
+    const pathKeys: string[] = [];
+    if (params.type !== 'object' || !params.properties) return pathKeys;
+
+    for (const [key, prop] of Object.entries(params.properties)) {
+      const desc = (prop.description ?? '').toLowerCase();
+      const lowKey = key.toLowerCase();
+      const propType = prop.type as string;
+
+      const isPathLike = (type: string, description: string, keyName: string) => {
+        const matchesKeyword = this.PATH_KEYWORDS.some(
+          (kw) => description.includes(kw) || keyName.includes(kw)
+        );
+        if (type === 'string') return matchesKeyword;
+        if (type === 'array' && prop.items && (prop.items as any).type === 'string') {
+          return matchesKeyword || keyName.endsWith('s');
+        }
+        return false;
+      };
+
+      if (isPathLike(propType, desc, lowKey)) {
+        pathKeys.push(key);
+      }
+    }
+    return pathKeys;
   }
 }

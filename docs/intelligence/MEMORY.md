@@ -139,6 +139,48 @@ As described in [Workspace Scoping](#workspace-scoping--multi-tenancy), identity
 +---------------------------------------------------------------------+
 ```
 
+## Memory Cache Architecture (Silo 2)
+
+To minimize latency while maintaining consistency, Serverless Claw uses a multi-layered caching strategy for memory retrieval.
+
+```text
+       [ Agent Execution ]
+               |
+               v
+       +-------------------+
+       |   CachedMemory    | <--- (Singleton Proxy)
+       +-------------------+
+               |
+       +-------+-------+
+       |               |
+       v               v
+ [ High-Speed ]  [ Scoped Data ]
+ [    LRU     ]  [    LRU      ]
+ (Global TTL)    (User-specific)
+       |               |
+       |               | (Cache Miss / TTL Expired)
+       +-------+-------+
+               |
+               v
+       +-------------------+
+       |  DynamoDB Storage | <--- (Persistence)
+       +-------------------+
+               |
+               +---> [ Atomic Updates ] (Partial Fields)
+```
+
+### Cache Namespace & Scoping
+
+Cache keys are strictly prefixed to prevent collisions and support strategic pruning:
+
+- **`prefs:<userId>[:<workspaceId>]`**: Personal and workspace-specific settings/insights.
+- **`lessons:<userId>[:<workspaceId>]`**: Tactical lessons (LRU).
+- **`search:<queryHash>`**: Semantic search results (Short TTL).
+- **`global:lessons`**: Common lessons shared across all users.
+
+---
+
+
 ## Memory Tiers Explained
 
 ### 1. Long-Term Facts (`DISTILLED#`)
@@ -221,7 +263,21 @@ The memory system exports operations for each tier. These are available via `cor
 | `releaseGapLock(gapId)`              | Release gap lock                                | Intelligence |
 | `assignGapToTrack(gapId, track)`     | Assign gap to evolution track                   | Intelligence |
 | `updateGapMetadata(gapId, metadata)` | Update impact/urgency scores                    | Intelligence |
+| `updateInsightMetadata(...)`        | Atomic partial update of metadata fields        | Intelligence |
 | `archiveStaleGaps()`                 | Archive gaps not accessed in 14+ days           | Intelligence |
+
+### Atomic Metadata Updates
+
+To prevent race conditions in highly concurrent swarm operations, `updateInsightMetadata` uses a granular **Partial Update Pattern**. 
+
+Instead of replacing the entire `metadata` object (which risks overwriting updates from parallel agents), the system constructs a dynamic `SET` expression for only the provided fields:
+
+```typescript
+// Example: Updating hitCount doesn't overwrite confidence or category
+await updateInsightMetadata(base, userId, timestamp, { hitCount: 5 });
+```
+
+**Implementation Detail**: Uses `UpdateExpression: "SET metadata.hitCount = :hitCount, updatedAt = :now"` to ensure atomic field isolation at the database level.
 
 ### Insight Operations (`insight-operations.ts`)
 

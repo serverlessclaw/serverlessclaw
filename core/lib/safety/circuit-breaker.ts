@@ -130,7 +130,8 @@ export class CircuitBreaker {
       } catch (e: unknown) {
         lastError = e;
         if (e instanceof Error && e.name === 'ConditionalCheckFailedException') {
-          const delay = BASE_DELAY_MS * Math.pow(2, i) + Math.random() * BASE_DELAY_MS;
+          const jitter = Math.random() * BASE_DELAY_MS * 2;
+          const delay = BASE_DELAY_MS * Math.pow(2, i) + jitter;
           logger.warn(
             `Circuit breaker retry ${i + 1}/${MAX_RETRIES} after ${Math.round(delay)}ms due to concurrent modification`
           );

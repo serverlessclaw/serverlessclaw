@@ -579,7 +579,8 @@ export async function refineMemory(
 }
 
 /**
- * Updates metadata for a specific insight.
+ * Updates metadata for a specific insight, merging with existing metadata.
+ * Uses atomic DynamoDB update to prevent race conditions.
  */
 export async function updateInsightMetadata(
   base: BaseMemoryProvider,
@@ -589,12 +590,60 @@ export async function updateInsightMetadata(
   workspaceId?: string
 ): Promise<void> {
   const pk = base.getScopedUserId(userId, workspaceId);
+
+  const setClauses: string[] = [];
+  const values: Record<string, unknown> = { ':now': Date.now() };
+
+  if (metadata.category !== undefined) {
+    setClauses.push('metadata.category = :category');
+    values[':category'] = metadata.category;
+  }
+  if (metadata.confidence !== undefined) {
+    setClauses.push('metadata.confidence = :confidence');
+    values[':confidence'] = metadata.confidence;
+  }
+  if (metadata.impact !== undefined) {
+    setClauses.push('metadata.impact = :impact');
+    values[':impact'] = metadata.impact;
+  }
+  if (metadata.complexity !== undefined) {
+    setClauses.push('metadata.complexity = :complexity');
+    values[':complexity'] = metadata.complexity;
+  }
+  if (metadata.risk !== undefined) {
+    setClauses.push('metadata.risk = :risk');
+    values[':risk'] = metadata.risk;
+  }
+  if (metadata.urgency !== undefined) {
+    setClauses.push('metadata.urgency = :urgency');
+    values[':urgency'] = metadata.urgency;
+  }
+  if (metadata.priority !== undefined) {
+    setClauses.push('metadata.priority = :priority');
+    values[':priority'] = metadata.priority;
+  }
+  if (metadata.hitCount !== undefined) {
+    setClauses.push('metadata.hitCount = :hitCount');
+    values[':hitCount'] = metadata.hitCount;
+  }
+  if (metadata.lastAccessed !== undefined) {
+    setClauses.push('metadata.lastAccessed = :lastAccessed');
+    values[':lastAccessed'] = metadata.lastAccessed;
+  }
+  if (metadata.retryCount !== undefined) {
+    setClauses.push('metadata.retryCount = :retryCount');
+    values[':retryCount'] = metadata.retryCount;
+  }
+  if (metadata.lastAttemptTime !== undefined) {
+    setClauses.push('metadata.lastAttemptTime = :lastAttemptTime');
+    values[':lastAttemptTime'] = metadata.lastAttemptTime;
+  }
+
+  setClauses.push('updatedAt = :now');
+
   await base.updateItem({
     Key: { userId: pk, timestamp },
-    UpdateExpression: 'SET metadata = :meta, updatedAt = :now',
-    ExpressionAttributeValues: {
-      ':meta': metadata,
-      ':now': Date.now(),
-    },
+    UpdateExpression: `SET ${setClauses.join(', ')}`,
+    ExpressionAttributeValues: values,
   });
 }

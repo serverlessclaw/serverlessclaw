@@ -101,7 +101,7 @@ export const SWARM = {
  */
 export const TRUST = {
   /** Default trust score for new agents when not specified. */
-  DEFAULT_SCORE: 85,
+  DEFAULT_SCORE: 90,
   /** Minimum allowed trust score (floor). */
   MIN_SCORE: 0,
   /** Maximum allowed trust score (ceiling). */

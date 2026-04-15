@@ -397,8 +397,11 @@ describe('Insight Operations', () => {
 
       const input = updateCalls[0]?.args[0].input;
       expect(input!.Key!.userId).toBe('USER#1');
-      expect(input!.ExpressionAttributeValues![':meta'].priority).toBe('high');
-      expect(input!.ExpressionAttributeValues![':meta'].impact).toBe('critical');
+      // New behavior: individual attributes are updated, not the whole metadata object
+      expect(input!.ExpressionAttributeValues![':priority']).toBe('high');
+      expect(input!.ExpressionAttributeValues![':impact']).toBe('critical');
+      expect(input!.UpdateExpression).toContain('metadata.priority');
+      expect(input!.UpdateExpression).toContain('metadata.impact');
     });
 
     it('should NOT call updateItem when item is not found', async () => {
