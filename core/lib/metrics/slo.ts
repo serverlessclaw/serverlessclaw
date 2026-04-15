@@ -52,6 +52,22 @@ const DEFAULT_SLOS: SLODefinition[] = [
 ];
 
 export class SLOTracker {
+  /**
+   * Calculate current latency value from rollups, with fallback to avg proxy.
+   */
+  private static calculateLatencyCurrent(rollups: TokenRollup[]): number {
+    const p95Values = rollups
+      .filter((r) => r.p95DurationMs !== undefined && (r.p95DurationMs as number) > 0)
+      .map((r) => r.p95DurationMs as number);
+    if (p95Values.length > 0) {
+      return p95Values.reduce((s, v) => s + v, 0) / p95Values.length;
+    }
+    const totalInvocations = rollups.reduce((s, r) => s + r.invocationCount, 0);
+    const totalDuration = rollups.reduce((s, r) => s + (r.totalDurationMs || 0), 0);
+    const avg = totalInvocations > 0 ? totalDuration / totalInvocations : 0;
+    return avg * 1.25;
+  }
+
   static async checkSLO(
     definition: SLODefinition,
     rollups: TokenRollup[]
@@ -67,23 +83,9 @@ export class SLOTracker {
         current = totalInvocations > 0 ? totalSuccesses / totalInvocations : 1;
         break;
       }
-      case 'avg_latency': {
-        // Use p95 latency for SLO tracking as per design principles
-        const p95Values = rollups
-          .filter((r) => r.p95DurationMs !== undefined && (r.p95DurationMs as number) > 0)
-          .map((r) => r.p95DurationMs as number);
-        if (p95Values.length > 0) {
-          // Average of p95 values across rollups
-          current = p95Values.reduce((s, v) => s + v, 0) / p95Values.length;
-        } else {
-          // Fallback to proxy (1.25x avg) if p95 not available (Inconsistency 6 Fix)
-          const totalInvocations = rollups.reduce((s, r) => s + r.invocationCount, 0);
-          const totalDuration = rollups.reduce((s, r) => s + (r.totalDurationMs || 0), 0);
-          const avg = totalInvocations > 0 ? totalDuration / totalInvocations : 0;
-          current = avg * 1.25;
-        }
+      case 'avg_latency':
+        current = this.calculateLatencyCurrent(rollups);
         break;
-      }
     }
 
     const burnRate =
@@ -131,19 +133,7 @@ export class SLOTracker {
         const successes = rollups.reduce((s, r) => s + r.successCount, 0);
         current = total > 0 ? successes / total : 1;
       } else if (slo.metric === 'avg_latency') {
-        // Use p95 latency for SLO tracking as per design principles
-        const p95Values = rollups
-          .filter((r) => r.p95DurationMs !== undefined && (r.p95DurationMs as number) > 0)
-          .map((r) => r.p95DurationMs as number);
-        if (p95Values.length > 0) {
-          current = p95Values.reduce((s, v) => s + v, 0) / p95Values.length;
-        } else {
-          // Fallback to proxy (1.25x avg) if p95 not available (Inconsistency 6 Fix)
-          const totalInvocations = rollups.reduce((s, r) => s + r.invocationCount, 0);
-          const totalDuration = rollups.reduce((s, r) => s + (r.totalDurationMs || 0), 0);
-          const avg = totalInvocations > 0 ? totalDuration / totalInvocations : 0;
-          current = avg * 1.25;
-        }
+        current = this.calculateLatencyCurrent(rollups);
       } else {
         current = 0;
       }

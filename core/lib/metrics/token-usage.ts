@@ -1,17 +1,10 @@
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import {
-  DynamoDBDocumentClient,
-  PutCommand,
-  UpdateCommand,
-  QueryCommand,
-} from '@aws-sdk/lib-dynamodb';
+import { PutCommand, UpdateCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
+import { SSTResource } from '../types/system';
 import { logger } from '../logger';
+import { getDocClient } from '../utils/ddb-client';
 
-const client = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(client, {
-  marshallOptions: { removeUndefinedValues: true },
-});
+const docClient = getDocClient();
 
 const TTL_DAYS_INVOCATION = 7;
 const TTL_DAYS_ROLLUP = 90;
@@ -63,8 +56,8 @@ export interface ToolTokenRollup {
 }
 
 function getTableName(): string {
-  const resource = Resource as { MemoryTable?: { name: string } };
-  return resource?.MemoryTable?.name ?? 'MemoryTable';
+  const typedResource = Resource as unknown as SSTResource;
+  return typedResource.MemoryTable?.name ?? 'MemoryTable';
 }
 
 function dayStart(ts: number = Date.now()): number {

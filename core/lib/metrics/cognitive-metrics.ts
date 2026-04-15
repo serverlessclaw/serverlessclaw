@@ -97,7 +97,15 @@ export class MetricsCollector {
     );
 
     // Sh5: Immediate flush for failures to prevent signal loss on container recycling
+    // Also flush if buffer exceeds 50 items, with max cap to prevent unbounded growth
+    const MAX_BUFFER_SIZE = 200;
     if (!success || this.buffer.length > 50) {
+      if (this.buffer.length >= MAX_BUFFER_SIZE) {
+        this.buffer = this.buffer.slice(-MAX_BUFFER_SIZE);
+        logger.warn(
+          `[MetricsCollector] Buffer exceeded max size ${MAX_BUFFER_SIZE}, trimming oldest entries`
+        );
+      }
       await this.flush();
     }
   }
@@ -585,8 +593,14 @@ export class CognitiveHealthMonitor {
     const agentMetrics: AggregatedMetrics[] = [];
     const allAnomalies: CognitiveAnomaly[] = [];
 
-    // Get metrics for each agent
-    const agents = agentIds ?? ['superclaw', 'coder', 'strategic-planner', 'cognition-reflector'];
+    // Get list of agents to analyze - query dynamically from BACKBONE_REGISTRY
+    let agents: string[];
+    if (agentIds && agentIds.length > 0) {
+      agents = agentIds;
+    } else {
+      const { BACKBONE_REGISTRY } = await import('../backbone');
+      agents = Object.keys(BACKBONE_REGISTRY);
+    }
 
     // Sh5: Parallelize metric aggregation to reduce snapshot latency
     const metricsPromises = agents.map((agentId) =>

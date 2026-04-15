@@ -390,15 +390,18 @@ export class ClawTracer {
   /**
    * Periodically checks for signal drift using the ConsistencyProbe.
    * Leverages on-demand activity to avoid background timers.
+   * Also supports immediate drift detection for critical events.
+   *
+   * @param immediate - If true, triggers drift detection immediately regardless of elapsed time
    */
-  async detectDrift(): Promise<void> {
+  async detectDrift(immediate: boolean = false): Promise<void> {
     if (!this.agentId) return;
 
-    // Check drift once every 5 minutes per execution node
+    // Check drift once every 5 minutes per execution node, or immediately if triggered
     const DRIFT_CHECK_THRESHOLD = 300000;
     const now = Date.now();
 
-    if (now - this.startTime > DRIFT_CHECK_THRESHOLD) {
+    if (immediate || now - this.startTime > DRIFT_CHECK_THRESHOLD) {
       try {
         const { ConsistencyProbe } = await import('../metrics/cognitive-metrics');
         await ConsistencyProbe.detectDrift(this.agentId);
