@@ -137,14 +137,14 @@ describe('Handoff Protocol', () => {
     expect(result).toBe(false);
   });
 
-  it('should return false when stored handoff has no sessionId but check includes sessionId', async () => {
+  it('should return true when stored handoff has no sessionId but check includes sessionId (Global Handoff)', async () => {
     const future = Math.floor(Date.now() / 1000) + 100;
     ddbMock.on(GetCommand).resolves({
       Item: { userId: 'HANDOFF#user-1', expiresAt: future },
     });
 
     const result = await isHumanTakingControl('user-1', 'session-1');
-    expect(result).toBe(false);
+    expect(result).toBe(true);
   });
 
   it('should ignore sessionId parameter for backwards compatibility', async () => {

@@ -293,6 +293,30 @@ export async function getSummary(
 }
 
 /**
+ * Saves a distilled recovery log for agent context.
+ *
+ * @param base - The base memory provider instance.
+ * @param traceId - The trace identifier.
+ * @param log - The distilled recovery log content.
+ * @returns A promise resolving when the log is saved.
+ */
+export async function saveDistilledRecoveryLog(
+  base: BaseMemoryProvider,
+  traceId: string,
+  log: string
+): Promise<void> {
+  const { expiresAt, type } = await RetentionManager.getExpiresAt('DISTILLED', 'SYSTEM#RECOVERY');
+  await base.putItem({
+    userId: 'DISTILLED#RECOVERY',
+    timestamp: Date.now(),
+    type,
+    expiresAt,
+    content: log,
+    traceId,
+  });
+}
+
+/**
  * Updates the latest summary for a conversation session.
  *
  * @param base - The base memory provider instance.

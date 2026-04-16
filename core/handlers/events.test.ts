@@ -26,6 +26,14 @@ vi.mock('../lib/agent', () => {
   };
 });
 
+// Mock DistributedState
+vi.mock('../lib/utils/distributed-state', () => ({
+  DistributedState: {
+    isCircuitOpen: vi.fn().mockResolvedValue(false),
+    consumeToken: vi.fn().mockResolvedValue(true),
+  },
+}));
+
 // Import local code AFTER the mocks
 import { handler } from './events';
 import { EventType } from '../lib/types/agent';
@@ -138,7 +146,7 @@ describe('EventHandler', () => {
     it('should route SYSTEM_HEALTH_REPORT to health-handler', async () => {
       const event = {
         'detail-type': EventType.SYSTEM_HEALTH_REPORT,
-        detail: { userId: 'u1', sessionId: 'test', traceId: 'test' },
+        detail: { userId: 'u1', sessionId: 'test-session', traceId: 'test-trace' },
       };
       await handler(event as any, {} as any);
       const { handleHealthReport } = await import('./events/health-handler');
@@ -148,7 +156,7 @@ describe('EventHandler', () => {
     it('should route SYSTEM_BUILD_FAILED to build-handler', async () => {
       const event = {
         'detail-type': EventType.SYSTEM_BUILD_FAILED,
-        detail: { userId: 'u1', sessionId: 'test', traceId: 'test' },
+        detail: { userId: 'u1', sessionId: 'test-session', traceId: 'test-trace' },
       };
       await handler(event as any, {} as any);
       const { handleBuildFailure } = await import('./events/build-handler');
@@ -158,7 +166,7 @@ describe('EventHandler', () => {
     it('should route TASK_COMPLETED to task-result-handler', async () => {
       const event = {
         'detail-type': EventType.TASK_COMPLETED,
-        detail: { userId: 'u1', sessionId: 'test', traceId: 'test' },
+        detail: { userId: 'u1', sessionId: 'test-session', traceId: 'test-trace' },
       };
       await handler(event as any, {} as any);
       const { handleTaskResult } = await import('./events/task-result-handler');
@@ -168,7 +176,7 @@ describe('EventHandler', () => {
     it('should route CONTINUATION_TASK to continuation-handler', async () => {
       const event = {
         'detail-type': EventType.CONTINUATION_TASK,
-        detail: { userId: 'u1', sessionId: 'test', traceId: 'test' },
+        detail: { userId: 'u1', sessionId: 'test-session', traceId: 'test-trace' },
       };
       await handler(event as any, {} as any);
       const { handleContinuationTask } = await import('./events/continuation-handler');
@@ -191,7 +199,7 @@ describe('EventHandler', () => {
 
       const event = {
         'detail-type': EventType.SYSTEM_HEALTH_REPORT,
-        detail: { userId: 'user-safe', sessionId: 'test', traceId: 'test' },
+        detail: { userId: 'user-safe', sessionId: 'test-session', traceId: 'test-trace' },
       };
 
       await handler(event as any, {} as any);

@@ -40,32 +40,25 @@ export async function handler(
   const eventDetail = event.detail;
   const envelopeId = event.id;
 
-  // Validate payload
+  // Validate payload - Enforce strict requirements for sessionId and traceId
   const validation = validateEvent(eventDetail);
   if (!validation.valid) {
-    logger.warn(`[VALIDATION] Missing required fields: ${validation.errors?.join(', ')}`);
+    const errorMsg = `[VALIDATION] Missing required fields: ${validation.errors?.join(', ')}`;
+    logger.error(errorMsg);
+    await routeToDlq(event, detailType, 'SYSTEM', 'unknown', errorMsg);
+    emitMetrics([METRICS.dlqEvents(1)]).catch(() => {});
+    return;
   }
 
   // Recursion depth enforcement using unified DynamoDB-based recursion tracker
   const { isMissionContext } = await import('./events/shared');
   const { incrementRecursionDepth, getRecursionLimit } = await import('../lib/recursion-tracker');
   const traceId = eventDetail.traceId as string;
-
-  if (!traceId) {
-    logger.warn(`[RECURSION] Missing traceId in event ${detailType}`);
-    await routeToDlq(event, detailType, 'SYSTEM', 'unknown', `Missing traceId`);
-    emitMetrics([METRICS.dlqEvents(1)]).catch(() => {});
-    return;
-  }
+  const sessionId = eventDetail.sessionId as string;
 
   const isMission = isMissionContext(detailType, eventDetail as Record<string, unknown>);
   const recursionLimit = await getRecursionLimit(isMission);
-  const currentDepth = await incrementRecursionDepth(
-    traceId,
-    (eventDetail.sessionId as string) || 'unknown',
-    'system.spine',
-    isMission
-  );
+  const currentDepth = await incrementRecursionDepth(traceId, sessionId, 'system.spine', isMission);
 
   if (currentDepth > recursionLimit || currentDepth === -1) {
     logger.warn(

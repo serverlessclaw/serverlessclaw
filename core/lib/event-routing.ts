@@ -158,6 +158,10 @@ const BASE_EVENT_ROUTING: EventRoutingTable = {
     module: './events/escalation-handler',
     function: 'handleEscalationLevelTimeout',
   },
+  [EventType.ESCALATION_COMPLETED]: {
+    module: './events/escalation-handler',
+    function: 'handleEscalationCompleted',
+  },
   [EventType.CONSENSUS_REQUEST]: {
     module: './events/consensus-handler',
     function: 'handleConsensus',
@@ -181,6 +185,10 @@ const BASE_EVENT_ROUTING: EventRoutingTable = {
   [EventType.SYSTEM_AUDIT_TRIGGER]: {
     module: './events/audit-handler',
     function: 'handleSystemAuditTrigger',
+  },
+  [EventType.RECOVERY_LOG]: {
+    module: './events/recovery-handler',
+    function: 'handleRecoveryLog',
   },
   [EventType.DASHBOARD_FAILURE_DETECTED]: {
     module: './events/dashboard-failure-handler',
@@ -209,6 +217,10 @@ const BASE_EVENT_ROUTING: EventRoutingTable = {
   [EventType.HEALTH_ALERT]: {
     module: './events/health-handler',
     function: 'handleHealthAlert',
+  },
+  [EventType.REPUTATION_UPDATE]: {
+    module: './events/reputation-handler',
+    function: 'handleReputationUpdate',
   },
 };
 

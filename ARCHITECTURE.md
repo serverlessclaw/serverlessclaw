@@ -202,25 +202,26 @@ The system architecture follows a **Distributed Spine** model where all critical
           |
           v
   [ Silo 1: The Spine (EventHandler) ]
-          |-- (1) FlowControl (FlowController: Rate Limit / Circuit Breaker)
-          |-- (2) Trace-Aware Recursion Guard (Atomic monotonic increment)
+          |-- (1) Strict Payload Validation (Required: traceId, sessionId)
+          |-- (2) FlowControl (FlowController: Fail-Closed Rate Limit / Circuit Breaker)
+          |-- (3) Trace-Aware Recursion Guard (Atomic monotonic increment)
           v
   [ Agent Multiplexer (Gateway) ]
-          |-- (3) Dynamic Selection (AgentRouter.selectBestAgent)
-          |-- (4) Selection Integrity (Verify agent.enabled === true)
+          |-- (4) Dynamic Selection (AgentRouter.selectBestAgent)
+          |-- (5) Selection Integrity (Verify agent.enabled === true)
           v
   [ Agent Execution (Silo 2: The Hand) ]
-          |-- (5) Unified Config (ConfigManager: 60s Cached Dynamic Lookups)
-          |-- (6) Security Enforcement (ToolSecurityValidator: Safety/RBAC/Breaker)
-          |-- (7) Budget Enforcement (BudgetEnforcer: Tokens/Cost/Thresholds)
-          |-- (8) Isolated Workspace (/tmp/claw-workspaces/<traceId>)
+          |-- (6) Unified Config (ConfigManager: 60s Cached Dynamic Lookups)
+          |-- (7) Security Enforcement (ToolSecurityValidator: Safety/RBAC/Breaker)
+          |-- (8) Budget Enforcement (BudgetEnforcer: Tokens/Cost/Thresholds)
+          |-- (9) Isolated Workspace (/tmp/claw-workspaces/<traceId>)
           v
   [ Outcome (Success/Failure) ]
           |
           v
   [ Silo 6: The Scales (TrustManager) ]
-          |-- (9) Quality-Weighted Reputation Update
-          |-- (10) Atomic History Recording (list_append)
+          |-- (10) Quality-Weighted Reputation Update
+          |-- (11) Atomic History Recording (list_append)
           v
   [ ConfigTable (DDB) ] <--- (Feedback Loop for Selection Integrity)
 ```
@@ -234,6 +235,7 @@ To satisfy **Principle 5 (Low Latency)** and **Principle 10 (Lean Evolution)**, 
 1. **Cached Dynamic Lookups**: The `ConfigManager` maintains a 60-second in-memory cache for all configuration keys. This reduces DynamoDB read IOPS by >90% during high-concurrency swarm missions while allowing system-wide behavioral changes (e.g., disabling an agent, opening a circuit) to propagate within one minute.
 2. **Authoritative Async Bridge**: The `getDynamicConfigValue` utility provides a type-safe, non-blocking interface for fetching hot-swappable settings. It automatically falls back to hardcoded defaults if DynamoDB is unreachable or the key is missing.
 3. **Atomic Writes & Invalidation**: Configuration updates use DynamoDB conditional writes to prevent lost updates. Any write to the `ConfigTable` automatically invalidates the local cache instance, ensuring immediate consistency for the writing process.
+4. **Centralized Table Resolution**: Table names are resolved via `ddb-client.ts`, supporting environment variable overrides (`MEMORY_TABLE_NAME`, `CONFIG_TABLE_NAME`) for robust local development and multi-stage deployment alignment.
 
 ---
 
@@ -241,13 +243,14 @@ To satisfy **Principle 5 (Low Latency)** and **Principle 10 (Lean Evolution)**, 
 
 To maintain a **Stateless Core** (Principle 1) while ensuring systemic safety, the system externalizes all operational state:
 
-1.  **Distributed Flow Control**: The `FlowController` centralizes backbone circuit breakers and rate limiters using DynamoDB atomic counters. This prevents "phantom safety" where different Lambda instances have divergent views of system health.
+1.  **Distributed Flow Control**: The `FlowController` centralizes backbone circuit breakers and rate limiters using DynamoDB atomic counters. It enforces a **Fail-Closed** strategy (Principle 13): if the system cannot verify safety state due to database failure, the operation is rejected to preserve system integrity.
 2.  **Surgical Security Enforcement**: The `ToolSecurityValidator` decouples security logic from tool execution. It enforces the "Shield" (SafetyEngine) rules, RBAC permissions, and system-level circuit breakers before any tool interaction occurs.
-3.  **Budget Guardrails**: Operationalized via the centralized `BudgetEnforcer`. It provides real-time monitoring of token consumption and monetary costs during agent loops. It triggers soft warnings at 80% usage and hard stops when limits are exceeded, ensuring identical safety behavior across standard and streaming executors.
-4.  **Selection Integrity**: The `AgentMultiplexer` acts as the authoritative gateway. It performs a mandatory configuration check for every agent before invocation, ensuring that `enabled: false` status is strictly enforced regardless of the event source.
-5.  **Dynamic Routing**: The `AgentRouter` uses historical success rates and reputation scores to dynamically select the best agent for a given task, prioritizing capability match over marginal token cost differences (Principle 10).
-6.  **Monotonic Recursion Tracking**: Cross-session recursion depth is managed via atomic increments in the `recursion-tracker`, preventing loop-bypass attacks in concurrent swarm scenarios.
-7.  **Unified Security Constants**: Protection patterns are consolidated into a single source of truth (`core/lib/constants/safety.ts`), ensuring consistent enforcement across the filesystem and cloud resources.
+3.  **Strict Payload Validation**: The `EventHandler` enforces mandatory presence of `traceId` and `sessionId` at the entry point, preventing malformed signals from polluting the backbone.
+4.  **Budget Guardrails**: Operationalized via the centralized `BudgetEnforcer`. It provides real-time monitoring of token consumption and monetary costs during agent loops. It triggers soft warnings at 80% usage and hard stops when limits are exceeded, ensuring identical safety behavior across standard and streaming executors.
+5.  **Selection Integrity**: The `AgentMultiplexer` acts as the authoritative gateway. It performs a mandatory configuration check for every agent before invocation, ensuring that `enabled: false` status is strictly enforced regardless of the event source.
+6.  **Dynamic Routing**: The `AgentRouter` uses historical success rates and reputation scores to dynamically select the best agent for a given task, prioritizing capability match over marginal token cost differences (Principle 10).
+7.  **Monotonic Recursion Tracking**: Cross-session recursion depth is managed via atomic increments in the `recursion-tracker`, preventing loop-bypass attacks in concurrent swarm scenarios.
+8.  **Unified Security Constants**: Protection patterns are consolidated into a single source of truth (`core/lib/constants/safety.ts`), ensuring consistent enforcement across the filesystem and cloud resources.
 
 ---
 

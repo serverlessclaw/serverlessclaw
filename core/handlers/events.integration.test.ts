@@ -14,6 +14,14 @@ vi.mock('sst', () => ({
   ),
 }));
 
+// Mock DistributedState
+vi.mock('../lib/utils/distributed-state', () => ({
+  DistributedState: {
+    isCircuitOpen: vi.fn().mockResolvedValue(false),
+    consumeToken: vi.fn().mockResolvedValue(true),
+  },
+}));
+
 vi.mock('../lib/logger', () => ({
   logger: {
     info: vi.fn(),
@@ -88,6 +96,7 @@ describe('Event Router Integration', () => {
           buildId: 'build-123',
           errorLogs: 'Test error',
           traceId: 'trace-1',
+          sessionId: 'session-1',
           initiatorId: 'test',
           task: 'Test task',
         },
@@ -117,6 +126,7 @@ describe('Event Router Integration', () => {
           initiatorId: 'test',
           task: 'Test task',
           traceId: 'trace-2',
+          sessionId: 'session-2',
         },
       },
       {} as any
@@ -164,7 +174,7 @@ describe('Event Router Integration', () => {
     const result = await handler(
       {
         'detail-type': 'unknown_event_type_xyz',
-        detail: { userId: 'user-1' },
+        detail: { userId: 'user-1', sessionId: 's1', traceId: 't1' },
       },
       {} as any
     );

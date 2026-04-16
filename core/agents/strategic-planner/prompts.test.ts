@@ -57,6 +57,7 @@ function createMockMemory(overrides: Partial<IMemory> = {}): IMemory {
     getEscalationState: vi.fn().mockResolvedValue(null),
     findExpiredClarifications: vi.fn().mockResolvedValue([]),
     incrementClarificationRetry: vi.fn().mockResolvedValue(0),
+    saveDistilledRecoveryLog: vi.fn().mockResolvedValue(undefined),
     getCollaboration: vi.fn().mockResolvedValue(null),
     checkCollaborationAccess: vi.fn().mockResolvedValue(true),
     closeCollaboration: vi.fn().mockResolvedValue(undefined),

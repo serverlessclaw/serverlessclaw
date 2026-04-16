@@ -309,6 +309,13 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   }
 
   /**
+   * Saves a distilled recovery log for agent context.
+   */
+  async saveDistilledRecoveryLog(traceId: string, log: string): Promise<void> {
+    return SessionOps.saveDistilledRecoveryLog(this, traceId, log);
+  }
+
+  /**
    * Retrieves the latest summary for a conversation session.
    */
   async getSummary(userId: string, workspaceId?: string): Promise<string | null> {

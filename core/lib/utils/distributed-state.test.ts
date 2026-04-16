@@ -92,6 +92,12 @@ describe('DistributedState', () => {
       // Verify reset was called - should have 2 calls (get + update)
       expect(mockSend).toHaveBeenCalledTimes(2);
     });
+
+    it('should return true (Fail-Closed) if DynamoDB fails', async () => {
+      mockSend.mockRejectedValue(new Error('DDB failure'));
+      const isOpen = await DistributedState.isCircuitOpen('test', 5, 60000);
+      expect(isOpen).toBe(true);
+    });
   });
 
   describe('consumeToken', () => {
@@ -122,8 +128,7 @@ describe('DistributedState', () => {
       mockSend.mockResolvedValueOnce({
         Item: {
           tokens: 0,
-          lastRefill: Date.now() - 2000, // 2s ago, should refill 2 tokens if refillMs=1000 and capacity=10?
-          // Interval = 1000/10 = 100ms. 2000ms = 20 tokens (capped at capacity 10).
+          lastRefill: Date.now() - 2000, // 2s ago
         },
       });
       mockSend.mockResolvedValueOnce({}); // Update succeeds
@@ -136,10 +141,16 @@ describe('DistributedState', () => {
       mockSend.mockResolvedValueOnce({
         Item: {
           tokens: 0,
-          lastRefill: Date.now() - 10, // 10ms ago, not enough for refill interval
+          lastRefill: Date.now() - 10, // 10ms ago
         },
       });
 
+      const allowed = await DistributedState.consumeToken('test-rate', 10, 1000);
+      expect(allowed).toBe(false);
+    });
+
+    it('should return false (Fail-Closed) if DynamoDB fails', async () => {
+      mockSend.mockRejectedValue(new Error('DDB failure'));
       const allowed = await DistributedState.consumeToken('test-rate', 10, 1000);
       expect(allowed).toBe(false);
     });

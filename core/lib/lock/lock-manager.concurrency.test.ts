@@ -2,6 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { LockManager } from './lock-manager';
 import { UpdateCommand } from '@aws-sdk/lib-dynamodb';
 
+// Mock ddb-client
+vi.mock('../utils/ddb-client', () => ({
+  getMemoryTableName: vi.fn(() => 'test-memory-table'),
+  getDocClient: vi.fn(() => ({
+    send: (...args: any[]) => mockSend(...args),
+  })),
+}));
+
 // Mock docClient.send
 const mockSend = vi.fn();
 vi.mock('@aws-sdk/lib-dynamodb', async (importOriginal) => {

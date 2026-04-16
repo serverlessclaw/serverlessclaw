@@ -34,6 +34,22 @@ vi.mock('../lib/utils/agent-helpers/event-emitter', () => ({
   emitTaskEvent: vi.fn(),
 }));
 
+// Mock DistributedState
+vi.mock('../lib/utils/distributed-state', () => ({
+  DistributedState: {
+    isCircuitOpen: vi.fn().mockResolvedValue(false),
+    consumeToken: vi.fn().mockResolvedValue(true),
+  },
+}));
+
+// Mock ddb-client
+vi.mock('../lib/utils/ddb-client', () => ({
+  getMemoryTableName: vi.fn(() => 'test-memory-table'),
+  getDocClient: vi.fn(() => ({
+    send: vi.fn().mockResolvedValue({}),
+  })),
+}));
+
 vi.mock('../lib/logger', () => ({
   logger: {
     info: vi.fn(),
@@ -63,6 +79,7 @@ describe('AgentRunner Decomposition Logic', () => {
       userId: 'user-1',
       task: 'Original Task',
       traceId: 'trace-1',
+      sessionId: 'session-1',
       depth: 0,
     },
   } as any;

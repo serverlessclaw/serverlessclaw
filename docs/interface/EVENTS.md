@@ -28,14 +28,15 @@ The Spine maintains system stability through distributed state management and pr
 
 - **Yield to Tie-break**: The `AgentMultiplexer` monitors collaboration timeouts in real-time. If a session exceeds its `TIE_BREAK_TIMEOUT_MS`, the multiplexer **immediately halts processing** and yields to the Facilitator's strategic tie-break to prevent "split-brain" state corruption.
 - **DistributedState**: Circuit breakers and rate limiters are grounded in `MemoryTable` rather than in-memory volatile state. This ensures protection is enforced consistently across all concurrent Lambda execution environments.
-- **Fail-Closed Strategy**: Rate limiting enforces a **fail-closed** policy after 5 retries. If the system cannot atomically verify token availability due to extreme contention, it rejects the event to prevent potential over-consumption and protect downstream capacity.
-- **Config Caching**: To minimize DynamoDB overhead, static configuration thresholds (limits, timeouts) are cached in-memory with a 1-minute TTL (`getCachedConfig`), balancing performance with operational flexibility.
+- **Fail-Closed Strategy (Principle 13)**: Rate limiting and circuit breakers enforce a **fail-closed** policy. If the system cannot atomically verify token availability or circuit status due to database failure or extreme contention, it rejects the operation/event to preserve system integrity and protect downstream capacity.
+- **Config Caching**: To minimize DynamoDB overhead, static configuration thresholds (limits, timeouts) are cached in-memory with a 1-minute TTL (`ConfigManager`), balancing performance with operational flexibility.
 
 ### 3. Agent Selection & Routing (Selection Integrity)
 
 The `AgentRouter` selects the best candidate from the `AgentRegistry` based on trust scores and capability matching.
 
 - **Selection Integrity (Principle 14)**: Operational status (`enabled === true`) is verified at the gateway for **all** selection paths. No reputation score or historical performance can override a "disabled" flag.
+- **Performance Optimization**: `AgentRouter` utilizes top-level imports and cached registry lookups to minimize orchestration latency.
 - **Fallback**: If no high-trust agent is available, the backbone falls back to a deterministic supervisor (SuperClaw) for graceful degradation.
 
 ### 4. Distributed Lock Management
@@ -123,6 +124,10 @@ Standard event types and their default priority levels are centrally defined to 
   [ EventBridge Event ]
           |
           v
+  [ EventHandler ] -- (Strict Validation) -> [ Missing traceId/sessionId? ] -- YES --> [ Reject & DLQ ]
+          |                                                                           (Fail-Closed)
+          | (NO)
+          v
   [ Agent Multiplexer ] -- (Check Timeout) -> [ Timed Out? ] -- YES --> [ HALT & Yield ]
           |                                                             (Tie-break)
           | (NO)
@@ -152,6 +157,14 @@ Standard event types and their default priority levels are centrally defined to 
 - **Safety Enforcement**: Returns the _new_ depth value immediately; calling code rejects any operation where `newDepth > RECURSION_LIMIT`.
 - **TTL**: Normal traces use 1-hour TTL; mission-critical contexts use 30-minute TTL
 - **Error Handling**: Database failures return `-1` (sentinel) to distinguish from no-entry (`0`)
+
+## Backbone Gap Management (April 2026)
+
+To prevent signal loss and ensure high-fidelity telemetry, the system now implements specific handlers for previously unhandled "Backbone Gaps":
+
+- **Reputation Updates**: `REPUTATION_UPDATE` events are processed by the `reputation-handler` to synchronize trust scores with the live dashboard.
+- **Escalation Completion**: `ESCALATION_COMPLETED` events are handled to ensure clean closure of human-intervention loops.
+- **Emergency Recovery Logs**: `RECOVERY_LOG` events are distilled and stored to provide agents with context about recent system rollbacks (Principle 1).
 
 ## Bus Lifecycle (Reserve-then-Commit)
 

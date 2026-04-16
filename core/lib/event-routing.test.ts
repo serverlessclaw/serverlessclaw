@@ -38,6 +38,9 @@ describe('event-routing', () => {
       EventType.REPORT_BACK,
       EventType.SYSTEM_AUDIT_TRIGGER,
       EventType.DASHBOARD_FAILURE_DETECTED,
+      EventType.RECOVERY_LOG,
+      EventType.REPUTATION_UPDATE,
+      EventType.ESCALATION_COMPLETED,
     ];
 
     it.each(REQUIRED_EVENT_TYPES)('should have routing entry for %s', (eventType) => {
@@ -48,8 +51,8 @@ describe('event-routing', () => {
 
     it('should have exactly the expected number of routing entries', () => {
       // This test will fail if someone adds a new event type without adding routing
-      // Update this count when adding new routable event types (currently 29)
-      expect(Object.keys(DEFAULT_EVENT_ROUTING)).toHaveLength(29);
+      // Update this count when adding new routable event types (currently 32)
+      expect(Object.keys(DEFAULT_EVENT_ROUTING)).toHaveLength(32);
     });
   });
 
@@ -95,6 +98,8 @@ describe('event-routing', () => {
         'orchestration-handler',
         'delegation-handler',
         'handoff-handler',
+        'reputation-handler',
+        'recovery-handler',
       ];
 
       for (const [, routing] of Object.entries(DEFAULT_EVENT_ROUTING)) {
@@ -236,16 +241,13 @@ describe('event-routing', () => {
       }
     });
   });
-
   describe('Event types NOT in routing (expected)', () => {
     // These event types are emitted but not routed to handlers in events.ts
     // They are handled by other components (e.g., SuperClaw webhook handler)
     const UNROUTED_EVENTS = [
       EventType.OUTBOUND_MESSAGE,
       EventType.SCHEDULE_TASK,
-      EventType.REPUTATION_UPDATE,
       EventType.CONSENSUS_REACHED,
-      EventType.ESCALATION_COMPLETED,
       EventType.HANDOFF,
       EventType.HEALTH_ALERT,
       EventType.CHUNK,
@@ -258,7 +260,6 @@ describe('event-routing', () => {
       EventType.CRITIC_TASK,
       EventType.QA_TASK,
     ];
-
     it('should document which event types are intentionally not routed', () => {
       // This test documents the expected behavior - these events are handled elsewhere
       for (const eventType of UNROUTED_EVENTS) {

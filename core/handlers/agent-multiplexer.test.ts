@@ -11,6 +11,28 @@ vi.mock('../lib/warmup', () => ({
   })),
 }));
 
+// Mock DistributedState
+vi.mock('../lib/utils/distributed-state', () => ({
+  DistributedState: {
+    isCircuitOpen: vi.fn().mockResolvedValue(false),
+    consumeToken: vi.fn().mockResolvedValue(true),
+  },
+}));
+
+// Mock ddb-client
+vi.mock('../lib/utils/ddb-client', () => ({
+  getMemoryTableName: vi.fn(() => 'test-memory-table'),
+  getDocClient: vi.fn(() => ({
+    send: vi.fn().mockResolvedValue({}),
+  })),
+}));
+
+// Mock recursion-tracker
+vi.mock('../lib/recursion-tracker', () => ({
+  incrementRecursionDepth: vi.fn(async () => 1),
+  getRecursionLimit: vi.fn(async () => 15),
+}));
+
 // Mocking agent-helpers
 vi.mock('../lib/utils/agent-helpers', () => ({
   handleWarmup: vi.fn(),
@@ -23,6 +45,7 @@ vi.mock('../lib/logger', () => ({
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
+    debug: vi.fn(),
   },
 }));
 
@@ -31,6 +54,12 @@ describe('AgentMultiplexer', () => {
     awsRequestId: 'test-request-id',
   } as Context;
 
+  const baseEventDetail = {
+    userId: 'u1',
+    sessionId: 's1',
+    traceId: 't1',
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -38,7 +67,7 @@ describe('AgentMultiplexer', () => {
   it('should handle centralized warmup and return WARM', async () => {
     vi.mocked(agentHelpers.handleWarmup).mockResolvedValue(true);
 
-    const event = { 'detail-type': 'WARMUP' };
+    const event = { 'detail-type': 'WARMUP', detail: baseEventDetail };
     const result = await handler(event, mockContext);
 
     expect(result).toBe('WARM');
@@ -53,7 +82,7 @@ describe('AgentMultiplexer', () => {
       handler: vi.fn().mockResolvedValue('CODER_DONE'),
     }));
 
-    const event = { 'detail-type': EventType.CODER_TASK };
+    const event = { 'detail-type': EventType.CODER_TASK, detail: baseEventDetail };
     const result = await handler(event, mockContext);
 
     expect(result).toBe('CODER_DONE');
@@ -67,7 +96,7 @@ describe('AgentMultiplexer', () => {
       handler: vi.fn().mockResolvedValue('QA_DONE'),
     }));
 
-    const event = { 'detail-type': 'qa_task' };
+    const event = { 'detail-type': 'qa_task', detail: baseEventDetail };
     const result = await handler(event, mockContext);
 
     expect(result).toBe('QA_DONE');
@@ -81,7 +110,7 @@ describe('AgentMultiplexer', () => {
       handler: vi.fn().mockResolvedValue('CRITIC_DONE'),
     }));
 
-    const event = { 'detail-type': 'critic_task' };
+    const event = { 'detail-type': 'critic_task', detail: baseEventDetail };
     const result = await handler(event, mockContext);
 
     expect(result).toBe('CRITIC_DONE');
@@ -90,7 +119,7 @@ describe('AgentMultiplexer', () => {
   it('should return undefined for unrecognized event types', async () => {
     vi.mocked(agentHelpers.handleWarmup).mockResolvedValue(false);
 
-    const event = { 'detail-type': 'unsupported_event' };
+    const event = { 'detail-type': 'unsupported_event', detail: baseEventDetail };
     const result = await handler(event, mockContext);
 
     expect(result).toBeUndefined();
@@ -104,7 +133,7 @@ describe('AgentMultiplexer', () => {
       handler: 'not-a-function',
     }));
 
-    const event = { 'detail-type': EventType.MERGER_TASK };
+    const event = { 'detail-type': EventType.MERGER_TASK, detail: baseEventDetail };
     await expect(handler(event, mockContext)).rejects.toThrow(
       'Agent merger does not export a valid handler function.'
     );

@@ -77,6 +77,8 @@ const TIER_MODELS: Record<ModelTier, { provider: string; model: string }[]> = {
   ],
 };
 
+import { AgentRegistry } from '../registry/AgentRegistry';
+
 /**
  * AgentRouter provides dynamic model and agent selection based on task characteristics.
  */
@@ -229,7 +231,6 @@ export class AgentRouter {
   ): Promise<string> {
     if (candidates.length === 0) throw new Error('No candidate agents provided');
 
-    const { AgentRegistry } = await import('../registry/AgentRegistry');
     const configs = await Promise.all(candidates.map((id) => AgentRegistry.getAgentConfig(id)));
     let enabledIds = candidates.filter((id, i) => configs[i]?.enabled === true);
 

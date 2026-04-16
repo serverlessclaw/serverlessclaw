@@ -1,15 +1,15 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, UpdateCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
-import { Resource } from 'sst';
 import { logger } from '../logger';
+
+import { getMemoryTableName } from './ddb-client';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client, {
   marshallOptions: { removeUndefinedValues: true },
 });
 
-const TABLE_NAME =
-  (Resource as unknown as { MemoryTable: { name: string } }).MemoryTable?.name || 'MemoryTable';
+const TABLE_NAME = getMemoryTableName();
 
 /**
  * Distributed State Utilities for Circuit Breakers and Rate Limiting.
@@ -18,6 +18,7 @@ const TABLE_NAME =
 export class DistributedState {
   /**
    * Checks if a circuit breaker is open.
+   * Enforces Principle 13 (Fail-Closed Strategy).
    */
   static async isCircuitOpen(key: string, threshold: number, timeoutMs: number): Promise<boolean> {
     try {
@@ -88,8 +89,10 @@ export class DistributedState {
       }
       return false;
     } catch (e) {
-      logger.warn(`[DISTRIBUTED_STATE] Circuit check failed for ${key}:`, e);
-      return false; // Fail closed (allow traffic)
+      logger.error(`[DISTRIBUTED_STATE] Circuit check failed for ${key}:`, e);
+      // Enforce Principle 13: Fail-Closed Strategy. If circuit status is unknown,
+      // we must assume the circuit is open to prevent cascading failures.
+      return true;
     }
   }
 
@@ -147,6 +150,7 @@ export class DistributedState {
   /**
    * Consumes a token for rate limiting.
    * Implements a distributed token bucket.
+   * Enforces Principle 13 (Fail-Closed Strategy).
    */
   static async consumeToken(
     key: string,
@@ -154,7 +158,12 @@ export class DistributedState {
     refillMs: number,
     retryCount = 0
   ): Promise<boolean> {
-    if (retryCount >= 5) return false; // Fail closed after retries to ensure rate limit integrity
+    if (retryCount >= 5) {
+      // Enforce Principle 13: Fail-Closed Strategy after retries to ensure rate limit integrity.
+      logger.warn(`[DISTRIBUTED_STATE] Rate limit retry limit exceeded for ${key}`);
+      return false;
+    }
+
     try {
       const fullKey = `RATE#${key}`;
       const now = Date.now();
@@ -202,7 +211,7 @@ export class DistributedState {
         }
       }
 
-      if (!state) return true; // Safety fallback
+      if (!state) return true; // Safety fallback for corrupted record
 
       // 2. Calculate refill
       const lastRefill = state.lastRefill as number;
@@ -242,8 +251,10 @@ export class DistributedState {
         // Race condition - retry once
         return DistributedState.consumeToken(key, capacity, refillMs, retryCount + 1);
       }
-      logger.warn(`[DISTRIBUTED_STATE] Rate limit check failed for ${key}:`, e);
-      return true; // Fail open
+      logger.error(`[DISTRIBUTED_STATE] Rate limit check failed for ${key}:`, e);
+      // Enforce Principle 13: Fail-Closed Strategy. If rate limit status is unknown
+      // due to system failure, we reject the operation to preserve stability.
+      return false;
     }
   }
 }

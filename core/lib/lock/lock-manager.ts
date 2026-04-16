@@ -6,8 +6,8 @@
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, UpdateCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
-import { Resource } from 'sst';
 import { logger } from '../logger';
+import { getMemoryTableName, getDocClient } from '../utils/ddb-client';
 
 export interface LockOptions {
   ttlSeconds: number;
@@ -25,18 +25,9 @@ export class LockManager {
   private tableName: string;
   private defaultPrefix: string = 'LOCK#';
 
-  constructor(client?: DynamoDBClient) {
-    const dbClient = client || new DynamoDBClient({});
-    this.docClient = DynamoDBDocumentClient.from(dbClient, {
-      marshallOptions: { removeUndefinedValues: true },
-    });
-    try {
-      this.tableName =
-        (Resource as unknown as Record<string, { name: string }>).MemoryTable?.name ||
-        'MemoryTable';
-    } catch {
-      this.tableName = process.env.MEMORY_TABLE_NAME || 'MemoryTable';
-    }
+  constructor(_client?: DynamoDBClient) {
+    this.docClient = getDocClient();
+    this.tableName = getMemoryTableName();
   }
 
   private getFullId(lockId: string, prefix?: string): string {

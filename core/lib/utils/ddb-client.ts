@@ -37,30 +37,45 @@ export function resetDocClient(): void {
 
 /**
  * Returns the name of the ConfigTable resource.
+ * Respects CONFIG_TABLE_NAME environment variable.
  *
  * @returns The table name string.
  */
 export function getConfigTableName(): string {
-  const resource = Resource as unknown as SSTResource;
-  return resource.ConfigTable?.name ?? 'ConfigTable';
+  try {
+    const resource = Resource as unknown as SSTResource;
+    return process.env.CONFIG_TABLE_NAME || resource.ConfigTable?.name || 'ConfigTable';
+  } catch {
+    return process.env.CONFIG_TABLE_NAME || 'ConfigTable';
+  }
 }
 
 /**
  * Returns the name of the MemoryTable resource.
+ * Respects MEMORY_TABLE_NAME environment variable.
  *
  * @returns The table name string.
  */
 export function getMemoryTableName(): string {
-  const resource = Resource as unknown as SSTResource;
-  return resource.MemoryTable?.name ?? 'MemoryTable';
+  try {
+    const resource = Resource as unknown as SSTResource;
+    return process.env.MEMORY_TABLE_NAME || resource.MemoryTable?.name || 'MemoryTable';
+  } catch {
+    return process.env.MEMORY_TABLE_NAME || 'MemoryTable';
+  }
 }
 
 /**
  * Returns the name of the TraceTable resource.
+ * Respects TRACE_TABLE_NAME environment variable.
  *
  * @returns The table name string.
  */
 export function getTraceTableName(): string {
-  const resource = Resource as unknown as SSTResource;
-  return resource.TraceTable?.name ?? 'TraceTable';
+  try {
+    const resource = Resource as unknown as SSTResource;
+    return process.env.TRACE_TABLE_NAME || resource.TraceTable?.name || 'TraceTable';
+  } catch {
+    return process.env.TRACE_TABLE_NAME || 'TraceTable';
+  }
 }

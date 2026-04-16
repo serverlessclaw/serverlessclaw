@@ -69,3 +69,21 @@ export async function handleEscalationLevelTimeout(
     logger.error(`Failed to handle escalation level timeout for ${traceId}/${agentId}:`, error);
   }
 }
+
+/**
+ * Handles escalation completed events
+ *
+ * @param eventDetail - The event detail containing final escalation state
+ */
+export async function handleEscalationCompleted(
+  eventDetail: Record<string, unknown>
+): Promise<void> {
+  const { traceId, agentId, outcome, currentLevel } = eventDetail;
+
+  logger.info(
+    `Escalation completed: traceId=${traceId}, agentId=${agentId}, ` +
+      `outcome=${outcome}, finalLevel=${currentLevel}`
+  );
+
+  // Additional cleanup or metrics tracking can be added here
+}
