@@ -2,13 +2,23 @@ import { TokenRollup } from './token-usage';
 import { AgentType } from '../types/agent';
 import { logger } from '../logger';
 
+/**
+ * Factor used to estimate p95 latency from average latency when percentile data is unavailable.
+ * This heuristic accounts for typical long-tail distribution in serverless execution.
+ */
+const LATENCY_P95_ESTIMATION_FACTOR = 1.25;
+
 async function emitSLOStatusMetrics(
   sloName: string,
+  metricType: 'availability' | 'task_success_rate' | 'avg_latency',
   current: number,
   target: number,
   withinBudget: boolean
 ): Promise<void> {
   try {
+    const isLatency = metricType === 'avg_latency';
+    const unit = isLatency ? 'Milliseconds' : 'Count';
+
     const { emitMetrics } = await import('./metrics');
     await emitMetrics([
       {
@@ -23,13 +33,13 @@ async function emitSLOStatusMetrics(
       {
         MetricName: 'SLOCurrent',
         Value: current,
-        Unit: 'Milliseconds',
+        Unit: unit,
         Dimensions: [{ Name: 'SLO', Value: sloName }],
       },
       {
         MetricName: 'SLOTarget',
         Value: target,
-        Unit: 'Milliseconds',
+        Unit: unit,
         Dimensions: [{ Name: 'SLO', Value: sloName }],
       },
     ]);
@@ -65,7 +75,7 @@ export class SLOTracker {
     const totalInvocations = rollups.reduce((s, r) => s + r.invocationCount, 0);
     const totalDuration = rollups.reduce((s, r) => s + (r.totalDurationMs || 0), 0);
     const avg = totalInvocations > 0 ? totalDuration / totalInvocations : 0;
-    return avg * 1.25;
+    return avg * LATENCY_P95_ESTIMATION_FACTOR;
   }
 
   static async checkSLO(
@@ -138,7 +148,7 @@ export class SLOTracker {
         current = 0;
       }
 
-      await emitSLOStatusMetrics(slo.name, current, slo.target, withinBudget);
+      await emitSLOStatusMetrics(slo.name, slo.metric, current, slo.target, withinBudget);
 
       result[slo.name] = {
         current: Math.round(current * 1000) / 1000,

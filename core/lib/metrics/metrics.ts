@@ -57,19 +57,28 @@ async function persistToDynamoDB(metrics: MetricDatum[]): Promise<void> {
         new PutCommand({
           TableName: tableName,
           Item: {
-            key: `metric:${m.MetricName}:${now}:${Math.random().toString(36).slice(2, 9)}`,
+            key: `METRIC#${m.MetricName}#${now}#${Math.random().toString(36).slice(2, 8)}`,
             metricName: m.MetricName,
             value: m.Value,
             unit: m.Unit ?? 'Count',
             dimensions: m.Dimensions,
             timestamp: now,
-            expiresAt: Math.floor(now / 1000) + 7 * 86400,
+            expiresAt: Math.floor(now / 1000) + 7 * 86400, // 7 days retention
           },
         })
       );
     }
   } catch (e) {
-    console.debug('[METRICS] DynamoDB fallback failed:', e);
+    // Only use console if logger import fails, otherwise use logger
+    try {
+      const { logger } = await import('../logger');
+      logger.error('[METRICS] Critical DynamoDB fallback failed', {
+        error: e,
+        metricCount: critical.length,
+      });
+    } catch {
+      console.error('[METRICS] DynamoDB fallback failed and logger unavailable:', e);
+    }
   }
 }
 
@@ -85,7 +94,8 @@ export async function emitMetrics(metrics: MetricDatum[]): Promise<void> {
 
   const cw = await getCloudWatchClient();
   if (!cw) {
-    console.warn('[METRICS] CloudWatch not available, persisting critical metrics to DynamoDB');
+    const { logger } = await import('../logger');
+    logger.warn('[METRICS] CloudWatch not available, persisting critical metrics to DynamoDB');
     await persistToDynamoDB(metrics);
     return;
   }
@@ -104,7 +114,10 @@ export async function emitMetrics(metrics: MetricDatum[]): Promise<void> {
     });
     await cw.send(command);
   } catch (error) {
-    console.error('[METRICS] Failed to emit CloudWatch metrics, falling back to DynamoDB:', error);
+    const { logger } = await import('../logger');
+    logger.error('[METRICS] Failed to emit CloudWatch metrics, falling back to DynamoDB', {
+      error,
+    });
     await persistToDynamoDB(metrics);
   }
 }

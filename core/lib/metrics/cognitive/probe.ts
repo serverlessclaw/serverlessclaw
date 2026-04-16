@@ -32,35 +32,29 @@ export class ConsistencyProbe {
     drift: number;
     details: string;
   }> {
-    // 1. Get raw task completions from metrics table
-    const items = await this.base.queryItems({
+    // 1. Fetch all metrics for the agent in this window in ONE query
+    const allMetrics = await this.base.queryItems({
       KeyConditionExpression: 'userId = :pk AND #ts BETWEEN :start AND :end',
-      FilterExpression: 'metricName = :name',
       ExpressionAttributeNames: { '#ts': 'timestamp' },
       ExpressionAttributeValues: {
         ':pk': `${MEMORY_KEYS.HEALTH_PREFIX}METRIC#${agentId}`,
         ':start': windowStart,
         ':end': windowEnd,
-        ':name': 'task_completed',
       },
     });
 
-    const metricsCount = items.length;
-
-    // 2. Verify internal consistency: task_completed vs task_latency_ms should be 1:1
-    const latencyItems = await this.base.queryItems({
-      KeyConditionExpression: 'userId = :pk AND #ts BETWEEN :start AND :end',
-      FilterExpression: 'metricName = :name',
-      ExpressionAttributeNames: { '#ts': 'timestamp' },
-      ExpressionAttributeValues: {
-        ':pk': `${MEMORY_KEYS.HEALTH_PREFIX}METRIC#${agentId}`,
-        ':start': windowStart,
-        ':end': windowEnd,
-        ':name': 'task_latency_ms',
+    // 2. Count metrics by name in memory
+    const counts = allMetrics.reduce(
+      (acc: Record<string, number>, item: { metricName?: string }) => {
+        const name = (item.metricName as string) || 'unknown';
+        acc[name] = (acc[name] || 0) + 1;
+        return acc;
       },
-    });
+      {}
+    );
 
-    const latencyCount = latencyItems.length;
+    const metricsCount = counts['task_completed'] || 0;
+    const latencyCount = counts['task_latency_ms'] || 0;
     const internalDrift = Math.abs(metricsCount - latencyCount);
 
     // 3. Cross-reference with TraceTable for end-to-end verification
@@ -92,10 +86,7 @@ export class ConsistencyProbe {
     try {
       const typedResource = Resource as unknown as SSTResource;
       const tableName = typedResource.TraceTable?.name;
-      if (!tableName) {
-        logger.debug('TraceTable not available in resources');
-        return 0;
-      }
+      if (!tableName) return 0;
 
       const client = new DynamoDBClient({});
       const docClient = DynamoDBDocumentClient.from(client, {
@@ -119,7 +110,7 @@ export class ConsistencyProbe {
 
       return response.Count ?? 0;
     } catch (e) {
-      logger.debug('Failed to query TraceTable for consistency check:', e);
+      logger.debug('[Probe] Failed to query TraceTable cross-reference:', e);
       return 0;
     }
   }
@@ -137,30 +128,30 @@ export class ConsistencyProbe {
     const parts: string[] = [];
 
     if (internalDrift === 0) {
-      parts.push(
-        `Internal metrics consistent (${metricsCount} task completions, ${latencyCount} latency records)`
-      );
+      parts.push(`Internal metrics consistent (${metricsCount} completions)`);
     } else {
       parts.push(
-        `INTERNAL DRIFT: ${internalDrift} - task completions (${metricsCount}) vs latency records (${latencyCount})`
+        `INTERNAL DRIFT: ${internalDrift} (completions: ${metricsCount}, latency records: ${latencyCount})`
       );
     }
 
-    if (traceDrift === 0 || traceCount === 0) {
-      parts.push(
-        `TraceTable cross-reference: ${traceCount > 0 ? 'consistent' : 'unavailable (requires agentId GSI)'}`
-      );
+    if (traceCount > 0) {
+      if (traceDrift === 0) {
+        parts.push(`TraceTable verified (${traceCount} traces)`);
+      } else {
+        parts.push(
+          `TRACE DRIFT: ${traceDrift} (metrics: ${metricsCount}, actual traces: ${traceCount})`
+        );
+      }
     } else {
-      parts.push(
-        `TRACE DRIFT: ${traceDrift} - metrics (${metricsCount}) vs actual traces (${traceCount})`
-      );
+      parts.push('TraceTable cross-reference unavailable');
     }
 
     return parts.join('. ');
   }
 
   /**
-   * Static helper for quick drift detection (default: last 1 hour).
+   * Static helper for quick drift detection.
    */
   static async detectDrift(agentId: string, memory?: BaseMemoryProvider): Promise<boolean> {
     const provider = memory ?? new DynamoMemory();
@@ -169,15 +160,14 @@ export class ConsistencyProbe {
     const result = await probe.verifyTraceConsistency(agentId, now - 3600000, now);
 
     if (!result.consistent && result.drift > 0) {
-      logger.warn(`[Silo 5] Signal drift detected for agent ${agentId}: ${result.details}`);
+      logger.warn(`[Eye] Signal drift detected for agent ${agentId}: ${result.details}`);
 
-      // Emit immediate failure event for monitoring to trigger real-time remediation
       try {
         const { emitEvent } = await import('../../utils/bus');
         const { AgentType, EventType, TraceSource } = await import('../../types/agent');
         await emitEvent(AgentType.RECOVERY, EventType.DASHBOARD_FAILURE_DETECTED, {
           userId: 'SYSTEM',
-          traceId: `drift-${agentId}-${Date.now()}`,
+          traceId: `drift-${agentId}-${now}`,
           agentId,
           task: 'Consistency Check',
           error: `SIGNAL_DRIFT: ${result.details}`,
@@ -185,12 +175,10 @@ export class ConsistencyProbe {
           source: TraceSource.SYSTEM,
         });
       } catch (e) {
-        logger.warn('[Probe] Failed to emit drift remediation event:', e);
+        logger.debug('[Probe] Failed to emit drift event:', e);
       }
-    } else {
-      logger.info(
-        `[Silo 5] Trace consistency verified for agent ${agentId}. Drift: ${result.drift}`
-      );
+    } else if (result.drift === 0) {
+      logger.info(`[Eye] Trace consistency verified for agent ${agentId}`);
     }
 
     return !result.consistent;

@@ -101,16 +101,23 @@ Serverless Claw integrates a robust tracking system, emitting real-time signals 
 
 ### Metric Topology
 
+Trace data and metrics flow through a multi-layered persistence strategy to ensure reliability and dashboard performance.
+
 ```text
  [ Agent Execution ] ----------(Tokens/Duration)--------> [ TokenTracker ] -> (Daily Rollups)
         |                                                       |
+        +-----(Steps/Status)-----> [ TraceTable ] <-------------+
+        |                             |
+        |                      (Summaries V2)
+        |                             |
  [ LLM/Tool Calls  ] --(Success/Failure/Tokens)--> [ Metrics ]  |
         |                  |         ^                 |        |
         |                  |         |                 |        |
         |          [ CRITICAL_FAIL ] | [ PARALLEL_AGG ]|        |
         |                  |         |                 |        |
         |                  v         |                 |        |
-        |          (DIRECT_PERSIST)  +-----------------+        |
+        |          (DETERMINISTIC)   +-----------------+        |
+        |          (FALLBACK KEY )                              |
         |                                              |        |
         +-------(CloudWatch Metrics / Dashboard)-------+        |
                                                        |        |
@@ -124,7 +131,12 @@ Serverless Claw integrates a robust tracking system, emitting real-time signals 
         +---> [ Notifier (Telegram) ]
 ```
 
+### Advanced Observability Features
+
 1. **Token Tracking**: Per-invocation and rollup storage ensures granular usage visibility (including summarization).
 2. **CloudWatch Metrics**: Core paths (executors, handlers, buses, dead letter queues) continuously emit metric data.
-3. **Alerting**: Automated notifications (via `OUTBOUND_MESSAGE`) push critical warnings like anomalous token usage, open circuit breakers, and DLQ overflow.
-4. **SLO Tracking**: Monitors service availability, task success rate, and P95 latency against predefined budgets.
+3. **Deterministic Persistence Keys**: Critical metrics that fail to emit to CloudWatch are persisted to DynamoDB using searchable, deterministic keys (`METRIC#${Name}#${Timestamp}`). This eliminates "Gaps in the Eye" by enabling offline aggregation and auditability of critical failure modes.
+4. **p95 Latency Estimation**: When high-resolution percentile data is unavailable (e.g., during cold starts or low-concurrency windows), the SLO Tracker employs a **Latency Estimation Factor (1.25x)**. This heuristic ensures that "Durable Observability" remains conservative and safety-first even with sparse data.
+5. **Trace Summary Consolidation**: The `ClawTracer` maintains a high-level `__summary__` row per trace. This consolidation avoids the "N+1 Query" problem in dashboards, providing a single-row-per-trace view that stays synchronized through atomic updates in `startTrace`, `addStep`, `endTrace`, and `failTrace`.
+6. **Alerting**: Automated notifications (via `OUTBOUND_MESSAGE`) push critical warnings like anomalous token usage, open circuit breakers, and DLQ overflow.
+7. **SLO Tracking**: Monitors service availability, task success rate, and P95 latency against predefined budgets.

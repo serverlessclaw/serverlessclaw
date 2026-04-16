@@ -19,8 +19,8 @@ The system enforces hard limits on high-impact actions to prevent runaway costs 
 - **Class C Limit**: Hard cap of 5 Class C actions per hour per agent (Principle 10).
 - **Promotion**: Class C actions require human approval unless an agent is in `EVOLUTION_MODE="AUTO"` and has a `TrustScore >= 95`.
 - **Persistence**: The `BlastRadiusStore` uses a **Two-Phase Atomic Update** pattern to ensure integrity during window transitions:
-    - **Phase 1 (Active Window)**: Conditional `UpdateCommand` using `ADD` to increment count within current window.
-    - **Phase 2 (Expired Window)**: Conditional `UpdateCommand` using `SET` to atomically reset the window if it has expired.
+  - **Phase 1 (Active Window)**: Conditional `UpdateCommand` using `ADD` to increment count within current window.
+  - **Phase 2 (Expired Window)**: Conditional `UpdateCommand` using `SET` to atomically reset the window if it has expired.
 
 ```text
    [ Class C Action ]

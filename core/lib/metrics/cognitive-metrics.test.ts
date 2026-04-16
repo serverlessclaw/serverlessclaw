@@ -690,10 +690,12 @@ describe('CognitiveHealthMonitor', () => {
     const { ConsistencyProbe } = await import('./cognitive-metrics');
     const probe = new ConsistencyProbe(mockBase as any);
 
-    // Scenario: Backend has 10 task completions, but Dashboard only has 5 events
-    mockBase.queryItems
-      .mockResolvedValueOnce(new Array(10).fill({ metricName: 'task_completed' })) // task_completed
-      .mockResolvedValueOnce(new Array(5).fill({ metricName: 'task_latency_ms' })); // task_latency_ms (Drift!)
+    // Scenario: Backend has 10 task completions and 5 latency records (Drift!)
+    const mockMetrics = [
+      ...new Array(10).fill({ metricName: 'task_completed' }),
+      ...new Array(5).fill({ metricName: 'task_latency_ms' }),
+    ];
+    mockBase.queryItems.mockResolvedValue(mockMetrics);
 
     const result = await probe.verifyTraceConsistency('agent-1', Date.now() - 3600000, Date.now());
     expect(result.consistent).toBe(false);

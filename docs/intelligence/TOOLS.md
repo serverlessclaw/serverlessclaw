@@ -254,7 +254,9 @@ To prevent "Context Window Bloat" and maintain high reasoning performance, Serve
 3. **Usage Tracking**: Every tool execution is recorded atomically in the `MemoryTable` via the `TokenTracker`, capturing the `count`, `successCount`, `totalDurationMs`, and estimated `totalInputTokens` / `totalOutputTokens`.
 4. **Anomalous Tool Detection**: During the 48-hour strategic review, the **Strategic Planner** identifies "Anomalous Tools" (those with <80% success rate or >100k token cost in 7 days). It generates `TOOL_OPTIMIZATION` gaps to `PRUNE` or `REPLACE` inefficient capabilities.
 5. **Selective Discovery Mode**: When enabled, the system automatically prunes an agent's toolset back to its "Core" defaults if it hasn't used a tool recently or if the toolset exceeds a complexity threshold.
+
 - **Performance-Based Routing**: When a task is dispatched, the **AgentRouter** (`core/lib/routing/AgentRouter.ts`) computes a composite score for candidate agents: `CapabilityMatch * SuccessRate`. This ensures tasks are handled by the most reliable agents.
+
 7. **MCP Server Pruning**: The **ClawCenter Dashboard** provides usage analytics for MCP servers, allowing humans or the SuperClaw to `unregisterMCPServer` if it's no longer providing value to the system.
 
 ### Performance Impact

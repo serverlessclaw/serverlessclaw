@@ -31,6 +31,7 @@ export class ClawTracer {
   private agentId?: string;
   private startTime: number;
   private readonly docClient: DynamoDBDocumentClient;
+  private summariesEnabled: boolean | null = null;
 
   /**
    * Initializes a new ClawTracer instance.
@@ -68,6 +69,69 @@ export class ClawTracer {
   }
 
   /**
+   * lazy-load and cache summary enablement status to ensure consistency during the trace lifecycle.
+   */
+  private async isSummaryEnabled(): Promise<boolean> {
+    if (this.summariesEnabled === null) {
+      this.summariesEnabled =
+        (await FlowController.areTraceSummariesEnabled()) && this.nodeId === 'root';
+    }
+    return this.summariesEnabled;
+  }
+
+  /**
+   * Internal helper to update or create the trace summary item.
+   */
+  private async updateSummary(
+    status: string,
+    extra: Record<string, unknown> = {},
+    isNew: boolean = false
+  ): Promise<void> {
+    if (!(await this.isSummaryEnabled())) return;
+
+    await this.withRetry(async () => {
+      if (isNew) {
+        await this.docClient.send(
+          new PutCommand({
+            TableName: this.getTableName(),
+            Item: {
+              traceId: this.traceId,
+              nodeId: '__summary__',
+              userId: this.userId,
+              source: this.source,
+              agentId: this.agentId,
+              timestamp: this.startTime,
+              status,
+              ...extra,
+            },
+          })
+        );
+      } else {
+        const updateExprParts = ['#status = :status', '#ts = :ts'];
+        const attrNames: Record<string, string> = { '#status': 'status', '#ts': 'timestamp' };
+        const attrValues: Record<string, unknown> = { ':status': status, ':ts': Date.now() };
+
+        Object.entries(extra).forEach(([key, val], i) => {
+          const valKey = `:v${i}`;
+          updateExprParts.push(`#k${i} = ${valKey}`);
+          attrNames[`#k${i}`] = key;
+          attrValues[valKey] = val;
+        });
+
+        await this.docClient.send(
+          new UpdateCommand({
+            TableName: this.getTableName(),
+            Key: { traceId: this.traceId, nodeId: '__summary__' },
+            UpdateExpression: `SET ${updateExprParts.join(', ')}`,
+            ExpressionAttributeNames: attrNames,
+            ExpressionAttributeValues: attrValues,
+          })
+        );
+      }
+    }, 'UpdateSummary');
+  }
+
+  /**
    * Initializes a new trace node in DynamoDB.
    *
    * @param initialContext - Initial context for the trace (e.g., user input).
@@ -76,7 +140,8 @@ export class ClawTracer {
   async startTrace(initialContext: Record<string, unknown>): Promise<string> {
     const { AgentRegistry } = await import('../registry');
     const days = await AgentRegistry.getRetentionDays('TRACES_DAYS');
-    const expiresAt = Math.floor(Date.now() / TIME.MS_PER_SECOND) + days * TIME.SECONDS_IN_DAY;
+    const now = Date.now();
+    const expiresAt = Math.floor(now / TIME.MS_PER_SECOND) + days * TIME.SECONDS_IN_DAY;
 
     try {
       await this.docClient.send(
@@ -89,7 +154,7 @@ export class ClawTracer {
             userId: this.userId,
             source: this.source,
             agentId: this.agentId,
-            timestamp: this.startTime,
+            timestamp: now,
             status: TRACE_STATUS.STARTED,
             initialContext,
             steps: [],
@@ -98,33 +163,15 @@ export class ClawTracer {
           ConditionExpression: 'attribute_not_exists(traceId) AND attribute_not_exists(nodeId)',
         })
       );
-      // Optionally maintain a summary item for this trace to support
-      // one-row-per-trace listings in the dashboard.
-      if ((await FlowController.areTraceSummariesEnabled()) && this.nodeId === 'root') {
-        try {
-          await this.docClient.send(
-            new PutCommand({
-              TableName: this.getTableName(),
-              Item: {
-                traceId: this.traceId,
-                nodeId: '__summary__',
-                userId: this.userId,
-                source: this.source,
-                agentId: this.agentId,
-                timestamp: this.startTime,
-                status: TRACE_STATUS.STARTED,
-                title:
-                  (initialContext as Record<string, unknown>)?.title ??
-                  (initialContext as Record<string, unknown>)?.message ??
-                  null,
-                expiresAt,
-              },
-            })
-          );
-        } catch (summErr) {
-          logger.warn(`Failed to create trace summary for ${this.traceId}:`, summErr);
-        }
-      }
+
+      await this.updateSummary(
+        TRACE_STATUS.STARTED,
+        {
+          title: initialContext?.title ?? initialContext?.message ?? null,
+          expiresAt,
+        },
+        true
+      );
     } catch (e: unknown) {
       if (
         e &&
@@ -185,24 +232,7 @@ export class ClawTracer {
       })
     );
 
-    // Update the trace summary's timestamp to reflect recent activity (only
-    // update the one summary row maintained for the root node) when enabled.
-    if ((await FlowController.areTraceSummariesEnabled()) && this.nodeId === 'root') {
-      try {
-        await this.docClient.send(
-          new UpdateCommand({
-            TableName: this.getTableName(),
-            Key: { traceId: this.traceId, nodeId: '__summary__' },
-            UpdateExpression: 'SET #ts = :ts, lastStepType = :t',
-            ExpressionAttributeNames: { '#ts': 'timestamp' },
-            ExpressionAttributeValues: { ':ts': Date.now(), ':t': step.type },
-          })
-        );
-      } catch (e) {
-        // best-effort - do not fail main flow
-        logger.warn(`Failed to update trace summary timestamp for ${this.traceId}:`, e);
-      }
-    }
+    await this.updateSummary(TRACE_STATUS.STARTED, { lastStepType: step.type });
   }
 
   /**
@@ -231,29 +261,8 @@ export class ClawTracer {
       })
     );
 
-    // Emit metrics for trace completion
     await this.emitCompletionMetrics(endTime);
-
-    // Mark the summary as completed as well (root-only) when enabled.
-    if ((await FlowController.areTraceSummariesEnabled()) && this.nodeId === 'root') {
-      try {
-        await this.docClient.send(
-          new UpdateCommand({
-            TableName: this.getTableName(),
-            Key: { traceId: this.traceId, nodeId: '__summary__' },
-            UpdateExpression: 'SET #status = :status, #ts = :ts, finalResponse = :resp',
-            ExpressionAttributeNames: { '#status': 'status', '#ts': 'timestamp' },
-            ExpressionAttributeValues: {
-              ':status': TRACE_STATUS.COMPLETED,
-              ':ts': endTime,
-              ':resp': finalResponse,
-            },
-          })
-        );
-      } catch (e) {
-        logger.warn(`Failed to update trace summary on end for ${this.traceId}:`, e);
-      }
-    }
+    await this.updateSummary(TRACE_STATUS.COMPLETED, { finalResponse });
   }
 
   /**
@@ -301,10 +310,9 @@ export class ClawTracer {
       })
     );
 
-    // Emit metrics for trace failure
     await this.emitCompletionMetrics(endTime);
 
-    // Emit immediate failure event for monitoring to trigger real-time remediation (Eye Silo Gap 5)
+    // Emit immediate failure event for monitoring to trigger real-time remediation
     try {
       const { emitEvent } = await import('../utils/bus');
       const { AgentType, EventType } = await import('../types/agent');
@@ -321,26 +329,7 @@ export class ClawTracer {
       logger.warn('[Tracer] Failed to emit immediate failure event:', e);
     }
 
-    // Mark the summary as failed as well
-    if ((await FlowController.areTraceSummariesEnabled()) && this.nodeId === 'root') {
-      try {
-        await this.docClient.send(
-          new UpdateCommand({
-            TableName: this.getTableName(),
-            Key: { traceId: this.traceId, nodeId: '__summary__' },
-            UpdateExpression: 'SET #status = :status, #ts = :ts, failureReason = :reason',
-            ExpressionAttributeNames: { '#status': 'status', '#ts': 'timestamp' },
-            ExpressionAttributeValues: {
-              ':status': TRACE_STATUS.FAILED,
-              ':ts': endTime,
-              ':reason': reason,
-            },
-          })
-        );
-      } catch (e) {
-        logger.warn(`Failed to update trace summary on failure for ${this.traceId}:`, e);
-      }
-    }
+    await this.updateSummary(TRACE_STATUS.FAILED, { failureReason: reason });
   }
 
   /**

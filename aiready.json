@@ -2,18 +2,8 @@
   "$schema": "https://getaiready.dev/schema.json",
   "threshold": 80,
   "scan": {
-    "include": [
-      "**/*.ts",
-      "**/*.tsx",
-      "**/*.js",
-      "**/*.jsx"
-    ],
-    "exclude": [
-      "**/node_modules/**",
-      "**/.sst/**",
-      "**/.next/**",
-      "**/.aiready/**"
-    ],
+    "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
+    "exclude": ["**/node_modules/**", "**/.sst/**", "**/.next/**", "**/.aiready/**"],
     "tools": [
       "pattern-detect",
       "context-analyzer",
@@ -114,9 +104,7 @@
         "naming-consistency:const-uppercase-snake-case",
         "naming-consistency:function-camel-case"
       ],
-      "exclude": [
-        "dashboard/src/components/ui/**"
-      ]
+      "exclude": ["dashboard/src/components/ui/**"]
     },
     "ai-signal-clarity": {
       "checkMagicLiterals": true,
@@ -127,10 +115,7 @@
       "checkDeepCallbacks": true,
       "checkOverloadedSymbols": true,
       "checkLargeFiles": true,
-      "exclude": [
-        "dashboard/src/components/ui/**",
-        "core/tools/index.ts"
-      ]
+      "exclude": ["dashboard/src/components/ui/**", "core/tools/index.ts"]
     },
     "agent-grounding": {
       "maxRecommendedDepth": 5,
