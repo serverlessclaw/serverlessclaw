@@ -39,8 +39,20 @@ export class SafetyConfigManager {
         for (const [tier, policy] of Object.entries(ddbPolicies)) {
           if (Object.values(SafetyTier).includes(tier as SafetyTier)) {
             policies[tier as SafetyTier] = policy as SafetyPolicy;
+          } else {
+            logger.warn(`[SafetyConfigManager] Ignoring unknown safety tier from DDB: ${tier}`);
           }
         }
+
+        // Sh6 Fix: Warn on missing tiers defined in enum
+        for (const tier of Object.values(SafetyTier)) {
+          if (!(tier in (ddbPolicies as object))) {
+            logger.warn(
+              `[SafetyConfigManager] Tier '${tier}' missing from DDB, using code defaults.`
+            );
+          }
+        }
+
         logger.info('Safety policies loaded from DynamoDB');
       } else {
         policies = DEFAULT_POLICIES;

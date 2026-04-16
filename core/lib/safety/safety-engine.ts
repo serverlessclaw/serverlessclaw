@@ -90,8 +90,8 @@ export class SafetyEngine extends SafetyBase {
     const validators = [
       () => this.validateStaticPolicies(action, ctx, tier),
       () => this.validateAccessControl(agentConfig, action, ctx, tier, policy),
-      () => this.validateDynamicRestrictions(agentConfig, action, ctx, tier, policy),
       () => this.limiter.checkRateLimits(policy, action),
+      () => this.validateDynamicRestrictions(agentConfig, action, ctx, tier, policy),
     ];
 
     for (const validator of validators) {
@@ -101,6 +101,9 @@ export class SafetyEngine extends SafetyBase {
         result.requiresApproval ||
         result.appliedPolicy === 'principle_9_promotion'
       ) {
+        if (result.violation) {
+          await this.logViolation(result.violation);
+        }
         return result;
       }
     }
@@ -159,7 +162,11 @@ export class SafetyEngine extends SafetyBase {
     for (const res of resources) {
       const resResult = await this.validator.checkResourceAccess(policy, res, action, tier, ctx);
       // System Protection Escalation
-      if (resResult.allowed && !agentConfig?.manuallyApproved && this.isSystemProtected(res)) {
+      if (
+        resResult.allowed &&
+        agentConfig?.manuallyApproved !== true &&
+        this.isSystemProtected(res)
+      ) {
         return this.handleViolation(
           ctx,
           tier,
@@ -257,12 +264,12 @@ export class SafetyEngine extends SafetyBase {
       ctx.traceId,
       ctx.userId
     );
-    await this.logViolation(violation);
     return {
       allowed: outcome === 'approval_required',
       requiresApproval: outcome === 'approval_required',
       reason,
       appliedPolicy,
+      violation,
     };
   }
 

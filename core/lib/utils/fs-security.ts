@@ -109,6 +109,19 @@ export function checkFileSecurity(
 }
 
 /**
+ * Unified scan and validate function to prevent developers from forgetting validation after scanning.
+ */
+export function scanAndValidateResources(
+  args: Record<string, unknown>,
+  operation: string,
+  extraPathKeys: string[] = []
+): { resources: { path: string; key: string }[]; error: string | null } {
+  const resources = scanForResources(args, extraPathKeys);
+  const error = checkArgumentsForSecurity(args, operation, extraPathKeys);
+  return { resources, error };
+}
+
+/**
  * Compatibility wrapper for checkArgumentsForSecurity.
  */
 export function checkArgumentsForSecurity(

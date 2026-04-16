@@ -1,6 +1,5 @@
 import { SafetyTier, SafetyPolicy, TimeRestriction, SafetyEvaluationResult } from '../types/agent';
 import { SafetyBase } from './safety-base';
-import { logger } from '../logger';
 
 /**
  * Validator for safety policies.
@@ -34,14 +33,13 @@ export class PolicyValidator {
             context?.traceId,
             context?.userId
           );
-          this.base.logViolationExternal(violation);
-
           return {
             allowed: false,
             requiresApproval: false,
             reason: `Access to '${resource}' is blocked`,
             appliedPolicy: 'blocked_resource',
             suggestion: 'Choose a different file path that is not protected',
+            violation,
           };
         }
       }
@@ -65,13 +63,12 @@ export class PolicyValidator {
           context?.traceId,
           context?.userId
         );
-        this.base.logViolationExternal(violation);
-
         return {
           allowed: false,
           requiresApproval: false,
           reason: `Resource '${resource}' is not in the allowed list`,
           appliedPolicy: 'resource_not_allowed',
+          violation,
         };
       }
     }
@@ -114,13 +111,12 @@ export class PolicyValidator {
             context?.traceId,
             context?.userId
           );
-          this.base.logViolationExternal(violation);
-
           return {
             allowed: false,
             requiresApproval: false,
             reason: `Action '${action}' is not allowed during this time window`,
             appliedPolicy: 'time_restriction',
+            violation,
           };
         } else {
           const violation = this.base.createViolation(
@@ -134,13 +130,12 @@ export class PolicyValidator {
             context?.traceId,
             context?.userId
           );
-          this.base.logViolationExternal(violation);
-
           return {
             allowed: true,
             requiresApproval: true,
             reason: `Action '${action}' requires approval during business hours`,
             appliedPolicy: 'time_restriction_approval',
+            violation,
           };
         }
       }
@@ -158,8 +153,8 @@ export class PolicyValidator {
     tier: SafetyTier,
     context?: { traceId?: string; userId?: string; toolName?: string; agentId?: string }
   ): Promise<SafetyEvaluationResult> {
-    let requiresApproval = false;
-    let reason = '';
+    let requiresApproval: boolean;
+    let reason: string;
 
     switch (action) {
       case 'code_change':
@@ -183,15 +178,8 @@ export class PolicyValidator {
         reason = 'MCP tool calls require approval in this safety tier';
         break;
       default:
-        // By default, unknown actions in PROD require approval
-        if (tier === SafetyTier.PROD) {
-          requiresApproval = true;
-          reason = `Unknown action '${action}' requires approval`;
-        } else {
-          logger.warn(
-            `[PolicyValidator] Unknown action '${action}' allowed in ${tier} tier - consider adding explicit policy`
-          );
-        }
+        requiresApproval = true;
+        reason = `Unknown action '${action}' requires approval`;
         break;
     }
 
@@ -207,13 +195,12 @@ export class PolicyValidator {
         context?.traceId,
         context?.userId
       );
-      this.base.logViolationExternal(violation);
-
       return {
         allowed: true,
         requiresApproval: true,
         reason,
         appliedPolicy: `${tier}_${action}_approval`,
+        violation,
       };
     }
 

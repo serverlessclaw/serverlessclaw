@@ -201,11 +201,11 @@ describe('TrustManager', () => {
   });
 
   describe('decayTrustScores', () => {
-    it('applies aggressive decay to high scores and baseline decay to others', async () => {
+    it('applies slower decay to high scores and baseline decay to others', async () => {
       const mockConfigs = {
-        'high-trust': { trustScore: 98 }, // Above autonomy (95) -> 1.5x decay
-        'mid-trust': { trustScore: 88 }, // Above 85 -> 1.2x decay
-        'at-baseline': { trustScore: 70 }, // At baseline -> 1.0x decay
+        'high-trust': { trustScore: 98 }, // Above autonomy (95) -> 0.5x decay
+        'mid-trust': { trustScore: 88 }, // Above 85 -> 0.75x decay
+        'at-baseline': { trustScore: 70 }, // At baseline -> No decay
         'below-baseline': { trustScore: 65 }, // Below baseline -> No decay
       };
 
@@ -218,12 +218,12 @@ describe('TrustManager', () => {
       expect(mockAgentRegistry.atomicAddAgentField).toHaveBeenCalledWith(
         'high-trust',
         'trustScore',
-        -0.75 // - (0.5 * 1.5)
+        -0.25 // - (0.5 * 0.5)
       );
       expect(mockAgentRegistry.atomicAddAgentField).toHaveBeenCalledWith(
         'mid-trust',
         'trustScore',
-        -0.6 // - (0.5 * 1.2)
+        -0.37 // - (0.5 * 0.75)
       );
       expect(mockAgentRegistry.atomicAddAgentField).not.toHaveBeenCalledWith(
         'at-baseline',

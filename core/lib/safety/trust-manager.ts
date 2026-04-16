@@ -199,9 +199,8 @@ export class TrustManager {
     if (score === undefined || score < TRUST.DECAY_BASELINE) return;
 
     let multiplier = 1;
-    if (score >= TRUST.AUTONOMY_THRESHOLD + 2) multiplier = 1.5;
-    else if (score >= TRUST.AUTONOMY_THRESHOLD) multiplier = 1.1;
-    else if (score >= 85) multiplier = 1.2;
+    if (score >= TRUST.AUTONOMY_THRESHOLD) multiplier = 0.5;
+    else if (score >= 85) multiplier = 0.75;
     const next = Math.max(TRUST.DECAY_BASELINE, score - TRUST.DECAY_RATE * multiplier);
     const delta = Math.round((next - score) * 100) / 100;
     if (delta < 0) {

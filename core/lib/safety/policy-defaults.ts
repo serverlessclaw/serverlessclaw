@@ -2,6 +2,30 @@ import { SafetyTier, SafetyPolicy } from '../types/agent';
 import { PROTECTED_PATHS } from '../constants/safety';
 
 /**
+ * Base policy template for new tiers (Principle 10: DRY).
+ */
+export const BASE_POLICY_TEMPLATE: Partial<SafetyPolicy> = {
+  requireCodeApproval: false,
+  requireDeployApproval: true,
+  requireFileApproval: false,
+  requireShellApproval: true,
+  requireMcpApproval: true,
+  blockedFilePaths: [...PROTECTED_PATHS],
+  maxDeploymentsPerDay: 10,
+  maxShellCommandsPerHour: 20,
+  maxFileWritesPerHour: 50,
+  cognitiveThresholds: {
+    minCompletionRate: 0.8,
+    maxErrorRate: 0.2,
+    minCoherence: 6.0,
+    maxMissRate: 0.4,
+    maxAvgLatencyMs: 12000,
+    maxPivotRate: 0.15,
+    minSampleTasks: 5,
+  },
+};
+
+/**
  * Default safety policies for each tier.
  * Centralized in policy-defaults.ts for clean separation of logic and config (Principle 10).
  */

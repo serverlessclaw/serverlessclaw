@@ -107,20 +107,6 @@ export class SafetyBase {
   }
 
   /**
-   * Log violation without persistence - for external validators.
-   * Use this for validation-stage violations that shouldn't be double-logged.
-   */
-  public logViolationExternal(violation: SafetyViolation): void {
-    logger.warn('Safety violation detected (external)', {
-      violationId: violation.id,
-      agentId: violation.agentId,
-      action: violation.action,
-      reason: violation.reason,
-      outcome: violation.outcome,
-    });
-  }
-
-  /**
    * Persist a single violation to DynamoDB for audit trail.
    */
   async persistViolation(violation: SafetyViolation): Promise<boolean> {

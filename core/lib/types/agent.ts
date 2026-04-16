@@ -619,4 +619,6 @@ export interface SafetyEvaluationResult {
   appliedPolicy?: string;
   /** Suggested alternative action if denied. */
   suggestion?: string;
+  /** Detailed violation record if the action was blocked or requires approval. */
+  violation?: SafetyViolation;
 }
