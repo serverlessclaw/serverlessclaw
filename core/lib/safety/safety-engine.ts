@@ -199,22 +199,29 @@ export class SafetyEngine extends SafetyBase {
       ctx
     );
 
-    // Blast Radius Enforcement (Class C)
-    if (this.isClassCAction(action)) {
-      const blastResult = await this.handleClassCAction(ctx.agentId, action, approvalResult, ctx);
-      if (blastResult) return blastResult;
-    }
-
     // Trust-Driven Promotion (Principle 9)
+    // Run this BEFORE scheduling Class C actions to prevent double execution
     const promotionResult = await this.checkAutonomousPromotion(
       agentConfig,
       action,
       approvalResult,
       ctx
     );
-    if (promotionResult) return promotionResult;
 
-    return approvalResult;
+    const finalApprovalResult = promotionResult ?? approvalResult;
+
+    // Blast Radius Enforcement (Class C)
+    if (this.isClassCAction(action)) {
+      const blastResult = await this.handleClassCAction(
+        ctx.agentId,
+        action,
+        finalApprovalResult,
+        ctx
+      );
+      if (blastResult) return blastResult;
+    }
+
+    return finalApprovalResult;
   }
 
   private async getResolvedPolicy(tier: SafetyTier): Promise<SafetyPolicy> {
@@ -302,15 +309,19 @@ export class SafetyEngine extends SafetyBase {
       const tier = (await AgentRegistry.getAgentConfig(agentId))?.safetyTier ?? SafetyTier.PROD;
       return this.handleViolation(ctx, tier, action, 'blast_radius_limit', error);
     }
-    await this.evolutionScheduler.scheduleAction({
-      agentId,
-      action,
-      reason: approvalResult.reason ?? 'Class C action requiring approval',
-      timeoutMs: CONFIG_DEFAULTS.EVOLUTIONARY_TIMEOUT_MS.code,
-      resource: ctx.resource,
-      traceId: ctx.traceId,
-      userId: ctx.userId,
-    });
+
+    if (approvalResult.requiresApproval) {
+      await this.evolutionScheduler.scheduleAction({
+        agentId,
+        action,
+        reason: approvalResult.reason ?? 'Class C action requiring approval',
+        timeoutMs: CONFIG_DEFAULTS.EVOLUTIONARY_TIMEOUT_MS.code,
+        resource: ctx.resource,
+        traceId: ctx.traceId,
+        userId: ctx.userId,
+      });
+    }
+
     await this.trackClassCBlastRadius(agentId, action, ctx.resource);
     return null;
   }

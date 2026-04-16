@@ -93,7 +93,7 @@ The central coordinator that manages the lifecycle of metabolic audits. It prior
   - Global: `tool_usage_global` - system-wide tool popularity
   - Per-agent: `tool_usage_{agentId}` - agent-specific usage
   - Per-workspace: `WS#{workspaceId}#tool_usage` - workspace-isolated tracking (new)
-- **Memory Culling**: Purges knowledge gaps in `DONE` or `DEPLOYED` status that are older than 90 days.
+- **Memory Culling**: Purges knowledge gaps in `DONE` or `DEPLOYED` status that are older than **60 days** (configurable via `GAPS_RETENTION_DAYS`). Both archival (stale OPEN gaps >30 days) and culling (resolved gaps >60 days) run in the periodic maintenance cycle.
 - **Native Fallback**: A resilient scanner that performs basic debt identification (e.g., scanning for orphans or TODOs) even when the AIReady MCP server is offline.
 
 ## Principle 10: Lean Evolution

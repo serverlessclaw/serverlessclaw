@@ -385,7 +385,7 @@ describe('SafetyEngine', () => {
       );
     });
 
-    it('should grant autonomous promotion for high-trust agents in AUTO mode', async () => {
+    it('should grant autonomous promotion for high-trust agents in AUTO mode without scheduling', async () => {
       const { EvolutionMode } = await import('../types/agent');
       const config = {
         id: 'high-trust-auto-agent',
@@ -394,11 +394,39 @@ describe('SafetyEngine', () => {
         evolutionMode: EvolutionMode.AUTO,
       } as IAgentConfig;
 
+      const scheduleSpy = vi.spyOn((engine as any).evolutionScheduler, 'scheduleAction');
+
       const result = await engine.evaluateAction(config, 'deployment');
 
       expect(result.allowed).toBe(true);
       expect(result.requiresApproval).toBe(false);
       expect(result.reason).toContain('[AUTONOMOUS PROMOTION: TrustScore >= 95 & AUTO mode]');
+      expect(scheduleSpy).not.toHaveBeenCalled();
+
+      scheduleSpy.mockRestore();
+    });
+
+    it('should schedule Class C action when human approval is required', async () => {
+      const config = {
+        id: 'low-trust-agent-scheduling',
+        safetyTier: SafetyTier.PROD,
+        trustScore: 80,
+      } as IAgentConfig;
+
+      const scheduleSpy = vi.spyOn((engine as any).evolutionScheduler, 'scheduleAction');
+
+      const result = await engine.evaluateAction(config, 'deployment');
+
+      expect(result.requiresApproval).toBe(true);
+      expect(scheduleSpy).toHaveBeenCalledTimes(1);
+      expect(scheduleSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          agentId: 'low-trust-agent-scheduling',
+          action: 'deployment',
+        })
+      );
+
+      scheduleSpy.mockRestore();
     });
 
     it('should NOT add advisory tag for high-trust agents on Class C (IAM) actions', async () => {

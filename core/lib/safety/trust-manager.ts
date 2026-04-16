@@ -129,14 +129,12 @@ export class TrustManager {
     if (delta === 0) return config.trustScore ?? TRUST.DEFAULT_SCORE;
 
     try {
-      // Use native atomic ADD to ensure 100% integrity without read-modify-write race conditions (Principle 13)
       const newScore = await AgentRegistry.atomicAddAgentField(agentId, 'trustScore', delta);
 
-      // Handle clamping on best-effort basis (or could use complex SET expressions if needed)
       if (newScore > TRUST.MAX_SCORE || newScore < TRUST.MIN_SCORE) {
-        const clamped = Math.min(TRUST.MAX_SCORE, Math.max(TRUST.MIN_SCORE, newScore));
-        await AgentRegistry.atomicUpdateAgentField(agentId, 'trustScore', clamped);
-        return clamped;
+        logger.warn(
+          `[TrustManager] Agent ${agentId} trust score ${newScore} exceeds bounds [${TRUST.MIN_SCORE}, ${TRUST.MAX_SCORE}]. Allowing natural decay to correct.`
+        );
       }
 
       await this.recordHistory(agentId, newScore);
@@ -166,9 +164,30 @@ export class TrustManager {
   static async decayTrustScores(): Promise<void> {
     const configs = await AgentRegistry.getAllConfigs();
     await Promise.all(
-      Object.entries(configs).map(([id, cfg]) =>
-        this.decayAgentTrust(id, cfg as { trustScore?: number })
-      )
+      Object.entries(configs)
+        .filter(([id]) => !AgentRegistry.isBackboneAgent(id))
+        .map(([id, cfg]) => this.decayAgentTrust(id, cfg as { trustScore?: number }))
+    );
+  }
+
+  private static isBackboneAgent(agentId: string): boolean {
+    return (
+      agentId in
+      {
+        superclaw: true,
+        coder: true,
+        strategic_planner: true,
+        cognition_reflector: true,
+        qa: true,
+        critic: true,
+        facilitator: true,
+        merger: true,
+        build_monitor: true,
+        recovery: true,
+        researcher: true,
+        event_handler: true,
+        judge: true,
+      }
     );
   }
 

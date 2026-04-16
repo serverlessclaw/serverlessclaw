@@ -268,6 +268,9 @@ export class AgentRegistry {
     const now = Date.now();
     const stats = { count: 1, lastUsed: now, firstRegistered: now };
 
+    // Ensure tool stats are initialized lazily (both for new tools and existing ones)
+    await this.ensureToolStatsInitialized(toolName);
+
     // Update global usage
     await ConfigManager.atomicUpdateMapEntity(DYNAMO_KEYS.TOOL_USAGE, toolName, stats);
 
@@ -278,6 +281,34 @@ export class AgentRegistry {
     if (workspaceId) {
       const workspaceUsageKey = `WS#${workspaceId}#${DYNAMO_KEYS.TOOL_USAGE_PREFIX}`;
       await ConfigManager.atomicUpdateMapEntity(workspaceUsageKey, toolName, stats);
+    }
+  }
+
+  /**
+   * Ensures tool stats are initialized for a tool that may not exist yet.
+   * Uses if_not_exists to avoid overwriting existing firstRegistered timestamps.
+   */
+  private static async ensureToolStatsInitialized(toolName: string): Promise<void> {
+    const { ConfigTable } = (await import('sst')).Resource as { ConfigTable?: { name: string } };
+    if (!ConfigTable?.name) return;
+
+    try {
+      const { UpdateCommand } = await import('@aws-sdk/lib-dynamodb');
+      await defaultDocClient.send(
+        new UpdateCommand({
+          TableName: ConfigTable.name,
+          Key: { key: DYNAMO_KEYS.TOOL_USAGE },
+          UpdateExpression: 'SET #val.#tool.#first = if_not_exists(#val.#tool.#first, :now)',
+          ExpressionAttributeNames: {
+            '#val': 'value',
+            '#tool': toolName,
+            '#first': 'firstRegistered',
+          },
+          ExpressionAttributeValues: { ':now': Date.now() },
+        })
+      );
+    } catch {
+      // Silently ignore - tool usage tracking is best-effort
     }
   }
 
@@ -341,6 +372,15 @@ export class AgentRegistry {
       unknown
     > | null;
     return ddbConfig !== null && id in ddbConfig;
+  }
+
+  /**
+   * Checks if an agent is a backbone (system) agent.
+   * @param id - The agent identifier to check.
+   * @returns true if the agent is a backbone agent.
+   */
+  static isBackboneAgent(id: string): boolean {
+    return !!this.backboneConfigs[id];
   }
 
   /**

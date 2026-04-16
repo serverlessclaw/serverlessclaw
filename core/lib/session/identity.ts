@@ -262,20 +262,32 @@ export class IdentityManager {
     return session;
   }
 
+  private static readonly WORKSPACE_SCOPED_PERMISSIONS = new Set([
+    Permission.WORKSPACE_CREATE,
+    Permission.WORKSPACE_DELETE,
+    Permission.WORKSPACE_MEMBERS,
+  ]);
+
   /**
    * Check if a user has a specific permission.
-   * Optionally validates workspace membership for workspace-scoped permissions.
+   * Validates workspace membership for workspace-scoped permissions.
    */
   async hasPermission(
     userId: string,
     permission: Permission,
-    _workspaceId?: string
+    workspaceId?: string
   ): Promise<boolean> {
     const user = await this.getUser(userId);
     if (!user) return false;
 
     const rolePermissions = ROLE_PERMISSIONS[user.role];
-    return rolePermissions.includes(permission);
+    if (!rolePermissions.includes(permission)) return false;
+
+    if (workspaceId && IdentityManager.WORKSPACE_SCOPED_PERMISSIONS.has(permission)) {
+      return user.workspaceIds.includes(workspaceId);
+    }
+
+    return true;
   }
 
   /**

@@ -71,6 +71,12 @@ export const handler = async (_event: unknown, _context: Context): Promise<void>
       logger.info(`[MAINTENANCE] Archived ${archivedGaps} stale capability gaps`);
     }
 
+    // 4. Cull resolved gaps older than retention threshold
+    const culledGaps = await memory.cullResolvedGaps(CONFIG_DEFAULTS.GAPS_RETENTION_DAYS.code);
+    if (culledGaps > 0) {
+      logger.info(`[MAINTENANCE] Culled ${culledGaps} resolved capability gaps`);
+    }
+
     // 4. Trust Score Decay (Silo 6: The Scales)
     // Periodically decay trust scores to ensure continuous autonomy earning
     await TrustManager.decayTrustScores();

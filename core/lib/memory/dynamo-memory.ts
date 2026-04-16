@@ -9,7 +9,7 @@ import {
   ConversationMeta,
 } from '../types/index';
 import { BaseMemoryProvider } from './base';
-import { LIMITS } from '../constants';
+import { LIMITS, RETENTION } from '../constants';
 export { CachedMemory } from './cached-memory';
 
 // Import operations from submodules
@@ -90,6 +90,17 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
     workspaceId?: string
   ): Promise<number> {
     return GapOps.archiveStaleGaps(this, staleDays, workspaceId);
+  }
+
+  /**
+   * Culls resolved gaps that are older than the retention threshold.
+   * Returns the number of gaps culled.
+   */
+  async cullResolvedGaps(
+    thresholdDays: number = RETENTION.GAPS_DAYS,
+    workspaceId?: string
+  ): Promise<number> {
+    return GapOps.cullResolvedGaps(this, thresholdDays, workspaceId);
   }
 
   /**

@@ -222,7 +222,7 @@ describe('AgentRegistry', () => {
   describe('recordToolUsage', () => {
     it('should delegate tool usage tracking to ConfigManager', async () => {
       await AgentRegistry.recordToolUsage('test_tool', 'test_agent');
-      // Called twice: once for global, once for per-agent
+      // Called 2 times: global + per-agent (ensureToolStatsInitialized uses defaultDocClient directly)
       expect(ConfigManager.atomicUpdateMapEntity).toHaveBeenCalledTimes(2);
       expect(ConfigManager.atomicUpdateMapEntity).toHaveBeenCalledWith(
         DYNAMO_KEYS.TOOL_USAGE,

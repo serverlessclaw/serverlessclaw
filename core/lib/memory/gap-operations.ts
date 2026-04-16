@@ -311,7 +311,7 @@ export async function acquireGapLock(
         ':exp': expiresAt,
         ':now': now,
         ':nowSec': Math.floor(now / 1000),
-        ':version': Date.now(),
+        ':version': now,
       },
     });
     return true;

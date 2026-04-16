@@ -151,7 +151,7 @@ The `SafetyEngine` decomposes every evaluation into four specific validation sta
           |                  |
           |          (2) Access Control (Blocked Patterns? System Protected?)
           |                  |
-          |          (3) Dynamic Check (Time Windows? Blast Radius? Principle 9 Promotion?)
+          |          (3) Dynamic Check (Time Windows? Principle 9 Promotion? Blast Radius?)
           |                  |
           |          (4) Rate Limits (Concurrent Throttling)
           |                  |

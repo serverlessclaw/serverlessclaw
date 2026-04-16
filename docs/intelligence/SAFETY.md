@@ -104,7 +104,9 @@ Writes to the following resources are blocked by default and require **Manual Ap
 
 ## 🔄 Proactive Evolution (Class C Actions)
 
-Highly sensitive changes, such as IAM modifications or memory retention policy shifts, are classified as **Class C**. These are never executed immediately but are scheduled with a **1-hour cooling period** for manual audit.
+Highly sensitive changes, such as IAM modifications or memory retention policy shifts, are classified as **Class C**. By default, these are never executed immediately but are scheduled with a **1-hour cooling period** for manual audit.
+
+**Exception (Principle 9):** If an agent has earned a `TrustScore >= 95` and is operating in `AUTO` mode, the system autonomously promotes the Class C action. In this scenario, the action executes immediately and the 1-hour HITL scheduling queue is bypassed.
 
 ---
 
