@@ -147,7 +147,7 @@ describe('BedrockProvider.stream', () => {
     expect(ConverseStreamCommand).toHaveBeenCalledWith(
       expect.objectContaining({
         additionalModelRequestFields: expect.objectContaining({
-          thinking: { type: 'enabled', budget_tokens: 32768 },
+          thinking: { type: 'enabled', budget_tokens: 8192 },
         }),
       })
     );

@@ -17,7 +17,7 @@ export const SYSTEM = {
   DEFAULT_BEDROCK_MODEL: BedrockModel.CLAUDE_4_6,
   DEFAULT_OPENROUTER_MODEL: OpenRouterModel.GLM_5,
   DEFAULT_MINIMAX_MODEL: MiniMaxModel.M2_7,
-  DEFAULT_RECURSION_LIMIT: 15,
+  DEFAULT_RECURSION_LIMIT: 7,
   DEFAULT_DEPLOY_LIMIT: CONFIG_DEFAULTS.DEPLOY_LIMIT.code,
   MAX_DEPLOY_LIMIT: CONFIG_DEFAULTS.MAX_DEPLOY_LIMIT.code,
   RECOVERY_KEY: 'SYSTEM#RECOVERY',
@@ -91,7 +91,7 @@ export const CONFIG_KEYS = {
  */
 export const SWARM = {
   /** Maximum recursive depth for swarm fanout to prevent runaway decomposition. */
-  MAX_RECURSIVE_DEPTH: 15,
+  MAX_RECURSIVE_DEPTH: 7,
   /** Default max sub-tasks per decomposition. */
   DEFAULT_MAX_SUB_TASKS: 4,
   /** Default barrier timeout for parallel tasks (5 minutes). */

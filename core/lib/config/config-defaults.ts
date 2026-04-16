@@ -9,17 +9,17 @@
  */
 
 export const CONFIG_DEFAULTS = {
-  /** Maximum recursion depth for multi-agent delegation. Default: 15 */
+  /** Maximum recursion depth for multi-agent delegation. Default: 7 */
   RECURSION_LIMIT: {
-    code: 15,
+    code: 7,
     hotSwappable: true,
     configKey: 'recursion_limit',
     description: 'Maximum depth for agent-to-agent delegation to prevent infinite loops.',
   },
 
-  /** Recursion limit for mission-critical workflows. Default: 5 */
+  /** Recursion limit for mission-critical workflows. Default: 3 */
   MISSION_RECURSION_LIMIT: {
-    code: 5,
+    code: 3,
     hotSwappable: true,
     configKey: 'mission_recursion_limit',
     description: 'Stricter recursion limit for mission-critical workflows (e.g., swarm missions).',
@@ -514,29 +514,6 @@ export function getConfigValue<K extends ConfigKey>(
   runtimeValue?: unknown
 ): (typeof CONFIG_DEFAULTS)[K]['code'] {
   return (runtimeValue ?? CONFIG_DEFAULTS[key].code) as (typeof CONFIG_DEFAULTS)[K]['code'];
-}
-
-/**
- * Retrieves a configuration value from DynamoDB if it exists and is hot-swappable,
- * otherwise falls back to the code default. Implements Principle 10 (Lean Evolution).
- *
- * @param key - The internal configuration key.
- * @returns A promise resolving to the effective configuration value.
- */
-export async function getDynamicConfigValue<K extends ConfigKey>(
-  key: K
-): Promise<(typeof CONFIG_DEFAULTS)[K]['code']> {
-  const def = CONFIG_DEFAULTS[key];
-  if (!def.hotSwappable || !def.configKey) {
-    return def.code;
-  }
-
-  try {
-    const { ConfigManager } = await import('../registry/config');
-    return await ConfigManager.getTypedConfig(def.configKey, def.code);
-  } catch {
-    return def.code;
-  }
 }
 
 export function getHotSwappableKeys(): Array<{ key: ConfigKey; configKey: string }> {

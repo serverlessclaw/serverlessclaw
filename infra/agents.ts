@@ -10,8 +10,8 @@ import {
 } from './shared';
 import { MCPServerResources } from './mcp-servers';
 
-const RECOVERY_SCHEDULE_RATE = 'rate(15 minutes)';
-const CONCURRENCY_MONITOR_RATE = 'rate(1 hour)';
+const RECOVERY_SCHEDULE_RATE = 'rate(2 hours)';
+const CONCURRENCY_MONITOR_RATE = 'rate(12 hours)';
 
 /**
  * Create an IAM role for EventBridge Scheduler to invoke a Lambda function.
@@ -582,10 +582,10 @@ export function createAgents(
     },
   });
 
-  // 1-hour Schedule (Maintenance)
+  // 12-hour Schedule (Maintenance)
   createScheduledInvocation(
     'Maintenance',
-    'rate(1 hour)',
+    'rate(12 hours)',
     maintenanceHandler,
     'Triggers proactive evolution, tie-breaks, and stale gap archival'
   );

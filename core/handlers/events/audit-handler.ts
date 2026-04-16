@@ -51,6 +51,14 @@ export async function handleSystemAuditTrigger(
     const { memory } = await getAgentContext();
 
     const triggerType = event.triggerType || 'EVENT_TRIGGER';
+
+    if (triggerType === 'AUDIT_COMPLETED') {
+      logger.info(
+        '[AuditHandler] Audit completion event received, skipping to avoid infinite loop.'
+      );
+      return;
+    }
+
     if (!VALID_TRIGGER_TYPES.includes(triggerType)) {
       logger.warn(
         `[AuditHandler] Invalid triggerType: ${triggerType}. Falling back to EVENT_TRIGGER.`

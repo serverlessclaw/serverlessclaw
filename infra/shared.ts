@@ -62,14 +62,14 @@ export const AGENT_CONFIG = {
   memory: {
     SMALL: '256 MB',
     MEDIUM: '512 MB',
-    MEDIUM_LARGE: '1024 MB',
-    LARGE: '2048 MB',
+    MEDIUM_LARGE: '768 MB',
+    LARGE: '1024 MB',
   },
   timeout: {
     SHORT: '30 seconds',
     MEDIUM: '60 seconds',
-    LONG: '600 seconds',
-    MAX: '900 seconds',
+    LONG: '300 seconds',
+    MAX: '600 seconds',
   },
 } as const;
 
@@ -80,7 +80,7 @@ export const LAMBDA_ARCHITECTURE = 'arm64';
 export const NODEJS_LOADERS = { '.md': 'text' } as const;
 
 /** Default log retention period for Lambda functions */
-export const LOG_RETENTION_PERIOD = '1 month';
+export const LOG_RETENTION_PERIOD = '1 week';
 
 /**
  * Returns the optional domain configuration for a component.

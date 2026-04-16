@@ -1,9 +1,5 @@
-export {
-  CONFIG_DEFAULTS,
-  getConfigValue,
-  getHotSwappableKeys,
-  getDynamicConfigValue,
-} from './config-defaults';
+export { CONFIG_DEFAULTS, getConfigValue, getHotSwappableKeys } from './config-defaults';
+export { getDynamicConfigValue } from './dynamic-config';
 export type { ConfigKey } from './config-defaults';
 export {
   validateConfigValue,

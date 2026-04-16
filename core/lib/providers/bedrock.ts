@@ -110,21 +110,21 @@ const BEDROCK_REASONING_MAP: Record<ReasoningProfile, BedrockReasoningConfig> = 
     temperature: 0.7,
   },
   [ReasoningProfile.STANDARD]: {
-    thinkingBudget: 1024,
+    thinkingBudget: 512,
     thinkingEnabled: true,
     maxTokens: 8192,
     temperature: 0.7,
   },
   [ReasoningProfile.THINKING]: {
-    thinkingBudget: 4096,
+    thinkingBudget: 2048,
     thinkingEnabled: true,
     maxTokens: 12288,
     temperature: 1.0,
   },
   [ReasoningProfile.DEEP]: {
-    thinkingBudget: 32768,
+    thinkingBudget: 8192,
     thinkingEnabled: true,
-    maxTokens: 49152,
+    maxTokens: 16384,
     temperature: 1.0,
   },
 };

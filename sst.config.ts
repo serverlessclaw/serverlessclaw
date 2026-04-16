@@ -161,9 +161,14 @@ export default $config({
       schedulerRole: agentResources.schedulerRole,
     });
 
+    // 9. Billing & Cost Alerts ($5/day Daily Budget)
+    const { createBilling } = await import('./infra/billing.js');
+    const { billingTopic } = createBilling();
+
     return {
       apiUrl: api.url,
       dashboardUrl: dashboard.url,
+      billingTopicArn: billingTopic?.arn,
     };
   },
 });

@@ -89,7 +89,7 @@ describe('CONFIG_DEFAULTS', () => {
 
 describe('getConfigValue', () => {
   it('should return the code default when no runtime value is provided', () => {
-    expect(getConfigValue('RECURSION_LIMIT')).toBe(15);
+    expect(getConfigValue('RECURSION_LIMIT')).toBe(7);
     expect(getConfigValue('DEPLOY_LIMIT')).toBe(5);
     expect(getConfigValue('FEATURE_FLAGS_ENABLED')).toBe(true);
   });
@@ -143,14 +143,14 @@ describe('getHotSwappableKeys', () => {
 describe('getDynamicConfigValue', () => {
   it('should return code default when ConfigManager fails or key not found', async () => {
     // Note: ConfigManager is mocked or fails because ConfigTable is not linked in test env by default
-    const value = await import('./config-defaults').then((m) =>
+    const value = await import('./dynamic-config').then((m) =>
       m.getDynamicConfigValue('RECURSION_LIMIT')
     );
-    expect(value).toBe(15);
+    expect(value).toBe(7);
   });
 
   it('should return code default for non-hot-swappable keys', async () => {
-    const value = await import('./config-defaults').then((m) =>
+    const value = await import('./dynamic-config').then((m) =>
       m.getDynamicConfigValue('MAX_DEPLOY_LIMIT')
     );
     expect(value).toBe(100);

@@ -1,6 +1,6 @@
 import { IMemory, Message, MessageRole, IProvider, ReasoningProfile } from '../types/index';
 import { LIMITS } from '../constants';
-import { getDynamicConfigValue } from '../config/config-defaults';
+import { getDynamicConfigValue } from '../config/dynamic-config';
 import { logger } from '../logger';
 import { getContextStrategy, ProviderContextStrategy } from './context-strategies';
 
