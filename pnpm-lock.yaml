@@ -25,6 +25,7 @@ overrides:
   '@hono/node-server': 1.19.13
   '@modelcontextprotocol/server-filesystem': 2026.1.14
   '@modelcontextprotocol/sdk': 1.29.0
+  private-ip: 3.0.2
 
 importers:
 
