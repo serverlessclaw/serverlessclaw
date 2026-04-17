@@ -1,6 +1,6 @@
 export { getCircuitBreaker, resetCircuitBreakerInstance } from './circuit-breaker';
 export type { CircuitBreakerStates, FailureType } from './circuit-breaker';
-export { SafetyEngine } from './safety-engine';
+export { SafetyEngine, getSafetyEngine, resetSafetyEngine, hasSafetyEngine } from './safety-engine';
 export { SafetyBase } from './safety-base';
 export { SafetyConfigManager } from './safety-config-manager';
 export { DEFAULT_POLICIES } from './policy-defaults';

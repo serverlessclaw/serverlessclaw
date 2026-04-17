@@ -54,6 +54,12 @@ export interface InsightMetadata {
   lastAttemptTime?: number;
   /** Timestamp (Unix epoch) when the insight was first recorded. */
   createdAt?: number;
+  /** Session ID for HITL approval flow */
+  sessionId?: string;
+  /** User ID who requested the action requiring approval */
+  requestingUserId?: string;
+  /** Additional dynamic metadata */
+  [key: string]: unknown;
 }
 
 /**
@@ -197,7 +203,12 @@ export interface IGapManager {
   /** Retrieves all capability gaps, optionally filtered by their current status. */
   getAllGaps(status?: import('./agent').GapStatus, workspaceId?: string): Promise<MemoryInsight[]>;
   /** Updates the lifecycle status of a specific capability gap. */
-  updateGapStatus(gapId: string, status: import('./agent').GapStatus): Promise<GapTransitionResult>;
+  updateGapStatus(
+    gapId: string,
+    status: import('./agent').GapStatus,
+    workspaceId?: string,
+    metadata?: Record<string, unknown>
+  ): Promise<GapTransitionResult>;
   /** Archives stale gaps older than specified days. Returns count of archived gaps. */
   archiveStaleGaps(staleDays?: number, workspaceId?: string): Promise<number>;
   /** Atomically increments the attempt counter on a capability gap. */

@@ -216,7 +216,7 @@ export async function atomicUpdateMetadata(
   workspaceId?: string
 ): Promise<void> {
   const pk = base.getScopedUserId(userId, workspaceId);
-  const metadataFields: Array<keyof InsightMetadata> = [
+  const metadataFields: string[] = [
     'category',
     'confidence',
     'impact',
@@ -228,6 +228,9 @@ export async function atomicUpdateMetadata(
     'lastAccessed',
     'retryCount',
     'lastAttemptTime',
+    'createdAt',
+    'sessionId',
+    'requestingUserId',
   ];
 
   const updates: string[] = [];

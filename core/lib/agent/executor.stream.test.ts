@@ -7,9 +7,9 @@ vi.mock('../../handlers/events/cancellation-handler', () => ({
   handleTaskCancellation: vi.fn(),
 }));
 
-vi.mock('../safety/safety-engine', () => {
+const { MockSafetyEngine } = vi.hoisted(() => {
   return {
-    SafetyEngine: class {
+    MockSafetyEngine: class {
       evaluateAction = vi.fn().mockResolvedValue({
         allowed: true,
         requiresApproval: false,
@@ -19,6 +19,11 @@ vi.mock('../safety/safety-engine', () => {
     },
   };
 });
+
+vi.mock('../safety/safety-engine', () => ({
+  SafetyEngine: MockSafetyEngine,
+  getSafetyEngine: () => new MockSafetyEngine(),
+}));
 
 describe('AgentExecutor.streamLoop', () => {
   let mockProvider: any;

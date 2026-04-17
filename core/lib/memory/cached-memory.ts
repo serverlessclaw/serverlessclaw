@@ -336,8 +336,13 @@ export class CachedMemory implements IMemory {
   async setGap(gapId: string, details: string, metadata?: InsightMetadata, workspaceId?: string) {
     return this.gaps.setGap(gapId, details, metadata, workspaceId);
   }
-  async updateGapStatus(gapId: string, status: GapStatus, workspaceId?: string) {
-    return this.gaps.updateGapStatus(gapId, status, workspaceId);
+  async updateGapStatus(
+    gapId: string,
+    status: GapStatus,
+    workspaceId?: string,
+    metadata?: Record<string, unknown>
+  ) {
+    return this.gaps.updateGapStatus(gapId, status, workspaceId, metadata);
   }
   async archiveStaleGaps(staleDays?: number, workspaceId?: string) {
     return this.gaps.archiveStaleGaps(staleDays, workspaceId);

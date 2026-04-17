@@ -3,11 +3,14 @@ const safetyEngineMocks = vi.hoisted(() => ({
   recordFailure: vi.fn().mockResolvedValue(80),
 }));
 
+const MockSafetyEngine = class {
+  recordSuccess = safetyEngineMocks.recordSuccess;
+  recordFailure = safetyEngineMocks.recordFailure;
+};
+
 vi.mock('../lib/safety/safety-engine', () => ({
-  SafetyEngine: class {
-    recordSuccess = safetyEngineMocks.recordSuccess;
-    recordFailure = safetyEngineMocks.recordFailure;
-  },
+  SafetyEngine: MockSafetyEngine,
+  getSafetyEngine: () => new MockSafetyEngine(),
 }));
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';

@@ -117,7 +117,10 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
         const lockAcquired = await memory.acquireGapLock(gapId, AgentType.QA);
         if (lockAcquired) {
           try {
-            await memory.updateGapStatus(gapId, GapStatus.PENDING_APPROVAL);
+            await memory.updateGapStatus(gapId, GapStatus.PENDING_APPROVAL, undefined, {
+              sessionId,
+              requestingUserId: userId,
+            });
           } finally {
             await memory.releaseGapLock(gapId, AgentType.QA);
           }

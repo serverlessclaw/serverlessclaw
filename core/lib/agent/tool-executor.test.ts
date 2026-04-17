@@ -26,9 +26,9 @@ vi.mock('../tracer', () => ({
   }),
 }));
 
-vi.mock('../safety/safety-engine', () => {
+const { MockSafetyEngine } = vi.hoisted(() => {
   return {
-    SafetyEngine: class {
+    MockSafetyEngine: class {
       evaluateAction = vi.fn().mockImplementation(async (config, action, params) => {
         if (params?.resource === 'sst.config.ts') {
           return {
@@ -48,6 +48,11 @@ vi.mock('../safety/safety-engine', () => {
     },
   };
 });
+
+vi.mock('../safety/safety-engine', () => ({
+  SafetyEngine: MockSafetyEngine,
+  getSafetyEngine: () => new MockSafetyEngine(),
+}));
 
 vi.mock('../constants', async (importOriginal) => {
   const actual = (await importOriginal()) as any;

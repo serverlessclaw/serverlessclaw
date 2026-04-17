@@ -4,10 +4,18 @@ import { SafetyTier, EvolutionMode } from '../types/agent';
 
 // Mock SafetyEngine
 const mockEvaluateAction = vi.fn().mockResolvedValue({ allowed: true, reason: 'Allowed' });
+
+const { MockSafetyEngine } = vi.hoisted(() => {
+  return {
+    MockSafetyEngine: class {
+      evaluateAction = mockEvaluateAction;
+    },
+  };
+});
+
 vi.mock('../safety', () => ({
-  SafetyEngine: class {
-    evaluateAction = mockEvaluateAction;
-  },
+  SafetyEngine: MockSafetyEngine,
+  getSafetyEngine: () => new MockSafetyEngine(),
   getCircuitBreaker: () => ({
     canProceed: vi.fn().mockResolvedValue({ allowed: true }),
   }),

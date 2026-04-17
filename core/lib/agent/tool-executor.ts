@@ -62,6 +62,8 @@ export class ToolExecutor {
     const ui_blocks: NonNullable<Message['ui_blocks']> = [];
 
     // 0. Pre-check: Determine if we can run in parallel
+    // Use agentConfig.parallelToolCalls if available, defaulting to false for safety
+    const enableParallel = execContext.agentConfig?.parallelToolCalls ?? false;
     const toolInfos = toolCalls.map((tc) => {
       const tool = availableTools.find((t) => t.name === tc.function.name);
       return { toolCall: tc, tool };
@@ -69,8 +71,8 @@ export class ToolExecutor {
 
     const hasSequential = toolInfos.some((ti) => ti.tool?.sequential);
 
-    // If we have sequential tools, or only one tool, keep original sequential behavior for simplicity and safety
-    if (hasSequential || toolCalls.length <= 1) {
+    // If parallel is disabled, or we have sequential tools, or only one tool, keep original sequential behavior
+    if (!enableParallel || hasSequential || toolCalls.length <= 1) {
       for (const toolCall of toolCalls) {
         const tool = availableTools.find((t) => t.name === toolCall.function.name);
         const result = await this.executeSingleToolCall(
@@ -350,6 +352,7 @@ export class ToolExecutor {
       try {
         const { emitMetrics, METRICS } = await import('../metrics');
         emitMetrics([METRICS.toolExecuted(tool.name, toolSuccess)]).catch(() => {});
+        emitMetrics([METRICS.toolDuration(tool.name, Math.round(toolDurationMs))]).catch(() => {});
 
         const { TokenTracker } = await import('../metrics/token-usage');
         TokenTracker.updateToolRollup(

@@ -74,7 +74,19 @@ describe('Metrics', () => {
       expect(metric.MetricName).toBe('AgentInvocations');
       expect(metric.Value).toBe(1);
       expect(metric.Unit).toBe('Count');
-      expect(metric.Dimensions).toEqual([{ Name: 'AgentId', Value: 'my-agent' }]);
+      expect(metric.Dimensions).toEqual([
+        { Name: 'AgentId', Value: 'my-agent' },
+        { Name: 'Success', Value: 'true' },
+      ]);
+    });
+
+    it('should include Success dimension as false when specified', () => {
+      const metric = METRICS.agentInvoked('my-agent', false);
+
+      expect(metric.Dimensions).toEqual([
+        { Name: 'AgentId', Value: 'my-agent' },
+        { Name: 'Success', Value: 'false' },
+      ]);
     });
   });
 

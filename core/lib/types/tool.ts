@@ -91,6 +91,8 @@ export interface IToolDefinition {
   pathKeys?: string[];
   /** Optional: explicitly mark this tool as sensitive to require mandatory approval/RBAC, overriding heuristics. */
   sensitive?: boolean;
+  /** Optional: safety action category for policy enforcement (e.g., 'deployment', 'shell_command', 'code_change'). */
+  safetyAction?: string;
 }
 
 /**

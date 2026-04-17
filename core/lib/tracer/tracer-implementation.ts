@@ -261,21 +261,21 @@ export class ClawTracer {
       })
     );
 
-    await this.emitCompletionMetrics(endTime);
     await this.updateSummary(TRACE_STATUS.COMPLETED, { finalResponse });
+    await this.emitCompletionMetrics(endTime, true);
   }
 
   /**
    * Internal helper to emit agent-level metrics on trace completion/failure.
    */
-  private async emitCompletionMetrics(endTime: number): Promise<void> {
+  private async emitCompletionMetrics(endTime: number, success: boolean = true): Promise<void> {
     if (!this.agentId) return;
 
     try {
       const durationMs = endTime - this.startTime;
       const { emitMetrics } = await import('../metrics/metrics');
       await emitMetrics([
-        METRICS.agentInvoked(this.agentId),
+        METRICS.agentInvoked(this.agentId, success),
         METRICS.agentDuration(this.agentId, durationMs),
       ]);
     } catch (e) {
@@ -310,7 +310,7 @@ export class ClawTracer {
       })
     );
 
-    await this.emitCompletionMetrics(endTime);
+    await this.emitCompletionMetrics(endTime, false);
 
     // Emit immediate failure event for monitoring to trigger real-time remediation
     try {

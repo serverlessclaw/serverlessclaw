@@ -7,9 +7,9 @@ vi.mock('../../handlers/events/cancellation-handler', () => ({
   handleTaskCancellation: vi.fn(),
 }));
 
-vi.mock('../safety/safety-engine', () => {
+const { MockSafetyEngine } = vi.hoisted(() => {
   return {
-    SafetyEngine: class {
+    MockSafetyEngine: class {
       evaluateAction = vi.fn().mockImplementation(async (config, action) => {
         if (action === 'deleteDatabase') {
           return {
@@ -24,10 +24,14 @@ vi.mock('../safety/safety-engine', () => {
           reason: 'Authorized',
         };
       });
-      getClassCBlastRadius = vi.fn().mockReturnValue({});
     },
   };
 });
+
+vi.mock('../safety/safety-engine', () => ({
+  SafetyEngine: MockSafetyEngine,
+  getSafetyEngine: () => new MockSafetyEngine(),
+}));
 
 vi.mock('../constants', async (importOriginal) => {
   const actual = (await importOriginal()) as any;

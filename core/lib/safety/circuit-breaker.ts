@@ -145,6 +145,14 @@ export class CircuitBreaker {
 
     if (transitionDetected) {
       await this.logStateChange(finalState, type, ctx);
+      try {
+        const { emitMetrics, METRICS } = await import('../metrics');
+        await emitMetrics([
+          METRICS.circuitBreakerTriggered(type as 'deploy' | 'recovery' | 'gap' | 'event'),
+        ]);
+      } catch {
+        // Metrics emission failure should not block circuit breaker operation
+      }
     }
 
     return finalState;

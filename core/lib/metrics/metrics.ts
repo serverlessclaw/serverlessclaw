@@ -123,12 +123,15 @@ export async function emitMetrics(metrics: MetricDatum[]): Promise<void> {
 }
 
 export const METRICS = {
-  agentInvoked(agentId: string): MetricDatum {
+  agentInvoked(agentId: string, success: boolean = true): MetricDatum {
     return {
       MetricName: 'AgentInvocations',
       Value: 1,
       Unit: 'Count',
-      Dimensions: [{ Name: 'AgentId', Value: agentId }],
+      Dimensions: [
+        { Name: 'AgentId', Value: agentId },
+        { Name: 'Success', Value: success ? 'true' : 'false' },
+      ],
     };
   },
 

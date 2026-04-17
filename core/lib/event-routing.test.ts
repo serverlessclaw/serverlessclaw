@@ -51,8 +51,8 @@ describe('event-routing', () => {
 
     it('should have exactly the expected number of routing entries', () => {
       // This test will fail if someone adds a new event type without adding routing
-      // Update this count when adding new routable event types (currently 32)
-      expect(Object.keys(DEFAULT_EVENT_ROUTING)).toHaveLength(32);
+      // Update this count when adding new routable event types
+      expect(Object.keys(DEFAULT_EVENT_ROUTING)).toHaveLength(29);
     });
   });
 

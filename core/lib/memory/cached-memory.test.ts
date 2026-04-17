@@ -347,7 +347,12 @@ describe('CachedMemory', () => {
     it('should delegate and invalidate gaps cache', async () => {
       await cached.updateGapStatus('gap1', 'RESOLVED' as any);
 
-      expect(mockDynamo.updateGapStatus).toHaveBeenCalledWith('gap1', 'RESOLVED', undefined);
+      expect(mockDynamo.updateGapStatus).toHaveBeenCalledWith(
+        'gap1',
+        'RESOLVED',
+        undefined,
+        undefined
+      );
     });
   });
 

@@ -129,9 +129,10 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   async updateGapStatus(
     gapId: string,
     status: GapStatus,
-    workspaceId?: string
+    workspaceId?: string,
+    metadata?: Record<string, unknown>
   ): Promise<GapTransitionResult> {
-    return GapOps.updateGapStatus(this, gapId, status, workspaceId);
+    return GapOps.updateGapStatus(this, gapId, status, workspaceId, metadata);
   }
 
   /**

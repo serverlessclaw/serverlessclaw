@@ -190,8 +190,10 @@ export const handler = async (
 
         // Find gaps in PENDING_APPROVAL status for this user
         const pendingGaps = await memory.getAllGaps(GapStatus.PENDING_APPROVAL);
-        // Filter by sessionId since gaps are session-scoped
-        const userGaps = pendingGaps.filter((g) => g.userId === sessionId || g.userId === userId);
+        // Filter by sessionId/requestingUserId in metadata since gaps store these in metadata
+        const userGaps = pendingGaps.filter(
+          (g) => g.metadata.sessionId === sessionId || g.metadata.requestingUserId === userId
+        );
 
         if (userGaps.length === 0) {
           await sendOutboundMessage(

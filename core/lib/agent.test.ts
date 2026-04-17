@@ -13,16 +13,20 @@ import {
 } from './types/index';
 import { SYSTEM } from './constants';
 
-vi.mock('./safety/safety-engine', () => ({
-  SafetyEngine: class {
+vi.mock('./safety/safety-engine', () => {
+  const MockSafetyEngine = class {
     evaluateAction = vi.fn().mockResolvedValue({
       allowed: true,
       requiresApproval: false,
       reason: 'Authorized',
     });
     getClassCBlastRadius = vi.fn().mockReturnValue({});
-  },
-}));
+  };
+  return {
+    SafetyEngine: MockSafetyEngine,
+    getSafetyEngine: () => new MockSafetyEngine(),
+  };
+});
 
 const { mockSmartWarmup } = vi.hoisted(() => ({
   mockSmartWarmup: vi.fn().mockResolvedValue({ servers: [], agents: [] }),

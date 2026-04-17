@@ -437,7 +437,7 @@ export function createAgents(
       retention: LOG_RETENTION_PERIOD,
     },
   });
-  bus.subscribe('SystemBuildFailedSubscriber', eventHandler.arn, {
+  bus.subscribe('EventHandlerSubscriber', eventHandler.arn, {
     pattern: {
       detailType: [
         EventType.SYSTEM_BUILD_FAILED,
@@ -453,6 +453,25 @@ export function createAgents(
         EventType.PARALLEL_BARRIER_TIMEOUT,
         EventType.CLARIFICATION_REQUEST,
         EventType.CLARIFICATION_TIMEOUT,
+        EventType.DAG_TASK_COMPLETED,
+        EventType.DAG_TASK_FAILED,
+        EventType.ESCALATION_LEVEL_TIMEOUT,
+        EventType.ESCALATION_COMPLETED,
+        EventType.CONSENSUS_REQUEST,
+        EventType.CONSENSUS_VOTE,
+        EventType.COGNITIVE_HEALTH_CHECK,
+        EventType.STRATEGIC_TIE_BREAK,
+        EventType.REPORT_BACK,
+        EventType.SYSTEM_AUDIT_TRIGGER,
+        EventType.RECOVERY_LOG,
+        EventType.DASHBOARD_FAILURE_DETECTED,
+        EventType.DLQ_ROUTE,
+        EventType.ORCHESTRATION_SIGNAL,
+        EventType.DELEGATION_TASK,
+        EventType.CONSENSUS_REACHED,
+        EventType.HANDOFF,
+        EventType.HEALTH_ALERT,
+        EventType.REPUTATION_UPDATE,
       ],
     },
     transform: {

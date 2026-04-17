@@ -198,21 +198,9 @@ const BASE_EVENT_ROUTING: EventRoutingTable = {
     module: './events/dlq-handler',
     function: 'handleDlqRoute',
   },
-  [EventType.ORCHESTRATION_SIGNAL]: {
-    module: './events/orchestration-handler',
-    function: 'handleOrchestrationSignal',
-  },
-  [EventType.DELEGATION_TASK]: {
-    module: './events/delegation-handler',
-    function: 'handleDelegationTask',
-  },
   [EventType.CONSENSUS_REACHED]: {
     module: './events/consensus-handler',
     function: 'handleConsensusReached',
-  },
-  [EventType.HANDOFF]: {
-    module: './events/handoff-handler',
-    function: 'handleHandoff',
   },
   [EventType.HEALTH_ALERT]: {
     module: './events/health-handler',

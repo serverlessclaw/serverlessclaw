@@ -20,9 +20,76 @@ import { CONFIG_DEFAULTS } from '../config/config-defaults';
 import { SafetyBase } from './safety-base';
 import { AgentRegistry } from '../registry/AgentRegistry';
 import { TRUST } from '../constants';
+import { CLASS_C_ACTIONS } from '../constants/safety';
 import { emitEvent } from '../utils/bus';
 import { PolicyValidator } from './policy-validator';
 import { scanForResources } from '../utils/fs-security';
+
+let sharedEngine: SafetyEngine | null = null;
+
+export function getSafetyEngine(
+  customPolicies?: Partial<Record<SafetyTier, Partial<SafetyPolicy>>>,
+  toolOverrides?: ToolSafetyOverride[],
+  base?: BaseMemoryProvider
+): SafetyEngine {
+  if (!sharedEngine) {
+    sharedEngine = new SafetyEngine(customPolicies, toolOverrides, base);
+  } else if (customPolicies || toolOverrides) {
+    logger.warn(
+      '[SafetyEngine] getSafetyEngine called with new config after engine already initialized. Ignoring new config. Use resetSafetyEngine() first if reconfiguration is needed.'
+    );
+  }
+  return sharedEngine;
+}
+
+export function resetSafetyEngine(
+  customPolicies?: Partial<Record<SafetyTier, Partial<SafetyPolicy>>>,
+  toolOverrides?: ToolSafetyOverride[],
+  base?: BaseMemoryProvider
+): SafetyEngine {
+  sharedEngine = null;
+  return getSafetyEngine(customPolicies, toolOverrides, base);
+}
+
+export function hasSafetyEngine(): boolean {
+  return sharedEngine !== null;
+}
+
+function normalizeSafetyAction(action: string, toolName?: string): string {
+  if (!toolName) return action;
+  const lowerAction = action.toLowerCase();
+  const lowerToolName = toolName.toLowerCase();
+  if (CLASS_C_ACTIONS.map((a) => a.toLowerCase()).includes(lowerAction)) {
+    return lowerAction;
+  }
+  if (lowerToolName.includes('deployment') || lowerToolName.includes('deploy')) {
+    return 'deployment';
+  }
+  if (
+    lowerToolName.includes('shell') ||
+    lowerToolName.includes('command') ||
+    lowerToolName.includes('exec')
+  ) {
+    return 'shell_command';
+  }
+  if (
+    lowerToolName.includes('code_change') ||
+    lowerToolName.includes('codechange') ||
+    lowerToolName.includes('edit') ||
+    lowerToolName.includes('write') ||
+    lowerToolName.includes('create_file')
+  ) {
+    return 'code_change';
+  }
+  if (
+    lowerToolName.includes('iam') ||
+    lowerToolName.includes('permission') ||
+    lowerToolName.includes('access')
+  ) {
+    return 'iam_change';
+  }
+  return action;
+}
 
 export class SafetyEngine extends SafetyBase {
   private policies: Map<SafetyTier, Partial<SafetyPolicy>>;
@@ -76,6 +143,8 @@ export class SafetyEngine extends SafetyBase {
     const agentId = agentConfig?.id ?? 'unknown';
     const ctx = { ...context, agentId };
 
+    const normalizedAction = normalizeSafetyAction(action, context?.toolName);
+
     const policy = await this.getResolvedPolicy(tier);
     if (!policy) {
       return {
@@ -88,10 +157,10 @@ export class SafetyEngine extends SafetyBase {
 
     // Validation Pipeline
     const validators = [
-      () => this.validateStaticPolicies(action, ctx, tier),
-      () => this.validateAccessControl(agentConfig, action, ctx, tier, policy),
-      () => this.limiter.checkRateLimits(policy, action),
-      () => this.validateDynamicRestrictions(agentConfig, action, ctx, tier, policy),
+      () => this.validateStaticPolicies(normalizedAction, ctx, tier),
+      () => this.validateAccessControl(agentConfig, normalizedAction, ctx, tier, policy),
+      () => this.limiter.checkRateLimits(policy, normalizedAction),
+      () => this.validateDynamicRestrictions(agentConfig, normalizedAction, ctx, tier, policy),
     ];
 
     for (const validator of validators) {

@@ -28,13 +28,18 @@ const mockEvaluate = vi.fn().mockResolvedValue({
   reason: 'Authorized',
 });
 
-vi.mock('../safety/safety-engine', () => {
+const { MockSafetyEngine } = vi.hoisted(() => {
   return {
-    SafetyEngine: class {
+    MockSafetyEngine: class {
       evaluateAction = mockEvaluate;
     },
   };
 });
+
+vi.mock('../safety/safety-engine', () => ({
+  SafetyEngine: MockSafetyEngine,
+  getSafetyEngine: () => new MockSafetyEngine(),
+}));
 
 describe('ToolExecutor Security', () => {
   const execContext: ToolExecutionContext = {

@@ -224,7 +224,8 @@ export async function updateGapStatus(
   base: BaseMemoryProvider,
   gapId: string,
   status: GapStatus,
-  workspaceId?: string
+  workspaceId?: string,
+  metadata?: Record<string, unknown>
 ): Promise<GapTransitionResult> {
   const target = await resolveItemById(base, gapId, 'GAP', workspaceId);
   if (!target) {
@@ -245,19 +246,33 @@ export async function updateGapStatus(
   };
 
   const guard = TRANSITION_GUARDS[status];
+  let updateExpr = 'SET #status = :status, updatedAt = :now';
+  const exprValues: Record<string, unknown> = {
+    ':status': status,
+    ':targetId': target.id,
+    ':now': Date.now(),
+    ...(guard ? { ':expectedStatus': guard.expectedStatus } : {}),
+  };
+  const exprNames: Record<string, string> = { '#status': 'status' };
+
+  if (metadata) {
+    const metaEntries = Object.entries(metadata).map(([key], idx) => {
+      return `${key} = :metaVal${idx}`;
+    });
+    Object.entries(metadata).forEach(([key], idx) => {
+      exprValues[`:metaVal${idx}`] = metadata[key];
+    });
+    updateExpr += ', ' + metaEntries.join(', ');
+  }
+
   const params: Record<string, any> = {
     Key: { userId: target.id, timestamp: target.timestamp },
-    UpdateExpression: 'SET #status = :status, updatedAt = :now',
+    UpdateExpression: updateExpr,
     ConditionExpression: guard
       ? 'attribute_exists(userId) AND userId = :targetId AND #status = :expectedStatus'
       : 'attribute_exists(userId) AND userId = :targetId',
-    ExpressionAttributeNames: { '#status': 'status' },
-    ExpressionAttributeValues: {
-      ':status': status,
-      ':targetId': target.id,
-      ':now': Date.now(),
-      ...(guard ? { ':expectedStatus': guard.expectedStatus } : {}),
-    },
+    ExpressionAttributeNames: exprNames,
+    ExpressionAttributeValues: exprValues,
   };
 
   try {

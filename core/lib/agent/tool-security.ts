@@ -1,4 +1,4 @@
-import { SafetyEngine, getCircuitBreaker } from '../safety';
+import { getSafetyEngine, getCircuitBreaker } from '../safety';
 import { Permission } from '../session/identity';
 import { ITool, ToolCall } from '../types/index';
 import { logger } from '../logger';
@@ -26,15 +26,16 @@ export class ToolSecurityValidator {
       .update(`${toolCall.function.name}:${toolCall.function.arguments}`)
       .digest('hex');
 
-    // 2. Safety Engine Evaluation
-    const safety = new SafetyEngine();
+    // 2. Safety Engine Evaluation (use singleton)
+    const safety = getSafetyEngine();
     const resourcePath = (args.path ||
       args.filePath ||
       args.resource ||
       args.destination ||
       args.source) as string | undefined;
 
-    const safetyResult = await safety.evaluateAction(execContext.agentConfig, tool.name, {
+    const safetyAction = tool.safetyAction || tool.name;
+    const safetyResult = await safety.evaluateAction(execContext.agentConfig, safetyAction, {
       toolName: tool.name,
       resource: resourcePath,
       traceId: execContext.traceId,

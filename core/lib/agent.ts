@@ -285,13 +285,14 @@ export class Agent {
       if (!process.env.VITEST && loopUsage) {
         try {
           const { emitMetrics, METRICS } = await import('./metrics');
+          const agentId = this.config?.id ?? 'unknown';
+          const success = !paused;
           emitMetrics([
-            METRICS.agentDuration(this.config?.id ?? 'unknown', loopUsage.durationMs),
-            METRICS.agentInvoked(this.config?.id ?? 'unknown'),
+            METRICS.agentDuration(agentId, loopUsage.durationMs),
+            METRICS.agentInvoked(agentId, success),
           ]).catch(() => {});
 
           const { TokenTracker } = await import('./metrics/token-usage');
-          const agentId = this.config?.id ?? 'unknown';
           TokenTracker.recordInvocation({
             timestamp: Date.now(),
             traceId: traceId ?? '',

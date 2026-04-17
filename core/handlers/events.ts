@@ -8,6 +8,57 @@ import { ConfigManager } from '../lib/registry/config';
 import { DEFAULT_EVENT_ROUTING, verifyEventRoutingConfiguration } from '../lib/event-routing';
 import { performance } from 'perf_hooks';
 import { FlowController } from '../lib/routing/flow-controller';
+import { isMissionContext } from './events/shared';
+import { incrementRecursionDepth, getRecursionLimit } from '../lib/recursion-tracker';
+import * as crypto from 'crypto';
+
+import * as buildHandler from './events/build-handler';
+import * as continuationHandler from './events/continuation-handler';
+import * as healthHandler from './events/health-handler';
+import * as taskResultHandler from './events/task-result-handler';
+import * as clarificationHandler from './events/clarification-handler';
+import * as clarificationTimeoutHandler from './events/clarification-timeout-handler';
+import * as parallelHandler from './events/parallel-handler';
+import * as parallelBarrierTimeoutHandler from './events/parallel-barrier-timeout-handler';
+import * as parallelTaskCompletedHandler from './events/parallel-task-completed-handler';
+import * as dagSupervisorHandler from './events/dag-supervisor-handler';
+import * as cancellationHandler from './events/cancellation-handler';
+import * as proactiveHandler from './events/proactive-handler';
+import * as escalationHandler from './events/escalation-handler';
+import * as consensusHandler from './events/consensus-handler';
+import * as cognitiveHealthHandler from './events/cognitive-health-handler';
+import * as strategicTieBreakHandler from './events/strategic-tie-break-handler';
+import * as reportBackHandler from './events/report-back-handler';
+import * as auditHandler from './events/audit-handler';
+import * as recoveryHandler from './events/recovery-handler';
+import * as dashboardFailureHandler from './events/dashboard-failure-handler';
+import * as dlqHandler from './events/dlq-handler';
+import * as reputationHandler from './events/reputation-handler';
+
+const STATIC_HANDLERS: Record<string, any> = {
+  'build-handler': buildHandler,
+  'continuation-handler': continuationHandler,
+  'health-handler': healthHandler,
+  'task-result-handler': taskResultHandler,
+  'clarification-handler': clarificationHandler,
+  'clarification-timeout-handler': clarificationTimeoutHandler,
+  'parallel-handler': parallelHandler,
+  'parallel-barrier-timeout-handler': parallelBarrierTimeoutHandler,
+  'parallel-task-completed-handler': parallelTaskCompletedHandler,
+  'dag-supervisor-handler': dagSupervisorHandler,
+  'cancellation-handler': cancellationHandler,
+  'proactive-handler': proactiveHandler,
+  'escalation-handler': escalationHandler,
+  'consensus-handler': consensusHandler,
+  'cognitive-health-handler': cognitiveHealthHandler,
+  'strategic-tie-break-handler': strategicTieBreakHandler,
+  'report-back-handler': reportBackHandler,
+  'audit-handler': auditHandler,
+  'recovery-handler': recoveryHandler,
+  'dashboard-failure-handler': dashboardFailureHandler,
+  'dlq-handler': dlqHandler,
+  'reputation-handler': reputationHandler,
+};
 
 // Verify event routing configuration on module load
 verifyEventRoutingConfiguration();
@@ -50,9 +101,6 @@ export async function handler(
     return;
   }
 
-  // Recursion depth enforcement using unified DynamoDB-based recursion tracker
-  const { isMissionContext } = await import('./events/shared');
-  const { incrementRecursionDepth, getRecursionLimit } = await import('../lib/recursion-tracker');
   const traceId = eventDetail.traceId as string;
   const sessionId = eventDetail.sessionId as string;
 
@@ -96,7 +144,6 @@ export async function handler(
   // Idempotency handling (deterministic key for events without envelopeId)
   let idempotencyKey = envelopeId;
   if (!idempotencyKey) {
-    const crypto = await import('crypto');
     const hash = crypto.createHash('sha256');
     hash.update(JSON.stringify(eventDetail) + detailType);
     idempotencyKey = hash.digest('hex').substring(0, 16);
@@ -150,37 +197,43 @@ export async function handler(
       return;
     }
 
-    // Dynamically import the handler module
+    // Retrieve the statically imported handler module
     let handlerModule;
     try {
-      const moduleName = routing.module.split('/').pop();
-      handlerModule = await import(`./events/${moduleName}.ts`);
+      const moduleName = routing.module.split('/').pop()!;
+      handlerModule = STATIC_HANDLERS[moduleName];
+      if (!handlerModule) {
+        throw new Error(`Module ${moduleName} not found in static handlers map`);
+      }
     } catch (importError) {
-      logger.error(`[SAFE_MODE] Import failed for ${routing.module}:`, importError);
+      logger.error(`[SAFE_MODE] Static import lookup failed for ${routing.module}:`, importError);
       // Attempt fallback to default routing if not already using it
       if (routingTable !== DEFAULT_EVENT_ROUTING) {
         const fallback = DEFAULT_EVENT_ROUTING[detailType];
         if (fallback) {
           logger.info(`[SAFE_MODE] Recovering via default routing for ${detailType}`);
-          const fallbackModuleName = fallback.module.split('/').pop();
+          const fallbackModuleName = fallback.module.split('/').pop()!;
           try {
-            handlerModule = await import(`./events/${fallbackModuleName}.ts`);
+            handlerModule = STATIC_HANDLERS[fallbackModuleName];
+            if (!handlerModule) {
+              throw new Error(`Fallback module ${fallbackModuleName} not found in static map`);
+            }
           } catch (fallbackError) {
-            const errorMsg = `[SAFE_MODE] Critical fallback import failed for ${fallbackModuleName}: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`;
+            const errorMsg = `[SAFE_MODE] Critical fallback lookup failed for ${fallbackModuleName}: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`;
             logger.error(errorMsg);
             await routeToDlq(event, detailType, 'SYSTEM', 'unknown', errorMsg);
             emitMetrics([METRICS.dlqEvents(1)]).catch(() => {});
             throw new Error(errorMsg);
           }
         } else {
-          const errorMsg = `[SAFE_MODE] Primary import failed and no fallback exists for ${detailType}`;
+          const errorMsg = `[SAFE_MODE] Primary lookup failed and no fallback exists for ${detailType}`;
           logger.error(errorMsg);
           await routeToDlq(event, detailType, 'SYSTEM', 'unknown', errorMsg);
           emitMetrics([METRICS.dlqEvents(1)]).catch(() => {});
           throw new Error(errorMsg);
         }
       } else {
-        const errorMsg = `Already using default routing and import failed: ${importError instanceof Error ? importError.message : String(importError)}`;
+        const errorMsg = `Already using default routing and lookup failed: ${importError instanceof Error ? importError.message : String(importError)}`;
         logger.error(errorMsg);
         await routeToDlq(event, detailType, 'SYSTEM', 'unknown', errorMsg);
         emitMetrics([METRICS.dlqEvents(1)]).catch(() => {});

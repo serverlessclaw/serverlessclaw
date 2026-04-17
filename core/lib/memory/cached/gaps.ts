@@ -54,9 +54,10 @@ export class MemoryGaps {
   async updateGapStatus(
     gapId: string,
     status: GapStatus,
-    workspaceId?: string
+    workspaceId?: string,
+    metadata?: Record<string, unknown>
   ): Promise<GapTransitionResult> {
-    const result = await this.underlying.updateGapStatus(gapId, status, workspaceId);
+    const result = await this.underlying.updateGapStatus(gapId, status, workspaceId, metadata);
 
     // Invalidate gaps cache
     MemoryCaches.global.invalidatePattern(/^gaps:/);
