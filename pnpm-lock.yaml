@@ -22,6 +22,8 @@ overrides:
   lodash: '>=4.18.1'
   vite: 8.0.8
   hono: 4.12.14
+  '@hono/node-server': 1.19.13
+  '@modelcontextprotocol/server-filesystem': 2026.1.14
 
 importers:
 
@@ -276,7 +278,7 @@ importers:
         specifier: ^1.29.0
         version: 1.29.0(zod@4.3.6)
       '@modelcontextprotocol/server-filesystem':
-        specifier: ^2026.1.14
+        specifier: 2026.1.14
         version: 2026.1.14(zod@4.3.6)
       '@openai/agents-core':
         specifier: ^0.8.0
@@ -1591,8 +1593,8 @@ packages:
     engines: {node: '>=14.0.0'}
     hasBin: true
 
-  '@hono/node-server@1.19.12':
-    resolution: {integrity: sha512-txsUW4SQ1iilgE0l9/e9VQWmELXifEFvmdA1j6WFh/aFPj99hIntrSsq/if0UWyGVkmrRPKA1wCeP+UCr1B9Uw==}
+  '@hono/node-server@1.19.13':
+    resolution: {integrity: sha512-TsQLe4i2gvoTtrHje625ngThGBySOgSK3Xo2XRYOdqGN1teR8+I7vchQC46uLJi8OF62YTYA3AhSpumtkhsaKQ==}
     engines: {node: '>=18.14.1'}
     peerDependencies:
       hono: 4.12.14
@@ -9648,7 +9650,7 @@ snapshots:
       - aws-crt
       - supports-color
 
-  '@hono/node-server@1.19.12(hono@4.12.14)':
+  '@hono/node-server@1.19.13(hono@4.12.14)':
     dependencies:
       hono: 4.12.14
 
@@ -9824,7 +9826,7 @@ snapshots:
 
   '@modelcontextprotocol/sdk@1.29.0(zod@3.25.76)':
     dependencies:
-      '@hono/node-server': 1.19.12(hono@4.12.14)
+      '@hono/node-server': 1.19.13(hono@4.12.14)
       ajv: 8.18.0
       ajv-formats: 3.0.1(ajv@8.18.0)
       content-type: 1.0.5
@@ -9846,7 +9848,7 @@ snapshots:
 
   '@modelcontextprotocol/sdk@1.29.0(zod@4.3.6)':
     dependencies:
-      '@hono/node-server': 1.19.12(hono@4.12.14)
+      '@hono/node-server': 1.19.13(hono@4.12.14)
       ajv: 8.18.0
       ajv-formats: 3.0.1(ajv@8.18.0)
       content-type: 1.0.5
