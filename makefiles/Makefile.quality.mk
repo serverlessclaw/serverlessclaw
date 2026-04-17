@@ -21,6 +21,8 @@ gate: ## Run all quality checks in parallel (via Turborepo) + E2E
 gate-tier-1: ## Fast Tier 1 checks (via Turborepo)
 	@$(call log_step,Running Tier 1 (Fast) gate via Turbo...)
 	@$(PNPM) run check
+	@$(MAKE) docs-check
+
 
 gate-tier-2: ## Thorough Tier 2 checks (via Turborepo)
 	@$(call log_step,Running Tier 2 (Thorough) gate via Turbo...)

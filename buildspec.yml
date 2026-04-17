@@ -48,19 +48,15 @@ phases:
     commands:
       - |
         if [ "$SYNC_ONLY" != "true" ]; then
-          echo "Starting autonomous deployment and quality gate (Tier 1) in parallel..."
-          make gate-deploy > /tmp/ci-logs/gate-deploy.log 2>&1 &
-          GATE_PID=$!
-          make deploy ENV=$SST_STAGE > /tmp/ci-logs/deploy.log 2>&1
-          DEPLOY_EXIT=$?
-          wait $GATE_PID
-          GATE_EXIT=$?
-          if [ $DEPLOY_EXIT -ne 0 ] || [ $GATE_EXIT -ne 0 ]; then
-            echo "Build failed: Deploy Exit=$DEPLOY_EXIT, Gate Exit=$GATE_EXIT"
-            # Move logs to current dir for artifact collection before exiting
-            cp /tmp/ci-logs/*.log . || true
-            npx tsx scripts/ci/generate-manifest.ts /tmp/ci-logs .
-            exit 1
+          echo "Running audited release (gates + deploy + tag)..."
+          # make release handles: Tier 1 gates, Tier 2 (coverage/aiready) + Deploy in parallel, Tier 3 (E2E), and Audit Tag.
+          make release ENV=$SST_STAGE > /tmp/ci-logs/release.log 2>&1
+          RELEASE_EXIT=$?
+          if [ $RELEASE_EXIT -ne 0 ]; then
+             echo "Release failed. Check release.log"
+             cp /tmp/ci-logs/*.log . || true
+             npx tsx scripts/ci/generate-manifest.ts /tmp/ci-logs .
+             exit 1
           fi
         fi
   post_build:
@@ -77,42 +73,7 @@ phases:
           fi
         fi
       - echo build completed on `date`
-      - |
-        if [ "$CODEBUILD_BUILD_SUCCEEDING" = "1" ] && [ "$SYNC_ONLY" != "true" ]; then
-          echo "Deployment successful. Running post-deploy checks..."
-          API_URL=$(python3 -c "import json; print(json.load(open('.sst/outputs.json'))['apiUrl'])")
 
-          echo "Running Tier 3 verification (Health + E2E) in parallel..."
-          make test-tier-3 URL=$API_URL > /tmp/ci-logs/test-tier-3.log 2>&1
-          TEST_TIER_3_EXIT=$?
-          if [ $TEST_TIER_3_EXIT -ne 0 ]; then
-            echo "ERROR: Tier 3 verification failed. Blocking trunk sync."
-            npx tsx scripts/ci/generate-manifest.ts /tmp/ci-logs .
-            exit 1
-          fi
-      - |
-        if [ "$CODEBUILD_BUILD_SUCCEEDING" = "1" ] && [ "$SYNC_ONLY" != "true" ]; then
-          echo "Running release-minimum blocking checks (tests + security + docs)..."
-          make test > /tmp/ci-logs/test.log 2>&1 || {
-            echo "ERROR: Unit test suite failed."
-            npx tsx scripts/ci/generate-manifest.ts /tmp/ci-logs .
-            exit 1
-          }
-          make docs-check > /tmp/ci-logs/docs-check.log 2>&1 || {
-            echo "ERROR: Documentation drift detected."
-            npx tsx scripts/ci/generate-manifest.ts /tmp/ci-logs .
-            exit 1
-          }
-        fi
-      - |
-        if [ "$CODEBUILD_BUILD_SUCCEEDING" = "1" ] && [ "$SYNC_ONLY" != "true" ]; then
-          echo "Running coverage enforcement..."
-          make test-coverage-ci > /tmp/ci-logs/coverage.log 2>&1 || {
-            echo "ERROR: Coverage thresholds not met. See coverage report above."
-            npx tsx scripts/ci/generate-manifest.ts /tmp/ci-logs .
-            exit 1
-          }
-        fi
       - |
         if [ "$CODEBUILD_BUILD_SUCCEEDING" = "1" ] && [ -n "$GITHUB_TOKEN" ] && [ "$TRUNK_SYNC_ENABLED" = "true" ]; then
           REPO="${HUB_URL:-${GITHUB_REPO:-serverlessclaw/serverlessclaw}}"

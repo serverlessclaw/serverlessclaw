@@ -22,6 +22,11 @@ dev-mono: clear-port ## Start SST in development mode (mono mode)
 	TERM=xterm $(SST) dev --stage $(LOCAL_STAGE) --mode=mono
 
 deploy: ## Deploy SST to the environment (default: prod)
+	@if [ "$(ENV)" = "prod" ]; then \
+		$(call log_warning,WARNING: Direct deployment to production is discouraged.); \
+		$(call log_warning,Run 'make release' instead for full quality gates and auditing (tagging).); \
+		sleep 2; \
+	fi
 	@$(call log_step,Preparing deployment for environment: $(ENV)...)
 	@if [ ! -f "$(SST)" ]; then $(call log_error,SST binary not found. Run pnpm install first.); exit 1; fi
 	@$(call load_env); \
@@ -34,6 +39,7 @@ deploy: ## Deploy SST to the environment (default: prod)
 	$(MAKE) verify-deploy ; \
 	if [ "$(E2E)" = "true" ]; then $(MAKE) test-tier-3 ; fi
 	@$(call log_success,SST deploy to $(ENV) completed successfully)
+
 
 diff: ## Show SST infrastructure changes
 	@$(call log_info,SST diff for $(ENV)...)
