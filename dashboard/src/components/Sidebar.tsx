@@ -24,10 +24,11 @@ import {
   Sun,
   Moon,
   Monitor,
+  LogOut,
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { ROUTES } from '@/lib/constants';
 import { useTranslations } from '@/components/Providers/TranslationsProvider';
 import { useUICommand } from '@/components/Providers/UICommandProvider';
@@ -42,6 +43,7 @@ import Button from '@/components/ui/Button';
  */
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const { isSidebarCollapsed: isCollapsed, setSidebarCollapsed } = useUICommand();
   const { t, locale, setLocale } = useTranslations();
@@ -55,6 +57,17 @@ export default function Sidebar() {
 
   const toggleCollapse = () => {
     setSidebarCollapsed(!isCollapsed);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (error) {
+      console.error('Logout failed:', error);
+    } finally {
+      router.push('/login');
+      router.refresh();
+    }
   };
 
   // Close mobile sidebar on navigation
@@ -101,7 +114,7 @@ export default function Sidebar() {
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 border-b border-border bg-background/80 backdrop-blur-md z-40 px-6 flex items-center justify-between">
         <Link href={ROUTES.HOME} className="flex items-center gap-3 group shrink-0">
-          <div className="relative w-8 h-8 flex-shrink-0 rounded-sm overflow-hidden group-hover:scale-105 transition-transform">
+          <div className="relative w-8 h-8 shrink-0 rounded-sm overflow-hidden group-hover:scale-105 transition-transform">
             <Image
               src="/icon.png"
               alt="ClawCenter Logo"
@@ -142,7 +155,7 @@ export default function Sidebar() {
       >
         <div className={`flex items-center justify-between gap-3 mb-6 ${isCollapsed ? 'flex-col' : 'px-2'} pt-4`}>
           <Link href={ROUTES.HOME} className="flex items-center gap-3 group shrink-0">
-            <div className="relative w-8 h-8 flex-shrink-0 rounded-sm overflow-hidden group-hover:scale-105 transition-transform">
+            <div className="relative w-8 h-8 shrink-0 rounded-sm overflow-hidden group-hover:scale-105 transition-transform">
               <Image
                 src="/icon.png"
                 alt="ClawCenter Logo"
@@ -173,7 +186,7 @@ export default function Sidebar() {
         {/* Desktop Fold Toggle - Floating on right edge */}
         <button
           onClick={toggleCollapse}
-          className="hidden lg:flex absolute top-6 -right-3 z-[60] h-6 w-6 rounded-full border border-border bg-background shadow-sm items-center justify-center text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all"
+          className="hidden lg:flex absolute top-6 -right-3 z-60 h-6 w-6 rounded-full border border-border bg-background shadow-sm items-center justify-center text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all"
           title={isCollapsed ? t('UNFOLD') : t('FOLD')}
         >
           {isCollapsed ? <PanelLeftOpen size={12} /> : <PanelLeftClose size={12} />}
@@ -324,6 +337,16 @@ export default function Sidebar() {
                   </button>
                 </div>
               </div>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="justify-start px-2 py-2 text-xs text-muted-foreground hover:text-cyber-green"
+                icon={<LogOut size={12} />}
+              >
+                Logout
+              </Button>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-1 pb-0">
@@ -341,6 +364,15 @@ export default function Sidebar() {
                   className={`text-[10px] font-mono font-bold transition-colors uppercase ${mounted ? 'text-muted-foreground hover:text-cyber-green' : 'text-transparent'}`}
                  >
                   {mounted ? (locale === 'en' ? 'CN' : 'EN') : '..'}
+                 </button>
+               </div>
+               <div className="w-8 h-6 flex items-center justify-center">
+                 <button
+                  onClick={handleLogout}
+                  className="p-1 rounded-full bg-foreground/5 transition-colors text-muted-foreground hover:text-cyber-green"
+                  title="Logout"
+                 >
+                  <LogOut size={12} />
                  </button>
                </div>
             </div>

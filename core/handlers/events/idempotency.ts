@@ -10,6 +10,7 @@
 import { logger } from '../../lib/logger';
 import { DynamoDBClient, ConditionalCheckFailedException } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { getMemoryTableName } from '../../lib/utils/ddb-client';
 
 const IDEMPOTENCY_TTL_SECONDS = 300; // 5 minutes - aligns with typical retry windows
 const IDEMPOTENCY_KEY_PREFIX = 'IDEMPOTENCY#';
@@ -39,7 +40,7 @@ export async function checkAndMarkIdempotent(
     // Atomic conditional write - fails if key already exists
     await docClient.send(
       new PutCommand({
-        TableName: process.env.MEMORY_TABLE_NAME ?? 'MemoryTable',
+        TableName: getMemoryTableName(),
         Item: {
           userId: key,
           timestamp: 0,

@@ -15,6 +15,7 @@ import {
 import { SYSTEM, DYNAMO_KEYS } from './constants';
 import { ConfigManager } from './registry/config';
 import { parseConfigInt } from './providers/utils';
+import { getMemoryTableName } from './utils/ddb-client';
 
 const RECURSION_STACK_PREFIX = 'RECURSION_STACK#';
 const RECURSION_TTL_SECONDS = 3600; // 1 hour - matches typical mission lifetime
@@ -98,7 +99,7 @@ export async function incrementRecursionDepth(
   try {
     const response = await docClient.send(
       new UpdateCommand({
-        TableName: process.env.MEMORY_TABLE_NAME ?? 'MemoryTable',
+        TableName: getMemoryTableName(),
         Key: { userId: key, timestamp: 0 },
         UpdateExpression:
           'SET #depth = if_not_exists(#depth, :zero) + :one, sessionId = :sessionId, agentId = :agentId, updatedAt = :now, expiresAt = :exp, #type = :type',
@@ -137,7 +138,7 @@ export async function getRecursionDepth(traceId: string): Promise<number> {
     const key = `${RECURSION_STACK_PREFIX}${traceId}`;
     const response = await docClient.send(
       new GetCommand({
-        TableName: process.env.MEMORY_TABLE_NAME ?? 'MemoryTable',
+        TableName: getMemoryTableName(),
         Key: {
           userId: key,
           timestamp: 0,
@@ -165,7 +166,7 @@ export async function clearRecursionStack(traceId: string): Promise<void> {
 
     await docClient.send(
       new DeleteCommand({
-        TableName: process.env.MEMORY_TABLE_NAME ?? 'MemoryTable',
+        TableName: getMemoryTableName(),
         Key: { userId: key, timestamp: 0 },
         ConditionExpression: 'attribute_exists(#depth)',
         ExpressionAttributeNames: {

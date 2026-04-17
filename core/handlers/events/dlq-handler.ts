@@ -1,5 +1,6 @@
 import { logger } from '../../lib/logger';
 import { reportHealthIssue } from '../../lib/lifecycle/health';
+import { EventType } from '../../lib/types/agent';
 
 /**
  * Handles explicit DLQ_ROUTE events, which are generated when the Events Lambda
@@ -24,6 +25,20 @@ export async function handleDlqRoute(
     errorMessage,
     originalEvent: JSON.stringify(originalEvent).substring(0, 500), // Log preview
   });
+
+  // Prevent SYSTEM_HEALTH_REPORT -> DLQ_ROUTE -> SYSTEM_HEALTH_REPORT feedback loops.
+  // When recursion tracking fails and system health events are rerouted, emitting another
+  // health issue here can re-enter the same failing path indefinitely.
+  if (
+    detailType === EventType.SYSTEM_HEALTH_REPORT &&
+    typeof errorMessage === 'string' &&
+    errorMessage.includes('Recursion limit exceeded')
+  ) {
+    logger.warn(
+      `[DLQ_ROUTE] Suppressing health re-report for recursion-rerouted ${detailType} (trace: ${traceId})`
+    );
+    return;
+  }
 
   // Report the issue so it shows up in dashboards
   await reportHealthIssue({

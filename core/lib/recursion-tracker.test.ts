@@ -6,6 +6,12 @@ import {
 } from './recursion-tracker';
 import { UpdateCommand, GetCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 
+vi.mock('sst', () => ({
+  Resource: {
+    MemoryTable: { name: 'test-memory-table' },
+  },
+}));
+
 // Mock the DynamoDB document client send method
 const mockSend = vi.fn();
 vi.mock('@aws-sdk/lib-dynamodb', () => {
@@ -34,6 +40,7 @@ vi.mock('@aws-sdk/client-dynamodb', () => ({
 describe('recursion-tracker', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env.MEMORY_TABLE_NAME;
   });
 
   describe('incrementRecursionDepth', () => {
@@ -76,6 +83,30 @@ describe('recursion-tracker', () => {
 
       const depth = await incrementRecursionDepth('trace-1', 'sess-1', 'agent-1');
       expect(depth).toBe(-1);
+    });
+
+    it('should use Resource.MemoryTable.name when MEMORY_TABLE_NAME is not set', async () => {
+      mockSend.mockResolvedValueOnce({
+        Attributes: { depth: 1 },
+      });
+
+      await incrementRecursionDepth('trace-resource', 'sess-resource', 'agent-resource');
+
+      const cmd = mockSend.mock.calls[0][0];
+      expect(cmd.input.TableName).toBe('test-memory-table');
+    });
+
+    it('should prefer MEMORY_TABLE_NAME env var over Resource fallback', async () => {
+      process.env.MEMORY_TABLE_NAME = 'env-memory-table';
+      mockSend.mockResolvedValueOnce({
+        Attributes: { depth: 1 },
+      });
+
+      await incrementRecursionDepth('trace-env', 'sess-env', 'agent-env');
+
+      const cmd = mockSend.mock.calls[0][0];
+      expect(cmd.input.TableName).toBe('env-memory-table');
+      delete process.env.MEMORY_TABLE_NAME;
     });
   });
 

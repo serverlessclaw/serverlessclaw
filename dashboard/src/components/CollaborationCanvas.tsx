@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   ReactFlow,
+  ReactFlowProvider,
   Background,
   Node,
   Edge,
@@ -37,6 +38,14 @@ import { HandoffPanel } from '@/components/HandoffPanel';
 import TraceDetailSidebar from '@/components/TraceDetailSidebar';
 
 export default function CollaborationCanvas() {
+  return (
+    <ReactFlowProvider>
+      <CollaborationCanvasContent />
+    </ReactFlowProvider>
+  );
+}
+
+function CollaborationCanvasContent() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [loading, setLoading] = useState(true);

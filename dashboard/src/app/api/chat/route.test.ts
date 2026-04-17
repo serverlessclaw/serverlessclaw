@@ -467,6 +467,65 @@ describe('Dashboard API: POST /api/chat (streaming)', () => {
     expect(data.thought).toBe('Let me think about this...');
     expect(data.tool_calls).toHaveLength(1);
   });
+
+  it('falls back to process when stream returns no content and no tool calls', async () => {
+    async function* fakeStream() {
+      yield { content: '' };
+    }
+    mockStream.mockReturnValue(fakeStream());
+    mockProcess.mockResolvedValue({
+      responseText: 'Fallback response',
+      thought: 'Recovered after empty stream',
+      traceId: 'trace-fallback-1',
+    });
+
+    const { POST } = await import('./route');
+    const res = await POST(
+      makeRequest(
+        { text: 'hi', sessionId: 'sess-fallback-1' },
+        { searchParams: { stream: 'true' } }
+      )
+    );
+    const data = await res.json();
+
+    expect(mockProcess).toHaveBeenCalledWith(
+      'CONV#dashboard-user#sess-fallback-1',
+      'hi',
+      expect.objectContaining({ sessionId: 'sess-fallback-1' })
+    );
+    expect(data.reply).toBe('Fallback response');
+    expect(data.thought).toBe('Recovered after empty stream');
+    expect(data.messageId).toBe('trace-fallback-1');
+  });
+
+  it('does not fall back to process when stream includes tool calls only', async () => {
+    async function* fakeStream() {
+      yield {
+        content: '',
+        tool_calls: [
+          {
+            id: 'call-only',
+            type: 'function',
+            function: { name: 'search', arguments: '{"q":"x"}' },
+          },
+        ],
+      };
+    }
+    mockStream.mockReturnValue(fakeStream());
+
+    const { POST } = await import('./route');
+    const res = await POST(
+      makeRequest(
+        { text: 'search x', sessionId: 'sess-fallback-2' },
+        { searchParams: { stream: 'true' } }
+      )
+    );
+    const data = await res.json();
+
+    expect(mockProcess).not.toHaveBeenCalled();
+    expect(data.reply).toBe('');
+    expect(data.tool_calls).toHaveLength(1);
+  });
 });
 
 describe('Dashboard API: PATCH /api/chat', () => {

@@ -87,10 +87,31 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         let finalResponse = '';
         let finalThought = '';
         let streamToolCalls: unknown[] | undefined;
+        let fallbackTraceId: string | undefined;
         for await (const chunk of stream) {
           if (chunk.content) finalResponse += chunk.content;
           if (chunk.thought) finalThought += chunk.thought;
           if (chunk.tool_calls) streamToolCalls = chunk.tool_calls;
+        }
+
+        // Some providers may complete with no visible content. Recover by running
+        // the non-stream path once so UI always receives an assistant payload.
+        if (!finalResponse.trim() && (!streamToolCalls || streamToolCalls.length === 0)) {
+          const fallback = await agent.process(storageId, text ?? '', {
+            sessionId,
+            source: TraceSource.DASHBOARD,
+            attachments,
+            approvedToolCalls,
+            pageContext,
+          });
+          finalResponse = fallback.responseText ?? '';
+          if (!finalThought && fallback.thought) {
+            finalThought = fallback.thought;
+          }
+          if ((!streamToolCalls || streamToolCalls.length === 0) && fallback.tool_calls) {
+            streamToolCalls = fallback.tool_calls;
+          }
+          fallbackTraceId = fallback.traceId;
         }
 
         if (sessionId) {
@@ -106,7 +127,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           thought: finalThought,
           agentName: 'SuperClaw',
           tool_calls: streamToolCalls,
-          messageId: clientTraceId, // strictly use what client sent to ensure mapping
+          messageId: clientTraceId || fallbackTraceId,
         };
       })();
 

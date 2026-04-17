@@ -437,17 +437,18 @@ describe('OpenAIProvider', () => {
   it('should cap reasoning effort for mini models', async () => {
     mockCreateResponse.mockResolvedValue({ output_text: 'Hi', output: [] });
 
-    // Mini model should support xhigh based on current code
-    provider = new OpenAIProvider('gpt-5.4-mini');
+    // Mini model should not request unsupported xhigh reasoning effort.
+    provider = new OpenAIProvider('gpt-5-mini');
     await provider.call(
       [{ role: MessageRole.USER, content: 'test', traceId: 'test-trace', messageId: 'test-msg' }],
       [],
-      ReasoningProfile.DEEP
+      ReasoningProfile.DEEP,
+      'gpt-5-mini'
     );
 
     expect(mockCreateResponse).toHaveBeenCalledWith(
       expect.objectContaining({
-        reasoning: { effort: 'xhigh' },
+        reasoning: { effort: 'high' },
       })
     );
   });

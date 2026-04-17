@@ -430,7 +430,7 @@ export class OpenAIProvider implements IProvider {
     const isNanoModel = activeModel.includes('nano');
 
     let maxReasoningEffort = 'xhigh';
-    if (isMiniModel) maxReasoningEffort = 'xhigh';
+    if (isMiniModel) maxReasoningEffort = 'high';
     else if (isNanoModel) maxReasoningEffort = 'medium';
 
     return {

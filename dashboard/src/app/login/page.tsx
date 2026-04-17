@@ -39,7 +39,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="fixed inset-0 bg-black flex items-center justify-center z-[100] font-mono overflow-hidden">
+    <div className="fixed inset-0 bg-black flex items-center justify-center z-100 font-mono overflow-hidden">
       {/* Abstract Background */}
       <div className="absolute inset-0 overflow-hidden opacity-20">
         <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-cyber-green rounded-full blur-[120px]" />
@@ -61,7 +61,7 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-[10px] text-white/100 font-bold uppercase tracking-widest block ml-1">
+            <label className="text-[10px] text-white font-bold uppercase tracking-widest block ml-1">
               Claw Keyphrase
             </label>
             <div className="relative">
@@ -70,7 +70,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoFocus
-                className="w-full bg-white/[0.03] border border-white/10 rounded px-4 py-3 outline-none focus:border-cyber-green/50 transition-all text-sm font-mono placeholder:text-white/10"
+                className="w-full bg-white/3 border border-white/10 rounded px-4 py-3 outline-none focus:border-cyber-green/50 transition-all text-sm font-mono placeholder:text-white/10"
                 placeholder="ENTER_PASSPHRASE..."
                 disabled={loading}
               />
@@ -109,6 +109,12 @@ export default function LoginPage() {
           <span>SERVERLESS_CLAW_OS</span>
           <span>EST_2026</span>
         </div>
+
+        {process.env.NODE_ENV !== 'production' && (
+          <div className="mt-3 text-[9px] text-white/40 text-center font-mono tracking-wide">
+            Local dev fallback keyphrase: test-password
+          </div>
+        )}
       </div>
     </div>
   );

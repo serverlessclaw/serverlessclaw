@@ -11,8 +11,8 @@ import {
  * System-wide defaults and operational limits.
  */
 export const SYSTEM = {
-  DEFAULT_PROVIDER: LLMProvider.MINIMAX,
-  DEFAULT_MODEL: MiniMaxModel.M2_7,
+  DEFAULT_PROVIDER: LLMProvider.OPENAI,
+  DEFAULT_MODEL: OpenAIModel.GPT_5_MINI,
   DEFAULT_OPENAI_MODEL: OpenAIModel.GPT_5_4_MINI,
   DEFAULT_BEDROCK_MODEL: BedrockModel.CLAUDE_4_6,
   DEFAULT_OPENROUTER_MODEL: OpenRouterModel.GLM_5,
