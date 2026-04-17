@@ -64,9 +64,9 @@ else
 endif
 
 # Environment file resolution
-# Strictly load only the specified file for 'local' and 'prod' stages.
-# For local dev, we load .env.local first (overrides) then .env.
-ENV_FILES = $(if $(filter local,$(ENV)),.env.local .env,$(if $(filter prod,$(ENV)),.env,.env.$(ENV).local .env.$(ENV) .env.local .env))
+# For local dev, we load only .env.local.
+# For prod, we load only .env.prod.
+ENV_FILES = $(if $(filter local,$(ENV)),.env.local,.env.prod)
 
 # Usage: $(call load_env)
 # Loads available env files and exports variables.

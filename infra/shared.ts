@@ -102,6 +102,7 @@ export function getDomainConfig(component: 'api' | 'dashboard' | 'router'):
   const stage = $app.stage;
 
   // Only use custom domains for production stage to avoid conflicts
+  // The two-tier model (local/prod) ensures personal stages use default AWS URLs.
   if (stage !== 'prod') {
     return undefined;
   }
