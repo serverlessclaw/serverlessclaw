@@ -75,17 +75,21 @@ describe('TrustManager', () => {
       );
     });
 
-    it('allows score to exceed bounds temporarily', async () => {
+    it('enforces floor at MIN_SCORE (0)', async () => {
       mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
         id: 'low-trust-agent',
         trustScore: 5,
       });
-      mockAgentRegistry.atomicAddAgentField.mockResolvedValueOnce(-45); // 5 - (5 * 10)
+      // First call: atomic add produces -45
+      mockAgentRegistry.atomicAddAgentField
+        .mockResolvedValueOnce(-45)
+        // Second call: clamp correction (+45 to bring from -45 to 0)
+        .mockResolvedValueOnce(0);
 
       const newScore = await TrustManager.recordFailure('low-trust-agent', 'Critical failure', 10);
 
-      // Score can exceed bounds temporarily; natural decay will correct over time
-      expect(newScore).toBe(-45);
+      // Score should be clamped to MIN_SCORE (0), not allowed to go negative
+      expect(newScore).toBe(0);
     });
     it('applies quality weighting to failure penalties', async () => {
       const getConfig = (score: number) => ({
@@ -187,24 +191,29 @@ describe('TrustManager', () => {
       expect(zeroQualityScore).toBe(80);
     });
 
-    it('allows score to exceed bounds temporarily', async () => {
+    it('enforces ceiling at MAX_SCORE (100)', async () => {
       mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
         id: 'top-agent',
         trustScore: 99.5,
       });
-      mockAgentRegistry.atomicAddAgentField.mockResolvedValueOnce(101.5); // 99.5 + 2
+      // First call: atomic add produces 101.5
+      mockAgentRegistry.atomicAddAgentField
+        .mockResolvedValueOnce(101.5)
+        // Second call: clamp correction (-1.5 to bring from 101.5 to 100)
+        .mockResolvedValueOnce(100);
 
       const newScore = await TrustManager.recordSuccess('top-agent', 10);
-      // Score can exceed bounds temporarily; natural decay will correct over time
-      expect(newScore).toBe(101.5);
+
+      // Score should be clamped to MAX_SCORE (100)
+      expect(newScore).toBe(100);
     });
   });
 
   describe('decayTrustScores', () => {
-    it('applies slower decay to high scores and baseline decay to others', async () => {
+    it('applies faster decay to high scores to ensure continuous autonomy earning', async () => {
       const mockConfigs = {
-        'high-trust': { trustScore: 98 }, // Above autonomy (95) -> 0.5x decay
-        'mid-trust': { trustScore: 88 }, // Above 85 -> 0.75x decay
+        'high-trust': { trustScore: 98 }, // Above autonomy (95) -> 1.5x decay (0.75/day)
+        'mid-trust': { trustScore: 88 }, // Above 85 -> 1.25x decay (0.625/day)
         'at-baseline': { trustScore: 70 }, // At baseline -> No decay
         'below-baseline': { trustScore: 65 }, // Below baseline -> No decay
       };
@@ -218,12 +227,12 @@ describe('TrustManager', () => {
       expect(mockAgentRegistry.atomicAddAgentField).toHaveBeenCalledWith(
         'high-trust',
         'trustScore',
-        -0.25 // - (0.5 * 0.5)
+        -0.75 // - (0.5 * 1.5)
       );
       expect(mockAgentRegistry.atomicAddAgentField).toHaveBeenCalledWith(
         'mid-trust',
         'trustScore',
-        -0.37 // - (0.5 * 0.75)
+        -0.62 // - (0.5 * 1.25) = -0.625, rounded
       );
       expect(mockAgentRegistry.atomicAddAgentField).not.toHaveBeenCalledWith(
         'at-baseline',

@@ -16,6 +16,7 @@ import {
   AWS_TOOLS,
   WEB_TOOLS,
 } from './constants/tools';
+import { TRUST } from './constants/system';
 import {
   SUPERCLAW_SYSTEM_PROMPT,
   CODER_SYSTEM_PROMPT,
@@ -46,7 +47,7 @@ const BACKBONE_LLM_DEFAULTS = {
   maxIterations: 10,
   safetyTier: SafetyTier.PROD,
   connectionProfile: [],
-  trustScore: 80,
+  trustScore: TRUST.DEFAULT_SCORE,
   evolutionMode: EvolutionMode.HITL,
 };
 
@@ -57,7 +58,7 @@ const BACKBONE_HANDLER_DEFAULTS = {
   maxIterations: 10,
   safetyTier: SafetyTier.PROD,
   connectionProfile: [],
-  trustScore: 80,
+  trustScore: TRUST.DEFAULT_SCORE,
 };
 
 export const BACKBONE_REGISTRY: Record<string, IAgentConfig> = {

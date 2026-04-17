@@ -31,7 +31,7 @@ vi.mock('../../lib/registry/AgentRegistry', () => ({
 vi.mock('../../lib/constants/system', () => ({
   TRUST: {
     FACILITATOR_THRESHOLD: 90,
-    DEFAULT_SCORE: 80,
+    DEFAULT_SCORE: 90,
   },
 }));
 

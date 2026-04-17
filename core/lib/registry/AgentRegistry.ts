@@ -3,7 +3,7 @@ import { IAgentConfig } from '../types/agent';
 import { BACKBONE_REGISTRY } from '../backbone';
 import { logger } from '../logger';
 import type { TopologyNode } from '../types/index';
-import { DYNAMO_KEYS, RETENTION } from '../constants';
+import { DYNAMO_KEYS, RETENTION, TRUST } from '../constants';
 import { ConfigManager, getDocClient } from './config';
 import { Resource } from 'sst';
 
@@ -64,7 +64,7 @@ export class AgentRegistry {
 
     const config: IAgentConfig = {
       evolutionMode: EvolutionMode.HITL,
-      trustScore: 80,
+      trustScore: TRUST.DEFAULT_SCORE,
       tools: [],
       ...backboneConfig,
       ...dynamicConfig,

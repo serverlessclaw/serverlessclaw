@@ -45,9 +45,6 @@ export class TrustManager {
     const newScore = await this.updateTrustScore(agentId, penalty);
     await this.logPenalty({ agentId, timestamp: Date.now(), reason, delta: penalty, newScore });
 
-    logger.warn(
-      `[TrustManager] Agent ${agentId} penalized. Reason: ${reason}. New Score: ${newScore}`
-    );
     await emitEvent('system.trust', EventType.REPUTATION_UPDATE, {
       agentId,
       trustScore: newScore,
@@ -131,14 +128,13 @@ export class TrustManager {
     try {
       const newScore = await AgentRegistry.atomicAddAgentField(agentId, 'trustScore', delta);
 
-      if (newScore > TRUST.MAX_SCORE || newScore < TRUST.MIN_SCORE) {
-        logger.warn(
-          `[TrustManager] Agent ${agentId} trust score ${newScore} exceeds bounds [${TRUST.MIN_SCORE}, ${TRUST.MAX_SCORE}]. Allowing natural decay to correct.`
-        );
+      const clampedScore = Math.max(TRUST.MIN_SCORE, Math.min(TRUST.MAX_SCORE, newScore));
+      if (clampedScore !== newScore) {
+        await AgentRegistry.atomicAddAgentField(agentId, 'trustScore', clampedScore - newScore);
       }
 
-      await this.recordHistory(agentId, newScore);
-      return newScore;
+      await this.recordHistory(agentId, clampedScore);
+      return clampedScore;
     } catch (e) {
       logger.error(`[TrustManager] Failed to atomically update trust for ${agentId}:`, e);
       // Fallback only if agent config exists to determine a sensible fallback
@@ -155,7 +151,7 @@ export class TrustManager {
   private static async recordHistory(agentId: string, score: number): Promise<void> {
     const { ConfigManager } = await import('../registry/config');
     await ConfigManager.appendToList(
-      `${DYNAMO_KEYS.REPUTATION_PREFIX}HISTORY#${agentId}`,
+      `trust:score_history#${agentId}`,
       { agentId, score, timestamp: Date.now() },
       { limit: 200 }
     );
@@ -178,8 +174,8 @@ export class TrustManager {
     if (score === undefined || score < TRUST.DECAY_BASELINE) return;
 
     let multiplier = 1;
-    if (score >= TRUST.AUTONOMY_THRESHOLD) multiplier = 0.5;
-    else if (score >= 85) multiplier = 0.75;
+    if (score >= TRUST.AUTONOMY_THRESHOLD) multiplier = 1.5;
+    else if (score >= 85) multiplier = 1.25;
     const next = Math.max(TRUST.DECAY_BASELINE, score - TRUST.DECAY_RATE * multiplier);
     const delta = Math.round((next - score) * 100) / 100;
     if (delta < 0) {
