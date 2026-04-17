@@ -132,8 +132,10 @@ export class SafetyRateLimiter {
       if ((err as { name?: string }).name === 'ConditionalCheckFailedException') {
         return false;
       }
-      logger.error('Rate limit check failed, falling back to in-memory', { key, err });
-      return this.checkRateLimitInMemory(key, limit, windowMs);
+      // Fail-closed for safety: if DDB fails, reject the request to prevent rate limit bypass
+      // Only fall back to in-memory for non-critical operations
+      logger.error('Rate limit check failed (fail-closed)', { key, err });
+      return false;
     }
   }
 

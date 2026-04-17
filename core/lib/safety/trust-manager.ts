@@ -138,14 +138,43 @@ export class TrustManager {
     } catch (e) {
       logger.error(`[TrustManager] Failed to atomically update trust for ${agentId}:`, e);
       // Fallback only if agent config exists to determine a sensible fallback
+      // SECURITY: Log audit event for fallback usage to detect potential attacks
       const config = await AgentRegistry.getAgentConfig(agentId);
-      return config?.trustScore ?? TRUST.DEFAULT_SCORE;
+      const fallbackScore = config?.trustScore ?? TRUST.DEFAULT_SCORE;
+      await this.logFallback({
+        agentId,
+        timestamp: Date.now(),
+        attemptedDelta: delta,
+        fallbackScore,
+        error: e instanceof Error ? e.message : String(e),
+      });
+      return fallbackScore;
     }
   }
 
   private static async logPenalty(penalty: TrustPenalty): Promise<void> {
     const { ConfigManager } = await import('../registry/config');
     await ConfigManager.appendToList(DYNAMO_KEYS.TRUST_PENALTY_LOG, penalty, { limit: 200 });
+  }
+
+  private static async logFallback(fallback: {
+    agentId: string;
+    timestamp: number;
+    attemptedDelta: number;
+    fallbackScore: number;
+    error: string;
+  }): Promise<void> {
+    const { ConfigManager } = await import('../registry/config');
+    await ConfigManager.appendToList(
+      DYNAMO_KEYS.TRUST_PENALTY_LOG,
+      {
+        ...fallback,
+        reason: `FALLBACK: atomic update failed - ${fallback.error}`,
+        delta: fallback.attemptedDelta,
+        newScore: fallback.fallbackScore,
+      },
+      { limit: 200 }
+    );
   }
 
   private static async recordHistory(agentId: string, score: number): Promise<void> {

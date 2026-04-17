@@ -12,6 +12,7 @@ import { SAFETY_LIMITS } from '../constants/safety';
 const BLAST_RADIUS_KEY_PREFIX = 'safety:blast_radius';
 const WINDOW_MS = 3600000; // 1 hour
 const LIMIT_PER_HOUR = SAFETY_LIMITS.CLASS_C_MAX_PER_HOUR;
+const MAX_RETRY_COUNT = 3;
 
 interface BlastRadiusEntry {
   key: string;
@@ -69,7 +70,8 @@ export class BlastRadiusStore {
   async incrementBlastRadius(
     agentId: string,
     action: string,
-    resource?: string
+    resource?: string,
+    retryCount: number = 0
   ): Promise<BlastRadiusEntry> {
     const key = makeKey(agentId, action);
     const now = Date.now();
@@ -99,8 +101,8 @@ export class BlastRadiusStore {
       const entry = { key, ...val } as BlastRadiusEntry;
       this.localCache.set(key, entry);
       return entry;
-    } catch (e: any) {
-      if (e.name === 'ConditionalCheckFailedException') {
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === 'ConditionalCheckFailedException') {
         // Phase 2: Window expired or record missing - Perform atomic reset
         const expiresAt = now + WINDOW_MS;
         const response = await db
@@ -124,16 +126,36 @@ export class BlastRadiusStore {
               ReturnValues: 'ALL_NEW',
             })
           )
-          .catch((innerE) => {
-            if (innerE.name === 'ConditionalCheckFailedException') {
-              // Recurse once if we hit a race during initialization
-              return this.incrementBlastRadius(agentId, action, resource);
+          .catch((innerE: unknown) => {
+            if (innerE instanceof Error && innerE.name === 'ConditionalCheckFailedException') {
+              // Guard against infinite recursion - max 3 retries
+              if (retryCount >= MAX_RETRY_COUNT) {
+                logger.warn(
+                  `[BlastRadiusStore] Max retry count exceeded for ${key}, allowing operation`
+                );
+                const fallbackEntry: BlastRadiusEntry = {
+                  key,
+                  count: 1,
+                  lastAction: now,
+                  resourceCount: resource ? 1 : 0,
+                  expiresAt,
+                };
+                return fallbackEntry;
+              }
+              return this.incrementBlastRadius(agentId, action, resource, retryCount + 1);
             }
             throw innerE;
           });
 
-        const val = (response as any).Attributes?.value;
-        const entry = { key, ...val } as BlastRadiusEntry;
+        let entry: BlastRadiusEntry;
+        if ('Attributes' in response) {
+          const val = (response as { Attributes?: { value?: BlastRadiusEntry } }).Attributes?.value;
+          entry = val
+            ? { ...val, key }
+            : { count: 1, lastAction: now, resourceCount: resource ? 1 : 0, expiresAt, key };
+        } else {
+          entry = { ...(response as BlastRadiusEntry), key };
+        }
         this.localCache.set(key, entry);
         return entry;
       }

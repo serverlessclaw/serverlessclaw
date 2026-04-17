@@ -355,6 +355,14 @@ export class SafetyEngine extends SafetyBase {
   ): Promise<SafetyEvaluationResult> {
     if (!ctx.toolName) return { allowed: true, requiresApproval: false };
     const override = this.toolOverrides.get(ctx.toolName);
+
+    // Check rate limit first (blocks execution entirely) - more severe
+    const rateLimitResult = await this.limiter.checkToolRateLimit(override, ctx.toolName);
+    if (!rateLimitResult.allowed) {
+      return rateLimitResult;
+    }
+
+    // Then check approval requirement
     if (override?.requireApproval) {
       return this.handleViolation(
         ctx,
@@ -365,7 +373,8 @@ export class SafetyEngine extends SafetyBase {
         'approval_required'
       );
     }
-    return this.limiter.checkToolRateLimit(override, ctx.toolName);
+
+    return { allowed: true, requiresApproval: false };
   }
 
   private async handleClassCAction(

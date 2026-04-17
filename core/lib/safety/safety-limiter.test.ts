@@ -125,7 +125,7 @@ describe('SafetyRateLimiter', () => {
       expect(mockMemoryProvider.updateItem).toHaveBeenCalled();
     });
 
-    it('should fail-open if memory provider throws', async () => {
+    it('should fail-closed if memory provider throws (security: prevent rate limit bypass)', async () => {
       const distributedLimiter = new SafetyRateLimiter(mockMemoryProvider as any);
       const policy = createPolicy({ maxDeploymentsPerDay: 5 });
 
@@ -133,7 +133,7 @@ describe('SafetyRateLimiter', () => {
 
       const result = await distributedLimiter.checkRateLimits(policy, 'deployment');
 
-      expect(result.allowed).toBe(true); // Fail open
+      expect(result.allowed).toBe(false); // Fail closed - reject if we can't verify
     });
   });
 

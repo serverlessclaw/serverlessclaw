@@ -21,6 +21,7 @@ The system enforces hard limits on high-impact actions to prevent runaway costs 
 - **Persistence**: The `BlastRadiusStore` uses a **Two-Phase Atomic Update** pattern to ensure integrity during window transitions:
   - **Phase 1 (Active Window)**: Conditional `UpdateCommand` using `ADD` to increment count within current window.
   - **Phase 2 (Expired Window)**: Conditional `UpdateCommand` using `SET` to atomically reset the window if it has expired.
+- **Retry Safety**: Maximum 3 retries to prevent infinite recursion during persistent race conditions. After max retries, the operation is allowed to proceed to prevent system blockage.
 
 ```text
    [ Class C Action ]
@@ -62,30 +63,35 @@ To ensure consistency across concurrent Lambda executions, the system utilizes a
 
 ### 1. Token Bucket Rate Limiter
 
-The `consumeToken` primitive implements a distributed token bucket to prevent downstream system saturation.
+The `consumeToken` primitive implements a distributed token bucket using atomic conditional updates to prevent race conditions.
 
 ```text
-    [ Request ]
-         |
-         v
-    [ DistributedState.consumeToken ]
-         |
-         | (1) GET Key from MemoryTable
-         +--------------------------------+
-         | (2) Calculate Refill Tokens    |
-         |     (now - lastRefill) / rate  |
-         +--------------------------------+
-         | (3) Check Capacity?            |
-         +-------+-------------+----------+
-                 |             |
-         [ YES: tokens > 0 ]   [ NO: tokens == 0 ]
-                 |             |
-         (4) UPDATE Table      (4) Return FALSE
-             (tokens - 1)      [ REJECT ]
-                 |
-         (5) Return TRUE
-             [ ALLOW ]
+     [ Request ]
+          |
+          v
+     [ DistributedState.consumeToken ]
+          |
+          v
+     [ Atomic Conditional Update ]
+     (if_not_exists(#c, :cap) - :one)
+     Condition: #c > :zero
+          |
+    +-----+-----+
+    |           |
+ [ SUCCESS ]  [ FAIL ]
+    |           |
+ (Tokens > 0) (Tokens = 0)
+    |           |
+ Return TRUE  Return FALSE
+ [ ALLOW ]    [ REJECT ]
 ```
+
+**Key Features**:
+
+- Uses window-based keys (`safety:token_bucket:{key}:{windowId}`) for automatic window reset
+- Atomic conditional update in single DynamoDB operation - no read-then-write race
+- Fail-closed: if DDB fails, request is rejected to prevent rate limit bypass
+- 1-hour TTL via DynamoDB expiry
 
 ### 2. Global Circuit Breaker
 

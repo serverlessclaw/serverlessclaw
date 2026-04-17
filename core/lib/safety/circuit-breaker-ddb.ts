@@ -8,7 +8,6 @@ const docClient = DynamoDBDocumentClient.from(client, {
 });
 
 const CIRCUIT_PREFIX = 'CIRCUIT#';
-const RATE_PREFIX = 'RATE#';
 
 export class DistributedSafetyControl {
   private tableName: string;
@@ -19,54 +18,40 @@ export class DistributedSafetyControl {
 
   /**
    * Distributed rate limiting using token bucket algorithm in DynamoDB.
+   * Uses atomic conditional updates to prevent race conditions.
    */
   async consumeToken(key: string, capacity: number, refillMs: number): Promise<boolean> {
-    const fullKey = `${RATE_PREFIX}${key}`;
     const now = Date.now();
-    const refillInterval = refillMs / capacity;
 
     try {
-      // 1. Get current bucket
-      const result = await docClient.send(
-        new GetCommand({
+      // Calculate token refill based on time elapsed
+      // Use atomic conditional update to consume token in single operation
+      const windowId = Math.floor(now / refillMs);
+      const pk = `safety:token_bucket:${key}:${windowId}`;
+
+      // Use atomic update with condition - only succeeds if tokens available
+      await docClient.send(
+        new UpdateCommand({
           TableName: this.tableName,
-          Key: { userId: fullKey, timestamp: 0 },
+          Key: { userId: pk, timestamp: 0 },
+          UpdateExpression: 'SET #c = if_not_exists(#c, :cap) - :one, #lr = :now, expiresAt = :exp',
+          ConditionExpression: 'attribute_not_exists(#c) OR #c > :zero',
+          ExpressionAttributeNames: { '#c': 'tokens', '#lr': 'lastRefill' },
+          ExpressionAttributeValues: {
+            ':cap': capacity,
+            ':one': 1,
+            ':zero': 0,
+            ':now': now,
+            ':exp': Math.floor(now / 1000) + 3600,
+          },
+          ReturnValues: 'ALL_NEW',
         })
       );
-
-      let { tokens, lastRefill } = result.Item || { tokens: capacity, lastRefill: now };
-
-      // 2. Calculate refill
-      const elapsed = now - lastRefill;
-      if (elapsed >= refillInterval) {
-        const refillTokens = Math.floor(elapsed / refillInterval);
-        tokens = Math.min(capacity, tokens + refillTokens);
-        lastRefill = now - Math.floor(elapsed % refillInterval);
-      }
-
-      if (tokens > 0) {
-        // 3. Atomically consume token
-        await docClient.send(
-          new UpdateCommand({
-            TableName: this.tableName,
-            Key: { userId: fullKey, timestamp: 0 },
-            UpdateExpression: 'SET tokens = :newTokens, lastRefill = :now, expiresAt = :exp',
-            ConditionExpression: 'attribute_not_exists(tokens) OR tokens = :oldTokens',
-            ExpressionAttributeValues: {
-              ':newTokens': tokens - 1,
-              ':oldTokens': tokens,
-              ':now': lastRefill,
-              ':exp': Math.floor(now / 1000) + 3600, // 1h TTL
-            },
-          })
-        );
-        return true;
-      }
-      return false;
+      return true;
     } catch (e: unknown) {
       if (e instanceof Error && e.name === 'ConditionalCheckFailedException') {
-        // Retry on race condition
-        return this.consumeToken(key, capacity, refillMs);
+        // Token exhausted - return false (rate limited)
+        return false;
       }
       logger.warn(`[SAFETY] Distributed rate limit check failed for ${key}:`, e);
       return true; // Fail open to prevent system-wide blockage
