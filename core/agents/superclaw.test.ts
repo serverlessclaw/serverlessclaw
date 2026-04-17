@@ -118,9 +118,9 @@ describe('SuperClaw', () => {
           safetyTier: SafetyTier.PROD,
         } as any;
         const result = await superclaw.evaluateAction(config, 'deployment');
-        expect(result.allowed).toBe(true);
+        expect(result.allowed).toBe(false);
         expect(result.requiresApproval).toBe(true);
-        expect(result.appliedPolicy).toBe('prod_deployment_approval');
+        expect(result.appliedPolicy).toBe('class_c_approval_required');
       });
     });
 

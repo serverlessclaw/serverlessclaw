@@ -135,6 +135,11 @@ Every audit finding falls into one of four categories. Classifying findings corr
    - Severity assessment (P0/P1/P2/P3)
    - Recommended action or further investigation
 
+> [!IMPORTANT]
+> **Every audit MUST verify at least ONE Cross-Silo Perspective** (A-E). Siloed audits miss integration bugs. See [Audit Coverage Matrix](AUDIT-COVERAGE.md) for which perspectives have been tested.
+>
+> **Track Pattern Recurrence**: When documenting findings, include `related_issues` field to link to past similar issues. See [Anti-Patterns](ANTI-PATTERNS.md) for known recurring issues to watch for.
+
 ---
 
 ## Audit Angle Selection

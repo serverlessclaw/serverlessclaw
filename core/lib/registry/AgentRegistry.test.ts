@@ -182,19 +182,19 @@ describe('AgentRegistry', () => {
     });
   });
 
-  describe('getInfraConfig', () => {
+  describe('getFullTopology', () => {
     it('should return topology nodes from DDB', async () => {
-      const nodes = [{ id: 'node1', type: 'bus' }];
-      vi.mocked(ConfigManager.getRawConfig).mockResolvedValueOnce(nodes);
+      const topology = { nodes: [{ id: 'node1', type: 'bus' as const, label: 'test' }], edges: [] };
+      vi.mocked(ConfigManager.getRawConfig).mockResolvedValueOnce(topology);
 
-      const result = await AgentRegistry.getInfraConfig();
-      expect(result).toEqual(nodes);
+      const result = await AgentRegistry.getFullTopology();
+      expect(result).toEqual(topology);
     });
 
-    it('should return empty array if config is not an array', async () => {
+    it('should return empty topology if config is empty object', async () => {
       vi.mocked(ConfigManager.getRawConfig).mockResolvedValueOnce({});
-      const result = await AgentRegistry.getInfraConfig();
-      expect(result).toEqual([]);
+      const result = await AgentRegistry.getFullTopology();
+      expect(result).toEqual({ nodes: [], edges: [] });
     });
   });
 

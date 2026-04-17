@@ -4,11 +4,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 class MockSnsTopic {
   arn = 'arn:aws:sns:region:123456789012:topic';
-  constructor(public name: string, public args: any) {}
+  constructor(
+    public name: string,
+    public args: any
+  ) {}
 }
 
 class MockBudget {
-  constructor(public name: string, public args: any) {}
+  constructor(
+    public name: string,
+    public args: any
+  ) {}
 }
 
 const mockSnsTopic = vi.fn(function (name, args) {

@@ -111,7 +111,7 @@ describe('Safety Engine Integration', () => {
       // deployment should require approval in PROD
       const result = await engine.evaluateAction(config, 'deployment');
       expect(result.requiresApproval).toBe(true);
-      expect(result.appliedPolicy).toBe('prod_deployment_approval');
+      expect(result.appliedPolicy).toBe('class_c_approval_required');
     });
 
     it('should allow LOCAL tier with no approvals for standard actions', async () => {

@@ -27,7 +27,8 @@
     "format-check": "turbo run format-check",
     "check": "turbo run check",
     "gate": "turbo run gate",
-    "aiready": "aiready scan"
+    "aiready": "aiready scan",
+    "principles": "npx tsx scripts/quality/verify-principles.ts"
   },
   "keywords": [
     "openclaw",
