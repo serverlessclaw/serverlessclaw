@@ -136,56 +136,110 @@ vi.mock('./events/clarification-timeout-handler', () => ({
 vi.mock('./events/parallel-handler', () => ({
   handleParallelDispatch: vi.fn(),
 }));
+vi.mock('./events/dlq-handler', () => ({
+  handleDlqRoute: vi.fn(),
+}));
+vi.mock('./events/idempotency', () => ({
+  checkAndMarkIdempotent: vi.fn().mockResolvedValue(false),
+}));
+vi.mock('../lib/routing/flow-controller', () => ({
+  FlowController: {
+    canProceed: vi.fn().mockResolvedValue({ allowed: true }),
+    recordFailure: vi.fn().mockResolvedValue(undefined),
+  },
+}));
 
 describe('EventHandler', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+
+    const tracker = await import('../lib/recursion-tracker');
+    vi.mocked(tracker.incrementRecursionDepth).mockResolvedValue(1);
+    vi.mocked(tracker.getRecursionLimit).mockResolvedValue(15);
   });
 
-  describe('Routing', () => {
-    it('should route SYSTEM_HEALTH_REPORT to health-handler', async () => {
+  describe('Loop Regression', () => {
+    it('should route non-DLQ events to DLQ once when recursion tracker fails (-1)', async () => {
+      const tracker = await import('../lib/recursion-tracker');
+      vi.mocked(tracker.incrementRecursionDepth).mockResolvedValueOnce(-1);
+
       const event = {
         'detail-type': EventType.SYSTEM_HEALTH_REPORT,
-        detail: { userId: 'u1', sessionId: 'test-session', traceId: 'test-trace' },
+        detail: {
+          userId: 'u1',
+          sessionId: 'test-session',
+          traceId: 'trace-loop-1',
+        },
       };
+
       await handler(event as any, {} as any);
+
+      expect(mockSend).toHaveBeenCalledTimes(1);
+      const commandInput = mockSend.mock.calls[0][0]?.input;
+      const entry = commandInput?.Entries?.[0];
+      expect(entry?.DetailType).toBe(EventType.DLQ_ROUTE);
+
+      const detail = JSON.parse(entry?.Detail ?? '{}');
+      expect(detail).toMatchObject({
+        detailType: EventType.SYSTEM_HEALTH_REPORT,
+        traceId: 'trace-loop-1',
+        sessionId: 'test-session',
+      });
+
       const { handleHealthReport } = await import('./events/health-handler');
-      expect(handleHealthReport).toHaveBeenCalled();
+      expect(handleHealthReport).not.toHaveBeenCalled();
     });
 
-    it('should route SYSTEM_BUILD_FAILED to build-handler', async () => {
+    it('should not emit DLQ when processing DLQ_ROUTE event itself', async () => {
+      const tracker = await import('../lib/recursion-tracker');
+
       const event = {
-        'detail-type': EventType.SYSTEM_BUILD_FAILED,
-        detail: { userId: 'u1', sessionId: 'test-session', traceId: 'test-trace' },
+        'detail-type': EventType.DLQ_ROUTE,
+        detail: {
+          detailType: EventType.SYSTEM_HEALTH_REPORT,
+          originalEvent: { userId: 'u1' },
+          userId: 'SYSTEM',
+          sessionId: 'test-session',
+          traceId: 'trace-loop-2',
+        },
       };
+
       await handler(event as any, {} as any);
-      const { handleBuildFailure } = await import('./events/build-handler');
-      expect(handleBuildFailure).toHaveBeenCalled();
+
+      expect(mockSend).not.toHaveBeenCalled();
+      expect(tracker.incrementRecursionDepth).not.toHaveBeenCalled();
+
+      const { handleDlqRoute } = await import('./events/dlq-handler');
+      expect(handleDlqRoute).toHaveBeenCalled();
     });
 
-    it('should route TASK_COMPLETED to task-result-handler', async () => {
+    it('should auto-inject missing ids on DLQ_ROUTE and still avoid recursive emit', async () => {
       const event = {
-        'detail-type': EventType.TASK_COMPLETED,
-        detail: { userId: 'u1', sessionId: 'test-session', traceId: 'test-trace' },
+        'detail-type': EventType.DLQ_ROUTE,
+        detail: {
+          detailType: EventType.SYSTEM_HEALTH_REPORT,
+          originalEvent: { userId: 'u1' },
+        },
       };
-      await handler(event as any, {} as any);
-      const { handleTaskResult } = await import('./events/task-result-handler');
-      expect(handleTaskResult).toHaveBeenCalled();
-    });
 
-    it('should route CONTINUATION_TASK to continuation-handler', async () => {
-      const event = {
-        'detail-type': EventType.CONTINUATION_TASK,
-        detail: { userId: 'u1', sessionId: 'test-session', traceId: 'test-trace' },
-      };
       await handler(event as any, {} as any);
-      const { handleContinuationTask } = await import('./events/continuation-handler');
-      expect(handleContinuationTask).toHaveBeenCalled();
+
+      expect(mockSend).not.toHaveBeenCalled();
+
+      const { handleDlqRoute } = await import('./events/dlq-handler');
+      expect(handleDlqRoute).toHaveBeenCalled();
+      const detailArg = vi.mocked(handleDlqRoute).mock.calls[0][0] as Record<string, unknown>;
+      expect(detailArg.sessionId).toBe('system-spine');
+      expect(String(detailArg.traceId)).toContain('t-sys-');
     });
   });
 
   describe('Safe Mode Fallback', () => {
     it('should block unrecognised routing combinations', async () => {
+      const tracker = await import('../lib/recursion-tracker');
+      vi.mocked(tracker.incrementRecursionDepth).mockResolvedValueOnce(1);
+      vi.mocked(tracker.getRecursionLimit).mockResolvedValueOnce(15);
+
       const { ConfigManager } = await import('../lib/registry/config');
       await import('../lib/event-routing');
 
@@ -194,6 +248,7 @@ describe('EventHandler', () => {
         [EventType.SYSTEM_HEALTH_REPORT]: {
           module: 'dangerous-module',
           function: 'formatDrive',
+          passContext: false,
         },
       });
 
@@ -207,6 +262,115 @@ describe('EventHandler', () => {
       const { logger } = await import('../lib/logger');
       expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('[SECURITY] Blocked unrecognised routing combination')
+      );
+    });
+  });
+
+  describe('Resiliency', () => {
+    it('should inject default sessionId when missing', async () => {
+      const event = {
+        'detail-type': EventType.SYSTEM_HEALTH_REPORT,
+        detail: { traceId: 'test-trace', component: 'test', issue: 'issue', severity: 'low' },
+      };
+      await handler(event as any, {} as any);
+      const { logger } = await import('../lib/logger');
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Missing sessionId, using default: system-spine')
+      );
+    });
+
+    it('should inject default traceId when missing', async () => {
+      const event = {
+        'detail-type': EventType.SYSTEM_HEALTH_REPORT,
+        detail: { sessionId: 'test-session', component: 'test', issue: 'issue', severity: 'low' },
+      };
+      await handler(event as any, {} as any);
+      const { logger } = await import('../lib/logger');
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Missing traceId, using default: t-sys-')
+      );
+    });
+
+    it('should skip recursion tracking for DLQ_ROUTE to prevent self-recursion', async () => {
+      const tracker = await import('../lib/recursion-tracker');
+      const event = {
+        'detail-type': EventType.DLQ_ROUTE,
+        detail: {
+          detailType: EventType.SYSTEM_HEALTH_REPORT,
+          originalEvent: { sessionId: 'test-session', traceId: 'test-trace' },
+          sessionId: 'test-session',
+          traceId: 'test-trace',
+        },
+      };
+
+      await handler(event as any, {} as any);
+
+      const { handleDlqRoute } = await import('./events/dlq-handler');
+      expect(tracker.incrementRecursionDepth).not.toHaveBeenCalled();
+      expect(handleDlqRoute).toHaveBeenCalled();
+    });
+
+    it('should include trace/session context when flow control rejects an event', async () => {
+      const { FlowController } = await import('../lib/routing/flow-controller');
+      vi.mocked(FlowController.canProceed).mockResolvedValueOnce({
+        allowed: false,
+        reason: 'rate limited',
+      } as any);
+
+      const event = {
+        'detail-type': EventType.SYSTEM_HEALTH_REPORT,
+        detail: { userId: 'u1', sessionId: 's-flow', traceId: 't-flow' },
+      };
+
+      await handler(event as any, {} as any);
+
+      expect(mockSend).toHaveBeenCalledTimes(1);
+      const commandInput = mockSend.mock.calls[0][0]?.input;
+      const entry = commandInput?.Entries?.[0];
+      const detail = JSON.parse(entry?.Detail ?? '{}');
+      expect(detail).toMatchObject({
+        detailType: EventType.SYSTEM_HEALTH_REPORT,
+        traceId: 't-flow',
+        sessionId: 's-flow',
+        errorMessage: 'rate limited',
+      });
+    });
+
+    it('should include trace/session context when retry count exceeds configured max', async () => {
+      const { ConfigManager } = await import('../lib/registry/config');
+      vi.mocked(ConfigManager.getTypedConfig).mockImplementation(
+        async (key: string, fallback: unknown) => {
+          if (key === 'event_max_retry_count') return 1 as any;
+          if (key === 'event_routing_table') return fallback as any;
+          return fallback as any;
+        }
+      );
+
+      const event = {
+        'detail-type': EventType.SYSTEM_HEALTH_REPORT,
+        detail: {
+          userId: 'u1',
+          sessionId: 's-retry',
+          traceId: 't-retry',
+          retryCount: 2,
+        },
+      };
+
+      await handler(event as any, {} as any);
+
+      expect(mockSend).toHaveBeenCalledTimes(1);
+      const commandInput = mockSend.mock.calls[0][0]?.input;
+      const entry = commandInput?.Entries?.[0];
+      const detail = JSON.parse(entry?.Detail ?? '{}');
+      expect(detail).toMatchObject({
+        detailType: EventType.SYSTEM_HEALTH_REPORT,
+        traceId: 't-retry',
+        sessionId: 's-retry',
+        errorMessage: 'Max retry count exceeded',
+      });
+
+      vi.mocked(ConfigManager.getTypedConfig).mockImplementation(
+        async (_key, fallback) => fallback
       );
     });
   });

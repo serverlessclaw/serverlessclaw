@@ -9,10 +9,31 @@ export async function routeToDlq(
   detailType: string,
   userId: string,
   traceId: string,
-  errorMessage?: string
+  errorMessage?: string,
+  sessionId?: string
 ): Promise<void> {
   const { emitEvent } = await import('../lib/utils/bus');
   const { EventType } = await import('../lib/types/agent');
+
+  if (detailType === EventType.DLQ_ROUTE) {
+    logger.error(
+      `[EVENTS] Prevented recursive DLQ routing for detailType=dlq_route (traceId: ${traceId})`
+    );
+    await reportHealthIssue({
+      component: 'EventHandler',
+      issue: 'Prevented recursive DLQ_ROUTE self-routing loop',
+      severity: 'high',
+      userId,
+      traceId,
+      context: {
+        detailType,
+        sessionId: sessionId || (event.detail.sessionId as string) || 'system-spine',
+        errorMessage,
+      },
+    });
+    return;
+  }
+
   try {
     await emitEvent('events.handler', EventType.DLQ_ROUTE, {
       eventCategory: 'dlq_routing',
@@ -21,6 +42,7 @@ export async function routeToDlq(
       envelopeId: event.id,
       userId,
       traceId,
+      sessionId: sessionId || (event.detail.sessionId as string) || 'system-spine',
       errorMessage,
       retryCount: (event.detail.retryCount as number) ?? 0,
       timestamp: Date.now(),
@@ -29,6 +51,7 @@ export async function routeToDlq(
         envelopeId: event.id,
         userId,
         traceId,
+        sessionId: sessionId || (event.detail.sessionId as string) || 'system-spine',
         errorMessage,
         retryCount: (event.detail.retryCount as number) ?? 0,
         timestamp: Date.now(),

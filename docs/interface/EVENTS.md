@@ -124,8 +124,8 @@ Standard event types and their default priority levels are centrally defined to 
   [ EventBridge Event ]
           |
           v
-  [ EventHandler ] -- (Strict Validation) -> [ Missing traceId/sessionId? ] -- YES --> [ Reject & DLQ ]
-          |                                                                           (Fail-Closed)
+  [ EventHandler ] -- (Resilient Validation) -> [ Missing traceId/sessionId? ] -- YES --> [ Inject Defaults ]
+          |                                                                              (Self-Heal)
           | (NO)
           v
   [ Agent Multiplexer ] -- (Check Timeout) -> [ Timed Out? ] -- YES --> [ HALT & Yield ]
@@ -142,6 +142,10 @@ Standard event types and their default priority levels are centrally defined to 
           |                                (Monotonic Safety)        (Limit Exceeded)
           |                                         |
           v                                         v
+  [ DLQ Guard ] -- (DLQ_ROUTE?) -> [ YES: stop re-route, raise health issue ]
+          |                         (Prevents DLQ -> DLQ loops)
+          | (NO)
+          v
   [ Agent Executor ] -- (Lock Acquisition) -> [ Session Lock ]
           |                                          |
           v                                          v
@@ -157,6 +161,7 @@ Standard event types and their default priority levels are centrally defined to 
 - **Safety Enforcement**: Returns the _new_ depth value immediately; calling code rejects any operation where `newDepth > RECURSION_LIMIT`.
 - **TTL**: Normal traces use 1-hour TTL; mission-critical contexts use 30-minute TTL
 - **Error Handling**: Database failures return `-1` (sentinel) to distinguish from no-entry (`0`)
+- **DLQ_ROUTE Exception**: `DLQ_ROUTE` bypasses recursion increment and cannot be re-routed to DLQ again.
 
 ## Backbone Gap Management (April 2026)
 

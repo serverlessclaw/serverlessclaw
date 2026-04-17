@@ -1,29 +1,37 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { OpenAIProvider } from './openai';
 import { MessageRole, Message, ReasoningProfile, AttachmentType, ToolType } from '../types/index';
+import { Resource } from 'sst';
 
 // Mock OpenAI SDK
 const mockCreateResponse = vi.fn();
+const mockOpenAIConstructor = vi.fn();
 
 vi.mock('openai', () => {
+  class MockOpenAI {
+    responses = {
+      create: mockCreateResponse,
+    };
+    chat = {
+      completions: {
+        create: vi.fn(), // Should no longer be used
+      },
+    };
+
+    constructor(options: { apiKey: string }) {
+      mockOpenAIConstructor(options);
+    }
+  }
+
   return {
-    default: class {
-      responses = {
-        create: mockCreateResponse,
-      };
-      chat = {
-        completions: {
-          create: vi.fn(), // Should no longer be used
-        },
-      };
-    },
+    default: MockOpenAI,
   };
 });
 
 // Mock SST Resource
 vi.mock('sst', () => ({
   Resource: {
-    OpenAIApiKey: { value: 'test-key' },
+    OpenAIApiKey: { value: 'sk-resource-key' },
   },
 }));
 
@@ -57,9 +65,152 @@ vi.mock('../constants', async (importOriginal) => {
 describe('OpenAIProvider', () => {
   let provider: OpenAIProvider;
 
+  const resetProviderClientCache = () => {
+    (OpenAIProvider as unknown as { _client: unknown; _currentKey: string | null })._client = null;
+    (OpenAIProvider as unknown as { _client: unknown; _currentKey: string | null })._currentKey =
+      null;
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env.SST_SECRET_OpenAIApiKey;
+    delete process.env.OPENAI_API_KEY;
+    (Resource as unknown as { OpenAIApiKey?: { value?: string } }).OpenAIApiKey = {
+      value: 'sk-resource-key',
+    };
+    resetProviderClientCache();
     provider = new OpenAIProvider('gpt-5.4');
+  });
+
+  describe('api key resolution guardrails', () => {
+    it('should prioritize linked SST secret over OPENAI_API_KEY', async () => {
+      process.env.OPENAI_API_KEY = 'sk-env-primary';
+      (Resource as unknown as { OpenAIApiKey?: { value?: string } }).OpenAIApiKey = {
+        value: 'sk-linked-primary',
+      };
+
+      mockCreateResponse.mockResolvedValue({ output_text: 'ok', output: [] });
+
+      await provider.call([
+        {
+          role: MessageRole.USER,
+          content: 'resolve-key',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
+      ]);
+
+      expect(mockOpenAIConstructor).toHaveBeenCalledWith(
+        expect.objectContaining({ apiKey: 'sk-linked-primary' })
+      );
+    });
+
+    it('should use OPENAI_API_KEY when linked key is placeholder', async () => {
+      process.env.OPENAI_API_KEY = 'sk-openai-env';
+      (Resource as unknown as { OpenAIApiKey?: { value?: string } }).OpenAIApiKey = {
+        value: 'dummy',
+      };
+
+      mockCreateResponse.mockResolvedValue({ output_text: 'ok', output: [] });
+
+      await provider.call([
+        {
+          role: MessageRole.USER,
+          content: 'resolve-env',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
+      ]);
+
+      expect(mockOpenAIConstructor).toHaveBeenCalledWith(
+        expect.objectContaining({ apiKey: 'sk-openai-env' })
+      );
+    });
+
+    it('should use SST_SECRET_OpenAIApiKey when linked and OPENAI_API_KEY are placeholders', async () => {
+      process.env.OPENAI_API_KEY = 'test-key';
+      process.env.SST_SECRET_OpenAIApiKey = 'sk-sst-env';
+      (Resource as unknown as { OpenAIApiKey?: { value?: string } }).OpenAIApiKey = {
+        value: 'test',
+      };
+
+      mockCreateResponse.mockResolvedValue({ output_text: 'ok', output: [] });
+
+      await provider.call([
+        {
+          role: MessageRole.USER,
+          content: 'resolve-sst-env',
+          traceId: 'test-trace',
+          messageId: 'test-msg',
+        },
+      ]);
+
+      expect(mockOpenAIConstructor).toHaveBeenCalledWith(
+        expect.objectContaining({ apiKey: 'sk-sst-env' })
+      );
+    });
+
+    it('should reject whitespace-only keys and throw actionable configuration error', async () => {
+      process.env.OPENAI_API_KEY = '   ';
+      process.env.SST_SECRET_OpenAIApiKey = '\t\n';
+      (Resource as unknown as { OpenAIApiKey?: { value?: string } }).OpenAIApiKey = {
+        value: 'dummy',
+      };
+
+      await expect(
+        provider.call([
+          {
+            role: MessageRole.USER,
+            content: 'misconfigured',
+            traceId: 'test-trace',
+            messageId: 'test-msg',
+          },
+        ])
+      ).rejects.toThrow(
+        'OpenAI API key is not configured. Set SST_SECRET_OpenAIApiKey (preferred for make dev) or OPENAI_API_KEY.'
+      );
+    });
+
+    it('should reject placeholder-only key combinations', async () => {
+      process.env.OPENAI_API_KEY = 'test';
+      process.env.SST_SECRET_OpenAIApiKey = 'test-key';
+      (Resource as unknown as { OpenAIApiKey?: { value?: string } }).OpenAIApiKey = {
+        value: 'dummy',
+      };
+
+      await expect(
+        provider.call([
+          {
+            role: MessageRole.USER,
+            content: 'placeholder-only',
+            traceId: 'test-trace',
+            messageId: 'test-msg',
+          },
+        ])
+      ).rejects.toThrow('OpenAI API key is not configured');
+    });
+  });
+
+  it('should fall back to SST secret env var when linked secret is a placeholder', async () => {
+    process.env.SST_SECRET_OpenAIApiKey = 'sk-env-fallback';
+    (Resource as unknown as { OpenAIApiKey?: { value?: string } }).OpenAIApiKey = {
+      value: 'dummy',
+    };
+
+    mockCreateResponse.mockResolvedValue({
+      output_text: 'Hello',
+      output: [],
+    });
+
+    const freshProvider = new OpenAIProvider('gpt-5.4');
+
+    await freshProvider.call([
+      { role: MessageRole.USER, content: 'test', traceId: 'test-trace', messageId: 'test-msg' },
+    ]);
+
+    expect(mockOpenAIConstructor).toHaveBeenCalledWith(
+      expect.objectContaining({ apiKey: 'sk-env-fallback' })
+    );
   });
 
   it('should correctly map different tool types for the Responses API', async () => {

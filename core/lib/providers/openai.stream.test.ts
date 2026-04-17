@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { OpenAIProvider } from './openai';
 import { ReasoningProfile } from '../types/index';
+import { Resource } from 'sst';
 
 const mockCreate = vi.fn();
 
@@ -16,7 +17,7 @@ vi.mock('openai', () => {
 
 vi.mock('sst', () => ({
   Resource: {
-    OpenAIApiKey: { value: 'test-key' },
+    OpenAIApiKey: { value: 'sk-stream-test-key' },
   },
 }));
 
@@ -25,7 +26,39 @@ describe('OpenAIProvider.stream', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env.OPENAI_API_KEY;
+    delete process.env.SST_SECRET_OpenAIApiKey;
+    (Resource as unknown as { OpenAIApiKey?: { value?: string } }).OpenAIApiKey = {
+      value: 'sk-stream-test-key',
+    };
+    (OpenAIProvider as unknown as { _client: unknown; _currentKey: string | null })._client = null;
+    (OpenAIProvider as unknown as { _client: unknown; _currentKey: string | null })._currentKey =
+      null;
     provider = new OpenAIProvider();
+  });
+
+  it('should fail fast with configuration error when all API keys are placeholders', async () => {
+    (Resource as unknown as { OpenAIApiKey?: { value?: string } }).OpenAIApiKey = {
+      value: 'dummy',
+    };
+    process.env.OPENAI_API_KEY = 'test';
+    process.env.SST_SECRET_OpenAIApiKey = 'test-key';
+
+    const consumeStream = async () => {
+      const stream = provider.stream(
+        [{ role: 'user' as any, content: 'hi', traceId: 't1', messageId: 'm1' }],
+        [],
+        ReasoningProfile.STANDARD
+      );
+
+      for await (const _chunk of stream) {
+        // no-op
+      }
+    };
+
+    await expect(consumeStream()).rejects.toThrow(
+      'OpenAI API key is not configured. Set SST_SECRET_OpenAIApiKey (preferred for make dev) or OPENAI_API_KEY.'
+    );
   });
 
   it('should yield chunks from the OpenAI stream', async () => {

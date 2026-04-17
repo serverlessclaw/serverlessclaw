@@ -58,6 +58,7 @@ The **OpenAIProvider** utilizes the modern `Responses` API for all 2026-grade re
 - **Condition**: Uses `/v1/responses` for all supported models (GPT-5 family).
 - **Behavior**: Ensures consistent support for `reasoning_effort`, strict tool use, and flattened message items.
 - **Mapping**: Our internal `ReasoningProfile` maps to OpenAI's native `ReasoningEffort` levels (`low`, `medium`, `high`, `xhigh`). `gpt-5.4-mini` specifically supports `xhigh` reasoning effort.
+- **Key Resolution (local safety)**: Provider key lookup order is `Resource.OpenAIApiKey.value` -> `OPENAI_API_KEY` -> `SST_SECRET_OpenAIApiKey`. Placeholder values such as `dummy`, `test`, and `test-key` are rejected to avoid accidental 401 calls in `make dev`.
 
 ### 2. AWS Bedrock (Thinking Budgets)
 

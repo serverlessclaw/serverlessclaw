@@ -54,7 +54,7 @@ export function verifyEventRoutingConfiguration(): EventType[] {
 
   // Check 2: Log warning for unhandled event types (gap detection)
   // These events are defined but have no handler - they will be silently dropped
-  const allDefinedEvents = Object.keys(EventType).filter((k) => isNaN(Number(k)));
+  const allDefinedEvents = Object.values(EventType) as string[];
   const handledEvents = new Set([
     ...Object.keys(DEFAULT_EVENT_ROUTING),
     ...EVENTBRIDGE_ONLY_EVENTS,

@@ -63,12 +63,38 @@ export class OpenAIProvider implements IProvider {
 
   constructor(private model: string = OpenAIModel.GPT_5_4) {}
 
-  private get client(): OpenAI {
+  private static isPlaceholderApiKey(value?: string): boolean {
+    if (!value) return true;
+
+    const normalized = value.trim().toLowerCase();
+    return (
+      normalized.length === 0 ||
+      normalized === 'dummy' ||
+      normalized === 'test' ||
+      normalized === 'test-key'
+    );
+  }
+
+  private static resolveApiKey(): string {
     const resource = Resource as unknown as Record<string, { value?: string } | undefined>;
-    const apiKey =
-      ('OpenAIApiKey' in resource ? resource.OpenAIApiKey?.value : undefined) ||
-      process.env.OPENAI_API_KEY ||
-      'test-key';
+    const linkedKey = resource.OpenAIApiKey?.value;
+    const openAiEnvKey = process.env.OPENAI_API_KEY;
+    const sstSecretEnvKey = process.env.SST_SECRET_OpenAIApiKey;
+
+    const candidates = [linkedKey, openAiEnvKey, sstSecretEnvKey];
+    const resolved = candidates.find((key) => !OpenAIProvider.isPlaceholderApiKey(key));
+
+    if (!resolved) {
+      throw new Error(
+        'OpenAI API key is not configured. Set SST_SECRET_OpenAIApiKey (preferred for make dev) or OPENAI_API_KEY.'
+      );
+    }
+
+    return resolved;
+  }
+
+  private get client(): OpenAI {
+    const apiKey = OpenAIProvider.resolveApiKey();
 
     if (!OpenAIProvider._client || OpenAIProvider._currentKey !== apiKey) {
       OpenAIProvider._client = new OpenAI({ apiKey });

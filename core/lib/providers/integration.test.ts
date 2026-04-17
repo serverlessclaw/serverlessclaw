@@ -9,7 +9,7 @@ import { MessageRole, Message, ReasoningProfile, AttachmentType } from '../types
 // 1. Setup mocks to avoid real AWS/OpenAI calls in CI
 vi.mock('sst', () => ({
   Resource: {
-    OpenAIApiKey: { value: 'test' },
+    OpenAIApiKey: { value: 'sk-integration-test-key' },
     TraceTable: { name: 'test-trace' },
     MemoryTable: { name: 'test-memory' },
   },

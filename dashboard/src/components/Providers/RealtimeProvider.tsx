@@ -35,6 +35,7 @@ export function useRealtimeContext() {
 export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
   const isConnectedRef = useRef(false);
+  const mountedRef = useRef(true);
   const [error, setError] = useState<Error | null>(null);
   const mqttClientRef = useRef<mqtt.MqttClient | null>(null);
   const connectingRef = useRef(false);
@@ -59,7 +60,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const connect = useCallback(async () => {
-    if (mqttClientRef.current || connectingRef.current) return;
+    if (!mountedRef.current || mqttClientRef.current || connectingRef.current) return;
 
     // Minimum 1 second between connection attempts to break fast loops
     const now = Date.now();
@@ -74,6 +75,9 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await fetch('/api/config');
       const config = await res.json();
+      if (!mountedRef.current) {
+        return;
+      }
       if (!config.realtime?.url) {
         console.warn('[Realtime] IoT URL missing in config');
         return;
@@ -112,7 +116,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         clientId,
         clean: true,
         connectTimeout: 30000,
-        reconnectPeriod: 5000,
+        reconnectPeriod: 0,
       });
 
       client.on('connect', () => {
@@ -161,6 +165,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         setError(err);
         setIsConnected(false);
         isConnectedRef.current = false;
+        client.end(true);
       });
 
       client.on('close', () => {
@@ -177,13 +182,15 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    mountedRef.current = true;
     console.log('[Realtime] Provider mounted');
     connect();
     return () => {
+      mountedRef.current = false;
       console.log('[Realtime] Provider unmounting');
       if (mqttClientRef.current) {
         console.log('[Realtime] Closing shared connection');
-        mqttClientRef.current.end();
+        mqttClientRef.current.end(true);
         mqttClientRef.current = null;
       }
     };
