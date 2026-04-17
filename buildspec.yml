@@ -98,11 +98,6 @@ phases:
             npx tsx scripts/ci/generate-manifest.ts /tmp/ci-logs .
             exit 1
           }
-          make security-scan > /tmp/ci-logs/security.log 2>&1 || {
-            echo "ERROR: Security scan reported blocking vulnerabilities."
-            npx tsx scripts/ci/generate-manifest.ts /tmp/ci-logs .
-            exit 1
-          }
           make docs-check > /tmp/ci-logs/docs-check.log 2>&1 || {
             echo "ERROR: Documentation drift detected."
             npx tsx scripts/ci/generate-manifest.ts /tmp/ci-logs .

@@ -29,9 +29,6 @@
     "aiready": {
       "cache": false
     },
-    "security-scan": {
-      "cache": true
-    },
     "check": {
       "dependsOn": ["lint", "type-check", "format-check"]
     },

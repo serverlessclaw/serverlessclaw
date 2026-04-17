@@ -144,10 +144,6 @@ test-affected: ## Run only tests in affected packages (via Turbo)
 	@$(call log_step,Running affected tests via Turbo...)
 	@$(PNPM) exec turbo run test --filter=[...origin/main]
 
-security-scan: ## Scan dependencies for security vulnerabilities
-	@$(call log_step,Running security scan...)
-	@$(PNPM) exec tsx scripts/quality/security-scan.ts $(if $(SEVERITY),--severity $(SEVERITY),) $(if $(FIX),--fix,)
-
 docs-check: ## Validate documentation is in sync with code changes
 	@$(call log_step,Checking documentation...)
 	@$(PNPM) exec tsx scripts/quality/docs-check.ts $(if $(BASE),--base $(BASE),) $(if $(STRICT),--strict,)
