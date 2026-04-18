@@ -32,8 +32,8 @@ importers:
   .:
     dependencies:
       '@aiready/ast-mcp-server':
-        specifier: 0.4.8
-        version: 0.4.8(typescript@6.0.2)
+        specifier: 0.8.2
+        version: 0.8.2(eslint@10.2.1(jiti@2.6.1))(typescript@6.0.2)
       '@octokit/rest':
         specifier: ^22.0.1
         version: 22.0.1
@@ -220,8 +220,8 @@ importers:
   core:
     dependencies:
       '@aiready/ast-mcp-server':
-        specifier: 0.1.6
-        version: 0.1.6(typescript@6.0.2)
+        specifier: 0.8.2
+        version: 0.8.2(eslint@10.2.1(jiti@2.6.1))(typescript@6.0.2)
       '@anthropic-ai/sdk':
         specifier: ^0.90.0
         version: 0.90.0(zod@4.3.6)
@@ -443,14 +443,8 @@ packages:
     engines: {node: '>=18.0.0'}
     hasBin: true
 
-  '@aiready/ast-mcp-server@0.1.6':
-    resolution: {integrity: sha512-mblrzP/jWxBhi/N6vpQ6vUkSwfl+p8tnOKg2HYCbNZ8YzXIDFxaqLYjtiQnlLJZ+pUFY/hrkRXE7KtbU3ocP+g==}
-    hasBin: true
-    peerDependencies:
-      typescript: ^5.9.3
-
-  '@aiready/ast-mcp-server@0.4.8':
-    resolution: {integrity: sha512-bj7jRXKzSC+pMFbI4XDJFnHHcUL2fCwMr0lku+byOnYsh+8uuVHdCROlWV6w1OUBuN4jSFw9SqI98GAls11VyQ==}
+  '@aiready/ast-mcp-server@0.8.2':
+    resolution: {integrity: sha512-6GkEasXGrb0PMOivEfiyiuYfS5cB4wT2Ht/69JAgLL12ujLhj3rqL+VRjHLAlGjHTXhf3xtP7LLh94XZvN6Z4A==}
     hasBin: true
     peerDependencies:
       typescript: ^5.9.3
@@ -480,11 +474,21 @@ packages:
   '@aiready/core@0.24.23':
     resolution: {integrity: sha512-XK2eZSijy09szNxKz9yapRALGNDYYmtabRv0J+jwg7daf4s5nKbg8pHl8reslG4rQuOpTCgpvcHOxfahwvymJg==}
 
+  '@aiready/core@0.28.0':
+    resolution: {integrity: sha512-U8+OC1bEMFG0VXONx6SUXTjVinEcSzZ7D1D5ySnmsLypJpMXvPdDUB1QR57tbUuhN0kKjtg3u8vVmkW3YjhsTA==}
+
+  '@aiready/core@0.29.4':
+    resolution: {integrity: sha512-13mS/PPPdHQg9FBUcYcoyZIXPKW0EF/oZNdKPIbfgX0WO9T4YSmODTP9mvP/BGLoGL2Azah6mZ2aYIrcG4HO4Q==}
+
   '@aiready/deps@0.14.20':
     resolution: {integrity: sha512-oWCFENQbtWl1yr7RQfkcysXJ2tzNqj/H1ZgD7rKdnE3gIHR3bZOjSnDqK4/sgK/StBjgTGVZLWp3by5M1AxnKQ==}
 
   '@aiready/doc-drift@0.14.20':
     resolution: {integrity: sha512-4t7EUKjHZsx6Kglg4afpJUep5PoruFzv3fSalB2+DPtjPIyQ5W01qs149fyojFWvmzsac5W3Y1+FWPQqRd7yDw==}
+
+  '@aiready/hygiene-audit@0.8.0':
+    resolution: {integrity: sha512-2vlTBEYupe84jNLu0f+RAqqRZJdQwshwh2yxrEf8MRk62Dpq6ArcYqpdkVWSDmKkqKf8a4II5Zm1x5WasatyBA==}
+    hasBin: true
 
   '@aiready/pattern-detect@0.17.20':
     resolution: {integrity: sha512-H69CohDq1W2V4AfCAF09NfCwYH+OsB4RXcM1kwe9Hp+qzIlJy4BTbELXC12Vm1hHhnlvpaKusGtqo0Jlb9eeAg==}
@@ -6802,8 +6806,10 @@ snapshots:
       - tree-sitter
       - typescript
 
-  '@aiready/ast-mcp-server@0.1.6(typescript@6.0.2)':
+  '@aiready/ast-mcp-server@0.8.2(eslint@10.2.1(jiti@2.6.1))(typescript@6.0.2)':
     dependencies:
+      '@aiready/core': 0.29.4(eslint@10.2.1(jiti@2.6.1))
+      '@aiready/hygiene-audit': 0.8.0(eslint@10.2.1(jiti@2.6.1))
       '@modelcontextprotocol/sdk': 1.29.0(zod@3.25.76)
       '@vscode/ripgrep': 1.17.1
       glob: 13.0.6
@@ -6812,19 +6818,9 @@ snapshots:
       zod: 3.25.76
     transitivePeerDependencies:
       - '@cfworker/json-schema'
+      - eslint
       - supports-color
-
-  '@aiready/ast-mcp-server@0.4.8(typescript@6.0.2)':
-    dependencies:
-      '@modelcontextprotocol/sdk': 1.29.0(zod@3.25.76)
-      '@vscode/ripgrep': 1.17.1
-      glob: 13.0.6
-      ts-morph: 25.0.1
-      typescript: 6.0.2
-      zod: 3.25.76
-    transitivePeerDependencies:
-      - '@cfworker/json-schema'
-      - supports-color
+      - tree-sitter
 
   '@aiready/change-amplification@0.14.20(eslint@10.2.1(jiti@2.6.1))(typescript@6.0.2)':
     dependencies:
@@ -6915,6 +6911,51 @@ snapshots:
       - supports-color
       - tree-sitter
 
+  '@aiready/core@0.28.0(eslint@10.2.1(jiti@2.6.1))':
+    dependencies:
+      '@octokit/rest': 22.0.1
+      '@typescript-eslint/parser': 8.58.2(eslint@10.2.1(jiti@2.6.1))(typescript@6.0.2)
+      '@typescript-eslint/typescript-estree': 8.58.2(typescript@6.0.2)
+      '@unit-mesh/treesitter-artifacts': 1.7.7
+      chalk: 5.6.2
+      commander: 14.0.3
+      glob: 13.0.6
+      ignore: 7.0.5
+      minimatch: 10.2.5
+      tree-sitter-java: 0.23.5
+      tree-sitter-python: 0.25.0
+      tree-sitter-wasms: 0.1.13
+      typescript: 6.0.2
+      web-tree-sitter: 0.26.8
+      zod: 4.3.6
+    transitivePeerDependencies:
+      - eslint
+      - supports-color
+      - tree-sitter
+
+  '@aiready/core@0.29.4(eslint@10.2.1(jiti@2.6.1))':
+    dependencies:
+      '@octokit/rest': 22.0.1
+      '@typescript-eslint/parser': 8.58.2(eslint@10.2.1(jiti@2.6.1))(typescript@6.0.2)
+      '@typescript-eslint/typescript-estree': 8.58.2(typescript@6.0.2)
+      '@unit-mesh/treesitter-artifacts': 1.7.7
+      '@vscode/ripgrep': 1.17.1
+      chalk: 5.6.2
+      commander: 14.0.3
+      glob: 13.0.6
+      ignore: 7.0.5
+      minimatch: 10.2.5
+      tree-sitter-java: 0.23.5
+      tree-sitter-python: 0.25.0
+      tree-sitter-wasms: 0.1.13
+      typescript: 6.0.2
+      web-tree-sitter: 0.26.8
+      zod: 4.3.6
+    transitivePeerDependencies:
+      - eslint
+      - supports-color
+      - tree-sitter
+
   '@aiready/deps@0.14.20(eslint@10.2.1(jiti@2.6.1))':
     dependencies:
       '@aiready/core': 0.24.23(eslint@10.2.1(jiti@2.6.1))
@@ -6938,6 +6979,17 @@ snapshots:
       - supports-color
       - tree-sitter
       - typescript
+
+  '@aiready/hygiene-audit@0.8.0(eslint@10.2.1(jiti@2.6.1))':
+    dependencies:
+      '@aiready/core': 0.28.0(eslint@10.2.1(jiti@2.6.1))
+      '@vscode/ripgrep': 1.17.1
+      chalk: 5.6.2
+      commander: 14.0.3
+    transitivePeerDependencies:
+      - eslint
+      - supports-color
+      - tree-sitter
 
   '@aiready/pattern-detect@0.17.20(eslint@10.2.1(jiti@2.6.1))':
     dependencies:
