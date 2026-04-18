@@ -113,6 +113,7 @@ export class Agent {
       tokenBudget = this.config?.tokenBudget,
       costLimit = this.config?.costLimit,
       priorTokenUsage,
+      skipUserSave = false,
     } = options;
 
     const responseFormat =
@@ -203,18 +204,20 @@ export class Agent {
       activeModel = finalModel;
       activeProvider = finalProvider;
 
-      await this.memory.addMessage(
-        storageId,
-        {
-          role: MessageRole.USER,
-          content: userText,
-          attachments: incomingAttachments as Attachment[],
-          pageContext,
-          traceId,
-          messageId: traceId,
-        },
-        workspaceId
-      );
+      if (!skipUserSave) {
+        await this.memory.addMessage(
+          storageId,
+          {
+            role: MessageRole.USER,
+            content: userText,
+            attachments: incomingAttachments as Attachment[],
+            pageContext,
+            traceId,
+            messageId: traceId,
+          },
+          workspaceId
+        );
+      }
 
       const { AgentExecutor, AGENT_DEFAULTS } = await import('./agent/executor');
       const executor = new AgentExecutor(
@@ -320,9 +323,12 @@ export class Agent {
       }
 
       let responseText = initialResponseText;
+      let finalThought = resultThought;
+
       if (communicationMode === 'json' && responseText) {
         try {
           const parsed = JSON.parse(responseText);
+          finalThought = parsed.thought || parsed.reasoning || parsed.thinking || finalThought;
           responseText = parsed.message || parsed.plan || responseText;
         } catch {
           // Fallback to raw text if not valid JSON
@@ -335,9 +341,10 @@ export class Agent {
           {
             role: MessageRole.ASSISTANT,
             content: responseText,
+            thought: finalThought,
             agentName: this.config?.name ?? 'SuperClaw',
             traceId,
-            messageId: this.config?.id === 'superclaw' ? traceId : `${traceId}-${this.config?.id}`,
+            messageId: `${traceId}-superclaw`,
             tool_calls: resultToolCalls,
           },
           workspaceId
@@ -360,6 +367,7 @@ export class Agent {
           });
         }
       } else {
+        const assistantMessageId = `${traceId}-superclaw`;
         await this.memory.addMessage(
           storageId,
           {
@@ -368,7 +376,7 @@ export class Agent {
             thought: resultThought,
             agentName: this.config?.name ?? 'SuperClaw',
             traceId,
-            messageId: this.config?.id === 'superclaw' ? traceId : `${traceId}-${this.config?.id}`,
+            messageId: assistantMessageId,
           },
           workspaceId
         );
@@ -377,8 +385,8 @@ export class Agent {
       await tracer.endTrace(responseText);
       return {
         responseText,
+        thought: finalThought,
         attachments: resultAttachments,
-        thought: resultThought,
         tool_calls: resultToolCalls,
         traceId,
       };
@@ -420,6 +428,7 @@ export class Agent {
       tokenBudget = this.config?.tokenBudget,
       costLimit = this.config?.costLimit,
       priorTokenUsage,
+      skipUserSave = false,
     } = options;
 
     const responseFormat =
@@ -500,18 +509,20 @@ export class Agent {
       }
     );
 
-    await this.memory.addMessage(
-      storageId,
-      {
-        role: MessageRole.USER,
-        content: userText,
-        attachments: incomingAttachments as Attachment[],
-        pageContext,
-        traceId,
-        messageId: traceId,
-      },
-      workspaceId
-    );
+    if (!skipUserSave) {
+      await this.memory.addMessage(
+        storageId,
+        {
+          role: MessageRole.USER,
+          content: userText,
+          attachments: incomingAttachments as Attachment[],
+          pageContext,
+          traceId,
+          messageId: traceId,
+        },
+        workspaceId
+      );
+    }
 
     const executor = new (await import('./agent/executor')).AgentExecutor(
       this.provider,
@@ -591,27 +602,35 @@ export class Agent {
     }
 
     let finalResponseText = fullContent;
+    let finalThought = fullThought;
+
     if (communicationMode === 'json' && finalResponseText) {
       try {
         const parsed = JSON.parse(finalResponseText);
+        finalThought = parsed.thought || parsed.reasoning || parsed.thinking || finalThought;
         finalResponseText = parsed.message || parsed.plan || finalResponseText;
       } catch {
         // Fallback to raw
       }
     }
 
-    await this.memory.addMessage(
-      storageId,
-      {
-        role: MessageRole.ASSISTANT,
-        content: finalResponseText,
-        thought: fullThought,
-        agentName: this.config?.name ?? 'SuperClaw',
-        traceId,
-        messageId: this.config?.id === 'superclaw' ? traceId : `${traceId}-${this.config?.id}`,
-      },
-      workspaceId
-    );
+    const streamProducedAnything =
+      finalResponseText.trim().length > 0 || fullThought.trim().length > 0;
+
+    if (streamProducedAnything) {
+      await this.memory.addMessage(
+        storageId,
+        {
+          role: MessageRole.ASSISTANT,
+          content: finalResponseText,
+          thought: finalThought,
+          agentName: this.config?.name ?? 'SuperClaw',
+          traceId,
+          messageId: `${traceId}-superclaw`,
+        },
+        workspaceId
+      );
+    }
     await tracer.endTrace(fullContent);
   }
 }

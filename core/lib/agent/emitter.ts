@@ -205,9 +205,8 @@ export class AgentEmitter {
         }
         if (!feedbackEnabled) return;
       }
-      // Root orchestrator uses traceId directly to match API response/history
-      // Sub-agents use traceId-agentId to maintain distinct bubbles
-      const messageId = isRoot ? traceId : `${traceId}-${agentId}`;
+      // Standardize assistant ID format: root agents use -superclaw, sub-agents use -agentId
+      const messageId = isRoot ? `${traceId}-superclaw` : `${traceId}-${agentId}`;
 
       // Normalize userId to base form for MQTT topic consistency
       const { extractBaseUserId } = await import('../utils/agent-helpers');

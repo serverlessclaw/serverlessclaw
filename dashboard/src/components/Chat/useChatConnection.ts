@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { ChatMessage } from './types';
 import type { ConversationMeta } from '@claw/core/lib/types/memory';
 import {
@@ -8,6 +8,7 @@ import {
   type IncomingChunk,
 } from './message-handler';
 import { useRealtime, RealtimeMessage } from '@/hooks/useRealtime';
+import type { PendingMessage } from '@claw/core/lib/types/session';
 
 export function useChatConnection(
   activeSessionId: string,
@@ -16,6 +17,7 @@ export function useChatConnection(
   isPostInFlight: React.MutableRefObject<boolean>
 ) {
   const [sessions, setSessions] = useState<ConversationMeta[]>([]);
+  const [pendingMessages, setPendingMessages] = useState<PendingMessage[]>([]);
   const activeSessionRef = useRef<string>(activeSessionId);
   const skipNextHistoryFetch = useRef<boolean>(false);
   const seenMessageIds = useRef<Set<string>>(new Set());
@@ -43,9 +45,10 @@ export function useChatConnection(
       try {
         const response = await fetch(`/api/chat?sessionId=${sessionId}`);
         const data = await response.json();
-        if (data.history) {
-          setMessagesRef.current((prev) => {
-            const { messages, seenIds } = mergeHistoryWithMessages(prev, data.history);
+          if (data.history) {
+             
+            setMessagesRef.current((prev) => {
+              const { messages, seenIds } = mergeHistoryWithMessages(prev, data.history);
             seenMessageIds.current = seenIds;
             return messages;
           });
@@ -55,6 +58,22 @@ export function useChatConnection(
       }
     },
     [isPostInFlight, setMessagesRef]
+  );
+
+  const fetchPendingSilently = useCallback(
+    async (sessionId: string) => {
+      if (isPostInFlight.current) return;
+      try {
+        const res = await fetch(`/api/pending-messages?sessionId=${sessionId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setPendingMessages(data.pendingMessages ?? []);
+        }
+      } catch {
+        // Silently ignore
+      }
+    },
+    [isPostInFlight]
   );
 
   const handleMessage = useCallback(
@@ -78,13 +97,18 @@ export function useChatConnection(
     [fetchHistorySilently, isPostInFlight, setMessagesRef]
   );
 
-  const { isConnected: isRealtimeActive } = useRealtime({
-    topics: [
+  const topics = useMemo(
+    () => [
       'users/+/signal',
       'users/+/sessions/+/signal',
       'collaborations/+/signal',
       'workspaces/+/signal',
     ],
+    []
+  );
+
+  const { isConnected: isRealtimeActive } = useRealtime({
+    topics,
     onMessage: handleMessage,
     userId,
   });
@@ -96,19 +120,74 @@ export function useChatConnection(
     init();
   }, []);
 
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastSyncRef = useRef<number>(0);
+  const isRealtimeActiveRef = useRef<boolean>(false);
+
+  // Keep refs in sync with state for use in the static interval
   useEffect(() => {
-    if (!activeSessionId) return;
-    const interval = setInterval(
-      () => {
+    isRealtimeActiveRef.current = isRealtimeActive;
+  }, [isRealtimeActive]);
+
+  useEffect(() => {
+    if (!activeSessionId) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      if (pendingMessages.length > 0) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setPendingMessages([]);
+      }
+      return;
+    }
+
+    // Start interval if not already running
+    if (!intervalRef.current) {
+      const runSync = () => {
+        const now = Date.now();
+        const sessionId = activeSessionRef.current;
+        const isLive = isRealtimeActiveRef.current;
+        
+        if (!sessionId) return;
+        if (now - lastSyncRef.current < 5000) return; // 5s absolute throttle
+        
+        // Frequency check (10s offline, 60s online)
+        const freq = isLive ? 60000 : 10000;
+        if (now - lastSyncRef.current < freq) return;
+
         const isIdle = !document.hidden;
         if (isIdle && !isPostInFlight.current) {
-          fetchHistorySilently(activeSessionId);
+          lastSyncRef.current = now;
+          fetchHistorySilently(sessionId);
+          fetchPendingSilently(sessionId);
         }
-      },
-      isRealtimeActive ? 60000 : 10000
-    );
-    return () => clearInterval(interval);
-  }, [activeSessionId, isRealtimeActive, isPostInFlight, fetchHistorySilently]);
+      };
 
-  return { isRealtimeActive, sessions, fetchSessions, skipNextHistoryFetch, seenMessageIds };
+      // Run every 2 seconds to check the state, but internal throttles enforce the 10s/60s rhythm
+      intervalRef.current = setInterval(runSync, 2000);
+    }
+
+    return () => {
+      // We only clear on unmount or activeSessionId becoming empty
+    };
+  }, [activeSessionId, fetchHistorySilently, fetchPendingSilently, isPostInFlight, pendingMessages.length]);
+
+  // Global cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  return {
+    isRealtimeActive,
+    sessions,
+    pendingMessages,
+    setPendingMessages,
+    fetchPendingSilently,
+    fetchSessions,
+    skipNextHistoryFetch,
+    seenMessageIds,
+  };
 }

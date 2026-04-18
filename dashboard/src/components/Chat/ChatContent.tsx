@@ -61,8 +61,6 @@ export default function ChatContent() {
   // --- Thinking Toggle ---
   const [showThinking, setShowThinking] = useState(true);
 
-  // --- Queued Messages State ---
-  const [pendingMessages, setPendingMessages] = useState<PendingMessage[]>([]);
 
   // --- Refs ---
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -130,13 +128,23 @@ export default function ChatContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const { isRealtimeActive, sessions, fetchSessions, skipNextHistoryFetch, seenMessageIds } =
-    useChatConnection(
-      activeSessionId,
-      setMessagesRef,
-      setIsLoading,
-      isPostInFlight
-    );
+  const chatConnection = useChatConnection(
+    activeSessionId,
+    setMessagesRef,
+    setIsLoading,
+    isPostInFlight
+  );
+
+  const {
+    isRealtimeActive,
+    sessions,
+    pendingMessages,
+    setPendingMessages,
+    fetchPendingSilently,
+    fetchSessions,
+    skipNextHistoryFetch,
+    seenMessageIds,
+  } = chatConnection;
 
   const {
     messages,
@@ -161,7 +169,9 @@ export default function ChatContent() {
     activeSessionRef
   );
 
-  setMessagesRef.current = setMessages;
+  useEffect(() => {
+    setMessagesRef.current = setMessages;
+  }, [setMessages]);
 
   const currentSession = sessions.find((s) => s.sessionId === activeSessionId);
 
@@ -204,39 +214,11 @@ export default function ChatContent() {
   }, [activeSessionId, router]);
 
   useEffect(() => {
-    if (activeSessionId) {
-      if (skipNextHistoryFetch.current) {
-        skipNextHistoryFetch.current = false;
-        return;
-      }
-      fetchHistory(activeSessionId);
-    } else {
+    if (!activeSessionId) {
       setMessages([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSessionId]);
+  }, [activeSessionId, setMessages]);
 
-  // --- Fetch Pending Messages ---
-  useEffect(() => {
-    if (!activeSessionId || isLoading) {
-      setPendingMessages([]);
-      return;
-    }
-    const fetchPending = async () => {
-      try {
-        const res = await fetch(`/api/pending-messages?sessionId=${activeSessionId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setPendingMessages(data.pendingMessages ?? []);
-        }
-      } catch {
-        // Silently ignore fetch errors for pending messages
-      }
-    };
-    fetchPending();
-    const interval = setInterval(fetchPending, 10000);
-    return () => clearInterval(interval);
-  }, [activeSessionId, isLoading]);
 
   // --- Session Operations ---
 

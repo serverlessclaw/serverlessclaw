@@ -79,7 +79,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       if (!config.realtime?.url) {
-        console.warn('[Realtime] IoT URL missing in config');
+        console.warn('[Realtime] IoT URL missing in config. This usually happens if the RealtimeBus is not linked or deployed. Streaming and LIVE updates will not work.');
         return;
       }
 
@@ -99,6 +99,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         token = `${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
       }
 
+      console.log('[Realtime] Generating connection URL with token:', token.substring(0, 8) + '...');
       const mqttUrl = config.realtime.authorizer
         ? `${baseUrl}?x-amz-customauthorizer-name=${config.realtime.authorizer}&token=${encodeURIComponent(token)}`
         : `${baseUrl}?token=${encodeURIComponent(token)}`;
@@ -161,7 +162,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       });
 
       client.on('error', (err: Error) => {
-        console.error('[Realtime] Shared connection error:', err);
+        console.error('[Realtime] MQTT connection error. This could be due to invalid credentials, incorrect authorizer setup, or network issues:', err);
         setError(err);
         setIsConnected(false);
         isConnectedRef.current = false;
@@ -175,11 +176,12 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
 
       mqttClientRef.current = client;
     } catch (e) {
+      console.error('[Realtime] Initialization failed critical error:', e);
       setError(e instanceof Error ? e : new Error(String(e)));
     } finally {
       connectingRef.current = false;
     }
-  }, []);
+  }, [batchSubscribe]);
 
   useEffect(() => {
     mountedRef.current = true;

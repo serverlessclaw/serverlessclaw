@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { MessageSquare, X, Minimize2, Maximize2, Activity } from 'lucide-react';
 import Button from '@/components/ui/Button';
@@ -19,36 +19,46 @@ import { PageContextData, ChatMessage } from './types';
  */
 export default function ChatBubble() {
   const pathname = usePathname();
-  const { context: pageContext } = usePageContext();
+  
+  // Hide the bubble on the main chat page to avoid redundancy and prevent 
+  // duplicate data synchronization hooks from running.
+  if (pathname === '/chat' || pathname === '/') {
+    return null;
+  }
+
+  // --- State & Refs needed for chat hooks ---
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [attachContext, setAttachContext] = useState(true);
-  const [activeSessionId, setActiveSessionId] = useState<string>('');
+  const [activeSessionId, setActiveSessionId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const isPostInFlight = useRef<boolean>(false);
-  const activeSessionRef = useRef<string>('');
-  // --- Refs ---
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const setMessagesRef = useRef<React.Dispatch<React.SetStateAction<ChatMessage[]>>>(() => undefined);
-
-  // Input state management (mimicking ChatContent)
   const [input, setInput] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [attachContext, setAttachContext] = useState(true);
 
-  // --- Hooks ---
-  const { seenMessageIds, fetchSessions } = useChatConnection(
+  const isPostInFlight = useRef(false);
+  const seenMessageIds = useRef(new Set<string>());
+  const skipNextHistoryFetch = useRef(false);
+  const activeSessionRef = useRef('');
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const setMessagesRef = useRef<React.Dispatch<React.SetStateAction<ChatMessage[]>>>(() => {});
+
+  const { context: pageContext } = usePageContext();
+
+  // Initialize Connection Hook (Sync Loop)
+  const chatConnection = useChatConnection(
     activeSessionId,
-    setMessagesRef,
+    setMessagesRef, 
     setIsLoading,
     isPostInFlight
   );
 
+  // Initialize Messages Hook
   const {
     messages,
     setMessages,
     sendMessage,
-    handleFiles,
     attachments,
+    handleFiles,
     removeAttachment,
   } = useChatMessages(
     activeSessionId,
@@ -56,17 +66,15 @@ export default function ChatBubble() {
     setIsLoading,
     isPostInFlight,
     seenMessageIds,
-    fetchSessions,
-    { current: false }, // skipNextHistoryFetch
+    chatConnection.fetchSessions,
+    skipNextHistoryFetch,
     activeSessionRef
   );
 
-  setMessagesRef.current = setMessages;
-
-  // Hide the bubble on the main chat page to avoid redundancy
-  if (pathname === '/chat' || pathname === '/') {
-    return null;
-  }
+  // Sync the ref for the connection hook
+  useEffect(() => {
+    setMessagesRef.current = setMessages;
+  }, [setMessages]);
 
   const toggleOpen = () => {
     setIsOpen(!isOpen);
@@ -90,6 +98,13 @@ export default function ChatBubble() {
       handleFiles(Array.from(e.target.files));
     }
   };
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4">

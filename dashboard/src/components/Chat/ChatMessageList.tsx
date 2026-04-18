@@ -123,6 +123,7 @@ const markdownComponents = (role: string): MarkdownComponents => ({
   p: ({ children }: MarkdownNodeProps) => (
     <Typography
       variant="body"
+      as="div"
       color={role === 'assistant' ? 'inherit' : 'white'}
       className="block mb-2 last:mb-0 break-words"
     >

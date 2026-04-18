@@ -117,7 +117,7 @@ describe('Dashboard API: POST /api/chat', () => {
     const res = await POST(makeRequest({ text: 'Hi', sessionId: 'session_1' }));
     const data = await res.json();
 
-    expect(data.messageId).toBe('trace-abc-123');
+    expect(data.messageId).toBe('trace-abc-123-superclaw');
     expect(data.reply).toBe('Hello from SuperClaw');
     expect(data.agentName).toBe('SuperClaw');
   });
@@ -320,7 +320,7 @@ describe('Dashboard API: POST /api/chat (streaming)', () => {
     const data = await res.json();
 
     expect(data.reply).toBe('chunk1');
-    expect(data.messageId).toBe('client-trace-fallback');
+    expect(data.messageId).toBe('client-trace-fallback-superclaw');
   });
 
   it('passes undefined traceId when client does not provide one', async () => {
@@ -515,7 +515,7 @@ describe('Dashboard API: POST /api/chat (streaming)', () => {
     );
     expect(data.reply).toBe('Fallback response');
     expect(data.thought).toBe('Recovered after empty stream');
-    expect(data.messageId).toBe('trace-fallback-1');
+    expect(data.messageId).toBe('trace-fallback-1-superclaw');
   });
 
   it('does not fall back to process when stream includes tool calls only', async () => {

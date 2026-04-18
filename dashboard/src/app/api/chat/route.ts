@@ -98,15 +98,22 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           if (chunk.tool_calls) streamToolCalls = chunk.tool_calls;
         }
 
-        // Some providers may complete with no visible content. Recover by running
-        // the non-stream path once so UI always receives an assistant payload.
-        if (!finalResponse.trim() && (!streamToolCalls || streamToolCalls.length === 0)) {
+        // Some providers may complete with no visible content if they only performed tool calls.
+        // If we have content or tool calls, the stream was successful.
+        const streamProducedAnything = 
+          finalResponse.trim().length > 0 || 
+          finalThought.trim().length > 0 || 
+          (streamToolCalls && streamToolCalls.length > 0);
+
+        if (!streamProducedAnything) {
+          console.warn('[Chat API] Stream produced no content, thought, or tool calls. Triggering fallback.');
           const fallback = await agent.process(storageId, text ?? '', {
             sessionId,
             source: TraceSource.DASHBOARD,
             attachments,
             approvedToolCalls,
             pageContext,
+            skipUserSave: true,
           });
           finalResponse = fallback.responseText ?? '';
           if (!finalThought && fallback.thought) {
@@ -131,7 +138,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           thought: finalThought,
           agentName: 'SuperClaw',
           tool_calls: streamToolCalls,
-          messageId: streamMessageId || clientTraceId || fallbackTraceId,
+          messageId: streamMessageId || (clientTraceId ? `${clientTraceId}-superclaw` : (fallbackTraceId ? `${fallbackTraceId}-superclaw` : undefined)),
         };
       })();
 
@@ -167,7 +174,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       agentName: 'SuperClaw',
       attachments: resultAttachments,
       tool_calls: resultToolCalls,
-      messageId: traceId,
+      messageId: traceId ? `${traceId}-superclaw` : undefined,
     });
   } catch (error) {
     console.error(UI_STRINGS.API_CHAT_ERROR, error);

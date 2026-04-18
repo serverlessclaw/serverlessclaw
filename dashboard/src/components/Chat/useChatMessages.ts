@@ -2,12 +2,14 @@ import { useState } from 'react';
 import {
   ChatMessage,
   AttachmentPreview,
-  HistoryMessage,
   ToolCall,
   DynamicComponent,
   PageContextData,
 } from './types';
 import { AGENT_ERRORS } from '@/lib/constants';
+import {
+  mergeHistoryWithMessages,
+} from './message-handler';
 
 interface ChatApiResponse {
   reply?: string;
@@ -38,36 +40,13 @@ export function useChatMessages(
       const response = await fetch(`/api/chat?sessionId=${sessionId}`);
       const data = await response.json();
       if (data.history) {
-        seenMessageIds.current.clear();
         setMessages((prev: ChatMessage[]) => {
-          const history = data.history.map((m: HistoryMessage) => ({
-            role: m.role === 'assistant' || m.role === 'system' ? 'assistant' : 'user',
-            content: m.content,
-            thought: m.thought,
-            agentName:
-              m.agentName ??
-              (m.role === 'assistant' || m.role === 'system' ? 'SuperClaw' : undefined),
-            attachments: m.attachments,
-            options: m.options,
-            tool_calls: m.tool_calls,
-            messageId: m.messageId || m.traceId,
-            pageContext: m.pageContext,
-            ui_blocks: m.ui_blocks,
-          }));
-
-          const historyIds = new Set(
-            history.map((msg: ChatMessage) => msg.messageId).filter(Boolean)
-          );
-          const localOnly = prev.filter(
-            (msg: ChatMessage) =>
-              msg.role === 'assistant' && msg.messageId && !historyIds.has(msg.messageId)
-          );
-
-          history.forEach((msg: ChatMessage) => {
-            if (msg.messageId) seenMessageIds.current.add(msg.messageId);
-          });
-
-          return [...history, ...localOnly];
+          const { messages: mergedMessages, seenIds } = mergeHistoryWithMessages(prev, data.history);
+          
+          // Sync the shared ref
+          seenIds.forEach(id => seenMessageIds.current.add(id));
+          
+          return mergedMessages;
         });
       }
     } catch (error) {
@@ -174,11 +153,13 @@ export function useChatMessages(
     isPostInFlight.current = true;
 
     let currentSessionId = activeSessionRef.current;
+    let isNewSession = false;
     if (!currentSessionId) {
       currentSessionId = `session_${Date.now()}`;
       skipNextHistoryFetch.current = true;
       activeSessionRef.current = currentSessionId;
       setActiveSessionId(currentSessionId);
+      isNewSession = true;
     }
 
     try {
@@ -228,7 +209,11 @@ export function useChatMessages(
       if (currentSessionId === activeSessionRef.current) {
         updateAssistantResponse(data, tempId);
       }
-      fetchSessions();
+      
+      // Only refresh sidebar if this was a new session creation
+      if (isNewSession) {
+        fetchSessions();
+      }
     } catch (error) {
       handleConnectionError(currentSessionId, error);
     } finally {

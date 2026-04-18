@@ -129,7 +129,7 @@ export class StreamingExecutor extends BaseExecutor {
               traceId,
               undefined,
               this.agentName,
-              false,
+              true,
               undefined,
               options.currentInitiator,
               thoughtDelta

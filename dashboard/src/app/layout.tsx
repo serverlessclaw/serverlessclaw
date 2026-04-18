@@ -52,7 +52,12 @@ export default async function RootLayout({
         suppressHydrationWarning
         className="min-h-full flex bg-background text-foreground font-mono text-base antialiased"
       >
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
           <TranslationsProvider initialLocale={initialLocale}>
             <RealtimeProvider>
               <UICommandProvider>

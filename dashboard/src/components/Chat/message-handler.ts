@@ -92,27 +92,27 @@ export function applyChunkToMessages(
     const isFinal =
       (data as IncomingChunk & { 'detail-type'?: string })['detail-type'] === 'outbound_message';
 
-    if (data.isThought || data.thought) {
-      updated[existingIndex] = {
-        ...existing,
-        thought: isFinal
-          ? (data.message || data.thought || existing.thought)
-          : (existing.thought ?? '') + (data.message || data.thought || ''),
-        options: data.options ?? existing.options,
-        ui_blocks: data.ui_blocks ?? existing.ui_blocks,
-      };
-    } else {
-      updated[existingIndex] = {
-        ...existing,
-        content: isFinal
-          ? (data.message ?? existing.content)
-          : (existing.content ?? '') + (data.message ?? ''),
-        attachments: data.attachments ?? existing.attachments,
-        tool_calls: data.toolCalls || data.tool_calls || existing.tool_calls,
-        options: data.options ?? existing.options,
-        ui_blocks: data.ui_blocks ?? existing.ui_blocks,
-      };
-    }
+    const isThought = !!(data.isThought || data.thought);
+
+    updated[existingIndex] = {
+      ...existing,
+      content:
+        !isThought || isFinal
+          ? isFinal
+            ? data.message ?? existing.content
+            : (existing.content ?? '') + (data.message ?? '')
+          : existing.content,
+      thought:
+        isThought || isFinal
+          ? isFinal
+            ? data.message || data.thought || existing.thought
+            : (existing.thought ?? '') + (data.message || data.thought || '')
+          : existing.thought,
+      attachments: data.attachments ?? existing.attachments,
+      tool_calls: data.toolCalls || data.tool_calls || existing.tool_calls,
+      options: data.options ?? existing.options,
+      ui_blocks: data.ui_blocks ?? existing.ui_blocks,
+    };
     return updated;
   }
 
@@ -175,28 +175,46 @@ export function mergeHistoryWithMessages(
   rawHistory: HistoryMessage[]
 ): { messages: ChatMessage[]; seenIds: Set<string> } {
   const seenIds = new Set<string>();
-  const history = rawHistory.map(mapHistoryMessage);
-
-  // Track unique message identifiers from history for dedup.
-  // We use a combination of messageId and role because a turn (user + assistant) shares the same traceId.
   const historyKeys = new Set<string>();
-  history.forEach((m) => {
-    if (m.messageId) {
-      seenIds.add(m.messageId);
-      historyKeys.add(`${m.role}:${m.messageId}`);
+  const uniqueHistory: ChatMessage[] = [];
+
+  const normalizeId = (id: string, role: string) => {
+    if (role !== 'assistant') return id;
+    if (!id.includes('-')) return id;
+    const parts = id.split('-');
+    const suffix = parts[parts.length - 1];
+    if (['superclaw', 'assistant', 'system'].includes(suffix)) {
+      return parts.slice(0, -1).join('-');
+    }
+    return id;
+  };
+
+  rawHistory.forEach((m) => {
+    const msg = mapHistoryMessage(m);
+    if (!msg.messageId) {
+      uniqueHistory.push(msg);
+      return;
+    }
+
+    const normId = normalizeId(msg.messageId, msg.role);
+    const key = `${msg.role}:${normId}`;
+
+    if (!historyKeys.has(key)) {
+      historyKeys.add(key);
+      uniqueHistory.push(msg);
+      seenIds.add(msg.messageId);
     }
   });
 
   // Preserve local-only messages:
-  // 1. Assistant messages that are still streaming (not yet in history with 'assistant' role)
-  // 2. Error messages (SystemGuard) that are not in history
+  // 1. Assistant messages that are still streaming
+  // 2. Error messages that are not in history
   const localOnly = prev.filter((m) => {
     if (!m.messageId) return false;
-    // If it's a user message, we prefer the history version (which has the real ID)
     if (m.role === 'user') return false;
-    // If it's an assistant message, keep it if it's NOT in history yet
-    return !historyKeys.has(`${m.role}:${m.messageId}`);
+    const normId = normalizeId(m.messageId, m.role);
+    return !historyKeys.has(`${m.role}:${normId}`);
   });
 
-  return { messages: [...history, ...localOnly], seenIds };
+  return { messages: [...uniqueHistory, ...localOnly], seenIds };
 }

@@ -96,4 +96,10 @@ export interface AgentProcessOptions {
     outputTokens: number;
     totalTokens: number;
   };
+  /**
+   * If true, the agent will skip saving the User message to history.
+   * Useful when retrying or falling back from a stream where the message
+   * was already persisted.
+   */
+  skipUserSave?: boolean;
 }
