@@ -42,14 +42,17 @@ export const handler = async (event: any, context: any, callback: any) => {
     // LENIENT FOR DEV: Allow connection even if token is missing but it's a local/dev handshake
     const isDevToken = finalToken === 'dashboard-dev-token-elegant';
     const isActuallyMissing = !finalToken || finalToken.length < 10;
-    
-    console.log(`[RealtimeAuth] Decision: isDevToken=${isDevToken}, isActuallyMissing=${isActuallyMissing}, finalTokenLen=${finalToken?.length ?? 0}`);
+
+    console.log(
+      `[RealtimeAuth] Decision: isDevToken=${isDevToken}, isActuallyMissing=${isActuallyMissing}, finalTokenLen=${finalToken?.length ?? 0}`
+    );
 
     if (isActuallyMissing && !isDevToken) {
-      console.warn(`[RealtimeAuth] ❌ Denied: Token too short or missing (${finalToken?.length ?? 0} chars)`);
+      console.warn(
+        `[RealtimeAuth] ❌ Denied: Token too short or missing (${finalToken?.length ?? 0} chars)`
+      );
       return { publish: [], subscribe: [] };
     }
-
 
     console.log(`[RealtimeAuth] ✅ Authorized for scope: ${prefix}/*`);
     return {

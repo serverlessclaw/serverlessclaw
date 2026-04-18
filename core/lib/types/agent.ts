@@ -265,10 +265,6 @@ export enum TraceSource {
  * Standard system event types for communication between agents.
  */
 export enum EventType {
-  TEXT_MESSAGE_START = 'TEXT_MESSAGE_START',
-  TEXT_MESSAGE_CONTENT = 'TEXT_MESSAGE_CONTENT',
-  TEXT_MESSAGE_END = 'TEXT_MESSAGE_END',
-  OUTBOUND_MESSAGE = 'outbound_message',
   /** Request for code modification. */
   CODER_TASK = 'coder_task',
   /** Completion signal for a coding task. */

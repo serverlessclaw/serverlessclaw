@@ -126,7 +126,6 @@ describe('AgentExecutor.streamLoop', () => {
       undefined,
       'outbound_message'
     );
-
   });
 
   it('should execute tool calls and continue the loop to get final response', async () => {

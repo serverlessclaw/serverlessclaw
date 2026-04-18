@@ -98,20 +98,20 @@ export class StreamingExecutor extends BaseExecutor {
       );
 
       const effectiveMaxTokens = this.getClampedMaxTokens(options, usage);
-const stream = this.provider.stream(
-  messages,
-  this.tools,
-  normalizedProfile,
-  options.activeModel,
-  options.activeProvider,
-  options.responseFormat,
-  options.temperature,
-  effectiveMaxTokens,
-  options.topP,
-  options.stopSequences
-);
+      const stream = this.provider.stream(
+        messages,
+        this.tools,
+        normalizedProfile,
+        options.activeModel,
+        options.activeProvider,
+        options.responseFormat,
+        options.temperature,
+        effectiveMaxTokens,
+        options.topP,
+        options.stopSequences
+      );
 
-const toolCalls: ToolCall[] = [];
+      const toolCalls: ToolCall[] = [];
 
       for await (const chunk of stream) {
         if (chunk.content) {

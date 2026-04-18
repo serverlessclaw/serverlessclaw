@@ -52,11 +52,13 @@ describe('RealtimeBridge Handler', () => {
 
     await handler(event, fakeContext);
 
-    expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({
-      input: expect.objectContaining({
-        topic: 'serverlessclaw/local/users/dashboard-user/sessions/sess-1/signal'
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          topic: 'serverlessclaw/local/users/dashboard-user/sessions/sess-1/signal',
+        }),
       })
-    }));
+    );
   });
 
   it('falls back to user signal topic when sessionId is missing', async () => {
@@ -64,11 +66,13 @@ describe('RealtimeBridge Handler', () => {
 
     await handler(event, fakeContext);
 
-    expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({
-      input: expect.objectContaining({
-        topic: 'serverlessclaw/local/users/dashboard-user/signal'
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          topic: 'serverlessclaw/local/users/dashboard-user/signal',
+        }),
       })
-    }));
+    );
   });
 
   it('sanitizes userId with MQTT-unsafe characters', async () => {
@@ -76,11 +80,13 @@ describe('RealtimeBridge Handler', () => {
 
     await handler(event, fakeContext);
 
-    expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({
-      input: expect.objectContaining({
-        topic: 'serverlessclaw/local/users/user_with_special/sessions/sess-1/signal'
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          topic: 'serverlessclaw/local/users/user_with_special/sessions/sess-1/signal',
+        }),
       })
-    }));
+    );
   });
 
   it('defaults userId to dashboard-user when missing', async () => {
@@ -88,11 +94,13 @@ describe('RealtimeBridge Handler', () => {
 
     await handler(event, fakeContext);
 
-    expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({
-      input: expect.objectContaining({
-        topic: 'serverlessclaw/local/users/dashboard-user/sessions/sess-1/signal'
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          topic: 'serverlessclaw/local/users/dashboard-user/sessions/sess-1/signal',
+        }),
       })
-    }));
+    );
   });
 
   it('normalizes userId with CONV# prefix for MQTT topics', async () => {
@@ -100,11 +108,13 @@ describe('RealtimeBridge Handler', () => {
 
     await handler(event, fakeContext);
 
-    expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({
-      input: expect.objectContaining({
-        topic: 'serverlessclaw/local/users/dashboard-user/sessions/sess-1/signal'
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          topic: 'serverlessclaw/local/users/dashboard-user/sessions/sess-1/signal',
+        }),
       })
-    }));
+    );
   });
 
   it('does not publish when event schema validation fails', async () => {
@@ -120,12 +130,14 @@ describe('RealtimeBridge Handler', () => {
 
     await handler(event, fakeContext);
 
-    expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({
-      input: expect.objectContaining({
-        payload: expect.anything()
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          payload: expect.anything(),
+        }),
       })
-    }));
-    
+    );
+
     const call = mockSend.mock.calls[0][0];
     const payload = JSON.parse(call.input.payload.toString());
     expect(payload.isThought).toBe(true);
@@ -137,11 +149,13 @@ describe('RealtimeBridge Handler', () => {
 
     await handler(event, fakeContext);
 
-    expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({
-      input: expect.objectContaining({
-        topic: 'serverlessclaw/local/collaborations/collab-123/signal'
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          topic: 'serverlessclaw/local/collaborations/collab-123/signal',
+        }),
       })
-    }));
+    );
   });
 
   it('routes to workspace topic when workspaceId is present (and no collaborationId)', async () => {
@@ -149,11 +163,13 @@ describe('RealtimeBridge Handler', () => {
 
     await handler(event, fakeContext);
 
-    expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({
-      input: expect.objectContaining({
-        topic: 'serverlessclaw/local/workspaces/ws-456/signal'
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          topic: 'serverlessclaw/local/workspaces/ws-456/signal',
+        }),
       })
-    }));
+    );
   });
 
   it('routes to system/metrics topic for health and metric events', async () => {
@@ -168,10 +184,12 @@ describe('RealtimeBridge Handler', () => {
 
     await handler(event as any, fakeContext);
 
-    expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({
-      input: expect.objectContaining({
-        topic: 'serverlessclaw/local/system/metrics'
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          topic: 'serverlessclaw/local/system/metrics',
+        }),
       })
-    }));
+    );
   });
 });

@@ -46,24 +46,27 @@ describe('Realtime Auth Handler', () => {
   it('denies access for short/invalid tokens (returns empty policies)', async () => {
     const event = { ...baseEvent, token: 'short' };
 
-    const response = await handler(event, mockContext, () => {}) as any;
+    const response = (await handler(event, mockContext, () => {})) as any;
 
     expect(response.isAuthenticated).toBe(true);
 
-    const policy = typeof response.policyDocuments[0] === 'string' 
-      ? JSON.parse(response.policyDocuments[0])
-      : response.policyDocuments[0];
+    const policy =
+      typeof response.policyDocuments[0] === 'string'
+        ? JSON.parse(response.policyDocuments[0])
+        : response.policyDocuments[0];
 
-    console.log('[RealtimeAuthTest] Generated Policy for short token:', JSON.stringify(policy, null, 2));
+    console.log(
+      '[RealtimeAuthTest] Generated Policy for short token:',
+      JSON.stringify(policy, null, 2)
+    );
 
     // Check that NO topics are allowed in the statement (Resource must be non-empty for an actual allow)
     const hasTopicAllow = policy.Statement.some(
       (s: any) =>
-        s.Action && 
+        s.Action &&
         (s.Action.includes('iot:Subscribe') || s.Action.includes('iot:Publish')) &&
-        (Array.isArray(s.Resource) ? s.Resource.length > 0 : (s.Resource && s.Resource !== ''))
+        (Array.isArray(s.Resource) ? s.Resource.length > 0 : s.Resource && s.Resource !== '')
     );
     expect(hasTopicAllow).toBe(false);
   });
-
 });

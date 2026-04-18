@@ -18,6 +18,15 @@ interface Subscription {
   callback: MessageCallback;
 }
 
+interface DashboardConfig {
+  app: string;
+  stage: string;
+  realtime: {
+    url: string | null;
+    authorizer?: string;
+  };
+}
+
 interface RealtimeContextType {
   isConnected: boolean;
   error: Error | null;
@@ -51,7 +60,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const mqttClientRef = useRef<mqtt.MqttClient | null>(null);
   const isUnmountedRef = useRef<boolean>(false);
   const subscriptionsRef = useRef<Set<Subscription>>(new Set());
-  const configCacheRef = useRef<any>(null);
+  const configCacheRef = useRef<DashboardConfig | null>(null);
   const prefixRef = useRef<string>('');
 
   const fetchSessions = useCallback(async () => {
@@ -74,10 +83,12 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       if (!configCacheRef.current) {
         const res = await fetch('/api/config');
         if (isUnmountedRef.current) return;
-        configCacheRef.current = await res.json();
+        configCacheRef.current = (await res.json()) as DashboardConfig;
       }
       
       const config = configCacheRef.current;
+      if (!config) return;
+
       prefixRef.current = `${config.app}/${config.stage}/`;
 
       if (!config.realtime?.url || isUnmountedRef.current || mqttClientRef.current) return;

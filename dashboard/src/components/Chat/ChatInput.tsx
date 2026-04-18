@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Paperclip, X, File } from 'lucide-react';
-import Image from 'next/image';
 import Button from '@/components/ui/Button';
 import Typography from '@/components/ui/Typography';
 import { AttachmentPreview } from './types';
