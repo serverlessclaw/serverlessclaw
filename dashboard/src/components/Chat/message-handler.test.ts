@@ -200,6 +200,73 @@ describe('applyChunkToMessages', () => {
     expect(result[0].messageId).toBe('t1');
   });
 
+  it('appends thought deltas to an existing message', () => {
+    const prev: ChatMessage[] = [
+      {
+        role: 'assistant',
+        content: '',
+        thought: 'I am ',
+        messageId: 't1',
+        agentName: 'SuperClaw',
+      },
+    ];
+    const chunk: IncomingChunk = {
+      isThought: true,
+      thought: 'thinking',
+      messageId: 't1',
+    };
+
+    const result = applyChunkToMessages(prev, chunk);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].thought).toBe('I am thinking');
+  });
+
+  it('ignores the synthetic thinking marker \u2026 in accumulated thought but uses it to set isThinking', () => {
+    const prev: ChatMessage[] = [
+      {
+        role: 'assistant',
+        content: '',
+        isThinking: true,
+        messageId: 't1',
+        agentName: 'SuperClaw',
+      },
+    ];
+    const chunk: IncomingChunk = {
+      isThought: true,
+      thought: '\u2026',
+      messageId: 't1',
+    };
+
+    const result = applyChunkToMessages(prev, chunk);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].thought).toBeUndefined();
+    expect(result[0].isThinking).toBe(true);
+  });
+
+  it('stops thinking when non-thought content arrives', () => {
+    const prev: ChatMessage[] = [
+      {
+        role: 'assistant',
+        content: '',
+        isThinking: true,
+        messageId: 't1',
+        agentName: 'SuperClaw',
+      },
+    ];
+    const chunk: IncomingChunk = {
+      message: 'Here is the answer',
+      messageId: 't1',
+    };
+
+    const result = applyChunkToMessages(prev, chunk);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].content).toBe('Here is the answer');
+    expect(result[0].isThinking).toBe(false);
+  });
+
   it('skips chunks for already seen message IDs', () => {
     const prev: ChatMessage[] = [];
     const seenIds = new Set(['trace-1']);
