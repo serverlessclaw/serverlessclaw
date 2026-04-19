@@ -227,7 +227,7 @@ export default async function TraceDetailPage({
                   {node.parentId ? `(Parent: ${node.parentId.slice(0, 8)})` : '(Root)'}
                 </span>
 
-                {node.status === 'error' && (
+                {(node.status === 'error' || node.status === 'failed') && (
                   <div className="flex gap-2">
                     <Button variant="danger" size="sm" data-testid="retry-button" className="h-6 text-[8px] font-black uppercase">
                       <RefreshCw size={10} className="mr-1" /> RETRY

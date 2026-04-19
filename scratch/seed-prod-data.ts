@@ -19,8 +19,8 @@ async function seedData() {
   const traceTable = (Resource as any).TraceTable.name;
   const userId = 'dashboard-user';
 
-  // Use a recent past timestamp (5 mins ago) to ensure these are fresh but not filtered
-  const now = Date.now() - 300000;
+  const runId = Math.random().toString(36).substring(7);
+  const now = Date.now();
 
   // 1. Create a FAILED Gap
   const failedGapId = `gap-resilience-fail-${now}`;
@@ -32,7 +32,7 @@ async function seedData() {
         userId: `GAP#${failedGapId}`,
         timestamp: now,
         type: 'GAP',
-        content: 'Simulated capability failure for resilience testing',
+        content: `Simulated capability failure ${runId}`,
         status: 'FAILED',
         metadata: { impact: 8, priority: 9 },
         expiresAt: Math.floor(Date.now() / 1000) + 86400,
@@ -54,9 +54,8 @@ async function seedData() {
         source: 'dashboard',
         agentId: 'superclaw',
         timestamp: now + 1,
-        status: 'error',
-        initialContext: { userText: 'Resilience Test Trace' },
-
+        status: 'failed',
+        initialContext: { userText: `Resilience Test Trace ${runId}` },
         failureReason: 'Simulated execution error for retry UI testing',
         steps: [
           {
@@ -81,9 +80,8 @@ async function seedData() {
         source: 'dashboard',
         agentId: 'superclaw',
         timestamp: now + 1,
-        status: 'error',
-        initialContext: { userText: 'Resilience Test Trace' },
-
+        status: 'failed',
+        initialContext: { userText: `Resilience Test Trace ${runId}` },
         failureReason: 'Simulated execution error for retry UI testing',
         expiresAt: Math.floor(Date.now() / 1000) + 86400,
       },
@@ -104,8 +102,8 @@ async function seedData() {
         source: 'dashboard',
         agentId: 'superclaw',
         timestamp: now + 2,
-        status: 'COMPLETED',
-        initialContext: { userText: 'Tool Source Test Trace' },
+        status: 'completed',
+        initialContext: { userText: `Tool Source Test Trace ${runId}` },
         steps: [
           {
             stepId: uuidv4(),
@@ -136,8 +134,8 @@ async function seedData() {
         source: 'dashboard',
         agentId: 'superclaw',
         timestamp: now + 2,
-        status: 'COMPLETED',
-        initialContext: { userText: 'Tool Source Test Trace' },
+        status: 'completed',
+        initialContext: { userText: `Tool Source Test Trace ${runId}` },
         expiresAt: Math.floor(Date.now() / 1000) + 86400,
       },
     })
@@ -158,8 +156,8 @@ async function seedData() {
         source: 'dashboard',
         agentId: 'superclaw',
         timestamp: now + 4,
-        status: 'COMPLETED',
-        initialContext: { userText: 'Collaboration Test Trace' },
+        status: 'completed',
+        initialContext: { userText: `Collaboration Test Trace ${runId}` },
         metadata: { collaborationId: collabId },
         steps: [
           {
@@ -186,8 +184,8 @@ async function seedData() {
         source: 'dashboard',
         agentId: 'superclaw',
         timestamp: now + 4,
-        status: 'COMPLETED',
-        initialContext: { userText: 'Collaboration Test Trace' },
+        status: 'completed',
+        initialContext: { userText: `Collaboration Test Trace ${runId}` },
         metadata: { collaborationId: collabId },
         expiresAt: Math.floor(Date.now() / 1000) + 86400,
       },

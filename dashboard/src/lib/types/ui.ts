@@ -171,7 +171,7 @@ export type TraceStepContent = TraceStep['content'];
 export interface Trace {
   traceId: string;
   userId?: string;
-  status: 'completed' | 'started' | 'error';
+  status: 'completed' | 'started' | 'error' | 'failed' | 'paused';
   timestamp: number;
   source?: string;
   initialContext?: {
