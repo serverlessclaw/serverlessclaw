@@ -79,7 +79,32 @@ To support efficient retrieval of entire execution graphs, the **TraceTable** (D
 
 This structure allows a single `Query` operation to retrieve the complete neural path for visualization.
 
-## Trace Types Reference
+## Retrieval Strategy
+
+The system uses a **Dual-Layer Retrieval** strategy to ensure trace visibility even if summary generation is delayed or disabled.
+
+### 1. Primary Path (Optimized)
+
+The dashboard primarily queries for `__summary__` rows. These rows contain pre-calculated aggregation data for the entire trace context, providing the fastest response time for listing traces.
+
+### 2. Fallback Path (Fail-Safe)
+
+If no `__summary__` rows are found (e.g., in development or if `trace_summaries` is disabled), the system falls back to a **Scan** for root nodes (`nodeId = 'root'`). 
+
+```text
+[ getTraces Request ]
+      |
+      ▼
+[ Query __summary__ ] ───(Items Found)───▶ [ Return Summary Results ]
+      |
+      (No Items)
+      ▼
+[ Scan nodeId = 'root' ] ───────────────▶ [ Return Root Nodes ]
+```
+
+> [!NOTE]
+> The fallback scan is limited to 200 items to prevent performance degradation on large tables. It is designed to ensure the `/trace` dashboard remains functional across all environment configurations.
+
 
 The system records various trace types to capture the full lifecycle of agent-to-agent communication:
 
