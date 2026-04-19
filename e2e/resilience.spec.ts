@@ -19,7 +19,8 @@ test.describe('Resilience & Fault Tolerance (Fault Detector)', () => {
     await page.goto('/trace');
     await page.waitForLoadState('networkidle');
 
-    const traceDetail = page.locator('text=/Resilience Test Trace/i').first();
+    // Find the highly unique fatal error trace seeded for this run
+    const traceDetail = page.locator('text=/FATAL_ERROR_VERIFICATION/i').first();
     await expect(traceDetail).toBeVisible({ timeout: 15000 });
     await traceDetail.click();
     await page.waitForLoadState('networkidle');

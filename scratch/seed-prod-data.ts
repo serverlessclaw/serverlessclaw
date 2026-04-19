@@ -55,7 +55,7 @@ async function seedData() {
         agentId: 'superclaw',
         timestamp: now + 1,
         status: 'failed',
-        initialContext: { userText: `Resilience Test Trace ${runId}` },
+        initialContext: { userText: `FATAL_ERROR_VERIFICATION ${runId}` },
         failureReason: 'Simulated execution error for retry UI testing',
         steps: [
           {
@@ -81,7 +81,7 @@ async function seedData() {
         agentId: 'superclaw',
         timestamp: now + 1,
         status: 'failed',
-        initialContext: { userText: `Resilience Test Trace ${runId}` },
+        initialContext: { userText: `FATAL_ERROR_VERIFICATION ${runId}` },
         failureReason: 'Simulated execution error for retry UI testing',
         expiresAt: Math.floor(Date.now() / 1000) + 86400,
       },
