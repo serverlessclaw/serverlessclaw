@@ -8,6 +8,10 @@ setup('authenticate', async ({ page }) => {
 
   // Fill in the password (uses env var or fallback for local dev)
   const password = process.env.DASHBOARD_PASSWORD || 'test-password';
+  console.log(
+    `[E2E:Auth] Authenticating with password from ${process.env.DASHBOARD_PASSWORD ? 'env' : 'fallback'}`
+  );
+
   await page.fill('input[type="password"]', password);
   await page.click('button[type="submit"]');
 
