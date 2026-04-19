@@ -122,7 +122,6 @@ export class StreamingExecutor extends BaseExecutor {
         normalizedProfile === 'thinking' ||
         normalizedProfile === 'deep';
 
-
       if (shouldPrefaceThinking && emitter) {
         await emitter.emitChunk(
           userId,

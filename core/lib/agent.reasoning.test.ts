@@ -159,14 +159,14 @@ describe('Agent Reasoning & Streaming Coverage', () => {
     // Verify that the emitter was called with thinking=true and the ellipsis marker
     expect(mockEmitter.emitChunk).toHaveBeenCalledWith(
       expect.any(String), // userId
-      undefined,          // sessionId
+      undefined, // sessionId
       expect.any(String), // traceId
-      undefined,          // content
-      'Test Agent',       // agentName
-      true,               // thinking
-      undefined,          // options
-      'test-agent',       // initiator
-      '\u2026',           // thought (ellipsis)
+      undefined, // content
+      'Test Agent', // agentName
+      true, // thinking
+      undefined, // options
+      'test-agent', // initiator
+      '\u2026', // thought (ellipsis)
       undefined,
       undefined,
       EventType.TEXT_MESSAGE_CONTENT
@@ -190,8 +190,8 @@ describe('Agent Reasoning & Streaming Coverage', () => {
 
     // Verify aggregated thought and content in memory save
     const addMessageCalls = vi.mocked(mockMemory.addMessage).mock.calls;
-    const assistantCall = addMessageCalls.find(call => call[1].role === MessageRole.ASSISTANT);
-    
+    const assistantCall = addMessageCalls.find((call) => call[1].role === MessageRole.ASSISTANT);
+
     expect(assistantCall).toBeDefined();
     expect(assistantCall![1]).toMatchObject({
       content: 'Hello world',
@@ -217,13 +217,13 @@ describe('Agent Reasoning & Streaming Coverage', () => {
     }
 
     // Verify that incremental extraction worked (at least one chunk should have detected thought)
-    const thoughtChunks = chunks.filter(c => c.thought === 'I am thinking');
+    const thoughtChunks = chunks.filter((c) => c.thought === 'I am thinking');
     expect(thoughtChunks.length).toBeGreaterThan(0);
 
     // Verify final memory save parsed the JSON
     const addMessageCalls = vi.mocked(mockMemory.addMessage).mock.calls;
-    const assistantCall = addMessageCalls.find(call => call[1].role === MessageRole.ASSISTANT);
-    
+    const assistantCall = addMessageCalls.find((call) => call[1].role === MessageRole.ASSISTANT);
+
     expect(assistantCall![1]).toMatchObject({
       content: 'Hello',
       thought: 'I am thinking',
@@ -232,7 +232,7 @@ describe('Agent Reasoning & Streaming Coverage', () => {
 
   it('TC4: should fallback to process() if stream is empty', async () => {
     const agent = createTestAgent();
-    
+
     // Mock empty stream
     async function* emptyStream() {}
     vi.mocked(mockProvider.stream).mockReturnValue(emptyStream());
@@ -250,9 +250,11 @@ describe('Agent Reasoning & Streaming Coverage', () => {
     }
 
     expect(processSpy).toHaveBeenCalled();
-    expect(chunks).toContainEqual(expect.objectContaining({
-      content: 'Fallback response',
-      thought: 'Fallback thought',
-    }));
+    expect(chunks).toContainEqual(
+      expect.objectContaining({
+        content: 'Fallback response',
+        thought: 'Fallback thought',
+      })
+    );
   });
 });

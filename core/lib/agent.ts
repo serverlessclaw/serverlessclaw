@@ -609,8 +609,6 @@ export class Agent {
         if (chunk.thought) {
           fullThought += chunk.thought;
         }
-        if (chunk.tool_calls) {
-        }
 
         // Incremental extraction for JSON mode
         let detectedThought = chunk.thought;

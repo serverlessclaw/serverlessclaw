@@ -36,6 +36,11 @@ vi.mock('mqtt', () => ({
 
 function configResponse() {
   return {
+    ok: true,
+    status: 200,
+    headers: {
+      get: (name: string) => (name === 'content-type' ? 'application/json' : null),
+    },
     json: async () => ({
       app: 'test-app',
       stage: 'test-stage',

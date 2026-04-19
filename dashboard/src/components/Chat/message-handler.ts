@@ -130,10 +130,8 @@ export function applyChunkToMessages(
       content:
         !isThought || isFinal
           ? isFinal
-            ? // For final message, preserve accumulated streaming content if non-empty
-              (existing.content && existing.content.trim().length > 0)
-                ? existing.content
-                : (data.message ?? existing.content)
+            ? // For final message, favor the final ground truth from data.message
+              (data.message ?? existing.content)
             : (existing.content ?? '') + (data.message ?? '')
           : existing.content,
       thought:

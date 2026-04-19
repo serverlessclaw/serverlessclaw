@@ -320,7 +320,7 @@ export class OpenAIProvider implements IProvider {
       requestedProfile
     );
 
-    const requestPayload = {
+    const requestPayload: any = {
       model: activeModel as OpenAI.ResponsesModel,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       input: responsesInput as any,
@@ -462,7 +462,7 @@ export class OpenAIProvider implements IProvider {
       requestedProfile
     );
 
-    const requestPayload = {
+    const requestPayload: any = {
       model: activeModel as OpenAI.ResponsesModel,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       input: responsesInput as any,
@@ -527,9 +527,6 @@ export class OpenAIProvider implements IProvider {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const rawChunk = chunk as any;
         const type = rawChunk.type || '';
-
-        if (type !== 'usage' && !type.endsWith('.delta')) {
-        }
 
         // Support both direct deltas and nested item deltas (2026 Responses API)
         // Some events are prefixed with "response."
