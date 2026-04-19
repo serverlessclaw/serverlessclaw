@@ -271,11 +271,11 @@ export default async function TraceDetailPage({
 
                             {step.type === TRACE_TYPES.TOOL_CALL && (
                               <Badge 
-                                variant={(step.content as any)?.connectorId ? "primary" : "outline"}
-                                data-testid={(step.content as any)?.connectorId ? "mcp-badge" : "local-badge"}
+                                variant={(step.content as ToolCallContent)?.connectorId ? "primary" : "outline"}
+                                data-testid={(step.content as ToolCallContent)?.connectorId ? "mcp-badge" : "local-badge"}
                                 className="text-[8px] px-1.5 py-0"
                               >
-                                {(step.content as any)?.connectorId ? 'MCP' : 'LOCAL'}
+                                {(step.content as ToolCallContent)?.connectorId ? 'MCP' : 'LOCAL'}
                               </Badge>
                             )}
                           </Typography>
