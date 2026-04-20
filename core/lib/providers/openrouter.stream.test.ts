@@ -9,7 +9,7 @@ global.fetch = mockFetch;
 // Mock SST Resource
 vi.mock('sst', () => ({
   Resource: {
-    OpenRouterApiKey: { value: 'test-key' },
+    OpenRouterApiKey: { value: 'test-openrouter-key' },
   },
 }));
 

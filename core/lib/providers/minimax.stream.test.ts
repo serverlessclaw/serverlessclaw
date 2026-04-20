@@ -16,7 +16,7 @@ vi.mock('@anthropic-ai/sdk', () => {
 
 vi.mock('sst', () => ({
   Resource: {
-    MiniMaxApiKey: { value: 'test-key' },
+    MiniMaxApiKey: { value: 'test-minimax-key' },
   },
 }));
 

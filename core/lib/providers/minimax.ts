@@ -11,9 +11,8 @@ import {
   MessageChunk,
   ResponseFormat,
 } from '../types/index';
-import { Resource } from 'sst';
 import { logger } from '../logger';
-// createEmptyResponse removed - providers now throw on failure
+import { resolveProviderApiKey } from './utils';
 
 const MINIMAX_REASONING_MAP: Record<ReasoningProfile, { budget_tokens: number; enabled: boolean }> =
   {
@@ -53,8 +52,7 @@ export class MiniMaxProvider implements IProvider {
     topP?: number,
     stopSequences?: string[]
   ): Promise<Message> {
-    const typedResource = Resource as unknown as import('../types/system').SSTResource;
-    const apiKey = typedResource.MiniMaxApiKey?.value ?? '';
+    const apiKey = resolveProviderApiKey('MiniMax', 'MiniMaxApiKey', 'MINIMAX_API_KEY');
     const activeModel = model ?? this.model;
 
     const reasoningConfig = MINIMAX_REASONING_MAP[profile];
@@ -163,8 +161,7 @@ export class MiniMaxProvider implements IProvider {
     topP?: number,
     stopSequences?: string[]
   ): AsyncIterable<MessageChunk> {
-    const typedResource = Resource as unknown as import('../types/system').SSTResource;
-    const apiKey = typedResource.MiniMaxApiKey?.value ?? '';
+    const apiKey = resolveProviderApiKey('MiniMax', 'MiniMaxApiKey', 'MINIMAX_API_KEY');
     const activeModel = model ?? this.model;
 
     const reasoningConfig = MINIMAX_REASONING_MAP[profile];

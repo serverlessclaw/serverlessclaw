@@ -10,9 +10,8 @@ import {
   MessageChunk,
   ResponseFormat,
 } from '../types/index';
-import { Resource } from 'sst';
 import { logger } from '../logger';
-import { normalizeProfile, capEffort } from './utils';
+import { normalizeProfile, capEffort, resolveProviderApiKey } from './utils';
 
 // --- Constants and Configuration ---
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
@@ -107,14 +106,6 @@ const OPENROUTER_REASONING_MAP: Record<
   [ReasoningProfile.THINKING]: { effort: 'medium', enabled: true, route: 'fallback' },
   [ReasoningProfile.DEEP]: { effort: 'high', enabled: true, route: 'fallback' },
 };
-
-/**
- * Interface for SST Resource object to avoid 'as any' assertions.
- */
-interface ClawSstResource {
-  OpenRouterApiKey?: { value: string };
-  [key: string]: unknown;
-}
 
 /**
  * Interface for OpenRouter/OpenAI-compatible content blocks.
@@ -245,8 +236,7 @@ export class OpenRouterProvider implements IProvider {
     topP?: number,
     stopSequences?: string[]
   ): Promise<Message> {
-    const sstResource = Resource as unknown as ClawSstResource;
-    const apiKey = sstResource.OpenRouterApiKey?.value ?? '';
+    const apiKey = resolveProviderApiKey('OpenRouter', 'OpenRouterApiKey', 'OPENROUTER_API_KEY');
     const baseUrl = OPENROUTER_BASE_URL;
     const activeModel = model ?? this.model;
 
@@ -356,8 +346,7 @@ export class OpenRouterProvider implements IProvider {
     topP?: number,
     stopSequences?: string[]
   ): AsyncIterable<MessageChunk> {
-    const sstResource = Resource as unknown as ClawSstResource;
-    const apiKey = sstResource.OpenRouterApiKey?.value ?? '';
+    const apiKey = resolveProviderApiKey('OpenRouter', 'OpenRouterApiKey', 'OPENROUTER_API_KEY');
     const baseUrl = OPENROUTER_BASE_URL;
     const activeModel = model ?? this.model;
 

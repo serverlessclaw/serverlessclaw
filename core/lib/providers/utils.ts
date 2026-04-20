@@ -1,4 +1,4 @@
-import { ReasoningProfile, ICapabilities, Message, MessageRole } from '../types/llm';
+import { ReasoningProfile, ICapabilities } from '../types/llm';
 import { ITool } from '../types/tool';
 import { logger } from '../logger';
 
@@ -103,26 +103,50 @@ export function capEffort(requested: string, max?: string): string {
   return requested;
 }
 
+import { Resource } from 'sst';
+
+export function isPlaceholderApiKey(value?: string): boolean {
+  if (!value) return true;
+
+  const normalized = value.trim().toLowerCase();
+  return (
+    normalized.length === 0 ||
+    normalized === 'dummy' ||
+    normalized === 'test' ||
+    normalized === 'test-key'
+  );
+}
+
 /**
- * Creates a standardized empty response message.
- * Deduplicates empty response handling across all provider implementations.
+ * Resolves the API key for a provider by checking SST Resources and Environment Variables.
+ * Deduplicates API key resolution logic across providers.
  *
- * @param providerName - The name of the provider.
- * @param traceId - Optional trace ID for the message.
- * @param messageId - Optional unique ID for the message.
- * @returns A standardized empty response message.
+ * @param providerName - The name of the provider (e.g., 'OpenAI').
+ * @param sstKeyName - The key name in the SST Resource object (e.g., 'OpenAIApiKey').
+ * @param envKeyName - The fallback environment variable name (e.g., 'OPENAI_API_KEY').
+ * @returns The resolved API key.
+ * @throws Error if no valid API key is found.
  */
-export function createEmptyResponse(
+export function resolveProviderApiKey(
   providerName: string,
-  traceId: string = 'system-empty-trace',
-  messageId: string = `msg-${Date.now()}`
-): Message {
-  return {
-    role: MessageRole.ASSISTANT,
-    content: `Empty response from ${providerName}.`,
-    traceId,
-    messageId,
-  };
+  sstKeyName: string,
+  envKeyName: string
+): string {
+  const resource = Resource as unknown as Record<string, { value?: string } | undefined>;
+  const linkedKey = resource[sstKeyName]?.value;
+  const directEnvKey = process.env[envKeyName];
+  const sstSecretEnvKey = process.env[`SST_SECRET_${sstKeyName}`];
+
+  const candidates = [linkedKey, directEnvKey, sstSecretEnvKey];
+  const resolved = candidates.find((key) => !isPlaceholderApiKey(key));
+
+  if (!resolved) {
+    throw new Error(
+      `${providerName} API key is not configured. Set SST_SECRET_${sstKeyName} (preferred for make dev) or ${envKeyName}.`
+    );
+  }
+
+  return resolved;
 }
 
 /**
