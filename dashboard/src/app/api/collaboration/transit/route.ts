@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 import { HTTP_STATUS } from '@claw/core/lib/constants';
-import { AgentType, ParticipantType, MessageRole } from '@claw/core/lib/types/index';
+import { AgentType } from '@claw/core/lib/types/index';
 import { DynamoMemory, CachedMemory } from '@claw/core/lib/memory';
 import { AgentRegistry } from '@claw/core/lib/registry';
 import { logger } from '@claw/core/lib/logger';

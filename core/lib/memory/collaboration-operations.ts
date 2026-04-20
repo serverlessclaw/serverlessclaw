@@ -382,7 +382,7 @@ export async function findStaleCollaborations(
 ): Promise<Collaboration[]> {
   const now = Date.now();
 
-  const params: any = {
+  const params: Record<string, unknown> = {
     FilterExpression: workspaceId
       ? '#status = :active AND workspaceId = :workspaceId'
       : '#status = :active',

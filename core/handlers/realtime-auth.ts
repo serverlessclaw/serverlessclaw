@@ -74,5 +74,9 @@ export const handler = async (event: unknown, context: unknown, callback: unknow
   // Inject token so SST's internal logic might find it
   if (token && !typedEvent.token) typedEvent.token = token;
 
-  return (auth as any)(event, context, callback);
+  return (auth as (e: unknown, c: unknown, cb: unknown) => Promise<unknown>)(
+    event,
+    context,
+    callback
+  );
 };
