@@ -17,6 +17,7 @@ export interface PendingEvolution {
   resource?: string;
   traceId?: string;
   userId?: string;
+  workspaceId?: string;
   createdAt: number;
   expiresAt: number; // The "Evolutionary Timeout" timestamp
   status: 'pending' | 'triggered' | 'approved' | 'rejected';
@@ -40,6 +41,7 @@ export class EvolutionScheduler {
     resource?: string;
     traceId?: string;
     userId?: string;
+    workspaceId?: string;
   }): Promise<string | undefined> {
     if (!this.base) {
       logger.warn('[EVOLUTION] No memory provider available, skipping scheduling.');
@@ -56,6 +58,7 @@ export class EvolutionScheduler {
       resource: params.resource,
       traceId: params.traceId,
       userId: params.userId,
+      workspaceId: params.workspaceId,
       createdAt: now,
       expiresAt: now + params.timeoutMs,
       status: 'pending',
@@ -125,6 +128,7 @@ export class EvolutionScheduler {
 
     await emitTypedEvent('evolution.scheduler', EventType.STRATEGIC_TIE_BREAK, {
       userId: action.userId || 'SYSTEM',
+      workspaceId: action.workspaceId,
       agentId: action.agentId,
       task: `Proactive evolution for: ${action.action} (Reason: ${action.reason})`,
       traceId: action.traceId,

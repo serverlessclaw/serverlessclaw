@@ -30,18 +30,29 @@ export const listAgents = {
 export const dispatchTask = {
   ...knowledgeSchema.dispatchTask,
   execute: async (args: Record<string, unknown>): Promise<string> => {
-    const { agentId, userId, task, metadata, traceId, nodeId, initiatorId, depth, sessionId } =
-      args as {
-        agentId: string;
-        userId: string;
-        task: string;
-        metadata?: Record<string, unknown>;
-        traceId?: string;
-        nodeId?: string;
-        initiatorId?: string;
-        depth?: number;
-        sessionId?: string;
-      };
+    const {
+      agentId,
+      userId,
+      task,
+      metadata,
+      traceId,
+      nodeId,
+      initiatorId,
+      depth,
+      sessionId,
+      workspaceId,
+    } = args as {
+      agentId: string;
+      userId: string;
+      task: string;
+      metadata?: Record<string, unknown>;
+      traceId?: string;
+      nodeId?: string;
+      initiatorId?: string;
+      depth?: number;
+      sessionId?: string;
+      workspaceId?: string;
+    };
 
     if (agentId === 'superclaw') {
       return `FAILED: Cannot dispatch tasks to the 'superclaw' agent (SuperClaw). The superclaw agent is the orchestrator, not a worker node. Please delegate to a specialized agent like 'strategic-planner' or 'coder'.`;
@@ -71,6 +82,7 @@ export const dispatchTask = {
         initiatorId: initiatorId ?? 'superclaw',
         depth: depth ?? 0,
         sessionId,
+        workspaceId,
       });
       return `TASK_PAUSED: I have successfully dispatched this task to the **${agentId}** agent. I'll let you know once they have an update.`;
     } catch (error) {
@@ -85,18 +97,29 @@ export const dispatchTask = {
 export const technicalResearch = {
   ...knowledgeSchema.technicalResearch,
   execute: async (args: Record<string, unknown>): Promise<string> => {
-    const { goal, agentId, parallel, userId, traceId, nodeId, initiatorId, depth, sessionId } =
-      args as {
-        goal: string;
-        agentId?: string;
-        parallel?: boolean;
-        userId: string;
-        traceId?: string;
-        nodeId?: string;
-        initiatorId?: string;
-        depth?: number;
-        sessionId?: string;
-      };
+    const {
+      goal,
+      agentId,
+      parallel,
+      userId,
+      traceId,
+      nodeId,
+      initiatorId,
+      depth,
+      sessionId,
+      workspaceId,
+    } = args as {
+      goal: string;
+      agentId?: string;
+      parallel?: boolean;
+      userId: string;
+      traceId?: string;
+      nodeId?: string;
+      initiatorId?: string;
+      depth?: number;
+      sessionId?: string;
+      workspaceId?: string;
+    };
 
     const targetAgentId = agentId ?? 'researcher';
 
@@ -117,6 +140,7 @@ export const technicalResearch = {
         initiatorId: initiatorId ?? 'superclaw',
         depth: depth ?? 0,
         sessionId,
+        workspaceId,
       });
       return `RESEARCH_INITIATED: I have successfully dispatched a technical research mission to the **${targetAgentId}** agent. I'll let you know once they have an update.`;
     } catch (error) {

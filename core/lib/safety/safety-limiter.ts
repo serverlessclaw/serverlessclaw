@@ -19,13 +19,24 @@ export class SafetyRateLimiter {
     this.rateLimitCounters = new LRUCache(5000); // LRU bound to 5000 counters
   }
 
-  async checkRateLimits(policy: SafetyPolicy, action: string): Promise<SafetyEvaluationResult> {
+  async checkRateLimits(
+    policy: SafetyPolicy,
+    action: string,
+    workspaceId?: string
+  ): Promise<SafetyEvaluationResult> {
     const now = Date.now();
     const hourKey = `${action}_hour_${Math.floor(now / 3600000)}`;
     const dayKey = `${action}_day_${Math.floor(now / 86400000)}`;
 
     if (action === 'shell_command' && policy.maxShellCommandsPerHour) {
-      if (!(await this.checkRateLimitAtomic(hourKey, policy.maxShellCommandsPerHour, 3600000))) {
+      if (
+        !(await this.checkRateLimitAtomic(
+          hourKey,
+          policy.maxShellCommandsPerHour,
+          3600000,
+          workspaceId
+        ))
+      ) {
         return {
           allowed: false,
           requiresApproval: false,
@@ -36,7 +47,14 @@ export class SafetyRateLimiter {
     }
 
     if (action === 'file_operation' && policy.maxFileWritesPerHour) {
-      if (!(await this.checkRateLimitAtomic(hourKey, policy.maxFileWritesPerHour, 3600000))) {
+      if (
+        !(await this.checkRateLimitAtomic(
+          hourKey,
+          policy.maxFileWritesPerHour,
+          3600000,
+          workspaceId
+        ))
+      ) {
         return {
           allowed: false,
           requiresApproval: false,
@@ -47,7 +65,14 @@ export class SafetyRateLimiter {
     }
 
     if (action === 'deployment' && policy.maxDeploymentsPerDay) {
-      if (!(await this.checkRateLimitAtomic(dayKey, policy.maxDeploymentsPerDay, 86400000))) {
+      if (
+        !(await this.checkRateLimitAtomic(
+          dayKey,
+          policy.maxDeploymentsPerDay,
+          86400000,
+          workspaceId
+        ))
+      ) {
         return {
           allowed: false,
           requiresApproval: false,
@@ -62,7 +87,8 @@ export class SafetyRateLimiter {
 
   async checkToolRateLimit(
     override: ToolSafetyOverride | undefined,
-    toolName: string
+    toolName: string,
+    workspaceId?: string
   ): Promise<SafetyEvaluationResult> {
     if (!override) {
       return { allowed: true, requiresApproval: false };
@@ -73,7 +99,9 @@ export class SafetyRateLimiter {
     const dayKey = `tool_${toolName}_day_${Math.floor(now / 86400000)}`;
 
     if (override.maxUsesPerHour) {
-      if (!(await this.checkRateLimitAtomic(hourKey, override.maxUsesPerHour, 3600000))) {
+      if (
+        !(await this.checkRateLimitAtomic(hourKey, override.maxUsesPerHour, 3600000, workspaceId))
+      ) {
         return {
           allowed: false,
           requiresApproval: false,
@@ -84,7 +112,9 @@ export class SafetyRateLimiter {
     }
 
     if (override.maxUsesPerDay) {
-      if (!(await this.checkRateLimitAtomic(dayKey, override.maxUsesPerDay, 86400000))) {
+      if (
+        !(await this.checkRateLimitAtomic(dayKey, override.maxUsesPerDay, 86400000, workspaceId))
+      ) {
         return {
           allowed: false,
           requiresApproval: false,
@@ -100,7 +130,8 @@ export class SafetyRateLimiter {
   private async checkRateLimitAtomic(
     key: string,
     limit: number,
-    windowMs: number
+    windowMs: number,
+    workspaceId?: string
   ): Promise<boolean> {
     this.evalCount++;
     if (this.evalCount % 100 === 0) {
@@ -108,14 +139,16 @@ export class SafetyRateLimiter {
     }
 
     if (!this.base) {
-      return this.checkRateLimitInMemory(key, limit, windowMs);
+      return this.checkRateLimitInMemory(key, limit, windowMs, workspaceId);
     }
 
     const windowId = Math.floor(Date.now() / windowMs);
     const pk = `${MEMORY_KEYS.HEALTH_PREFIX}RATE#${key}#${windowId}`;
+    const scopedUserId = this.base.getScopedUserId(pk, workspaceId);
+
     try {
       await this.base.updateItem({
-        Key: { userId: pk, timestamp: 0 },
+        Key: { userId: scopedUserId, timestamp: 0 },
         UpdateExpression: 'SET #c = if_not_exists(#c, :z) + :o, expiresAt = :e',
         ConditionExpression: 'attribute_not_exists(#c) OR #c < :lim',
         ExpressionAttributeNames: { '#c': 'count' },
@@ -134,15 +167,21 @@ export class SafetyRateLimiter {
       }
       // Fail-closed for safety: if DDB fails, reject the request to prevent rate limit bypass
       // Only fall back to in-memory for non-critical operations
-      logger.error('Rate limit check failed (fail-closed)', { key, err });
+      logger.error('Rate limit check failed (fail-closed)', { key, workspaceId, err });
       return false;
     }
   }
 
-  private checkRateLimitInMemory(key: string, limit: number, windowMs: number): boolean {
-    const counter = this.rateLimitCounters.get(key);
+  private checkRateLimitInMemory(
+    key: string,
+    limit: number,
+    windowMs: number,
+    workspaceId?: string
+  ): boolean {
+    const memoryKey = workspaceId ? `WS#${workspaceId}#${key}` : key;
+    const counter = this.rateLimitCounters.get(memoryKey);
     if (!counter || Date.now() > counter.resetTime) {
-      this.rateLimitCounters.set(key, { count: 1, resetTime: Date.now() + windowMs });
+      this.rateLimitCounters.set(memoryKey, { count: 1, resetTime: Date.now() + windowMs });
       return true;
     }
     if (counter.count >= limit) return false;

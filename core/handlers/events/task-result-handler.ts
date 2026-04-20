@@ -139,8 +139,8 @@ export async function handleTaskResult(
       'durationMs' in parsedEvent.metadata
         ? ((parsedEvent.metadata.durationMs as number) ?? 0)
         : 0;
-    updateReputation(memBase, agentId, !isFailure, latencyMs).catch((err: unknown) =>
-      logger.warn(`Reputation update failed for ${agentId}:`, err)
+    updateReputation(memBase, agentId, !isFailure, latencyMs, parsedEvent.workspaceId).catch(
+      (err: unknown) => logger.warn(`Reputation update failed for ${agentId}:`, err)
     );
   } catch {
     // reputation module may not be available in all environments

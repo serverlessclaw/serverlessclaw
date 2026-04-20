@@ -603,6 +603,8 @@ export interface SafetyViolation {
   traceId?: string;
   /** User ID associated with the violation. */
   userId?: string;
+  /** Workspace ID associated with the violation. */
+  workspaceId?: string;
 }
 
 /**

@@ -47,6 +47,7 @@ export const handler = async (
   // Note: traceId and userId are preserved for future use (e.g., logging, tracing)
   const _traceId = (detail.traceId as string) || (event.traceId as string);
   const _userId = (detail.userId as string) || (event.userId as string);
+  const _workspaceId = (detail.workspaceId as string) || (event.workspaceId as string);
 
   // Session lock management
   const sessionStateManager = new SessionStateManager();
@@ -91,6 +92,27 @@ export const handler = async (
     case EventType.COGNITION_REFLECTOR_TASK:
       targetAgent = AgentType.COGNITION_REFLECTOR;
       handlerPath = '../agents/cognition-reflector';
+      break;
+    case EventType.DELEGATION_TASK:
+      // P1 Fix: Active Trust Loop. Use AgentRouter to select the best worker dynamically.
+      try {
+        const { AgentRouter } = await import('../lib/routing/AgentRouter');
+        const { AgentRegistry } = await import('../lib/registry/AgentRegistry');
+        const candidates = (detail.candidates as string[]) || AgentRegistry.getFallbackAgents();
+        const selectedId = await AgentRouter.selectBestAgent(
+          candidates,
+          detail.capabilityScores as Record<string, number>,
+          _workspaceId
+        );
+        targetAgent = selectedId as AgentType;
+        handlerPath = './agent-runner';
+        logger.info(`[MULTIPLEXER] Dynamic delegation: selected ${targetAgent} via AgentRouter.`);
+      } catch (err) {
+        logger.error(`[MULTIPLEXER] Failed to perform dynamic delegation:`, err);
+        // Fallback to static if provided
+        targetAgent = (detail.agentId as AgentType) || (event.agentId as AgentType);
+        handlerPath = './agent-runner';
+      }
       break;
     default:
       // Check if it's a dynamic agent or explicitly specified in the payload (P2 Gap Fix)

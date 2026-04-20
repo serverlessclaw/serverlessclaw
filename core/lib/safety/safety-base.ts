@@ -72,7 +72,8 @@ export class SafetyBase {
     reason: string,
     outcome: 'blocked' | 'approval_required' | 'allowed',
     traceId?: string,
-    userId?: string
+    userId?: string,
+    workspaceId?: string
   ): SafetyViolation {
     return {
       id: `violation_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
@@ -86,6 +87,7 @@ export class SafetyBase {
       outcome,
       traceId,
       userId,
+      workspaceId,
     };
   }
 

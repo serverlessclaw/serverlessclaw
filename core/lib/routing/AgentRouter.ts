@@ -11,9 +11,12 @@ import type { IAgentConfig } from '../types/agent';
 import { LLMProvider, OpenAIModel, MiniMaxModel, ReasoningProfile } from '../types/llm';
 import type { AgentReputation } from '../types/reputation';
 
-import { computeReputationScore } from '../memory/reputation-operations';
+import { computeReputationScore, getReputations } from '../memory/reputation-operations';
+import { BaseMemoryProvider } from '../memory/base';
 import { TokenTracker } from '../metrics/token-usage';
 import { ConfigManager } from '../registry/config';
+
+const sharedMemoryProvider = new BaseMemoryProvider();
 
 /**
  * Performance metrics for an agent.
@@ -227,7 +230,8 @@ export class AgentRouter {
    */
   static async selectBestAgent(
     candidates: string[],
-    capabilityScores?: Record<string, number>
+    capabilityScores?: Record<string, number>,
+    workspaceId?: string
   ): Promise<string> {
     if (candidates.length === 0) throw new Error('No candidate agents provided');
 
@@ -245,11 +249,28 @@ export class AgentRouter {
 
     if (enabledIds.length === 1) return enabledIds[0];
 
-    const metrics = await Promise.all(
-      enabledIds.map((id) => this.getMetrics(id, capabilityScores?.[id] ?? 1.0))
+    // Fetch performance metrics and reputations in parallel
+    const [metrics, reputations] = await Promise.all([
+      Promise.all(enabledIds.map((id) => this.getMetrics(id, capabilityScores?.[id] ?? 1.0))),
+      getReputations(sharedMemoryProvider, enabledIds, workspaceId),
+    ]);
+
+    // Compute composite scores incorporating reputation
+    const weightedMetrics = metrics.map((m) => {
+      const rep = reputations.get(m.agentId);
+      const repScore = rep ? computeReputationScore(rep) : 0.5;
+      const composite = this.computeCompositeScore(m.compositeScore, repScore);
+      return { ...m, compositeScore: composite };
+    });
+
+    weightedMetrics.sort((a, b) => b.compositeScore - a.compositeScore);
+    const best = weightedMetrics[0].agentId;
+
+    logger.info(
+      `[AgentRouter] Selected best agent for task: ${best} (Score: ${weightedMetrics[0].compositeScore.toFixed(3)}, Workspace: ${workspaceId ?? 'global'})`
     );
-    metrics.sort((a, b) => b.compositeScore - a.compositeScore);
-    return metrics[0].agentId;
+
+    return best;
   }
 
   /**

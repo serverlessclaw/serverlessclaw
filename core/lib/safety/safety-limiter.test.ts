@@ -23,6 +23,7 @@ const mockMemoryProvider = {
   get: vi.fn(),
   set: vi.fn(),
   updateItem: vi.fn(),
+  getScopedUserId: vi.fn((userId) => userId),
 };
 
 vi.mock('../constants', async () => ({
@@ -134,6 +135,26 @@ describe('SafetyRateLimiter', () => {
       const result = await distributedLimiter.checkRateLimits(policy, 'deployment');
 
       expect(result.allowed).toBe(false); // Fail closed - reject if we can't verify
+    });
+
+    it('should isolate rate limits by workspaceId', async () => {
+      const distributedLimiter = new SafetyRateLimiter(mockMemoryProvider as any);
+      const policy = createPolicy({ maxDeploymentsPerDay: 5 });
+
+      mockMemoryProvider.updateItem.mockResolvedValue({});
+      (mockMemoryProvider.getScopedUserId as any).mockImplementation(
+        (userId: any, workspaceId: any) => (workspaceId ? `WS#${workspaceId}#${userId}` : userId)
+      );
+
+      await distributedLimiter.checkRateLimits(policy, 'deployment', 'workspace-A');
+
+      expect(mockMemoryProvider.updateItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          Key: expect.objectContaining({
+            userId: expect.stringMatching(/^WS#workspace-A#HEALTH#RATE#deployment_day_/),
+          }),
+        })
+      );
     });
   });
 

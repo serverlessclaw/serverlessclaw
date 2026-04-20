@@ -21,8 +21,9 @@ const REPUTATION_WINDOW_MS = 7 * TIME.MS_PER_DAY;
 /**
  * Resolves the DynamoDB partition key for a reputation record.
  */
-function reputationKey(agentId: string): string {
-  return `${MEMORY_KEYS.REPUTATION_PREFIX}${agentId}`;
+function reputationKey(base: BaseMemoryProvider, agentId: string, workspaceId?: string): string {
+  const pk = `${MEMORY_KEYS.REPUTATION_PREFIX}${agentId}`;
+  return base.getScopedUserId(pk, workspaceId);
 }
 
 /**
@@ -34,14 +35,15 @@ function reputationKey(agentId: string): string {
  */
 export async function getReputation(
   base: BaseMemoryProvider,
-  agentId: string
+  agentId: string,
+  workspaceId?: string
 ): Promise<AgentReputation | null> {
   try {
     const items = await base.queryItems({
       KeyConditionExpression: 'userId = :pk AND #ts = :zero',
       ExpressionAttributeNames: { '#ts': 'timestamp' },
       ExpressionAttributeValues: {
-        ':pk': reputationKey(agentId),
+        ':pk': reputationKey(base, agentId, workspaceId),
         ':zero': 0,
       },
     });
@@ -90,10 +92,11 @@ export async function updateReputation(
   base: BaseMemoryProvider,
   agentId: string,
   success: boolean,
-  latencyMs: number = 0
+  latencyMs: number = 0,
+  workspaceId?: string
 ): Promise<UpdateReputationResult> {
   const now = Date.now();
-  const pk = reputationKey(agentId);
+  const pk = reputationKey(base, agentId, workspaceId);
 
   try {
     await base.updateItem({
@@ -138,11 +141,12 @@ export async function updateReputation(
  */
 export async function getReputations(
   base: BaseMemoryProvider,
-  agentIds: string[]
+  agentIds: string[],
+  workspaceId?: string
 ): Promise<Map<string, AgentReputation>> {
   const results = new Map<string, AgentReputation>();
   const promises = agentIds.map(async (id) => {
-    const rep = await getReputation(base, id);
+    const rep = await getReputation(base, id, workspaceId);
     if (rep) results.set(id, rep);
   });
   await Promise.all(promises);

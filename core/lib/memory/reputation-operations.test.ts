@@ -11,6 +11,7 @@ const mockBase = {
   queryItems: vi.fn(),
   putItem: vi.fn(),
   updateItem: vi.fn(),
+  getScopedUserId: vi.fn((userId) => userId),
 };
 
 vi.mock('../logger', () => ({

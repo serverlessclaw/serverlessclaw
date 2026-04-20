@@ -28,6 +28,7 @@ export const BASE_EVENT_SCHEMA = z.object({
   initiatorId: z.string().default('orchestrator'),
   depth: z.number().default(0),
   sessionId: z.string().default('default-session'),
+  workspaceId: z.string().optional(),
   timestamp: z.number().default(() => Date.now()),
   tokenBudget: z.number().min(0).optional(),
   costLimit: z.number().min(0).optional(),

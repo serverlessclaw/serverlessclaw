@@ -135,13 +135,15 @@ export class SafetyEngine extends SafetyBase {
       resource?: string;
       traceId?: string;
       userId?: string;
+      workspaceId?: string;
       args?: Record<string, unknown>;
       pathKeys?: string[];
     }
   ): Promise<SafetyEvaluationResult> {
     const tier = agentConfig?.safetyTier ?? SafetyTier.PROD;
     const agentId = agentConfig?.id ?? 'unknown';
-    const ctx = { ...context, agentId };
+    const workspaceId = context?.workspaceId;
+    const ctx = { ...context, agentId, workspaceId };
 
     const normalizedAction = normalizeSafetyAction(action, context?.toolName);
 
@@ -159,7 +161,7 @@ export class SafetyEngine extends SafetyBase {
     const validators = [
       () => this.validateStaticPolicies(normalizedAction, ctx, tier),
       () => this.validateAccessControl(agentConfig, normalizedAction, ctx, tier, policy),
-      () => this.limiter.checkRateLimits(policy, normalizedAction),
+      () => this.limiter.checkRateLimits(policy, normalizedAction, ctx.workspaceId),
       () => this.validateDynamicRestrictions(agentConfig, normalizedAction, ctx, tier, policy),
     ];
 
@@ -188,6 +190,7 @@ export class SafetyEngine extends SafetyBase {
       resource?: string;
       traceId?: string;
       userId?: string;
+      workspaceId?: string;
     },
     tier: SafetyTier
   ): Promise<SafetyEvaluationResult> {
@@ -261,6 +264,7 @@ export class SafetyEngine extends SafetyBase {
       resource?: string;
       traceId?: string;
       userId?: string;
+      workspaceId?: string;
     },
     tier: SafetyTier,
     policy: SafetyPolicy
@@ -314,6 +318,7 @@ export class SafetyEngine extends SafetyBase {
       resource?: string;
       traceId?: string;
       userId?: string;
+      workspaceId?: string;
     },
     tier: SafetyTier,
     action: string,
@@ -331,7 +336,8 @@ export class SafetyEngine extends SafetyBase {
       reason,
       outcome,
       ctx.traceId,
-      ctx.userId
+      ctx.userId,
+      ctx.workspaceId
     );
     return {
       allowed: outcome === 'approval_required',
@@ -349,6 +355,7 @@ export class SafetyEngine extends SafetyBase {
       resource?: string;
       traceId?: string;
       userId?: string;
+      workspaceId?: string;
     },
     tier: SafetyTier,
     action: string
@@ -357,7 +364,11 @@ export class SafetyEngine extends SafetyBase {
     const override = this.toolOverrides.get(ctx.toolName);
 
     // Check rate limit first (blocks execution entirely) - more severe
-    const rateLimitResult = await this.limiter.checkToolRateLimit(override, ctx.toolName);
+    const rateLimitResult = await this.limiter.checkToolRateLimit(
+      override,
+      ctx.toolName,
+      ctx.workspaceId
+    );
     if (!rateLimitResult.allowed) {
       return rateLimitResult;
     }
@@ -387,6 +398,7 @@ export class SafetyEngine extends SafetyBase {
       resource?: string;
       traceId?: string;
       userId?: string;
+      workspaceId?: string;
     }
   ): Promise<SafetyEvaluationResult | null> {
     const error = await this.enforceClassCBlastRadius(agentId, action);
@@ -404,6 +416,7 @@ export class SafetyEngine extends SafetyBase {
         resource: ctx.resource,
         traceId: ctx.traceId,
         userId: ctx.userId,
+        workspaceId: ctx.workspaceId,
       });
       return {
         allowed: false,
@@ -427,6 +440,7 @@ export class SafetyEngine extends SafetyBase {
       resource?: string;
       traceId?: string;
       userId?: string;
+      workspaceId?: string;
     }
   ): Promise<SafetyEvaluationResult | null> {
     const trustScore = config?.trustScore ?? TRUST.DEFAULT_SCORE;
@@ -440,6 +454,7 @@ export class SafetyEngine extends SafetyBase {
         );
         await emitEvent('safety.principle9', EventType.SYSTEM_AUDIT_TRIGGER, {
           agentId: config?.id ?? 'unknown',
+          workspaceId: ctx.workspaceId,
           action,
           trustScore,
           reason: `Trust-based autonomous promotion: trustScore >= 95`,

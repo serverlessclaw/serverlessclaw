@@ -45,7 +45,7 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
 
   const agentId = detailType.replace('dynamic_', '').replace('_task', '');
   const payload = extractPayload<TaskEvent>(event.detail);
-  const { userId, task, isContinuation, traceId, taskId, sessionId } = payload;
+  const { userId, task, isContinuation, traceId, taskId, sessionId, workspaceId } = payload;
 
   if (!validatePayload({ userId, task }, ['userId', 'task'])) {
     return;
@@ -119,6 +119,7 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
       traceId,
       taskId,
       sessionId,
+      workspaceId,
       source: TraceSource.SYSTEM,
       context,
       communicationMode: config?.defaultCommunicationMode,

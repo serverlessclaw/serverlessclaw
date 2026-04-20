@@ -77,6 +77,11 @@ Individual message rows render the thinking process:
 - **Thought Card**: A dedicated glassmorphism card with a terminal icon (`Terminal`) displays the `thought` field.
 - **Analysing Indicator**: When `isThinking` is true, a pulsating "Analysing Signal..." loader is displayed until the first content chunk or final message arrives.
 
+### 5. Reputation-Aware Worker Selection
+When worker feedback is enabled, the system selects sub-agents using the **Active Trust Loop**. 
+- **Reputation Weighting**: Agents with higher success rates and lower latencies in the current workspace are prioritized.
+- **Tenant Isolation**: Reputation is isolated per workspace to ensure a "noisy neighbor" or failure in one environment doesn't degrade routing in another.
+
 ## Signal Types
 
 | Type | Description |

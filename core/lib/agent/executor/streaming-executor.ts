@@ -290,6 +290,7 @@ export class StreamingExecutor extends BaseExecutor {
           currentInitiator: options.currentInitiator,
           depth: options.depth,
           sessionId: options.sessionId,
+          workspaceId: options.workspaceId,
           userId: options.userId,
           mainConversationId: options.mainConversationId,
           activeModel: options.activeModel,

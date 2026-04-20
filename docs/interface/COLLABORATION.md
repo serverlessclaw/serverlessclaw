@@ -148,6 +148,33 @@ A session must result in a structured output (a plan, a fix, a decision). The Ow
 
 This mirrors how the existing `ParallelAggregator` works for transactional fan-outs, but applies it to an iterative chat context.
 
+### 🔄 Dynamic Delegation & Trust Loop
+
+When an agent (usually the Strategic Planner) needs to delegate a task but wants the system to select the most reliable worker, it uses **Dynamic Delegation**. Instead of targeting a specific `agentId`, it provides a list of `candidates`.
+
+The **Agent Multiplexer** then consults the **Agent Router**, which uses reputation-weighted metrics to select the best agent for the job.
+
+```text
+  Initiator (Planner)      AgentBus (EB)         Multiplexer            AgentRouter           Worker Agent
+         |                      |                     |                      |                     |
+         +-- (1) dispatchTask ->|                     |                      |                     |
+         |    (candidates: [])  |                     |                      |                     |
+         |                      +-- DELEGATION_TASK ->|                      |                     |
+         |                      |                     +-- (2) selectBestAgent|                     |
+         |                      |                     |   (workspace-aware)  |                     |
+         |                      |                     |                      |                     |
+         |                      |                     |<-- [Best: Coder] ----+                     |
+         |                      |                     |                      |                     |
+         |                      |                     +-- (3) invoke Coder --+-------------------->|
+         |                      |                     |                      |               [EXECUTE]
+         |                      |                     |                      |                     |
+         |                      |                     |<-- (4) TASK_RESULT --+---------------------+
+         |                      |                     |                      |                     |
+         |                      |                     +-- (5) updateReputation                     |
+         |                      |                     |   (workspace-isolated)                     |
+         v                      v                     v                      v                     v
+```
+
 ### Council of Agents (Peer Review Gate)
 
 For high-impact strategic plans, the system introduces a **Council of Agents** — a peer review gate that dispatches the plan to three specialized **Critic Agents** for independent review before execution.
