@@ -12,7 +12,12 @@ export const dynamic = 'force-dynamic';
 
 export const GET = withApiHandler(async () => {
   const { DynamoMemory } = await import('@claw/core/lib/memory');
+  const { getCircuitBreaker } = await import('@claw/core/lib/safety/circuit-breaker');
   const memory = new DynamoMemory();
+
+  // Fetch real circuit breaker state for deployments
+  const cb = getCircuitBreaker('deploy');
+  const cbState = await cb.getState();
 
   // Fetch recovery logs
   const recoveryLogs = await memory.listByPrefix('DISTILLED#RECOVERY');
@@ -32,7 +37,6 @@ export const GET = withApiHandler(async () => {
   const recentTotal = recentLogs.length;
 
   // Health score: success rate over the last 24h (volume-normalized)
-  // A system with 1000 ops and 5 failures (99.5%) is healthier than one with 10 ops and 5 failures (50%)
   const healthScore =
     recentTotal > 0 ? Math.round(((recentTotal - recentFailures) / recentTotal) * 100) : 100;
 
@@ -40,7 +44,6 @@ export const GET = withApiHandler(async () => {
   const errorRate = recentTotal > 0 ? Math.round((recentFailures / recentTotal) * 100) : 0;
 
   // Recovery success: percentage of recent failures that were subsequently resolved
-  // This is distinct from errorRate — it measures incident resolution, not raw failure rate
   const recoverySuccess =
     recentFailures > 0
       ? Math.round((recentSuccesses / (recentFailures + recentSuccesses)) * 100)
@@ -54,6 +57,12 @@ export const GET = withApiHandler(async () => {
     recentTotal,
     recentFailures,
     recentSuccesses,
+    circuitBreaker: {
+      state: cbState.state,
+      lastFailure: cbState.lastFailureTime,
+      failureCount: cbState.failures.length,
+      emergencyDeployCount: cbState.emergencyDeployCount,
+    },
     lastUpdated: now,
   };
 });

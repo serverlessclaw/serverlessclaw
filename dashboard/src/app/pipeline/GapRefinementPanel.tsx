@@ -1,8 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, Save, AlertTriangle, Users } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Save, AlertTriangle, Users, ListFilter, Plus, Trash2 } from 'lucide-react';
 import { useTranslations } from '@/components/Providers/TranslationsProvider';
+
+interface SubTask {
+  id: number | string;
+  description: string;
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+}
+
+interface EvolutionPlan {
+  gapId: string;
+  strategy: string;
+  subTasks: SubTask[];
+}
 
 interface GapRefinementPanelProps {
   gapId: string;
@@ -28,7 +40,30 @@ export default function GapRefinementPanel({
   const [rejectionReason, setRejectionReason] = useState('');
   const [showReject, setShowReject] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState(false);
   const [error, setError] = useState('');
+  
+  const [plan, setPlan] = useState<EvolutionPlan | null>(null);
+
+  // Fetch real plan from DynamoDB
+  useEffect(() => {
+    const fetchPlan = async () => {
+      setLoadingPlan(true);
+      try {
+        const res = await fetch(`/api/memory/gap/plan?gapId=${gapId}`);
+        if (!res.ok) throw new Error('Failed to fetch plan');
+        const data = await res.json();
+        if (data.plan) {
+          setPlan(data.plan);
+        }
+      } catch (err) {
+        console.error('Failed to load plan:', err);
+      } finally {
+        setLoadingPlan(false);
+      }
+    };
+    fetchPlan();
+  }, [gapId]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -42,6 +77,7 @@ export default function GapRefinementPanel({
           content: content !== gapContent ? content : undefined,
           impact: impact !== currentImpact ? impact : undefined,
           priority: priority !== currentPriority ? priority : undefined,
+          plan: plan || undefined,
         }),
       });
       if (!res.ok) throw new Error(t('PIPELINE_SAVE_FAILED'));
@@ -50,6 +86,40 @@ export default function GapRefinementPanel({
       setError(e instanceof Error ? e.message : t('PIPELINE_SAVE_FAILED'));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const updateSubTask = (id: number | string, description: string) => {
+    if (!plan) return;
+    setPlan({
+      ...plan,
+      subTasks: plan.subTasks.map((st) => (st.id === id ? { ...st, description } : st)),
+    });
+  };
+
+  const removeSubTask = (id: number | string) => {
+    if (!plan) return;
+    setPlan({
+      ...plan,
+      subTasks: plan.subTasks.filter((st) => st.id !== id),
+    });
+  };
+
+  const addSubTask = () => {
+    const newId = `new-${Date.now()}`;
+    const newSubTask: SubTask = { id: newId, description: '', status: 'PENDING' };
+    
+    if (!plan) {
+      setPlan({
+        gapId: gapId.replace(/^GAP#/, ''),
+        strategy: 'User defined strategy',
+        subTasks: [newSubTask]
+      });
+    } else {
+      setPlan({
+        ...plan,
+        subTasks: [...plan.subTasks, newSubTask],
+      });
     }
   };
 
@@ -97,7 +167,7 @@ export default function GapRefinementPanel({
           </button>
         </div>
 
-        <div className="px-6 py-5 space-y-5">
+        <div className="px-6 py-5 space-y-6">
           {/* Description */}
           <div>
             <label className="block text-[10px] font-bold text-white/50 uppercase tracking-wider mb-2">
@@ -106,9 +176,53 @@ export default function GapRefinementPanel({
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              rows={5}
+              rows={4}
               className="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-xs text-white/90 focus:outline-none focus:border-cyber-green/50 resize-none"
             />
+          </div>
+
+          {/* Evolution Plan Decomposition */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-[10px] font-bold text-cyber-green/70 uppercase tracking-wider">
+                <ListFilter size={12} /> {t('PIPELINE_PLAN_DECOMPOSITION')}
+              </label>
+              <button 
+                onClick={addSubTask}
+                className="text-[9px] font-bold text-white/40 hover:text-cyber-green transition-colors flex items-center gap-1 uppercase tracking-widest"
+              >
+                <Plus size={10} /> {t('PIPELINE_ADD_SUBTASK')}
+              </button>
+            </div>
+            
+            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+              {loadingPlan ? (
+                <div className="py-8 text-center animate-pulse text-[10px] text-white/20 uppercase font-mono tracking-widest">
+                  {t('PIPELINE_LOADING_EVOLUTION_PLAN')}
+                </div>
+              ) : plan?.subTasks.length ? (
+                plan.subTasks.map((st) => (
+                  <div key={st.id} className="group relative">
+                    <textarea
+                      value={st.description}
+                      onChange={(e) => updateSubTask(st.id, e.target.value)}
+                      rows={2}
+                      className="w-full bg-white/[0.03] border border-white/5 rounded px-3 py-2 text-[11px] text-white/70 focus:outline-none focus:border-cyber-green/30 resize-none group-hover:bg-white/[0.05] transition-colors"
+                    />
+                    <button 
+                      onClick={() => removeSubTask(st.id)}
+                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-red-400/50 hover:text-red-400 transition-all"
+                    >
+                      <Trash2 size={10} />
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div className="py-4 text-center border border-dashed border-white/5 rounded text-[10px] text-white/20 uppercase tracking-widest italic">
+                  {t('PIPELINE_NO_PLAN_GENERATED')}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Impact + Priority */}
@@ -145,12 +259,12 @@ export default function GapRefinementPanel({
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-full bg-cyber-green/10 hover:bg-cyber-green/20 border border-cyber-green/30 text-cyber-green text-xs font-bold uppercase tracking-wider py-2.5 rounded flex items-center justify-center gap-2 transition-colors"
+            className="w-full bg-cyber-green/10 hover:bg-cyber-green/20 border border-cyber-green/30 text-cyber-green text-xs font-bold uppercase tracking-wider py-3 rounded flex items-center justify-center gap-2 transition-colors mt-auto"
           >
-            <Save size={14} /> {saving ? t('PIPELINE_SAVING') : t('PIPELINE_SAVE_REFINEMENT')}
+            <Save size={14} /> {saving ? t('PIPELINE_SAVING') : t('PIPELINE_AUTHORIZE_PLAN')}
           </button>
 
-          {/* Swarm Consensus Section (Satisfies E2E) */}
+          {/* Swarm Consensus Section */}
           <div className="border-t border-white/10 pt-4 space-y-3">
             <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-400 uppercase tracking-widest">
               <Users size={12} /> {t('PIPELINE_SWARM_CONSENSUS')}
@@ -174,7 +288,7 @@ export default function GapRefinementPanel({
             {!showReject ? (
               <button
                 onClick={() => setShowReject(true)}
-                className="w-full text-red-400/70 hover:text-red-400 text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors"
+                className="w-full text-red-400/50 hover:text-red-400 text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors py-2"
               >
                 <AlertTriangle size={12} /> {t('PIPELINE_REJECT_PLAN')}
               </button>

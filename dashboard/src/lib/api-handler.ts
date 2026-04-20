@@ -21,34 +21,38 @@ export type ApiSuccessResponse<T = Record<string, unknown>> = {
 } & T;
 
 /**
- * Wraps a Next.js POST handler with standard error handling and validation.
+ * Wraps a Next.js handler with standard error handling and validation.
  * Eliminates the try/catch boilerplate duplicated across API routes.
+ * Handles both GET and body-providing methods (POST, etc).
  *
- * @param handler - The business logic function. Receives parsed JSON body.
- * @returns A Next.js POST handler with consistent error handling.
- *
- * @example
- * ```ts
- * export const POST = withApiHandler(async (body) => {
- *   if (!body.gapId) throw new ApiError('gapId is required', 400);
- *   await memory.updateGapStatus(body.gapId, body.status);
- *   return { gapId: body.gapId, status: body.status };
- * });
- * ```
+ * @param handler - The business logic function. Receives parsed JSON body if present.
+ * @returns A Next.js handler with consistent error handling.
  */
 export function withApiHandler<T = unknown>(
   handler: (body: Record<string, unknown>, req: NextRequest) => Promise<T>
 ): (req: NextRequest) => Promise<NextResponse> {
   return async (req: NextRequest): Promise<NextResponse> => {
     try {
-      const body = await req.json();
+      let body: Record<string, unknown> = {};
+      
+      // Only attempt to parse body for non-GET methods
+      if (req.method !== 'GET' && req.method !== 'HEAD') {
+        try {
+          body = await req.json();
+        } catch {
+          // If no body provided or invalid JSON, default to empty object
+          body = {};
+        }
+      }
+      
       const result = await handler(body, req);
       return NextResponse.json(result);
     } catch (error) {
-      if (error instanceof ApiError) {
+      if (error instanceof ApiError || (error && typeof error === 'object' && 'statusCode' in error)) {
+        const apiError = error as { message?: string; details?: unknown; statusCode?: number };
         return NextResponse.json(
-          { error: error.message, details: error.details },
-          { status: error.statusCode }
+          { error: apiError.message, details: apiError.details },
+          { status: apiError.statusCode || HTTP_STATUS.INTERNAL_SERVER_ERROR }
         );
       }
       logger.error('API Error:', error);
@@ -126,12 +130,6 @@ export function requireEnum<T extends string>(
  * @param schema - The Zod schema to validate against.
  * @returns The parsed and validated body with correct types.
  * @throws {ApiError} If validation fails.
- *
- * @example
- * ```ts
- * const body = validateBody(rawBody, z.object({ gapId: z.string(), status: z.string() }));
- * // body.gapId is now typed as string
- * ```
  */
 export function validateBody<T extends z.ZodType>(body: unknown, schema: T): z.infer<T> {
   const result = schema.safeParse(body);

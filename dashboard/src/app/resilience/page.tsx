@@ -98,12 +98,7 @@ export default async function ResilienceHub() {
         recoveryOpsCount={logs.length}
       />
 
-      <ResilienceGaugesSection
-        isHealthy={isHealthy}
-        logsLength={logs.length}
-        recoveryValue={recoveryValue}
-        recoveryStatus={recoveryState?.status as string | undefined}
-      />
+      <ResilienceGaugesSection />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <ResilienceDiagnosticsCard isHealthy={isHealthy} healthData={health} />

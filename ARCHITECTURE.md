@@ -21,6 +21,39 @@ This document covers the AWS topology and data flow. For operational instruction
 
 ---
 
+## 🌀 Total Quality & Evolution Loop
+
+Serverless Claw operates on a self-correcting feedback loop that bridges real-time observability with autonomous evolution:
+
+```text
+  [ REAL-TIME SIGNALS ]
+          |
+          +--> [ System Pulse HUD ] ----+
+          |    (Health / Persistence)   |
+          |                             |
+          +--> [ Resilience HUD ] ------+---> [ CIRCUIT BREAKER ]
+          |    (CB State / Burn-Rate)   |     (Block / Allow Deploys)
+          |                             |
+          v                             v
+  [ STRATEGIC PLANNING ] <------- [ ANOMALY DETECTED ]
+          |
+          v
+  [ EVOLUTION PIPELINE ] <------- [ CAPABILITY GAPS ]
+          |
+          +--> [ PIPELINE BOARD ] (Kanban)
+          |           |
+          |           v
+          |    [ HITL REFINEMENT ] (Human Edit / Approve)
+          |           |
+          v           v
+  [ CODER AGENT ] -> [ DEPLOYER ] -> [ VERIFIED BUILD ]
+          ^                                 |
+          |                                 v
+          +-------- [ SELF-HEALING ] <--- [ FAILURE ]
+```
+
+---
+
 ## 📂 JIT File Staging Pipeline
 
 The system handles chat-uploaded media through a decoupled staging layer:

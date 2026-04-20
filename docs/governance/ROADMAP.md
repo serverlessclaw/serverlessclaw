@@ -98,8 +98,8 @@ Our goal: the most customizable, cost-effective, and self-evolving personal AI a
 - [x] **Hardened Binary Safety Tiers**: Reinforced safety levels (LOCAL, PROD) with strict approval gates.
 - [x] **Neural Map**: Dependency graph visualization of agent-to-agent delegation paths and dynamic infrastructure state from DynamoDB.
 - [x] **Capabilities Discovery**: Real-time multi-agent tool search and automated roster management.
-- [ ] **Real-time Resilience Gauge**: Dashboard HUD for Circuit Breaker status and token burn-rate monitoring.
-- [ ] **Interactive Gap Refinement**: Feedback loop for users to edit and improve strategic plans before implementation.
+- [x] **Real-time Resilience Gauge**: Dashboard HUD for Circuit Breaker status and token burn-rate monitoring.
+- [x] **Interactive Gap Refinement**: Feedback loop for users to edit and improve strategic plans before implementation.
 
 ## 🏗️ Phase 13: Multi-Modal Chat & File Handling
 
