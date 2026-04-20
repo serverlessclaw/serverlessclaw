@@ -27,6 +27,7 @@
 | [docs/interface/DASHBOARD.md](./docs/interface/DASHBOARD.md)         | Real-time signals (MQTT), design system, and theme                         |
 | [docs/governance/STANDARDS.md](./docs/governance/STANDARDS.md)       | Engineering standards, test-first requirements, and audit rules            |
 | [docs/governance/ROADMAP.md](./docs/governance/ROADMAP.md)           | Understand what's planned, pick the next task                              |
+| [docs/intelligence/STREAMING.md](./docs/intelligence/STREAMING.md)   | Real-time reasoning streaming (MQTT) and signal flow                |
 | [docs/governance/CONTRIBUTING.md](./docs/governance/CONTRIBUTING.md) | Understand how to contribute code or update documentation                  |
 | [Extensibility](./core/lib/registry/)                                | Dynamic Skill and Agent registries for spoke extension                     |
 | [Evolution](./core/lib/safety/evolution-scheduler.ts)                | Evolution Manager for proposing optimizations and bug fixes                |

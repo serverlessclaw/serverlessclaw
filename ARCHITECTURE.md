@@ -10,7 +10,7 @@ This document covers the AWS topology and data flow. For operational instruction
 
 1.  **Stateless**: The core execution is entirely stateless, with persistence offloaded to highly available managed services (DynamoDB). Utilizes a **Tiered Retention Policy** (TTL) and Global Secondary Index (GSI) for high-performance context recall.
 2.  **Extensible**: Every major component (Memory, Messaging, Tools) is designed as a pluggable adapter.
-3.  **Low Latency**: Optimized for fast startup times to minimize "time-to-first-token". Implements **Real-time Streaming (AG-UI Protocol)** via IoT Core (MQTT) to provide instantaneous feedback to human users during long-running reasoning tasks. Tokens are published directly to IoT Core from the execution environment to bypass EventBridge overhead. See [Streaming Flow ↗](./docs/intelligence/streaming-flow.md) for architectural details.
+3.  **Low Latency**: Optimized for fast startup times to minimize "time-to-first-token". Implements **Real-time Streaming (AG-UI Protocol)** via IoT Core (MQTT) to provide instantaneous feedback to human users during long-running reasoning tasks. Tokens are published directly to IoT Core from the execution environment to bypass EventBridge overhead. See [Streaming Flow ↗](./docs/intelligence/STREAMING.md) for architectural details.
 4.  **Safety-First**: Implements nested guardrails including Circuit Breakers, Recursion Limits, and Protected Scopes.
 5.  **Co-managed Autonomy**: Employs a **Dynamic Trust Loop** where agents and humans collaborate on autonomy levels (HITL vs AUTO). Trust is earned through sustained success and weighted by implementation quality, while being penalized for failures, cognitive anomalies (reasoning loops, degradation), or SLO breaches via a centralized **TrustManager**.
 6.  **Proactive & Efficient**: Agents can self-schedule future tasks, but the system prioritizes a **Trigger-on-Message** warm-up strategy.
@@ -394,7 +394,7 @@ Serverless Claw utilizes a tiered logic system to ensure efficiency and cost-con
 | **Dynamic Tools**         | [docs/intelligence/TOOLS.md](./docs/intelligence/TOOLS.md)   |
 | **Memory Strategy**       | [docs/intelligence/MEMORY.md](./docs/intelligence/MEMORY.md) |
 | **Resource Provisioning** | [docs/system/PROVISIONING.md](./docs/system/PROVISIONING.md) |
-| **Real-time Streaming**   | [docs/intelligence/streaming-flow.md](./docs/intelligence/streaming-flow.md) |
+| **Real-time Streaming**   | [docs/intelligence/STREAMING.md](./docs/intelligence/STREAMING.md) |
 
 ---
 

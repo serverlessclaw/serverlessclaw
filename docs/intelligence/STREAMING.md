@@ -1,6 +1,6 @@
 # Streaming Reasoning & Real-time Signal Flow
 
-This document details the architectural flow for real-time message streaming and reasoning (thinking) within SuperClaw. It explains how high-latency reasoning models (like OpenAI O1 or Claude 3.7) provide immediate feedback to the user via the IoT Real-time Bus.
+This document details the architectural flow for real-time message streaming and reasoning (thinking) within SuperClaw. It explains how high-latency reasoning models (like OpenAI GPT 5 or Claude 4.5) provide immediate feedback to the user via the IoT Real-time Bus.
 
 ## Architecture Diagram
 
