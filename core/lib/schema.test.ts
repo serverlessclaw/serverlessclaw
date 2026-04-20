@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { logger } from './logger';
 
 vi.mock('sst', () => ({
   Resource: {
@@ -23,7 +24,7 @@ describe('Tool Schema Validation', () => {
           allErrors[id] = errors;
         }
       }
-      console.error('Tool validation failures:', JSON.stringify(allErrors, null, 2));
+      logger.error('Tool validation failures:', JSON.stringify(allErrors, null, 2));
     }
     expect(isValid, 'All tool schemas should be valid and follow strict requirements').toBe(true);
   });

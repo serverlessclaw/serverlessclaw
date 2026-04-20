@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EvolutionScheduler } from './evolution-scheduler';
 import { EventType } from '../types/agent';
 import { emitTypedEvent } from '../utils/typed-emit';
+import { logger } from '../logger';
 
 vi.mock('../logger', () => ({
   logger: {
@@ -27,18 +28,18 @@ describe('EvolutionScheduler', () => {
     mockMemory = {
       items,
       putItem: vi.fn(async (item: any) => {
-        console.log('STORAGE: putting', item.userId);
+        logger.info('STORAGE: putting', item.userId);
         items.set(item.userId, item);
       }),
       queryItems: vi.fn(async (params: any) => {
         const allItems = Array.from(items.values());
-        console.log('STORAGE: querying with params', JSON.stringify(params));
+        logger.info('STORAGE: querying with params', JSON.stringify(params));
         if (params.FilterExpression === '#status = :pending AND expiresAt <= :now') {
           const now = params.ExpressionAttributeValues[':now'];
           const filtered = allItems.filter(
             (item) => item.status === 'pending' && item.expiresAt <= now
           );
-          console.log('STORAGE: found', filtered.length, 'items');
+          logger.info('STORAGE: found', filtered.length, 'items');
           return filtered;
         }
         return allItems;

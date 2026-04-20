@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_EVENT_ROUTING } from './event-routing';
 import { EventType } from './types/agent';
+import { logger } from './logger';
 
 /**
  * Event Routing Tests
@@ -267,7 +268,7 @@ describe('event-routing', () => {
         // Either it's not routed (expected) or it is routed (update this test)
         if (isRouted) {
           // If it becomes routed, update the UNROUTED_EVENTS list
-          console.warn(`${eventType} is now routed - update UNROUTED_EVENTS list`);
+          logger.warn(`${eventType} is now routed - update UNROUTED_EVENTS list`);
         }
       }
     });

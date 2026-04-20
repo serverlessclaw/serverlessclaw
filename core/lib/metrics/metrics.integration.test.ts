@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { emitMetrics } from './metrics';
+import { logger } from '../logger';
 
 /**
  * Integration test for CloudWatch metrics.
@@ -15,7 +16,7 @@ describe('Metrics Permission Integration', () => {
 
   beforeEach(() => {
     if (!isIntegrationTest) {
-      console.log('Skipping integration test (INTEGRATION_TESTS not set to true)');
+      logger.info('Skipping integration test (INTEGRATION_TESTS not set to true)');
     }
   });
 
@@ -38,13 +39,13 @@ describe('Metrics Permission Integration', () => {
     // In our implementation, emitMetrics catches errors and logs them.
     // We wrap it to ensure we can detect failure.
 
-    const consoleSpy = vi.spyOn(console, 'error');
+    const loggerSpy = vi.spyOn(logger, 'error');
 
     await emitMetrics([metric]);
 
-    // If AccessDenied happened, our implementation would have called console.error
-    expect(consoleSpy).not.toHaveBeenCalled();
+    // If AccessDenied happened, our implementation would have called logger.error
+    expect(loggerSpy).not.toHaveBeenCalled();
 
-    console.log('[METRICS] Integration test emitted successfully.');
+    logger.info('[METRICS] Integration test emitted successfully.');
   });
 });
