@@ -15,6 +15,7 @@ import {
   ParticipantType,
   getSyntheticUserId,
 } from '../types/collaboration';
+import { MessageRole } from '../types/llm';
 
 const COLLAB_PREFIX = 'COLLAB#';
 const COLLAB_INDEX_PREFIX = 'COLLAB_INDEX#';
@@ -398,4 +399,61 @@ export async function findStaleCollaborations(
     const timeout = c.timeoutMs || defaultTimeoutMs;
     return now - c.lastActivityAt > timeout;
   });
+}
+
+/**
+ * Transits a 1:1 session into a collaboration session
+ */
+export async function transitToCollaboration(
+  base: BaseMemoryProvider,
+  userId: string,
+  workspaceId: string,
+  sourceSessionId: string,
+  invitedAgentIds: string[],
+  name?: string
+): Promise<Collaboration> {
+  const collaboration = await createCollaboration(base, userId, 'human', {
+    name: name || `Collaboration: ${sourceSessionId.substring(0, 8)}`,
+    description: `Transited from session ${sourceSessionId}`,
+    workspaceId,
+    initialParticipants: [
+      ...invitedAgentIds.map((id) => ({
+        id,
+        type: 'agent' as ParticipantType,
+        role: 'editor' as CollaborationRole,
+      })),
+      {
+        id: 'facilitator', // Constant or AgentType.FACILITATOR
+        type: 'agent' as ParticipantType,
+        role: 'editor' as CollaborationRole,
+      },
+    ],
+    tags: [`source_session:${sourceSessionId}`],
+  });
+
+  // Seed history
+  try {
+    const history = await base.getHistory(
+      base.getScopedUserId(`CONV#${userId}#${sourceSessionId}`, workspaceId)
+    );
+    if (history && history.length > 0) {
+      const recent = history.slice(-5);
+      const summary = recent.map((m) => `${m.role}: ${m.content}`).join('\n\n');
+      const syntheticId = getSyntheticUserId(collaboration.collaborationId);
+
+      await base.putItem({
+        userId: syntheticId,
+        timestamp: Date.now(),
+        type: 'MESSAGE',
+        role: MessageRole.SYSTEM,
+        content: `### Context Transition ###\n\nThis collaboration has been transited from a 1:1 session. Brief history summary:\n\n${summary}`,
+        metadata: { type: 'context_transition' },
+        traceId: `transit-${collaboration.collaborationId}`,
+      });
+    }
+  } catch (e) {
+    logger.warn(`Failed to seed history for collab ${collaboration.collaborationId}:`, e);
+  }
+
+  return collaboration;
 }

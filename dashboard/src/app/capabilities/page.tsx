@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic';
+import { logger } from '@claw/core/lib/logger';
 import CapabilitiesView from '@/components/Capabilities/CapabilitiesView';
 import CapabilitiesHeader from './CapabilitiesHeader';
 import CapabilitiesAdvisory from './CapabilitiesAdvisory';
@@ -14,7 +15,7 @@ async function getMCPServers() {
       > | null) ?? {};
     return mcpServers;
   } catch (e) {
-    console.error('Error fetching MCP servers:', e);
+    logger.error('Error fetching MCP servers:', e);
     return {};
   }
 }
@@ -45,7 +46,7 @@ async function getAgentConfigs() {
 
     return agentsWithUsage;
   } catch (e) {
-    console.error('Error fetching agent configs:', e);
+    logger.error('Error fetching agent configs:', e);
     return [];
   }
 }

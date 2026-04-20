@@ -146,6 +146,15 @@ A session must result in a structured output (a plan, a fix, a decision). The Ow
 2. Executing a tool (like `triggerDeployment` or `dispatchTask` to a Coder).
 3. Closing the collaboration session using the `closeCollaboration` tool so agents stop monitoring it.
 
+### 📡 Adaptive Communication Hub
+
+In a shared collaboration session, agents dynamically adjust their output format based on whom they are talking to.
+
+- **Text Mode**: If a human participant is present, agents use Markdown to ensure transparency, accountability, and the ability for the human to intervene.
+- **JSON Mode**: If the session consists only of autonomous agents (e.g., a background swarm), agents switch to highly structured JSON. This minimizes token overhead and eliminates conversational "fluff," optimizing for agent-to-agent protocol consistency.
+
+This mode is evaluated at every message dispatch via the `communicationMode` parameter in the `Agent.stream` logic.
+
 This mirrors how the existing `ParallelAggregator` works for transactional fan-outs, but applies it to an iterative chat context.
 
 ### 🔄 Dynamic Delegation & Trust Loop

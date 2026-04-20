@@ -3,6 +3,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import React from 'react';
 import SystemPulseFlow, { getAgentIcon, getAgentDescription } from './Flow';
+import { logger } from '@claw/core/lib/logger';
+
+vi.mock('@claw/core/lib/logger', () => ({
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
 
 const mockFitView = vi.fn();
 
@@ -167,7 +176,7 @@ describe('SystemPulseFlow Component', () => {
   });
 
   it('handles fetch error gracefully', async () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const loggerSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
     mockFetch.mockRejectedValue(new Error('Fetch failed'));
 
     render(<SystemPulseFlow />);
@@ -176,8 +185,8 @@ describe('SystemPulseFlow Component', () => {
       expect(screen.queryByText(/SYNCHRONIZING_NEURAL_MAP/i)).not.toBeInTheDocument();
     });
 
-    expect(consoleSpy).toHaveBeenCalledWith('Failed to fetch system blueprint:', expect.any(Error));
-    consoleSpy.mockRestore();
+    expect(loggerSpy).toHaveBeenCalledWith('Failed to fetch system blueprint:', expect.any(Error));
+    loggerSpy.mockRestore();
   });
 
   it('re-fetches data and fits view when reset button is clicked', async () => {

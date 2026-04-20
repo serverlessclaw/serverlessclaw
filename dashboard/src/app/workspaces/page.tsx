@@ -20,6 +20,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import PageHeader from '@/components/PageHeader';
 import { useTranslations } from '@/components/Providers/TranslationsProvider';
+import { logger } from '@claw/core/lib/logger';
 
 interface Member {
   id: string;
@@ -110,7 +111,7 @@ export default function WorkspacesPage() {
         fetchWorkspaces();
       }
     } catch (e) {
-      console.error('Failed to create workspace:', e);
+      logger.error('Failed to create workspace:', e);
     } finally {
       setCreating(false);
     }
@@ -138,7 +139,7 @@ export default function WorkspacesPage() {
         fetchWorkspaces();
       }
     } catch (e) {
-      console.error('Failed to invite member:', e);
+      logger.error('Failed to invite member:', e);
     } finally {
       setInviting(false);
     }
@@ -156,7 +157,7 @@ export default function WorkspacesPage() {
         fetchWorkspaces();
       }
     } catch (e) {
-      console.error('Failed to update member role:', e);
+      logger.error('Failed to update member role:', e);
     }
   };
 
@@ -172,7 +173,7 @@ export default function WorkspacesPage() {
         fetchWorkspaces();
       }
     } catch (e) {
-      console.error('Failed to remove member:', e);
+      logger.error('Failed to remove member:', e);
     }
   };
 

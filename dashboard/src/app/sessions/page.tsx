@@ -9,6 +9,7 @@ import Link from 'next/link';
 import ExportButton from './ExportButton';
 import SessionPagination from './SessionPagination';
 import PageHeader from '@/components/PageHeader';
+import { logger } from '@claw/core/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +18,7 @@ async function getSessions(nextToken?: string, query?: string) {
   try {
     const tableName = getResourceName('MemoryTable');
     if (!tableName) {
-      console.error('MemoryTable name is missing from Resources');
+      logger.error('MemoryTable name is missing from Resources');
       return { items: [], nextToken: undefined };
     }
     const client = new DynamoDBClient({});
@@ -61,7 +62,7 @@ async function getSessions(nextToken?: string, query?: string) {
 
     return { items, nextToken: encodedNext };
   } catch (e) {
-    console.error('Error fetching sessions:', e);
+    logger.error('Error fetching sessions:', e);
     return { items: [], nextToken: undefined };
   }
 }

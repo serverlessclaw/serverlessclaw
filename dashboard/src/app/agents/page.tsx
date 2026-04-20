@@ -15,6 +15,7 @@ import { Tool, Agent } from '@/lib/types/ui';
 import PageHeader from '@/components/PageHeader';
 import { useRealtime, RealtimeMessage } from '@/hooks/useRealtime';
 import { useTranslations } from '@/components/Providers/TranslationsProvider';
+import { logger } from '@claw/core/lib/logger';
 
 import {
   LLMProvider,
@@ -104,7 +105,7 @@ export default function AgentsPage() {
       setAgents(agentsMap);
       setInitialAgents(structuredClone(agentsMap));
     } catch (err) {
-      console.error('Failed to load agents:', err);
+      logger.error('Failed to load agents:', err);
       toast.error(t('AGENTS_SYNC_REGISTRY_ERROR'));
     } finally {
       setLoading(false);
@@ -121,7 +122,7 @@ export default function AgentsPage() {
       setAllTools(toolsData.tools || []);
       if (forceRefresh) toast.success(t('AGENTS_TOOL_CACHE_SYNCED'));
     } catch (err) {
-      console.error('Failed to load tools:', err);
+      logger.error('Failed to load tools:', err);
       toast.error(t('AGENTS_TOOL_REGISTRY_ERROR'));
     } finally {
       setLoadingTools(false);
@@ -135,7 +136,7 @@ export default function AgentsPage() {
       await Promise.all([loadAgents(), loadTools(true)]);
       toast.success(t('AGENTS_REGISTRY_SYNCED'));
     } catch (err) {
-      console.error('Sync failed:', err);
+      logger.error('Sync failed:', err);
       toast.error(t('AGENTS_SYNC_ERROR'));
     } finally {
       setRefreshingTools(false);
@@ -158,7 +159,7 @@ export default function AgentsPage() {
       const data = await res.json();
       setReputation(data);
     } catch (err) {
-      console.error('Failed to load reputation:', err);
+      logger.error('Failed to load reputation:', err);
     }
   }, []);
 
@@ -204,7 +205,7 @@ export default function AgentsPage() {
       toast.success(t('AGENTS_CONFIG_SYNCED'));
       setShowBackboneWarning(false);
     } catch (err) {
-      console.error('Failed to save agent configuration:', err);
+      logger.error('Failed to save agent configuration:', err);
       toast.error(t('AGENTS_SAVE_ERROR'));
     } finally {
       setSaving(false);
@@ -274,7 +275,7 @@ export default function AgentsPage() {
 
       toast.success(t('AGENTS_TOOLS_UPDATED'));
     } catch (err) {
-      console.error('Failed to update tools:', err);
+      logger.error('Failed to update tools:', err);
       toast.error('Failed to update tools');
       // Revert to snapshot taken before toggle
       setAgents((prev) => ({
@@ -335,7 +336,7 @@ export default function AgentsPage() {
       type === 'task_completed' ||
       type === 'task_failed'
     ) {
-      console.log(`[Realtime] Refreshing agents due to: ${type}`);
+      logger.info(`[Realtime] Refreshing agents due to: ${type}`);
       loadAgents();
       loadReputation();
     }

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { DynamicComponent } from '../Chat/types';
+import { logger } from '@claw/core/lib/logger';
 
 interface UICommandProps {
   component: DynamicComponent;
@@ -33,13 +34,13 @@ export default function UICommand({ component }: UICommandProps) {
     
     const runCommand = async () => {
       if (props.command === 'navigation' && props.mode === 'auto' && props.path) {
-        console.log(`[UICommand] Auto-navigating to ${props.path}`);
+        logger.info(`[UICommand] Auto-navigating to ${props.path}`);
         const query = props.params ? '?' + new URLSearchParams(props.params).toString() : '';
         router.push(`${props.path}${query}`);
         executedRef.current = true;
       } 
       else if (props.command === 'action' && props.action && props.target) {
-        console.log(`[UICommand] Triggering UI Action: ${props.action} on ${props.target}`);
+        logger.info(`[UICommand] Triggering UI Action: ${props.action} on ${props.target}`);
         
         // Custom event for the dashboard to listen to
         const event = new CustomEvent('claw:ui-command', {

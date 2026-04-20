@@ -4,6 +4,7 @@ import React from 'react';
 import { Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { logger } from '@claw/core/lib/logger';
 import Button from './ui/Button';
 
 interface DeleteTraceButtonProps {
@@ -29,7 +30,7 @@ export default function DeleteTraceButton({ traceId }: DeleteTraceButtonProps) {
         toast.error(`Failed to delete trace: ${error.error}`);
       }
     } catch (error) {
-      console.error('Delete trace error:', error);
+      logger.error('Delete trace error:', error);
       toast.error('Failed to delete trace.');
     }
   };

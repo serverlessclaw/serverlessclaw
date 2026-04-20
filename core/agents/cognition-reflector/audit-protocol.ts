@@ -14,15 +14,20 @@ import { setGap } from '../../lib/memory/gap-operations';
 import { InsightCategory } from '../../lib/types/memory';
 
 /**
+ * Interface representing the subset of the memory provider used for audits.
+ */
+interface MemoryForAudit {
+  getAllGaps(status: string): Promise<unknown[]>;
+  getFailurePatterns(userId: string, pattern: string, limit: number): Promise<unknown[]>;
+  set(key: string, value: unknown): Promise<void>;
+  get?(key: string): Promise<unknown>;
+}
+
+/**
  * Runs a full system audit across all defined silos.
  */
 export async function runSystemAudit(
-  memory: {
-    getAllGaps(status: unknown): Promise<unknown[]>;
-    getFailurePatterns(userId: string, pattern: string, limit: number): Promise<unknown[]>;
-    set(key: string, value: unknown): Promise<void>;
-    get?(key: string): Promise<unknown>;
-  },
+  memory: MemoryForAudit,
   triggerType: string,
   context?: Record<string, unknown>
 ): Promise<AuditReport> {
@@ -62,7 +67,7 @@ export async function runSystemAudit(
 }
 
 async function auditSilo(
-  memory: any,
+  memory: MemoryForAudit,
   silo: AuditSilo,
   _context?: Record<string, unknown>
 ): Promise<AuditFinding[]> {
@@ -101,7 +106,7 @@ async function auditSilo(
 
 // --- Silo Implementations ---
 
-async function auditSpine(memory: any): Promise<AuditFinding[]> {
+async function auditSpine(memory: MemoryForAudit): Promise<AuditFinding[]> {
   const findings: AuditFinding[] = [];
   const openGaps = (await memory.getAllGaps('OPEN')) as unknown[];
 
@@ -118,11 +123,11 @@ async function auditSpine(memory: any): Promise<AuditFinding[]> {
   return findings;
 }
 
-async function auditHand(memory: any): Promise<AuditFinding[]> {
+async function auditHand(memory: MemoryForAudit): Promise<AuditFinding[]> {
   const findings: AuditFinding[] = [];
-  const failures = (await memory.getFailurePatterns('*', '*', 10)) as unknown[];
+  const failures = (await memory.getFailurePatterns('*', '*', 10)) as Array<{ category: string }>;
 
-  const toolFailurePatterns = failures.filter((f: any) => f.category === 'TOOL_EXECUTION');
+  const toolFailurePatterns = failures.filter((f) => f.category === 'TOOL_EXECUTION');
 
   if (toolFailurePatterns.length > 3) {
     findings.push({
@@ -137,13 +142,13 @@ async function auditHand(memory: any): Promise<AuditFinding[]> {
   return findings;
 }
 
-async function auditShield(memory: any): Promise<AuditFinding[]> {
+async function auditShield(memory: MemoryForAudit): Promise<AuditFinding[]> {
   const findings: AuditFinding[] = [];
   const safeGet = async (key: string) =>
     typeof memory.get === 'function' ? await memory.get(key) : null;
 
   // Sh1: Check for recent safety violations
-  const recentViolations = (await safeGet('safety:violations:recent')) as any;
+  const recentViolations = (await safeGet('safety:violations:recent')) as { count?: number } | null;
   if (!recentViolations || recentViolations.count === 0) {
     findings.push({
       silo: 'Shield',
@@ -155,7 +160,7 @@ async function auditShield(memory: any): Promise<AuditFinding[]> {
   }
 
   // Sh4: Check recovery Dead Man's Switch health
-  const recoveryHealth = (await safeGet('recovery:health')) as any;
+  const recoveryHealth = (await safeGet('recovery:health')) as { lastCheck: number } | null;
   const healthCheckAge = recoveryHealth ? Date.now() - recoveryHealth.lastCheck : Infinity;
   if (!recoveryHealth || healthCheckAge > 5 * 60 * 1000) {
     findings.push({
@@ -170,9 +175,11 @@ async function auditShield(memory: any): Promise<AuditFinding[]> {
   return findings;
 }
 
-async function auditBrain(memory: any): Promise<AuditFinding[]> {
+async function auditBrain(memory: MemoryForAudit): Promise<AuditFinding[]> {
   const findings: AuditFinding[] = [];
-  const doneGaps = (await memory.getAllGaps('DONE')) as any[];
+  const doneGaps = (await memory.getAllGaps('DONE')) as Array<{
+    metadata?: { updatedAt?: number };
+  }>;
   const staleLimit = 90 * 24 * 60 * 60 * 1000;
   const now = Date.now();
   const staleGaps = doneGaps.filter((g) => now - (g.metadata?.updatedAt || 0) > staleLimit);
@@ -190,12 +197,12 @@ async function auditBrain(memory: any): Promise<AuditFinding[]> {
   return findings;
 }
 
-async function auditEye(memory: any): Promise<AuditFinding[]> {
+async function auditEye(memory: MemoryForAudit): Promise<AuditFinding[]> {
   const findings: AuditFinding[] = [];
   const safeGet = async (key: string) =>
     typeof memory.get === 'function' ? await memory.get(key) : null;
 
-  const e2eStatus = (await safeGet('e2e:last_run')) as any;
+  const e2eStatus = (await safeGet('e2e:last_run')) as { passed: number; failed: number } | null;
   if (e2eStatus) {
     const total = e2eStatus.passed + e2eStatus.failed;
     const passRate = total > 0 ? e2eStatus.passed / total : 0;
@@ -210,7 +217,7 @@ async function auditEye(memory: any): Promise<AuditFinding[]> {
     }
   }
 
-  const ciStatus = (await safeGet('ci:last_run')) as any;
+  const ciStatus = (await safeGet('ci:last_run')) as { status: string } | null;
   if (!ciStatus || ciStatus.status === 'failed') {
     findings.push({
       silo: 'Eye',
@@ -224,12 +231,12 @@ async function auditEye(memory: any): Promise<AuditFinding[]> {
   return findings;
 }
 
-async function auditScales(memory: any): Promise<AuditFinding[]> {
+async function auditScales(memory: MemoryForAudit): Promise<AuditFinding[]> {
   const findings: AuditFinding[] = [];
   const safeGet = async (key: string) =>
     typeof memory.get === 'function' ? await memory.get(key) : null;
 
-  const trustHistory = (await safeGet('trust:score_history')) as any[];
+  const trustHistory = (await safeGet('trust:score_history')) as unknown[];
   if (!trustHistory || trustHistory.length < 2) {
     findings.push({
       silo: 'Scales',
@@ -247,7 +254,8 @@ async function auditScales(memory: any): Promise<AuditFinding[]> {
  * Audits Silo 7: The Metabolism (Bloat & Debt)
  * Now uses the central MetabolismService for Regenerative Repair.
  */
-async function auditMetabolism(memory: any): Promise<AuditFinding[]> {
+async function auditMetabolism(memory: MemoryForAudit): Promise<AuditFinding[]> {
+  // @ts-expect-error - MetabolismService expects BaseMemoryProvider but MemoryForAudit is a compatible subset for what it needs here
   const findings = await MetabolismService.runMetabolismAudit(memory, { repair: true });
 
   // Propagate critical metabolism findings as Strategic Gaps for the Planner to pick up
@@ -255,6 +263,7 @@ async function auditMetabolism(memory: any): Promise<AuditFinding[]> {
     if (f.severity === 'P1' || f.severity === 'P2') {
       try {
         await setGap(
+          // @ts-expect-error - setGap expects BaseMemoryProvider
           memory,
           `MAINTENANCE-${Date.now()}-${Math.random().toString(36).substring(7)}`,
           `[Metabolism] ${f.actual}. Recommendation: ${f.recommendation}`,
@@ -271,7 +280,7 @@ async function auditMetabolism(memory: any): Promise<AuditFinding[]> {
 
 // --- Persistence & Signaling ---
 
-async function saveAuditReport(memory: any, report: AuditReport): Promise<void> {
+async function saveAuditReport(memory: MemoryForAudit, report: AuditReport): Promise<void> {
   try {
     await memory.set(`audit:${report.auditId}`, report);
   } catch (e) {

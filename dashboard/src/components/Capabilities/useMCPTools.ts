@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
+import { logger } from '@claw/core/lib/logger';
 
 interface MCPTool {
   name: string;
@@ -63,7 +64,7 @@ export function useMCPTools(initialTools: MCPTool[]): UseMCPToolsResult {
 
       toast.success(`Discovered ${mcpServerNames.length} MCP servers`);
     } catch (error) {
-      console.error('Error discovering MCP tools:', error);
+      logger.error('Error discovering MCP tools:', error);
       toast.error('Failed to discover MCP tools');
     } finally {
       setIsLoading(false);

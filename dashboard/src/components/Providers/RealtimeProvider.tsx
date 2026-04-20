@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useRef, useState, useCallb
 import mqtt from 'mqtt';
 import type { ConversationMeta } from '@claw/core/lib/types/memory';
 import type { PendingMessage } from '@claw/core/lib/types/session';
+import { logger } from '@claw/core/lib/logger';
 
 export interface RealtimeMessage {
   'detail-type': string;
@@ -68,21 +69,21 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await fetch('/api/chat');
       if (!res.ok) {
-        console.warn(`[Realtime] Failed to fetch sessions: HTTP ${res.status}`);
+        logger.warn(`[Realtime] Failed to fetch sessions: HTTP ${res.status}`);
         return;
       }
 
       const contentType = res.headers.get('content-type') ?? '';
       if (!contentType.includes('application/json')) {
         const preview = (await res.text()).slice(0, 120);
-        console.warn(`[Realtime] /api/chat returned non-JSON payload: ${preview}`);
+        logger.warn(`[Realtime] /api/chat returned non-JSON payload: ${preview}`);
         return;
       }
 
       const data = (await res.json()) as { sessions?: ConversationMeta[] };
       setSessions(data.sessions || []);
     } catch (err) {
-      console.warn('[Realtime] Failed to fetch sessions', err);
+      logger.warn('[Realtime] Failed to fetch sessions', err);
     }
   }, []);
 
@@ -95,14 +96,14 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         if (isUnmountedRef.current) return;
 
         if (!res.ok) {
-          console.warn(`[Realtime] /api/config failed: HTTP ${res.status}`);
+          logger.warn(`[Realtime] /api/config failed: HTTP ${res.status}`);
           return;
         }
 
         const contentType = res.headers.get('content-type') ?? '';
         if (!contentType.includes('application/json')) {
           const preview = (await res.text()).slice(0, 120);
-          console.warn(`[Realtime] /api/config returned non-JSON payload: ${preview}`);
+          logger.warn(`[Realtime] /api/config returned non-JSON payload: ${preview}`);
           return;
         }
 
@@ -123,7 +124,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       const host = config.realtime.url.replace(/^wss?:\/\//, '').replace(/\/mqtt$/, '');
       const mqttUrl = `wss://${host}/mqtt?x-amz-customauthorizer-name=${config.realtime.authorizer}&x-amz-customauthorizer-token=${encodeURIComponent(token)}&clientId=${encodeURIComponent(clientId)}`;
 
-      console.log(`[Realtime] ⚡ Connecting to: wss://${host}/mqtt`);
+      logger.info(`[Realtime] ⚡ Connecting to: wss://${host}/mqtt`);
       
       const client = mqtt.connect(mqttUrl, {
         clientId,
@@ -135,20 +136,20 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       });
 
       client.on('connect', () => {
-        console.log('[Realtime] ✅ Connected');
+        logger.info('[Realtime] ✅ Connected');
         setIsConnected(true);
         setError(null);
         
         // Restore existing subscriptions
         subscriptionsRef.current.forEach(sub => {
           const prefixed = sub.topics.map(t => `${prefixRef.current}${t}`);
-          console.log(`[Realtime] Restoring subscription to: ${prefixed.join(', ')}`);
+          logger.info(`[Realtime] Restoring subscription to: ${prefixed.join(', ')}`);
           client.subscribe(prefixed);
         });
       });
 
-      client.on('reconnect', () => console.log('[Realtime] 🔄 Reconnecting...'));
-      client.on('offline', () => console.warn('[Realtime] 🔌 Client went offline'));
+      client.on('reconnect', () => logger.info('[Realtime] 🔄 Reconnecting...'));
+      client.on('offline', () => logger.warn('[Realtime] 🔌 Client went offline'));
       client.on('message', (topic, payload) => {
         try {
           const payloadStr = payload.toString();
@@ -181,17 +182,17 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
           });
           
           if (matchCount === 0) {
-            console.warn(`[Realtime:MQTT] No subscription matched for topic: ${displayTopic}`);
+            logger.warn(`[Realtime:MQTT] No subscription matched for topic: ${displayTopic}`);
           } else {
-            console.log(`[Realtime:MQTT] Dispatched to ${matchCount} subscribers`);
+            logger.info(`[Realtime:MQTT] Dispatched to ${matchCount} subscribers`);
           }
         } catch (e) {
-          console.error('[Realtime:MQTT] Failed to parse message', e);
+          logger.error('[Realtime:MQTT] Failed to parse message', e);
         }
       });
 
       client.on('error', (err) => {
-        console.error('[Realtime] 🚫 Error:', err.message);
+        logger.error('[Realtime] 🚫 Error:', err.message);
         setError(err);
       });
 
@@ -199,7 +200,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
 
       mqttClientRef.current = client;
     } catch (e) {
-      console.error('[Realtime] Setup failed', e);
+      logger.error('[Realtime] Setup failed', e);
     }
   }, []);
 
@@ -231,12 +232,12 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     
     if (mqttClientRef.current?.connected) {
       const prefixed = topics.map(t => `${prefixRef.current}${t}`);
-      console.log(`[Realtime] Subscribing to NEW topics: ${prefixed.join(', ')}`);
+      logger.info(`[Realtime] Subscribing to NEW topics: ${prefixed.join(', ')}`);
       mqttClientRef.current.subscribe(prefixed);
     }
 
     return () => {
-      console.log(`[Realtime] Removing subscription for topics: ${topics.join(', ')}`);
+      logger.info(`[Realtime] Removing subscription for topics: ${topics.join(', ')}`);
       subscriptionsRef.current.delete(sub);
     };
   }, []);

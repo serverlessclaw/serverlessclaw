@@ -11,7 +11,7 @@ import { getTraces } from '@/lib/traces';
 import PageHeader from '@/components/PageHeader';
 
 export const dynamic = 'force-dynamic';
-
+import { logger } from '@claw/core/lib/logger';
 import { LLMProvider, OpenAIModel } from '@claw/core/lib/types/llm';
 
 async function getConfig() {
@@ -33,7 +33,7 @@ async function getConfig() {
       model: modelRes.Item?.value ?? OpenAIModel.GPT_5_4,
     };
   } catch (e) {
-    console.error('Error fetching config:', e);
+    logger.error('Error fetching config:', e);
     return { provider: 'OFFLINE', model: 'OFFLINE' };
   }
 }
@@ -66,7 +66,7 @@ async function getSessionTitles() {
     });
     return titles;
   } catch (e) {
-    console.error('Error fetching session titles:', e);
+    logger.error('Error fetching session titles:', e);
     return {};
   }
 }

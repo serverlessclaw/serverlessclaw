@@ -16,6 +16,7 @@ import { useKeyboardShortcuts, type ShortcutDefinition } from '@/hooks/useKeyboa
 import { useTranslations } from '@/components/Providers/TranslationsProvider';
 import { AgentSelector } from './AgentSelector';
 import { AgentType } from '@claw/core/lib/types/index';
+import { logger } from '@claw/core/lib/logger';
 import type { ChatMessage } from './types';
 
 /**
@@ -238,7 +239,7 @@ export default function ChatContent() {
       setIsEditingTitle(false);
       fetchSessions();
     } catch (error) {
-      console.error('Failed to save title:', error);
+      logger.error('Failed to save title:', error);
     }
   };
 
@@ -251,7 +252,7 @@ export default function ChatContent() {
       });
       fetchSessions();
     } catch (error) {
-      console.error('Failed to toggle pin:', error);
+      logger.error('Failed to toggle pin:', error);
     }
   };
 
@@ -347,7 +348,7 @@ export default function ChatContent() {
           }]);
         }
       } catch (e) {
-        console.error('Transit failed:', e);
+        logger.error('Transit failed:', e);
       } finally {
         setIsTransiting(false);
       }
@@ -378,7 +379,7 @@ export default function ChatContent() {
         fetchSessions();
       }
     } catch (error) {
-      console.error('Failed to delete session:', error);
+      logger.error('Failed to delete session:', error);
     }
     setShowDeleteConfirm(false);
   };
@@ -393,7 +394,7 @@ export default function ChatContent() {
         fetchSessions();
       }
     } catch (error) {
-      console.error('Failed to delete all history:', error);
+      logger.error('Failed to delete all history:', error);
     }
     setShowDeleteAllConfirm(false);
   };

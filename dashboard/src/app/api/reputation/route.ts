@@ -1,3 +1,5 @@
+import { logger } from '@claw/core/lib/logger';
+
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
@@ -15,7 +17,7 @@ export async function GET() {
     }));
     return Response.json({ reputation });
   } catch (e) {
-    console.error('Error fetching reputation:', e);
+    logger.error('Error fetching reputation:', e);
     return Response.json({ reputation: [] });
   }
 }

@@ -19,6 +19,7 @@ import MemoryHeader from './MemoryHeader';
 import MemoryEmptyState from './MemoryEmptyState';
 import { headers } from 'next/headers';
 import { AUTH } from '@/lib/constants';
+import { logger } from '@claw/core/lib/logger';
 
 interface MemoryMetadata {
   priority?: number;
@@ -77,7 +78,7 @@ async function getMemoryData(
   try {
     registeredTypes = await memory.getRegisteredMemoryTypes();
   } catch (err) {
-    console.error('[MemoryVault] Failed to fetch registered memory types:', err);
+    logger.error('[MemoryVault] Failed to fetch registered memory types:', err);
   }
 
   const knownTypes = new Set(['DISTILLED', 'LESSON', 'GAP', 'SESSION']);
@@ -99,7 +100,7 @@ async function getMemoryData(
         registeredTypes = Array.from(new Set(Items.map((i) => i.type).filter(Boolean)));
       }
     } catch (err) {
-      console.error('[MemoryVault] Fallback type discovery failed:', err);
+      logger.error('[MemoryVault] Fallback type discovery failed:', err);
     }
   }
 
@@ -124,7 +125,7 @@ async function getMemoryData(
         dynamicTypes,
       };
     } catch (err) {
-      console.error('[MemoryVault] Search failed:', err);
+      logger.error('[MemoryVault] Search failed:', err);
       return {
         items: [],
         nextToken: undefined,
@@ -137,26 +138,26 @@ async function getMemoryData(
   // Define counts fetcher (parallel with individual error boundaries)
   const countPromises = [
     memory.getMemoryByType('DISTILLED', 50).catch((e) => {
-      console.error('Count error DISTILLED:', e);
+      logger.error('Count error DISTILLED:', e);
       return [];
     }),
     Promise.all([
       memory.getMemoryByType('LESSON', 50).catch((e) => {
-        console.error('Count error LESSON:', e);
+        logger.error('Count error LESSON:', e);
         return [];
       }),
       memory.getMemoryByType('lesson', 50).catch((e) => {
-        console.error('Count error lesson:', e);
+        logger.error('Count error lesson:', e);
         return [];
       }),
     ]).then(([a, b]) => [...a, ...b]),
     memory.getMemoryByType('GAP', 50).catch((e) => {
-      console.error('Count error GAP:', e);
+      logger.error('Count error GAP:', e);
       return [];
     }),
     ...dynamicTypes.map((t) =>
       memory.getMemoryByType(t, 50).catch((e) => {
-        console.error(`Count error ${t}:`, e);
+        logger.error(`Count error ${t}:`, e);
         return [];
       })
     ),
@@ -215,7 +216,7 @@ async function getMemoryData(
       }
     }
   } catch (err) {
-    console.error(`[MemoryVault] Failed to fetch items for tab ${activeTab}:`, err);
+    logger.error(`[MemoryVault] Failed to fetch items for tab ${activeTab}:`, err);
   }
 
   const countResults = await Promise.all(countPromises);
@@ -323,7 +324,7 @@ async function updateMemoryContent(formData: FormData) {
     try {
       JSON.parse(content);
     } catch (e) {
-      console.error('Invalid JSON content for memory update:', e);
+      logger.error('Invalid JSON content for memory update:', e);
       throw new Error('Content must be valid JSON');
     }
   }

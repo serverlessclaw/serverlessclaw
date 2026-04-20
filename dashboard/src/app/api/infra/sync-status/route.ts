@@ -1,3 +1,5 @@
+import { logger } from '@claw/core/lib/logger';
+
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
@@ -14,7 +16,7 @@ export async function GET() {
     }));
     return Response.json({ syncs });
   } catch (e) {
-    console.error('Error fetching sync status:', e);
+    logger.error('Error fetching sync status:', e);
     return Response.json({ syncs: [] });
   }
 }

@@ -10,6 +10,7 @@ import MemoryPrioritySelector from '@/components/MemoryPrioritySelector';
 import { MemoryItem, getBadgeVariant, getCategoryLabel } from './types';
 import CyberConfirm from '@/components/CyberConfirm';
 import { useTranslations } from '@/components/Providers/TranslationsProvider';
+import { logger } from '@claw/core/lib/logger';
 
 interface MemoryDetailModalProps {
   item: MemoryItem | null;
@@ -107,7 +108,7 @@ export default function MemoryDetailModal({
       setIsEditing(false);
       toast.success(t('MEMORY_UPDATE_SUCCESS'));
     } catch (err) {
-      console.error('Failed to update memory:', err);
+      logger.error('Failed to update memory:', err);
       toast.error(t('MEMORY_UPDATE_ERROR'));
     } finally {
       setIsSaving(false);

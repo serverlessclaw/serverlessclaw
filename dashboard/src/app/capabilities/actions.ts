@@ -4,6 +4,7 @@ import { getResourceName } from '@/lib/sst-utils';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { revalidatePath } from 'next/cache';
+import { logger } from '@claw/core/lib/logger';
 
 export async function updateAgentTools(formData: FormData) {
   const agentId = formData.get('agentId') as string;
@@ -30,7 +31,7 @@ export async function updateAgentTools(formData: FormData) {
     revalidatePath('/capabilities');
     return { success: true };
   } catch (e) {
-    console.error('Error updating agent tools:', e);
+    logger.error('Error updating agent tools:', e);
     return { error: e instanceof Error ? e.message : 'Failed to update tools' };
   }
 }
@@ -77,7 +78,7 @@ export async function registerMCPServer(name: string, command: string, env: stri
     revalidatePath('/capabilities');
     return { success: true };
   } catch (e) {
-    console.error('Error registering MCP server:', e);
+    logger.error('Error registering MCP server:', e);
     return { error: e instanceof Error ? e.message : 'Failed to register bridge' };
   }
 }
@@ -113,7 +114,7 @@ export async function deleteMCPServer(serverName: string) {
     revalidatePath('/capabilities');
     return { success: true };
   } catch (e) {
-    console.error('Error deleting MCP server:', e);
+    logger.error('Error deleting MCP server:', e);
     return { error: e instanceof Error ? e.message : 'Failed to delete MCP server' };
   }
 }

@@ -80,6 +80,44 @@ For high-impact strategic decisions, agents use a voting mechanism:
 - **Unanimous**: 100% YES.
 - **Weighted**: Votes are weighted by the agent's **Reputation Score**.
 
+- **Weighted**: Votes are weighted by the agent's **Reputation Score**.
+
+---
+
+## 📡 Adaptive Communication Hub
+
+Agents dynamically switch their output protocol based on the presence of human participants in a collaboration session.
+
+### 1. Communication Modes
+
+| Mode | Trigger | Protocol | Goal |
+| :--- | :--- | :--- | :--- |
+| **`text`** | Human Participant Present | Natural Language (Markdown) | Readability & Alignment |
+| **`json`** | Autonomous Swarm Only | Structured JSON | Protocol Precision & Cost |
+
+### 2. Mode Selection Logic (Diagram B)
+
+```text
+       [ AGENT TRIGGERED ]
+               |
+      (Is Collaboration?) -- NO --> [ MODE: text ] (Default)
+               |
+              YES
+               |
+      [ LOAD Participants ]
+               |
+      (Contains human?) -- YES --> [ MODE: text ]
+               |
+               NO
+               |
+         [ MODE: json ]
+```
+
+### 3. Benefits of Adaptive Protocol
+
+- **Protocol Density**: In `json` mode, agents omit conversational filler, reducing token usage by ~30% for inter-agent communication.
+- **Audit Integrity**: `text` mode ensures humans can always observe the swarm's reasoning without needing custom parsers.
+
 ---
 
 ## 🛰️ Backbone Event Roster (Signals)

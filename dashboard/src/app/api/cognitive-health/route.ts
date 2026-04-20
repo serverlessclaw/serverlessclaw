@@ -1,3 +1,5 @@
+import { logger } from '@claw/core/lib/logger';
+
 export const dynamic = 'force-dynamic';
 
 interface AgentHealthRecord {
@@ -49,7 +51,7 @@ export async function GET() {
 
     return Response.json({ agents });
   } catch (e) {
-    console.error('Error fetching cognitive health:', e);
+    logger.error('Error fetching cognitive health:', e);
     return new Response(JSON.stringify({ agents: [], error: 'Failed to fetch health data' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },

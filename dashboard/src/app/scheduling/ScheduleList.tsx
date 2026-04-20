@@ -34,6 +34,7 @@ import { GovernanceProtocol } from './GovernanceProtocol';
 import CyberConfirm from '@/components/CyberConfirm';
 import { useTranslations } from '@/components/Providers/TranslationsProvider';
 import PageHeader from '@/components/PageHeader';
+import { logger } from '@claw/core/lib/logger';
 
 export default function ScheduleList() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -62,7 +63,7 @@ export default function ScheduleList() {
         })
       );
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       setFetchError(true);
       toast.error(t('SCHEDULING_LOAD_ERROR'));
     } finally {

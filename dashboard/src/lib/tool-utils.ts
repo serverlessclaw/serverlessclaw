@@ -4,6 +4,7 @@
  * both server and client/server components as needed.
  */
 import { tools } from './tool-definitions';
+import { logger } from '@claw/core/lib/logger';
 
 /** Options for fetching all tools. */
 interface GetAllToolsOptions {
@@ -26,7 +27,7 @@ export async function getToolUsage(): Promise<Record<string, { count: number; la
       >) ?? {}
     );
   } catch (e) {
-    console.error('Error fetching tool usage:', e);
+    logger.error('Error fetching tool usage:', e);
     return {};
   }
 }
@@ -85,7 +86,7 @@ export async function getAllTools(
 
     return [...localTools, ...mcpTools];
   } catch (e) {
-    console.error('Error fetching all tools:', e);
+    logger.error('Error fetching all tools:', e);
     return Object.values(tools).map((t) => ({
       name: t.name,
       description: t.description,

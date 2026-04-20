@@ -1,3 +1,5 @@
+import { logger } from '@claw/core/lib/logger';
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
@@ -62,7 +64,7 @@ export async function GET(request: Request) {
       meta: { days, agentId: agentId ?? 'all' },
     });
   } catch (e) {
-    console.error('Error fetching analytics:', e);
+    logger.error('Error fetching analytics:', e);
     return Response.json(
       {
         error: 'Failed to fetch analytics data',

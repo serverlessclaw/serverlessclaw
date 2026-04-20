@@ -113,11 +113,20 @@ export class MCPToolMapper {
    * Parses MCP callTool result into a structured ToolResult.
    */
   private static parseMcpToolResult(result: unknown): ToolResult {
-    const res = result as { content?: any[]; isError?: boolean };
+    const res = result as {
+      content?: Array<{
+        type?: 'text' | 'image' | 'resource' | string;
+        text?: string;
+        uri?: string;
+        mimeType?: string;
+        data?: string;
+      }>;
+      isError?: boolean;
+    };
     const images: string[] = [];
-    const resources: any[] = [];
+    const resources: Array<{ uri?: string; text?: string; mimeType?: string }> = [];
     let text = '';
-    const metadata: Record<string, any> = {};
+    const metadata: Record<string, unknown> = {};
 
     if (Array.isArray(res.content)) {
       for (const item of res.content) {
@@ -129,7 +138,10 @@ export class MCPToolMapper {
         } else if (item.type === 'image') {
           if (item.data) images.push(item.data);
           if (item.mimeType) {
-            metadata.imageMimeTypes = [...(metadata.imageMimeTypes || []), item.mimeType];
+            metadata.imageMimeTypes = [
+              ...((metadata.imageMimeTypes as string[]) || []),
+              item.mimeType,
+            ];
           }
         } else {
           metadata[item.type] = item;

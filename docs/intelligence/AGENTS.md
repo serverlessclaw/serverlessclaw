@@ -58,6 +58,35 @@ To evolve the system with a new specialized node:
 
 ---
 
+## 🔄 Session Promotion Flow (Diagram A)
+
+Agents can transition from a private 1:1 session to a multi-agent **Collaboration Hub**. This is typically triggered when a task requires specialized peer review or a human invites more help.
+
+```text
+    [ 1:1 SESSION ]             [ TRIGGER ]             [ COLLABORATION HUB ]
+(Human <-> SuperClaw)      (Invite Agent / Gap)     (Multi-Agent / Shared)
+          |                         |                        |
+          |---- (1) Incubation ---->|                        |
+          |                         |                        |
+          |                         |--- (2) Promo Action -->|
+          |                         |   (transitToCollab)    |
+          |                         |                        |
+          |                         |                        |---- (3) Seeding ---+
+          |                         |                        |  (History Summary) |
+          v                         v                        v                    |
+    [ ARCHIVED ]              [ LOG RECORDED ]          [ ACTIVE HUB ]  <---------+
+                                                     (Facilitator joins)
+```
+
+### Collaboration Lifecycle
+
+1. **Incubation**: A task starts as a direct interaction with the system orchestrator (SuperClaw).
+2. **Promotion**: A strategic gap or a manual human request triggers a "Promotion to Collaboration."
+3. **Execution**: Multiple sub-agents (Critics, Coders) join the shared session. The Facilitator moderates.
+4. **Conclusion**: The Owner agent summarizes the verdict, executes the action, and archives the hub.
+
+---
+
 ## 🧪 Testing Agent Interfaces
 
 To ensure coordination doesn't break, follow a **Contract-First** pattern:

@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { HTTP_STATUS } from './constants';
+import { logger } from '@claw/core/lib/logger';
 
 /** Standard API error response shape. */
 export interface ApiErrorResponse {
@@ -50,7 +51,7 @@ export function withApiHandler<T = unknown>(
           { status: error.statusCode }
         );
       }
-      console.error('API Error:', error);
+      logger.error('API Error:', error);
       return NextResponse.json(
         {
           error: 'Internal Server Error',

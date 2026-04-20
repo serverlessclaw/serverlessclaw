@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { logger } from '@claw/core/lib/logger';
 
 interface UICommandDetail {
   action: 'open_modal' | 'close_modal' | 'focus_resource' | 'toggle_sidebar';
@@ -53,7 +54,7 @@ export function UICommandProvider({ children }: { children: React.ReactNode }) {
       if (!detail || !detail.action) return;
       
       setLastCommand(detail);
-      console.log(`[UICommandProvider] Executing agent command:`, detail);
+      logger.info(`[UICommandProvider] Executing agent command:`, detail);
 
       switch (detail.action) {
         case 'open_modal':

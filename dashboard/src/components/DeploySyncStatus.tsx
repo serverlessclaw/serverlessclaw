@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Typography from '@/components/ui/Typography';
 import Badge from '@/components/ui/Badge';
 import { GitBranch, CheckCircle2, XCircle, Loader2, Link2 } from 'lucide-react';
+import { logger } from '@claw/core/lib/logger';
 
 interface SyncRecord {
   buildId: string;
@@ -24,7 +25,7 @@ export default function DeploySyncStatus() {
         const data = await res.json();
         setSyncs(data.syncs || []);
       } catch (e) {
-        console.error('Failed to fetch sync status:', e);
+        logger.error('Failed to fetch sync status:', e);
       } finally {
         setIsLoading(false);
       }

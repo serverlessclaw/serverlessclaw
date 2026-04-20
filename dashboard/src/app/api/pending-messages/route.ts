@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@claw/core/lib/logger';
 export const dynamic = 'force-dynamic';
 
 /**
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json({ pendingMessages });
   } catch (error) {
-    console.error('Failed to get pending messages:', error);
+    logger.error('Failed to get pending messages:', error);
     return NextResponse.json(
       {
         error: 'Failed to get pending messages',
@@ -58,7 +59,7 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Failed to remove pending message:', error);
+    logger.error('Failed to remove pending message:', error);
     return NextResponse.json(
       {
         error: 'Failed to remove pending message',
@@ -102,7 +103,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Failed to update pending message:', error);
+    logger.error('Failed to update pending message:', error);
     return NextResponse.json(
       {
         error: 'Failed to update pending message',

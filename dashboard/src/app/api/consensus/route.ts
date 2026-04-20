@@ -1,3 +1,5 @@
+import { logger } from '@claw/core/lib/logger';
+
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
@@ -16,7 +18,7 @@ export async function GET() {
     }));
     return Response.json({ requests });
   } catch (e) {
-    console.error('Error fetching consensus:', e);
+    logger.error('Error fetching consensus:', e);
     return Response.json({ requests: [] });
   }
 }

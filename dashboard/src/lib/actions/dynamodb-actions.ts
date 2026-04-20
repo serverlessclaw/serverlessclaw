@@ -4,6 +4,7 @@ import { Resource } from 'sst';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { revalidatePath } from 'next/cache';
+import { logger } from '@claw/core/lib/logger';
 
 /**
  * Deletes a memory item from DynamoDB by userId and timestamp.
@@ -38,7 +39,7 @@ export async function deleteMemoryItem(
 
     revalidatePath(revalidatePathString);
   } catch (e) {
-    console.error('Error deleting memory item:', e);
+    logger.error('Error deleting memory item:', e);
     throw e;
   }
 }

@@ -43,54 +43,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       }
     }
 
-    // 1. Create the collaboration
-    // We use the human user as the owner
-    const collaboration = await memory.createCollaboration(
+    // 1. Create and Seed the collaboration (Atomic in core)
+    const collaboration = await memory.transitToCollaboration(
       userId,
-      'human',
-      {
-        name: name || `Collaboration: ${sessionId.substring(0, 8)}`,
-        description: `Transited from trace session ${sessionId}`,
-        initialParticipants: [
-          // The owner (human) is added automatically by createCollaboration
-          // Add the invited agents
-          ...(invitedAgentIds || []).map((id: string) => ({
-            id,
-            type: 'agent' as ParticipantType,
-            role: 'editor',
-          })),
-          // Auto-inject Facilitator
-          {
-            id: AgentType.FACILITATOR,
-            type: 'agent' as ParticipantType,
-            role: 'editor',
-          }
-        ],
-        // Link to the existing trace session if possible (metadata only)
-        tags: [`trace_session:${sessionId}`]
-      }
+      '', // default workspace if none
+      sessionId,
+      invitedAgentIds || [],
+      name
     );
-
-    // 2. Optional: Seed the collaboration with the last few messages from history
-    // (This ensures context continuity in the new shared session)
-    try {
-      const history = await memory.getHistory(`CONV#${userId}#${sessionId}`);
-      if (history && history.length > 0) {
-        // We take the last 5 messages as context summary
-        const recent = history.slice(-5);
-        const summary = recent.map(m => `${m.role}: ${m.content}`).join('\n\n');
-        
-        await memory.addMessage(`shared#collab#${collaboration.collaborationId}`, {
-          role: MessageRole.SYSTEM,
-          content: `### Context Transition ###\n\nThis collaboration has been transited from a 1:1 session. Brief history summary:\n\n${summary}`,
-          name: AgentType.FACILITATOR,
-          traceId: `transit-${collaboration.collaborationId}`,
-          messageId: `transit-${collaboration.collaborationId}-seed`,
-        }, (userId as string | undefined));
-      }
-    } catch (e) {
-      logger.warn('[Collab Transit] Failed to seed history:', e);
-    }
 
     return NextResponse.json({ 
       success: true, 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { ChatMessage } from './types';
+import { logger } from '@claw/core/lib/logger';
 import {
   shouldProcessChunk,
   applyChunkToMessages,
@@ -44,7 +45,7 @@ export function useChatConnection(
           });
         }
       } catch (e) {
-        console.warn('Silent History fetch failed:', e);
+        logger.warn('Silent History fetch failed:', e);
       }
     },
     [isPostInFlight, setMessagesRef]
@@ -69,7 +70,7 @@ export function useChatConnection(
   const handleMessage = useCallback(
     (topic: string, data: RealtimeMessage) => {
       const currentActiveId = activeSessionRef.current;
-      console.log(`[useChatConnection] Raw signal on ${topic}:`, data);
+      logger.info(`[useChatConnection] Raw signal on ${topic}:`, data);
       
       const normalized: IncomingChunk & { 'detail-type'?: string } = {
         ...(typeof data.detail === 'object' && data.detail !== null ? data.detail : {}),
@@ -77,10 +78,10 @@ export function useChatConnection(
       };
 
       if (shouldProcessChunk(normalized, currentActiveId, 'dashboard-user')) {
-        console.log(`[useChatConnection] ✅ Processing chunk: ${normalized.messageId} (msg: ${normalized.message?.length ?? 0} chars)`);
+        logger.info(`[useChatConnection] ✅ Processing chunk: ${normalized.messageId} (msg: ${normalized.message?.length ?? 0} chars)`);
         setMessagesRef.current((prev) => applyChunkToMessages(prev, normalized, seenMessageIds.current));
       } else {
-        console.warn(`[useChatConnection] ⚠️ Chunk ignored (filter): ${normalized.messageId} on topic ${topic}`);
+        logger.warn(`[useChatConnection] ⚠️ Chunk ignored (filter): ${normalized.messageId} on topic ${topic}`);
         if (currentActiveId && !isPostInFlight.current) {
           fetchHistorySilently(currentActiveId);
         }

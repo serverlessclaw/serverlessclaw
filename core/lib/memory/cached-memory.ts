@@ -422,6 +422,21 @@ export class CachedMemory implements IMemory {
   async listCollaborationsForParticipant(pid: string, pt: ParticipantType, wid?: string) {
     return this.collaboration.listCollaborationsForParticipant(pid, pt, wid);
   }
+  async transitToCollaboration(
+    userId: string,
+    workspaceId: string,
+    sourceSessionId: string,
+    invitedAgentIds: string[],
+    name?: string
+  ) {
+    return this.collaboration.transitToCollaboration(
+      userId,
+      workspaceId,
+      sourceSessionId,
+      invitedAgentIds,
+      name
+    );
+  }
 
   // --- SYSTEM OPERATIONS (Delegated) ---
 

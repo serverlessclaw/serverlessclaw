@@ -123,7 +123,7 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
           lastKey = scanRes.LastEvaluatedKey;
         } while (lastKey);
 
-        console.log(`[Trace API] Successfully purged ${deletedCount} trace nodes`);
+        logger.info(`[Trace API] Successfully purged ${deletedCount} trace nodes`);
         revalidatePath('/trace');
         return NextResponse.json({ success: true, count: deletedCount });
       } catch (scanError: unknown) {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { Resource } from 'sst';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { logger } from '@claw/core/lib/logger';
 
 export async function GET() {
   try {
@@ -98,7 +99,7 @@ export async function GET() {
 
     return NextResponse.json({ activeDispatches });
   } catch (error) {
-    console.error('Error fetching collaboration data:', error);
+    logger.error('Error fetching collaboration data:', error);
     return NextResponse.json({ activeDispatches: [] });
   }
 }

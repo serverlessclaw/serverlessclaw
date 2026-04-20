@@ -4,6 +4,7 @@ import React from 'react';
 import { Download } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { toast } from 'sonner';
+import { logger } from '@claw/core/lib/logger';
 
 import { Trace } from '@/lib/types/ui';
 
@@ -37,7 +38,7 @@ export default function ExportTracesButton({ traces }: ExportTracesButtonProps) 
 
       toast.success(`${traces.length} traces exported successfully`);
     } catch (err) {
-      console.error('Export failed:', err);
+      logger.error('Export failed:', err);
       toast.error('Failed to export traces');
     }
   };

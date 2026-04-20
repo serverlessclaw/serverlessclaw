@@ -1,3 +1,5 @@
+import { logger } from '@claw/core/lib/logger';
+
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
@@ -20,7 +22,7 @@ export async function GET() {
 
     return Response.json({ budgets, maxTotalBudgetUsd: configItem?.maxTotalBudgetUsd ?? 10.0 });
   } catch (e) {
-    console.error('Error fetching budget:', e);
+    logger.error('Error fetching budget:', e);
     return Response.json({ budgets: [], maxTotalBudgetUsd: 10.0 });
   }
 }

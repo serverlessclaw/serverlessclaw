@@ -104,6 +104,10 @@ Most common recurring issues (see ANTI-PATTERNS.md for details):
 5. Double execution of Class C actions
 6. Direct object-level overwrite instead of atomic update
 7. Missing conditionExpression in DynamoDB operations
+108. Missing `shared#collab#` context summary during promotion
+109. Adaptive Mode failure (autonomous agents talking in natural language)
+110. Unauthorized agent invitation (missing Principle 14 check in transit)
+111. Race condition in collaboration creation (non-atomic creation)
 
 ## Summary
 

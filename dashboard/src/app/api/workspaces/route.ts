@@ -1,5 +1,6 @@
 import { ApiError, requireEnum, requireFields, withApiHandler } from '@/lib/api-handler';
 import type { InviteMemberInput, MemberType, WorkspaceRole } from '@claw/core/lib/types/workspace';
+import { logger } from '@claw/core/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,7 +57,7 @@ export async function GET() {
     }));
     return Response.json({ workspaces: formatted });
   } catch (e) {
-    console.error('Error fetching workspaces:', e);
+    logger.error('Error fetching workspaces:', e);
     return Response.json({ workspaces: [] });
   }
 }

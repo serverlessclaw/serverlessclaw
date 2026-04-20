@@ -1,6 +1,7 @@
 /**
  * Generic NDJSON stream processor for chat interactions.
  */
+import { logger } from '@claw/core/lib/logger';
 
 export interface StreamCallbacks<TFinal> {
   onChunk?: (chunk: unknown) => void;
@@ -49,7 +50,7 @@ export async function processNdjsonStream<TFinal = unknown>(
               callbacks.onError(payload.error || 'Unknown stream error');
             }
           } catch (e) {
-            console.warn('[StreamReader] Failed to parse line:', trimmedLine.substring(0, 100), e);
+            logger.warn('[StreamReader] Failed to parse line:', trimmedLine.substring(0, 100), e);
           }
         }
       }

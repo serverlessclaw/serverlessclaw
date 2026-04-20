@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useRealtimeContext, type RealtimeMessage } from '@/components/Providers/RealtimeProvider';
+import { logger } from '@claw/core/lib/logger';
 
 export type { RealtimeMessage };
 
@@ -41,10 +42,10 @@ export function useRealtime({
 
   useEffect(() => {
     if (!onMessageRef.current) return;
-    console.log(`[useRealtime] Subscribing to: ${allTopics.join(', ')}`);
+    logger.info(`[useRealtime] Subscribing to: ${allTopics.join(', ')}`);
     const unsubscribe = subscribe(allTopics, (topic, data) => onMessageRef.current?.(topic, data));
     return () => {
-      console.log(`[useRealtime] Unsubscribing from topics...`);
+      logger.info(`[useRealtime] Unsubscribing from topics...`);
       unsubscribe();
     };
   }, [allTopics, subscribe]);

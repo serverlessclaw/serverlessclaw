@@ -15,6 +15,7 @@ import { NextResponse } from 'next/server';
 import { HTTP_STATUS, DYNAMO_KEYS } from '@claw/core/lib/constants';
 import { BACKBONE_REGISTRY } from '@claw/core/lib/backbone';
 import { SSTResource } from '@claw/core/lib/types/index';
+import { logger } from '@claw/core/lib/logger';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -32,7 +33,7 @@ export async function GET(): Promise<NextResponse> {
     const configs = await AgentRegistry.getAllConfigs();
     return NextResponse.json(configs);
   } catch (error) {
-    console.error('Failed to fetch agents:', error);
+    logger.error('Failed to fetch agents:', error);
     return NextResponse.json(
       {
         error: 'Failed to fetch agents',
@@ -73,7 +74,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error updating agents config:', error);
+    logger.error('Error updating agents config:', error);
     return NextResponse.json(
       {
         error: 'Failed to update agents',
@@ -126,7 +127,7 @@ export async function PATCH(request: Request): Promise<NextResponse> {
 
     return NextResponse.json({ success: true, agentId });
   } catch (error) {
-    console.error('Error updating agent:', error);
+    logger.error('Error updating agent:', error);
     return NextResponse.json(
       {
         error: 'Failed to update agent',
@@ -187,7 +188,7 @@ export async function DELETE(request: Request): Promise<NextResponse> {
 
     return NextResponse.json({ success: true, agentId });
   } catch (error) {
-    console.error('Error deleting agent:', error);
+    logger.error('Error deleting agent:', error);
     return NextResponse.json(
       {
         error: 'Failed to delete agent',

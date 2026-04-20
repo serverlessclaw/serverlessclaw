@@ -101,12 +101,13 @@ class Logger {
 
   /**
    * Logs a debug message.
-   * @param message - The message to log.
+   * @param message - The message or object to log.
    * @param contextOrArgs - Either a LogContext object or additional arguments.
    * @param args - Additional arguments if context was provided.
    */
-  debug(message: string, contextOrArgs?: LogContext | unknown, ...args: unknown[]): void {
+  debug(message: unknown, contextOrArgs?: LogContext | unknown, ...args: unknown[]): void {
     if (this.level <= LogLevel.DEBUG) {
+      const msg = typeof message === 'string' ? message : String(message);
       if (
         contextOrArgs &&
         typeof contextOrArgs === 'object' &&
@@ -116,23 +117,24 @@ class Logger {
           'agentId' in contextOrArgs ||
           Object.keys(contextOrArgs).length > 0)
       ) {
-        this.output('debug', 'DEBUG', message, contextOrArgs as LogContext, ...args);
+        this.output('debug', 'DEBUG', msg, contextOrArgs as LogContext, ...args);
       } else if (contextOrArgs !== undefined) {
-        this.output('debug', 'DEBUG', message, undefined, contextOrArgs, ...args);
+        this.output('debug', 'DEBUG', msg, undefined, contextOrArgs, ...args);
       } else {
-        this.output('debug', 'DEBUG', message, undefined, ...args);
+        this.output('debug', 'DEBUG', msg, undefined, ...args);
       }
     }
   }
 
   /**
    * Logs an info message.
-   * @param message - The message to log.
+   * @param message - The message or object to log.
    * @param contextOrArgs - Either a LogContext object or additional arguments.
    * @param args - Additional arguments if context was provided.
    */
-  info(message: string, contextOrArgs?: LogContext | unknown, ...args: unknown[]): void {
+  info(message: unknown, contextOrArgs?: LogContext | unknown, ...args: unknown[]): void {
     if (this.level <= LogLevel.INFO) {
+      const msg = typeof message === 'string' ? message : String(message);
       if (
         contextOrArgs &&
         typeof contextOrArgs === 'object' &&
@@ -142,23 +144,24 @@ class Logger {
           'agentId' in contextOrArgs ||
           Object.keys(contextOrArgs).length > 0)
       ) {
-        this.output('info', 'INFO', message, contextOrArgs as LogContext, ...args);
+        this.output('info', 'INFO', msg, contextOrArgs as LogContext, ...args);
       } else if (contextOrArgs !== undefined) {
-        this.output('info', 'INFO', message, undefined, contextOrArgs, ...args);
+        this.output('info', 'INFO', msg, undefined, contextOrArgs, ...args);
       } else {
-        this.output('info', 'INFO', message, undefined, ...args);
+        this.output('info', 'INFO', msg, undefined, ...args);
       }
     }
   }
 
   /**
    * Logs a warning message.
-   * @param message - The message to log.
+   * @param message - The message or object to log.
    * @param contextOrArgs - Either a LogContext object or additional arguments.
    * @param args - Additional arguments if context was provided.
    */
-  warn(message: string, contextOrArgs?: LogContext | unknown, ...args: unknown[]): void {
+  warn(message: unknown, contextOrArgs?: LogContext | unknown, ...args: unknown[]): void {
     if (this.level <= LogLevel.WARN) {
+      const msg = typeof message === 'string' ? message : String(message);
       if (
         contextOrArgs &&
         typeof contextOrArgs === 'object' &&
@@ -168,23 +171,24 @@ class Logger {
           'agentId' in contextOrArgs ||
           Object.keys(contextOrArgs).length > 0)
       ) {
-        this.output('warn', 'WARN', message, contextOrArgs as LogContext, ...args);
+        this.output('warn', 'WARN', msg, contextOrArgs as LogContext, ...args);
       } else if (contextOrArgs !== undefined) {
-        this.output('warn', 'WARN', message, undefined, contextOrArgs, ...args);
+        this.output('warn', 'WARN', msg, undefined, contextOrArgs, ...args);
       } else {
-        this.output('warn', 'WARN', message, undefined, ...args);
+        this.output('warn', 'WARN', msg, undefined, ...args);
       }
     }
   }
 
   /**
    * Logs an error message.
-   * @param message - The message to log.
+   * @param message - The message or object to log.
    * @param contextOrArgs - Either a LogContext object or additional arguments.
    * @param args - Additional arguments if context was provided.
    */
-  error(message: string, contextOrArgs?: LogContext | unknown, ...args: unknown[]): void {
+  error(message: unknown, contextOrArgs?: LogContext | unknown, ...args: unknown[]): void {
     if (this.level <= LogLevel.ERROR) {
+      const msg = typeof message === 'string' ? message : String(message);
       if (
         contextOrArgs &&
         typeof contextOrArgs === 'object' &&
@@ -194,22 +198,22 @@ class Logger {
           'agentId' in contextOrArgs ||
           Object.keys(contextOrArgs).length > 0)
       ) {
-        this.output('error', 'ERROR', message, contextOrArgs as LogContext, ...args);
+        this.output('error', 'ERROR', msg, contextOrArgs as LogContext, ...args);
       } else if (contextOrArgs !== undefined) {
-        this.output('error', 'ERROR', message, undefined, contextOrArgs, ...args);
+        this.output('error', 'ERROR', msg, undefined, contextOrArgs, ...args);
       } else {
-        this.output('error', 'ERROR', message, undefined, ...args);
+        this.output('error', 'ERROR', msg, undefined, ...args);
       }
     }
   }
 
   /**
    * Logs a generic message (defaults to INFO).
-   * @param message - The message to log.
+   * @param message - The message or object to log.
    * @param contextOrArgs - Either a LogContext object or additional arguments.
    * @param args - Additional arguments if context was provided.
    */
-  log(message: string, contextOrArgs?: LogContext | unknown, ...args: unknown[]): void {
+  log(message: unknown, contextOrArgs?: LogContext | unknown, ...args: unknown[]): void {
     this.info(message, contextOrArgs, ...args);
   }
 }

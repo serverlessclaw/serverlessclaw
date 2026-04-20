@@ -98,9 +98,18 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
   // 4. Process the task via unified lifecycle (Session Locking + Heartbeat)
   const { processEventWithAgent } = await import('../handlers/events/shared');
 
-  let result: { responseText: string; attachments: Message['attachments']; parsedData?: any };
+  interface CoderParsedData {
+    patch?: string;
+    buildId?: string;
+  }
+
+  let result: {
+    responseText: string;
+    attachments: Message['attachments'];
+    parsedData?: CoderParsedData;
+  };
   try {
-    result = await processEventWithAgent(userId, AgentType.CODER, task || '', {
+    const processResult = await processEventWithAgent(userId, AgentType.CODER, task || '', {
       context,
       traceId,
       taskId: taskId ?? traceId,
@@ -113,6 +122,10 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
       outboundHandlerName: AgentType.CODER,
       formatResponse: (text) => text,
     });
+    result = {
+      ...processResult,
+      parsedData: processResult.parsedData as CoderParsedData | undefined,
+    };
   } catch (err) {
     logger.error('Unexpected error in Coder Agent processing:', err);
     result = {

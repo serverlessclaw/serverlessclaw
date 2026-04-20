@@ -10,6 +10,7 @@ import {
 } from '@aws-sdk/client-scheduler';
 import { NextResponse } from 'next/server';
 import { HTTP_STATUS } from '@claw/core/lib/constants';
+import { logger } from '@claw/core/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +35,7 @@ export async function GET() {
             ...details,
           };
         } catch (e) {
-          console.error(`Failed to fetch details for schedule ${s.Name}:`, e);
+          logger.error(`Failed to fetch details for schedule ${s.Name}:`, e);
           return s;
         }
       })
@@ -42,7 +43,7 @@ export async function GET() {
 
     return NextResponse.json(detailedSchedules.filter(Boolean));
   } catch (error) {
-    console.error('Failed to fetch schedules:', error);
+    logger.error('Failed to fetch schedules:', error);
     return NextResponse.json(
       {
         error: 'Failed to fetch schedules',
@@ -117,7 +118,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (error) {
-    console.error('Failed to process schedule POST:', error);
+    logger.error('Failed to process schedule POST:', error);
     return NextResponse.json(
       {
         error: 'Failed to process request',
@@ -154,7 +155,7 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Failed to update schedule:', error);
+    logger.error('Failed to update schedule:', error);
     return NextResponse.json(
       {
         error: 'Failed to update schedule',
@@ -180,7 +181,7 @@ export async function DELETE(request: Request) {
     await scheduler.send(new DeleteScheduleCommand({ Name: name }));
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Failed to delete schedule:', error);
+    logger.error('Failed to delete schedule:', error);
     return NextResponse.json(
       {
         error: 'Failed to delete schedule',

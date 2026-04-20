@@ -675,6 +675,26 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
   }
 
   /**
+   * Transits a 1:1 session into a collaboration session.
+   */
+  async transitToCollaboration(
+    userId: string,
+    workspaceId: string,
+    sourceSessionId: string,
+    invitedAgentIds: string[],
+    name?: string
+  ): Promise<import('../types/collaboration').Collaboration> {
+    return CollaborationOps.transitToCollaboration(
+      this,
+      userId,
+      workspaceId,
+      sourceSessionId,
+      invitedAgentIds,
+      name
+    );
+  }
+
+  /**
    * Gets cache statistics for monitoring. DynamoMemory itself doesn't cache,
    * so it returns zeroed stats. Use CachedMemory for actual caching.
    */

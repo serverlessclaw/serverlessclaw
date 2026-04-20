@@ -1,5 +1,6 @@
 import { Resource } from 'sst';
 import { realtime } from 'sst/aws/realtime';
+import { logger } from '../lib/logger';
 
 /**
  * Enhanced SST Realtime Authorizer for Diagnostics.
@@ -7,7 +8,7 @@ import { realtime } from 'sst/aws/realtime';
  */
 export const handler = async (event: unknown, context: unknown, callback: unknown) => {
   // 1. Log EVERYTHING for diagnostics
-  console.log('[RealtimeAuth] RAW_EVENT:', JSON.stringify(event));
+  logger.info('[RealtimeAuth] RAW_EVENT:', JSON.stringify(event));
 
   const typedEvent = event as {
     protocolData?: {
@@ -41,7 +42,7 @@ export const handler = async (event: unknown, context: unknown, callback: unknow
     token = Buffer.from(typedEvent.protocolData.mqtt.password, 'base64').toString();
   }
 
-  console.log(`[RealtimeAuth] Detected Token: ${token ? token.substring(0, 5) + '...' : 'NONE'}`);
+  logger.info(`[RealtimeAuth] Detected Token: ${token ? token.substring(0, 5) + '...' : 'NONE'}`);
 
   // 3. Create the authorizer
   const auth = realtime.authorizer(async (validatedToken) => {
@@ -52,18 +53,18 @@ export const handler = async (event: unknown, context: unknown, callback: unknow
     const isDevToken = finalToken === 'dashboard-dev-token-elegant';
     const isActuallyMissing = !finalToken || finalToken.length < 10;
 
-    console.log(
+    logger.info(
       `[RealtimeAuth] Decision: isDevToken=${isDevToken}, isActuallyMissing=${isActuallyMissing}, finalTokenLen=${finalToken?.length ?? 0}`
     );
 
     if (isActuallyMissing && !isDevToken) {
-      console.warn(
+      logger.warn(
         `[RealtimeAuth] ❌ Denied: Token too short or missing (${finalToken?.length ?? 0} chars)`
       );
       return { publish: [], subscribe: [] };
     }
 
-    console.log(`[RealtimeAuth] ✅ Authorized for scope: ${prefix}/*`);
+    logger.info(`[RealtimeAuth] ✅ Authorized for scope: ${prefix}/*`);
     return {
       publish: [`${prefix}/*`],
       subscribe: [`${prefix}/*`],

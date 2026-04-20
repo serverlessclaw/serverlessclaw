@@ -18,6 +18,7 @@ import {
 import Typography from '@/components/ui/Typography';
 import Button from '@/components/ui/Button';
 import { useTranslations } from '@/components/Providers/TranslationsProvider';
+import { logger } from '@claw/core/lib/logger';
 
 // Mapping string icon names to Lucide components
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -73,7 +74,7 @@ export function AgentSelector({
           
         setAgents(llmAgents);
       } catch (e) {
-        console.error('Failed to fetch agents:', e);
+        logger.error('Failed to fetch agents:', e);
       } finally {
         setIsLoading(false);
       }

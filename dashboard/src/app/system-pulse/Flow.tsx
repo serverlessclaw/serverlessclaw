@@ -45,6 +45,7 @@ import { THEME } from '@/lib/theme';
 import Button from '@/components/ui/Button';
 import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
+import { logger } from '@claw/core/lib/logger';
 
 /**
  * Maps agnostic icon keys to Lucide components.
@@ -478,7 +479,7 @@ export function FlowContent() {
       setEdges(newEdges);
       setLoading(false);
     } catch (e) {
-      console.error('Failed to fetch system blueprint:', e);
+      logger.error('Failed to fetch system blueprint:', e);
       setLoading(false);
     }
   }, [setNodes, setEdges]);

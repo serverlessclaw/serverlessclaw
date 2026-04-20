@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { logger } from '@claw/core/lib/logger';
 import {
   ChatMessage,
   AttachmentPreview,
@@ -55,7 +56,7 @@ export function useChatMessages(
         });
       }
     } catch (error) {
-      console.error('Failed to fetch history:', error);
+      logger.error('Failed to fetch history:', error);
     } finally {
       setIsLoading(false);
     }
@@ -104,7 +105,7 @@ export function useChatMessages(
         const isMeaningfulThought = data.thought && data.thought.trim().length > 1;
         const willPreserveContent = !!(existing.content && existing.content.trim().length > 0);
 
-        console.log(
+        logger.info(
           `[updateAssistantResponse] id=${targetId.substring(0, 12)}, ` +
           `existingLen=${existing.content?.length ?? 0}, replyLen=${data.reply?.length ?? 0}, ` +
           `preserve=${willPreserveContent}, hasMeaningfulThought=${isMeaningfulThought}`
@@ -140,7 +141,7 @@ export function useChatMessages(
   };
 
   const handleConnectionError = async (sessionId: string, error: unknown) => {
-    console.error('Chat connection error:', error);
+    logger.error('Chat connection error:', error);
     const errorMsg = AGENT_ERRORS.CONNECTION_FAILURE;
     if (sessionId === activeSessionRef.current) {
       const errorId = `error_${Date.now()}`;
@@ -166,7 +167,7 @@ export function useChatMessages(
         }),
       });
     } catch (e) {
-      console.error('Failed to report strategic gap:', e);
+      logger.error('Failed to report strategic gap:', e);
     }
   };
 
@@ -249,7 +250,7 @@ export function useChatMessages(
         let errorData;
         try { errorData = await response.json(); } catch { errorData = { error: 'Unknown error' }; }
         const errorContent = errorData.details || errorData.error || AGENT_ERRORS.PROCESS_FAILURE;
-        console.error('Chat API error:', errorData);
+        logger.error('Chat API error:', errorData);
         if (currentSessionId === activeSessionRef.current) {
           setMessages((prev: ChatMessage[]) => [
             ...prev,
@@ -323,7 +324,7 @@ export function useChatMessages(
       }
       fetchSessions();
     } catch (error) {
-      console.error('Approval error:', error);
+      logger.error('Approval error:', error);
     } finally {
       isPostInFlight.current = false;
       setIsLoading(false);
@@ -364,7 +365,7 @@ export function useChatMessages(
       }
       fetchSessions();
     } catch (error) {
-      console.error('Rejection error:', error);
+      logger.error('Rejection error:', error);
     } finally {
       isPostInFlight.current = false;
       setIsLoading(false);
@@ -405,7 +406,7 @@ export function useChatMessages(
       }
       fetchSessions();
     } catch (error) {
-      console.error('Clarification error:', error);
+      logger.error('Clarification error:', error);
     } finally {
       isPostInFlight.current = false;
       setIsLoading(false);
@@ -454,7 +455,7 @@ export function useChatMessages(
 
       fetchSessions();
     } catch (error) {
-      console.error('Cancellation error:', error);
+      logger.error('Cancellation error:', error);
     } finally {
       isPostInFlight.current = false;
       setIsLoading(false);

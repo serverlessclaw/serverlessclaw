@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import EvolutionBudgetView from '@/components/EvolutionBudgetView';
 import { TrackBudget } from '@/lib/types/dashboard';
+import { logger } from '@claw/core/lib/logger';
 
 export default function EvolutionBudgetSection() {
   const [budgets, setBudgets] = useState<TrackBudget[]>([]);
@@ -15,7 +16,7 @@ export default function EvolutionBudgetSection() {
         const data = await res.json();
         setBudgets(data.budgets || []);
       } catch (e) {
-        console.error('Failed to fetch budget:', e);
+        logger.error('Failed to fetch budget:', e);
       } finally {
         setIsLoading(false);
       }

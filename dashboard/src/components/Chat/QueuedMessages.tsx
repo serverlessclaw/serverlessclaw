@@ -4,6 +4,7 @@
  */
 import React, { useState } from 'react';
 import { Clock, Edit2, X, Check } from 'lucide-react';
+import { logger } from '@claw/core/lib/logger';
 import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -35,7 +36,7 @@ export function QueuedMessageItem({ message, onEdit, onRemove }: QueuedMessageIt
       await onEdit(message.id, editedContent);
       setIsEditing(false);
     } catch (error) {
-      console.error('Failed to edit message:', error);
+      logger.error('Failed to edit message:', error);
       setEditedContent(message.content);
     } finally {
       setIsLoading(false);
@@ -47,7 +48,7 @@ export function QueuedMessageItem({ message, onEdit, onRemove }: QueuedMessageIt
     try {
       await onRemove(message.id);
     } catch (error) {
-      console.error('Failed to remove message:', error);
+      logger.error('Failed to remove message:', error);
     } finally {
       setIsLoading(false);
     }

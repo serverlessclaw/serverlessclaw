@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { AUTH } from '@/lib/constants';
+import { logger } from '@claw/core/lib/logger';
 
 const PUBLIC_PATHS = [
   '/login',
@@ -30,7 +31,7 @@ export default function proxy(request: NextRequest): NextResponse {
   
   // Basic request logging with timestamp
   if (!pathname.startsWith('/_next') && !pathname.startsWith('/static')) {
-    console.log(`[${timestamp}] ${request.method} ${pathname}`);
+    logger.info(`[${timestamp}] ${request.method} ${pathname}`);
   }
 
   if (isPublicPath(pathname)) {

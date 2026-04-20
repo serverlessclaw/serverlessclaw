@@ -37,6 +37,7 @@ import Typography from '@/components/ui/Typography';
 import Button from '@/components/ui/Button';
 import { useRealtimeContext } from '@/components/Providers/RealtimeProvider';
 import CyberTooltip from '@/components/CyberTooltip';
+import { logger } from '@claw/core/lib/logger';
 
 /**
  * Main application sidebar component.
@@ -65,7 +66,7 @@ export default function Sidebar() {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch (error) {
-      console.error('Logout failed:', error);
+      logger.error('Logout failed:', error);
     } finally {
       router.push('/login');
       router.refresh();

@@ -7,6 +7,15 @@ import { act, render, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { RealtimeProvider } from './RealtimeProvider';
 import { useRealtime } from '@/hooks/useRealtime';
+import { logger } from '@claw/core/lib/logger';
+
+vi.mock('@claw/core/lib/logger', () => ({
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
 
 const mqttState = vi.hoisted(() => {
   const connections: Array<{ url: string; options: any; client: any }> = [];
@@ -269,8 +278,8 @@ describe('RealtimeProvider loop prevention', () => {
   });
 
   it('logs reconnect and offline events', async () => {
-    const consoleSpy = vi.spyOn(console, 'log');
-    const warnSpy = vi.spyOn(console, 'warn');
+    const infoSpy = vi.spyOn(logger, 'info').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     
     render(
       <RealtimeProvider>
@@ -284,7 +293,7 @@ describe('RealtimeProvider loop prevention', () => {
     act(() => {
       client._events.reconnect();
     });
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Reconnecting'));
+    expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining('Reconnecting'));
 
     act(() => {
       client._events.offline();

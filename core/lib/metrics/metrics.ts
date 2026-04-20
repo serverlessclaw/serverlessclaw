@@ -77,7 +77,9 @@ async function persistToDynamoDB(metrics: MetricDatum[]): Promise<void> {
         metricCount: critical.length,
       });
     } catch {
-      console.error('[METRICS] DynamoDB fallback failed and logger unavailable:', e);
+      // Last resort fallback
+      const { logger } = await import('../logger');
+      logger.error('[METRICS] DynamoDB fallback failed and logger unavailable:', e);
     }
   }
 }

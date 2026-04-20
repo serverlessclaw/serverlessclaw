@@ -1,6 +1,7 @@
 import { getResourceUrl } from '@/lib/sst-utils';
 
 import { DynamoMemory } from '@claw/core/lib/memory';
+import { logger } from '@claw/core/lib/logger';
 import ResilienceHeader from './ResilienceHeader';
 import ResilienceGaugesSection from './ResilienceGaugesSection';
 import ResilienceDiagnosticsCard from './ResilienceDiagnosticsCard';
@@ -10,7 +11,7 @@ async function getHealth() {
   const apiUrl = getResourceUrl('WebhookApi', 'url');
 
   if (!apiUrl) {
-    console.error('API URL is missing from Resources and Environment');
+    logger.error('API URL is missing from Resources and Environment');
     return {
       status: 'error',
       message: 'Infrastructure Missing',
@@ -32,7 +33,7 @@ async function getHealth() {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Health check failed. Status:', response.status, 'Body:', errorText);
+      logger.error('Health check failed. Status:', response.status, 'Body:', errorText);
       return {
         status: 'error',
         message: `Health check failed: ${response.status}`,
@@ -43,7 +44,7 @@ async function getHealth() {
     return await response.json();
   } catch (e: unknown) {
     const error = e as Error;
-    console.error('Error fetching health status:', error);
+    logger.error('Error fetching health status:', error);
     const isTimeout = error.name === 'AbortError';
 
     return {
@@ -64,7 +65,7 @@ async function getRecoveryLogs() {
         (b.timestamp ?? 0) - (a.timestamp ?? 0)
     );
   } catch (e) {
-    console.error('Error fetching recovery logs:', e);
+    logger.error('Error fetching recovery logs:', e);
     return [];
   }
 }
@@ -75,7 +76,7 @@ async function getRecoveryState() {
     const items = await memory.listByPrefix('SYSTEM#RECOVERY#STATS');
     return items?.[0] ?? null;
   } catch (e) {
-    console.error('Error fetching recovery state:', e);
+    logger.error('Error fetching recovery state:', e);
     return null;
   }
 }

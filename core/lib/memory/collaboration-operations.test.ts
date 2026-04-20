@@ -44,6 +44,7 @@ function createMockBase(): BaseMemoryProvider & {
   queryItems: ReturnType<typeof vi.fn>;
   putItem: ReturnType<typeof vi.fn>;
   updateItem: ReturnType<typeof vi.fn>;
+  getHistory: ReturnType<typeof vi.fn>;
 } {
   return {
     queryItems: vi.fn(),
@@ -61,6 +62,7 @@ function createMockBase(): BaseMemoryProvider & {
     queryItems: ReturnType<typeof vi.fn>;
     putItem: ReturnType<typeof vi.fn>;
     updateItem: ReturnType<typeof vi.fn>;
+    getHistory: ReturnType<typeof vi.fn>;
   };
 }
 
@@ -723,5 +725,46 @@ describe('edge cases', () => {
     const collabItem = base.putItem.mock.calls[0][0];
     const expectedSeconds = Math.floor((MOCK_NOW + 7 * 24 * 60 * 60 * 1000) / 1000);
     expect(collabItem.expiresAt).toBe(expectedSeconds);
+  });
+});
+
+import { transitToCollaboration } from './collaboration-operations';
+
+describe('transitToCollaboration', () => {
+  it('should transit a session to a collaboration and seed history', async () => {
+    const base = createMockBase();
+    base.putItem.mockResolvedValue(undefined);
+    base.getHistory.mockResolvedValue([
+      { role: 'user', content: 'hello' },
+      { role: 'assistant', content: 'hi there' },
+    ]);
+    (uuidv4 as ReturnType<typeof vi.fn>).mockReturnValue('collab-uuid');
+
+    const collab = await transitToCollaboration(base, 'user-1', 'ws-1', 'sess-1', ['agent-1']);
+
+    expect(collab.collaborationId).toBe('collab-uuid');
+    expect(collab.participants).toHaveLength(3); // user-1, agent-1, facilitator
+
+    // Check history seeding
+    expect(base.getHistory).toHaveBeenCalled();
+    // 1 collab + 3 indexes + 1 seed message = 5 putItems
+    expect(base.putItem).toHaveBeenCalledTimes(5);
+
+    const seedMessage = base.putItem.mock.calls[4][0];
+    expect(seedMessage.type).toBe('MESSAGE');
+    expect(seedMessage.content).toContain('Context Transition');
+    expect(seedMessage.content).toContain('user: hello');
+  });
+
+  it('should handle transition with no history', async () => {
+    const base = createMockBase();
+    base.putItem.mockResolvedValue(undefined);
+    base.getHistory.mockResolvedValue([]);
+    (uuidv4 as ReturnType<typeof vi.fn>).mockReturnValue('collab-uuid');
+
+    await transitToCollaboration(base, 'user-1', 'ws-1', 'sess-1', []);
+
+    // 1 collab + 2 indexes (user + facilitator) = 3 putItems
+    expect(base.putItem).toHaveBeenCalledTimes(3);
   });
 });

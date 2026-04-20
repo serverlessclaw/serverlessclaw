@@ -1,4 +1,5 @@
 import { ChatMessage, HistoryMessage } from './types';
+import { logger } from '@claw/core/lib/logger';
 
 /**
  * Data shape for an incoming MQTT chunk message.
@@ -34,45 +35,45 @@ export function shouldProcessChunk(
   const type = data.type || data['detail-type'];
   
   // DEBUG: Log session processing
-  console.log(`[shouldProcessChunk] msg=${data.messageId?.substring(0, 8)}, type=${type}, incoming_session=${data.sessionId}, active_session=${currentActiveId}`);
+  logger.info(`[shouldProcessChunk] msg=${data.messageId?.substring(0, 8)}, type=${type}, incoming_session=${data.sessionId}, active_session=${currentActiveId}`);
 
   // Normalize incoming userId (remove CONV# prefix if present)
   const incomingUserId = data.userId?.startsWith('CONV#') ? data.userId.split('#')[1] : data.userId;
   const useStrictUserFilter = expectedUserId !== 'dashboard-user';
 
   if (useStrictUserFilter && incomingUserId !== expectedUserId) {
-    console.warn(`[shouldProcessChunk] ❌ User mismatch: ${incomingUserId} !== ${expectedUserId}`);
+    logger.warn(`[shouldProcessChunk] ❌ User mismatch: ${incomingUserId} !== ${expectedUserId}`);
     return false;
   }
 
   // ALLOW ALL VALID SIGNAL TYPES
   const validTypes = ['chunk', 'TEXT_MESSAGE_CONTENT', 'outbound_message', 'TEXT_MESSAGE_START', 'TEXT_MESSAGE_END'];
   if (type && !validTypes.includes(type)) {
-    console.warn(`[shouldProcessChunk] ❌ Type mismatch: ${type}`);
+    logger.warn(`[shouldProcessChunk] ❌ Type mismatch: ${type}`);
     return false;
   }
 
   if (!data.messageId) {
-    console.log(`[shouldProcessChunk] ⏭️  Skipping: no messageId`);
+    logger.info(`[shouldProcessChunk] ⏭️  Skipping: no messageId`);
     return false;
   }
 
   // If no activeSessionId yet, accept the chunk (session will be set soon)
   if (!currentActiveId) {
-    console.log(`[shouldProcessChunk] ⏩ No active session yet, accepting chunk`);
+    logger.info(`[shouldProcessChunk] ⏩ No active session yet, accepting chunk`);
     return true;
   }
 
   if (!data.sessionId) {
-    console.log(`[shouldProcessChunk] ⏩ No session in data, accepting chunk`);
+    logger.info(`[shouldProcessChunk] ⏩ No session in data, accepting chunk`);
     return true;
   }
 
   const match = data.sessionId === currentActiveId;
   if (!match) {
-    console.warn(`[shouldProcessChunk] ❌ Session mismatch: ${data.sessionId} !== ${currentActiveId}`);
+    logger.warn(`[shouldProcessChunk] ❌ Session mismatch: ${data.sessionId} !== ${currentActiveId}`);
   } else {
-    console.log(`[shouldProcessChunk] ✅ Session match: ${data.sessionId}`);
+    logger.info(`[shouldProcessChunk] ✅ Session match: ${data.sessionId}`);
   }
   return match;
 }
@@ -92,7 +93,7 @@ export function applyChunkToMessages(
 ): ChatMessage[] {
   // Prevent processing chunks for messages we've already finalized via API
   if (data.messageId && seenIds?.has(data.messageId)) {
-    console.log(`[message-handler] ⏭️  Skipping already-seen ID: ${data.messageId?.substring(0, 12)}`);
+    logger.info(`[message-handler] ⏭️  Skipping already-seen ID: ${data.messageId?.substring(0, 12)}`);
     return prev;
   }
 
@@ -117,7 +118,7 @@ export function applyChunkToMessages(
     const existing = updated[existingIndex];
     const stopThinking = (hasVisibleMessageContent && !isThought) || isFinal;
 
-    console.log(
+    logger.info(
       `[message-handler] merge: id=${data.messageId?.substring(0, 12)}, ` +
       `type=${chunkType ?? 'chunk'}, isFinal=${isFinal}, isThought=${isThought}, ` +
       `synthetic=${isSyntheticThought}, msgLen=${data.message?.length ?? 0}, ` +
@@ -159,7 +160,7 @@ export function applyChunkToMessages(
     const existing = updated[thinkingIndex];
     const stopThinking = (hasVisibleMessageContent && !isThought) || isFinal;
 
-    console.log(
+    logger.info(
       `[message-handler] thinkingPlaceholder: id=${data.messageId?.substring(0, 12)}, ` +
       `type=${chunkType ?? 'chunk'}, isFinal=${isFinal}, isThought=${isThought}, ` +
       `synthetic=${isSyntheticThought}, msgLen=${data.message?.length ?? 0}`
@@ -201,7 +202,7 @@ export function applyChunkToMessages(
       (m) => m.role === 'assistant' && m.content === data.message
     );
     if (isContentDup) {
-      console.log(`[message-handler] Dropping duplicate content chunk for ${data.messageId}`);
+      logger.info(`[message-handler] Dropping duplicate content chunk for ${data.messageId}`);
       return prev;
     }
   }
@@ -216,7 +217,7 @@ export function applyChunkToMessages(
   );
   const stopThinkingNew = hasVisibleContent || isFinal;
 
-  console.log(
+  logger.info(
     `[message-handler] addNew: id=${data.messageId?.substring(0, 12)}, ` +
     `type=${chunkType ?? 'chunk'}, isThought=${isThought}, ` +
     `msgLen=${data.message?.length ?? 0}, isThinking=${!stopThinkingNew}`

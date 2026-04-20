@@ -514,3 +514,30 @@ The "Brain" follows a tiered model:
 1.  **Tier 1: Hot State (DynamoDB)**: Sub-50ms session state and atomic locks.
 2.  **Tier 2: Semantic Memory (Vector DB)**: RAG and strategic gap identification.
 3.  **Tier 3: Relational Memory (Graph DB)**: Complex agent-to-agent collaboration tracking.
+
+---
+
+## 🤝 Collaboration Operations
+
+The system provides specialized state management for multi-party coordination through `CollaborationOps`.
+
+### 1. Context Transition (Promotion Flow)
+
+When a 1:1 session is promoted to a collaboration hub (e.g., inviting an auditor), the system performs an atomic transition:
+- **Summarization**: The last 5 messages from the personal history are distilled into a context summary.
+- **Seeding**: A new `shared#collab#` partition is initialized with a `SYSTEM` message containing the summary.
+- **Invitation**: All requested agents and the `facilitator` are atomically added as participants.
+
+### 2. Atomic State Integrity (Principle 13)
+
+To prevent race conditions in multi-agent swarms, all collaboration operations are atomic:
+- **Creation Integrity**: Enforces a `ConditionExpression: attribute_not_exists(userId)` check on the collaboration ID.
+- **Participant Integrity**: Adding participants uses atomic `list_append` with existence checks.
+- **Closing Integrity**: Updates status to `closed` and cleans up index entries to prevent orphaned sessions.
+
+### 🍱 Partitioning Scheme
+| PK (userId) | Type | Description |
+| :--- | :--- | :--- |
+| `shared#collab#<ID>` | `MESSAGE` | Shared message history for multi-agent hubs. |
+| `COLLABORATION#<ID>` | `METADATA` | Core configuration, owner, and participant roster. |
+| `COLLAB_INDEX#<PID>` | `INDEX` | Shard for participant lookup (List my collaborations). |

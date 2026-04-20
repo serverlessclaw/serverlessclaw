@@ -8,6 +8,7 @@ import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import { Trace, TraceStep } from '@/lib/types/ui';
 import { TRACE_TYPES } from '@claw/core/lib/constants';
+import { logger } from '@claw/core/lib/logger';
 
 interface TraceDetailSidebarProps {
   traceId: string | null;
@@ -34,7 +35,7 @@ export default function TraceDetailSidebar({ traceId, onClose }: TraceDetailSide
         const data = await response.json();
         setTrace(data.trace);
       } catch (err) {
-        console.error('Failed to fetch trace details:', err);
+        logger.error('Failed to fetch trace details:', err);
         setError('Failed to load trace information');
       } finally {
         setLoading(false);

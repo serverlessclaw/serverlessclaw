@@ -7,6 +7,7 @@ import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { useTranslations } from '@/components/Providers/TranslationsProvider';
+import { logger } from '@claw/core/lib/logger';
 
 interface NewGoalModalProps {
   onClose: () => void;
@@ -50,7 +51,7 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({ onClose, onSuccess }
       onSuccess();
       onClose();
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       toast.error(t('SCHEDULING_ESTABLISH_ERROR'));
     } finally {
       setSubmitting(false);

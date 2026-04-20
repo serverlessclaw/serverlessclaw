@@ -28,6 +28,7 @@ import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import { useRealtime, RealtimeMessage } from '@/hooks/useRealtime';
+import { logger } from '@claw/core/lib/logger';
 
 import { 
   TaskNodeData,
@@ -272,7 +273,7 @@ function CollaborationCanvasContent() {
       setEdges(newEdges);
       setLoading(false);
     } catch (e) {
-      console.error('Failed to fetch collaboration data:', e);
+      logger.error('Failed to fetch collaboration data:', e);
       setLoading(false);
     }
   }, [setNodes, setEdges]);
@@ -332,7 +333,7 @@ function CollaborationCanvasContent() {
       setHandoffResponse('');
       fetchActiveTasks();
     } catch (err) {
-      console.error('Failed to submit handoff response:', err);
+      logger.error('Failed to submit handoff response:', err);
     } finally {
       setSubmittingResponse(false);
     }

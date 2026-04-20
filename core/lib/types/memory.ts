@@ -373,6 +373,15 @@ export interface IMemory extends IHistoryStore, IKnowledgeStore, IGapManager {
     }>
   >;
 
+  /** Transits a 1:1 session into a collaboration session. */
+  transitToCollaboration(
+    userId: string,
+    workspaceId: string,
+    sourceSessionId: string,
+    invitedAgentIds: string[],
+    name?: string
+  ): Promise<Collaboration>;
+
   /** Gets cache statistics for monitoring. Returns hit rates and sizes for all caches. */
   getCacheStats(): {
     userData: { hits: number; misses: number; evictions: number; size: number };

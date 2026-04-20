@@ -4,6 +4,7 @@ import React, { Component, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import Button from './Button';
 import Typography from './Typography';
+import { logger } from '@claw/core/lib/logger';
 
 interface Props {
   children: ReactNode;
@@ -26,7 +27,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    logger.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 
   handleReset = () => {

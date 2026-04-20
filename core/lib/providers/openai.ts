@@ -289,7 +289,7 @@ export class OpenAIProvider implements IProvider {
       requestedProfile
     );
 
-    const requestPayload: any = {
+    const requestPayload: Record<string, unknown> = {
       model: activeModel as OpenAI.ResponsesModel,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       input: responsesInput as any,
@@ -431,7 +431,7 @@ export class OpenAIProvider implements IProvider {
       requestedProfile
     );
 
-    const requestPayload: any = {
+    const requestPayload: Record<string, unknown> = {
       model: activeModel as OpenAI.ResponsesModel,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       input: responsesInput as any,

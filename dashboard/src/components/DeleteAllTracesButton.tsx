@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Trash2, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { logger } from '@claw/core/lib/logger';
 import CyberConfirm from './CyberConfirm';
 import Button from './ui/Button';
 
@@ -28,7 +29,7 @@ export default function DeleteAllTracesButton() {
         toast.error(`Failed to purge traces: ${error.error}`);
       }
     } catch (error) {
-      console.error('Delete all traces error:', error);
+      logger.error('Delete all traces error:', error);
       toast.error('Failed to purge traces.');
     } finally {
       setIsDeleting(false);

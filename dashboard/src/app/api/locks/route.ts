@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, ScanCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { HTTP_STATUS } from '@claw/core/lib/constants';
+import { logger } from '@claw/core/lib/logger';
 
 /**
  * GET: Lists all active distributed locks.
@@ -40,7 +41,7 @@ export async function GET(): Promise<NextResponse> {
 
     return NextResponse.json({ locks });
   } catch (error) {
-    console.error('Error fetching locks:', error);
+    logger.error('Error fetching locks:', error);
     return NextResponse.json(
       {
         error: 'Failed to fetch locks',
@@ -84,7 +85,7 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json({ success: true, lockId: rawId });
   } catch (error) {
-    console.error('Error releasing lock:', error);
+    logger.error('Error releasing lock:', error);
     return NextResponse.json(
       {
         error: 'Failed to release lock',

@@ -5,6 +5,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, QueryCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { TraceSource } from '@claw/core/lib/types/index';
 import { Trace } from '@/lib/types/ui';
+import { logger } from '@claw/core/lib/logger';
 
 /**
  * Fetches trace summaries from DynamoDB.
@@ -16,7 +17,7 @@ export async function getTraces(
   try {
     const tableName = getResourceName('TraceTable');
     if (!tableName) {
-      console.warn('TraceTable name is missing from Resources and Environment');
+      logger.warn('TraceTable name is missing from Resources and Environment');
       return { items: [], nextToken: undefined };
     }
     const client = new DynamoDBClient({});
@@ -48,7 +49,7 @@ export async function getTraces(
     // Fallback path: if trace summaries are disabled, '__summary__' rows won't exist.
     // In that case, scan root trace nodes so /trace still has data.
     if (filteredSummary.length === 0) {
-      console.warn(
+      logger.warn(
         '[getTraces] No summary rows found. Falling back to root trace scan (trace_summaries may be disabled).'
       );
 
@@ -81,7 +82,7 @@ export async function getTraces(
       nextToken: encodePaginationToken(queryRes.LastEvaluatedKey),
     };
   } catch (e) {
-    console.error('Error fetching traces:', e);
+    logger.error('Error fetching traces:', e);
     return { items: [], nextToken: undefined };
   }
 }

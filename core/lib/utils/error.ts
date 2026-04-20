@@ -17,7 +17,7 @@
  * try {
  *   await someOperation();
  * } catch (error) {
- *   console.log(formatErrorMessage(error));
+ *   logger.info(formatErrorMessage(error));
  * }
  * ```
  */

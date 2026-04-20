@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { EventType } from '@claw/core/lib/types/agent';
 import { emitEvent, EventPriority } from '@claw/core/lib/utils/bus';
 import { HTTP_STATUS } from '@claw/core/lib/constants';
+import { logger } from '@claw/core/lib/logger';
 
 /**
  * Endpoint to cancel an active task/trace.
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Missing traceId' }, { status: HTTP_STATUS.BAD_REQUEST });
     }
 
-    console.log(`[Cancel API] Cancelling task: ${traceId}, reason: ${reason}`);
+    logger.info(`[Cancel API] Cancelling task: ${traceId}, reason: ${reason}`);
 
     await emitEvent(
       'dashboard.api.cancel',
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json({ success: true, traceId });
   } catch (error) {
-    console.error('[Cancel API] Failed to cancel task:', error);
+    logger.error('[Cancel API] Failed to cancel task:', error);
     return NextResponse.json(
       {
         error: 'Internal Server Error',

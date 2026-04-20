@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { toast } from 'sonner';
+import { logger } from '@claw/core/lib/logger';
 
 interface ExportButtonProps {
   sessionId: string;
@@ -42,7 +43,7 @@ export default function ExportButton({ sessionId, sessionTitle }: ExportButtonPr
 
       toast.success('Session exported successfully');
     } catch (err) {
-      console.error('Export failed:', err);
+      logger.error('Export failed:', err);
       toast.error('Failed to export session');
     } finally {
       setIsExporting(false);

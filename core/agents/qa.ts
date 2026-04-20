@@ -45,8 +45,14 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
 
   const qaPrompt = `Verify and audit the following gaps: ${gapIds.join(', ')}\n\nImplementation Output:\n${implementationResponse || 'No implementation response provided.'}`;
 
+  interface QAParsedData {
+    status?: string;
+    satisfied?: boolean;
+    score?: number;
+  }
+
   let auditReport: string;
-  let parsedData: any;
+  let parsedData: QAParsedData | undefined;
   try {
     const result = await processEventWithAgent(userId, AgentType.QA, qaPrompt, {
       context: _context,
@@ -61,7 +67,7 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
       formatResponse: (text) => text,
     });
     auditReport = result.responseText;
-    parsedData = result.parsedData;
+    parsedData = result.parsedData as QAParsedData | undefined;
   } catch (err) {
     logger.error('Unexpected error in QA Agent processing:', err);
     return; // Failure handled by wrapper
@@ -93,7 +99,7 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
         const { SafetyEngine } = await import('../lib/safety/safety-engine');
         const safety = new SafetyEngine();
         // Sh6: Pass the numeric score from the judge to reward high-quality work
-        await safety.recordSuccess(initiatorId, (parsedData as any)?.score);
+        await safety.recordSuccess(initiatorId, parsedData?.score);
       } catch (e) {
         logger.warn(`Failed to record trust success for ${initiatorId}:`, e);
       }

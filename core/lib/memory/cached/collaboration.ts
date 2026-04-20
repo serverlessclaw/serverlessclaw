@@ -70,4 +70,20 @@ export class MemoryCollaboration {
       workspaceId
     );
   }
+
+  async transitToCollaboration(
+    userId: string,
+    workspaceId: string,
+    sourceSessionId: string,
+    invitedAgentIds: string[],
+    name?: string
+  ): Promise<Collaboration> {
+    return this.underlying.transitToCollaboration(
+      userId,
+      workspaceId,
+      sourceSessionId,
+      invitedAgentIds,
+      name
+    );
+  }
 }

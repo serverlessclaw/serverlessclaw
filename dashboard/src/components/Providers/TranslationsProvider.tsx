@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useMemo, useEffect } from '
 import en from '../../../messages/en.json';
 import cn from '../../../messages/cn.json';
 import { CONFIG_KEYS } from '@claw/core/lib/constants';
+import { logger } from '@claw/core/lib/logger';
 
 type Messages = typeof en;
 type Locale = 'en' | 'cn';
@@ -60,7 +61,7 @@ export const TranslationsProvider: React.FC<{
         }),
       });
     } catch (error) {
-      console.error('Failed to persist locale to backend:', error);
+      logger.error('Failed to persist locale to backend:', error);
     }
   };
 
