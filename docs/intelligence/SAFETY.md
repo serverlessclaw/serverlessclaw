@@ -60,7 +60,7 @@ Multiplies the base bump by a weight in the range **[0.0x, 2.0x]**:
 
 ---
 
-## 🚦 Granular Safety Tiers
+## 🚦 Binary Safety Tiers
 
 Agents operate under different trust levels, defining which actions require explicit human approval. Serverless Claw uses a trunk-based development model with two primary tiers:
 

@@ -210,6 +210,10 @@ const BASE_EVENT_ROUTING: EventRoutingTable = {
     module: './events/reputation-handler',
     function: 'handleReputationUpdate',
   },
+  [EventType.PULSE_PING]: {
+    module: './events/pulse-handler',
+    function: 'handlePulsePing',
+  },
 };
 
 /**

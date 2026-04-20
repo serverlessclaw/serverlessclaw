@@ -24,6 +24,8 @@ export const BASE_EVENT_SCHEMA = z.object({
   userId: z.string().default('SYSTEM'),
   traceId: z.string().default(() => `t-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`),
   taskId: z.string().default(() => `task-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`),
+  nodeId: z.string().optional(),
+  parentId: z.string().optional(),
   agentId: z.string().optional(),
   initiatorId: z.string().default('orchestrator'),
   depth: z.number().default(0),
@@ -427,6 +429,14 @@ export const DLQ_ROUTE_SCHEMA = BASE_EVENT_SCHEMA.extend({
   retryCount: z.number().default(0),
 });
 
+/** Schema for pulse check events. */
+export const PULSE_EVENT_SCHEMA = BASE_EVENT_SCHEMA.extend({
+  targetAgentId: z.string(),
+  timestamp: z.number(),
+  responseTimestamp: z.number().optional(),
+  status: z.enum(['ping', 'pong']).default('ping'),
+});
+
 /**
  * Event schema map for typed event emission and validation.
  * Maps EventType strings to their corresponding Zod schemas.
@@ -473,6 +483,8 @@ export const EVENT_SCHEMA_MAP = {
   [EventType.ORCHESTRATION_SIGNAL as string]: ORCHESTRATION_SIGNAL_SCHEMA,
   [EventType.DASHBOARD_FAILURE_DETECTED as string]: FAILURE_EVENT_SCHEMA,
   [EventType.DLQ_ROUTE as string]: DLQ_ROUTE_SCHEMA,
+  [EventType.PULSE_PING as string]: PULSE_EVENT_SCHEMA,
+  [EventType.PULSE_PONG as string]: PULSE_EVENT_SCHEMA,
 } as const;
 
 /** Keys of the EVENT_SCHEMA_MAP (for type-safe event type lookups). */

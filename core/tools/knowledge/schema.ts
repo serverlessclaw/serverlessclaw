@@ -74,6 +74,24 @@ export const knowledgeSchema: Record<string, IToolDefinition> = {
     },
     connectionProfile: ['bus'],
   },
+  pulseCheck: {
+    type: ToolType.FUNCTION,
+    argSchema: z.any(),
+    requiresApproval: false,
+    requiredPermissions: [],
+    name: 'pulseCheck',
+    description:
+      'Performs a deep cognitive health check by pinging another agent. Verifies EventBus connectivity.',
+    parameters: {
+      type: 'object',
+      properties: {
+        targetAgentId: { type: 'string', description: 'The ID of the agent to ping.' },
+      },
+      required: ['targetAgentId'],
+      additionalProperties: false,
+    },
+    connectionProfile: ['bus'],
+  },
   createAgent: {
     type: ToolType.FUNCTION,
     argSchema: z.any(),

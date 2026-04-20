@@ -374,6 +374,10 @@ export enum EventType {
   DASHBOARD_FAILURE_DETECTED = 'dashboard_failure_detected',
   /** Route an event to the Dead Letter Queue. */
   DLQ_ROUTE = 'dlq_route',
+  /** Deep cognitive pulse check ping. */
+  PULSE_PING = 'pulse_ping',
+  /** Response to a cognitive pulse check. */
+  PULSE_PONG = 'pulse_pong',
 }
 
 /**

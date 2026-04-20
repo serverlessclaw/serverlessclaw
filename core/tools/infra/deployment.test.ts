@@ -4,6 +4,7 @@ import { CodeBuildClient, StartBuildCommand } from '@aws-sdk/client-codebuild';
 import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { triggerDeployment, triggerInfraRebuild, stageChanges, generatePatch } from './deployment';
+import { AgentType } from '../../lib/types/agent';
 
 const codebuildMock = mockClient(CodeBuildClient);
 const ddbMock = mockClient(DynamoDBDocumentClient);
@@ -67,6 +68,12 @@ vi.mock('../../lib/utils/agent-helpers', () => ({
   getAgentContext: mockGetAgentContext,
 }));
 
+vi.mock('../../lib/tracer', () => ({
+  ClawTracer: {
+    getTrace: vi.fn(),
+  },
+}));
+
 import { getDeployCountToday, incrementDeployCount } from '../../lib/metrics/deploy-stats';
 import { getCircuitBreaker } from '../../lib/safety/circuit-breaker';
 import { getAgentContext } from '../../lib/utils/agent-helpers';
@@ -83,6 +90,7 @@ describe('Deployment Tools', () => {
     mockArchiveFile.mockReset();
     mockArchiveFinalize.mockReset();
     mockCreateWriteStream.mockReset();
+    process.env.AGENT_ID = AgentType.CODER;
     vi.mocked(getAgentContext).mockResolvedValue({
       memory: {
         getAllGaps: vi.fn().mockResolvedValue([]),
@@ -258,6 +266,66 @@ describe('Deployment Tools', () => {
       });
 
       expect(result).toContain('FAILED_TO_DEPLOY');
+    });
+
+    it('infers gapIds from trace context when not provided', async () => {
+      vi.mocked(getCircuitBreaker).mockReturnValue({
+        canProceed: vi.fn().mockResolvedValue({ allowed: true }),
+        recordFailure: vi.fn(),
+      } as any);
+      vi.mocked(getDeployCountToday).mockResolvedValue(0);
+      vi.mocked(incrementDeployCount).mockResolvedValue(true);
+      ddbMock.on(GetCommand).resolves({ Item: { value: '10' } });
+      codebuildMock.on(StartBuildCommand).resolves({ build: { id: 'build-inferred-1' } });
+      ddbMock.on(PutCommand).resolves({});
+
+      const { ClawTracer } = await import('../../lib/tracer');
+      vi.mocked(ClawTracer.getTrace).mockResolvedValueOnce([
+        {
+          traceId: 'trace-inferred',
+          nodeId: 'root',
+          initialContext: {
+            metadata: { gapIds: ['GAP#INFERRED'] },
+          },
+        } as any,
+      ]);
+
+      await triggerDeployment.execute({
+        reason: 'test inference',
+        userId: 'user-inf',
+        traceId: 'trace-inferred',
+      });
+
+      const startCall = codebuildMock.call(0);
+      const envVars = (startCall.args[0] as any).input.environmentVariablesOverride;
+      expect(envVars).toContainEqual({
+        name: 'GAP_IDS',
+        value: JSON.stringify(['GAP#INFERRED']),
+      });
+    });
+
+    it('uses STAGING_ZIP_KEY fallback if traceId is missing', async () => {
+      vi.mocked(getCircuitBreaker).mockReturnValue({
+        canProceed: vi.fn().mockResolvedValue({ allowed: true }),
+        recordFailure: vi.fn(),
+      } as any);
+      vi.mocked(getDeployCountToday).mockResolvedValue(0);
+      vi.mocked(incrementDeployCount).mockResolvedValue(true);
+      ddbMock.on(GetCommand, { Key: { key: 'deploy_limit' } }).resolves({ Item: { value: '10' } });
+      ddbMock.on(GetCommand, { Key: { key: 'staging_zip_key' } }).resolves({});
+      codebuildMock.on(StartBuildCommand).resolves({ build: { id: 'build-fallback-2' } });
+
+      await triggerDeployment.execute({
+        reason: 'test fallback zip',
+        userId: 'user-zip',
+      });
+
+      const startCall = codebuildMock.call(0);
+      const envVars = (startCall.args[0] as any).input.environmentVariablesOverride;
+      expect(envVars).toContainEqual({
+        name: 'STAGING_ZIP_KEY',
+        value: 'latest/staging.zip',
+      });
     });
   });
 

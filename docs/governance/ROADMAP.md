@@ -88,16 +88,16 @@ Our goal: the most customizable, cost-effective, and self-evolving personal AI a
 ## ✅ Phase 11.5: Self-Evolution Loop Resilience
 
 - [x] **Standardized Neural Signal Schema**: Enforce JSON-based status reporting and coordination via centralized enums (`TOOLS`, `TRACE_TYPES`).
-- [ ] **Atomic Deployment Sync**: Pass `gapIds` directly to the `triggerDeployment` tool for failure-proof metadata mapping.
-- [ ] **Deep Cognitive Health**: Pulse checks that verify agent-to-agent communication and tool functionality.
-- [ ] **Plan Decomposition**: Hierarchical task breakdown to prevent Coder Agent logic overload.
+- [x] **Deep Cognitive Health**: Pulse checks between agents to verify tool reasoning paths.
+- [x] **Atomic Deployment Sync**: Ensure `gapIds` are always mapped to `BUILD#` records even if missing from initial tool call.
+- [x] **Plan Decomposition**: Hierarchical task breakdown to prevent Coder Agent logic overload.
 
 ## 🏗️ Phase 12: Evolutionary Command Center (ClawCenter v2)
 
 - [x] **Evolution Pipeline Board**: Kanban visualization of the 5-stage gap lifecycle.
+- [x] **Hardened Binary Safety Tiers**: Reinforced safety levels (LOCAL, PROD) with strict approval gates.
 - [x] **Neural Map**: Dependency graph visualization of agent-to-agent delegation paths and dynamic infrastructure state from DynamoDB.
 - [x] **Capabilities Discovery**: Real-time multi-agent tool search and automated roster management.
-- [ ] **Granular Safety Tiers**: Multi-level trust settings (Local, Prod) instead of binary toggle.
 - [ ] **Real-time Resilience Gauge**: Dashboard HUD for Circuit Breaker status and token burn-rate monitoring.
 - [ ] **Interactive Gap Refinement**: Feedback loop for users to edit and improve strategic plans before implementation.
 
@@ -105,7 +105,7 @@ Our goal: the most customizable, cost-effective, and self-evolving personal AI a
 
 - [ ] **Rich Media Receiver**: Webhook support for Photos, Documents, and Voice messages via S3 bridging.
 - [ ] **S3 Memory Integration**: Attachments linked to session history with TTL-aware lifecycle.
-- [ ] **Multi-Modal Provider Support**: Full support for image and file analysis in OpenAI/Gemini/Bedrock adapters.
+- [ ] **Multi-Modal Provider Support**: Full support for image and file analysis in OpenAI/Minimax adapters first, others deferred.
 - [ ] **Rich Media Notifier**: Capability for agents to send files, charts, and generated images back to chat channels.
 
 ## 🏢 Phase 14: Advanced Autonomy
@@ -131,3 +131,29 @@ Our goal: the most customizable, cost-effective, and self-evolving personal AI a
 - [ ] **Interactive Strategic Planning**: "Reject with Reason" feedback loop in dashboard that converts into immediate `TACTICAL_LESSONS`.
 - [ ] **Multi-Agent Conflict Resolution**: Detection and mediation of overlapping plans between different autonomous nodes.
 - [ ] **Continuous Knowledge Reconciliation**: Automated periodic audits to merge redundant facts and lessons.
+
+---
+
+## 🏗️ Phase 18: Cognitive Efficiency & Edge Optimization (Inspired by Ruflo)
+
+- [ ] **Agent Booster (WASM)**: Integrate WASM-based transforms (regex/AST) to handle trivial code changes (logging, type fixes) without LLM calls.
+- [ ] **Local Embedding Cache**: Local SSD/S3-backed cache for frequently used vector embeddings to reduce API dependency.
+- [ ] **Pre-flight Static Analysis**: Inject `eslint` and `tsc` results directly into the agent context for faster error correction.
+
+## 🏗️ Phase 19: Advanced Multi-Agent Orchestration (Inspired by Mastra & Ruflo)
+
+- [ ] **Dynamic Workflow Engine (ClawFlow)**: Transition from fixed agent roles to a graph-based orchestration engine with parallel execution.
+- [ ] **Consensus Protocols**: Implement "Council of Agents" (Raft-lite) for 3-agent agreement on critical production merges.
+- [ ] **Unified Claim System**: Dashboard-based ownership management between human and agents for shared tasks.
+
+## 🏗️ Phase 20: Persistent Human-in-the-Loop (Inspired by Mastra)
+
+- [ ] **Workflow State Snapshots**: Persistent DynamoDB snapshots of active workflows allowing mid-task "Suspend & Resume".
+- [ ] **Milestone Checkpoints**: Automatic session snapshotting before high-risk agent operations.
+- [ ] **Live Collaboration Interface**: Real-time collaborative terminal/editor in ClawCenter for human-agent pairing.
+
+## 🏗️ Phase 21: Neural Evolution & Quantitative Evals
+
+- [ ] **SONA Learning Loop**: Track tool success rates to dynamically route tasks to the most cost-effective provider.
+- [ ] **Integrated Agent Evals**: Built-in benchmarking suite to measure PR success rate, security regressions, and "Time to Fix".
+- [ ] **Trajectory Analysis**: Extract high-performance reasoning patterns from successful traces and inject them as system-level guidance.

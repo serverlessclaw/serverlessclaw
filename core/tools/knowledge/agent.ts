@@ -5,6 +5,7 @@ import { formatErrorMessage } from '../../lib/utils/error';
 import { BACKBONE_REGISTRY } from '../../lib/backbone';
 import { LLMProvider, MiniMaxModel } from '../../lib/types/llm';
 import { AgentCategory } from '../../lib/types/agent';
+import { logger } from '../../lib/logger';
 
 /**
  * Lists all registered agents and their current status.
@@ -25,7 +26,56 @@ export const listAgents = {
 };
 
 /**
+ * Performs a deep cognitive health check by pinging another agent.
+ * Verifies EventBus connectivity and peer-to-peer responsiveness.
+ */
+export const pulseCheck = {
+  ...knowledgeSchema.pulseCheck,
+  execute: async (args: Record<string, unknown>): Promise<string> => {
+    const { targetAgentId, userId, traceId, nodeId, initiatorId, sessionId, workspaceId } =
+      args as {
+        targetAgentId: string;
+        userId: string;
+        traceId?: string;
+        nodeId?: string;
+        initiatorId?: string;
+        sessionId?: string;
+        workspaceId?: string;
+      };
+
+    const { AgentRegistry } = await import('../../lib/registry');
+    const config = await AgentRegistry.getAgentConfig(targetAgentId);
+
+    if (!config || !config.enabled) {
+      return `FAILED: Target agent '${targetAgentId}' is not registered or disabled.`;
+    }
+
+    const { ClawTracer } = await import('../../lib/tracer');
+    const tracer = new ClawTracer(userId, 'system', traceId, nodeId);
+    const childTracer = tracer.getChildTracer(undefined, targetAgentId);
+
+    try {
+      await emitEvent(initiatorId ?? 'superclaw', 'pulse_ping', {
+        userId,
+        targetAgentId,
+        timestamp: Date.now(),
+        traceId: childTracer.getTraceId(),
+        nodeId: childTracer.getNodeId(),
+        parentId: childTracer.getParentId(),
+        initiatorId: initiatorId ?? 'superclaw',
+        sessionId,
+        workspaceId,
+      });
+      return `PULSE_SENT: I've sent a cognitive pulse to **${targetAgentId}**. I'll wait for a pong response to verify health.`;
+    } catch (error) {
+      return `PULSE_FAILED: EventBus failure - ${formatErrorMessage(error)}`;
+    }
+  },
+};
+
+/**
  * Dispatches a specific task to another agent via EventBridge.
+ * Supports automatic plan decomposition for complex missions.
  */
 export const dispatchTask = {
   ...knowledgeSchema.dispatchTask,
@@ -34,7 +84,7 @@ export const dispatchTask = {
       agentId,
       userId,
       task,
-      metadata,
+      metadata = {},
       traceId,
       nodeId,
       initiatorId,
@@ -67,8 +117,40 @@ export const dispatchTask = {
 
     const { ClawTracer } = await import('../../lib/tracer');
     const tracer = new ClawTracer(userId, 'system', traceId, nodeId);
-    const childTracer = tracer.getChildTracer(undefined, agentId);
 
+    // Dynamic Plan Decomposition for large tasks
+    const { decomposePlan } = await import('../../lib/agent/decomposer');
+    const gapIds = (metadata.gapIds as string[]) || [];
+    const decomposition = decomposePlan(task, traceId || 'mission', gapIds);
+
+    if (decomposition.wasDecomposed) {
+      logger.info(
+        `[dispatchTask] Decomposing large mission into ${decomposition.totalSubTasks} sub-tasks.`
+      );
+      for (const sub of decomposition.subTasks) {
+        const childTracer = tracer.getChildTracer(undefined, sub.agentId);
+        const eventName = BACKBONE_REGISTRY[sub.agentId]?.isBackbone
+          ? `${sub.agentId}_task`
+          : `dynamic_${sub.agentId}_task`;
+
+        await emitEvent(initiatorId ?? 'superclaw', eventName, {
+          userId,
+          task: sub.task,
+          metadata: { ...metadata, gapIds: sub.gapIds, order: sub.order, planId: sub.planId },
+          traceId: childTracer.getTraceId(),
+          nodeId: childTracer.getNodeId(),
+          parentId: childTracer.getParentId(),
+          initiatorId: initiatorId ?? 'superclaw',
+          depth: (depth ?? 0) + 1,
+          sessionId,
+          workspaceId,
+        });
+      }
+      return `TASK_PAUSED: I have decomposed this mission into ${decomposition.totalSubTasks} sub-tasks and dispatched them to the appropriate agents. Monitoring progress...`;
+    }
+
+    // Standard single dispatch
+    const childTracer = tracer.getChildTracer(undefined, agentId);
     const eventName = config.isBackbone ? `${agentId}_task` : `dynamic_${agentId}_task`;
 
     try {
@@ -80,7 +162,7 @@ export const dispatchTask = {
         nodeId: childTracer.getNodeId(),
         parentId: childTracer.getParentId(),
         initiatorId: initiatorId ?? 'superclaw',
-        depth: depth ?? 0,
+        depth: (depth ?? 0) + 1,
         sessionId,
         workspaceId,
       });

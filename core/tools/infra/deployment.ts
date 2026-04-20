@@ -291,10 +291,33 @@ export const triggerDeployment = {
         envOverrides.push({ name: 'STAGING_ZIP_KEY', value: stagingKey });
       } else if (traceId) {
         envOverrides.push({ name: 'STAGING_ZIP_KEY', value: `staged_${traceId}.zip` });
+      } else {
+        envOverrides.push({ name: 'STAGING_ZIP_KEY', value: 'latest/staging.zip' });
       }
 
-      if (gapIds && gapIds.length > 0) {
-        envOverrides.push({ name: 'GAP_IDS', value: JSON.stringify(gapIds) });
+      // Atomic Sync: Ensure gapIds are passed if present in trace context
+      let effectiveGapIds = gapIds || [];
+      if (effectiveGapIds.length === 0 && traceId) {
+        try {
+          const { ClawTracer } = await import('../../lib/tracer');
+          const traceNodes = await ClawTracer.getTrace(traceId);
+          const rootNode = traceNodes.find((n) => n.nodeId === 'root' || n.nodeId === traceId);
+          if (rootNode?.initialContext?.metadata) {
+            const meta = rootNode.initialContext.metadata as Record<string, unknown>;
+            if (Array.isArray(meta.gapIds)) {
+              effectiveGapIds = meta.gapIds;
+              logger.info(
+                `[triggerDeployment] Inferred ${effectiveGapIds.length} gapIds from trace context.`
+              );
+            }
+          }
+        } catch (e) {
+          logger.warn('[triggerDeployment] Failed to infer gapIds from trace:', e);
+        }
+      }
+
+      if (effectiveGapIds.length > 0) {
+        envOverrides.push({ name: 'GAP_IDS', value: JSON.stringify(effectiveGapIds) });
       }
       if (userId) {
         envOverrides.push({ name: 'INITIATOR_USER_ID', value: userId });

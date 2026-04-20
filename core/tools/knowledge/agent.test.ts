@@ -6,6 +6,7 @@ import {
   createAgent,
   deleteAgent,
   syncAgentRegistry,
+  pulseCheck,
 } from './agent';
 import { setSystemConfig } from './config';
 import { emitEvent } from '../../lib/utils/bus';
@@ -144,6 +145,52 @@ describe('Knowledge Agent Tools', () => {
 
       expect(result).toContain("FAILED: Cannot dispatch tasks to the 'superclaw' agent");
       expect(emitEvent).not.toHaveBeenCalled();
+    });
+
+    it('should decompose complex missions into sub-tasks', async () => {
+      const args = {
+        agentId: 'coder',
+        userId: 'user-1',
+        task: `
+### Goal: CODER
+Implement the backend API with auth and database connection. Ensure all routes are protected.
+Actually, this next part is also for the coder.
+### Goal: CODER
+Implement the frontend dashboard with responsive design and theme support.
+### Goal: CODER
+Deploy the entire application to AWS using SST and verify all resources are active.
+`,
+        sessionId: 'session-complex',
+      };
+
+      const result = await dispatchTask.execute(args);
+
+      expect(result).toContain('TASK_PAUSED');
+      expect(result).toContain('decomposed this mission into 3 sub-tasks');
+
+      // Verify multiple events emitted (total 3 sub-tasks)
+      expect(emitEvent).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  describe('pulseCheck', () => {
+    it('should emit PULSE_PING event to verify agent connectivity', async () => {
+      const result = await pulseCheck.execute({
+        targetAgentId: 'coder',
+        userId: 'user-pulse',
+      });
+
+      expect(result).toContain('PULSE_SENT');
+      expect(result).toContain('sent a cognitive pulse to **coder**');
+
+      expect(emitEvent).toHaveBeenCalledWith(
+        'superclaw',
+        'pulse_ping',
+        expect.objectContaining({
+          targetAgentId: 'coder',
+          userId: 'user-pulse',
+        })
+      );
     });
   });
 

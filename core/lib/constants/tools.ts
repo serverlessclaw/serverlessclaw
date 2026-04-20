@@ -75,6 +75,7 @@ export const TOOLS = {
   uiAction: 'uiAction',
   proposeAutonomyUpdate: 'proposeAutonomyUpdate',
   scanMetabolism: 'scanMetabolism',
+  pulseCheck: 'pulseCheck',
 } as const;
 
 /**
@@ -116,6 +117,7 @@ export const UNIVERSAL_SYSTEM_TOOLS = [
   TOOLS.installSkill,
   TOOLS.seekClarification,
   TOOLS.provideClarification,
+  TOOLS.pulseCheck,
 ];
 
 /**
