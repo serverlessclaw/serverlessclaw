@@ -10,7 +10,7 @@ import { ProviderManager } from '@claw/core/lib/providers/index';
 import { getAgentTools } from '@claw/core/tools/index';
 import { Agent } from '@claw/core/lib/agent';
 import { SUPERCLAW_SYSTEM_PROMPT } from '@claw/core/agents/superclaw';
-import { TraceSource, AgentType } from '@claw/core/lib/types/index';
+import { TraceSource, AgentType, IAgentConfig } from '@claw/core/lib/types/index';
 import { AgentRegistry } from '@claw/core/lib/registry';
 import { logger } from '@claw/core/lib/logger';
 
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         ...config, 
         ...(overrideConfig || {}),
         systemPrompt: overrideConfig?.systemPrompt ?? config?.systemPrompt ?? SUPERCLAW_SYSTEM_PROMPT
-      } as any
+      } as IAgentConfig
     );
 
     // We use the streaming generator to trigger real-time MQTT emissions via AgentEmitter

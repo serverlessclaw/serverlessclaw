@@ -191,6 +191,7 @@
   "CHAT_SHOW_THINKING": "显示思考块",
   "CHAT_KEYBOARD_SHORTCUTS": "键盘快捷键 (?)",
   "CHAT_LIVE": "实时",
+  "CHAT_LIVE_STATUS": "实时连接已建立并正在监控。",
   "CHAT_THINKING": "显示思考",
   "CHAT_DELETE_CONVERSATION": "删除会话",
   "CHAT_DELETE_CONFIRM": "确定要从记忆中清除此记录吗？",
@@ -212,8 +213,10 @@
   "AGENT_SELECTOR_TITLE": "选择智能节点",
   "INITIALIZING_REGISTRY": "正在同步代理注册表...",
   "INVITE_AGENT": "邀请代理",
+  "INVITE": "邀请",
   "START_COLLABORATION": "开始协作",
   "COLLABORATION_MODE": "协作模式",
+  "COLLABORATION_MODE_DESC": "多代理协作已激活。代理现在可以共同处理复杂任务。",
   "COLLABORATORS": "协作者",
   "UNFOLD": "展开",
 

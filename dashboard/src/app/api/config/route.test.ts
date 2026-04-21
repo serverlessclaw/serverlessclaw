@@ -59,6 +59,23 @@ describe('Config API Route', () => {
     expect(data.app).toBe('serverlessclaw');
   });
 
+  it('handles Resource access errors gracefully', async () => {
+    // Force Resource access to throw
+    const { Resource } = await import('sst');
+    vi.spyOn(Resource as any, 'App', 'get').mockImplementation(() => {
+      throw new Error('SST Linkage Missing');
+    });
+
+    const res = await GET({} as any);
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.app).toBe('serverlessclaw'); // Default fallback
+    expect(data.stage).toBe('local'); // Default fallback
+
+    vi.restoreAllMocks();
+  });
+
   describe('POST /api/config', () => {
     it('returns 400 for missing key or value', async () => {
        

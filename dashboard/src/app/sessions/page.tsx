@@ -97,7 +97,7 @@ export default async function SessionsPage({
       >
         <div className="relative w-64 group">
           <form action="/sessions" method="GET">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-cyber-blue transition-colors">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-more group-focus-within:text-cyber-blue transition-colors">
               <SearchIcon size={14} />
             </div>
             <input
@@ -105,7 +105,7 @@ export default async function SessionsPage({
               type="text"
               placeholder="Search sessions..."
               defaultValue={params.q}
-              className="w-full bg-white/5 border border-white/5 rounded h-[34px] pl-9 pr-3 text-xs font-mono text-white placeholder:text-white/20 focus:outline-none focus:border-cyber-blue/30 focus:bg-white/[0.08] transition-all"
+              className="w-full bg-input border border-input rounded h-[34px] pl-9 pr-3 text-xs font-mono text-foreground placeholder:text-muted-more/40 focus:outline-none focus:border-cyber-blue/30 focus:bg-background transition-all"
             />
           </form>
         </div>
@@ -116,7 +116,7 @@ export default async function SessionsPage({
           <Link
             key={session.sessionId}
             href={`/chat?sessionId=${session.sessionId}`}
-            className="group bg-white/5 border border-white/10 p-6 rounded-xl hover:border-cyber-blue/40 transition-all duration-300 relative overflow-hidden"
+            className="group bg-card/60 backdrop-blur-xl border border-border p-6 rounded-xl hover:border-cyber-blue/40 transition-all duration-300 relative overflow-hidden"
           >
             {/* Background Glow */}
             <div className="absolute -right-10 -top-10 w-32 h-32 bg-cyber-blue/10 rounded-full blur-3xl group-hover:bg-cyber-blue/20 transition-all" />
@@ -148,23 +148,23 @@ export default async function SessionsPage({
                 </Typography>
                 <Typography
                   variant="mono"
-                  color="muted"
-                  className="text-[10px] block mt-1 opacity-50 line-clamp-1"
+                  color="muted-more"
+                  className="text-[10px] block mt-1 line-clamp-1"
                 >
                   {session.lastMessage || `ID: ${session.sessionId}`}
                 </Typography>
               </div>
 
-              <div className="pt-4 border-t border-white/5 grid grid-cols-2 gap-4">
+              <div className="pt-4 border-t border-border grid grid-cols-2 gap-4">
                 <div className="flex items-center gap-2">
-                  <Users size={14} className="text-white/40" />
-                  <Typography variant="mono" className="text-[11px] text-white/60">
+                  <Users size={14} className="text-muted-more" />
+                  <Typography variant="mono" className="text-[11px] text-muted">
                     {session.participantCount || 1} Participants
                   </Typography>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Clock size={14} className="text-white/40" />
-                  <Typography variant="mono" className="text-[11px] text-white/60">
+                  <Clock size={14} className="text-muted-more" />
+                  <Typography variant="mono" className="text-[11px] text-muted">
                     {new Date(session.updatedAt || session.timestamp).toLocaleDateString()}
                   </Typography>
                 </div>
@@ -184,7 +184,7 @@ export default async function SessionsPage({
         ))}
 
         {sessions.length === 0 && (
-          <div className="col-span-full py-20 text-center bg-white/5 border border-dashed border-white/10 rounded-2xl">
+          <div className="col-span-full py-20 text-center bg-card/20 border border-dashed border-border rounded-2xl">
             <Typography variant="body" color="muted">
               No active sessions found.
             </Typography>

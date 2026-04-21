@@ -7,8 +7,11 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card-bg);
+  --color-card-elevated: var(--card-bg-elevated);
   --color-border: var(--card-border);
   --color-muted-foreground: var(--muted);
+  --color-muted-more: var(--muted-more);
+  --shadow-premium: var(--shadow-premium);
   --font-sans: var(--font-inter), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), monospace;
 }
@@ -16,12 +19,17 @@
 :root {
   --background: #ffffff;
   --foreground: #0a0a0a;
-  --cyber-green: #00bf7a; /* Darker green for light mode contrast */
-  --cyber-blue: #0099ad; /* Darker blue for light mode contrast */
-  --card-bg: rgba(0, 0, 0, 0.03);
-  --card-border: rgba(0, 0, 0, 0.1);
-  --muted: rgba(0, 0, 0, 0.6);
-  --border: rgba(0, 0, 0, 0.1);
+  --cyber-green: #008f5a; /* Darker green for light mode contrast */
+  --cyber-blue: #007a8a; /* Darker blue for light mode contrast */
+  --card-bg: rgba(0, 0, 0, 0.02);
+  --card-bg-elevated: #ffffff;
+  --card-border: rgba(0, 0, 0, 0.08);
+  --muted: rgba(0, 0, 0, 0.5);
+  --muted-more: rgba(0, 0, 0, 0.3);
+  --border: rgba(0, 0, 0, 0.08);
+  --input-bg: rgba(0, 0, 0, 0.03);
+  --input-border: rgba(0, 0, 0, 0.1);
+  --shadow-premium: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
 }
 
 .dark {
@@ -30,9 +38,14 @@
   --cyber-green: #00ffa3;
   --cyber-blue: #00e0ff;
   --card-bg: rgba(255, 255, 255, 0.03);
+  --card-bg-elevated: rgba(255, 255, 255, 0.05);
   --card-border: rgba(255, 255, 255, 0.1);
   --muted: rgba(255, 255, 255, 0.6);
+  --muted-more: rgba(255, 255, 255, 0.4);
   --border: rgba(255, 255, 255, 0.1);
+  --input-bg: rgba(255, 255, 255, 0.03);
+  --input-border: rgba(255, 255, 255, 0.1);
+  --shadow-premium: 0 20px 50px -12px rgba(0, 0, 0, 0.5);
 }
 
 body {
@@ -47,6 +60,15 @@ body {
   border: 1px solid var(--card-border);
   backdrop-filter: blur(12px);
   border-radius: 8px;
+  box-shadow: var(--shadow-premium);
+}
+
+.glass-card-elevated {
+  background: var(--card-bg-elevated);
+  border: 1px solid var(--card-border);
+  backdrop-filter: blur(12px);
+  border-radius: 8px;
+  box-shadow: var(--shadow-premium);
 }
 
 .glow-text {
@@ -271,20 +293,34 @@ body {
 
 /* Custom Cyber Toasts */
 .cyber-toast {
-  background: var(--background) !important;
-  border: 1px solid var(--border) !important;
+  background: var(--card-bg-elevated) !important;
+  border: 1px solid var(--card-border) !important;
   backdrop-filter: blur(12px) !important;
   color: var(--foreground) !important;
   font-family: var(--font-mono) !important;
   border-radius: 2px !important;
-  box-shadow:
-    0 0 30px rgba(0, 0, 0, 0.1),
-    inset 0 0 10px rgba(0, 224, 255, 0.05) !important;
+  box-shadow: var(--shadow-premium) !important;
   padding: 16px !important;
   font-size: 11px !important;
   font-weight: 700 !important;
   letter-spacing: 0.1em !important;
   text-transform: uppercase !important;
+}
+
+.bg-muted-more {
+  background-color: var(--muted-more);
+}
+
+.text-muted-more {
+  color: var(--muted-more);
+}
+
+.bg-input {
+  background-color: var(--input-bg);
+}
+
+.border-input {
+  border-color: var(--input-border);
 }
 
 .dark .cyber-toast {

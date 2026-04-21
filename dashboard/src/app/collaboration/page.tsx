@@ -65,10 +65,10 @@ export default function CollaborationPage() {
         subtitleKey="COLLABORATION_SUBTITLE"
         stats={
           <div className="flex gap-4">
-            <div className="glass-card px-4 py-2 border-white/5 flex items-center gap-3">
+            <div className="glass-card px-4 py-2 border-border flex items-center gap-3">
               <TrustGauge score={94} label="SWARM" size={40} />
               <div>
-                <Typography variant="mono" className="text-[10px] uppercase opacity-40">
+                <Typography variant="mono" color="muted-more" className="text-[10px] uppercase">
                   {t('SWARM_TRUST')}
                 </Typography>
                 <Typography variant="mono" weight="black" className="text-xs text-cyber-blue">
@@ -76,12 +76,12 @@ export default function CollaborationPage() {
                 </Typography>
               </div>
             </div>
-            <div className="glass-card px-4 py-2 border-white/5 flex items-center gap-3">
+            <div className="glass-card px-4 py-2 border-border flex items-center gap-3">
               <div className="p-2 bg-cyber-green/10 rounded-full">
                 <ShieldAlert size={16} className="text-cyber-green" />
               </div>
               <div>
-                <Typography variant="mono" className="text-[10px] uppercase opacity-40">
+                <Typography variant="mono" color="muted-more" className="text-[10px] uppercase">
                   {t('AUTONOMY')}
                 </Typography>
                 <Typography variant="mono" weight="black" className="text-xs text-cyber-green">
@@ -125,8 +125,8 @@ export default function CollaborationPage() {
         </div>
         <div className="lg:col-span-2 space-y-4">
            {/* Summary Text / Global Feed */}
-           <div className="glass-card p-6 border-white/5 h-full flex flex-col justify-center">
-             <Typography variant="h3" glow color="white" uppercase className="mb-2">
+           <div className="glass-card p-6 border-border h-full flex flex-col justify-center bg-card/40">
+             <Typography variant="h3" glow uppercase className="mb-2">
                {t('OPERATIONAL_SUMMARY')}
              </Typography>
              <Typography variant="body" color="muted" className="text-sm italic">
@@ -153,7 +153,7 @@ export default function CollaborationPage() {
       {/* Main Workspace */}
       <div className="space-y-6">
         {/* Improved Tab Navigation */}
-        <div className="flex items-center justify-between border-b border-white/5 pb-4">
+        <div className="flex items-center justify-between border-b border-border pb-4">
           <div className="flex gap-2">
             {tabs.map((tab) => {
               const Icon = tab.icon;
@@ -166,8 +166,8 @@ export default function CollaborationPage() {
                     flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all
                     ${
                       isActive
-                        ? 'bg-cyber-blue/10 text-cyber-blue border border-cyber-blue/30 shadow-[0_0_15px_rgba(6,182,212,0.1)]'
-                        : 'text-white/30 hover:text-white/60 hover:bg-white/5 border border-transparent'
+                        ? 'bg-cyber-blue/10 text-cyber-blue border border-cyber-blue/30 shadow-premium'
+                        : 'text-muted-more hover:text-foreground hover:bg-foreground/5 border border-transparent'
                     }
                   `}
                 >
@@ -177,7 +177,7 @@ export default function CollaborationPage() {
                     <span
                       className={`
                       ml-1 px-1.5 py-0.5 rounded-full text-[9px] font-black
-                      ${isActive ? 'bg-cyber-blue/20 text-cyber-blue' : 'bg-white/10 text-white/40'}
+                      ${isActive ? 'bg-cyber-blue/20 text-cyber-blue' : 'bg-foreground/10 text-muted-more'}
                     `}
                     >
                       {tab.count}
@@ -207,7 +207,7 @@ export default function CollaborationPage() {
             ))}
 
           {activeTab === 'live' && (
-            <div className="h-[700px] glass-card border-white/5 overflow-hidden relative shadow-inner">
+            <div className="h-[700px] glass-card border-border overflow-hidden relative shadow-premium bg-card/40">
               <ReactFlowProvider>
                 <CollaborationCanvas />
               </ReactFlowProvider>

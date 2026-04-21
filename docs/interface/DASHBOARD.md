@@ -108,6 +108,7 @@ The theme is entirely driven by CSS variables defined in [`dashboard/src/globals
 1. **Avoid Hardcoded Hex Codes**: Always use Tailwind's semantic utility classes (e.g., `text-foreground` instead of `text-white`).
 2. **Adaptive Transparency**: Use Tailwind's opacity modifier for borders (e.g., `border-foreground/10`) to ensure they scale with the theme.
 3. **Micro-animations**: Use subtle transitions on hover and state changes to make the interface feel alive.
+4. **Smart Tooltips**: Use the `CyberTooltip` component for all action buttons and information icons. It uses React Portals to avoid stacking context issues and features smart positioning to stay within the viewport.
 
 ---
 

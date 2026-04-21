@@ -68,6 +68,8 @@ export interface SSTResource {
   ActiveProvider: { value: string };
   /** Secret: Active LLM model configuration. */
   ActiveModel: { value: string };
+  /** Global application metadata (internal SST resource). */
+  App: { name: string; stage: string };
 }
 
 /**

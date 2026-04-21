@@ -151,18 +151,18 @@ export default function GapRefinementPanel({
   const shortId = gapId.split('#').slice(-1)[0];
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/60" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex justify-end bg-background/60 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="w-full max-w-md h-full bg-[#0a0a0a] border-l border-white/10 overflow-y-auto"
+        className="w-full max-w-md h-full bg-background border-l border-border overflow-y-auto shadow-premium"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-[#0a0a0a] border-b border-white/10 px-6 py-4 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-background/80 backdrop-blur-md border-b border-border px-6 py-4 flex items-center justify-between z-10">
           <div>
-            <h2 className="text-sm font-bold text-white/90 uppercase tracking-wider">{t('PIPELINE_REFINE_GAP')}</h2>
-            <p className="text-[10px] font-mono text-white/40 mt-0.5">ID: {shortId}</p>
+            <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">{t('PIPELINE_REFINE_GAP')}</h2>
+            <p className="text-[10px] font-mono text-muted-more mt-0.5">ID: {shortId}</p>
           </div>
-          <button onClick={onClose} className="text-white/40 hover:text-white/80 transition-colors">
+          <button onClick={onClose} className="text-muted-more hover:text-foreground transition-colors">
             <X size={18} />
           </button>
         </div>
@@ -170,14 +170,14 @@ export default function GapRefinementPanel({
         <div className="px-6 py-5 space-y-6">
           {/* Description */}
           <div>
-            <label className="block text-[10px] font-bold text-white/50 uppercase tracking-wider mb-2">
+            <label className="block text-[10px] font-bold text-muted-more uppercase tracking-wider mb-2">
               {t('PIPELINE_DESCRIPTION')}
             </label>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={4}
-              className="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-xs text-white/90 focus:outline-none focus:border-cyber-green/50 resize-none"
+              className="w-full bg-input border border-input rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-cyber-green/50 resize-none transition-colors"
             />
           </div>
 
@@ -189,15 +189,15 @@ export default function GapRefinementPanel({
               </label>
               <button 
                 onClick={addSubTask}
-                className="text-[9px] font-bold text-white/40 hover:text-cyber-green transition-colors flex items-center gap-1 uppercase tracking-widest"
+                className="text-[9px] font-bold text-muted-more hover:text-cyber-green transition-colors flex items-center gap-1 uppercase tracking-widest"
               >
                 <Plus size={10} /> {t('PIPELINE_ADD_SUBTASK')}
               </button>
             </div>
             
-            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
               {loadingPlan ? (
-                <div className="py-8 text-center animate-pulse text-[10px] text-white/20 uppercase font-mono tracking-widest">
+                <div className="py-8 text-center animate-pulse text-[10px] text-muted-more uppercase font-mono tracking-widest">
                   {t('PIPELINE_LOADING_EVOLUTION_PLAN')}
                 </div>
               ) : plan?.subTasks.length ? (
@@ -207,18 +207,18 @@ export default function GapRefinementPanel({
                       value={st.description}
                       onChange={(e) => updateSubTask(st.id, e.target.value)}
                       rows={2}
-                      className="w-full bg-white/[0.03] border border-white/5 rounded px-3 py-2 text-[11px] text-white/70 focus:outline-none focus:border-cyber-green/30 resize-none group-hover:bg-white/[0.05] transition-colors"
+                      className="w-full bg-foreground/[0.02] border border-border rounded px-3 py-2 text-[11px] text-foreground/70 focus:outline-none focus:border-cyber-green/30 resize-none group-hover:bg-foreground/[0.04] transition-colors"
                     />
                     <button 
                       onClick={() => removeSubTask(st.id)}
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-red-400/50 hover:text-red-400 transition-all"
+                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-red-500/50 hover:text-red-500 transition-all font-bold"
                     >
                       <Trash2 size={10} />
                     </button>
                   </div>
                 ))
               ) : (
-                <div className="py-4 text-center border border-dashed border-white/5 rounded text-[10px] text-white/20 uppercase tracking-widest italic">
+                <div className="py-4 text-center border border-dashed border-border rounded text-[10px] text-muted-more/40 uppercase tracking-widest italic">
                   {t('PIPELINE_NO_PLAN_GENERATED')}
                 </div>
               )}
@@ -228,7 +228,7 @@ export default function GapRefinementPanel({
           {/* Impact + Priority */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] font-bold text-white/50 uppercase tracking-wider mb-2">
+              <label className="block text-[10px] font-bold text-muted-more uppercase tracking-wider mb-2">
                 {t('PIPELINE_IMPACT_LABEL')}
               </label>
               <input
@@ -237,11 +237,11 @@ export default function GapRefinementPanel({
                 max={10}
                 value={impact}
                 onChange={(e) => setImpact(Number(e.target.value))}
-                className="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-xs text-white/90 focus:outline-none focus:border-cyber-green/50"
+                className="w-full bg-input border border-input rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-cyber-green/50 transition-colors"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-white/50 uppercase tracking-wider mb-2">
+              <label className="block text-[10px] font-bold text-muted-more uppercase tracking-wider mb-2">
                 {t('PIPELINE_PRIORITY_LABEL')}
               </label>
               <input
@@ -250,7 +250,7 @@ export default function GapRefinementPanel({
                 max={10}
                 value={priority}
                 onChange={(e) => setPriority(Number(e.target.value))}
-                className="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-xs text-white/90 focus:outline-none focus:border-cyber-green/50"
+                className="w-full bg-input border border-input rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-cyber-green/50 transition-colors"
               />
             </div>
           </div>
@@ -265,36 +265,36 @@ export default function GapRefinementPanel({
           </button>
 
           {/* Swarm Consensus Section */}
-          <div className="border-t border-white/10 pt-4 space-y-3">
-            <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-400 uppercase tracking-widest">
+          <div className="border-t border-border pt-4 space-y-3">
+            <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-500 uppercase tracking-widest">
               <Users size={12} /> {t('PIPELINE_SWARM_CONSENSUS')}
             </div>
-            <div className="p-3 bg-indigo-500/5 border border-indigo-500/20 rounded">
+            <div className="p-3 bg-indigo-500/5 border border-indigo-500/10 rounded">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-[9px] text-white/60 uppercase">{t('PIPELINE_AGENT_AGREEMENT')}</span>
+                <span className="text-[9px] text-muted uppercase">{t('PIPELINE_AGENT_AGREEMENT')}</span>
                 <span className="text-[9px] text-cyber-green font-black">94%</span>
               </div>
-              <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+              <div className="w-full h-1 bg-foreground/5 rounded-full overflow-hidden">
                 <div className="h-full bg-cyber-green" style={{ width: '94%' }} />
               </div>
-              <p className="text-[9px] text-white/40 mt-2 italic leading-tight">
+              <p className="text-[9px] text-muted-more mt-2 italic leading-tight">
                 {t('PIPELINE_CONSENSUS_REACHED')}
               </p>
             </div>
           </div>
 
           {/* Reject section */}
-          <div className="border-t border-white/10 pt-4">
+          <div className="border-t border-border pt-4">
             {!showReject ? (
               <button
                 onClick={() => setShowReject(true)}
-                className="w-full text-red-400/50 hover:text-red-400 text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors py-2"
+                className="w-full text-red-500/60 hover:text-red-500 text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors py-2"
               >
                 <AlertTriangle size={12} /> {t('PIPELINE_REJECT_PLAN')}
               </button>
             ) : (
               <div className="space-y-3">
-                <label className="block text-[10px] font-bold text-red-400/70 uppercase tracking-wider">
+                <label className="block text-[10px] font-bold text-red-500 uppercase tracking-wider">
                   {t('PIPELINE_REJECTION_REASON_LABEL')}
                 </label>
                 <textarea
@@ -302,19 +302,19 @@ export default function GapRefinementPanel({
                   onChange={(e) => setRejectionReason(e.target.value)}
                   rows={3}
                   placeholder={t('PIPELINE_REJECTION_REASON_PLACEHOLDER')}
-                  className="w-full bg-red-500/5 border border-red-500/20 rounded px-3 py-2 text-xs text-white/90 focus:outline-none focus:border-red-500/50 resize-none placeholder:text-white/20"
+                  className="w-full bg-red-500/5 border border-red-500/20 rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-red-500 resize-none placeholder:text-muted-more/30"
                 />
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowReject(false)}
-                    className="flex-1 text-white/40 hover:text-white/70 text-[10px] font-bold uppercase tracking-wider py-2 rounded border border-white/10 transition-colors"
+                    className="flex-1 text-muted-more hover:text-foreground text-[10px] font-bold uppercase tracking-wider py-2 rounded border border-border transition-colors"
                   >
                     {t('COMMON_CANCEL')}
                   </button>
                   <button
                     onClick={handleReject}
                     disabled={saving}
-                    className="flex-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-[10px] font-bold uppercase tracking-wider py-2 rounded transition-colors"
+                    className="flex-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-500 text-[10px] font-bold uppercase tracking-wider py-2 rounded transition-colors"
                   >
                     {saving ? t('PIPELINE_REJECTING') : t('PIPELINE_CONFIRM_REJECT')}
                   </button>

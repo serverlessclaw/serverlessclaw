@@ -107,10 +107,10 @@ export const uninstallSkill = {
 export const recallKnowledge = {
   ...schema.recallKnowledge,
   execute: async (args: Record<string, unknown>): Promise<string> => {
-    const { userId, _query, _category, tags, _orgId, minImpact, minConfidence } = args as {
+    const { userId, _query, category, tags, _orgId, minImpact, minConfidence } = args as {
       userId: string;
       _query: string;
-      _category: InsightCategory;
+      category: InsightCategory;
       tags?: string[];
       _orgId?: string;
       minImpact?: number;
@@ -121,7 +121,7 @@ export const recallKnowledge = {
 
     const searchResponse = await memory.searchInsights({
       tags,
-      category: _category,
+      category,
       limit: 50,
     });
 

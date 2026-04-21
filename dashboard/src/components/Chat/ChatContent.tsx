@@ -17,6 +17,7 @@ import { useTranslations } from '@/components/Providers/TranslationsProvider';
 import { AgentSelector } from './AgentSelector';
 import { AgentType } from '@claw/core/lib/types/index';
 import { logger } from '@claw/core/lib/logger';
+import CyberTooltip from '@/components/CyberTooltip';
 import type { ChatMessage } from './types';
 
 /**
@@ -473,8 +474,8 @@ export default function ChatContent() {
           </div>
         )}
 
-        <header className="px-6 pb-6 pt-10 border-b border-white/5 flex flex-col lg:flex-row lg:justify-between lg:items-end shrink-0 min-h-[70px] gap-6">
-          <div className="flex-1 min-w-0 mr-4">
+        <header className="px-6 py-4 border-b border-white/5 flex flex-row items-center justify-between shrink-0 min-h-[70px] gap-6">
+          <div className="flex-1 min-w-0">
             {activeSessionId && currentSession ? (
               <div className="flex items-center gap-3 group/title">
                 {isEditingTitle ? (
@@ -515,7 +516,7 @@ export default function ChatContent() {
                       weight="bold"
                       color="white"
                       glow
-                      className="truncate uppercase"
+                      className="truncate uppercase text-xl"
                     >
                       {currentSession?.title || t('CHAT_UNTITLED_TRACE')}
                     </Typography>
@@ -535,76 +536,99 @@ export default function ChatContent() {
                 weight="bold"
                 color="white"
                 glow
-                className="truncate uppercase"
+                className="truncate uppercase text-xl"
               >
                 {t('CHAT_DIRECT')}
               </Typography>
             )}
-            
-            {/* Collaborators Row */}
-            <div className="flex items-center gap-2 mt-2">
-              <div className="flex -space-x-2 overflow-hidden">
+          </div>
+
+          <div className="flex items-center gap-5">
+            {/* Collaborators Section */}
+            <div className="flex items-center gap-4">
+              <div className="flex -space-x-3">
                 {activeCollaborators.map((id) => (
-                  <div 
-                    key={id} 
-                    className="inline-block h-6 w-6 rounded-full ring-2 ring-[#0a0a0a] bg-black/40 border border-white/10 flex items-center justify-center overflow-hidden"
-                    title={id}
-                  >
-                    <Bot size={12} className={id === currentAgentId ? "text-cyber-green" : "text-cyber-blue"} />
-                  </div>
+                  <CyberTooltip key={id} content={id} position="bottom" showIcon={false} width="w-auto">
+                    <div 
+                      className={`relative flex items-center justify-center h-8 w-8 rounded-full ring-2 ring-[#0a0a0a] bg-black/40 border transition-all hover:scale-110 hover:z-10 group/avatar ${id === currentAgentId ? 'border-cyber-green/30 shadow-[0_0_15px_rgba(0,255,163,0.1)]' : 'border-white/10'}`}
+                    >
+                      <div className="flex items-center justify-center w-full h-full">
+                        <Bot 
+                          size={16} 
+                          className={id === currentAgentId ? "text-cyber-green drop-shadow-[0_0_8px_rgba(0,255,163,0.5)]" : "text-cyber-blue"} 
+                        />
+                      </div>
+                    </div>
+                  </CyberTooltip>
                 ))}
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsInviteSelectorOpen(true)}
-                className="p-1 h-6 w-6 rounded-full border border-dashed border-white/20 text-white/40 hover:text-cyber-green hover:border-cyber-green/40 transition-all ml-2"
-                icon={<Plus size={12} />}
-                title={t('INVITE_AGENT')}
-              />
+
+              <CyberTooltip content={t('INVITE_AGENT')} position="bottom" showIcon={false} width="w-auto">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsInviteSelectorOpen(true)}
+                  className="px-3 h-8 rounded-full border border-dashed border-white/20 text-white/40 hover:text-cyber-green hover:border-cyber-green/40 hover:bg-cyber-green/5 transition-all flex items-center gap-2 group/invite"
+                >
+                  <Plus size={12} className="group-hover/invite:rotate-90 transition-transform" />
+                  <span className="text-[10px] font-mono uppercase tracking-wider">
+                    {t('INVITE')}
+                  </span>
+                </Button>
+              </CyberTooltip>
+
               {collaborationId && (
-                <div className="flex items-center gap-2 ml-4 bg-cyber-blue/10 px-2 py-0.5 rounded border border-cyber-blue/30">
-                   <div className="w-1 h-1 rounded-full bg-cyber-blue animate-pulse" />
-                   <Typography variant="mono" className="text-[8px] text-cyber-blue font-bold uppercase">
-                     {t('COLLABORATION_MODE')}
-                   </Typography>
-                </div>
+                <CyberTooltip content={t('COLLABORATION_MODE_DESC')} position="bottom" showIcon={false}>
+                  <div className="flex items-center gap-2 bg-cyber-blue/10 px-2 py-1 rounded border border-cyber-blue/30 ml-1 cursor-help">
+                    <div className="w-1 h-1 rounded-full bg-cyber-blue animate-pulse" />
+                    <Typography variant="mono" className="text-[8px] text-cyber-blue font-bold uppercase tracking-wider">
+                      {t('COLLABORATION_MODE')}
+                    </Typography>
+                  </div>
+                </CyberTooltip>
               )}
             </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowThinking(!showThinking)}
-              className={`p-1 flex items-center gap-2 transition-colors ${showThinking ? 'text-cyber-green' : 'text-white/40 hover:text-white/70'}`}
-              title={showThinking ? t('CHAT_HIDE_THINKING') : t('CHAT_SHOW_THINKING')}
-              icon={<Brain size={18} />}
-            >
-              <span className="text-[10px] font-mono uppercase tracking-wider hidden sm:inline">
-                {t('CHAT_THINKING')}
-              </span>
-            </Button>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowShortcutsHelp(true)}
-              className="p-1 text-white/40 hover:text-cyber-green transition-colors"
-              title={t('CHAT_KEYBOARD_SHORTCUTS')}
-              icon={<Keyboard size={18} />}
-            />
+            <div className="h-6 w-px bg-white/10 mx-1" />
 
-            {isRealtimeActive && (
-              <div className="flex items-center gap-2 bg-cyber-green/10 px-3 py-1 rounded border border-cyber-green/30">
-                <div
-                  className={`w-1.5 h-1.5 rounded-full bg-cyber-green ${CHAT_STYLES.ANIMATIONS.PULSE}`}
+            <div className="flex items-center gap-3">
+              <CyberTooltip content={showThinking ? t('CHAT_HIDE_THINKING') : t('CHAT_SHOW_THINKING')} position="bottom" showIcon={false} width="w-auto">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowThinking(!showThinking)}
+                  className={`px-2 py-1 h-8 flex items-center gap-2 rounded-md transition-all ${showThinking ? 'bg-cyber-green/5 text-cyber-green border border-cyber-green/20' : 'text-white/40 hover:text-white/70'}`}
+                  icon={<Brain size={18} />}
+                >
+                  <span className="text-[10px] font-mono uppercase tracking-wider hidden xl:inline">
+                    {t('CHAT_THINKING')}
+                  </span>
+                </Button>
+              </CyberTooltip>
+
+              <CyberTooltip content={t('CHAT_KEYBOARD_SHORTCUTS')} position="bottom" showIcon={false} width="w-auto">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowShortcutsHelp(true)}
+                  className="p-1.5 h-8 w-8 rounded-md text-white/40 hover:text-cyber-green hover:bg-white/5 transition-all flex items-center justify-center"
+                  icon={<Keyboard size={18} />}
                 />
-                <Typography variant="mono" weight="bold" className="text-cyber-green text-[10px]">
-                  {t('CHAT_LIVE')}
-                </Typography>
-              </div>
-            )}
+              </CyberTooltip>
+
+              {isRealtimeActive && (
+                <CyberTooltip content={t('CHAT_LIVE_STATUS')} position="bottom" showIcon={false} width="w-auto">
+                  <div className="flex items-center gap-2 bg-cyber-green/10 px-3 py-1 rounded border border-cyber-green/30 h-8">
+                    <div
+                      className={`w-1.5 h-1.5 rounded-full bg-cyber-green ${CHAT_STYLES.ANIMATIONS.PULSE}`}
+                    />
+                    <Typography variant="mono" weight="bold" className="text-cyber-green text-[10px] uppercase">
+                      {t('CHAT_LIVE')}
+                    </Typography>
+                  </div>
+                </CyberTooltip>
+              )}
+            </div>
           </div>
         </header>
 

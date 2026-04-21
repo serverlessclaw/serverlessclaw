@@ -64,6 +64,12 @@ vi.mock('../lib/agent/parallel-aggregator', () => ({
   },
 }));
 
+vi.mock('../lib/metrics/evolution-metrics', () => ({
+  EVOLUTION_METRICS: {
+    recordBarrierTimeout: vi.fn(),
+  },
+}));
+
 vi.mock('../lib/registry/config', () => ({
   ConfigManager: {
     getRawConfig: vi.fn().mockResolvedValue(0.5),

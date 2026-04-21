@@ -3,7 +3,7 @@ import React from 'react';
 interface TypographyProps {
   variant?: 'h1' | 'h2' | 'h3' | 'body' | 'caption' | 'mono';
   as?: React.ElementType;
-  color?: 'primary' | 'intel' | 'danger' | 'warning' | 'muted' | 'white' | 'inherit';
+  color?: 'primary' | 'intel' | 'danger' | 'warning' | 'muted' | 'muted-more' | 'white' | 'inherit';
   uppercase?: boolean;
   glow?: boolean;
   weight?: 'normal' | 'medium' | 'bold' | 'black';
@@ -50,6 +50,7 @@ const Typography: React.FC<TypographyProps> = ({
     danger: 'text-red-500',
     warning: 'text-orange-400',
     muted: 'text-[var(--muted)]',
+    'muted-more': 'text-[var(--muted-more)]',
     white: 'text-[var(--foreground)]',
     inherit: '',
   }[color];

@@ -248,7 +248,7 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
             </div>
           </div>
 
-          <div className="pt-8 border-t border-white/5 space-y-4">
+          <div className="pt-8 border-t border-border space-y-4">
             <div className="flex justify-between items-center">
               <Typography
                 variant="caption"
@@ -355,7 +355,7 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
                   type="number"
                   value={deployLimit}
                   onChange={(e) => setDeployLimit(e.target.value)}
-                  className={`w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-${THEME.COLORS.PRIMARY} transition-colors font-mono`}
+                  className={`w-full bg-input border border-input rounded p-2 text-sm text-foreground outline-none focus:border-${THEME.COLORS.PRIMARY} transition-colors font-mono`}
                 />
               </div>
               <div className="space-y-2">
@@ -425,7 +425,7 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
                   type="number"
                   value={maxToolIterations}
                   onChange={(e) => setMaxToolIterations(e.target.value)}
-                  className={`w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-${THEME.COLORS.PRIMARY} transition-colors font-mono`}
+                  className={`w-full bg-input border border-input rounded p-2 text-sm text-foreground outline-none focus:border-${THEME.COLORS.PRIMARY} transition-colors font-mono`}
                 />
                 <Typography variant="caption" color="muted" className="italic block mt-1">
                   {t('SETTINGS_MAX_TOOL_ITERATIONS_DESC')}
@@ -457,7 +457,7 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
                   type="number"
                   value={circuitBreakerThreshold}
                   onChange={(e) => setCircuitBreakerThreshold(e.target.value)}
-                  className={`w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-${THEME.COLORS.PRIMARY} transition-colors font-mono`}
+                  className={`w-full bg-input border border-input rounded p-2 text-sm text-foreground outline-none focus:border-${THEME.COLORS.PRIMARY} transition-colors font-mono`}
                 />
               </div>
               <div className="space-y-2">
@@ -487,7 +487,7 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
                   type="number"
                   value={recursionLimit}
                   onChange={(e) => setRecursionLimit(e.target.value)}
-                  className={`w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-${THEME.COLORS.PRIMARY} transition-colors font-mono`}
+                  className={`w-full bg-input border border-input rounded p-2 text-sm text-foreground outline-none focus:border-${THEME.COLORS.PRIMARY} transition-colors font-mono`}
                 />
               </div>
               <div className="space-y-2">
@@ -562,7 +562,7 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
                 type="text"
                 value={protectedResources}
                 onChange={(e) => setProtectedResources(e.target.value)}
-                className={`w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-${THEME.COLORS.PRIMARY} transition-colors font-mono`}
+                className={`w-full bg-input border border-input rounded p-2 text-sm text-foreground outline-none focus:border-${THEME.COLORS.PRIMARY} transition-colors font-mono`}
               />
               <Typography variant="caption" color="muted" className="italic block mt-1">
                 {t('SETTINGS_PROTECTED_RESOURCE_SCOPES_DESC')}
@@ -621,7 +621,7 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
                   type="number"
                   value={reflectionFrequency}
                   onChange={(e) => setReflectionFrequency(e.target.value)}
-                  className={`w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-${THEME.COLORS.REFLECT} transition-colors font-mono`}
+                  className={`w-full bg-input border border-input rounded p-2 text-sm text-foreground outline-none focus:border-${THEME.COLORS.REFLECT} transition-colors font-mono`}
                 />
               </div>
               <div className="space-y-2">
@@ -651,7 +651,7 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
                   type="number"
                   value={strategicReviewFrequency}
                   onChange={(e) => setStrategicReviewFrequency(e.target.value)}
-                  className={`w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-${THEME.COLORS.REFLECT} transition-colors font-mono`}
+                  className={`w-full bg-input border border-input rounded p-2 text-sm text-foreground outline-none focus:border-${THEME.COLORS.REFLECT} transition-colors font-mono`}
                 />
               </div>
               <div className="space-y-2">
@@ -681,7 +681,7 @@ export default function SettingsForm({ config, updateConfig }: SettingsFormProps
                   type="number"
                   value={minGapsForReview}
                   onChange={(e) => setMinGapsForReview(e.target.value)}
-                  className={`w-full bg-black/40 border border-white/10 rounded p-2 text-sm text-white/90 outline-none focus:border-${THEME.COLORS.REFLECT} transition-colors font-mono`}
+                  className={`w-full bg-input border border-input rounded p-2 text-sm text-foreground outline-none focus:border-${THEME.COLORS.REFLECT} transition-colors font-mono`}
                 />
               </div>
             </div>

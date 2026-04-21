@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ConfigManager, setDocClient } from './config';
 
 vi.mock('sst', () => ({
-  Resource: {},
+  Resource: {
+    ConfigTable: undefined,
+  },
 }));
 
 vi.mock('../config/config-versioning', () => ({
@@ -36,6 +38,19 @@ describe('ConfigManager', () => {
 
   it('should safely return undefined when deleteConfig is called and ConfigTable is not linked', async () => {
     await expect(ConfigManager.deleteConfig('any_key')).resolves.toBeUndefined();
+  });
+
+  it('should handle Resource throwing error during table name resolution', async () => {
+    // Mock Resource to throw when accessed
+    vi.spyOn(Resource as any, 'ConfigTable', 'get').mockImplementation(() => {
+      throw new Error('SST Linkage Error');
+    });
+
+    const value = await ConfigManager.resolveTableName();
+    expect(value).toBeUndefined();
+
+    // Cleanup
+    vi.restoreAllMocks();
   });
 });
 

@@ -91,10 +91,10 @@ export default function PlaygroundPage() {
   };
 
   return (
-    <main className="flex h-screen overflow-hidden bg-[#0a0a0a]">
+    <main className="flex h-screen overflow-hidden bg-background">
       {/* Left Sidebar: Config */}
-      <aside className="w-80 border-r border-white/5 flex flex-col bg-black/40">
-        <div className="p-6 border-b border-white/5">
+      <aside className="w-80 border-r border-border flex flex-col bg-card/40 backdrop-blur-xl">
+        <div className="p-6 border-b border-border">
           <div className="flex items-center gap-2 mb-6">
             <ShieldCheck size={20} className="text-cyber-green" />
             <Typography variant="mono" weight="bold" uppercase className="text-xs tracking-widest">Evolution_Sandbox</Typography>
@@ -102,11 +102,11 @@ export default function PlaygroundPage() {
 
           <div className="space-y-4">
              <div className="space-y-2">
-                <Typography variant="mono" className="text-[9px] text-white/40 uppercase">Target Persona</Typography>
+                <Typography variant="mono" color="muted-more" className="text-[9px] uppercase">Target Persona</Typography>
                 <select 
-                  value={selectedAgentId}
-                  onChange={(e) => handleAgentChange(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded p-2 text-xs text-white outline-none focus:border-cyber-green/50"
+                   value={selectedAgentId}
+                   onChange={(e) => handleAgentChange(e.target.value)}
+                   className="w-full bg-input border border-input rounded p-2 text-xs text-foreground outline-none focus:border-cyber-green/50 transition-colors"
                 >
                   <option value="">Select Agent</option>
                   {Object.values(agents).map(a => (
@@ -120,23 +120,23 @@ export default function PlaygroundPage() {
                   <Zap size={12} className="text-cyber-blue" />
                   <Typography variant="mono" weight="bold" className="text-[10px] text-cyber-blue">ISOLATED_MODE</Typography>
                 </div>
-                <Typography variant="caption" className="text-[9px] text-white/50 leading-relaxed uppercase">
+                <Typography variant="caption" color="muted" className="text-[9px] leading-relaxed uppercase">
                   Safety enabled. Memory drift and reflection disabled for this session.
                 </Typography>
              </div>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
           <div className="space-y-3">
              <div className="flex items-center justify-between">
-                <Typography variant="mono" className="text-[9px] text-white/40 uppercase font-black tracking-widest">Core Directive</Typography>
-                <Badge variant="outline" className="text-[8px] border-white/10 opacity-50 uppercase">v{agents[selectedAgentId]?.version || 1}</Badge>
+                <Typography variant="mono" color="muted-more" className="text-[9px] uppercase font-black tracking-widest">Core Directive</Typography>
+                <Badge variant="outline" className="text-[8px] opacity-50 uppercase">v{agents[selectedAgentId]?.version || 1}</Badge>
              </div>
              <textarea 
                value={systemPrompt}
                onChange={(e) => setSystemPrompt(e.target.value)}
-               className="w-full h-80 bg-black/60 border border-white/10 rounded p-3 text-[11px] font-mono text-white/80 outline-none focus:border-cyber-green/30 custom-scrollbar resize-none"
+               className="w-full h-80 bg-input border border-input rounded p-3 text-[11px] font-mono text-foreground/80 outline-none focus:border-cyber-green/30 custom-scrollbar resize-none transition-colors"
                placeholder="System instructions..."
              />
              <Button 
@@ -151,12 +151,12 @@ export default function PlaygroundPage() {
           </div>
 
           <div className="space-y-3">
-             <Typography variant="mono" className="text-[9px] text-white/40 uppercase font-black tracking-widest">Active Tools</Typography>
+             <Typography variant="mono" color="muted-more" className="text-[9px] uppercase font-black tracking-widest">Active Tools</Typography>
              <div className="space-y-2">
                 {agents[selectedAgentId]?.tools?.map(t => (
-                  <div key={t} className="flex items-center gap-2 p-2 bg-white/[0.02] border border-white/5 rounded">
-                     <Wrench size={10} className="text-white/30" />
-                     <Typography variant="mono" className="text-[10px] text-white/70">{t}</Typography>
+                  <div key={t} className="flex items-center gap-2 p-2 bg-foreground/[0.02] border border-border rounded">
+                     <Wrench size={10} className="text-muted-more" />
+                     <Typography variant="mono" color="muted" className="text-[10px]">{t}</Typography>
                   </div>
                 ))}
              </div>

@@ -7,7 +7,6 @@ export const dynamic = 'force-dynamic';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
   DynamoDBDocumentClient,
-  PutCommand,
   UpdateCommand,
   DeleteCommand,
 } from '@aws-sdk/lib-dynamodb';
@@ -69,7 +68,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         }
         return NextResponse.json({ success: true });
       }
-      body.agents.forEach((a: any) => {
+      body.agents.forEach((a: Partial<IAgentConfig>) => {
         if (a.id) agentsToSave[a.id] = a;
       });
     } else {

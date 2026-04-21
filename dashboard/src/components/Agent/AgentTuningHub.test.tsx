@@ -5,15 +5,15 @@ import AgentTuningHub from './AgentTuningHub';
 
 // Mock UI components
 vi.mock('@/components/ui/Card', () => ({
-  default: ({ children, className }: any) => <div data-testid="card" className={className}>{children}</div>,
+  default: ({ children, className }: { children?: React.ReactNode; className?: string }) => <div data-testid="card" className={className}>{children}</div>,
 }));
 
 vi.mock('@/components/ui/Typography', () => ({
-  default: ({ children, className, variant }: any) => <div data-testid="typography" data-variant={variant} className={className}>{children}</div>,
+  default: ({ children, className, variant }: { children?: React.ReactNode; className?: string; variant?: string }) => <div data-testid="typography" data-variant={variant} className={className}>{children}</div>,
 }));
 
 vi.mock('@/components/ui/Button', () => ({
-  default: ({ children, onClick, variant, icon }: any) => (
+  default: ({ children, onClick, variant, icon }: { children?: React.ReactNode; onClick?: () => void; variant?: string; icon?: React.ReactNode }) => (
     <button data-testid="button" onClick={onClick} data-variant={variant}>{icon}{children}</button>
   ),
 }));
@@ -32,10 +32,10 @@ vi.mock('lucide-react', () => ({
 }));
 
 vi.mock('recharts', () => ({
-  ResponsiveContainer: ({ children }: any) => <div>{children}</div>,
-  BarChart: ({ data }: any) => (
+  ResponsiveContainer: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+  BarChart: ({ data }: { data?: Array<{ name: string; value: number }> }) => (
     <div data-testid="bar-chart">
-      {data?.map((d: any, i: number) => (
+      {data?.map((d, i) => (
         <span key={i}>{d.name}</span>
       ))}
     </div>
@@ -63,7 +63,7 @@ describe('AgentTuningHub', () => {
       observe() {}
       unobserve() {}
       disconnect() {}
-    } as any;
+    } as unknown as typeof ResizeObserver;
   });
 
   it('renders title and agent ID', () => {

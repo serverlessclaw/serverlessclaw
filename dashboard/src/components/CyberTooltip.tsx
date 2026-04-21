@@ -10,34 +10,71 @@ interface CyberTooltipProps {
   position?: 'top' | 'bottom' | 'left' | 'right';
   showIcon?: boolean;
   className?: string;
+  width?: string;
 }
 
+/**
+ * A premium tooltip component that uses React Portals for perfect stacking
+ * and includes smart positioning to stay within the viewport.
+ */
 export default function CyberTooltip({
   content,
   children,
   position = 'top',
   showIcon = true,
   className = '',
+  width = 'w-64',
 }: CyberTooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const [isPositioned, setIsPositioned] = useState(false);
+  const [activePosition, setActivePosition] = useState(position);
   const triggerRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
+
+  // Reset positioning state when tooltip is hidden
+  useEffect(() => {
+    if (!isVisible) {
+      setIsPositioned(false);
+      setCoords({ top: 0, left: 0 });
+    }
+  }, [isVisible]);
 
   useLayoutEffect(() => {
     if (isVisible && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
+      const margin = 8;
+      let finalPos = position;
+
+      // Smart positioning: detect collisions with viewport edges
+      const estimatedHeight = 80;
+      const widthPart = width.split('-')[1];
+      const widthVal = widthPart ? parseInt(widthPart) : NaN;
+      const estimatedWidth = isNaN(widthVal) ? 120 : widthVal * 4;
+
+      if (position === 'top' && rect.top < estimatedHeight) {
+        finalPos = 'bottom';
+      } else if (position === 'bottom' && rect.bottom + estimatedHeight > window.innerHeight) {
+        finalPos = 'top';
+      }
+
+      if (position === 'left' && rect.left < estimatedWidth) {
+        finalPos = 'right';
+      } else if (position === 'right' && rect.right + estimatedWidth > window.innerWidth) {
+        finalPos = 'left';
+      }
+
+      setActivePosition(finalPos);
+
       let top = 0;
       let left = 0;
 
-      const margin = 8; // Small gap between trigger and tooltip
-
-      switch (position) {
+      switch (finalPos) {
         case 'top':
           top = rect.top - margin;
           left = rect.left + rect.width / 2;
@@ -56,49 +93,55 @@ export default function CyberTooltip({
           break;
       }
 
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCoords({ top, left });
+      setIsPositioned(true);
     }
-  }, [isVisible, position]);
+  }, [isVisible, position, width]);
 
   const positionClasses = {
     top: '-translate-x-1/2 -translate-y-full',
-    bottom: '-translate-x-1/2',
+    bottom: '-translate-x-1/2 translate-y-0',
     left: '-translate-x-full -translate-y-1/2',
-    right: '-translate-y-1/2',
+    right: 'translate-x-0 -translate-y-1/2',
   };
 
-  const getArrowStyles = () => {
-    switch (position) {
+  const getArrowStyles = (pos: string) => {
+    const common = {
+      width: '8px',
+      height: '8px',
+      backgroundColor: 'var(--card-bg-elevated)', 
+      borderStyle: 'solid',
+      borderColor: 'var(--cyber-green-opacity-20, rgba(0, 255, 163, 0.2))', 
+    };
+
+    switch (pos) {
       case 'top':
         return {
+          ...common,
           bottom: '-4px',
           left: 'calc(50% - 4px)',
-          borderRight: '1px solid hsl(var(--border))',
-          borderBottom: '1px solid hsl(var(--border))',
+          borderWidth: '0 1px 1px 0',
         };
       case 'bottom':
         return {
+          ...common,
           top: '-4px',
           left: 'calc(50% - 4px)',
-          borderLeft: '1px solid hsl(var(--border))',
-          borderTop: '1px solid hsl(var(--border))',
+          borderWidth: '1px 0 0 1px',
         };
       case 'left':
         return {
+          ...common,
           right: '-4px',
           top: 'calc(50% - 4px)',
-          borderLeft: '1px solid hsl(var(--border))',
-          borderBottom: '1px solid hsl(var(--border))',
-          transform: 'rotate(-135deg)',
+          borderWidth: '1px 1px 0 0',
         };
       case 'right':
         return {
+          ...common,
           left: '-4px',
           top: 'calc(50% - 4px)',
-          borderLeft: '1px solid hsl(var(--border))',
-          borderTop: '1px solid hsl(var(--border))',
-          transform: 'rotate(-45deg)',
+          borderWidth: '0 0 1px 1px',
         };
       default:
         return {};
@@ -107,17 +150,22 @@ export default function CyberTooltip({
 
   const tooltipContent = (
     <div
-      className={`fixed z-[9999] w-64 p-3 bg-background/95 border border-border rounded shadow-2xl text-[10px] leading-relaxed text-foreground/90 backdrop-blur-md animate-in fade-in zoom-in duration-200 pointer-events-none ${positionClasses[position]}`}
+      ref={tooltipRef}
+      data-testid="cyber-tooltip-content"
+      className={`fixed z-[9999] ${width} p-3 bg-card-elevated border border-border rounded shadow-premium text-[10px] leading-relaxed text-foreground backdrop-blur-xl animate-in fade-in zoom-in duration-200 pointer-events-none ring-1 ring-cyber-green/5 ${positionClasses[activePosition]} ${isPositioned ? 'opacity-100' : 'opacity-0'}`}
       style={{
         top: coords.top,
         left: coords.left,
       }}
     >
-      {content}
+      <div className="relative z-10">
+        {content}
+      </div>
       <div
-        className="absolute w-2 h-2 bg-background border-border rotate-45"
-        style={getArrowStyles()}
+        className="absolute rotate-45"
+        style={getArrowStyles(activePosition)}
       />
+      <div className="absolute top-0 right-0 w-1 h-1 bg-cyber-green/40 rounded-bl-sm" />
     </div>
   );
 
@@ -133,10 +181,10 @@ export default function CyberTooltip({
       {children ? (
         children
       ) : showIcon ? (
-        <Info size={12} className="text-muted-foreground hover:text-foreground/80 transition-colors cursor-help ml-1" />
+        <Info size={12} className="text-muted-more hover:text-cyber-green transition-colors cursor-help ml-1" />
       ) : null}
 
-      {isVisible && mounted && content && createPortal(tooltipContent, document.body)}
+      {isVisible && mounted && content && isPositioned && createPortal(tooltipContent, document.body)}
     </div>
   );
 }

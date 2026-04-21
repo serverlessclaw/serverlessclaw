@@ -67,19 +67,19 @@ export default async function LocksPage() {
         subtitleKey="LOCKS_SUBTITLE"
         stats={
           <div className="flex gap-4">
-            <Card variant="glass" padding="sm" className="px-4 py-2 min-w-[120px]">
-              <Typography variant="mono" color="white" className="mb-1 block opacity-90">
+            <Card variant="glass" padding="sm" className="px-4 py-2 min-w-[120px] bg-card/40">
+              <Typography variant="mono" color="muted-more" className="mb-1 block">
                 ACTIVE_LOCKS
               </Typography>
               <Typography variant="h3" weight="bold" className="text-orange-500">
                 {locks.filter((l) => !l.isExpired).length}
               </Typography>
             </Card>
-            <Card variant="glass" padding="sm" className="px-4 py-2 min-w-[120px]">
-              <Typography variant="mono" color="white" className="mb-1 block opacity-90">
+            <Card variant="glass" padding="sm" className="px-4 py-2 min-w-[120px] bg-card/40">
+              <Typography variant="mono" color="muted-more" className="mb-1 block">
                 ZOMBIE_LOCKS
               </Typography>
-              <Typography variant="h3" weight="bold" color="white">
+              <Typography variant="h3" weight="bold">
                 {locks.filter((l) => l.isExpired).length}
               </Typography>
             </Card>
@@ -97,8 +97,8 @@ export default async function LocksPage() {
             <Zap size={14} className="text-orange-500" /> Lane Concurrency Monitor
           </Typography>
           <div className="flex items-center gap-2">
-            <RefreshCw size={10} className="animate-spin-slow text-white/50" />
-            <Typography variant="mono" color="muted">
+            <RefreshCw size={10} className="animate-spin-slow text-muted-more" />
+            <Typography variant="mono" color="muted-more">
               Auto-Refresh Active
             </Typography>
           </div>
@@ -111,17 +111,17 @@ export default async function LocksPage() {
                 key={i}
                 variant="glass"
                 padding="lg"
-                className={`flex justify-between items-center border-l-4 transition-all ${
+                className={`flex justify-between items-center border-l-4 transition-all bg-card/60 ${
                   lock.isExpired
-                    ? 'border-l-white/10 opacity-60'
-                    : 'border-l-orange-500 shadow-[0_0_20px_rgba(249,115,22,0.05)]'
+                    ? 'border-l-border opacity-60'
+                    : 'border-l-orange-500 shadow-premium'
                 }`}
               >
                 <div className="flex gap-6 items-center">
                   <div
                     className={`w-10 h-10 rounded flex items-center justify-center ${
                       lock.isExpired
-                        ? 'bg-white/5 text-white/50'
+                        ? 'bg-foreground/5 text-muted-more'
                         : 'bg-orange-500/10 text-orange-500'
                     }`}
                   >
@@ -129,7 +129,7 @@ export default async function LocksPage() {
                   </div>
                   <div>
                     <div className="flex items-center gap-3">
-                      <Typography variant="caption" weight="bold" color="white">
+                      <Typography variant="caption" weight="bold">
                         SESSION::{lock.lockId}
                       </Typography>
                       {lock.isExpired && (
@@ -141,7 +141,7 @@ export default async function LocksPage() {
                     <div className="flex gap-6 mt-2">
                       <Typography
                         variant="mono"
-                        color="white"
+                        color="muted-more"
                         className="flex items-center gap-1.5 text-[10px]"
                       >
                         <Clock size={12} /> Acquired:{' '}
@@ -149,7 +149,7 @@ export default async function LocksPage() {
                       </Typography>
                       <Typography
                         variant="mono"
-                        color="white"
+                        color="muted-more"
                         className="flex items-center gap-1.5 text-[10px]"
                       >
                         <ShieldAlert size={12} /> TTL:{' '}
@@ -177,13 +177,13 @@ export default async function LocksPage() {
             <Card
               variant="solid"
               padding="lg"
-              className="h-48 flex flex-col items-center justify-center opacity-20 border-dashed"
+              className="h-48 flex flex-col items-center justify-center opacity-50 border-dashed border-border bg-card/20"
             >
-              <Unlock size={32} className="mb-4" />
-              <Typography variant="body" weight="normal">
+              <Unlock size={32} className="mb-4 text-muted-more" />
+              <Typography variant="body" weight="normal" color="muted">
                 All lanes clear // No active sessions
               </Typography>
-              <Typography variant="caption" color="muted" className="mt-2 block">
+              <Typography variant="caption" color="muted-more" className="mt-2 block">
                 System is idle.
               </Typography>
             </Card>
@@ -203,7 +203,7 @@ export default async function LocksPage() {
         >
           <ShieldAlert size={12} /> Recovery Protocol
         </Typography>
-        <Typography variant="body" color="white" italic className="leading-relaxed block">
+        <Typography variant="body" italic className="leading-relaxed block">
           &quot;Ghost Locks&quot; occur when an agent crashes before releasing its session. Force
           releasing a lock allows the user to start a new session immediately. Caution: Releasing an
           active lock may cause state corruption.

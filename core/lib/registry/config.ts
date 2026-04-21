@@ -7,6 +7,7 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { Resource } from 'sst';
+import type { SSTResource } from '../types';
 import { logger } from '../logger';
 
 // Default client for backward compatibility - can be overridden for testing
@@ -45,11 +46,23 @@ export class ConfigManager {
   private static readonly CACHE_TTL_MS = 60000; // 1 minute (60s)
 
   /**
+   * Internal helper to safely get the ConfigTable name.
+   */
+  private static _getTableName(): string | undefined {
+    try {
+      const resource = Resource as unknown as SSTResource;
+      return resource.ConfigTable?.name;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
    * Fetches a raw value from the ConfigTable by key.
    */
   public static async getRawConfig(key: string): Promise<unknown> {
-    const resource = Resource as { ConfigTable?: { name: string } };
-    if (!('ConfigTable' in resource)) {
+    const tableName = this._getTableName();
+    if (!tableName) {
       logger.warn(`ConfigTable not linked. Skipping fetch for ${key}`);
       return undefined;
     }
@@ -57,7 +70,7 @@ export class ConfigManager {
     try {
       const { Item } = await getDocClient().send(
         new GetCommand({
-          TableName: resource.ConfigTable?.name,
+          TableName: tableName,
           Key: { key },
         })
       );
@@ -111,8 +124,8 @@ export class ConfigManager {
       skipVersioning?: boolean;
     }
   ): Promise<void> {
-    const resource = Resource as { ConfigTable?: { name: string } };
-    if (!('ConfigTable' in resource)) {
+    const tableName = this._getTableName();
+    if (!tableName) {
       logger.warn(`ConfigTable not linked. Skipping save for ${key}`);
       return;
     }
@@ -140,7 +153,7 @@ export class ConfigManager {
     try {
       await getDocClient().send(
         new PutCommand({
-          TableName: resource.ConfigTable?.name,
+          TableName: tableName,
           Item: { key, value },
         })
       );
@@ -154,8 +167,8 @@ export class ConfigManager {
    * Deletes a configuration value from the ConfigTable.
    */
   public static async deleteConfig(key: string): Promise<void> {
-    const resource = Resource as { ConfigTable?: { name: string } };
-    if (!('ConfigTable' in resource)) {
+    const tableName = this._getTableName();
+    if (!tableName) {
       logger.warn(`ConfigTable not linked. Skipping delete for ${key}`);
       return;
     }
@@ -165,7 +178,7 @@ export class ConfigManager {
     try {
       await getDocClient().send(
         new DeleteCommand({
-          TableName: resource.ConfigTable?.name,
+          TableName: tableName,
           Key: { key },
         })
       );
@@ -179,8 +192,7 @@ export class ConfigManager {
    * Resolves the table name for the configured ConfigTable.
    */
   public static async resolveTableName(): Promise<string | undefined> {
-    const resource = Resource as { ConfigTable?: { name: string } };
-    return 'ConfigTable' in resource ? resource.ConfigTable!.name : undefined;
+    return this._getTableName();
   }
 
   /**
@@ -191,8 +203,8 @@ export class ConfigManager {
     item: unknown,
     options?: { limit?: number }
   ): Promise<void> {
-    const resource = Resource as { ConfigTable?: { name: string } };
-    if (!('ConfigTable' in resource)) return;
+    const tableName = this._getTableName();
+    if (!tableName) return;
 
     this.configCache.delete(key);
 
@@ -200,7 +212,7 @@ export class ConfigManager {
       const { limit } = options || {};
       await getDocClient().send(
         new UpdateCommand({
-          TableName: resource.ConfigTable!.name,
+          TableName: tableName,
           Key: { key },
           UpdateExpression: 'SET #val = if_not_exists(#val, :empty_list)',
           ExpressionAttributeNames: { '#val': 'value' },
@@ -210,7 +222,7 @@ export class ConfigManager {
 
       const result = await getDocClient().send(
         new UpdateCommand({
-          TableName: resource.ConfigTable!.name,
+          TableName: tableName,
           Key: { key },
           UpdateExpression: 'SET #val = list_append(#val, :items)',
           ExpressionAttributeNames: { '#val': 'value' },
@@ -225,7 +237,7 @@ export class ConfigManager {
         await getDocClient()
           .send(
             new UpdateCommand({
-              TableName: resource.ConfigTable!.name,
+              TableName: tableName,
               Key: { key },
               UpdateExpression: `REMOVE ${Array.from({ length: excess }, (_, i) => `#val[${i}]`).join(', ')}`,
               ExpressionAttributeNames: { '#val': 'value' },
@@ -243,15 +255,15 @@ export class ConfigManager {
    * Atomically increments a numeric configuration value.
    */
   public static async incrementConfig(key: string, increment: number = 1): Promise<number> {
-    const resource = Resource as { ConfigTable?: { name: string } };
-    if (!('ConfigTable' in resource)) return 0;
+    const tableName = this._getTableName();
+    if (!tableName) return 0;
 
     this.configCache.delete(key);
 
     try {
       const result = await getDocClient().send(
         new UpdateCommand({
-          TableName: resource.ConfigTable?.name,
+          TableName: tableName,
           Key: { key },
           UpdateExpression: 'ADD #val :inc',
           ExpressionAttributeNames: { '#val': 'value' },
@@ -276,8 +288,8 @@ export class ConfigManager {
     value: unknown,
     retryCount: number = 0
   ): Promise<void> {
-    const resource = Resource as { ConfigTable?: { name: string } };
-    if (!resource.ConfigTable?.name) return;
+    const tableName = this._getTableName();
+    if (!tableName) return;
 
     this.configCache.delete(key);
 
@@ -287,7 +299,7 @@ export class ConfigManager {
     try {
       await docClient.send(
         new UpdateCommand({
-          TableName: resource.ConfigTable.name,
+          TableName: tableName,
           Key: { key },
           UpdateExpression: 'SET #val.#id.#field = :value',
           ConditionExpression: 'attribute_exists(#val.#id)',
@@ -301,7 +313,7 @@ export class ConfigManager {
         try {
           await docClient.send(
             new UpdateCommand({
-              TableName: resource.ConfigTable.name,
+              TableName: tableName,
               Key: { key },
               UpdateExpression: 'SET #val.#id = :entityObj',
               ConditionExpression: 'attribute_not_exists(#val.#id)',
@@ -315,7 +327,7 @@ export class ConfigManager {
             try {
               await docClient.send(
                 new UpdateCommand({
-                  TableName: resource.ConfigTable.name,
+                  TableName: tableName,
                   Key: { key },
                   UpdateExpression: 'SET #val = :rootObj',
                   ConditionExpression: 'attribute_not_exists(#val)',
@@ -354,15 +366,15 @@ export class ConfigManager {
     field: string,
     delta: number
   ): Promise<number> {
-    const resource = Resource as { ConfigTable?: { name: string } };
-    if (!resource.ConfigTable?.name) return 0;
+    const tableName = this._getTableName();
+    if (!tableName) return 0;
 
     this.configCache.delete(key);
 
     try {
       const result = await getDocClient().send(
         new UpdateCommand({
-          TableName: resource.ConfigTable.name,
+          TableName: tableName,
           Key: { key },
           UpdateExpression: 'SET #val.#id.#field = if_not_exists(#val.#id.#field, :zero) + :delta',
           ExpressionAttributeNames: { '#val': 'value', '#id': entityId, '#field': field },
@@ -387,15 +399,15 @@ export class ConfigManager {
     value: unknown,
     expectedValue: unknown
   ): Promise<void> {
-    const resource = Resource as { ConfigTable?: { name: string } };
-    if (!resource.ConfigTable?.name) return;
+    const tableName = this._getTableName();
+    if (!tableName) return;
 
     this.configCache.delete(key);
 
     try {
       await getDocClient().send(
         new UpdateCommand({
-          TableName: resource.ConfigTable.name,
+          TableName: tableName,
           Key: { key },
           UpdateExpression: 'SET #val.#id.#field = :value',
           ConditionExpression: '#val.#id.#field = :expected',
@@ -418,8 +430,8 @@ export class ConfigManager {
     entityId: string,
     itemsToRemove: unknown[]
   ): Promise<void> {
-    const resource = Resource as { ConfigTable?: { name: string } };
-    if (!resource.ConfigTable?.name) return;
+    const tableName = this._getTableName();
+    if (!tableName) return;
 
     this.configCache.delete(key);
 
@@ -430,7 +442,7 @@ export class ConfigManager {
       try {
         const { Item } = await getDocClient().send(
           new GetCommand({
-            TableName: resource.ConfigTable.name,
+            TableName: tableName,
             Key: { key },
             ProjectionExpression: '#val.#id',
             ExpressionAttributeNames: { '#val': 'value', '#id': entityId },
@@ -449,7 +461,7 @@ export class ConfigManager {
 
         await getDocClient().send(
           new UpdateCommand({
-            TableName: resource.ConfigTable.name,
+            TableName: tableName,
             Key: { key },
             UpdateExpression: 'SET #val.#id = :newList',
             ConditionExpression: '#val.#id = :oldList',
@@ -474,8 +486,8 @@ export class ConfigManager {
     field: string,
     itemsToRemove: unknown[]
   ): Promise<void> {
-    const resource = Resource as { ConfigTable?: { name: string } };
-    if (!resource.ConfigTable?.name) return;
+    const tableName = this._getTableName();
+    if (!tableName) return;
 
     this.configCache.delete(key);
 
@@ -486,7 +498,7 @@ export class ConfigManager {
       try {
         const { Item } = await getDocClient().send(
           new GetCommand({
-            TableName: resource.ConfigTable.name,
+            TableName: tableName,
             Key: { key },
             ProjectionExpression: '#val.#id.#field',
             ExpressionAttributeNames: { '#val': 'value', '#id': entityId, '#field': field },
@@ -506,7 +518,7 @@ export class ConfigManager {
 
         await getDocClient().send(
           new UpdateCommand({
-            TableName: resource.ConfigTable.name,
+            TableName: tableName,
             Key: { key },
             UpdateExpression: 'SET #val.#id.#field = :newList',
             ConditionExpression: '#val.#id.#field = :oldList',
@@ -534,8 +546,8 @@ export class ConfigManager {
     updates: Record<string, unknown>,
     retryCount: number = 0
   ): Promise<void> {
-    const resource = Resource as { ConfigTable?: { name: string } };
-    if (!resource.ConfigTable?.name) return;
+    const tableName = this._getTableName();
+    if (!tableName) return;
 
     this.configCache.delete(key);
 
@@ -554,7 +566,7 @@ export class ConfigManager {
     try {
       await docClient.send(
         new UpdateCommand({
-          TableName: resource.ConfigTable.name,
+          TableName: tableName,
           Key: { key },
           UpdateExpression: `SET ${sets.join(', ')}`,
           ConditionExpression: 'attribute_exists(#val.#id)',
@@ -569,7 +581,7 @@ export class ConfigManager {
           // Entity doesn't exist - create entity object
           await docClient.send(
             new UpdateCommand({
-              TableName: resource.ConfigTable.name,
+              TableName: tableName,
               Key: { key },
               UpdateExpression: 'SET #val.#id = :entity',
               ConditionExpression: 'attribute_not_exists(#val.#id)',
@@ -584,7 +596,7 @@ export class ConfigManager {
               // Root 'value' doesn't exist - create map object
               await docClient.send(
                 new UpdateCommand({
-                  TableName: resource.ConfigTable.name,
+                  TableName: tableName,
                   Key: { key },
                   UpdateExpression: 'SET #val = :rootObj',
                   ConditionExpression: 'attribute_not_exists(#val)',

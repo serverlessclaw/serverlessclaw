@@ -220,22 +220,22 @@ export default function PipelineBoard({
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, col.status)}
             >
-              <div className={`flex flex-col p-3 glass-card border-white/5 bg-white/5 ${col.glow}`}>
+              <div className={`flex flex-col p-3 glass-card border-border bg-card/50 ${col.glow}`}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <Icon size={16} className={col.color} />
-                    <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground">
                       {col.label}
                     </span>
                   </div>
-                  <span className="text-[10px] font-mono text-white/40">{colGaps.length}</span>
+                  <span className="text-[10px] font-mono text-muted-more">{colGaps.length}</span>
                 </div>
 
                 {colGaps.length > 0 && (
-                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-border">
                     <button
                       onClick={() => handleSelectAllInColumn(col.status)}
-                      className="flex items-center gap-1.5 text-[8px] uppercase font-bold text-white/30 hover:text-white/60 transition-colors"
+                      className="flex items-center gap-1.5 text-[8px] uppercase font-bold text-muted hover:text-foreground transition-colors"
                     >
                       {colGaps.every((g) => selectedGaps.has(g.userId)) ? (
                         <CheckSquare size={10} />
@@ -267,13 +267,13 @@ export default function PipelineBoard({
                       data-testid="gap-card"
                       draggable={!processing}
                       onDragStart={(e) => handleDragStart(e, gap.userId)}
-                      className={`glass-card gap-card pt-3 pl-3 pr-3 pb-2 border-white/5 hover:border-white/20 transition-all group relative overflow-hidden bg-black/40 ${selectedGaps.has(gap.userId) ? 'ring-1 ring-indigo-500/50 bg-indigo-500/5' : ''} ${processing === gap.userId ? 'opacity-50 cursor-wait' : 'cursor-grab active:cursor-grabbing'}`}
+                      className={`glass-card gap-card pt-3 pl-3 pr-3 pb-2 border-border hover:border-border/50 transition-all group relative overflow-hidden bg-card/60 ${selectedGaps.has(gap.userId) ? 'ring-1 ring-indigo-500/50 bg-indigo-500/10' : ''} ${processing === gap.userId ? 'opacity-50 cursor-wait' : 'cursor-grab active:cursor-grabbing'}`}
                     >
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => toggleSelection(gap.userId)}
-                            className="text-white/20 hover:text-white/60 transition-colors"
+                            className="text-muted-more hover:text-foreground transition-colors"
                           >
                             {selectedGaps.has(gap.userId) ? (
                               <CheckSquare size={12} className="text-indigo-500" />
@@ -281,12 +281,12 @@ export default function PipelineBoard({
                               <Square size={12} />
                             )}
                           </button>
-                          <div className="text-[8px] font-mono text-white/30 uppercase">
+                          <div className="text-[8px] font-mono text-muted-more uppercase">
                             ID: {gap.userId.split('#').slice(-1)[0]}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="flex gap-1.5 text-[7px] text-white/20 uppercase font-black">
+                          <div className="flex gap-1.5 text-[7px] text-muted-more uppercase font-black">
                             <span className="flex items-center gap-0.5">
                               <TrendingUp size={7} className="text-cyber-green" />{' '}
                               {gap.metadata?.impact ?? 5}
@@ -307,7 +307,7 @@ export default function PipelineBoard({
                               )}
                               <button
                                 onClick={() => handlePrune(gap.userId, gap.timestamp)}
-                                className="opacity-0 group-hover:opacity-100 text-white/20 hover:text-red-500 transition-all"
+                                className="opacity-0 group-hover:opacity-100 text-muted-more hover:text-red-500 transition-all"
                               >
                                 <Trash2 size={12} />
                               </button>
@@ -318,7 +318,7 @@ export default function PipelineBoard({
 
                       <div className="relative">
                         <p
-                          className={`text-[11px] text-white/100 leading-relaxed font-medium mb-2 ${isExpanded ? '' : 'line-clamp-3'}`}
+                          className={`text-[11px] text-foreground leading-relaxed font-medium mb-2 ${isExpanded ? '' : 'line-clamp-3'}`}
                         >
                           {gap.content}
                         </p>
@@ -338,8 +338,8 @@ export default function PipelineBoard({
                         </button>
                       </div>
 
-                      <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                        <div className="flex items-center gap-2 text-[8px] text-white/30 font-mono">
+                      <div className="flex items-center justify-between pt-2 border-t border-border">
+                        <div className="flex items-center gap-2 text-[8px] text-muted-more font-mono">
                           <Clock size={8} />
                           {new Date(gap.timestamp).toLocaleDateString()}
                         </div>
@@ -360,7 +360,7 @@ export default function PipelineBoard({
                                 )
                               }
                               disabled={!!processing}
-                              className="cursor-pointer text-[8px] font-bold bg-white/10 hover:bg-white/20 px-2 py-1 rounded flex items-center gap-1 transition-colors uppercase tracking-tight"
+                              className="cursor-pointer text-[8px] font-bold bg-foreground/5 hover:bg-foreground/10 px-2 py-1 rounded flex items-center gap-1 transition-colors uppercase tracking-tight text-foreground/80 hover:text-foreground"
                             >
                               {t('PIPELINE_ADVANCE')} <ArrowRight size={8} />
                             </button>
@@ -375,7 +375,7 @@ export default function PipelineBoard({
                                 )
                               }
                               disabled={!!processing}
-                              className="cursor-pointer text-[8px] font-bold text-white/40 hover:text-white/80 px-2 py-1 transition-colors uppercase tracking-tight"
+                              className="cursor-pointer text-[8px] font-bold text-muted hover:text-foreground px-2 py-1 transition-colors uppercase tracking-tight"
                             >
                               {t('PIPELINE_REVERT')}
                             </button>
@@ -393,7 +393,7 @@ export default function PipelineBoard({
                 })}
 
                 {colGaps.length === 0 && (
-                  <div className="h-32 flex items-center justify-center text-white/5 border border-dashed border-white/5 rounded-lg">
+                  <div className="h-32 flex items-center justify-center text-muted-more/20 border border-dashed border-border rounded-lg">
                     <span className="text-[9px] uppercase tracking-widest font-bold">
                       {t('PIPELINE_TERMINAL_EMPTY')}
                     </span>

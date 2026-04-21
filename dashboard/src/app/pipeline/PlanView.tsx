@@ -44,10 +44,10 @@ export default function PlanView() {
 
   if (!plan) {
     return (
-      <section className="bg-black/90 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-2xl opacity-50 transition-opacity hover:opacity-100">
-        <div className="py-3 px-6 flex items-center justify-between text-[10px] text-white/30 uppercase font-bold tracking-widest">
+      <section className="bg-card/80 backdrop-blur-xl border border-border rounded-xl overflow-hidden glass-card opacity-50 transition-opacity hover:opacity-100">
+        <div className="py-3 px-6 flex items-center justify-between text-[10px] text-muted-more uppercase font-bold tracking-widest">
           <div className="flex items-center gap-3">
-             <GitCommit size={14} className="text-white/20" />
+             <GitCommit size={14} className="text-muted-more/40" />
              <span>Authorize a plan to see decomposition</span>
           </div>
         </div>
@@ -56,9 +56,9 @@ export default function PlanView() {
   }
 
   return (
-    <section className="bg-black/90 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-2xl">
+    <section className="bg-card/90 backdrop-blur-xl border border-border rounded-xl overflow-hidden shadow-premium">
       {expanded && (
-        <div className="max-h-[65vh] overflow-y-auto border-b border-white/10 custom-scrollbar">
+        <div className="max-h-[65vh] overflow-y-auto border-b border-border custom-scrollbar">
           <PlanDecompositionTree
             planId={plan.planId}
             title={plan.title}
@@ -69,21 +69,21 @@ export default function PlanView() {
 
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between py-3 px-6 hover:bg-white/5 transition-colors"
+        className="w-full flex items-center justify-between py-3 px-6 hover:bg-foreground/5 transition-colors"
       >
         <div className="flex items-center gap-3">
           <GitCommit size={14} className="text-cyber-blue" />
           <Typography
             variant="mono"
-            className="text-[11px] font-black tracking-[0.2em] uppercase text-white/80"
+            className="text-[11px] font-black tracking-[0.2em] uppercase text-foreground/80"
           >
-            Plan Decomposition <span className="text-white/20 ml-2">ID: {plan.planId}</span>
+            Plan Decomposition <span className="text-muted-more ml-2">ID: {plan.planId}</span>
           </Typography>
         </div>
         {expanded ? (
           <ChevronDown size={16} className="text-cyber-blue" />
         ) : (
-          <ChevronUp size={16} className="text-white/40" />
+          <ChevronUp size={16} className="text-muted-more" />
         )}
       </button>
     </section>

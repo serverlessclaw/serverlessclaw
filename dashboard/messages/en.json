@@ -192,6 +192,7 @@
   "CHAT_SHOW_THINKING": "Show thinking blocks",
   "CHAT_KEYBOARD_SHORTCUTS": "Keyboard shortcuts (?)",
   "CHAT_LIVE": "LIVE",
+  "CHAT_LIVE_STATUS": "Realtime connection is active and monitoring.",
   "CHAT_THINKING": "Show Thinking",
   "CHAT_DELETE_CONVERSATION": "Delete Conversation",
   "CHAT_DELETE_CONFIRM": "Are you sure you want to purge this record from memory?",
@@ -213,8 +214,10 @@
   "AGENT_SELECTOR_TITLE": "Select Intelligence Node",
   "INITIALIZING_REGISTRY": "Synchronizing Agent Registry...",
   "INVITE_AGENT": "Invite Agent",
+  "INVITE": "Invite",
   "START_COLLABORATION": "Start Collaboration",
   "COLLABORATION_MODE": "Collaboration Mode",
+  "COLLABORATION_MODE_DESC": "Multi-agent collaboration is active. Agents can now work together on complex tasks.",
   "COLLABORATORS": "Collaborators",
   "UNFOLD": "Unfold",
 

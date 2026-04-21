@@ -8,6 +8,7 @@ const eslintConfig = defineConfig([
   {
     rules: {
       'no-alert': 'error',
+      '@next/next/no-html-link-for-pages': ['error', 'dashboard/src/app'],
     },
     settings: {
       react: {

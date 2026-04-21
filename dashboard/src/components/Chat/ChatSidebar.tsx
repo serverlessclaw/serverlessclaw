@@ -4,6 +4,7 @@ import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
 import type { ConversationMeta } from '@claw/core/lib/types/memory';
 import { useTranslations } from '@/components/Providers/TranslationsProvider';
+import CyberTooltip from '@/components/CyberTooltip';
 
 interface ChatSidebarProps {
   sessions: ConversationMeta[];
@@ -177,28 +178,30 @@ export function ChatSidebar({
                 </div>
 
                 <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onTogglePin(s.sessionId, !s.isPinned);
-                    }}
-                    className={`p-1 h-auto transition-colors z-10 ${s.isPinned ? 'text-cyber-green' : 'text-white/20'}`}
-                    icon={s.isPinned ? <PinOff size={12} /> : <Pin size={12} />}
-                    title={s.isPinned ? t('CHAT_SIDEBAR_UNPIN_SESSION') : t('CHAT_SIDEBAR_PIN_SESSION')}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteSession(e, s.sessionId);
-                    }}
-                    className="p-1 text-red-500/40 hover:text-red-500 h-auto transition-colors z-10"
-                    icon={<Trash2 size={12} />}
-                    title="Delete Conversation"
-                  />
+                  <CyberTooltip content={s.isPinned ? t('CHAT_SIDEBAR_UNPIN_SESSION') : t('CHAT_SIDEBAR_PIN_SESSION')} position="top" showIcon={false} width="w-auto">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onTogglePin(s.sessionId, !s.isPinned);
+                      }}
+                      className={`p-1 h-auto transition-colors z-10 ${s.isPinned ? 'text-cyber-green' : 'text-white/20'}`}
+                      icon={s.isPinned ? <PinOff size={12} /> : <Pin size={12} />}
+                    />
+                  </CyberTooltip>
+                  <CyberTooltip content={t('CHAT_DELETE_CONVERSATION')} position="top" showIcon={false} width="w-auto">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteSession(e, s.sessionId);
+                      }}
+                      className="p-1 text-red-500/40 hover:text-red-500 h-auto transition-colors z-10"
+                      icon={<Trash2 size={12} />}
+                    />
+                  </CyberTooltip>
                 </div>
               </div>
             </div>

@@ -134,23 +134,23 @@ export default function PlaygroundChat({
 
   if (!agentId) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-white/20">
-        <Bot size={64} className="mb-4 opacity-5" />
+      <div className="flex-1 flex flex-col items-center justify-center text-muted-more/40">
+        <Bot size={64} className="mb-4 opacity-10" />
         <Typography variant="h3" weight="bold">Select a Persona to Begin</Typography>
-        <Typography variant="caption" className="mt-2 uppercase tracking-widest">Cognitive sandbox initialized</Typography>
+        <Typography variant="caption" color="muted-more" className="mt-2 uppercase tracking-widest">Cognitive sandbox initialized</Typography>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
-      <header className="p-4 border-b border-white/5 flex items-center justify-between bg-black/20">
+    <div className="flex-1 flex flex-col min-h-0 bg-background">
+      <header className="p-4 border-b border-border flex items-center justify-between bg-card/40 backdrop-blur-md">
          <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-cyber-green/10 border border-cyber-green/20 flex items-center justify-center">
               <Bot size={16} className="text-cyber-green" />
             </div>
             <div>
-              <Typography variant="mono" weight="bold" className="text-xs text-white uppercase tracking-tighter">Testing::{agentId}</Typography>
+              <Typography variant="mono" weight="bold" className="text-xs text-foreground uppercase tracking-tighter">Testing::{agentId}</Typography>
               <div className="flex items-center gap-1.5">
                  <div className="w-1 h-1 rounded-full bg-cyber-green animate-pulse" />
                  <Typography variant="mono" className="text-[8px] text-cyber-green/60 uppercase">Sandbox_Active</Typography>
@@ -164,7 +164,7 @@ export default function PlaygroundChat({
               setMessages([]);
               setActiveSessionId(`playground_${Date.now()}`);
             }}
-            className="text-white/40 hover:text-white"
+            className="text-muted-more hover:text-foreground"
             icon={<RefreshCw size={14} />}
          >
            Reset
@@ -180,7 +180,7 @@ export default function PlaygroundChat({
         />
       </div>
 
-      <div className="p-4 bg-gradient-to-t from-black to-transparent">
+      <div className="p-4 bg-gradient-to-t from-background to-transparent">
         <ChatInput 
           input={input}
           setInput={setInput}
@@ -194,8 +194,8 @@ export default function PlaygroundChat({
           fileInputRef={fileInputRef}
         />
         <div className="mt-2 flex items-center gap-2 px-1">
-           <AlertCircle size={10} className="text-white/20" />
-           <Typography variant="mono" className="text-[8px] text-white/20 uppercase tracking-widest">
+           <AlertCircle size={10} className="text-muted-more/40" />
+           <Typography variant="mono" className="text-[8px] text-muted-more/40 uppercase tracking-widest">
              Interactions in this environment do not affect agent reputation or collective memory.
            </Typography>
         </div>

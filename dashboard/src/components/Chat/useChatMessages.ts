@@ -180,7 +180,7 @@ export function useChatMessages(
       profile?: string;
       isIsolated?: boolean;
       source?: string;
-      overrideConfig?: any;
+      overrideConfig?: Record<string, unknown>;
     } = {}
   ) => {
     const { 

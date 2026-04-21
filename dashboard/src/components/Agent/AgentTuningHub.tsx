@@ -168,7 +168,7 @@ export default function AgentTuningHub({
                 <div>
                   <Typography variant="mono" className="text-[9px] text-white/40 uppercase block mb-1">Root Cause</Typography>
                   <Typography variant="caption" color="white" className="italic leading-relaxed">
-                    "{suggestions.rootCause}"
+                    &ldquo;{suggestions.rootCause}&rdquo;
                   </Typography>
                 </div>
 
