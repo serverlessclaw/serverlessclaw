@@ -141,7 +141,8 @@ export async function addCollaborationParticipant(
     throw new Error(`Collaboration ${collaborationId} not found`);
   }
 
-  const workspaceId = (typeof scope === 'string' ? scope : scope?.workspaceId) ?? collaboration.workspaceId;
+  const workspaceId =
+    (typeof scope === 'string' ? scope : scope?.workspaceId) ?? collaboration.workspaceId;
 
   // Check if actor is owner
   const actor = collaboration.participants.find((p) => p.id === actorId && p.type === actorType);
@@ -290,7 +291,8 @@ export async function closeCollaboration(
     throw new Error(`Collaboration ${collaborationId} not found`);
   }
 
-  const workspaceId = (typeof scope === 'string' ? scope : scope?.workspaceId) ?? collaboration.workspaceId;
+  const workspaceId =
+    (typeof scope === 'string' ? scope : scope?.workspaceId) ?? collaboration.workspaceId;
 
   const actor = collaboration.participants.find((p) => p.id === actorId && p.type === actorType);
   if (!actor || actor.role !== 'owner') {
@@ -403,24 +405,30 @@ export async function transitToCollaboration(
   name?: string
 ): Promise<Collaboration> {
   const workspaceId = typeof scope === 'string' ? scope : scope?.workspaceId;
-  const collaboration = await createCollaboration(base, userId, 'human', {
-    name: name || `Collaboration: ${sourceSessionId.substring(0, 8)}`,
-    description: `Transited from session ${sourceSessionId}`,
-    workspaceId,
-    initialParticipants: [
-      ...invitedAgentIds.map((id) => ({
-        id,
-        type: 'agent' as ParticipantType,
-        role: 'editor' as CollaborationRole,
-      })),
-      {
-        id: 'facilitator',
-        type: 'agent' as ParticipantType,
-        role: 'editor' as CollaborationRole,
-      },
-    ],
-    tags: [`source_session:${sourceSessionId}`],
-  }, scope);
+  const collaboration = await createCollaboration(
+    base,
+    userId,
+    'human',
+    {
+      name: name || `Collaboration: ${sourceSessionId.substring(0, 8)}`,
+      description: `Transited from session ${sourceSessionId}`,
+      workspaceId,
+      initialParticipants: [
+        ...invitedAgentIds.map((id) => ({
+          id,
+          type: 'agent' as ParticipantType,
+          role: 'editor' as CollaborationRole,
+        })),
+        {
+          id: 'facilitator',
+          type: 'agent' as ParticipantType,
+          role: 'editor' as CollaborationRole,
+        },
+      ],
+      tags: [`source_session:${sourceSessionId}`],
+    },
+    scope
+  );
 
   // Seed history
   try {

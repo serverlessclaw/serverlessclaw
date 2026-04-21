@@ -305,10 +305,7 @@ export async function acquireGapLock(
   scope?: string | import('../types/memory').ContextualScope
 ): Promise<boolean> {
   const normalizedGapId = normalizeGapId(gapId);
-  const lockKey = base.getScopedUserId(
-    `${MEMORY_KEYS.GAP_LOCK_PREFIX}${normalizedGapId}`,
-    scope
-  );
+  const lockKey = base.getScopedUserId(`${MEMORY_KEYS.GAP_LOCK_PREFIX}${normalizedGapId}`, scope);
   const now = Date.now();
   const expiresAt = Math.floor((now + ttlMs) / 1000);
 
@@ -347,10 +344,7 @@ export async function releaseGapLock(
   scope?: string | import('../types/memory').ContextualScope
 ): Promise<void> {
   const normalizedGapId = normalizeGapId(gapId);
-  const lockKey = base.getScopedUserId(
-    `${MEMORY_KEYS.GAP_LOCK_PREFIX}${normalizedGapId}`,
-    scope
-  );
+  const lockKey = base.getScopedUserId(`${MEMORY_KEYS.GAP_LOCK_PREFIX}${normalizedGapId}`, scope);
 
   const conditionExpr = force
     ? 'attribute_exists(userId)'
@@ -380,10 +374,7 @@ export async function getGapLock(
   scope?: string | import('../types/memory').ContextualScope
 ): Promise<{ agentId: string; expiresAt: number; lockVersion?: number } | null> {
   const normalizedGapId = normalizeGapId(gapId);
-  const lockKey = base.getScopedUserId(
-    `${MEMORY_KEYS.GAP_LOCK_PREFIX}${normalizedGapId}`,
-    scope
-  );
+  const lockKey = base.getScopedUserId(`${MEMORY_KEYS.GAP_LOCK_PREFIX}${normalizedGapId}`, scope);
   try {
     const items = await base.queryItems({
       KeyConditionExpression: 'userId = :lockKey AND #ts = :zero',
@@ -413,12 +404,7 @@ export async function assignGapToTrack(
   priority?: number,
   scope?: string | import('../types/memory').ContextualScope
 ): Promise<void> {
-  const transitionResult = await updateGapStatus(
-    base as never,
-    gapId,
-    GapStatus.PLANNED,
-    scope
-  );
+  const transitionResult = await updateGapStatus(base as never, gapId, GapStatus.PLANNED, scope);
   if (!transitionResult.success) {
     throw new Error(
       `[GapTrack] Failed to transition ${gapId} to PLANNED: ${transitionResult.error}`

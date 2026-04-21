@@ -2,12 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { InsightCategory } from '../../lib/types/index';
 import type { IMemory } from '../../lib/types/index';
 import { MEMORY_KEYS, TIME } from '../../lib/constants';
-import { 
-  buildTelemetry, 
-  shouldRunProactiveReview, 
-  buildReactivePrompt, 
-  buildProactiveReviewPrompt, 
-  fetchStaleMemoryContext 
+import {
+  buildTelemetry,
+  shouldRunProactiveReview,
+  buildReactivePrompt,
+  buildProactiveReviewPrompt,
+  fetchStaleMemoryContext,
 } from './prompts';
 
 /**
@@ -473,7 +473,6 @@ describe('buildProactiveReviewPrompt', () => {
   });
 
   it('should build full prompt with gaps and improvements for scheduled review', async () => {
-
     const { buildProactiveReviewPrompt } = await import('./prompts');
     const gaps = [
       {
@@ -522,7 +521,6 @@ describe('buildProactiveReviewPrompt', () => {
   });
 
   it('should include failed plans anti-patterns in prompt', async () => {
-
     const { buildProactiveReviewPrompt } = await import('./prompts');
     const gapsForReview = Array.from({ length: 25 }, (_, i) => ({
       id: `review-gap-${i}`,
@@ -567,7 +565,6 @@ describe('buildProactiveReviewPrompt', () => {
   });
 
   it('should call updateDistilledMemory with current timestamp on success', async () => {
-
     const { buildProactiveReviewPrompt } = await import('./prompts');
     const gapsForReview = Array.from({ length: 25 }, (_, i) => ({
       id: `review-gap-${i}`,
@@ -600,7 +597,6 @@ describe('buildProactiveReviewPrompt', () => {
   });
 
   it('should include no improvements message when none exist', async () => {
-
     const { buildProactiveReviewPrompt } = await import('./prompts');
     const gapsForReview = Array.from({ length: 25 }, (_, i) => ({
       id: `review-gap-${i}`,
@@ -630,7 +626,6 @@ describe('buildProactiveReviewPrompt', () => {
   });
 
   it('should include only top 3 gaps by impact and show backlog summary for remaining gaps', async () => {
-
     const { buildProactiveReviewPrompt } = await import('./prompts');
     const gaps = [
       {
@@ -691,7 +686,6 @@ describe('buildProactiveReviewPrompt', () => {
   });
 
   it('should omit backlog summary when there are no remaining gaps beyond top 3', async () => {
-
     const { buildProactiveReviewPrompt } = await import('./prompts');
     const gaps = [
       { id: 'gap-1', content: 'one', metadata: { impact: 1 } as any, timestamp: Date.now() },
@@ -730,7 +724,6 @@ describe('fetchToolUsageContext', () => {
   });
 
   it('should return empty string when no tools have usage data', async () => {
-
     const { fetchToolUsageContext } = await import('./prompts');
     const result = await fetchToolUsageContext();
 
@@ -738,7 +731,6 @@ describe('fetchToolUsageContext', () => {
   });
 
   it('should return empty string on import error', async () => {
-
     const { fetchToolUsageContext } = await import('./prompts');
     const result = await fetchToolUsageContext();
 

@@ -138,7 +138,9 @@ export async function updateReputation(
         'createdAt = if_not_exists(createdAt, :now), ' +
         'lastTraceId = :tid, ' +
         'promptHash = :ph' +
-        (errorType ? ', errorDistribution.#err = if_not_exists(errorDistribution.#err, :zero) + :one' : ''),
+        (errorType
+          ? ', errorDistribution.#err = if_not_exists(errorDistribution.#err, :zero) + :one'
+          : ''),
       ExpressionAttributeNames: errorType ? { '#err': errorType } : undefined,
       ExpressionAttributeValues: {
         ':type': 'REPUTATION',

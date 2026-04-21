@@ -2,7 +2,7 @@ import { Message } from './llm';
 import { GapStatus, GapTransitionResult } from './agent';
 import type { Collaboration, CollaborationRole, ParticipantType } from './collaboration';
 
-// DO NOT RE-EXPORT GapStatus or Message from here. 
+// DO NOT RE-EXPORT GapStatus or Message from here.
 // They are exported by index.ts via agent.ts and llm.ts.
 
 /**
@@ -199,10 +199,7 @@ export interface IKnowledgeStore {
     scope?: string | ContextualScope
   ): Promise<number | string>;
   /** Retrieves failure patterns relevant to the given context. */
-  getFailurePatterns(
-    limit?: number,
-    scope?: string | ContextualScope
-  ): Promise<MemoryInsight[]>;
+  getFailurePatterns(limit?: number, scope?: string | ContextualScope): Promise<MemoryInsight[]>;
   /** Adds a system-wide lesson that benefits ALL users and sessions. */
   addGlobalLesson(lesson: string, metadata?: Partial<InsightMetadata>): Promise<number | string>;
   /** Retrieves system-wide lessons for injection into agent prompts. */
@@ -233,10 +230,7 @@ export interface IGapManager {
     scope?: string | ContextualScope
   ): Promise<void>;
   /** Retrieves all capability gaps, optionally filtered by their current status. */
-  getAllGaps(
-    status?: GapStatus,
-    scope?: string | ContextualScope
-  ): Promise<MemoryInsight[]>;
+  getAllGaps(status?: GapStatus, scope?: string | ContextualScope): Promise<MemoryInsight[]>;
   /** Updates the lifecycle status of a specific capability gap. */
   updateGapStatus(
     gapId: string,
@@ -282,7 +276,9 @@ export interface IMemory extends IHistoryStore, IKnowledgeStore, IGapManager {
    * Searches for insights across all categories.
    */
   searchInsights(
-    queryOrUserId?: string | { tags?: string[]; category?: InsightCategory; limit?: number; scope?: ContextualScope },
+    queryOrUserId?:
+      | string
+      | { tags?: string[]; category?: InsightCategory; limit?: number; scope?: ContextualScope },
     queryText?: string,
     category?: InsightCategory,
     limit?: number,
@@ -360,7 +356,10 @@ export interface IMemory extends IHistoryStore, IKnowledgeStore, IGapManager {
   // Collaboration Operations
 
   /** Gets a collaboration by ID. */
-  getCollaboration(collaborationId: string, scope?: string | ContextualScope): Promise<Collaboration | null>;
+  getCollaboration(
+    collaborationId: string,
+    scope?: string | ContextualScope
+  ): Promise<Collaboration | null>;
 
   /** Checks if a participant has access to a collaboration. */
   checkCollaborationAccess(

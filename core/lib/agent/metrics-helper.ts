@@ -19,7 +19,19 @@ export async function reportAgentMetrics(params: {
 }) {
   if (process.env.VITEST) return;
 
-  const { agentId, traceId, activeProvider, activeModel, inputTokens, outputTokens, toolCalls, durationMs, success, paused, scope } = params;
+  const {
+    agentId,
+    traceId,
+    activeProvider,
+    activeModel,
+    inputTokens,
+    outputTokens,
+    toolCalls,
+    durationMs,
+    success,
+    paused,
+    scope,
+  } = params;
 
   try {
     const { emitMetrics, METRICS } = await import('../metrics');

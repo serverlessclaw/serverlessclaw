@@ -100,12 +100,7 @@ export const handler = async (
 
   const agentTools = await (await import('../tools/index')).getAgentTools('cognition-reflector');
   const { Agent } = await import('../lib/agent');
-  const reflector = new Agent(
-    memory,
-    providerManager,
-    agentTools,
-    config
-  );
+  const reflector = new Agent(memory, providerManager, agentTools, config);
 
   // 2. Handle simple direct tasks (e.g. greetings)
   if (task) {
@@ -120,13 +115,7 @@ export const handler = async (
         source: TraceSource.SYSTEM,
       });
       const { updateReputation } = await import('../lib/memory/reputation-operations');
-      await updateReputation(
-        (memory as any),
-        config.id,
-        true,
-        Date.now() - startTime,
-        { scope }
-      );
+      await updateReputation(memory as any, config.id, true, Date.now() - startTime, { scope });
       return responseText;
     }
   }
@@ -202,7 +191,7 @@ export const handler = async (
             const { items: preferences } = await memory.searchInsights({
               tags: ['preference', 'user_preference'],
               category: InsightCategory.USER_PREFERENCE,
-              scope
+              scope,
             });
             const metadata = {
               category: InsightCategory.STRATEGIC_GAP,

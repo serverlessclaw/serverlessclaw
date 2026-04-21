@@ -90,10 +90,10 @@ Agents dynamically switch their output protocol based on the presence of human p
 
 ### 1. Communication Modes
 
-| Mode | Trigger | Protocol | Goal |
-| :--- | :--- | :--- | :--- |
-| **`text`** | Human Participant Present | Natural Language (Markdown) | Readability & Alignment |
-| **`json`** | Autonomous Swarm Only | Structured JSON | Protocol Precision & Cost |
+| Mode       | Trigger                   | Protocol                    | Goal                      |
+| :--------- | :------------------------ | :-------------------------- | :------------------------ |
+| **`text`** | Human Participant Present | Natural Language (Markdown) | Readability & Alignment   |
+| **`json`** | Autonomous Swarm Only     | Structured JSON             | Protocol Precision & Cost |
 
 ### 2. Mode Selection Logic (Diagram B)
 

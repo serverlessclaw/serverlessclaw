@@ -209,7 +209,9 @@ export class CachedMemory implements IMemory {
   }
 
   async searchInsights(
-    queryOrUserId?: string | { tags?: string[]; category?: InsightCategory; limit?: number; scope?: ContextualScope },
+    queryOrUserId?:
+      | string
+      | { tags?: string[]; category?: InsightCategory; limit?: number; scope?: ContextualScope },
     queryText?: string,
     category?: InsightCategory,
     limit?: number,
@@ -251,7 +253,9 @@ export class CachedMemory implements IMemory {
       effectiveScope
     );
 
-    const cached = MemoryCaches.search.get(cacheKey) as { items: MemoryInsight[]; lastEvaluatedKey?: Record<string, unknown> } | undefined;
+    const cached = MemoryCaches.search.get(cacheKey) as
+      | { items: MemoryInsight[]; lastEvaluatedKey?: Record<string, unknown> }
+      | undefined;
     if (cached) return cached;
 
     const result = await this.underlying.searchInsights(
@@ -277,7 +281,14 @@ export class CachedMemory implements IMemory {
     metadata?: Partial<InsightMetadata>,
     scope?: string | import('../types/memory').ContextualScope
   ): Promise<number | string> {
-    return this.underlying.recordFailurePattern(planHash, planContent, gapIds, failureReason, metadata, scope);
+    return this.underlying.recordFailurePattern(
+      planHash,
+      planContent,
+      gapIds,
+      failureReason,
+      metadata,
+      scope
+    );
   }
 
   async getFailurePatterns(
@@ -418,7 +429,10 @@ export class CachedMemory implements IMemory {
   ): Promise<void> {
     return this.gaps.updateGapMetadata(gapId, metadata, scope);
   }
-  async getGap(gapId: string, scope?: string | import('../types/memory').ContextualScope): Promise<MemoryInsight | null> {
+  async getGap(
+    gapId: string,
+    scope?: string | import('../types/memory').ContextualScope
+  ): Promise<MemoryInsight | null> {
     return this.gaps.getGap(gapId, scope);
   }
   async acquireGapLock(
@@ -438,16 +452,15 @@ export class CachedMemory implements IMemory {
   ): Promise<void> {
     return this.gaps.releaseGapLock(gapId, agentId, expectedVersion, force, scope);
   }
-  async getGapLock(gapId: string): Promise<{ agentId: string; expiresAt: number; lockVersion?: number } | null> {
+  async getGapLock(
+    gapId: string
+  ): Promise<{ agentId: string; expiresAt: number; lockVersion?: number } | null> {
     return this.gaps.getGapLock(gapId);
   }
 
   // --- COLLABORATION OPERATIONS (Delegated) ---
 
-  async getCollaboration(
-    id: string,
-    scope?: string | import('../types/memory').ContextualScope
-  ) {
+  async getCollaboration(id: string, scope?: string | import('../types/memory').ContextualScope) {
     return this.collaboration.getCollaboration(id, scope);
   }
   async checkCollaborationAccess(
@@ -607,9 +620,7 @@ export class CachedMemory implements IMemory {
   ) {
     return this.delegator.getEscalationState(t, a, scope);
   }
-  async findExpiredClarifications(
-    scope?: string | import('../types/memory').ContextualScope
-  ) {
+  async findExpiredClarifications(scope?: string | import('../types/memory').ContextualScope) {
     return this.delegator.findExpiredClarifications(scope);
   }
   async incrementClarificationRetry(
@@ -630,7 +641,6 @@ export class CachedMemory implements IMemory {
     MemoryCaches.conversation.delete(CacheKeys.history(userId, scope));
     MemoryCaches.conversation.delete(CacheKeys.summary(userId, scope));
   }
-
 
   getCacheStats() {
     return getCacheStatsSummary();

@@ -293,7 +293,9 @@ export class AgentEmitter {
   /**
    * Emits a reputation update event with execution results (success, latency, etc).
    */
-  async emitReputationUpdate(payload: import('../types/reputation').ReputationUpdatePayload): Promise<void> {
+  async emitReputationUpdate(
+    payload: import('../types/reputation').ReputationUpdatePayload
+  ): Promise<void> {
     try {
       await this.eventbridge.send(
         new PutEventsCommand({

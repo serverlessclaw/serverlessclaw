@@ -1,6 +1,12 @@
 import { BaseMemoryProvider } from './base';
 import { logger } from '../logger';
-import { InsightMetadata, MemoryInsight, InsightCategory, GapStatus, ContextualScope } from '../types/index';
+import {
+  InsightMetadata,
+  MemoryInsight,
+  InsightCategory,
+  GapStatus,
+  ContextualScope,
+} from '../types/index';
 
 /**
  * Creates a standard MemoryInsight metadata object with defaults.

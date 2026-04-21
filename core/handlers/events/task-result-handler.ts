@@ -98,8 +98,19 @@ export async function handleTaskResult(
     ? FAILURE_EVENT_SCHEMA.parse(eventDetail)
     : COMPLETION_EVENT_SCHEMA.parse(eventDetail);
 
-  const { userId, agentId, task, traceId, initiatorId, depth, sessionId, userNotified, workspaceId, teamId, staffId } =
-    parsedEvent;
+  const {
+    userId,
+    agentId,
+    task,
+    traceId,
+    initiatorId,
+    depth,
+    sessionId,
+    userNotified,
+    workspaceId,
+    teamId,
+    staffId,
+  } = parsedEvent;
   const response = 'error' in parsedEvent ? parsedEvent.error : parsedEvent.response;
 
   // Defense-in-depth: Validate recursion depth before processing (P1 fix)
@@ -140,11 +151,9 @@ export async function handleTaskResult(
         ? ((parsedEvent.metadata.durationMs as number) ?? 0)
         : 0;
     updateReputation(memBase, agentId, !isFailure, latencyMs, {
-        scope: { workspaceId, teamId, staffId },
-        traceId: traceId || ''
-    }).catch(
-      (err: unknown) => logger.warn(`Reputation update failed for ${agentId}:`, err)
-    );
+      scope: { workspaceId, teamId, staffId },
+      traceId: traceId || '',
+    }).catch((err: unknown) => logger.warn(`Reputation update failed for ${agentId}:`, err));
   } catch {
     // reputation module may not be available in all environments
   }
@@ -241,7 +250,7 @@ export async function handleTaskResult(
             aggregationPrompt: aggregateState.aggregationPrompt,
             workspaceId,
             teamId,
-            staffId
+            staffId,
           });
         }
       }

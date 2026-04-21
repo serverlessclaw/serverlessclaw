@@ -64,11 +64,7 @@ export class MemoryCollaboration {
       collaborationName: string;
     }>
   > {
-    return this.underlying.listCollaborationsForParticipant(
-      participantId,
-      participantType,
-      scope
-    );
+    return this.underlying.listCollaborationsForParticipant(participantId, participantType, scope);
   }
 
   async transitToCollaboration(

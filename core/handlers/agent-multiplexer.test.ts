@@ -60,7 +60,7 @@ vi.mock('../agents/merger', () => {
   return {
     get handler() {
       return mocks.failHandler ? 'not-a-function' : mocks.mergerHandler;
-    }
+    },
   };
 });
 
@@ -102,8 +102,6 @@ describe('AgentMultiplexer', () => {
   it('should route CODER_TASK to coder agent', async () => {
     vi.mocked(agentHelpers.handleWarmup).mockResolvedValue(false);
 
-
-
     const event = { 'detail-type': EventType.CODER_TASK, detail: baseEventDetail };
     const result = await handler(event, mockContext);
 
@@ -113,8 +111,6 @@ describe('AgentMultiplexer', () => {
   it('should route QA_TASK to qa agent', async () => {
     vi.mocked(agentHelpers.handleWarmup).mockResolvedValue(false);
 
-
-
     const event = { 'detail-type': 'qa_task', detail: baseEventDetail };
     const result = await handler(event, mockContext);
 
@@ -123,8 +119,6 @@ describe('AgentMultiplexer', () => {
 
   it('should route CRITIC_TASK to critic agent', async () => {
     vi.mocked(agentHelpers.handleWarmup).mockResolvedValue(false);
-
-
 
     const event = { 'detail-type': 'critic_task', detail: baseEventDetail };
     const result = await handler(event, mockContext);

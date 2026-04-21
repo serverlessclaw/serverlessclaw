@@ -37,6 +37,6 @@ export function validateAgentConfig(config: IAgentConfig | undefined, agentType:
 
   // systemPrompt is mandatory for LLM agents (default type)
   if (!config.systemPrompt) {
-      throw new Error(`Agent config for '${agentType}' is missing systemPrompt.`);
+    throw new Error(`Agent config for '${agentType}' is missing systemPrompt.`);
   }
 }

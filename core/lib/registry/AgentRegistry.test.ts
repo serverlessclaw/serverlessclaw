@@ -203,7 +203,9 @@ describe('AgentRegistry', () => {
       (Resource as any).ConfigTable = undefined;
 
       const config = { id: 'test', name: 'Test', systemPrompt: 'Prompt', enabled: true };
-      await expect(AgentRegistry.saveConfig('test', config)).rejects.toThrow('ConfigTable not linked');
+      await expect(AgentRegistry.saveConfig('test', config)).rejects.toThrow(
+        'ConfigTable not linked'
+      );
       expect(mockDocClient.send).not.toHaveBeenCalled();
     });
 
@@ -220,7 +222,7 @@ describe('AgentRegistry', () => {
 
     it('should implement cognitive lineage with versioning and hashing', async () => {
       const config = { id: 'evolution-bot', name: 'Evolution Bot', systemPrompt: 'Be helpful.' };
-      
+
       // Mock the atomic field update to simulate versioning
       vi.spyOn(AgentRegistry, 'atomicAddAgentField').mockResolvedValue(1);
 
@@ -232,8 +234,8 @@ describe('AgentRegistry', () => {
         'evolution-bot',
         expect.objectContaining({
           metadata: expect.objectContaining({
-            promptHash: expect.any(String)
-          })
+            promptHash: expect.any(String),
+          }),
         })
       );
 

@@ -33,7 +33,10 @@ export interface MemoryForAudit {
     metadata?: Partial<import('../../lib/types/memory').InsightMetadata>,
     scope?: string | import('../../lib/types/memory').ContextualScope
   ): Promise<number | string>;
-  getScopedUserId(userId: string, scope?: string | import('../../lib/types/memory').ContextualScope): string;
+  getScopedUserId(
+    userId: string,
+    scope?: string | import('../../lib/types/memory').ContextualScope
+  ): string;
   set?(key: string, value: unknown): Promise<void>;
   get?(key: string): Promise<unknown>;
 }
@@ -123,7 +126,9 @@ async function auditSilo(
 
 async function auditSpine(memory: MemoryForAudit): Promise<AuditFinding[]> {
   const findings: AuditFinding[] = [];
-  const openGaps = (await memory.getAllGaps(GapStatus.OPEN)) as import('../../lib/types/memory').MemoryInsight[];
+  const openGaps = (await memory.getAllGaps(
+    GapStatus.OPEN
+  )) as import('../../lib/types/memory').MemoryInsight[];
 
   if (openGaps.length > 50) {
     findings.push({
@@ -140,7 +145,9 @@ async function auditSpine(memory: MemoryForAudit): Promise<AuditFinding[]> {
 
 async function auditHand(memory: MemoryForAudit): Promise<AuditFinding[]> {
   const findings: AuditFinding[] = [];
-  const failures = (await memory.getFailurePatterns(10)) as import('../../lib/types/memory').MemoryInsight[];
+  const failures = (await memory.getFailurePatterns(
+    10
+  )) as import('../../lib/types/memory').MemoryInsight[];
 
   const toolFailurePatterns = failures.filter((f) => f.metadata?.category === 'TOOL_EXECUTION');
 

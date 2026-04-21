@@ -63,12 +63,7 @@ describe('Multi-Modal Integration', () => {
   });
 
   it('should pass attachments to the provider for vision analysis', async () => {
-    const agent = new Agent(
-      mockMemory as any,
-      mockProvider as any,
-      [],
-      mockConfig
-    );
+    const agent = new Agent(mockMemory as any, mockProvider as any, [], mockConfig);
 
     mockProvider.call.mockResolvedValue({
       role: MessageRole.ASSISTANT,

@@ -43,7 +43,7 @@ vi.mock('../lib/session/session-state', () => ({
     releaseProcessing = vi.fn().mockResolvedValue(true);
     addPendingMessage = vi.fn().mockResolvedValue(true);
     getState = vi.fn().mockResolvedValue(null);
-  }
+  },
 }));
 
 vi.mock('../lib/recursion-tracker', () => ({

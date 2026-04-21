@@ -36,21 +36,23 @@ describe('Agent handoff (human control) branches', () => {
     vi.clearAllMocks();
   });
 
-  const createMockMemory = () => ({
-    addMessage: vi.fn().mockResolvedValue(undefined),
-    getHistory: vi.fn().mockResolvedValue([]),
-    getDistilledMemory: vi.fn().mockResolvedValue(''),
-    getLessons: vi.fn().mockResolvedValue([]),
-    getGlobalLessons: vi.fn().mockResolvedValue([]),
-    searchInsights: vi.fn().mockResolvedValue({ items: [] }),
-    getSummary: vi.fn().mockResolvedValue(null),
-    updateDistilledMemory: vi.fn().mockResolvedValue(undefined),
-    getScopedUserId: vi.fn().mockImplementation((uid: string) => uid),
-  } as any);
+  const createMockMemory = () =>
+    ({
+      addMessage: vi.fn().mockResolvedValue(undefined),
+      getHistory: vi.fn().mockResolvedValue([]),
+      getDistilledMemory: vi.fn().mockResolvedValue(''),
+      getLessons: vi.fn().mockResolvedValue([]),
+      getGlobalLessons: vi.fn().mockResolvedValue([]),
+      searchInsights: vi.fn().mockResolvedValue({ items: [] }),
+      getSummary: vi.fn().mockResolvedValue(null),
+      updateDistilledMemory: vi.fn().mockResolvedValue(undefined),
+      getScopedUserId: vi.fn().mockImplementation((uid: string) => uid),
+    }) as any;
 
-  const createMockProvider = () => ({
-    getCapabilities: vi.fn().mockResolvedValue({}),
-  } as any);
+  const createMockProvider = () =>
+    ({
+      getCapabilities: vi.fn().mockResolvedValue({}),
+    }) as any;
 
   it('process returns human-control response and ends trace', async () => {
     const mockMemory = createMockMemory();

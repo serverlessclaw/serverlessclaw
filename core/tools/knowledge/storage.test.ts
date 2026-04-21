@@ -133,7 +133,7 @@ describe('knowledge-storage tools', () => {
       expect(mocks.searchInsights).toHaveBeenCalledWith({
         tags: undefined,
         category: 'tactical_lesson',
-        limit: 50
+        limit: 50,
       });
     });
     it('should search both prefixed and raw for user_preference', async () => {
@@ -145,7 +145,7 @@ describe('knowledge-storage tools', () => {
       expect(mocks.searchInsights).toHaveBeenCalledWith({
         tags: undefined,
         category: 'user_preference',
-        limit: 50
+        limit: 50,
       });
       expect(mocks.searchInsights).toHaveBeenCalledTimes(1);
     });

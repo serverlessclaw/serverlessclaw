@@ -7,14 +7,13 @@
 import { logger } from '../logger';
 import { getDocClient, getMemoryTableName } from '../utils/ddb-client';
 import { UpdateCommand } from '@aws-sdk/lib-dynamodb';
-import { TIME } from '../constants';
 
 const docClient = getDocClient();
 
 export enum MetricGrain {
   HOURLY = 'HOURLY',
   DAILY = 'DAILY',
-  TASKS = 'TASKS'
+  TASKS = 'TASKS',
 }
 
 export interface MetricSnapshot {
@@ -50,7 +49,7 @@ export async function recordAgentMetric(params: {
 
   const snapshots = [
     { grain: MetricGrain.HOURLY, ts: hourStart, pk: `METRIC#HOUR#${agentId}` },
-    { grain: MetricGrain.DAILY, ts: dayStart, pk: `METRIC#DAY#${agentId}` }
+    { grain: MetricGrain.DAILY, ts: dayStart, pk: `METRIC#DAY#${agentId}` },
   ];
 
   try {
@@ -61,7 +60,7 @@ export async function recordAgentMetric(params: {
         'totalDurationMs = if_not_exists(totalDurationMs, :zero) + :d',
         'promptHash = :ph',
         'version = :v',
-        'updatedAt = :now'
+        'updatedAt = :now',
       ];
 
       const attrValues: Record<string, any> = {
@@ -71,11 +70,11 @@ export async function recordAgentMetric(params: {
         ':ph': promptHash ?? 'unknown',
         ':v': version ?? 0,
         ':now': now,
-        ':zero': 0
+        ':zero': 0,
       };
 
       const attrNames: Record<string, string> = {
-        '#err': 'errorDistribution'
+        '#err': 'errorDistribution',
       };
 
       if (errorType) {
@@ -84,13 +83,15 @@ export async function recordAgentMetric(params: {
         attrValues[':one'] = 1;
       }
 
-      return docClient.send(new UpdateCommand({
-        TableName: tableName,
-        Key: { userId: s.pk, timestamp: s.ts },
-        UpdateExpression: updateExpr.join(', '),
-        ExpressionAttributeNames: attrNames,
-        ExpressionAttributeValues: attrValues
-      }));
+      return docClient.send(
+        new UpdateCommand({
+          TableName: tableName,
+          Key: { userId: s.pk, timestamp: s.ts },
+          UpdateExpression: updateExpr.join(', '),
+          ExpressionAttributeNames: attrNames,
+          ExpressionAttributeValues: attrValues,
+        })
+      );
     });
 
     await Promise.all(promises);

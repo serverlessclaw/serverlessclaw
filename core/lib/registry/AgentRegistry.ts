@@ -136,13 +136,13 @@ export class AgentRegistry {
 
   /**
    * Saves or updates an agent configuration in DynamoDB.
-   * 
+   *
    * Implementing Principle 12 (Cognitive Lineage & Versioning):
    * This method automatically handles:
    * 1. Hashing the systemPrompt to detect behavioral changes.
    * 2. Incrementing the version number atomically.
    * 3. Triggering a topology refresh to update agent roles in the swarm navigation.
-   * 
+   *
    * @param agentId - The unique identifier for the agent.
    * @param config - The partial configuration updates to apply.
    * @throws Error if mandatory fields (name, systemPrompt) are missing during initialization.
@@ -168,7 +168,7 @@ export class AgentRegistry {
     };
 
     await ConfigManager.atomicUpdateMapEntity(DYNAMO_KEYS.AGENTS_CONFIG, agentId, enrichedConfig);
-    
+
     // Increment version atomically to track cognitive evolution
     await this.atomicAddAgentField(agentId, 'version', 1).catch(() => {});
 
