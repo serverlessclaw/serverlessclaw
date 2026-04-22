@@ -1,16 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  Activity,
-  Brain,
-  X,
-  Zap,
-  Database,
-  Terminal,
-  Cpu,
-  Wrench,
-} from 'lucide-react';
+import { Activity, Brain, X, Zap, Database, Terminal, Cpu, Wrench } from 'lucide-react';
 import Typography from '@/components/ui/Typography';
 import { useTranslations } from '@/components/Providers/TranslationsProvider';
 import { Trace } from '@/lib/types/ui';

@@ -625,7 +625,6 @@ export default function ChatContent() {
         onCancel={() => setShowDeleteAllConfirm(false)}
         variant="danger"
       />
-
     </div>
   );
 }

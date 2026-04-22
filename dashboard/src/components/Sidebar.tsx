@@ -416,7 +416,11 @@ export default function Sidebar() {
 
           {/* Keyboard Shortcuts Row */}
           {isCollapsed ? (
-            <CyberTooltip position="right" showIcon={false} content={t('CHAT_KEYBOARD_SHORTCUTS_TITLE')}>
+            <CyberTooltip
+              position="right"
+              showIcon={false}
+              content={t('CHAT_KEYBOARD_SHORTCUTS_TITLE')}
+            >
               <button
                 onClick={() => setActiveModal('shortcuts')}
                 className="w-full flex justify-center py-1.5 text-muted-foreground hover:text-cyber-green transition-colors bg-foreground/5 rounded border border-transparent hover:border-cyber-green/20 mx-1"
@@ -441,10 +445,7 @@ export default function Sidebar() {
                   </Typography>
                 </div>
                 <div className="bg-foreground/10 rounded px-1 py-0.5 border border-border/50 group-hover:border-cyber-green/30">
-                  <Typography
-                    variant="mono"
-                    className="text-[9px] font-bold text-cyber-green"
-                  >
+                  <Typography variant="mono" className="text-[9px] font-bold text-cyber-green">
                     ?
                   </Typography>
                 </div>

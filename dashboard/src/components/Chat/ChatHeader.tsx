@@ -195,7 +195,6 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             </Button>
           </CyberTooltip>
 
-
           <CyberTooltip
             content="Toggle Session Intelligence"
             position="bottom"

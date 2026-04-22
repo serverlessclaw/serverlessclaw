@@ -63,10 +63,7 @@ export default function CoManagementHub() {
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card
-          variant="glass"
-          className="flex flex-col items-center justify-center p-8 bg-card/10"
-        >
+        <Card variant="glass" className="flex flex-col items-center justify-center p-8 bg-card/10">
           <TrustGauge score={94} label="System Trust" size={140} />
           <div className="mt-4 text-center">
             <Typography variant="caption" color="muted">

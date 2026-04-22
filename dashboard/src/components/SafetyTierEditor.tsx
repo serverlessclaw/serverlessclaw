@@ -72,7 +72,11 @@ export default function SafetyTierEditor({ currentTier, onTierChange }: SafetyTi
             )}
 
             <div className="mb-4">
-              <Typography variant="h3" color={tier.id === 'local' ? 'intel' : 'primary'} className="font-semibold mb-2">
+              <Typography
+                variant="h3"
+                color={tier.id === 'local' ? 'intel' : 'primary'}
+                className="font-semibold mb-2"
+              >
                 {tier.label}
               </Typography>
               <Typography variant="caption" className="text-muted-foreground">

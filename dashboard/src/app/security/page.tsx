@@ -148,8 +148,7 @@ export default function SecurityManifestPage() {
               weight="bold"
               className={`tracking-[0.2em] flex items-center gap-2 mb-6`}
             >
-              <Globe size={14} className="text-cyber-green" /> Agent Capability
-              Matrix
+              <Globe size={14} className="text-cyber-green" /> Agent Capability Matrix
             </Typography>
             <div className="space-y-4">
               {AGENT_POLICIES.map((policy, i) => (
@@ -159,9 +158,7 @@ export default function SecurityManifestPage() {
                 >
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
-                      <div
-                        className="w-8 h-8 rounded bg-cyber-green/10 flex items-center justify-center text-cyber-green"
-                      >
+                      <div className="w-8 h-8 rounded bg-cyber-green/10 flex items-center justify-center text-cyber-green">
                         <Server size={16} />
                       </div>
                       <Typography variant="body" weight="bold">
@@ -219,8 +216,7 @@ export default function SecurityManifestPage() {
         <div className="lg:col-span-5 space-y-8">
           <section className="glass-card p-6 border-border bg-card">
             <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-foreground flex items-center gap-2 mb-6">
-              <Lock size={14} className="text-red-500" /> Protected Resource
-              Labeling
+              <Lock size={14} className="text-red-500" /> Protected Resource Labeling
             </h3>
             <div className="space-y-3">
               {PROTECTED_RESOURCES.map((res, i) => (
@@ -230,9 +226,7 @@ export default function SecurityManifestPage() {
                 >
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-[11px] font-mono text-foreground">{res.path}</span>
-                    <span className="text-[9px] font-bold text-red-500">
-                      {res.protection}
-                    </span>
+                    <span className="text-[9px] font-bold text-red-500">{res.protection}</span>
                   </div>
                   <div className="flex justify-between items-center text-[9px]">
                     <span className="text-muted-foreground italic">{res.reason}</span>
@@ -244,9 +238,7 @@ export default function SecurityManifestPage() {
               ))}
             </div>
             <div className="mt-6 pt-6 border-t border-border">
-              <div
-                className="p-4 rounded bg-red-500/10 border border-red-500/20 flex gap-3"
-              >
+              <div className="p-4 rounded bg-red-500/10 border border-red-500/20 flex gap-3">
                 <FileWarning size={16} className="text-red-500 shrink-0" />
                 <p className="text-[10px] text-red-500/70 leading-relaxed italic">
                   Writing to these paths requires Human-in-the-Loop (HITL) approval via Telegram.
@@ -258,8 +250,7 @@ export default function SecurityManifestPage() {
 
           <section className="glass-card p-6 border-border bg-card">
             <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-foreground flex items-center gap-2 mb-4">
-              <Lock size={14} className="text-cyber-blue" /> Infrastructure
-              Boundaries (IAM)
+              <Lock size={14} className="text-cyber-blue" /> Infrastructure Boundaries (IAM)
             </h3>
             <p className="text-xs text-foreground leading-relaxed mb-4 font-light">
               Permissions are hardware-enforced at the AWS IAM level. Agents only have access to the
@@ -267,14 +258,10 @@ export default function SecurityManifestPage() {
               <code className="text-cyber-blue font-bold">sst.config.ts</code>.
             </p>
             <div className="flex flex-wrap gap-2">
-              <span
-                className="text-[9px] px-2 py-1 rounded bg-cyber-blue/10 border border-cyber-blue/30 text-cyber-blue font-bold"
-              >
+              <span className="text-[9px] px-2 py-1 rounded bg-cyber-blue/10 border border-cyber-blue/30 text-cyber-blue font-bold">
                 Principle of Least Privilege
               </span>
-              <span
-                className="text-[9px] px-2 py-1 rounded bg-cyber-blue/10 border border-cyber-blue/30 text-cyber-blue font-bold"
-              >
+              <span className="text-[9px] px-2 py-1 rounded bg-cyber-blue/10 border border-cyber-blue/30 text-cyber-blue font-bold">
                 Scoped Tokens
               </span>
             </div>
