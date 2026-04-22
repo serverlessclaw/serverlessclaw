@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Activity,
   Terminal,
@@ -52,13 +53,44 @@ export default function TraceIntelligenceView({
   sessionTitles,
   nextToken,
 }: TraceIntelligenceViewProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [activeTab, setActiveTab] = useState<TabType>('timeline');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'started' | 'error'>(
     'all'
   );
   const [sourceFilter, setSourceFilter] = useState<string>('all');
-  const [dateFilter, setDateFilter] = useState<'all' | '24h' | '7d'>('all');
+
+  // Derive dateFilter from URL searchParams
+  const startTimeParam = searchParams.get('startTime');
+  const dateFilter = useMemo(() => {
+    if (!startTimeParam) return '24h'; // Default to 24h as per page.tsx
+    const startTimeNum = parseInt(startTimeParam);
+    // eslint-disable-next-line react-hooks/purity
+    const now = mountTime || Date.now();
+    const diffHours = (now - startTimeNum) / (1000 * 60 * 60);
+
+    if (diffHours <= 25 && diffHours >= 23) return '24h';
+    if (diffHours <= 169 && diffHours >= 167) return '7d';
+    if (startTimeNum === 0) return 'all';
+    return 'custom';
+  }, [startTimeParam]);
+
+  const setDateFilter = (value: 'all' | '24h' | '7d') => {
+    const params = new URLSearchParams(searchParams.toString());
+    const now = Date.now();
+    if (value === '24h') {
+      params.set('startTime', (now - 24 * 60 * 60 * 1000).toString());
+    } else if (value === '7d') {
+      params.set('startTime', (now - 7 * 24 * 60 * 60 * 1000).toString());
+    } else if (value === 'all') {
+      params.set('startTime', '0'); // Effectively all time
+    }
+    params.delete('nextToken'); // Reset pagination when filter changes
+    router.push(`/trace?${params.toString()}`);
+  };
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [mountTime, setMountTime] = useState<number>(0);
   const { t } = useTranslations();
@@ -143,16 +175,7 @@ export default function TraceIntelligenceView({
       const matchesStatus = statusFilter === 'all' || trace.status === statusFilter;
       const matchesSource = sourceFilter === 'all' || trace.source === sourceFilter;
 
-      let matchesDate = true;
-      if (mountTime > 0) {
-        if (dateFilter === '24h') {
-          matchesDate = mountTime - trace.timestamp < 24 * 60 * 60 * 1000;
-        } else if (dateFilter === '7d') {
-          matchesDate = mountTime - trace.timestamp < 7 * 24 * 60 * 60 * 1000;
-        }
-      }
-
-      return matchesSearch && matchesStatus && matchesSource && matchesDate;
+      return matchesSearch && matchesStatus && matchesSource;
     });
   }, [traces, searchQuery, statusFilter, sourceFilter, dateFilter, mountTime]);
 
@@ -394,9 +417,10 @@ export default function TraceIntelligenceView({
             onChange={(e) => setDateFilter(e.target.value as 'all' | '24h' | '7d')}
             className="bg-foreground/5 border border-border rounded-lg px-3 py-2 text-[10px] font-bold uppercase text-muted-foreground focus:outline-none focus:border-cyber-blue/50 flex-1 md:flex-none min-w-[100px]"
           >
-            <option value="all">All Time</option>
+            <option value="all">All Time (30 Days)</option>
             <option value="24h">Last 24h</option>
             <option value="7d">Last 7 Days</option>
+            {dateFilter === 'custom' && <option value="custom">Custom Range</option>}
           </select>
         </div>
       </div>
@@ -552,7 +576,11 @@ export default function TraceIntelligenceView({
         {nextToken && activeTab === 'timeline' && (
           <div className="flex justify-center pt-4">
             <Link
-              href={`/trace?nextToken=${nextToken}`}
+              href={`/trace?${(() => {
+                const p = new URLSearchParams(searchParams.toString());
+                p.set('nextToken', nextToken);
+                return p.toString();
+              })()}`}
               className="px-6 py-2 rounded bg-cyber-blue/10 border border-cyber-blue/30 text-cyber-blue text-xs font-bold uppercase tracking-widest hover:bg-cyber-blue/20 transition-colors"
             >
               Load More Traces

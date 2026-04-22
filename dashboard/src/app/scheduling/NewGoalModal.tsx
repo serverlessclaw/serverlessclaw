@@ -65,7 +65,7 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({ onClose, onSuccess }
         variant="glass"
         className="w-full max-w-md border-blue-500/20 shadow-[0_0_30px_rgba(37,99,235,0.1)] relative z-10 overflow-hidden"
       >
-        <div className="p-6 border-b border-white/5 flex justify-between items-center">
+        <div className="p-6 border-b border-border flex justify-between items-center">
           <Typography variant="h3" weight="bold">
             {t('SCHEDULING_NEW_GOAL_TITLE')}
           </Typography>
@@ -76,19 +76,19 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({ onClose, onSuccess }
 
         <form className="p-6 space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">
+            <label className="text-[10px] font-black uppercase tracking-widest text-muted-more ml-1">
               {t('SCHEDULING_GOAL_IDENTIFIER')}
             </label>
             <input
               name="name"
               placeholder="e.g., SECURITY_AUDIT_S3"
               required
-              className="w-full bg-white/[0.03] border border-white/10 focus:border-blue-500/40 rounded-lg py-2.5 px-4 text-xs text-white outline-none transition-all"
+              className="w-full bg-input border border-input focus:border-blue-500/40 rounded-lg py-2.5 px-4 text-xs text-foreground outline-none transition-all"
             />
           </div>
 
           <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">
+            <label className="text-[10px] font-black uppercase tracking-widest text-muted-more ml-1">
               {t('SCHEDULING_TASK_SPECIFICATION')}
             </label>
             <textarea
@@ -96,39 +96,29 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({ onClose, onSuccess }
               placeholder={t('SCHEDULING_NEW_GOAL_PLACEHOLDER')}
               required
               rows={3}
-              className="w-full bg-white/[0.03] border border-white/10 focus:border-blue-500/40 rounded-lg py-2.5 px-4 text-xs text-white outline-none transition-all resize-none"
+              className="w-full bg-input border border-input focus:border-blue-500/40 rounded-lg py-2.5 px-4 text-xs text-foreground outline-none transition-all resize-none"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-more ml-1">
                 {t('SCHEDULING_TARGET_AGENT')}
               </label>
               <select
                 name="agentId"
-                className="w-full bg-white/[0.03] border border-white/10 focus:border-blue-500/40 rounded-lg py-2.5 px-3 text-xs text-white outline-none transition-all appearance-none"
+                className="w-full bg-input border border-input focus:border-blue-500/40 rounded-lg py-2.5 px-3 text-xs text-foreground outline-none transition-all appearance-none"
               >
-                <option value="strategic-planner" className="bg-slate-900">
-                  PLANNER
-                </option>
-                <option value="coder" className="bg-slate-900">
-                  CODER
-                </option>
-                <option value="cognition-reflector" className="bg-slate-900">
-                  REFLECTOR
-                </option>
-                <option value="qa" className="bg-slate-900">
-                  QA_ENGINEER
-                </option>
-                <option value="worker" className="bg-slate-900">
-                  GENERIC_WORKER
-                </option>
+                <option value="strategic-planner">PLANNER</option>
+                <option value="coder">CODER</option>
+                <option value="cognition-reflector">REFLECTOR</option>
+                <option value="qa">QA_ENGINEER</option>
+                <option value="worker">GENERIC_WORKER</option>
               </select>
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-more ml-1">
                 {t('SCHEDULING_FREQUENCY')}
               </label>
               <div className="flex gap-2">
@@ -136,21 +126,15 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({ onClose, onSuccess }
                   name="frequency"
                   type="number"
                   defaultValue="24"
-                  className="w-16 bg-white/[0.03] border border-white/10 focus:border-blue-500/40 rounded-lg py-2.5 px-2 text-xs text-white outline-none transition-all"
+                  className="w-16 bg-input border border-input focus:border-blue-500/40 rounded-lg py-2.5 px-2 text-xs text-foreground outline-none transition-all"
                 />
                 <select
                   name="unit"
-                  className="flex-1 bg-white/[0.03] border border-white/10 focus:border-blue-500/40 rounded-lg py-2.5 px-2 text-xs text-white outline-none transition-all appearance-none"
+                  className="flex-1 bg-input border border-input focus:border-blue-500/40 rounded-lg py-2.5 px-2 text-xs text-foreground outline-none transition-all appearance-none"
                 >
-                  <option value="hours" className="bg-slate-900">
-                    HOURS
-                  </option>
-                  <option value="minutes" className="bg-slate-900">
-                    MINUTES
-                  </option>
-                  <option value="days" className="bg-slate-900">
-                    DAYS
-                  </option>
+                  <option value="hours">HOURS</option>
+                  <option value="minutes">MINUTES</option>
+                  <option value="days">DAYS</option>
                 </select>
               </div>
             </div>

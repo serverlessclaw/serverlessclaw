@@ -402,7 +402,7 @@ export default async function MemoryVault({
       <div className="max-w-6xl animate-in fade-in slide-in-from-bottom-2 duration-500 min-h-[400px]">
         {/* Dynamic Types Sub-navigation */}
         {activeTab === 'dynamic' && (
-          <div className="flex flex-wrap gap-2 mb-8 p-4 bg-white/[0.02] border border-white/5 rounded-lg">
+          <div className="flex flex-wrap gap-2 mb-8 p-4 bg-input border border-border rounded-lg">
             <div className="flex items-center gap-2 mr-4 opacity-50">
               <Filter size={14} className="text-purple-400" />
               <Typography
@@ -419,7 +419,7 @@ export default async function MemoryVault({
                 className={`px-3 py-1 rounded text-[10px] font-bold uppercase transition-all ${
                   subType === type || (!subType && dynamicTypes[0] === type)
                     ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                    : 'bg-white/5 text-muted hover:bg-white/10 hover:text-white border border-transparent'
+                    : 'bg-input/50 text-muted-foreground hover:bg-input hover:text-foreground border border-transparent'
                 }`}
               >
                 {type.replace('MEMORY:', '').replace(/_/g, ' ')}

@@ -24,13 +24,13 @@ export default function CapabilitiesHeader({ localCount, bridgeCount }: Capabili
             <Typography
               variant="mono"
               color="muted"
-              className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
+              className="text-[10px] uppercase tracking-widest opacity-60 mb-1 font-black"
             >
               {t('CAPABILITIES_LOCAL')}
             </Typography>
             <Badge
               variant="outline"
-              className="px-4 py-1 font-bold text-xs border-yellow-500/20 text-yellow-500/60 uppercase"
+              className="px-4 py-1 font-black text-xs border-amber-500/30 text-amber-600 dark:text-yellow-500/60 uppercase bg-amber-500/5"
             >
               {localCount}
             </Badge>
@@ -39,13 +39,13 @@ export default function CapabilitiesHeader({ localCount, bridgeCount }: Capabili
             <Typography
               variant="mono"
               color="muted"
-              className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
+              className="text-[10px] uppercase tracking-widest opacity-60 mb-1 font-black"
             >
               {t('CAPABILITIES_BRIDGES')}
             </Typography>
             <Badge
               variant="outline"
-              className="px-4 py-1 font-bold text-xs border-cyber-blue/20 text-cyber-blue/60 uppercase"
+              className="px-4 py-1 font-black text-xs border-cyber-blue/30 text-cyber-blue/60 uppercase bg-cyber-blue/5"
             >
               {bridgeCount}
             </Badge>

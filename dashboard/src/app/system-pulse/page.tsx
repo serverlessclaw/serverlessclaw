@@ -27,12 +27,12 @@ export default function SystemPulsePage() {
     >
       <PageHeader titleKey="SYSPULSE_TITLE" subtitleKey="SYSPULSE_SUBTITLE" />
 
-      <div className="flex-1 min-h-0 glass-card border-white/5 overflow-hidden flex flex-col">
-        <div className="px-6 py-3 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
-          <div className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-[0.2em] text-white/70">
+      <div className="flex-1 min-h-0 glass-card border-border overflow-hidden flex flex-col">
+        <div className="px-6 py-3 border-b border-border bg-card flex items-center justify-between">
+          <div className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-[0.2em] text-muted-foreground">
             <Zap size={14} className={`text-${THEME.COLORS.INTEL}`} /> Architecture Map
           </div>
-          <div className="flex items-center gap-4 text-[9px] text-white/40">
+          <div className="flex items-center gap-4 text-[9px] text-muted-more">
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-cyber-green"></div> AGENT_NODE
             </div>

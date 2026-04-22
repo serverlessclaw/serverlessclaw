@@ -29,11 +29,7 @@ export const GovernanceProtocol: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card
-          variant="glass"
-          padding="lg"
-          className="border-white/5 relative overflow-hidden group"
-        >
+        <Card variant="glass" padding="lg" className="border-border relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
             <Brain size={80} className="text-blue-500" />
           </div>
@@ -46,21 +42,24 @@ export const GovernanceProtocol: React.FC = () => {
                 {t('SCHEDULING_AUTONOMOUS_ROLE')}
               </Badge>
             </div>
-            <Typography variant="body" weight="bold" className="mb-3 text-white/90 block">
+            <Typography variant="body" weight="bold" className="mb-3 text-foreground block">
               {t('SCHEDULING_STRATEGIC_PLANNER')}
             </Typography>
-            <Typography variant="body" className="text-xs text-white/60 leading-relaxed block">
+            <Typography
+              variant="body"
+              className="text-xs text-muted-foreground leading-relaxed block"
+            >
               {t('SCHEDULING_STRATEGIC_PLANNER_DESC').replace('{gaps}', 'evolution_gaps')}
             </Typography>
-            <div className="mt-6 flex items-center gap-4 border-t border-white/5 pt-4">
+            <div className="mt-6 flex items-center gap-4 border-t border-border pt-4">
               <div className="flex flex-col">
-                <span className="text-[9px] text-white/40 uppercase font-black tracking-widest">
+                <span className="text-[9px] text-muted-more uppercase font-black tracking-widest">
                   {t('SCHEDULING_SYNC_PRIORITY')}
                 </span>
                 <span className="text-xs font-mono text-blue-400">P0_CRITICAL</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-[9px] text-white/40 uppercase font-black tracking-widest">
+                <span className="text-[9px] text-muted-more uppercase font-black tracking-widest">
                   {t('SCHEDULING_AUDIT_MODE')}
                 </span>
                 <span className="text-xs font-mono text-blue-400">CONTINUOUS</span>
@@ -69,11 +68,7 @@ export const GovernanceProtocol: React.FC = () => {
           </div>
         </Card>
 
-        <Card
-          variant="glass"
-          padding="lg"
-          className="border-white/5 relative overflow-hidden group"
-        >
+        <Card variant="glass" padding="lg" className="border-border relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
             <Users size={80} className="text-amber-500" />
           </div>
@@ -86,7 +81,7 @@ export const GovernanceProtocol: React.FC = () => {
                 {t('SCHEDULING_HUMAN_CO_MANAGER')}
               </Badge>
             </div>
-            <Typography variant="body" weight="bold" className="mb-3 text-white/90 block">
+            <Typography variant="body" weight="bold" className="mb-3 text-foreground block">
               {t('SCHEDULING_INTERVENTION_PRIVILEGES')}
             </Typography>
             <ul className="space-y-2">
@@ -96,7 +91,7 @@ export const GovernanceProtocol: React.FC = () => {
                 t('SCHEDULING_PRIVILEGE_OVERRIDE'),
                 t('SCHEDULING_PRIVILEGE_PURGE'),
               ].map((item, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-xs text-white/60">
+                <li key={idx} className="flex items-start gap-2 text-xs text-muted-foreground">
                   <ChevronRight size={12} className="mt-0.5 text-amber-500/50" />
                   <span>{item}</span>
                 </li>

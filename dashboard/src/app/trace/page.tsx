@@ -74,11 +74,16 @@ async function getSessionTitles() {
 export default async function AnalyticsTab({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; nextToken?: string }>;
+  searchParams: Promise<{ tab?: string; nextToken?: string; startTime?: string; endTime?: string }>;
 }) {
   const params = await searchParams;
+  // eslint-disable-next-line react-hooks/purity
+  const now = Date.now();
+  const startTime = params.startTime ? parseInt(params.startTime) : now - 24 * 60 * 60 * 1000;
+  const endTime = params.endTime ? parseInt(params.endTime) : undefined;
+
   const [tracesResult, config, sessionTitles] = await Promise.all([
-    getTraces(params.nextToken),
+    getTraces(params.nextToken, { startTime, endTime }),
     getConfig(),
     getSessionTitles(),
   ]);

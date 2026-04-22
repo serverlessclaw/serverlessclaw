@@ -36,11 +36,11 @@ export default function MemorySearch() {
   return (
     <div className="relative w-full max-w-md">
       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-        <Search size={16} className="text-muted" />
+        <Search size={16} className="text-muted-foreground" />
       </div>
       <input
         type="text"
-        className="block w-full pl-10 pr-10 py-2 border border-white/10 rounded-lg bg-black/40 text-white placeholder-muted focus:ring-1 focus:ring-cyber-blue focus:border-cyber-blue transition-all"
+        className="block w-full pl-10 pr-10 py-2 border border-input rounded-lg bg-input text-foreground placeholder-muted-foreground focus:ring-1 focus:ring-cyber-blue focus:border-cyber-blue transition-all"
         placeholder={t('MEMORY_SEARCH_PLACEHOLDER')}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
@@ -48,7 +48,7 @@ export default function MemorySearch() {
       {query && (
         <button
           onClick={() => setQuery('')}
-          className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted hover:text-white"
+          className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground"
         >
           <X size={16} />
         </button>

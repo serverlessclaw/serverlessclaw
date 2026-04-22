@@ -133,7 +133,7 @@ export default function AgentsTab({
             variant="glass"
             padding="lg"
             key={agent.id}
-            className="cyber-border border-white/5 hover:border-yellow-500/20 transition-all flex flex-col justify-between group"
+            className="cyber-border border-border hover:border-yellow-500/20 transition-all flex flex-col justify-between group"
           >
             <div className="space-y-6">
               <div className="flex items-center gap-4">
@@ -158,14 +158,14 @@ export default function AgentsTab({
                   <Typography
                     variant="mono"
                     color="muted"
-                    className="text-[8px] uppercase tracking-tighter opacity-40"
+                    className="text-[8px] uppercase tracking-tighter opacity-60 font-black"
                   >
                     NEURAL_ID: {agent.id}
                   </Typography>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 border-y border-white/5 py-6">
+              <div className="grid grid-cols-2 gap-4 border-y border-border py-6">
                 <div className="text-center">
                   <Typography
                     variant="h3"
@@ -183,19 +183,19 @@ export default function AgentsTab({
                     Active Skills
                   </Typography>
                 </div>
-                <div className="text-center border-l border-white/5">
+                <div className="text-center border-l border-border">
                   <Typography
                     variant="h3"
                     color="white"
                     weight="black"
-                    className="text-xl leading-none opacity-40"
+                    className="text-xl leading-none opacity-60"
                   >
                     {allTools.length - agent.tools.length}
                   </Typography>
                   <Typography
                     variant="mono"
                     color="muted"
-                    className="text-[8px] uppercase tracking-widest mt-1 opacity-40"
+                    className="text-[8px] uppercase tracking-widest mt-1 opacity-60 font-black"
                   >
                     Untapped
                   </Typography>
@@ -208,7 +208,7 @@ export default function AgentsTab({
                 onClick={() => setSelectedAgentId(agent.id)}
                 variant="ghost"
                 size="sm"
-                className="w-full font-black text-[9px] tracking-[0.2em] border-white/10 hover:border-yellow-500/40 hover:text-yellow-500 group-hover:bg-yellow-500/5 transition-all"
+                className="w-full font-black text-[9px] tracking-[0.2em] border-border hover:border-yellow-500/40 hover:text-yellow-500 group-hover:bg-yellow-500/5 transition-all"
                 icon={<Cpu size={12} />}
               >
                 OPEN NEURAL ROSTER
@@ -220,13 +220,13 @@ export default function AgentsTab({
 
       {/* Neural Roster Management Modal */}
       {selectedAgent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/90 backdrop-blur-xl animate-in fade-in duration-300">
           <Card
-            variant="glass"
-            className="w-full max-w-4xl max-h-[90vh] flex flex-col border-yellow-500/20 shadow-[0_0_100px_rgba(234,179,8,0.1)] overflow-hidden"
+            variant="glass-elevated"
+            className="w-full max-w-4xl max-h-[90vh] flex flex-col border-yellow-500/20 shadow-premium overflow-hidden"
           >
             {/* Modal Header */}
-            <div className="p-8 border-b border-white/10 flex justify-between items-center bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-yellow-500/5 via-transparent to-transparent">
+            <div className="p-8 border-b border-border flex justify-between items-center bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-yellow-500/5 via-transparent to-transparent">
               <div className="flex items-center gap-6">
                 <div className="w-14 h-14 rounded bg-yellow-500/20 flex items-center justify-center text-yellow-500 border border-yellow-500/40 shadow-[0_0_30px_rgba(234,179,8,0.2)]">
                   {selectedAgent.id === 'superclaw' ? <Zap size={32} /> : <Cpu size={32} />}
@@ -254,14 +254,14 @@ export default function AgentsTab({
                   setSelectedAgentId(null);
                   setModalSearchQuery('');
                 }}
-                className="p-3 bg-white/5 hover:bg-red-500/20 hover:text-red-500 border border-white/10 transition-all rounded"
+                className="p-3 bg-input hover:bg-red-500/20 hover:text-red-500 border border-border transition-all rounded"
               >
                 <X size={24} />
               </button>
             </div>
 
             {/* Sub-header with Search */}
-            <div className="px-8 py-4 bg-white/[0.02] border-b border-white/10 flex gap-4">
+            <div className="px-8 py-4 bg-input border-b border-border flex gap-4">
               <div className="relative flex-1 group">
                 <Search
                   size={14}
@@ -272,10 +272,10 @@ export default function AgentsTab({
                   placeholder="Filter neural patterns by name or protocol..."
                   value={modalSearchQuery}
                   onChange={(e) => setModalSearchQuery(e.target.value)}
-                  className="w-full bg-black/40 border border-white/10 focus:border-yellow-500/40 rounded p-3 pl-10 text-[10px] font-mono outline-none tracking-widest placeholder:text-white/10"
+                  className="w-full bg-background border border-border focus:border-yellow-500/40 rounded p-3 pl-10 text-[10px] font-mono outline-none tracking-widest placeholder:text-muted-more font-black"
                 />
               </div>
-              <div className="flex items-center gap-2 px-4 border border-white/10 rounded bg-black/40">
+              <div className="flex items-center gap-2 px-4 border border-border rounded bg-background">
                 <Typography
                   variant="mono"
                   color="muted"
@@ -310,7 +310,7 @@ export default function AgentsTab({
 
                 if (Object.keys(categorizedTools).length === 0) {
                   return (
-                    <div className="flex flex-col items-center justify-center py-20 opacity-20 border border-dashed border-white/10 rounded">
+                    <div className="flex flex-col items-center justify-center py-20 opacity-20 border border-dashed border-border rounded">
                       <Search size={48} className="mb-4" />
                       <Typography variant="mono" className="tracking-widest">
                         NO_PATTERNS_MATCHED
@@ -329,7 +329,7 @@ export default function AgentsTab({
                       >
                         {groupName.replace('_', ' ')}
                       </Typography>
-                      <div className="h-px w-full bg-white/5" />
+                      <div className="h-px w-full bg-border" />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -342,8 +342,8 @@ export default function AgentsTab({
                             key={tool.name}
                             className={`group/item p-4 border rounded transition-all flex justify-between items-center ${
                               isAttached
-                                ? 'bg-yellow-500/[0.03] border-yellow-500/20'
-                                : 'bg-white/[0.01] border-white/5 hover:border-white/10'
+                                ? 'bg-yellow-500/[0.03] border-yellow-500/20 shadow-premium'
+                                : 'bg-background border-border hover:border-yellow-500/30'
                             }`}
                           >
                             <div className="space-y-1 pr-6 flex-1 min-w-0">
@@ -351,7 +351,7 @@ export default function AgentsTab({
                                 <Typography
                                   variant="mono"
                                   weight="black"
-                                  className={`text-xs truncate ${isAttached ? 'text-yellow-500' : 'text-white/60'}`}
+                                  className={`text-xs truncate ${isAttached ? 'text-yellow-500' : 'text-foreground/60'}`}
                                 >
                                   {tool.name}
                                 </Typography>
@@ -366,7 +366,7 @@ export default function AgentsTab({
                               </div>
                               <Typography
                                 variant="caption"
-                                className="text-[9px] text-white/20 line-clamp-1 tracking-tighter"
+                                className="text-[9px] text-muted-foreground opacity-60 font-black line-clamp-1 tracking-tighter"
                               >
                                 {tool.description}
                               </Typography>
@@ -382,7 +382,7 @@ export default function AgentsTab({
                               className={`min-w-[100px] font-black tracking-widest text-[8px] h-9 transition-all relative group/btn ${
                                 isAttached
                                   ? 'bg-red-500/80 hover:bg-red-600 border-red-500/40 shadow-[0_0_15px_rgba(239,68,68,0.2)]'
-                                  : 'border-white/10 text-white/40 hover:text-white hover:border-yellow-500/40'
+                                  : 'border-border text-muted-foreground hover:text-foreground hover:border-yellow-500/40 bg-background/50'
                               }`}
                               icon={
                                 isPending ? (
@@ -403,7 +403,7 @@ export default function AgentsTab({
               })()}
             </div>
 
-            <div className="p-6 bg-yellow-500/[0.02] border-t border-white/5 text-center">
+            <div className="p-6 bg-yellow-500/[0.02] border-t border-border text-center">
               <Typography
                 variant="mono"
                 color="muted"

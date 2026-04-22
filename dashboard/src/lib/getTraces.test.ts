@@ -25,7 +25,7 @@ describe('getTraces', () => {
     const mockSend = vi.fn().mockResolvedValue(queryRes);
     const fakeDocClient = { send: mockSend };
 
-    const res = await getTraces(undefined, fakeDocClient);
+    const res = await getTraces(undefined, undefined, fakeDocClient);
 
     expect(res.items.length).toBe(2);
     expect(res.items[0].traceId).toBe('t3');
@@ -45,7 +45,7 @@ describe('getTraces', () => {
     const mockSend = vi.fn().mockRejectedValue(new Error('Dynamo failure'));
     const fakeDocClient = { send: mockSend };
 
-    const res = await getTraces(undefined, fakeDocClient);
+    const res = await getTraces(undefined, undefined, fakeDocClient);
 
     expect(res.items).toHaveLength(0);
     expect(res.nextToken).toBeUndefined();
@@ -67,7 +67,7 @@ describe('getTraces', () => {
       });
 
     const fakeDocClient = { send: mockSend };
-    const res = await getTraces(undefined, fakeDocClient);
+    const res = await getTraces(undefined, undefined, fakeDocClient);
 
     expect(mockSend).toHaveBeenCalledTimes(2);
     expect(res.items).toHaveLength(2);

@@ -56,11 +56,11 @@ export default function AnalyticsTab({
       />
 
       {isPending && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/40 backdrop-blur-sm animate-in fade-in duration-300">
           <Card
             variant="glass"
             padding="lg"
-            className="flex flex-col items-center gap-6 border-cyber-blue/20 shadow-[0_0_50px_rgba(0,224,255,0.1)]"
+            className="flex flex-col items-center gap-6 border-cyber-blue/20 shadow-premium"
           >
             <Loader2 size={48} className="text-cyber-blue animate-spin" />
             <div className="space-y-2 text-center">
@@ -86,11 +86,11 @@ export default function AnalyticsTab({
 
       {/* Global Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card variant="glass" padding="lg" className="border-cyber-blue/20">
+        <Card variant="solid" padding="lg" className="border-cyber-blue/20">
           <Typography
             variant="mono"
             color="muted"
-            className="text-[10px] tracking-widest opacity-40 mb-2 block"
+            className="text-[10px] tracking-widest opacity-60 mb-2 block font-black"
           >
             Total neural invocations
           </Typography>
@@ -104,11 +104,11 @@ export default function AnalyticsTab({
             {totalInvocations}
           </Typography>
         </Card>
-        <Card variant="glass" padding="lg" className="border-cyber-green/20">
+        <Card variant="solid" padding="lg" className="border-cyber-green/20">
           <Typography
             variant="mono"
             color="muted"
-            className="text-[10px] tracking-widest opacity-40 mb-2 block"
+            className="text-[10px] tracking-widest opacity-60 mb-2 block font-black"
           >
             Most active skill
           </Typography>
@@ -121,11 +121,11 @@ export default function AnalyticsTab({
             {sortedByUsage[0]?.name || 'N/A'}
           </Typography>
         </Card>
-        <Card variant="glass" padding="lg" className="border-purple-500/20">
+        <Card variant="solid" padding="lg" className="border-purple-500/20">
           <Typography
             variant="mono"
             color="muted"
-            className="text-[10px] tracking-widest opacity-40 mb-2 block"
+            className="text-[10px] tracking-widest opacity-60 mb-2 block font-black"
           >
             MCP Server efficiency
           </Typography>
@@ -144,18 +144,18 @@ export default function AnalyticsTab({
                 ).size
               }
             </Typography>
-            <Typography variant="mono" color="muted" className="text-[10px]">
+            <Typography variant="mono" color="muted" className="text-[10px] opacity-60 font-bold">
               /{' '}
               {new Set(allTools.filter((t) => t.isExternal).map((t) => t.name.split('_')[0])).size}{' '}
               servers
             </Typography>
           </div>
         </Card>
-        <Card variant="glass" padding="lg" className="border-purple-400/20">
+        <Card variant="solid" padding="lg" className="border-purple-400/20">
           <Typography
             variant="mono"
             color="muted"
-            className="text-[10px] tracking-widest opacity-40 mb-2 block"
+            className="text-[10px] tracking-widest opacity-60 mb-2 block font-black"
           >
             Tool efficiency
           </Typography>
@@ -168,7 +168,7 @@ export default function AnalyticsTab({
             >
               {allTools.filter((t) => t.isExternal && (t.usage?.count || 0) > 0).length}
             </Typography>
-            <Typography variant="mono" color="muted" className="text-[10px]">
+            <Typography variant="mono" color="muted" className="text-[10px] opacity-60 font-bold">
               / {allTools.filter((t) => t.isExternal).length} tools
             </Typography>
           </div>
@@ -179,7 +179,7 @@ export default function AnalyticsTab({
       {toolTrendData.length > 0 && <ToolUsageTrendChart tools={toolTrendData} />}
 
       {/* Tool Usage Trends Chart */}
-      <Card variant="glass" padding="lg" className="border-white/5 bg-black/40">
+      <Card variant="solid" padding="lg" className="border-border bg-input">
         <Typography
           variant="caption"
           weight="black"
@@ -196,12 +196,12 @@ export default function AnalyticsTab({
             return (
               <div key={tool.name} className="space-y-1">
                 <div className="flex justify-between items-center text-[10px] font-mono">
-                  <span className="text-white/60 uppercase">{tool.name}</span>
-                  <span className="text-cyber-blue">
+                  <span className="text-foreground/60 uppercase font-black">{tool.name}</span>
+                  <span className="text-cyber-blue font-black">
                     {tool.usage?.count ?? 0} calls ({percentage.toFixed(1)}%)
                   </span>
                 </div>
-                <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                <div className="h-2 w-full bg-background rounded-full overflow-hidden border border-border">
                   <div
                     className="h-full bg-gradient-to-r from-cyber-blue/40 to-cyber-blue shadow-[0_0_10px_rgba(0,224,255,0.3)] transition-all duration-1000 ease-out"
                     style={{
@@ -224,7 +224,7 @@ export default function AnalyticsTab({
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
         {/* Per-Agent Usage & Pruning */}
         <div className="xl:col-span-12 space-y-6">
-          <h4 className="text-[12px] font-black uppercase tracking-[0.4em] text-white/40 flex items-center gap-2">
+          <h4 className="text-[12px] font-black uppercase tracking-[0.4em] text-muted-foreground flex items-center gap-2">
             <Activity size={16} className="text-cyber-blue" /> Per-agent efficiency audit
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -240,13 +240,13 @@ export default function AnalyticsTab({
                 return (
                   <Card
                     key={agent.id}
-                    variant="glass"
+                    variant="solid"
                     padding="lg"
-                    className="border-white/5 bg-black/40"
+                    className="border-border bg-input"
                   >
-                    <div className="flex justify-between items-start mb-6 border-b border-white/5 pb-4">
+                    <div className="flex justify-between items-start mb-6 border-b border-border pb-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded bg-cyber-blue/10 flex items-center justify-center text-cyber-blue border border-cyber-blue/20 shadow-[0_0_15px_rgba(0,224,255,0.1)]">
+                        <div className="w-8 h-8 rounded bg-cyber-blue/10 flex items-center justify-center text-cyber-blue border border-cyber-blue/20 shadow-premium">
                           {agent.id === 'superclaw' ? <Zap size={16} /> : <Cpu size={16} />}
                         </div>
                         <Typography
@@ -324,12 +324,12 @@ export default function AnalyticsTab({
                             .map((t) => (
                               <div
                                 key={t}
-                                className="flex justify-between items-center bg-white/[0.02] p-2 rounded border border-white/5"
+                                className="flex justify-between items-center bg-background p-2 rounded border border-border"
                               >
-                                <span className="text-[10px] font-black text-white/60 truncate mr-2">
+                                <span className="text-[10px] font-black text-foreground/60 truncate mr-2">
                                   {t}
                                 </span>
-                                <span className="text-[10px] font-mono text-cyber-green">
+                                <span className="text-[10px] font-mono text-cyber-green font-bold">
                                   {agentUsage[t].count}
                                 </span>
                               </div>

@@ -33,18 +33,18 @@ export default function MemoryTabs({ tabs }: MemoryTabsProps) {
   };
 
   return (
-    <div className="flex border-b border-white/5 mb-8 overflow-x-auto scrollbar-hide">
+    <div className="flex border-b border-border mb-8 overflow-x-auto scrollbar-hide">
       {tabs.map((tab) => (
         <button
           key={tab.id}
           onClick={() => handleTabChange(tab.id)}
           className={`flex items-center gap-2 px-6 py-4 border-b-2 transition-all whitespace-nowrap ${
             activeTab === tab.id
-              ? 'border-cyber-blue text-white bg-cyber-blue/5'
-              : 'border-transparent text-muted hover:text-white hover:bg-white/5'
+              ? 'border-cyber-blue text-foreground bg-cyber-blue/5'
+              : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-input'
           }`}
         >
-          <span className={`${activeTab === tab.id ? 'text-cyber-blue' : 'text-muted'}`}>
+          <span className={`${activeTab === tab.id ? 'text-cyber-blue' : 'text-muted-foreground'}`}>
             {tab.icon}
           </span>
           <Typography

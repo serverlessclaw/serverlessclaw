@@ -33,7 +33,7 @@ export default function TrustGauge({ score, label, size = 120 }: TrustGaugeProps
             stroke="currentColor"
             strokeWidth="8"
             fill="transparent"
-            className="text-white/5"
+            className="text-border"
           />
           {/* Progress Circle */}
           <circle
@@ -62,7 +62,7 @@ export default function TrustGauge({ score, label, size = 120 }: TrustGaugeProps
       <Typography
         variant="caption"
         weight="bold"
-        className="uppercase tracking-widest text-white/60"
+        className="uppercase tracking-widest text-muted-foreground"
       >
         {label}
       </Typography>

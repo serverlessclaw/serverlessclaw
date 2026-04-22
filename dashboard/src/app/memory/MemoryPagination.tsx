@@ -27,7 +27,7 @@ export default function MemoryPagination({ nextToken }: MemoryPaginationProps) {
         variant="outline"
         onClick={handleNext}
         icon={<ChevronRight size={16} />}
-        className="px-10 border-white/5 hover:border-cyber-blue/40 transition-all group"
+        className="px-10 border-border hover:border-cyber-blue/40 transition-all group"
       >
         <span className="group-hover:text-cyber-blue transition-colors uppercase tracking-widest text-[11px] font-bold">
           Load Next Reserve Page

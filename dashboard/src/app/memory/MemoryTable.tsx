@@ -153,15 +153,15 @@ export default function MemoryTable({
         )}
       </div>
 
-      <div className="glass-card overflow-hidden border-white/5">
+      <div className="glass-card overflow-hidden border-border">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-white/5 bg-white/[0.02]">
+              <tr className="border-b border-border bg-card">
                 <th className="pl-6 pr-2 py-4 w-10">
                   <button
                     onClick={toggleSelectAll}
-                    className="text-white/20 hover:text-white transition-colors"
+                    className="text-muted-more hover:text-foreground transition-colors"
                   >
                     {selectedKeys.size === items.length && items.length > 0 ? (
                       <CheckSquare size={14} className="text-cyber-blue" />
@@ -170,31 +170,31 @@ export default function MemoryTable({
                     )}
                   </button>
                 </th>
-                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-white/40">
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                   {t('MEMORY_CATEGORY')}
                 </th>
 
-                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40">
+                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                   {t('MEMORY_CONTENT')}
                 </th>
-                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40 text-center">
+                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-center">
                   {t('MEMORY_PRIORITY')}
                 </th>
-                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40 text-center">
+                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-center">
                   {t('MEMORY_USE_COUNT')}
                 </th>
-                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40">
+                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                   {t('MEMORY_CREATED')}
                 </th>
-                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40">
+                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                   {t('MEMORY_LAST_RECALLED')}
                 </th>
-                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white/40 text-right">
+                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-right">
                   {t('COMMON_ACTIONS')}
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-border">
               {items &&
                 items.length > 0 &&
                 items.map((item, i) => {
@@ -204,11 +204,11 @@ export default function MemoryTable({
                     <tr
                       key={`${item.userId}-${item.timestamp}-${i}`}
                       onClick={() => toggleSelect(item.userId, item.timestamp)}
-                      className={`hover:bg-white/[0.03] transition-colors cursor-pointer group ${
+                      className={`hover:bg-input transition-colors cursor-pointer group ${
                         isSelected
-                          ? 'bg-cyber-blue/[0.05]'
+                          ? 'bg-cyber-blue/10'
                           : item.metadata?.priority && item.metadata.priority >= 8
-                            ? 'bg-amber-500/[0.03]'
+                            ? 'bg-amber-500/5'
                             : ''
                       }`}
                     >
@@ -218,7 +218,7 @@ export default function MemoryTable({
                             e.stopPropagation();
                             toggleSelect(item.userId, item.timestamp);
                           }}
-                          className={`transition-colors ${isSelected ? 'text-cyber-blue' : 'text-white/10 group-hover:text-white/30'}`}
+                          className={`transition-colors ${isSelected ? 'text-cyber-blue' : 'text-muted-more group-hover:text-muted-foreground'}`}
                         >
                           {isSelected ? <CheckSquare size={14} /> : <Square size={14} />}
                         </button>
@@ -240,7 +240,7 @@ export default function MemoryTable({
                       >
                         <Typography
                           variant="body"
-                          className="text-xs text-white/80 max-w-[400px] truncate block"
+                          className="text-xs text-foreground/80 max-w-[400px] truncate block"
                         >
                           {getContentPreview(item.content || '')}
                         </Typography>
@@ -252,13 +252,13 @@ export default function MemoryTable({
                             <Zap size={10} /> {item.metadata.priority}
                           </span>
                         ) : (
-                          <span className="text-white/40 font-mono text-xs">
+                          <span className="text-muted-foreground font-mono text-xs">
                             {item.metadata?.priority ?? '-'}
                           </span>
                         )}
                       </td>
                       <td className="px-5 py-3 text-center">
-                        <span className="flex items-center justify-center gap-1 text-white/50 font-mono text-xs">
+                        <span className="flex items-center justify-center gap-1 text-muted-foreground font-mono text-xs">
                           <BarChart2 size={10} /> {item.metadata?.hitCount ?? 0}
                         </span>
                       </td>
@@ -280,7 +280,7 @@ export default function MemoryTable({
                         </span>
                       </td>
                       <td className="px-5 py-3">
-                        <span className="flex items-center gap-1 text-white/40 font-mono text-[11px]">
+                        <span className="flex items-center gap-1 text-muted-foreground font-mono text-[11px]">
                           <Clock size={10} />
                           {item.metadata?.lastAccessed
                             ? formatDate(item.metadata.lastAccessed, 'date')
@@ -296,7 +296,7 @@ export default function MemoryTable({
                               e.stopPropagation();
                               setSelectedItem(item);
                             }}
-                            className="text-white/50 hover:text-cyber-blue p-1"
+                            className="text-muted-foreground hover:text-cyber-blue p-1"
                             icon={<Eye size={14} />}
                             title={t('COMMON_VIEW_DETAILS')}
                           />
@@ -307,7 +307,7 @@ export default function MemoryTable({
                               variant="ghost"
                               size="sm"
                               type="submit"
-                              className="text-white/50 hover:text-red-500 p-1"
+                              className="text-muted-foreground hover:text-red-500 p-1"
                               icon={<Trash2 size={14} />}
                               title="Delete"
                             />

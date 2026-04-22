@@ -2,7 +2,7 @@
 import { getResourceName } from '@/lib/sst-utils';
 import { decodePaginationToken, encodePaginationToken } from '@/lib/pagination-utils';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, QueryCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { TraceSource } from '@claw/core/lib/types/index';
 import { Trace } from '@/lib/types/ui';
 import { logger } from '@claw/core/lib/logger';
@@ -12,6 +12,7 @@ import { logger } from '@claw/core/lib/logger';
  */
 export async function getTraces(
   nextToken?: string,
+  options?: { startTime?: number; endTime?: number },
   injectedDocClient?: any
 ): Promise<{ items: Trace[]; nextToken: string | undefined }> {
   try {
@@ -23,12 +24,29 @@ export async function getTraces(
     const client = new DynamoDBClient({});
     const docClient = injectedDocClient ?? DynamoDBDocumentClient.from(client);
 
+    const { startTime, endTime } = options ?? {};
+    let keyCondition = 'nodeId = :summary';
+    const expressionAttributeValues: Record<string, any> = { ':summary': '__summary__' };
+
+    if (startTime && endTime) {
+      keyCondition += ' AND #ts BETWEEN :start AND :end';
+      expressionAttributeValues[':start'] = startTime;
+      expressionAttributeValues[':end'] = endTime;
+    } else if (startTime) {
+      keyCondition += ' AND #ts >= :start';
+      expressionAttributeValues[':start'] = startTime;
+    } else if (endTime) {
+      keyCondition += ' AND #ts <= :end';
+      expressionAttributeValues[':end'] = endTime;
+    }
+
     const queryRes = await docClient.send(
       new QueryCommand({
         TableName: tableName,
         IndexName: 'SummaryByNode',
-        KeyConditionExpression: 'nodeId = :summary',
-        ExpressionAttributeValues: { ':summary': '__summary__' },
+        KeyConditionExpression: keyCondition,
+        ExpressionAttributeNames: startTime || endTime ? { '#ts': 'timestamp' } : undefined,
+        ExpressionAttributeValues: expressionAttributeValues,
         Limit: 100,
         ExclusiveStartKey: decodePaginationToken(nextToken ?? ''),
         ScanIndexForward: false,
@@ -47,23 +65,29 @@ export async function getTraces(
     ) as Trace[];
 
     // Fallback path: if trace summaries are disabled, '__summary__' rows won't exist.
-    // In that case, scan root trace nodes so /trace still has data.
+    // In that case, query root trace nodes so /trace still has data.
     if (filteredSummary.length === 0) {
       logger.warn(
-        '[getTraces] No summary rows found. Falling back to root trace scan (trace_summaries may be disabled).'
+        '[getTraces] No summary rows found. Falling back to root trace query (trace_summaries may be disabled).'
       );
 
-      const scanRes = await docClient.send(
-        new ScanCommand({
+      // Re-use query logic but for 'root' nodeId
+      const rootExpressionAttributeValues = { ...expressionAttributeValues, ':summary': 'root' };
+
+      const fallbackRes = await docClient.send(
+        new QueryCommand({
           TableName: tableName,
-          FilterExpression: 'nodeId = :root',
-          ExpressionAttributeValues: { ':root': 'root' },
-          Limit: 200,
+          IndexName: 'SummaryByNode',
+          KeyConditionExpression: keyCondition,
+          ExpressionAttributeNames: startTime || endTime ? { '#ts': 'timestamp' } : undefined,
+          ExpressionAttributeValues: rootExpressionAttributeValues,
+          Limit: 100,
           ExclusiveStartKey: decodePaginationToken(nextToken ?? ''),
+          ScanIndexForward: false,
         })
       );
 
-      const fallbackItems = (scanRes.Items ?? [])
+      const fallbackItems = (fallbackRes.Items ?? [])
         .filter((item: any) => item.source !== TraceSource.SYSTEM)
         .sort((a: any, b: any) => {
           const bTs = Number(b.timestamp);
@@ -73,7 +97,7 @@ export async function getTraces(
 
       return {
         items: fallbackItems,
-        nextToken: encodePaginationToken(scanRes.LastEvaluatedKey),
+        nextToken: encodePaginationToken(fallbackRes.LastEvaluatedKey),
       };
     }
 

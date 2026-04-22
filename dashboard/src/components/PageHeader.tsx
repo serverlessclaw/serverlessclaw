@@ -15,11 +15,19 @@ interface PageHeaderProps {
  * Standardized Page Header component based on /trace design.
  * Provides consistent typography, spacing, and responsive behavior.
  */
-export default function PageHeader({ titleKey, subtitleKey, children, stats }: PageHeaderProps) {
+export default function PageHeader({
+  titleKey,
+  subtitleKey,
+  children,
+  stats,
+  className = '',
+}: PageHeaderProps & { className?: string }) {
   const { t } = useTranslations();
 
   return (
-    <header className="flex flex-col lg:flex-row lg:justify-between lg:items-start border-b border-white/5 pb-6 gap-6">
+    <header
+      className={`flex flex-col lg:flex-row lg:justify-between lg:items-start border-b border-white/5 pb-4 gap-6 ${className}`}
+    >
       <div>
         <Typography variant="h2" color="white" glow uppercase>
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}

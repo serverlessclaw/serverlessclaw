@@ -191,9 +191,12 @@ export default function ScheduleList() {
       </PageHeader>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card variant="glass" padding="md" className="border-white/5">
+        <Card variant="glass" padding="md" className="border-border">
           <div className="flex justify-between items-start mb-2">
-            <Typography variant="caption" className="text-white/60 uppercase tracking-widest">
+            <Typography
+              variant="caption"
+              className="text-muted-foreground uppercase tracking-widest"
+            >
               {t('SCHEDULING_ACTIVE_GOALS')}
             </Typography>
             <Target size={16} className="text-blue-500" />
@@ -203,9 +206,12 @@ export default function ScheduleList() {
           </Typography>
         </Card>
 
-        <Card variant="glass" padding="md" className="border-white/5">
+        <Card variant="glass" padding="md" className="border-border">
           <div className="flex justify-between items-start mb-2">
-            <Typography variant="caption" className="text-white/60 uppercase tracking-widest">
+            <Typography
+              variant="caption"
+              className="text-muted-foreground uppercase tracking-widest"
+            >
               {t('SCHEDULING_NEXT_EVOLUTION')}
             </Typography>
             <Zap size={16} className="text-yellow-500" />
@@ -215,9 +221,12 @@ export default function ScheduleList() {
           </Typography>
         </Card>
 
-        <Card variant="glass" padding="md" className="border-white/5">
+        <Card variant="glass" padding="md" className="border-border">
           <div className="flex justify-between items-start mb-2">
-            <Typography variant="caption" className="text-white/60 uppercase tracking-widest">
+            <Typography
+              variant="caption"
+              className="text-muted-foreground uppercase tracking-widest"
+            >
               {t('SCHEDULING_HEALTH')}
             </Typography>
             <Activity size={16} className={fetchError ? 'text-red-500' : 'text-green-500'} />
@@ -240,28 +249,28 @@ export default function ScheduleList() {
           <Calendar size={18} className="text-blue-500" /> {t('SCHEDULING_REGISTRY_TITLE')}
         </Typography>
 
-        <div className="overflow-hidden border border-white/5 rounded-xl bg-black/20">
+        <div className="overflow-hidden border border-border rounded-xl bg-card/40">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-white/5 bg-white/[0.02]">
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/50">
+              <tr className="border-b border-border bg-card-elevated/50">
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
                   {t('SCHEDULING_GOAL_ID_NAME')}
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/50">
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
                   {t('SCHEDULING_EXPRESSION')}
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/50">
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
                   {t('SCHEDULING_AGENT')}
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/50">
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
                   {t('SCHEDULING_STATE')}
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/50 text-right">
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 text-right">
                   {t('SCHEDULING_ACTIONS')}
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-border">
               {filteredSchedules.length > 0 ? (
                 filteredSchedules.map((s) => {
                   const payload = s.Target?.Input ? JSON.parse(s.Target.Input) : {};
@@ -269,11 +278,11 @@ export default function ScheduleList() {
                   const catBadge = CATEGORY_BADGE[info.category];
 
                   return (
-                    <tr key={s.Name} className="hover:bg-white/[0.01] group transition-colors">
+                    <tr key={s.Name} className="hover:bg-card/50 group transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-white group-hover:text-blue-400 transition-colors uppercase tracking-tight">
+                            <span className="text-xs font-bold text-foreground group-hover:text-blue-400 transition-colors uppercase tracking-tight">
                               {s.Name}
                             </span>
                             <span
@@ -282,7 +291,7 @@ export default function ScheduleList() {
                               {catBadge.label}
                             </span>
                           </div>
-                          <span className="text-[10px] text-white/50 line-clamp-1">
+                          <span className="text-[10px] text-muted-foreground/60 line-clamp-1">
                             {info.purpose}
                           </span>
                         </div>
@@ -294,7 +303,7 @@ export default function ScheduleList() {
                           >
                             <RefreshCw size={10} /> {formatFrequency(s.ScheduleExpression)}
                           </div>
-                          <div className="flex items-center gap-2 text-[10px] font-mono text-white/40">
+                          <div className="flex items-center gap-2 text-[10px] font-mono text-muted-more">
                             <Clock size={10} />{' '}
                             {t('SCHEDULING_NEXT_RUN').replace('{time}', getNextRun(s))}
                           </div>
@@ -303,7 +312,7 @@ export default function ScheduleList() {
                       <td className="px-6 py-4">
                         <Badge
                           variant="outline"
-                          className="text-[10px] font-bold border-white/10 text-white/70"
+                          className="text-[10px] font-bold border-border text-muted-foreground"
                         >
                           {payload.agentId ?? 'SYSTEM'}
                         </Badge>
@@ -311,10 +320,10 @@ export default function ScheduleList() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1.5">
                           <div
-                            className={`w-1.5 h-1.5 rounded-full ${s.State === 'ENABLED' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-white/20'}`}
+                            className={`w-1.5 h-1.5 rounded-full ${s.State === 'ENABLED' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-muted-more'}`}
                           ></div>
                           <span
-                            className={`text-[10px] font-bold ${s.State === 'ENABLED' ? 'text-green-500' : 'text-white/40'}`}
+                            className={`text-[10px] font-bold ${s.State === 'ENABLED' ? 'text-green-500' : 'text-muted-more'}`}
                           >
                             {s.State}
                           </span>
@@ -373,7 +382,7 @@ export default function ScheduleList() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-white/40 italic text-xs">
+                  <td colSpan={5} className="px-6 py-12 text-center text-muted-more italic text-xs">
                     {t('SCHEDULING_NO_SCHEDULES')}
                   </td>
                 </tr>

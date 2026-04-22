@@ -48,8 +48,8 @@ export default function CapabilitiesView({ allTools, mcpServers, agents }: Capab
       className={`space-y-10 transition-all duration-500 ${isPending ? 'opacity-80' : 'opacity-100'}`}
     >
       {/* Navigation & Search */}
-      <div className="flex flex-col lg:flex-row gap-6 justify-between items-start lg:items-center sticky top-0 z-20 bg-black/90 backdrop-blur-xl p-6 border-b border-white/5 -mx-6 lg:-mx-10 -mt-10 mb-10">
-        <nav className="flex gap-1 bg-white/5 p-1 rounded-sm border border-white/5 overflow-x-auto no-scrollbar">
+      <div className="flex flex-col lg:flex-row gap-6 justify-between items-start lg:items-center sticky top-0 z-20 bg-background/90 backdrop-blur-xl p-6 border-b border-border -mx-6 lg:-mx-10 -mt-10 mb-10">
+        <nav className="flex gap-1 bg-input p-1 rounded-sm border border-border overflow-x-auto no-scrollbar">
           {[
             { id: 'analytics', label: t('CAPABILITIES_TAB_DASHBOARD'), icon: Activity },
             { id: 'usage', label: t('CAPABILITIES_TAB_LEADERBOARD'), icon: Sparkles },
@@ -68,7 +68,7 @@ export default function CapabilitiesView({ allTools, mcpServers, agents }: Capab
               className={`px-6 font-black tracking-widest transition-all whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'shadow-[0_0_20px_rgba(0,224,255,0.2)]'
-                  : 'text-white/40 hover:text-white/60'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               {tab.label}
@@ -85,7 +85,7 @@ export default function CapabilitiesView({ allTools, mcpServers, agents }: Capab
             placeholder={t('CAPABILITIES_SEARCH_PLACEHOLDER')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-black/60 border border-white/10 focus:border-cyber-blue/40 rounded-sm py-3 pl-12 pr-4 text-[10px] outline-none transition-all placeholder:text-white/20 font-mono tracking-widest"
+            className="w-full bg-input border border-border focus:border-cyber-blue/40 rounded-sm py-3 pl-12 pr-4 text-[10px] outline-none transition-all placeholder:text-muted-more font-mono tracking-widest"
           />
         </div>
       </div>

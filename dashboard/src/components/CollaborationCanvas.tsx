@@ -383,7 +383,7 @@ function CollaborationCanvasContent() {
           fitView
           className="bg-dot-pattern"
         >
-          <Background color="#222" gap={20} />
+          <Background color="var(--color-muted-more)" gap={20} />
         </ReactFlow>
       )}
 
@@ -401,33 +401,33 @@ function CollaborationCanvasContent() {
             variant="ghost"
             size="sm"
             onClick={() => zoomIn()}
-            className="border-b border-white/5 p-3 rounded-none text-white/60 hover:text-purple-400"
+            className="border-b border-border p-3 rounded-none text-muted-foreground hover:text-purple-400"
             icon={<Plus size={18} />}
           />
           <Button
             variant="ghost"
             size="sm"
             onClick={() => zoomOut()}
-            className="border-b border-white/5 p-3 rounded-none text-white/60 hover:text-purple-400"
+            className="border-b border-border p-3 rounded-none text-muted-foreground hover:text-purple-400"
             icon={<Minus size={18} />}
           />
           <Button
             variant="ghost"
             size="sm"
             onClick={handleReset}
-            className="p-3 rounded-none text-white/60 hover:text-purple-400"
+            className="p-3 rounded-none text-muted-foreground hover:text-purple-400"
             icon={<Maximize size={18} />}
           />
         </Card>
-        <div className="bg-black/80 border border-white/10 rounded-lg p-3 backdrop-blur-md shadow-2xl flex items-center justify-center">
-          <Lock size={14} className="text-white/30" />
+        <div className="bg-card/80 border border-border rounded-lg p-3 backdrop-blur-md shadow-2xl flex items-center justify-center">
+          <Lock size={14} className="text-muted-foreground" />
         </div>
       </div>
 
       {/* Headers and Status */}
       <div className="absolute top-4 left-4 z-10 flex gap-2">
         <div
-          className={`flex items-center gap-2 px-3 py-1 bg-black/80 border ${isConnected ? 'border-cyber-green/30' : 'border-red-500/30'} rounded-full backdrop-blur-md`}
+          className={`flex items-center gap-2 px-3 py-1 bg-card/80 border ${isConnected ? 'border-cyber-green/30' : 'border-red-500/30'} rounded-full backdrop-blur-md`}
         >
           <div
             className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-cyber-green animate-pulse' : 'bg-red-500'}`}
@@ -448,7 +448,7 @@ function CollaborationCanvasContent() {
       </div>
 
       <div className="absolute top-4 right-4 z-10 space-y-2 pointer-events-none">
-        <div className="flex items-center gap-2 px-3 py-1 bg-black/80 border border-purple-500/30 rounded-full">
+        <div className="flex items-center gap-2 px-3 py-1 bg-card/80 border border-purple-500/30 rounded-full">
           <Zap size={12} className="text-purple-400 animate-pulse" />
           <Typography variant="caption" weight="bold" className="text-purple-400 uppercase">
             Live Collaboration Feed
@@ -461,7 +461,7 @@ function CollaborationCanvasContent() {
             setLoading(true);
             fetchActiveTasks();
           }}
-          className="bg-black/80 rounded-full hover:bg-white/5 pointer-events-auto"
+          className="bg-card/80 rounded-full hover:bg-card-elevated pointer-events-auto"
           icon={<RefreshCw size={10} />}
         >
           <Typography variant="caption" weight="bold" color="white" uppercase>

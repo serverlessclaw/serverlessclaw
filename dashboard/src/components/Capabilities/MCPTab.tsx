@@ -94,9 +94,9 @@ export default function MCPTab({ mcpServers, searchQuery }: MCPTabProps) {
 
       {/* New Bridge Form */}
       <Card
-        variant="glass"
+        variant="solid"
         padding="lg"
-        className="border-cyber-blue/10 bg-[radial-gradient(circle_at_top_left,_var(--tw-gradient-stops))] from-cyber-blue/5 via-transparent to-transparent"
+        className="border-border bg-input/50 bg-[radial-gradient(circle_at_top_left,_var(--tw-gradient-stops))] from-cyber-blue/5 via-transparent to-transparent shadow-premium"
       >
         <h4 className="text-[12px] font-black tracking-[0.4em] text-cyber-blue/80 mb-6 flex items-center gap-2">
           <Plus size={16} /> Establish new bridge
@@ -105,9 +105,9 @@ export default function MCPTab({ mcpServers, searchQuery }: MCPTabProps) {
           <div className="space-y-2">
             <Typography
               variant="mono"
-              weight="bold"
+              weight="black"
               color="muted"
-              className="text-[9px] tracking-widest ml-1"
+              className="text-[9px] tracking-widest ml-1 opacity-60 uppercase"
             >
               Bridge identifier
             </Typography>
@@ -116,15 +116,15 @@ export default function MCPTab({ mcpServers, searchQuery }: MCPTabProps) {
               placeholder="e.g. brave-search"
               value={newBridge.name}
               onChange={(e) => setNewBridge({ ...newBridge, name: e.target.value })}
-              className="w-full bg-black/60 border border-white/10 focus:border-cyber-blue/40 rounded-sm p-3 text-[10px] font-mono outline-none text-white/80 transition-all"
+              className="w-full bg-background border border-border focus:border-cyber-blue/40 rounded-sm p-3 text-[10px] font-mono outline-none text-foreground transition-all placeholder:text-muted-more"
             />
           </div>
           <div className="space-y-2 md:col-span-2">
             <Typography
               variant="mono"
-              weight="bold"
+              weight="black"
               color="muted"
-              className="text-[9px] tracking-widest ml-1"
+              className="text-[9px] tracking-widest ml-1 opacity-60 uppercase"
             >
               Activation command
             </Typography>
@@ -133,15 +133,15 @@ export default function MCPTab({ mcpServers, searchQuery }: MCPTabProps) {
               placeholder="npx -y @modelcontextprotocol/server-brave-search"
               value={newBridge.command}
               onChange={(e) => setNewBridge({ ...newBridge, command: e.target.value })}
-              className="w-full bg-black/60 border border-white/10 focus:border-cyber-blue/40 rounded-sm p-3 text-[10px] font-mono outline-none text-white/80 transition-all"
+              className="w-full bg-background border border-border focus:border-cyber-blue/40 rounded-sm p-3 text-[10px] font-mono outline-none text-foreground transition-all placeholder:text-muted-more"
             />
           </div>
           <div className="space-y-2 md:col-span-2">
             <Typography
               variant="mono"
-              weight="bold"
+              weight="black"
               color="muted"
-              className="text-[9px] tracking-widest ml-1"
+              className="text-[9px] tracking-widest ml-1 opacity-60 uppercase"
             >
               Environment variables (JSON)
             </Typography>
@@ -150,7 +150,7 @@ export default function MCPTab({ mcpServers, searchQuery }: MCPTabProps) {
               value={newBridge.env}
               onChange={(e) => setNewBridge({ ...newBridge, env: e.target.value })}
               rows={1}
-              className="w-full bg-black/60 border border-white/10 focus:border-cyber-blue/40 rounded-sm p-3 text-[10px] font-mono outline-none text-white/80 transition-all resize-none"
+              className="w-full bg-background border border-border focus:border-cyber-blue/40 rounded-sm p-3 text-[10px] font-mono outline-none text-foreground transition-all placeholder:text-muted-more resize-none"
             />
           </div>
           <div className="flex items-end">
@@ -158,7 +158,7 @@ export default function MCPTab({ mcpServers, searchQuery }: MCPTabProps) {
               type="submit"
               disabled={isPending}
               variant="primary"
-              className="w-full h-[46px] shadow-[0_0_30px_rgba(0,224,255,0.1)]"
+              className="w-full h-[46px] shadow-premium"
               icon={isPending ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
             >
               Initiate bridge
@@ -170,10 +170,10 @@ export default function MCPTab({ mcpServers, searchQuery }: MCPTabProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredServers.map(([name, config]) => (
           <Card
-            variant="glass"
+            variant="solid"
             padding="md"
             key={name}
-            className="group hover:border-red-500/20 transition-all relative overflow-hidden"
+            className="group hover:border-red-500/20 transition-all relative overflow-hidden bg-input/50"
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-cyber-blue/5 blur-3xl -mr-16 -mt-16 pointer-events-none" />
             <div className="flex justify-between items-start mb-6 relative">
@@ -194,12 +194,12 @@ export default function MCPTab({ mcpServers, searchQuery }: MCPTabProps) {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleRemoveMCPServer(name)}
-                className="opacity-0 group-hover:opacity-100 border border-white/10 hover:bg-red-500 hover:text-white p-2"
+                className="opacity-0 group-hover:opacity-100 border border-border bg-background hover:bg-red-500 hover:text-white p-2"
                 icon={<Trash2 size={14} />}
               />
             </div>
             <div className="space-y-4 relative">
-              <p className="text-[10px] font-mono text-white/40 break-all bg-black/60 p-3 rounded-sm border border-white/5 leading-relaxed">
+              <p className="text-[10px] font-mono text-muted-foreground opacity-60 font-black break-all bg-background p-3 rounded-sm border border-border leading-relaxed">
                 {typeof config === 'string' ? config : config.command}
               </p>
               {typeof config !== 'string' && config.env && (
@@ -222,7 +222,7 @@ export default function MCPTab({ mcpServers, searchQuery }: MCPTabProps) {
           <Card
             variant="solid"
             padding="lg"
-            className="col-span-full py-20 text-center border-dashed border-white/10"
+            className="col-span-full py-20 text-center border-dashed border-border bg-input/20"
           >
             <Typography variant="caption" color="muted" uppercase className="tracking-[0.5em]">
               No active skill bridges detected.

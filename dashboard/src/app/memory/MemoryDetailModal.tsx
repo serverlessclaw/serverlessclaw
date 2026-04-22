@@ -32,16 +32,16 @@ function renderContent(content: string) {
     return (
       <div className="space-y-3">
         {Object.entries(obj).map(([key, value]) => (
-          <div key={key} className="bg-white/[0.03] border border-white/5 rounded-lg p-4">
+          <div key={key} className="bg-input border border-border rounded-lg p-4">
             <Typography
               variant="mono"
-              className="text-[10px] uppercase tracking-widest text-white/40 mb-1 block"
+              className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1 block"
             >
               {key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase())}
             </Typography>
             <Typography
               variant="body"
-              className="text-sm text-white/80 leading-relaxed whitespace-pre-wrap"
+              className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap"
             >
               {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
             </Typography>
@@ -52,10 +52,12 @@ function renderContent(content: string) {
   }
 
   if (parsed && typeof parsed === 'string') {
-    return <p className="text-white/90 leading-relaxed text-[15px]">{parsed}</p>;
+    return <p className="text-foreground/90 leading-relaxed text-[15px]">{parsed}</p>;
   }
 
-  return <p className="text-white/90 leading-relaxed text-[15px] whitespace-pre-wrap">{content}</p>;
+  return (
+    <p className="text-foreground/90 leading-relaxed text-[15px] whitespace-pre-wrap">{content}</p>
+  );
 }
 export default function MemoryDetailModal({
   item,
@@ -128,11 +130,11 @@ export default function MemoryDetailModal({
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative w-full max-w-3xl max-h-[85vh] flex flex-col bg-[#0a0a0a] border border-white/10 rounded-lg shadow-xl overflow-hidden">
+      <div className="relative w-full max-w-3xl max-h-[85vh] flex flex-col bg-background border border-border rounded-lg shadow-xl overflow-hidden">
         {/* Header */}
-        <div className="shrink-0 bg-[#0a0a0a] border-b border-white/10 px-6 py-4 flex items-center justify-between">
+        <div className="shrink-0 bg-background border-b border-border px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Badge variant={getBadgeVariant(item)} className="uppercase tracking-widest">
               {getCategoryLabel(item)}
@@ -153,7 +155,7 @@ export default function MemoryDetailModal({
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsEditing(true)}
-                className="text-white/40 hover:text-cyber-blue p-1"
+                className="text-muted-foreground hover:text-cyber-blue p-1"
                 icon={<Edit3 size={16} />}
               />
             ) : (
@@ -170,7 +172,7 @@ export default function MemoryDetailModal({
             )}
             <button
               onClick={onClose}
-              className="text-white/40 hover:text-white transition-colors p-1 ml-2"
+              className="text-muted-foreground hover:text-foreground transition-colors p-1 ml-2"
             >
               <X size={18} />
             </button>
@@ -178,12 +180,12 @@ export default function MemoryDetailModal({
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-black/20">
+        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-background">
           {isEditing ? (
             <textarea
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
-              className="w-full h-full min-h-[300px] bg-black/40 border border-white/5 rounded p-4 font-mono text-sm text-white/90 focus:outline-none focus:border-cyber-blue/30 transition-all resize-none"
+              className="w-full h-full min-h-[300px] bg-input border border-border rounded p-4 font-mono text-sm text-foreground/90 focus:outline-none focus:border-cyber-blue/30 transition-all resize-none"
               placeholder={t('MEMORY_EDIT_CONTENT_PLACEHOLDER')}
             />
           ) : (
@@ -192,26 +194,26 @@ export default function MemoryDetailModal({
         </div>
 
         {/* Footer - metadata + actions all in one row */}
-        <div className="shrink-0 bg-[#0a0a0a] border-t border-white/10 px-6 py-3">
+        <div className="shrink-0 bg-background border-t border-border px-6 py-3">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             {/* Metadata pills */}
             <div className="flex items-center gap-2 flex-wrap">
               <div className="flex items-center gap-1.5 text-[11px] font-mono">
                 <Zap size={11} className="text-amber-400" />
-                <span className="text-white/40">{t('MEMORY_PRIORITY')}</span>
+                <span className="text-muted-foreground">{t('MEMORY_PRIORITY')}</span>
                 <span className="font-black text-amber-400">{item.metadata?.priority ?? 5}</span>
               </div>
-              <span className="text-white/10">|</span>
+              <span className="text-muted-more">|</span>
               <div className="flex items-center gap-1.5 text-[11px] font-mono">
                 <BarChart2 size={11} className="text-cyber-blue" />
-                <span className="text-white/40">{t('MEMORY_USE_COUNT')}</span>
-                <span className="font-bold text-white/70">{item.metadata?.hitCount ?? 0}</span>
+                <span className="text-muted-foreground">{t('MEMORY_USE_COUNT')}</span>
+                <span className="font-bold text-foreground/70">{item.metadata?.hitCount ?? 0}</span>
               </div>
-              <span className="text-white/10">|</span>
+              <span className="text-muted-more">|</span>
               <div className="flex items-center gap-1.5 text-[11px] font-mono">
-                <Clock size={11} className="text-white/30" />
-                <span className="text-white/40">{t('MEMORY_RECALLED')}</span>
-                <span className="text-white/50">
+                <Clock size={11} className="text-muted-more" />
+                <span className="text-muted-foreground">{t('MEMORY_RECALLED')}</span>
+                <span className="text-foreground/50">
                   {item.metadata?.lastAccessed
                     ? new Date(item.metadata.lastAccessed).toLocaleDateString()
                     : t('MEMORY_RECALLED_NEVER')}
@@ -219,18 +221,18 @@ export default function MemoryDetailModal({
               </div>
               {item.metadata?.impact != null && (
                 <>
-                  <span className="text-white/10">|</span>
+                  <span className="text-muted-more">|</span>
                   <div className="flex items-center gap-1.5 text-[11px] font-mono">
                     <TrendingUp size={11} className="text-cyber-green" />
-                    <span className="text-white/40">{t('MEMORY_IMPACT')}</span>
+                    <span className="text-muted-foreground">{t('MEMORY_IMPACT')}</span>
                     <span className="font-bold text-cyber-green">{item.metadata.impact}/10</span>
                   </div>
                 </>
               )}
               {item.timestamp > 0 && (
                 <>
-                  <span className="text-white/10">|</span>
-                  <div className="flex items-center gap-1.5 text-[11px] font-mono text-white/30">
+                  <span className="text-muted-more">|</span>
+                  <div className="flex items-center gap-1.5 text-[11px] font-mono text-muted-more">
                     <Clock size={11} />
                     {new Date(item.timestamp).toLocaleDateString()}
                   </div>
@@ -249,7 +251,7 @@ export default function MemoryDetailModal({
                 variant="ghost"
                 size="sm"
                 onClick={handleDelete}
-                className="text-white/40 hover:text-red-500 p-1.5"
+                className="text-muted-foreground hover:text-red-500 p-1.5"
                 icon={<Trash2 size={13} />}
               />
             </div>
