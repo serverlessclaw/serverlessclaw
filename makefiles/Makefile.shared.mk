@@ -221,6 +221,18 @@ define run_parallel_gate
        fi
 endef
 
+# Usage: $(call verify_env,VAR1 VAR2)
+# Fails if any of the provided variables are empty.
+define verify_env
+	@for var in $(1); do \
+		eval value=\$$$$var; \
+		if [ -z "$$value" ]; then \
+			$(call log_error,Required environment variable $$var is missing.); \
+			exit 1; \
+		fi; \
+	done
+endef
+
 # Usage: $(call verify_up_to_date)
 # Fetches remote and verifies local branch is not behind or diverged. Use before push in trunk-based dev.
 define verify_up_to_date
@@ -229,21 +241,26 @@ define verify_up_to_date
                $(call log_error,Detached HEAD detected. Push to a branch instead.); \
                exit 1; \
        fi; \
-       git fetch origin "$$current" --quiet 2>/dev/null || true; \
-       local_rev=$$(git rev-parse HEAD); \
-       remote_rev=$$(git rev-parse "origin/$$current" 2>/dev/null || echo ""); \
-       if [ -n "$$remote_rev" ]; then \
-               merge_base=$$(git merge-base HEAD "origin/$$current" 2>/dev/null || echo ""); \
-               if [ "$$merge_base" != "$$remote_rev" ]; then \
-                       if [ "$$merge_base" = "$$local_rev" ]; then \
-                               $(call log_error,Local branch is behind origin/$$current. Run: git pull --rebase); \
-                       else \
-                               $(call log_error,Local branch has diverged from origin/$$current. Rebase first.); \
+       if ! git remote | grep -q "^origin$$"; then \
+               $(call log_warning,No 'origin' remote found. Skipping up-to-date check.); \
+       else \
+               $(call log_info,Verifying connectivity to origin...); \
+               git fetch origin "$$current" --quiet --dry-run --timeout=10 2>/dev/null || true; \
+               local_rev=$$(git rev-parse HEAD); \
+               remote_rev=$$(git rev-parse "origin/$$current" 2>/dev/null || echo ""); \
+               if [ -n "$$remote_rev" ]; then \
+                       merge_base=$$(git merge-base HEAD "origin/$$current" 2>/dev/null || echo ""); \
+                       if [ "$$merge_base" != "$$remote_rev" ]; then \
+                               if [ "$$merge_base" = "$$local_rev" ]; then \
+                                       $(call log_error,Local branch is behind origin/$$current. Run: git pull --rebase); \
+                               else \
+                                       $(call log_error,Local branch has diverged from origin/$$current. Rebase first.); \
+                               fi; \
+                               exit 1; \
                        fi; \
-                       exit 1; \
                fi; \
-       fi; \
-       $(call log_success,Branch is up to date with remote)
+               $(call log_success,Branch is up to date with remote); \
+       fi
 endef
 
 .PHONY: manifest

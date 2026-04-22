@@ -104,6 +104,33 @@ verify-deploy: ## Full post-deploy verification: API, dashboard, CSS, JS
 	if [ "$$FAIL" -ne 0 ]; then $(call log_error,Verification FAILED); exit 1; fi ; \
 	$(call log_success,All checks passed)
 
+smoke-test: ## Fast HTTP smoke test of key routes. Usage: make smoke-test [URL=https://...]
+	@$(call log_step,Running fast smoke test...) ; \
+	FINAL_URL=$(URL) ; \
+	if [ -z "$$FINAL_URL" ]; then \
+		OUTPUTS=$$(cat .sst/outputs.json 2>/dev/null) ; \
+		FINAL_URL=$$(echo "$$OUTPUTS" | python3 -c "import json,sys; print(json.load(sys.stdin).get('dashboardUrl',''))" 2>/dev/null) ; \
+	fi ; \
+	if [ -z "$$FINAL_URL" ] || [[ "$$FINAL_URL" == *"unavailable"* ]]; then \
+		$(call log_warning,No valid URL found for smoke test (detected placeholder or empty). Skipping.); \
+		exit 0; \
+	fi; \
+	FAIL=0 ; \
+	for route in "" "/observability" "/chat"; do \
+		STATUS=$$(curl -s -L -o /dev/null -w "%{http_code}" --max-time 10 "$$FINAL_URL$$route") ; \
+		if [ "$$STATUS" = "200" ]; then \
+			printf "  ✅ %-20s: HTTP %s\n" "$${route:-/}" "$$STATUS"; \
+		else \
+			printf "  ❌ %-20s: HTTP %s\n" "$${route:-/}" "$$STATUS"; \
+			FAIL=1; \
+		fi ; \
+	done ; \
+	if [ "$$FAIL" -ne 0 ]; then \
+		$(call log_warning,Smoke test failed at $$FINAL_URL. If you are in local dev, this is expected if the server isn't running.); \
+		if [ "$(ENV)" = "prod" ]; then $(call log_error,Blocking release due to smoke test failure on PROD); exit 1; fi; \
+	else \
+		$(call log_success,Smoke test passed for $$FINAL_URL); \
+	fi
 
 test: ## Run unit tests with vitest (via Turbo)
 	@$(call log_step,Running unit tests via Turbo...)

@@ -29,8 +29,12 @@
     "aiready": {
       "cache": false
     },
+    "principles": {
+      "cache": true,
+      "inputs": ["core/lib/**/*.ts", "scripts/quality/verify-principles.ts"]
+    },
     "check": {
-      "dependsOn": ["lint", "type-check", "format-check"]
+      "dependsOn": ["lint", "type-check", "format-check", "principles"]
     },
     "gate": {
       "dependsOn": ["check", "test", "aiready"]

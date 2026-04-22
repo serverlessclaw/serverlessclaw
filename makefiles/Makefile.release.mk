@@ -11,25 +11,27 @@ release: ## Full Release: Quality Gates -> Deploy -> Audit Tag (Auditing & Costs
 		$(call log_warning,WARNING: Running release on non-prod environment: $(ENV)); \
 	fi
 	@$(call verify_clean)
+	@$(MAKE) pre-release-check
 	@$(MAKE) gate-tier-1
-	@$(call log_info,Tier 1 passed. Running Tier 2 (Coverage/AIReady) and Deployment in parallel...)
-	@($(MAKE) gate-tier-2 > release-tier2.log 2>&1) & \
-	TIER2_PID=$$!; \
-	$(MAKE) deploy ENV=$(ENV) E2E=false; \
-	DEPLOY_EXIT=$$?; \
-	wait $$TIER2_PID; \
-	TIER2_EXIT=$$?; \
-	if [ $$TIER2_EXIT -ne 0 ]; then \
-		$(call log_error,Tier 2 checks failed. Check release-tier2.log); \
-		exit 1; \
-	fi; \
-	if [ $$DEPLOY_EXIT -ne 0 ]; then \
-		$(call log_error,Deployment failed.); \
-		exit 1; \
-	fi
+	@$(call log_info,Tier 1 passed. Running Tier 2 (Coverage/AIReady) sequentially for safety...)
+	@$(MAKE) gate-tier-2
+	@$(call log_info,Tier 2 passed. Starting deployment...)
+	@$(MAKE) deploy ENV=$(ENV) E2E=false
 	@$(MAKE) test-tier-3
 	@$(MAKE) tag
 	@$(call log_success,Release completed successfully!)
+
+pre-release-check: ## Validate environment and credentials before release
+	@$(call log_step,Running pre-release environment check for $(ENV)...)
+	@$(call load_env); \
+	$(call verify_env,EXPECTED_ACCOUNT); \
+	$(call log_info,Verifying AWS identity...); \
+	ACTUAL_ACCOUNT=$$(aws sts get-caller-identity --query Account --output text 2>/dev/null); \
+	if [ "$$ACTUAL_ACCOUNT" != "$$EXPECTED_ACCOUNT" ]; then \
+		$(call log_error,AWS Account mismatch! Expected $$EXPECTED_ACCOUNT but found $$ACTUAL_ACCOUNT); \
+		exit 1; \
+	fi; \
+	$(call log_success,Environment validated for release to $$EXPECTED_ACCOUNT)
 
 tag: ## Create and push a git tag for the current release (for auditing)
 	@$(call log_info,Bumping version and creating release tag for auditing...)

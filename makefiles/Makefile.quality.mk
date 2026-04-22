@@ -28,9 +28,14 @@ gate-tier-2: ## Thorough Tier 2 checks (via Turborepo)
 	@$(call log_step,Running Tier 2 (Thorough) gate via Turbo...)
 	@$(PNPM) exec turbo run test-coverage aiready
 
-gate-fast: ## Fast local gate (only affected packages)
+gate-fast: ## Fast local gate (only affected packages + principles)
 	@$(call log_step,Running fast local gate via Turbo...)
 	@$(PNPM) exec turbo run check test --filter="[origin/main]"
+	@$(MAKE) principles-check
+
+principles-check: ## Verify architectural principles (P0/P1 issues)
+	@$(call log_step,Verifying architectural principles...)
+	@$(PNPM) run principles
 
 gate-deploy: ## Pre-deploy gate (Tier 1 + aiready + e2e)
 	@$(call log_step,Running deploy gate via Turbo...)
