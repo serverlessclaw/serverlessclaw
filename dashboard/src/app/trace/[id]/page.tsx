@@ -29,6 +29,7 @@ import Button from '@/components/ui/Button';
 import { THEME } from '@/lib/theme';
 import { getTraceTableName } from '@claw/core/lib/utils/ddb-client';
 import { Trace, TraceStep, ToolCallContent, ToolResultContent } from '@/lib/types/ui';
+import PageHeader from '@/components/PageHeader';
 
 export const dynamic = 'force-dynamic';
 
@@ -117,7 +118,7 @@ export default async function TraceDetailPage({
   return (
     <div
       data-testid="trace-detail-container"
-      className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-blue/5 via-transparent to-transparent"
+      className="flex-1 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-blue/5 via-transparent to-transparent"
     >
       <TraceContextRegistrar
         traceId={id}
@@ -128,84 +129,53 @@ export default async function TraceDetailPage({
           timestamp: rootNode.timestamp,
         }}
       />
-      <header className="mb-10">
-        <Link href="/trace" className="group">
-          <Typography
-            variant="caption"
-            color="white"
-            weight="bold"
-            className="flex items-center gap-2 mb-6 hover:text-cyber-green transition-colors"
-          >
-            <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />{' '}
-            {UI_STRINGS.BACK_TO_INTELLIGENCE}
-          </Typography>
-        </Link>
-
-        <div className="flex justify-between items-end border-b border-white/5 pb-8">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <span
-                className={`text-[10px] px-2 py-0.5 rounded-sm font-bold ${
-                  rootNode.status === TRACE_STATUS.COMPLETED
-                    ? 'bg-cyber-green/20 text-cyber-green'
-                    : 'bg-yellow-500/20 text-yellow-500'
+      <PageHeader
+        titleKey={`Trace::${rootNode.traceId.slice(0, 8)}`}
+        subtitleKey={rootNode.initialContext?.userText ?? 'System orchestrated task execution.'}
+        stats={
+          <div className="flex gap-4">
+            <div className="flex flex-col items-center text-center">
+              <Typography
+                variant="mono"
+                color="muted"
+                className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
+              >
+                STATUS
+              </Typography>
+              <Badge
+                variant={rootNode.status === TRACE_STATUS.COMPLETED ? 'primary' : 'outline'}
+                className={`px-4 py-1 font-black text-xs uppercase ${
+                  rootNode.status !== TRACE_STATUS.COMPLETED
+                    ? 'text-yellow-500 border-yellow-500/20'
+                    : ''
                 }`}
               >
                 {rootNode.status}
-              </span>
-              <Typography variant="h1" weight="bold" className="tracking-tighter">
-                Trace::{rootNode.traceId.slice(0, 8)}
-              </Typography>
+              </Badge>
             </div>
-            <Typography variant="body" color="white" className="max-w-2xl block">
-              {rootNode.initialContext?.userText ?? 'System orchestrated task execution.'}
-            </Typography>
-          </div>
-
-          <div className="text-right space-y-1">
-            <Typography
-              variant="mono"
-              color="white"
-              className="flex items-center justify-end gap-2 text-[10px]"
-            >
-              <Clock size={12} />{' '}
-              {rootNode.timestamp ? new Date(rootNode.timestamp).toLocaleString() : 'Unknown'}
-            </Typography>
-            <div className="flex items-center justify-end gap-2">
-              <Typography variant="mono" color="white" className="text-[10px] block">
-                Source:{' '}
-                <span className="text-cyber-blue font-bold tracking-tighter ml-1">
-                  [{rootNode.source ?? 'Unknown'}]
-                </span>
-              </Typography>
+            <div className="flex flex-col items-center text-center">
               <Typography
                 variant="mono"
-                color="white"
-                className="text-[10px] border-l border-white/10 pl-2 ml-1"
+                color="muted"
+                className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
               >
-                UID: {rootNode.userId}
+                STEPS
               </Typography>
-            </div>
-            <Typography
-              variant="mono"
-              color="white"
-              className="flex items-center justify-end gap-2 text-[10px]"
-            >
-              TOTAL STEPS:{' '}
-              <Typography
-                variant="mono"
-                weight="bold"
-                color="primary"
-                className="bg-primary/10 px-1 rounded-sm"
-              >
+              <Badge variant="intel" className="px-4 py-1 font-black text-xs">
                 {nodes.reduce((acc, n) => acc + (n.steps?.length ?? 0), 0)}
-              </Typography>
-            </Typography>
+              </Badge>
+            </div>
           </div>
-        </div>
-      </header>
+        }
+      >
+        <Link href="/trace">
+          <Button variant="outline" size="sm" icon={<ArrowLeft size={14} />}>
+            {UI_STRINGS.BACK_TO_INTELLIGENCE}
+          </Button>
+        </Link>
+      </PageHeader>
 
-      <main className="space-y-12">
+      <div className="space-y-12">
         {/* Visualizer Section */}
         <section>
           {/* PathVisualizer will now receive all nodes to render the graph */}
@@ -436,7 +406,7 @@ export default async function TraceDetailPage({
             </Card>
           </section>
         )}
-      </main>
+      </div>
     </div>
   );
 }

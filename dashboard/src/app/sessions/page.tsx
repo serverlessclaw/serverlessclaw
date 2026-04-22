@@ -75,22 +75,24 @@ export default async function SessionsPage({
   const { items: sessions, nextToken: next } = await getSessions(params.next, params.q);
 
   return (
-    <main className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-10">
+    <div className="flex-1 space-y-10">
       <PageHeader
         titleKey="SESSIONS_TITLE"
         subtitleKey="SESSIONS_SUBTITLE"
         stats={
-          <div className="flex flex-col items-center text-center">
-            <Typography
-              variant="mono"
-              color="muted"
-              className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
-            >
-              PAGE_RESULTS
-            </Typography>
-            <Badge variant="primary" className="px-4 py-1 font-black text-xs">
-              {sessions.length}
-            </Badge>
+          <div className="flex gap-4">
+            <div className="flex flex-col items-center text-center">
+              <Typography
+                variant="mono"
+                color="muted"
+                className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
+              >
+                TOTAL
+              </Typography>
+              <Badge variant="primary" className="px-4 py-1 font-black text-xs">
+                {sessions.length}
+              </Badge>
+            </div>
           </div>
         }
       >
@@ -192,6 +194,6 @@ export default async function SessionsPage({
       </div>
 
       <SessionPagination nextToken={next} />
-    </main>
+    </div>
   );
 }

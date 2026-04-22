@@ -236,6 +236,7 @@ export async function searchInsights(
   } else {
     // Global fallback
     const pk = base.getScopedUserId('SYSTEM#GLOBAL', resolvedScope);
+    params.IndexName = 'UserInsightIndex';
     params.KeyConditionExpression = 'userId = :pk AND #tp = :type';
     (params.ExpressionAttributeValues as Record<string, unknown>)[':pk'] = pk;
   }
@@ -377,6 +378,7 @@ export async function getLessons(
   const pk = base.getScopedUserId(`USER#${userId}`, scope);
 
   const items = await queryByTypeAndMap(base, {
+    IndexName: 'UserInsightIndex',
     KeyConditionExpression: 'userId = :pk AND #type = :type',
     ExpressionAttributeNames: { '#type': 'type' },
     ExpressionAttributeValues: {
@@ -401,6 +403,7 @@ export async function getGlobalLessons(
   const pk = base.getScopedUserId('SYSTEM#GLOBAL', scope);
 
   const items = await queryByTypeAndMap(base, {
+    IndexName: 'UserInsightIndex',
     KeyConditionExpression: 'userId = :pk AND #type = :type',
     ExpressionAttributeNames: { '#type': 'type' },
     ExpressionAttributeValues: {

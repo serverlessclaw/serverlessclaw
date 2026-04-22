@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { AUTH } from '@/lib/constants';
 import { logger } from '@claw/core/lib/logger';
 
-const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/auth/logout', '/api/config'];
+const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/auth/logout'];
 
 const PUBLIC_PATH_PREFIXES = ['/_next', '/static', '/favicon', '/icon', '/robots.txt'];
 
@@ -41,5 +41,5 @@ export default function proxy(request: NextRequest): NextResponse {
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|robots.txt).*)'],
+  matcher: ['/((?!api/auth|_next/static|_next/image|favicon.ico|robots.txt).*)'],
 };

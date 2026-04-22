@@ -8,7 +8,7 @@ import DeploySyncStatus from '@/components/DeploySyncStatus';
 import { SYSTEM } from '@claw/core/lib/constants';
 import { EvolutionMode } from '@claw/core/lib/types/agent';
 import SettingsClient from './SettingsClient';
-import SettingsHeader from './SettingsHeader';
+import PageHeader from '@/components/PageHeader';
 import { logger } from '@claw/core/lib/logger';
 
 async function getConfig() {
@@ -357,8 +357,8 @@ export default async function SettingsPage() {
   const config = await getConfig();
 
   return (
-    <main className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-blue/5 via-transparent to-transparent">
-      <SettingsHeader />
+    <div className="flex-1 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-green/5 via-transparent to-transparent">
+      <PageHeader titleKey="SETTINGS_TITLE" subtitleKey="SETTINGS_SUBTITLE" />
 
       <div className="max-w-4xl space-y-10">
         <SettingsForm config={config} updateConfig={updateConfig} />
@@ -367,6 +367,6 @@ export default async function SettingsPage() {
 
         <DeploySyncStatus />
       </div>
-    </main>
+    </div>
   );
 }

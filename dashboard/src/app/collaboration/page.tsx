@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 
 import { Vote, Activity, ShieldAlert, Cpu } from 'lucide-react';
 import Typography from '@/components/ui/Typography';
+import Badge from '@/components/ui/Badge';
 import SwarmConsensusView from '@/components/SwarmConsensusView';
 import CollaborationCanvas from '@/components/CollaborationCanvas';
 import CognitiveHealthCard from '@/components/CognitiveHealthCard';
@@ -59,35 +60,38 @@ export default function CollaborationPage() {
   ];
 
   return (
-    <main className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-blue/5 via-transparent to-transparent">
+    <div className="flex-1 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-blue/5 via-transparent to-transparent">
       <PageHeader
         titleKey="COLLABORATION_TITLE"
         subtitleKey="COLLABORATION_SUBTITLE"
         stats={
           <div className="flex gap-4">
-            <div className="glass-card px-4 py-2 border-border flex items-center gap-3">
-              <TrustGauge score={94} label="SWARM" size={40} />
-              <div>
-                <Typography variant="mono" color="muted-more" className="text-[10px] uppercase">
-                  {t('SWARM_TRUST')}
-                </Typography>
-                <Typography variant="mono" weight="black" className="text-xs text-cyber-blue">
+            <div className="flex flex-col items-center text-center">
+              <Typography
+                variant="mono"
+                color="muted"
+                className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
+              >
+                SWARM_TRUST
+              </Typography>
+              <div className="flex items-center gap-2">
+                <TrustGauge score={94} label="" size={24} />
+                <Badge variant="primary" className="px-4 py-1 font-black text-xs">
                   94.2%
-                </Typography>
+                </Badge>
               </div>
             </div>
-            <div className="glass-card px-4 py-2 border-border flex items-center gap-3">
-              <div className="p-2 bg-cyber-green/10 rounded-full">
-                <ShieldAlert size={16} className="text-cyber-green" />
-              </div>
-              <div>
-                <Typography variant="mono" color="muted-more" className="text-[10px] uppercase">
-                  {t('AUTONOMY')}
-                </Typography>
-                <Typography variant="mono" weight="black" className="text-xs text-cyber-green">
-                  LEVEL_3 (AUTO)
-                </Typography>
-              </div>
+            <div className="flex flex-col items-center text-center">
+              <Typography
+                variant="mono"
+                color="muted"
+                className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
+              >
+                AUTONOMY
+              </Typography>
+              <Badge variant="intel" className="px-4 py-1 font-black text-xs">
+                LEVEL_3
+              </Badge>
             </div>
           </div>
         }
@@ -240,6 +244,6 @@ export default function CollaborationPage() {
           )}
         </div>
       </div>
-    </main>
+    </div>
   );
 }

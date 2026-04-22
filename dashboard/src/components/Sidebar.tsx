@@ -57,6 +57,19 @@ export default function Sidebar() {
     setMounted(true);
   }, []);
 
+  // Close mobile sidebar on navigation
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => setIsOpen(false), 0);
+      return () => clearTimeout(timer);
+    }
+  }, [pathname, isOpen]);
+
+  // Do not render sidebar on login page
+  if (pathname === '/login') {
+    return null;
+  }
+
   const toggleCollapse = () => {
     setSidebarCollapsed(!isCollapsed);
   };
@@ -71,14 +84,6 @@ export default function Sidebar() {
       router.refresh();
     }
   };
-
-  // Close mobile sidebar on navigation
-  useEffect(() => {
-    if (isOpen) {
-      const timer = setTimeout(() => setIsOpen(false), 0);
-      return () => clearTimeout(timer);
-    }
-  }, [pathname, isOpen]);
 
   const navItems = [
     { label: t('OPERATIONS'), type: 'header' },
@@ -345,46 +350,13 @@ export default function Sidebar() {
         </nav>
 
         {/* Footer */}
-        <div
-          className={`block pt-2 border-t border-border space-y-1.5 pb-2 ${isCollapsed ? 'flex flex-col items-center' : ''}`}
-        >
-          {/* System Status Row */}
-          {isCollapsed ? (
-            <CyberTooltip
-              position="right"
-              showIcon={false}
-              className="w-full"
-              content={
-                <div className="flex flex-col gap-1">
-                  <Typography
-                    variant="caption"
-                    weight="bold"
-                    className="text-cyber-green text-[10px] uppercase tracking-wider"
-                  >
-                    {t('SYSTEM_STATUS')}
-                  </Typography>
-                  <Typography className="text-[9px] leading-tight text-foreground/70">
-                    {isConnected ? t('CONNECTED') : t('SYSTEM_OFFLINE')}
-                  </Typography>
-                </div>
-              }
-            >
-              <Link href={ROUTES.SYSTEM_PULSE} className="block group/status w-full">
-                <div className="bg-foreground/5 rounded transition-colors cursor-pointer py-1.5 flex justify-center group-hover/status:bg-foreground/10 border border-transparent hover:border-cyber-green/20 mx-1">
-                  <div className="relative flex h-2 w-2">
-                    <span
-                      className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isConnected ? 'bg-cyber-green' : 'bg-amber-500'} opacity-75`}
-                    ></span>
-                    <span
-                      className={`relative inline-flex rounded-full h-2 w-2 ${isConnected ? 'bg-cyber-green' : 'bg-amber-500'}`}
-                    ></span>
-                  </div>
-                </div>
-              </Link>
-            </CyberTooltip>
-          ) : (
-            <Link href={ROUTES.SYSTEM_PULSE} className="block group/status w-full px-2">
-              <div className="bg-foreground/5 rounded transition-colors cursor-pointer px-2 py-1.5 group-hover/status:bg-foreground/10 flex items-center justify-between border border-transparent hover:border-cyber-green/20">
+        <div className="pt-2 border-t border-border space-y-1 pb-2">
+          {/* Status & Shortcuts Row */}
+          <div className={`flex items-center gap-1.5 ${isCollapsed ? 'flex-col' : 'px-2'}`}>
+            <Link href={ROUTES.SYSTEM_PULSE} className="flex-1 min-w-0">
+              <div
+                className={`bg-foreground/5 rounded transition-colors cursor-pointer hover:bg-foreground/10 border border-transparent hover:border-cyber-green/20 flex items-center ${isCollapsed ? 'justify-center p-1.5' : 'px-2 py-1.5 justify-between'}`}
+              >
                 <div className="flex items-center gap-2">
                   <div className="relative flex h-1.5 w-1.5">
                     <span
@@ -394,172 +366,79 @@ export default function Sidebar() {
                       className={`relative inline-flex rounded-full h-1.5 w-1.5 ${isConnected ? 'bg-cyber-green' : 'bg-amber-500'}`}
                     ></span>
                   </div>
+                  {!isCollapsed && (
+                    <Typography
+                      variant="mono"
+                      weight="bold"
+                      className="text-[9px] text-foreground/80 tracking-wider uppercase truncate"
+                    >
+                      {t('SYSTEM_STATUS')}
+                    </Typography>
+                  )}
+                </div>
+                {!isCollapsed && (
                   <Typography
                     variant="mono"
-                    weight="bold"
-                    className="text-[10px] text-foreground/80 tracking-wider uppercase"
+                    className={`text-[8px] font-bold uppercase ${isConnected ? 'text-cyber-green' : 'text-amber-500'}`}
                   >
-                    {t('SYSTEM_STATUS')}
+                    {isConnected ? 'ONLINE' : 'OFFLINE'}
                   </Typography>
-                </div>
-                <Typography
-                  variant="mono"
-                  className={`text-[9px] font-bold uppercase ${isConnected ? 'text-cyber-green' : 'text-amber-500'}`}
-                >
-                  {isConnected ? t('CONNECTED') : t('SYSTEM_OFFLINE')}
-                </Typography>
+                )}
               </div>
             </Link>
-          )}
 
-          {/* Keyboard Shortcuts Row */}
-          {isCollapsed ? (
-            <CyberTooltip
-              position="right"
-              showIcon={false}
-              content={t('CHAT_KEYBOARD_SHORTCUTS_TITLE')}
-            >
+            {!isCollapsed && (
               <button
                 onClick={() => setActiveModal('shortcuts')}
-                className="w-full flex justify-center py-1.5 text-muted-foreground hover:text-cyber-green transition-colors bg-foreground/5 rounded border border-transparent hover:border-cyber-green/20 mx-1"
+                className="p-1.5 text-muted-foreground hover:text-cyber-green transition-colors bg-foreground/5 rounded border border-transparent hover:border-cyber-green/20"
+                title={t('CHAT_KEYBOARD_SHORTCUTS_TITLE')}
               >
                 <Keyboard size={14} />
               </button>
-            </CyberTooltip>
-          ) : (
-            <div className="px-2">
+            )}
+          </div>
+
+          {/* Preferences Row (Theme & Locale) */}
+          <div
+            className={`flex items-center justify-between ${isCollapsed ? 'flex-col gap-1' : 'px-2 pt-1'}`}
+          >
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setActiveModal('shortcuts')}
-                className="w-full bg-foreground/5 rounded transition-colors cursor-pointer px-2 py-1.5 group hover:bg-foreground/10 flex items-center justify-between border border-transparent hover:border-cyber-green/20"
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="p-1.5 rounded hover:bg-foreground/5 text-muted-foreground hover:text-cyber-green transition-colors"
               >
-                <div className="flex items-center gap-2 text-muted-foreground group-hover:text-foreground">
-                  <Keyboard size={14} className="group-hover:text-cyber-green transition-colors" />
-                  <Typography
-                    variant="mono"
-                    weight="bold"
-                    className="text-[10px] tracking-wider uppercase"
-                  >
-                    {t('CHAT_KEYBOARD_SHORTCUTS_TITLE')}
-                  </Typography>
-                </div>
-                <div className="bg-foreground/10 rounded px-1 py-0.5 border border-border/50 group-hover:border-cyber-green/30">
-                  <Typography variant="mono" className="text-[9px] font-bold text-cyber-green">
-                    ?
-                  </Typography>
-                </div>
+                {theme === 'dark' ? <Sun size={12} /> : <Moon size={12} />}
+              </button>
+              <button
+                onClick={() => setLocale(locale === 'en' ? 'cn' : 'en')}
+                className="text-[10px] font-mono font-bold text-muted-foreground hover:text-cyber-green transition-colors uppercase px-1"
+              >
+                {locale === 'en' ? 'CN' : 'EN'}
               </button>
             </div>
-          )}
 
-          {!isCollapsed ? (
-            <div className="flex flex-col gap-1 px-2 pb-1 pt-1">
-              <div className="flex items-center justify-between">
-                <Typography
-                  variant="caption"
-                  className="text-muted-foreground text-[10px] uppercase tracking-wider font-mono"
-                >
-                  {t('LANGUAGE')}
-                </Typography>
-                <div className="flex gap-2 text-[10px] font-mono">
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setLocale('en');
-                    }}
-                    className={`transition-colors ${mounted && locale === 'en' ? 'text-foreground font-bold' : 'text-muted-foreground hover:text-foreground/70'}`}
-                  >
-                    EN
-                  </button>
-                  <span className="text-foreground/20">|</span>
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setLocale('cn');
-                    }}
-                    className={`transition-colors ${mounted && locale === 'cn' ? 'text-foreground font-bold' : 'text-muted-foreground hover:text-foreground/70'}`}
-                  >
-                    中文
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <Typography
-                  variant="caption"
-                  className="text-muted-foreground text-[10px] uppercase tracking-wider font-mono"
-                >
-                  {t('THEME')}
-                </Typography>
-                <div className="flex gap-3 text-muted-foreground">
-                  <button
-                    onClick={() => setTheme('light')}
-                    className={`p-1 rounded hover:bg-foreground/5 transition-colors ${mounted && theme === 'light' ? 'text-cyber-green' : ''}`}
-                  >
-                    <Sun size={12} />
-                  </button>
-                  <button
-                    onClick={() => setTheme('dark')}
-                    className={`p-1 rounded hover:bg-foreground/5 transition-colors ${mounted && theme === 'dark' ? 'text-cyber-green' : ''}`}
-                  >
-                    <Moon size={12} />
-                  </button>
-                  <button
-                    onClick={() => setTheme('system')}
-                    className={`p-1 rounded hover:bg-foreground/5 transition-colors ${mounted && theme === 'system' ? 'text-cyber-green' : ''}`}
-                  >
-                    <Monitor size={12} />
-                  </button>
-                </div>
-              </div>
-
-              <Button
-                variant="ghost"
-                size="sm"
+            {!isCollapsed && (
+              <button
                 onClick={handleLogout}
-                className="justify-start px-2 py-1.5 text-xs text-muted-foreground hover:text-cyber-green"
-                icon={<LogOut size={12} />}
+                className="p-1.5 rounded hover:bg-foreground/5 text-muted-foreground hover:text-red-500 transition-colors flex items-center gap-1.5"
+                title={t('LOGOUT')}
               >
-                {t('LOGOUT')}
-              </Button>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-1 pb-0">
-              <div className="w-8 h-6 flex items-center justify-center">
-                <button
-                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                  className={`p-1 rounded-full bg-foreground/5 transition-colors ${mounted ? 'text-muted-foreground hover:text-cyber-green' : 'text-transparent'}`}
-                >
-                  {mounted ? (
-                    theme === 'dark' ? (
-                      <Sun size={12} />
-                    ) : (
-                      <Moon size={12} />
-                    )
-                  ) : (
-                    <div className="w-3 h-3" />
-                  )}
-                </button>
-              </div>
-              <div className="w-8 h-6 flex items-center justify-center">
-                <button
-                  onClick={() => setLocale(locale === 'en' ? 'cn' : 'en')}
-                  className={`text-[10px] font-mono font-bold transition-colors uppercase ${mounted ? 'text-muted-foreground hover:text-cyber-green' : 'text-transparent'}`}
-                >
-                  {mounted ? (locale === 'en' ? 'CN' : 'EN') : '..'}
-                </button>
-              </div>
-              <div className="w-8 h-6 flex items-center justify-center">
-                <CyberTooltip position="right" showIcon={false} content={t('LOGOUT')}>
-                  <button
-                    onClick={handleLogout}
-                    className="p-1 rounded-full bg-foreground/5 transition-colors text-muted-foreground hover:text-cyber-green"
-                  >
-                    <LogOut size={12} />
-                  </button>
-                </CyberTooltip>
-              </div>
-            </div>
-          )}
+                <LogOut size={12} />
+                <Typography variant="mono" className="text-[9px] font-bold uppercase">
+                  EXIT
+                </Typography>
+              </button>
+            )}
+
+            {isCollapsed && (
+              <button
+                onClick={handleLogout}
+                className="p-1.5 rounded hover:bg-foreground/5 text-muted-foreground hover:text-red-500 transition-colors"
+              >
+                <LogOut size={12} />
+              </button>
+            )}
+          </div>
         </div>
       </aside>
     </>

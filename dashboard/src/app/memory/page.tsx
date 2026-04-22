@@ -12,10 +12,11 @@ import { Database, Brain, Search as SearchIcon, Lightbulb, Target, Filter } from
 import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
 import Typography from '@/components/ui/Typography';
+import Badge from '@/components/ui/Badge';
+import PageHeader from '@/components/PageHeader';
 import MemoryTabs from './MemoryTabs';
 import MemoryPagination from './MemoryPagination';
 import MemoryTable from './MemoryTable';
-import MemoryHeader from './MemoryHeader';
 import MemoryEmptyState from './MemoryEmptyState';
 import { headers } from 'next/headers';
 import { AUTH } from '@/lib/constants';
@@ -394,8 +395,54 @@ export default async function MemoryVault({
   }
 
   return (
-    <main className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-blue/5 via-transparent to-transparent">
-      <MemoryHeader />
+    <div className="flex-1 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-purple-400/5 via-transparent to-transparent">
+      <PageHeader
+        titleKey="MEMORY_RESERVE"
+        subtitleKey="MEMORY_SUBTITLE"
+        stats={
+          <div className="flex gap-4">
+            <div className="flex flex-col items-center text-center">
+              <Typography
+                variant="mono"
+                color="muted"
+                className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
+              >
+                FACTS
+              </Typography>
+              <Badge variant="primary" className="px-4 py-1 font-black text-xs">
+                {counts.facts}
+              </Badge>
+            </div>
+            <div className="flex flex-col items-center text-center">
+              <Typography
+                variant="mono"
+                color="muted"
+                className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
+              >
+                LESSONS
+              </Typography>
+              <Badge variant="intel" className="px-4 py-1 font-black text-xs">
+                {counts.lessons}
+              </Badge>
+            </div>
+            <div className="flex flex-col items-center text-center">
+              <Typography
+                variant="mono"
+                color="muted"
+                className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
+              >
+                TOTAL_NODES
+              </Typography>
+              <Badge
+                variant="outline"
+                className="px-4 py-1 font-black text-xs border-white/10 text-white/60"
+              >
+                {counts.dynamic}
+              </Badge>
+            </div>
+          </div>
+        }
+      />
 
       <MemoryTabs tabs={tabs} />
 
@@ -441,6 +488,6 @@ export default async function MemoryVault({
 
         <MemoryPagination nextToken={next} />
       </div>
-    </main>
+    </div>
   );
 }

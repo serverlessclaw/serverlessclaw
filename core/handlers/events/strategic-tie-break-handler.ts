@@ -87,7 +87,8 @@ export async function handleStrategicTieBreak(eventDetail: Record<string, unknow
     /kill\s+(all|process)/i,
   ];
 
-  const isHighRisk = highRiskPatterns.some((pattern) => pattern.test(originalTask));
+  const safeOriginalTask = originalTask ?? task ?? '';
+  const isHighRisk = highRiskPatterns.some((pattern) => pattern.test(safeOriginalTask));
 
   let finalTask: string;
   let eventType: string;

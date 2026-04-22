@@ -97,7 +97,7 @@ export default async function AnalyticsTab({
     : undefined;
 
   return (
-    <main className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-green/5 via-transparent to-transparent">
+    <div className="flex-1 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-green/5 via-transparent to-transparent">
       <PageHeader titleKey="TRACE_TITLE" subtitleKey="TRACE_SUBTITLE">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:flex gap-3 lg:gap-4">
           <DeleteAllTracesButton />
@@ -154,6 +154,6 @@ export default async function AnalyticsTab({
         initialTab={initialTab}
         nextToken={nextToken}
       />
-    </main>
+    </div>
   );
 }

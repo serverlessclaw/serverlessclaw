@@ -181,3 +181,7 @@ test-coverage-trend: ## Track coverage trends and detect regressions. Usage: mak
 	@$(PNPM) exec tsx scripts/quality/coverage-trend.ts \
 		$(if $(THRESHOLD),--threshold $(THRESHOLD),) \
 		$(if $(UPDATE_BASELINE),--update-baseline,)
+
+security-scan: ## Run security audit and basic static analysis
+	@$(call log_step,Running security audit...)
+	@$(PNPM) audit --audit-level=high || $(call log_warning,High-severity security vulnerabilities detected. Review required.)

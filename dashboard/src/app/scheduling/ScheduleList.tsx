@@ -164,7 +164,43 @@ export default function ScheduleList() {
 
   return (
     <div className="space-y-10">
-      <PageHeader titleKey="SCHEDULING_TITLE" subtitleKey="SCHEDULING_SUBTITLE">
+      <PageHeader
+        titleKey="SCHEDULING_TITLE"
+        subtitleKey="SCHEDULING_SUBTITLE"
+        stats={
+          <div className="flex gap-4">
+            <div className="flex flex-col items-center text-center">
+              <Typography
+                variant="mono"
+                color="muted"
+                className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
+              >
+                GOALS
+              </Typography>
+              <Badge variant="primary" className="px-4 py-1 font-black text-xs">
+                {filteredSchedules.length}
+              </Badge>
+            </div>
+            <div className="flex flex-col items-center text-center">
+              <Typography
+                variant="mono"
+                color="muted"
+                className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
+              >
+                HEALTH
+              </Typography>
+              <Badge
+                variant="outline"
+                className={`px-4 py-1 font-bold text-xs border-none ${
+                  fetchError ? 'bg-red-500/10 text-red-500' : 'bg-green-500/10 text-green-500'
+                }`}
+              >
+                {fetchError ? 'OFFLINE' : 'ONLINE'}
+              </Badge>
+            </div>
+          </div>
+        }
+      >
         <div className="flex gap-3">
           <Button
             variant="outline"
@@ -189,60 +225,6 @@ export default function ScheduleList() {
           </Button>
         </div>
       </PageHeader>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card variant="glass" padding="md" className="border-border">
-          <div className="flex justify-between items-start mb-2">
-            <Typography
-              variant="caption"
-              className="text-muted-foreground uppercase tracking-widest"
-            >
-              {t('SCHEDULING_ACTIVE_GOALS')}
-            </Typography>
-            <Target size={16} className="text-blue-500" />
-          </div>
-          <Typography variant="h3" weight="bold">
-            {filteredSchedules.length}
-          </Typography>
-        </Card>
-
-        <Card variant="glass" padding="md" className="border-border">
-          <div className="flex justify-between items-start mb-2">
-            <Typography
-              variant="caption"
-              className="text-muted-foreground uppercase tracking-widest"
-            >
-              {t('SCHEDULING_NEXT_EVOLUTION')}
-            </Typography>
-            <Zap size={16} className="text-yellow-500" />
-          </div>
-          <Typography variant="h3" weight="bold">
-            {nextEvolution}
-          </Typography>
-        </Card>
-
-        <Card variant="glass" padding="md" className="border-border">
-          <div className="flex justify-between items-start mb-2">
-            <Typography
-              variant="caption"
-              className="text-muted-foreground uppercase tracking-widest"
-            >
-              {t('SCHEDULING_HEALTH')}
-            </Typography>
-            <Activity size={16} className={fetchError ? 'text-red-500' : 'text-green-500'} />
-          </div>
-          <Badge
-            variant="outline"
-            className={
-              fetchError
-                ? 'bg-red-500/10 text-red-500 border-red-500/20'
-                : 'bg-green-500/10 text-green-500 border-green-500/20'
-            }
-          >
-            {fetchError ? t('SCHEDULING_DISCONNECTED') : t('SCHEDULING_OPERATIONAL')}
-          </Badge>
-        </Card>
-      </div>
 
       <div className="space-y-4">
         <Typography variant="h3" weight="bold" className="flex items-center gap-2">

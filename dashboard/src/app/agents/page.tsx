@@ -11,6 +11,7 @@ import Badge from '@/components/ui/Badge';
 import NewAgentModal from './NewAgentModal';
 import AgentToolsModal from './AgentToolsModal';
 import AgentTable from './AgentTable';
+import Skeleton from '@/components/ui/Skeleton';
 import { Tool, Agent } from '@/lib/types/ui';
 import PageHeader from '@/components/PageHeader';
 import { useRealtime, RealtimeMessage } from '@/hooks/useRealtime';
@@ -369,22 +370,31 @@ export default function AgentsPage() {
 
   if (loading)
     return (
-      <main className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-4">
-        <div className="flex items-center justify-center min-h-[400px] text-muted">
-          <Typography
-            variant="mono"
-            color="intel"
-            uppercase
-            className="flex items-center gap-3 animate-pulse"
-          >
-            <RefreshCw className="animate-spin" size={20} /> {t('AGENTS_INITIALIZING')}
-          </Typography>
+      <div className="flex-1 space-y-4">
+        <PageHeader titleKey="AGENTS_TITLE" subtitleKey="AGENTS_SUBTITLE" />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card border border-border rounded-lg p-3 backdrop-blur-sm">
+          <Skeleton variant="rectangular" width="384px" height="36px" />
+          <div className="flex items-center gap-3">
+            <Skeleton variant="rectangular" width="120px" height="36px" />
+            <Skeleton variant="rectangular" width="120px" height="36px" />
+          </div>
         </div>
-      </main>
+        <div className="max-w-6xl space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Skeleton
+              key={i}
+              variant="rectangular"
+              width="100%"
+              height="100px"
+              className="rounded-xl"
+            />
+          ))}
+        </div>
+      </div>
     );
 
   return (
-    <main className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-4">
+    <div className="flex-1 space-y-4">
       <CyberConfirm
         isOpen={confirmModal.isOpen}
         title={t('AGENTS_DECOMMISSION_TITLE')}
@@ -567,6 +577,6 @@ export default function AgentsPage() {
         handleToggleTool={handleToggleTool}
         isUpdatingTools={isUpdatingTools}
       />
-    </main>
+    </div>
   );
 }

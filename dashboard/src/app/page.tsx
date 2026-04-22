@@ -10,16 +10,15 @@ import {
   Brain,
   ShieldCheck,
   ArrowRight,
-  Loader2,
   Clock,
 } from 'lucide-react';
+import Skeleton from '@/components/ui/Skeleton';
 import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import PageHeader from '@/components/PageHeader';
 import { ROUTES } from '@/lib/constants';
-import { useTranslations } from '@/components/Providers/TranslationsProvider';
 
 interface SessionMetadata {
   sessionId: string;
@@ -49,7 +48,7 @@ export default function MissionDashboard() {
   }, []);
 
   return (
-    <main className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-green/5 via-transparent to-transparent">
+    <div className="flex-1 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-green/5 via-transparent to-transparent">
       <PageHeader titleKey="DASHBOARD_TITLE" subtitleKey="CHAT_SUBTITLE" />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
@@ -76,9 +75,30 @@ export default function MissionDashboard() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {loading ? (
-              <div className="col-span-full h-32 flex items-center justify-center opacity-30">
-                <Loader2 className="animate-spin mr-2" size={20} /> Loading_Signals...
-              </div>
+              <>
+                <Card variant="glass" padding="lg" className="h-32 border-border/40 bg-card/60">
+                  <div className="flex flex-col h-full justify-between gap-4">
+                    <div className="space-y-2">
+                      <Skeleton variant="text" width="80%" />
+                      <Skeleton variant="text" width="40%" />
+                    </div>
+                    <div className="flex justify-end">
+                      <Skeleton variant="rectangular" width={60} height={16} />
+                    </div>
+                  </div>
+                </Card>
+                <Card variant="glass" padding="lg" className="h-32 border-border/40 bg-card/60">
+                  <div className="flex flex-col h-full justify-between gap-4">
+                    <div className="space-y-2">
+                      <Skeleton variant="text" width="70%" />
+                      <Skeleton variant="text" width="30%" />
+                    </div>
+                    <div className="flex justify-end">
+                      <Skeleton variant="rectangular" width={60} height={16} />
+                    </div>
+                  </div>
+                </Card>
+              </>
             ) : recentSessions.length > 0 ? (
               recentSessions.map((session) => (
                 <Link key={session.sessionId} href={`${ROUTES.CHAT}?session=${session.sessionId}`}>
@@ -250,6 +270,6 @@ export default function MissionDashboard() {
           </Card>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

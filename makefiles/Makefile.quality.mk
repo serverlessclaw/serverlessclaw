@@ -27,6 +27,7 @@ gate-tier-1: ## Fast Tier 1 checks (via Turborepo)
 gate-tier-2: ## Thorough Tier 2 checks (via Turborepo)
 	@$(call log_step,Running Tier 2 (Thorough) gate via Turbo...)
 	@$(PNPM) exec turbo run test-coverage aiready
+	@$(MAKE) security-scan
 
 gate-fast: ## Fast local gate (only affected packages + principles)
 	@$(call log_step,Running fast local gate via Turbo...)

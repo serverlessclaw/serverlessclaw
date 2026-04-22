@@ -14,6 +14,16 @@
   --shadow-premium: var(--shadow-premium);
   --font-sans: var(--font-inter), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), monospace;
+  @keyframes cyber-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.4;
+    }
+  }
+  --animate-cyber-pulse: cyber-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 :root {

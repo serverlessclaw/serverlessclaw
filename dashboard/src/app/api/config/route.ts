@@ -5,6 +5,7 @@ import { CONFIG_KEYS } from '@claw/core/lib/constants';
 import { logger } from '@claw/core/lib/logger';
 import { getConfigTableName } from '@claw/core/lib/utils/ddb-client';
 import { getAppInfo, getRealtimeInfo } from '@claw/core/lib/utils/resource-helpers';
+import { AUTH } from '@/lib/constants';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +25,12 @@ function getDocClient() {
  */
 export async function GET(req: NextRequest) {
   try {
+    // 0. Manual Auth Check (Fallback if middleware/proxy is bypassed)
+    const sessionToken = req.cookies.get(AUTH.COOKIE_NAME);
+    if (!sessionToken || sessionToken.value !== AUTH.COOKIE_VALUE) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
     // Debug diagnostic: log the MQTT URL being used by the client
     const debugUrl = req.nextUrl?.searchParams?.get('__debug_url');
     if (debugUrl) {
@@ -59,6 +66,12 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
+    // 0. Manual Auth Check
+    const sessionToken = req.cookies.get(AUTH.COOKIE_NAME);
+    if (!sessionToken || sessionToken.value !== AUTH.COOKIE_VALUE) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
     const body = await req.json();
     const { key, value } = body;
 

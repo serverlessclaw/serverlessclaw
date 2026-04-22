@@ -281,6 +281,7 @@ export class SafetyEngine extends SafetyBase {
       workspaceId?: string;
       teamId?: string;
       staffId?: string;
+      args?: Record<string, unknown>;
     },
     tier: SafetyTier,
     policy: SafetyPolicy
@@ -423,6 +424,7 @@ export class SafetyEngine extends SafetyBase {
       workspaceId?: string;
       teamId?: string;
       staffId?: string;
+      args?: Record<string, unknown>;
     }
   ): Promise<SafetyEvaluationResult | null> {
     const error = await this.enforceClassCBlastRadius(agentId, action);
@@ -437,6 +439,8 @@ export class SafetyEngine extends SafetyBase {
         action,
         reason: approvalResult.reason ?? 'Class C action requiring approval',
         timeoutMs: CONFIG_DEFAULTS.EVOLUTIONARY_TIMEOUT_MS.code,
+        toolName: ctx.toolName,
+        args: ctx.args,
         resource: ctx.resource,
         traceId: ctx.traceId,
         userId: ctx.userId,
@@ -469,6 +473,7 @@ export class SafetyEngine extends SafetyBase {
       workspaceId?: string;
       teamId?: string;
       staffId?: string;
+      args?: Record<string, unknown>;
     }
   ): Promise<SafetyEvaluationResult | null> {
     const trustScore = config?.trustScore ?? TRUST.DEFAULT_SCORE;

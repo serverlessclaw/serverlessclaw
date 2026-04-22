@@ -74,9 +74,9 @@ export default function ChatBubble() {
   }, [messages]);
 
   // --- Early Return (Must be after all hooks) ---
-  // Hide the bubble on the main chat page to avoid redundancy and prevent
-  // duplicate data synchronization hooks from running.
-  if (pathname === '/chat' || pathname === '/') {
+  // Hide the bubble on the main chat page, home page, or login page to avoid
+  // redundancy and prevent duplicate data synchronization hooks from running.
+  if (pathname === '/chat' || pathname === '/' || pathname === '/login') {
     return null;
   }
 

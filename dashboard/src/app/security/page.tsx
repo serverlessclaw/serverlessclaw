@@ -96,22 +96,38 @@ export default function SecurityManifestPage() {
   const { t } = useTranslations();
   const [currentTier, setCurrentTier] = useState<'local' | 'prod'>('prod');
   return (
-    <main
-      className={`flex-1 overflow-y-auto p-6 lg:p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,color-mix(in_srgb,var(--cyber-green)_5%,transparent),transparent,transparent)]`}
+    <div
+      className={`flex-1 space-y-10 bg-[radial-gradient(circle_at_top_right,color-mix(in_srgb,var(--cyber-green)_5%,transparent),transparent,transparent)]`}
     >
       <PageHeader
         titleKey="SECURITY_TITLE"
         subtitleKey="SECURITY_SUBTITLE"
         stats={
           <div className="flex gap-4">
-            <Card variant="glass" padding="sm" className="border-cyber-green/30">
-              <Typography variant="mono" color="muted" className="mb-1 block">
-                {t('COMPLIANCE_MODE')}
+            <div className="flex flex-col items-center text-center">
+              <Typography
+                variant="mono"
+                color="muted"
+                className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
+              >
+                MODE
               </Typography>
-              <Typography variant="mono" weight="bold" color="primary">
-                {t('STRICT_ENFORCEMENT')}
+              <Badge variant="primary" className="px-4 py-1 font-black text-xs">
+                STRICT
+              </Badge>
+            </div>
+            <div className="flex flex-col items-center text-center">
+              <Typography
+                variant="mono"
+                color="muted"
+                className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
+              >
+                POLICIES
               </Typography>
-            </Card>
+              <Badge variant="intel" className="px-4 py-1 font-black text-xs">
+                {AGENT_POLICIES.length}
+              </Badge>
+            </div>
           </div>
         }
       />
@@ -267,6 +283,6 @@ export default function SecurityManifestPage() {
           </section>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

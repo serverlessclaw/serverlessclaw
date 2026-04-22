@@ -63,12 +63,12 @@ export default async function CapabilitiesPage() {
   const bridgeCount = Object.keys(mcpServers).length;
 
   return (
-    <main className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-blue/5 via-transparent to-transparent">
+    <div className="flex-1 space-y-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyber-blue/5 via-transparent to-transparent">
       <CapabilitiesHeader localCount={localCount} bridgeCount={bridgeCount} />
 
       <CapabilitiesView allTools={allTools} mcpServers={mcpServers} agents={agents} />
 
       <CapabilitiesAdvisory />
-    </main>
+    </div>
   );
 }

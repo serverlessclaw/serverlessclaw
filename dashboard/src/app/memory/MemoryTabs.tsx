@@ -33,36 +33,45 @@ export default function MemoryTabs({ tabs }: MemoryTabsProps) {
   };
 
   return (
-    <div className="flex border-b border-border mb-8 overflow-x-auto scrollbar-hide">
-      {tabs.map((tab) => (
-        <button
-          key={tab.id}
-          onClick={() => handleTabChange(tab.id)}
-          className={`flex items-center gap-2 px-6 py-4 border-b-2 transition-all whitespace-nowrap ${
-            activeTab === tab.id
-              ? 'border-cyber-blue text-foreground bg-cyber-blue/5'
-              : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-input'
-          }`}
-        >
-          <span className={`${activeTab === tab.id ? 'text-cyber-blue' : 'text-muted-foreground'}`}>
-            {tab.icon}
-          </span>
-          <Typography
-            variant="mono"
-            weight={activeTab === tab.id ? 'bold' : 'medium'}
-            uppercase
-            className="text-[11px] tracking-widest"
+    <div className="flex gap-1 bg-input/50 p-1 rounded-sm border border-border overflow-x-auto scrollbar-hide w-fit">
+      {tabs.map((tab) => {
+        const isActive = activeTab === tab.id;
+        return (
+          <button
+            key={tab.id}
+            onClick={() => handleTabChange(tab.id)}
+            className={`
+              flex items-center gap-3 px-6 py-2.5 rounded-sm transition-all whitespace-nowrap
+              ${
+                isActive
+                  ? 'bg-cyber-blue/10 text-cyber-blue border border-cyber-blue/30 shadow-[0_0_15px_rgba(0,243,255,0.1)]'
+                  : 'text-muted-more hover:text-foreground hover:bg-foreground/5 border border-transparent'
+              }
+            `}
           >
-            {t(tab.label as Parameters<typeof t>[0])}
-          </Typography>
-          <Badge
-            variant={activeTab === tab.id ? 'intel' : 'outline'}
-            className="ml-1 px-2 py-0.5 text-[10px] font-black"
-          >
-            {tab.count}
-          </Badge>
-        </button>
-      ))}
+            <span className={`${isActive ? 'text-cyber-blue' : 'text-muted-more opacity-50'}`}>
+              {tab.icon}
+            </span>
+            <Typography
+              variant="mono"
+              weight={isActive ? 'black' : 'bold'}
+              uppercase
+              className="text-[10px] tracking-[0.2em]"
+            >
+              {t(tab.label as Parameters<typeof t>[0])}
+            </Typography>
+            <Badge
+              variant={isActive ? 'primary' : 'outline'}
+              className={`
+                ml-1 px-2 py-0 text-[9px] font-black border-none
+                ${isActive ? 'bg-cyber-blue text-black' : 'bg-foreground/10 text-muted-more'}
+              `}
+            >
+              {tab.count}
+            </Badge>
+          </button>
+        );
+      })}
     </div>
   );
 }

@@ -8,6 +8,8 @@ import { DynamoMemory } from '@claw/core/lib/memory';
 import { GapItem } from '@claw/core/lib/types/memory';
 import { deleteMemoryItem } from '@/lib/actions/dynamodb-actions';
 import PageHeader from '@/components/PageHeader';
+import Typography from '@/components/ui/Typography';
+import Badge from '@/components/ui/Badge';
 import { logger } from '@claw/core/lib/logger';
 
 async function getGaps(): Promise<GapItem[]> {
@@ -92,28 +94,36 @@ export default async function EvolutionPipeline() {
   const gaps = await getGaps();
 
   return (
-    <main className="flex-1 flex flex-col min-h-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-amber-500/5 via-transparent to-transparent">
-      <div className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-8 min-w-[1240px] pb-32">
+    <div className="flex-1 flex flex-col min-h-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-amber-500/5 via-transparent to-transparent">
+      <div className="flex-1 overflow-y-auto space-y-8 min-w-[1240px] pb-32">
         <PageHeader
           titleKey="PIPELINE_TITLE"
           subtitleKey="PIPELINE_SUBTITLE"
           stats={
             <div className="flex gap-4">
-              <div className="glass-card px-4 py-2 text-[10px] border-amber-500/20">
-                <div className="text-white/50 mb-1 uppercase font-bold tracking-widest">
-                  ACTIVE_GAPS
-                </div>
-                <div className="font-bold text-amber-500 text-lg">
+              <div className="flex flex-col items-center text-center">
+                <Typography
+                  variant="mono"
+                  color="muted"
+                  className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
+                >
+                  ACTIVE
+                </Typography>
+                <Badge variant="primary" className="px-4 py-1 font-black text-xs">
                   {gaps.filter((g) => g.status !== GapStatus.DONE).length}
-                </div>
+                </Badge>
               </div>
-              <div className="glass-card px-4 py-2 text-[10px] border-cyber-green/20">
-                <div className="text-white/50 mb-1 uppercase font-bold tracking-widest">
-                  HISTORICAL_SUCCESS
-                </div>
-                <div className="font-bold text-cyber-green text-lg">
+              <div className="flex flex-col items-center text-center">
+                <Typography
+                  variant="mono"
+                  color="muted"
+                  className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
+                >
+                  SUCCESS
+                </Typography>
+                <Badge variant="intel" className="px-4 py-1 font-black text-xs">
                   {gaps.filter((g) => g.status === GapStatus.DONE).length}
-                </div>
+                </Badge>
               </div>
             </div>
           }
@@ -134,6 +144,6 @@ export default async function EvolutionPipeline() {
           <PlanView />
         </div>
       </div>
-    </main>
+    </div>
   );
 }

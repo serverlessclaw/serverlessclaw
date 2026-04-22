@@ -14,6 +14,8 @@ export interface PendingEvolution {
   agentId: string;
   action: string;
   reason: string;
+  toolName?: string;
+  args?: Record<string, unknown>;
   resource?: string;
   traceId?: string;
   userId?: string;
@@ -41,6 +43,8 @@ export class EvolutionScheduler {
     action: string;
     reason: string;
     timeoutMs: number;
+    toolName?: string;
+    args?: Record<string, unknown>;
     resource?: string;
     traceId?: string;
     userId?: string;
@@ -61,6 +65,8 @@ export class EvolutionScheduler {
       agentId: params.agentId,
       action: params.action,
       reason: params.reason,
+      toolName: params.toolName,
+      args: params.args,
       resource: params.resource,
       traceId: params.traceId,
       userId: params.userId,
@@ -135,6 +141,8 @@ export class EvolutionScheduler {
       `[EVOLUTION] Triggering proactive evolution for ${action.actionId} (Timeout reached)`
     );
 
+    const originalTask = `Execute tool ${action.toolName || action.action} with args ${action.args ? JSON.stringify(action.args) : '{}'}`;
+
     await emitTypedEvent('evolution.scheduler', EventType.STRATEGIC_TIE_BREAK, {
       userId: action.userId || 'SYSTEM',
       workspaceId: action.workspaceId,
@@ -143,12 +151,15 @@ export class EvolutionScheduler {
       staffId: action.staffId,
       agentId: action.agentId,
       task: `Proactive evolution for: ${action.action} (Reason: ${action.reason})`,
+      originalTask,
       traceId: action.traceId,
       sessionId: action.traceId,
       metadata: {
         actionId: action.actionId,
         proactive: true,
         originalAction: action.action,
+        toolName: action.toolName,
+        args: action.args,
         resource: action.resource,
       },
     });
@@ -168,7 +179,11 @@ export class EvolutionScheduler {
   /**
    * Handle human approval/rejection.
    */
-  async updateStatus(actionId: string, status: 'approved' | 'rejected'): Promise<void> {
+  async updateStatus(
+    actionId: string,
+    status: 'approved' | 'rejected',
+    workspaceId?: string
+  ): Promise<void> {
     if (!this.base) return;
     const items = await this.base.queryItems({
       KeyConditionExpression: 'userId = :userId AND #timestamp = :zero',
@@ -182,6 +197,12 @@ export class EvolutionScheduler {
     if (items.length === 0) return;
 
     const action = items[0] as unknown as PendingEvolution;
+
+    if (workspaceId && action.workspaceId && action.workspaceId !== workspaceId) {
+      logger.warn(`[EVOLUTION] Unauthorized updateStatus attempt for ${actionId}`);
+      throw new Error('Unauthorized access to pending evolution');
+    }
+
     action.status = status;
 
     await this.base.putItem({

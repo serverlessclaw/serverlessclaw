@@ -178,8 +178,39 @@ export default function WorkspacesPage() {
   };
 
   return (
-    <main className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-10">
-      <PageHeader titleKey="WORKSPACES_TITLE" subtitleKey="WORKSPACES_SUBTITLE">
+    <div className="flex-1 space-y-10">
+      <PageHeader
+        titleKey="WORKSPACES_TITLE"
+        subtitleKey="WORKSPACES_SUBTITLE"
+        stats={
+          <div className="flex gap-4">
+            <div className="flex flex-col items-center text-center">
+              <Typography
+                variant="mono"
+                color="muted"
+                className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
+              >
+                TOTAL
+              </Typography>
+              <Badge variant="primary" className="px-4 py-1 font-black text-xs">
+                {workspaces.length}
+              </Badge>
+            </div>
+            <div className="flex flex-col items-center text-center">
+              <Typography
+                variant="mono"
+                color="muted"
+                className="text-[10px] uppercase tracking-widest opacity-40 mb-1"
+              >
+                MEMBERS
+              </Typography>
+              <Badge variant="intel" className="px-4 py-1 font-black text-xs">
+                {workspaces.reduce((acc, ws) => acc + ws.members.length, 0)}
+              </Badge>
+            </div>
+          </div>
+        }
+      >
         <Button
           variant="primary"
           size="sm"
@@ -522,6 +553,6 @@ export default function WorkspacesPage() {
           </div>
         </div>
       )}
-    </main>
+    </div>
   );
 }

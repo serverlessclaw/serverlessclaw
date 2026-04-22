@@ -141,8 +141,6 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({ isOpen, onClose, ses
   );
 };
 
-type TranslationFn = (key: string) => string;
-
 const TraceList = ({ traces }: { traces: Trace[] }) => {
   if (traces.length === 0) {
     return (
