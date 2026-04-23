@@ -266,7 +266,6 @@ export default function PlaygroundPage() {
         />
       </section>
 
-
       {/* Right Sidebar: Trace (Optional Overlay) */}
       <TraceDetailSidebar
         traceId={activeTraceId}

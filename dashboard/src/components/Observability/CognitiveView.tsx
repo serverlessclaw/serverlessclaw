@@ -111,7 +111,11 @@ export default function CognitiveView() {
             </div>
           </Card>
 
-          <Card variant="outline" padding="lg" className="border-cyber-blue/20 bg-cyber-blue/[0.02]">
+          <Card
+            variant="outline"
+            padding="lg"
+            className="border-cyber-blue/20 bg-cyber-blue/[0.02]"
+          >
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
                 <Zap size={16} className="text-cyber-blue" />
@@ -160,7 +164,11 @@ export default function CognitiveView() {
                           {f.silo}::{f.severity}
                         </Typography>
                       </div>
-                      <Typography variant="mono" color="muted-more" className="text-[8px] uppercase">
+                      <Typography
+                        variant="mono"
+                        color="muted-more"
+                        className="text-[8px] uppercase"
+                      >
                         {f.actual.length > 30 ? f.actual.substring(0, 30) + '...' : f.actual}
                       </Typography>
                     </div>
