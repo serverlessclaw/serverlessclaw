@@ -216,6 +216,7 @@ export function createAgents(
             fetch: mcpServers.multiplexer.arn,
             ast: mcpServers.multiplexer.arn,
             puppeteer: mcpServers.browserMultiplexer.arn,
+            playwright: mcpServers.browserMultiplexer.arn,
             aws: mcpServers.devOpsMultiplexer.arn,
             'aws-s3': mcpServers.devOpsMultiplexer.arn,
           }),

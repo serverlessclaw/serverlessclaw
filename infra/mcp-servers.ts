@@ -77,6 +77,7 @@ export function createMCPServers(ctx: SharedContext): MCPServerResources {
     environment: {
       ...baseEnv,
       PUPPETEER_EXECUTABLE_PATH: '/opt/chromium',
+      PLAYWRIGHT_BROWSERS_PATH: '/opt/pw-browsers',
     },
   });
 

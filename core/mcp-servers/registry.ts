@@ -37,6 +37,14 @@ export const MCP_SERVER_REGISTRY: Record<string, StdioServerParameters> = {
       PUPPETEER_EXECUTABLE_PATH: '/opt/chromium',
     },
   },
+  playwright: {
+    command: 'npx',
+    args: ['--offline', '@mcp-server/playwright'],
+    env: {
+      HOME: '/tmp',
+      PLAYWRIGHT_BROWSERS_PATH: '/opt/pw-browsers',
+    },
+  },
   fetch: {
     command: 'npx',
     args: ['--offline', 'mcp-fetch-server'],

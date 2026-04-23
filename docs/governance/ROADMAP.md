@@ -108,9 +108,9 @@ Our goal: the most customizable, cost-effective, and self-evolving personal AI a
 - [x] **Multi-Modal Provider Support**: Full support for image and file analysis in OpenAI/Minimax adapters first, others deferred.
 - [x] **Rich Media Notifier**: Capability for agents to send files, charts, and generated images back to chat channels.
 
-## 🏗️ Phase 14: Advanced Autonomy
+## ✅ Phase 14: Advanced Autonomy
 
-- [ ] **Browser Automation**: Playwright Lambda Layer for autonomous web browsing.
+- [x] **Browser Automation**: Playwright Lambda Layer for autonomous web browsing.
 - [ ] **Promotion Manager**: Agent-driven promotion of validated builds to `prod`.
 - [ ] **Skill Marketplace**: CLI-based installation of community tools.
 

@@ -104,6 +104,9 @@ export const WEB_TOOLS = [
   'puppeteer_navigate',
   'puppeteer_screenshot',
   'puppeteer_click',
+  'playwright_navigate',
+  'playwright_screenshot',
+  'playwright_click',
 ];
 
 /**

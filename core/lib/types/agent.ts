@@ -268,6 +268,7 @@ export enum TraceSource {
   SYSTEM = 'system',
   UNKNOWN = 'unknown',
   PLAYGROUND = 'playground',
+  PLAYWRIGHT = 'playwright',
 }
 
 /**
