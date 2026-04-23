@@ -218,7 +218,9 @@ describe('Infrastructure Resource Creation', () => {
         deployerLink: { name: 'deployerLink' },
         schedulerRole: { arn: 'arn:role' },
         heartbeatHandler: { arn: 'arn:heartbeat' },
-        secrets: {},
+        secrets: {
+          DashboardPassword: new MockSecret('DashboardPassword'),
+        },
       };
 
       const result = createDashboard(mockCtx as any);

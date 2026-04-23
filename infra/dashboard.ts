@@ -38,6 +38,7 @@ export function createDashboard(ctx: SharedContext): { dashboard: sst.aws.Nextjs
       ...getValidSecrets(ctx.secrets),
     ],
     environment: {
+      DASHBOARD_PASSWORD: ctx.secrets.DashboardPassword.value,
       DEPLOYER_NAME: deployer.name,
       DYNAMIC_SCHEDULER_ROLE_ARN: schedulerRole!.arn,
       HEARTBEAT_HANDLER_ARN: heartbeatHandler!.arn,

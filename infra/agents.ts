@@ -373,7 +373,7 @@ export function createAgents(
     name: `${$app.name}-${$app.stage}-Recovery`,
     description: "Dead man's switch — deep health checks and emergency rollback",
     scheduleExpression: RECOVERY_SCHEDULE_RATE,
-    state: $app.stage === 'prod' ? 'ENABLED' : 'DISABLED',
+    state: 'DISABLED',
     flexibleTimeWindow: { mode: 'OFF' },
     target: {
       arn: deadMansSwitch.arn,
