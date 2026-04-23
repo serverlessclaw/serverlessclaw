@@ -235,13 +235,18 @@ export class AgentRouter {
   ): Promise<string> {
     if (candidates.length === 0) throw new Error('No candidate agents provided');
 
-    const configs = await Promise.all(candidates.map((id) => AgentRegistry.getAgentConfig(id)));
+    const workspaceId = typeof scope === 'string' ? undefined : scope?.workspaceId;
+    const configs = await Promise.all(
+      candidates.map((id) => AgentRegistry.getAgentConfig(id, { workspaceId }))
+    );
     let enabledIds = candidates.filter((id, i) => configs[i]?.enabled === true);
 
     if (enabledIds.length === 0) {
       logger.warn(`[AgentRouter] Target agents disabled. Using backbone fallback.`);
       const fallbacks = AgentRegistry.getFallbackAgents();
-      const fbConfigs = await Promise.all(fallbacks.map((id) => AgentRegistry.getAgentConfig(id)));
+      const fbConfigs = await Promise.all(
+        fallbacks.map((id) => AgentRegistry.getAgentConfig(id, { workspaceId }))
+      );
       enabledIds = fallbacks.filter((id, i) => fbConfigs[i]?.enabled === true);
       if (enabledIds.length === 0)
         throw new Error(`Critical: All target and backbone fallback agents are disabled.`);

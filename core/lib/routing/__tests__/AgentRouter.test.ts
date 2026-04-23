@@ -255,7 +255,9 @@ describe('AgentRouter', () => {
 
       const best = await AgentRouter.selectBestAgent(['disabled-agent', 'enabled-agent']);
       expect(best).toBe('enabled-agent');
-      expect(AgentRegistry.getAgentConfig).toHaveBeenCalledWith('disabled-agent');
+      expect(AgentRegistry.getAgentConfig).toHaveBeenCalledWith('disabled-agent', {
+        workspaceId: undefined,
+      });
     });
 
     it('should throw Error if no enabled agents remain', async () => {

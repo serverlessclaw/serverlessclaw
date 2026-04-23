@@ -176,21 +176,30 @@ export class TrustManager {
     }
   }
 
-  private static async logPenalty(penalty: TrustPenalty): Promise<void> {
+  private static async logPenalty(penalty: TrustPenalty, context?: TrustContext): Promise<void> {
     const { ConfigManager } = await import('../registry/config');
-    await ConfigManager.appendToList(DYNAMO_KEYS.TRUST_PENALTY_LOG, penalty, { limit: 200 });
+    const key = context?.workspaceId
+      ? `WS#${context.workspaceId}#${DYNAMO_KEYS.TRUST_PENALTY_LOG}`
+      : DYNAMO_KEYS.TRUST_PENALTY_LOG;
+    await ConfigManager.appendToList(key, penalty, { limit: 200 });
   }
 
-  private static async logFallback(fallback: {
-    agentId: string;
-    timestamp: number;
-    attemptedDelta: number;
-    fallbackScore: number;
-    error: string;
-  }): Promise<void> {
+  private static async logFallback(
+    fallback: {
+      agentId: string;
+      timestamp: number;
+      attemptedDelta: number;
+      fallbackScore: number;
+      error: string;
+    },
+    context?: TrustContext
+  ): Promise<void> {
     const { ConfigManager } = await import('../registry/config');
+    const key = context?.workspaceId
+      ? `WS#${context.workspaceId}#${DYNAMO_KEYS.TRUST_PENALTY_LOG}`
+      : DYNAMO_KEYS.TRUST_PENALTY_LOG;
     await ConfigManager.appendToList(
-      DYNAMO_KEYS.TRUST_PENALTY_LOG,
+      key,
       {
         ...fallback,
         reason: `FALLBACK: atomic update failed - ${fallback.error}`,
@@ -201,10 +210,17 @@ export class TrustManager {
     );
   }
 
-  private static async recordHistory(agentId: string, score: number): Promise<void> {
+  private static async recordHistory(
+    agentId: string,
+    score: number,
+    context?: TrustContext
+  ): Promise<void> {
     const { ConfigManager } = await import('../registry/config');
+    const key = context?.workspaceId
+      ? `WS#${context.workspaceId}#trust:score_history#${agentId}`
+      : `trust:score_history#${agentId}`;
     await ConfigManager.appendToList(
-      `trust:score_history#${agentId}`,
+      key,
       { agentId, score, timestamp: Date.now() },
       { limit: 200 }
     );

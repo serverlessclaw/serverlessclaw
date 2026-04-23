@@ -38,6 +38,7 @@ Last Updated: 2026-04-23
 
 | Date       | Report                                     | Silos Covered          | Cross-Silo      | Key Findings                                     |
 | :--------- | :----------------------------------------- | :--------------------- | :-------------- | :----------------------------------------------- |
+| 2026-04-23 | `audit-2026-04-23-trust-loop.md`           | Scales, Spine         | D               | FIXED: Multi-tenant leaks in TrustManager, AgentRouter|
 | 2026-04-23 | `AUDIT-2026-04-23-HAND-EVOLUTION-IDENTITY.md`| Hand                 | B, C            | FIXED: Truncated Class C list, Broken evolution loop|
 | 2026-04-23 | `audit-2026-04-23-multi-tenant-integrity.md`| Brain, Scales          | A, D            | P0 Knowledge leakage, Broken trust loop isolation|
 | 2026-04-22 | `audit-2026-04-22-evolution-recovery.md`   | Shield                 | E               | Dropped tool context, IDOR on approval           |
