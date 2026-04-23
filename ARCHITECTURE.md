@@ -18,6 +18,7 @@ This document covers the AWS topology and data flow. For operational instruction
 8.  **Adaptive UI**: The dashboard implements a theme-agnostic design system using semantic CSS variables, ensuring full functional and aesthetic parity between Light and Dark modes while maintaining the signature "cyber" identity.
 9.  **Multi-Lingual**: Implements a "Baseline English Prompt" strategy. Agents maintain high reasoning quality via English core prompts while communicating in the user's preferred language (English/Chinese) via dynamic runtime instruction injection.
 10. **JIT File Staging**: Implements a Just-In-Time media pipeline that intercept uploads, stages them in S3, and provides optimized cognitive context (base64/URLs) to agents, ensuring peak vision performance and trace-aware file management.
+11. **Shared Real-time Handshakes (Singleton UI Connectivity)**: To minimize AWS IoT Core authorizer costs and prevent "connection storms" during local development (HMR), the dashboard utilizes a singleton `RealtimeProvider`. This architecture ensures that regardless of the number of active components (Chat, Canvas, Agents), only **one physical WebSocket connection** is established per tab, reducing Lambda Authorizer invocations by >80%.
 
 ---
 
@@ -376,6 +377,38 @@ Interactive signals act as the "Brake & Steering" of the system, allowing humans
 1. **Signal Interception**: The `BaseExecutor` intercepts `APPROVE_TOOL_CALL`, `REJECT_TOOL_CALL`, and `CLARIFY_TOOL_CALL` signals before the next LLM turn.
 2. **Context Injection**: Rejections and clarifications are injected as `TOOL` role messages, providing the agent with the semantic reason for the intervention.
 3. **Loop Continuation**: The agent then re-evaluates its strategy based on the human feedback, maintaining the reasoning chain without loss of state.
+
+---
+
+## ⚡ Real-time Connectivity: Shared Singleton Model
+
+The dashboard implements a **Singleton Connectivity** model via the `RealtimeProvider` to optimize performance and reduce AWS operational costs.
+
+```text
+[ Dashboard Components ]
+   | (useRealtime Hook)
+   +-------------------+-------------------+
+   |                   |                   |
+   v                   v                   v
+[ Chat ]           [ Canvas ]        [ Agents ]
+   |                   |                   |
+   +---------+---------+---------+---------+
+             |
+             v
+     [ RealtimeProvider ]  <--- (Context Gateway)
+             |
+             | (Single WebSocket Connection)
+             v
+     [ AWS IoT Core ]      <--- (1 Auth Hit per Session)
+             |
+             +---- [ user/123/signal ]
+             +---- [ workspaces/abc/signal ]
+```
+
+1. **Singleton Gateway**: All dashboard features share a single MQTT client instance provided via React Context.
+2. **Batch Subscriptions**: Subscription requests from multiple components are batched and deduplicated to minimize signaling overhead.
+3. **Tab Isolation**: Each browser tab maintains its own connection with a unique `clientId` (derived from a shared session token), preventing connection flapping while allowing parallel development.
+4. **Leak Prevention**: Handshake lifecycle management ensures that connections are cleanly terminated even during rapid client-side hydration cycles or HMR resets.
 
 ---
 

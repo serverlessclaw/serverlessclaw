@@ -161,6 +161,18 @@ Standard event types and their default priority levels are centrally defined to 
 - **Safety Enforcement**: Returns the _new_ depth value immediately; calling code rejects any operation where `newDepth > RECURSION_LIMIT`.
 - **TTL**: Normal traces use 1-hour TTL; mission-critical contexts use 30-minute TTL
 - **Error Handling**: Database failures return `-1` (sentinel) to distinguish from no-entry (`0`)
+
+---
+
+## Resilient Event Validation (Self-Healing)
+
+To prevent infinite routing loops (especially during failure handling and DLQ routing), the `EventHandler` implements a **Self-Healing Context** strategy:
+
+- **Logic**: If an incoming event is missing `sessionId` or `traceId`, the handler injects system-level defaults (`system-spine` for sessionId, and a generated trace for traceId) instead of rejecting the event.
+- **Resiliency**: This ensures that even events with degraded metadata can be bridged to the appropriate handlers or secondary queues without triggering a "Validation -> DLQ -> Validation" failure loop.
+- **Observability**: Every injection triggers a `logger.warn` signal, allowing operators to trace the source of "dirty" events without compromising system uptime.
+
+---
 - **DLQ_ROUTE Exception**: `DLQ_ROUTE` bypasses recursion increment and cannot be re-routed to DLQ again.
 
 ## Backbone Gap Management (April 2026)
