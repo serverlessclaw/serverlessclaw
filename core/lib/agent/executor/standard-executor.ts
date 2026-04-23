@@ -61,7 +61,7 @@ export class StandardExecutor extends BaseExecutor {
         if (loopResult) return { ...loopResult, usage };
       }
 
-      const postCallLimit = BudgetEnforcer.check(this.agentId, options, usage);
+      const postCallLimit = await BudgetEnforcer.checkAsync(this.agentId, options, usage);
       if (postCallLimit && !postCallLimit.isWarning) {
         return { ...postCallLimit, attachments };
       }

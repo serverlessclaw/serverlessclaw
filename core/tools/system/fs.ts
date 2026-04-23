@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import * as path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -154,10 +155,27 @@ export const runShellCommand = {
  */
 export const runTests = {
   ...schema.runTests,
-  execute: async (): Promise<string> => {
+  execute: async (args: Record<string, unknown> = {}): Promise<string> => {
     try {
-      logger.info('Running autonomous test suite...');
-      const { stdout, stderr } = await execAsync('npm test');
+      const { dir_path } = (args || {}) as { dir_path?: string };
+      const projectRoot = process.cwd();
+      const targetDir = dir_path ? path.resolve(projectRoot, dir_path) : projectRoot;
+
+      logger.info(`Running autonomous test suite in ${targetDir}...`);
+
+      // Link node_modules if missing (remediation for /tmp workspaces)
+      const targetNodeModules = path.join(targetDir, 'node_modules');
+      const rootNodeModules = path.join(projectRoot, 'node_modules');
+
+      if (!fs.existsSync(targetNodeModules) && fs.existsSync(rootNodeModules)) {
+        try {
+          fs.symlinkSync(rootNodeModules, targetNodeModules, 'dir');
+        } catch (e) {
+          logger.warn(`Failed to symlink node_modules: ${formatErrorMessage(e)}`);
+        }
+      }
+
+      const { stdout, stderr } = await execAsync('npm test', { cwd: targetDir });
       return `Test Results:\n${stdout}\n${stderr}`;
     } catch (error) {
       return `Tests FAILED:\n${formatErrorMessage(error)}`;

@@ -86,6 +86,9 @@ export const CONFIG_KEYS = {
   UI_SIDEBAR_STATE: 'ui_sidebar_state',
   UI_LAYOUT: 'ui_layout',
   GLOBAL_TOKEN_BUDGET: 'global_token_budget',
+  GLOBAL_COST_LIMIT: 'global_cost_limit',
+  SESSION_TOKEN_BUDGET: 'session_token_budget',
+  SESSION_COST_LIMIT: 'session_cost_limit',
   SIMPLE_TASK_THRESHOLD: 'simple_task_threshold',
 } as const;
 

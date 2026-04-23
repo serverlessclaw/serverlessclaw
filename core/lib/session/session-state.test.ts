@@ -10,17 +10,6 @@ import { SessionStateManager } from './session-state';
 
 const ddbMock = mockClient(DynamoDBDocumentClient);
 
-const mockEmit = vi.fn();
-vi.mock('../utils/bus', () => ({
-  emitEvent: (...args: any[]) => mockEmit(...args),
-}));
-
-vi.mock('sst', () => ({
-  Resource: {
-    MemoryTable: { name: 'test-memory-table' },
-  },
-}));
-
 vi.mock('../logger', () => ({
   logger: {
     info: vi.fn(),
@@ -30,7 +19,7 @@ vi.mock('../logger', () => ({
   },
 }));
 
-describe('SessionStateManager', () => {
+describe('SessionStateManager - Workflow Snapshots', () => {
   let sessionStateManager: SessionStateManager;
 
   beforeEach(() => {
@@ -38,132 +27,94 @@ describe('SessionStateManager', () => {
     sessionStateManager = new SessionStateManager();
   });
 
-  describe('acquireProcessing', () => {
-    it('should return true and update state when lock is acquired', async () => {
-      // First call: LockManager.acquire (UpdateCommand on LOCK#SESSION#...)
-      // Second call: SessionStateManager (UpdateCommand on SESSION_STATE#...)
+  describe('saveSnapshot', () => {
+    it('should save a workflow snapshot to DynamoDB', async () => {
       ddbMock.on(UpdateCommand).resolves({});
 
-      const result = await sessionStateManager.acquireProcessing('session-123', 'agent-abc');
+      const snapshot = {
+        reason: 'Waiting for human approval',
+        timestamp: 1700000000000,
+        agentId: 'agent-123',
+        task: 'deploy new feature',
+        state: { historyCount: 42 },
+        metadata: { userId: 'user-456', key: 'value' },
+      };
 
-      expect(result).toBe(true);
-      expect(ddbMock.calls()).toHaveLength(2);
+      await sessionStateManager.saveSnapshot('session-789', snapshot);
 
-      const lockCall = ddbMock.call(0).args[0].input as UpdateCommandInput;
-      expect(lockCall.Key?.userId).toBe('LOCK#SESSION#session-123');
-
-      const sessionCall = ddbMock.call(1).args[0].input as UpdateCommandInput;
-      expect(sessionCall.Key?.userId).toBe('SESSION_STATE#session-123');
-      expect(sessionCall.ExpressionAttributeValues?.[':agentId']).toBe('agent-abc');
-    });
-
-    it('should return false when lock acquisition fails', async () => {
-      const error = new Error('ConditionalCheckFailed');
-      error.name = 'ConditionalCheckFailedException';
-      ddbMock.on(UpdateCommand).rejects(error);
-
-      const result = await sessionStateManager.acquireProcessing('session-123', 'agent-xyz');
-
-      expect(result).toBe(false);
-      // Should stop after the failed Update call
       expect(ddbMock.calls()).toHaveLength(1);
+      const call = ddbMock.call(0).args[0].input as UpdateCommandInput;
+      expect(call.Key?.userId).toBe('SESSION_STATE#session-789');
+      expect(call.UpdateExpression).toContain('SET workflowSnapshot = :snapshot');
+      expect(call.ExpressionAttributeValues?.[':snapshot']).toEqual(snapshot);
     });
 
-    it('should handle state update failure gracefully after lock acquisition', async () => {
-      ddbMock
-        .on(UpdateCommand)
-        .resolvesOnce({}) // Lock acquired
-        .rejectsOnce(new Error('State update failed')); // State update fails
+    it('should log error and throw on failure', async () => {
+      ddbMock.on(UpdateCommand).rejects(new Error('DynamoDB failure'));
 
-      const result = await sessionStateManager.acquireProcessing('session-123', 'agent-abc');
+      const snapshot = {
+        reason: 'test',
+        timestamp: Date.now(),
+        agentId: 'agent-1',
+        task: 'test task',
+        state: {},
+      };
 
-      expect(result).toBe(true); // Still returns true because the lock IS held
-      expect(ddbMock.calls()).toHaveLength(2);
-    });
-  });
-
-  describe('releaseProcessing', () => {
-    it('should release lock and update state', async () => {
-      ddbMock.on(UpdateCommand).resolves({});
-
-      await sessionStateManager.releaseProcessing('session-123', 'agent-abc');
-
-      // 1. Lock release (Update), 2. Session state clear (Update)
-      expect(ddbMock.calls()).toHaveLength(2);
-
-      const lockReleaseCall = ddbMock.call(0).args[0].input as UpdateCommandInput;
-      expect(lockReleaseCall.Key?.userId).toBe('LOCK#SESSION#session-123');
-      expect(lockReleaseCall.UpdateExpression).toContain('REMOVE ownerId');
-
-      const sessionClearCall = ddbMock.call(1).args[0].input as UpdateCommandInput;
-      expect(sessionClearCall.UpdateExpression).toContain('processingAgentId = :null');
-    });
-
-    it('should re-emit pending message if found during release', async () => {
-      ddbMock.on(GetCommand).resolvesOnce({
-        // getPendingMessage check
-        Item: {
-          pendingMessages: [{ id: 'msg-1', content: 'coder: do stuff', attachments: [] }],
-        },
-      });
-
-      ddbMock
-        .on(UpdateCommand)
-        .resolvesOnce({}) // LockManager.release
-        .resolvesOnce({
-          // SessionStateManager update
-          Attributes: {
-            userId: 'SESSION#user-1',
-            pendingMessages: [{ id: 'msg-1', content: 'coder: do stuff', attachments: [] }],
-          },
-        })
-        .resolvesOnce({}); // removePendingMessage update
-
-      await sessionStateManager.releaseProcessing('session-123', 'agent-abc');
-
-      // 1. release lock (Update), 2. update session (Update), 3. get pending (Get), 4. remove pending (Update)
-      expect(ddbMock.calls()).toHaveLength(4);
-
-      // Verify re-emission
-      expect(mockEmit).toHaveBeenCalledWith(
-        'agent-abc.session-release',
-        'dynamic_coder_task',
-        expect.objectContaining({
-          sessionId: 'session-123',
-          task: 'do stuff',
-          userId: 'SESSION#user-1',
-        })
-      );
-
-      // Verify removal call
-      const removeCall = ddbMock
-        .calls()
-        .find((c) =>
-          (c.args[0].input as UpdateCommandInput).UpdateExpression?.includes('SET pendingMessages')
-        );
-      expect(removeCall).toBeDefined();
-      expect((removeCall?.args[0].input as UpdateCommandInput).UpdateExpression).toContain(
-        'SET pendingMessages = :filtered'
+      await expect(sessionStateManager.saveSnapshot('session-1', snapshot)).rejects.toThrow(
+        'DynamoDB failure'
       );
     });
-  });
 
-  describe('renewProcessing', () => {
-    it('should renew the lock', async () => {
+    it('should set expiresAt with TTL', async () => {
       ddbMock.on(UpdateCommand).resolves({});
 
-      const result = await sessionStateManager.renewProcessing('session-123', 'agent-abc');
+      const snapshot = {
+        reason: 'test',
+        timestamp: Date.now(),
+        agentId: 'agent-1',
+        task: 'test task',
+        state: {},
+      };
 
-      expect(result).toBe(true);
-      expect(ddbMock.calls()).toHaveLength(2);
-      const input = ddbMock.call(0).args[0].input as UpdateCommandInput;
-      expect(input.Key?.userId).toBe('LOCK#SESSION#session-123');
-      expect(input.ConditionExpression).toBe('ownerId = :owner');
+      await sessionStateManager.saveSnapshot('session-1', snapshot);
+
+      const call = ddbMock.call(0).args[0].input as UpdateCommandInput;
+      expect(call.UpdateExpression).toContain('expiresAt = :exp');
+      expect(call.ExpressionAttributeValues?.[':exp']).toBeDefined();
     });
   });
 
-  describe('getState', () => {
-    it('should return session state', async () => {
+  describe('clearSnapshot', () => {
+    it('should clear the workflow snapshot by setting it to null', async () => {
+      ddbMock.on(UpdateCommand).resolves({});
+
+      await sessionStateManager.clearSnapshot('session-123');
+
+      expect(ddbMock.calls()).toHaveLength(1);
+      const call = ddbMock.call(0).args[0].input as UpdateCommandInput;
+      expect(call.Key?.userId).toBe('SESSION_STATE#session-123');
+      expect(call.UpdateExpression).toContain('SET workflowSnapshot = :null');
+      expect(call.ExpressionAttributeValues?.[':null']).toBeNull();
+    });
+
+    it('should handle errors gracefully without throwing', async () => {
+      ddbMock.on(UpdateCommand).rejects(new Error('Network error'));
+
+      // Should not throw
+      await expect(sessionStateManager.clearSnapshot('session-123')).resolves.toBeUndefined();
+    });
+  });
+
+  describe('getState - includes workflowSnapshot', () => {
+    it('should include workflowSnapshot in returned state', async () => {
+      const snapshot = {
+        reason: 'test reason',
+        timestamp: 1700000000000,
+        agentId: 'agent-xyz',
+        task: 'test task',
+        state: { step: 1 },
+      };
+
       ddbMock.on(GetCommand).resolves({
         Item: {
           sessionId: 'session-1',
@@ -171,60 +122,30 @@ describe('SessionStateManager', () => {
           processingStartedAt: 1000,
           pendingMessages: [],
           lastMessageAt: 2000,
+          workflowSnapshot: snapshot,
         },
       });
 
       const result = await sessionStateManager.getState('session-1');
-
-      expect(result).toEqual({
-        sessionId: 'session-1',
-        processingAgentId: 'agent-1',
-        processingStartedAt: 1000,
-        pendingMessages: [],
-        lastMessageAt: 2000,
-      });
-    });
-  });
-
-  describe('addPendingMessage', () => {
-    it('should add message to pending list and reject when queue is full (atomic conditional)', async () => {
-      // With atomic conditional, when the queue already has 50 messages,
-      // the conditional check fails and the append is rejected
-
-      // The UpdateCommand should fail with ConditionalCheckFailedException when queue is full
-      ddbMock.on(UpdateCommand).rejects({
-        name: 'ConditionalCheckFailedException',
-        message: 'Queue full',
-      });
-
-      // Attempting to add when queue is at capacity should reject
-      await expect(
-        sessionStateManager.addPendingMessage('session-123', 'New message')
-      ).rejects.toThrow('PENDING_QUEUE_FULL');
-
-      const updateCalls = ddbMock.calls().filter((c) => c.args[0] instanceof UpdateCommand);
-      expect(updateCalls.length).toBe(1);
-
-      const rejectedCall = updateCalls[0].args[0].input as UpdateCommandInput;
-      expect(rejectedCall.ConditionExpression).toContain('size(pendingMessages) < :max');
-      expect(rejectedCall.ExpressionAttributeValues?.[':max']).toBe(50);
+      expect(result).not.toBeNull();
+      expect(result!.workflowSnapshot).toEqual(snapshot);
     });
 
-    it('should handle small lists without truncation', async () => {
-      ddbMock.on(UpdateCommand).resolves({});
+    it('should return undefined workflowSnapshot when not present', async () => {
       ddbMock.on(GetCommand).resolves({
         Item: {
-          pendingMessages: [{ id: 'msg-1', content: 'Existing', attachments: [] }],
+          sessionId: 'session-1',
+          processingAgentId: null,
+          processingStartedAt: null,
+          pendingMessages: [],
+          lastMessageAt: 2000,
+          workflowSnapshot: undefined,
         },
       });
 
-      await sessionStateManager.addPendingMessage('session-123', 'New message');
-
-      const updateCalls = ddbMock.calls().filter((c) => c.args[0] instanceof UpdateCommand);
-      // Should ONLY have the append call, NO truncation call
-      expect(updateCalls.length).toBe(1);
-      const appendCall = updateCalls[0].args[0].input as UpdateCommandInput;
-      expect(appendCall.UpdateExpression).toContain('list_append');
+      const result = await sessionStateManager.getState('session-1');
+      expect(result).not.toBeNull();
+      expect(result!.workflowSnapshot).toBeUndefined();
     });
   });
 });

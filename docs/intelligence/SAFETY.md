@@ -8,14 +8,14 @@ This document defines the safety boundaries and policy enforcement mechanisms th
 
 The system employs a multi-layered safety architecture:
 
-| Guardrail              | Where Implemented           | Trigger                                                        |
-| :--------------------- | :-------------------------- | :------------------------------------------------------------- |
-| **Resource Labeling**  | `core/tools`                | Any write to a protected file (e.g., `.git`, `sst.config.ts`). |
-| **Safety Engine**      | `core/lib/safety-engine.ts` | Multi-dimensional policy enforcement (Tiers, Rates, Time).     |
-| **Budget Enforcer**    | `core/lib/agent/executor`   | Token and cost limits exceeded (80% warning / 100% stop).      |
-| **Recursion Guard**    | `core/handlers/events.ts`   | Prevents infinite loops (Depth > 15).                          |
-| **Human-in-the-Loop**  | `AgentExecutor`             | Pauses execution for sensitive tools (e.g., `deleteDatabase`). |
-| **Context Compaction** | `core/lib/context.ts`       | Prevents context overflow during long autonomous missions.     |
+| Guardrail              | Where Implemented           | Trigger                                                                                                                                             |
+| :--------------------- | :-------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Resource Labeling**  | `core/tools`                | Any write to a protected file (e.g., `.git`, `sst.config.ts`).                                                                                      |
+| **Safety Engine**      | `core/lib/safety-engine.ts` | Multi-dimensional policy enforcement (Tiers, Rates, Time).                                                                                          |
+| **Budget Enforcer**    | `core/lib/agent/executor`   | Token and cost limits exceeded (80% warning / 100% stop). Supports session-level budgets across multi-turn conversations via `TokenBudgetEnforcer`. |
+| **Recursion Guard**    | `core/handlers/events.ts`   | Prevents infinite loops (Depth > 15).                                                                                                               |
+| **Human-in-the-Loop**  | `AgentExecutor`             | Pauses execution for sensitive tools (e.g., `deleteDatabase`).                                                                                      |
+| **Context Compaction** | `core/lib/context.ts`       | Prevents context overflow during long autonomous missions.                                                                                          |
 
 ---
 

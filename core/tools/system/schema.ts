@@ -37,10 +37,15 @@ export const systemSchema: Record<string, IToolDefinition> = {
     requiresApproval: false,
     requiredPermissions: [],
     name: 'runTests',
-    description: 'Runs the project unit tests to verify changes.',
+    description: 'Runs the project unit tests in the current or specified directory.',
     parameters: {
       type: 'object',
-      properties: {},
+      properties: {
+        dir_path: {
+          type: 'string',
+          description: 'Optional path to the directory to run tests in. Defaults to project root.',
+        },
+      },
       required: [],
       additionalProperties: false,
     },
@@ -147,10 +152,15 @@ export const systemSchema: Record<string, IToolDefinition> = {
     requiresApproval: false,
     requiredPermissions: [],
     name: 'validateCode',
-    description: 'Runs type checking and linting.',
+    description: 'Runs type checking and linting in the current or specified directory.',
     parameters: {
       type: 'object',
-      properties: {},
+      properties: {
+        dir_path: {
+          type: 'string',
+          description: 'Optional path to the directory to validate. Defaults to project root.',
+        },
+      },
       required: [],
       additionalProperties: false,
     },
@@ -522,6 +532,50 @@ export const systemSchema: Record<string, IToolDefinition> = {
             'Optional specific agent ID to scan for tool bloat. If not provided, performs a global system scan.',
         },
       },
+      additionalProperties: false,
+    },
+  },
+  pauseWorkflow: {
+    type: ToolType.FUNCTION,
+    argSchema: z.any(),
+    connectionProfile: [],
+    connector_id: '',
+    auth: { type: 'api_key', resource_id: '' },
+    requiresApproval: false,
+    requiredPermissions: [],
+    name: 'pauseWorkflow',
+    description:
+      'Suspends the current agent workflow and saves its state to DynamoDB for later resumption. Useful for long-running tasks or tasks requiring human approval.',
+    parameters: {
+      type: 'object',
+      properties: {
+        reason: {
+          type: 'string',
+          description:
+            'The reason for pausing the workflow (e.g., "Waiting for human approval", "Long-running deployment").',
+        },
+        metadata: { type: 'object', description: 'Optional metadata to store with the snapshot.' },
+      },
+      required: ['reason'],
+      additionalProperties: false,
+    },
+  },
+  resumeWorkflow: {
+    type: ToolType.FUNCTION,
+    argSchema: z.any(),
+    connectionProfile: [],
+    connector_id: '',
+    auth: { type: 'api_key', resource_id: '' },
+    requiresApproval: true,
+    requiredPermissions: ['admin'],
+    name: 'resumeWorkflow',
+    description: 'Resumes a previously paused workflow from its saved state.',
+    parameters: {
+      type: 'object',
+      properties: {
+        sessionId: { type: 'string', description: 'The unique ID of the session to resume.' },
+      },
+      required: ['sessionId'],
       additionalProperties: false,
     },
   },

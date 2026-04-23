@@ -22,6 +22,8 @@ describe('System Domain Tool Schemas', () => {
     'listSystemConfigs',
     'proposeAutonomyUpdate',
     'scanMetabolism',
+    'pauseWorkflow',
+    'resumeWorkflow',
   ];
 
   it('should export all expected tool definitions', () => {
@@ -65,6 +67,8 @@ describe('System Domain Tool Schemas', () => {
       validateCode: [],
       switchModel: ['provider', 'model'],
       checkReputation: ['agentId'],
+      pauseWorkflow: ['reason'],
+      resumeWorkflow: ['sessionId'],
     };
 
     for (const [name, expected] of Object.entries(requiredByTool)) {

@@ -42,6 +42,38 @@ This document outlines the system-wide configuration keys available in the `Conf
   - **Increasing**: Allows more autonomous cycles, potentially fixing complex multi-step gaps faster. However, it increases AWS costs and risks deploying unstable code.
   - **Decreasing**: Enhances safety and reduces cost. May stall evolution if multiple attempts are needed to solve a task.
 
+### `global_token_budget`
+
+- **Default**: 0 (unlimited)
+- **Purpose**: Global token budget across all sessions. If set to a positive value, the system tracks total token consumption across the entire system and blocks new sessions when the budget is exhausted. Serves as a hard cap for total LLM spend.
+- **Implications**:
+  - **Setting > 0**: Enforces a hard ceiling on total token usage system-wide. Useful for cost control in high-traffic deployments. When the budget is exceeded, new agent sessions are rejected until the budget resets (daily via retention_config) or is manually increased.
+  - **0 (default)**: No global limit; session-level budgets only.
+
+### `global_cost_limit`
+
+- **Default**: 0 (unlimited)
+- **Purpose**: Global monetary cost limit across all sessions in USD. If set, any further LLM calls are blocked once the cumulative cost exceeds this threshold.
+- **Implications**:
+  - **Positive value**: Provides a dollar-based safety valve. Monitored via DynamoDB atomic counters; resistant to race conditions.
+  - **0 (default)**: Cost is not globally capped; only session-level limits apply.
+
+### `session_token_budget`
+
+- **Default**: 0 (unlimited per session)
+- **Purpose**: Maximum number of tokens a single agent session can consume before being forcibly terminated. If exceeded, the session is paused/ended with a `[SESSION_BUDGET_EXCEEDED]` message. granular per-session cost control.
+- **Implications**:
+  - **Positive value**: Guarantees that a single long-running or looping task cannot consume unlimited tokens. Budget is enforced via `TokenBudgetEnforcer` with DynamoDB persistence for accurate multi-turn accounting.
+  - **0 (default)**: Sessions have no token limit unless explicitly overridden via `Agent.start(options)`.
+
+### `session_cost_limit`
+
+- **Default**: 0 (unlimited per session)
+- **Purpose**: Maximum monetary cost (in USD) a single session can accrue before termination. Works in tandem with `session_token_budget`; whichever limit is hit first stops execution.
+- **Implications**:
+  - **Positive value**: Bounds per-session spend. Useful to prevent runaway costs from recursive self-improvement loops.
+  - **0 (default)**: No per-session cost cap.
+
 ### `circuit_breaker_threshold`
 
 - **Default**: 5 (failures in sliding window)

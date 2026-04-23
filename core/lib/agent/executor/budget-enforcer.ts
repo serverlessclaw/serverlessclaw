@@ -1,6 +1,7 @@
 import { logger } from '../../logger';
 import { ExecutorOptions, ExecutorUsage, LoopResult } from '../executor-types';
 import { estimateCost as calcCost } from '../../providers/pricing';
+import { getTokenBudgetEnforcer } from '../../metrics/token-budget-enforcer';
 
 /**
  * Enforces token and cost budgets during agent execution.
@@ -19,8 +20,24 @@ export class BudgetEnforcer {
     options: ExecutorOptions,
     currentUsage?: ExecutorUsage
   ): LoopResult | null {
-    const { tokenBudget, costLimit, activeProvider, activeModel } = options;
+    const { tokenBudget, costLimit, activeProvider, activeModel, sessionId } = options;
 
+    // 1. Session-level budget check (TokenBudgetEnforcer)
+    if (sessionId && currentUsage) {
+      const enforcer = getTokenBudgetEnforcer();
+      // Record usage so far to check session-wide limits (persists to DynamoDB internally)
+      enforcer.recordUsage(
+        sessionId,
+        currentUsage.totalInputTokens,
+        currentUsage.totalOutputTokens,
+        agentId
+      );
+
+      // Note: We deliberately do not await here to keep check() synchronous.
+      // Async enforcement with await is performed by checkAsync().
+    }
+
+    // 2. Task-level budget check (local limits)
     if (!tokenBudget && !costLimit) {
       return null;
     }
@@ -80,6 +97,38 @@ export class BudgetEnforcer {
     }
 
     return null;
+  }
+
+  /**
+   * Performs an asynchronous check of the session budget.
+   * Separated from the synchronous check() for easier use in async loops.
+   */
+  public static async checkAsync(
+    agentId: string,
+    options: ExecutorOptions,
+    currentUsage?: ExecutorUsage
+  ): Promise<LoopResult | null> {
+    const { sessionId } = options;
+
+    if (sessionId && currentUsage) {
+      const enforcer = getTokenBudgetEnforcer();
+      const sessionResult = await enforcer.recordUsage(
+        sessionId,
+        currentUsage.totalInputTokens,
+        currentUsage.totalOutputTokens,
+        agentId
+      );
+
+      if (!sessionResult.allowed) {
+        return {
+          responseText: `[SESSION_BUDGET_EXCEEDED] ${sessionResult.reason}. Stopping execution.`,
+          paused: false,
+          usage: currentUsage,
+        };
+      }
+    }
+
+    return this.check(agentId, options, currentUsage);
   }
 
   /**

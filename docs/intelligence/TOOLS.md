@@ -61,6 +61,10 @@
 | `uiAction`                | Triggers a specific UI event or state change (modal, sidebar, etc.)                             |     —      |        —         |
 | `renderCodeDiff`          | Renders a code diff/patch component for code review and interaction                             |     —      |        —         |
 | `renderPlanEditor`        | Renders an interactive JSON editor for strategic plan review and modification                   |     —      |        —         |
+| `pauseWorkflow`           | Suspends current agent workflow, saves state to DynamoDB for later resumption                   |     —      |        ✅        |
+| `resumeWorkflow`          | Resumes a previously paused workflow from its saved state                                       |     ✅     |        ✅        |
+| `runTests`                | Runs the project unit tests in the current or specified directory                               |     —      |        —         |
+| `validateCode`            | Runs type checking and linting in the current or specified directory                            |     —      |        —         |
 
 ---
 

@@ -152,6 +152,17 @@ export class Agent {
         activeProfile: resolvedProfile,
       } = await resolveAgentConfig(this.config, profile);
 
+      // Fetch global budgets if not explicitly provided in options
+      const { ConfigManager } = await import('./registry/config');
+      const { CONFIG_KEYS } = await import('./constants');
+
+      const sessionTokenBudget =
+        options.tokenBudget ??
+        (await ConfigManager.getTypedConfig<number>(CONFIG_KEYS.SESSION_TOKEN_BUDGET, 0));
+      const sessionCostLimit =
+        options.costLimit ??
+        (await ConfigManager.getTypedConfig<number>(CONFIG_KEYS.SESSION_COST_LIMIT, 0));
+
       const { AgentAssembler } = await import('./agent/assembler');
       const {
         contextPrompt,
@@ -223,6 +234,8 @@ export class Agent {
         approvedToolCalls: options.approvedToolCalls,
         currentInitiator,
         depth: options.depth ?? 0,
+        tokenBudget: sessionTokenBudget || undefined,
+        costLimit: sessionCostLimit || undefined,
       });
 
       loopUsage.totalInputTokens += result.usage?.totalInputTokens ?? 0;
@@ -384,6 +397,17 @@ export class Agent {
         activeProfile: resolvedProfile,
       } = await resolveAgentConfig(this.config, profile);
 
+      // Fetch global budgets if not explicitly provided in options
+      const { ConfigManager } = await import('./registry/config');
+      const { CONFIG_KEYS } = await import('./constants');
+
+      const sessionTokenBudget =
+        options.tokenBudget ??
+        (await ConfigManager.getTypedConfig<number>(CONFIG_KEYS.SESSION_TOKEN_BUDGET, 0));
+      const sessionCostLimit =
+        options.costLimit ??
+        (await ConfigManager.getTypedConfig<number>(CONFIG_KEYS.SESSION_COST_LIMIT, 0));
+
       const { AgentAssembler } = await import('./agent/assembler');
       const {
         contextPrompt,
@@ -448,6 +472,8 @@ export class Agent {
             : initialResponseFormat,
         currentInitiator,
         depth: options.depth ?? 0,
+        tokenBudget: sessionTokenBudget || undefined,
+        costLimit: sessionCostLimit || undefined,
       });
 
       for await (const chunk of stream) {

@@ -257,11 +257,11 @@ The system architecture follows a **Distributed Spine** model where all critical
           |-- (4) Dynamic Selection (AgentRouter.selectBestAgent)
           |-- (5) Selection Integrity (Verify agent.enabled === true)
           v
-  [ Agent Execution (Silo 2: The Hand) ]
-          |-- (6) Unified Config (ConfigManager: 60s Cached Dynamic Lookups)
-          |-- (7) Security Enforcement (ToolSecurityValidator: Safety/RBAC/Breaker)
-          |-- (8) Budget Enforcement (BudgetEnforcer: Tokens/Cost/Thresholds)
-          |-- (9) Isolated Workspace (/tmp/claw-workspaces/<traceId>)
+   [ Agent Execution (Silo 2: The Hand) ]
+           |-- (6) Unified Config (ConfigManager: 60s Cached Dynamic Lookups)
+           |-- (7) Security Enforcement (ToolSecurityValidator: Safety/RBAC/Breaker)
+           |-- (8) Budget Enforcement (BudgetEnforcer + TokenBudgetEnforcer: Session + Task-level Tokens/Cost)
+           |-- (9) Isolated Workspace (/tmp/claw-workspaces/<traceId>)
           v
   [ Outcome (Success/Failure) ]
           |
@@ -303,7 +303,7 @@ To maintain a **Stateless Core** (Principle 1) while ensuring systemic safety, t
 1.  **Distributed Flow Control**: The `FlowController` centralizes backbone circuit breakers and rate limiters using DynamoDB atomic counters. It enforces a **Fail-Closed** strategy (Principle 13): if the system cannot verify safety state due to database failure, the operation is rejected to preserve system integrity.
 2.  **Surgical Security Enforcement**: The `ToolSecurityValidator` decouples security logic from tool execution. It enforces the "Shield" (SafetyEngine) rules, RBAC permissions, and system-level circuit breakers before any tool interaction occurs.
 3.  **Strict Payload Validation**: The `EventHandler` enforces mandatory presence of `traceId` and `sessionId` at the entry point, preventing malformed signals from polluting the backbone.
-4.  **Budget Guardrails**: Operationalized via the centralized `BudgetEnforcer`. It provides real-time monitoring of token consumption and monetary costs during agent loops. It triggers soft warnings at 80% usage and hard stops when limits are exceeded. The system implements **Trace Isolation** (session-aware fallbacks) to prevent global budget poisoning.
+4.  **Budget Guardrails**: Operationalized via the centralized `BudgetEnforcer` together with `TokenBudgetEnforcer`. Provides two-tier enforcement: (1) **Session-level** budgets tracked across multi-turn conversations via DynamoDB-persisted counters (prevents budget poisoning), and (2) **Task-level** token/cost thresholds checked each loop iteration. Soft warnings at 80% usage, hard stops when limits are exceeded. Configured via `CONFIG_KEYS` (`SESSION_TOKEN_BUDGET`, `SESSION_COST_LIMIT`, `GLOBAL_TOKEN_BUDGET`, `GLOBAL_COST_LIMIT`).
 5.  **Selection Integrity**: The `AgentMultiplexer` acts as the authoritative gateway. It performs a mandatory configuration check for every agent before invocation, ensuring that `enabled: false` status is strictly enforced regardless of the event source.
 6.  **Dynamic Routing**: The `AgentRouter` uses historical success rates and reputation scores to dynamically select the best agent for a given task, prioritizing capability match over marginal token cost differences (Principle 10).
 7.  **Monotonic Recursion Tracking**: Cross-session recursion depth is managed via atomic increments in the `recursion-tracker`, preventing loop-bypass attacks in concurrent swarm scenarios.
@@ -330,14 +330,17 @@ To ensure "small" sessions are never blocked by unrelated runaway background tas
         v
 [ SystemGuard ]
         |
-        +----(2) Fetch Buckets from MemoryTable (RECURSION_STACK#<traceId>)
+        +----(2) Fetch Trace Budget from MemoryTable (RECURSION_STACK#<traceId>)
         |
-        +----(3) [ consumed >= 1.0M ? ] --- [YES] ---> [ HALT: BUDGET_EXCEEDED ]
+        +----(3) [ trace consumed >= 1.0M ? ] --- [YES] ---> [ HALT: BUDGET_EXCEEDED ]
         |                                   [NO ] ---> [ CONTINUE ]
+        |
+        +----(4) Check Session Budget via TokenBudgetEnforcer ---[EXCEEDED]---> [ HALT: SESSION_BUDGET_EXCEEDED ]
+        |
         v
 [ Provider Execution ]
         |
-        +----(4) Update Buckets Atomically (+ prompt_tokens + completion_tokens)
+        +----(5) Update Trace Buckets Atomically (+ prompt_tokens + completion_tokens)
         |
         v
 [ Dashboard ] (Refresh and continue turn)

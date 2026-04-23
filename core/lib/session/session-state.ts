@@ -27,6 +27,14 @@ export interface SessionState {
   processingStartedAt: number | null;
   pendingMessages: PendingMessage[];
   lastMessageAt: number;
+  workflowSnapshot?: {
+    reason: string;
+    timestamp: number;
+    agentId: string;
+    task: string;
+    state: any;
+    metadata?: any;
+  } | null;
 }
 
 export class SessionStateManager {
@@ -493,6 +501,55 @@ export class SessionStateManager {
   }
 
   /**
+   * Saves a workflow snapshot for later resumption.
+   */
+  async saveSnapshot(
+    sessionId: string,
+    snapshot: NonNullable<SessionState['workflowSnapshot']>
+  ): Promise<void> {
+    const key = this.getKey(sessionId);
+    try {
+      await this.docClient.send(
+        new UpdateCommand({
+          TableName: this.tableName,
+          Key: { userId: key, timestamp: 0 },
+          UpdateExpression: 'SET workflowSnapshot = :snapshot, expiresAt = :exp',
+          ExpressionAttributeValues: {
+            ':snapshot': snapshot,
+            ':exp': this.getSessionExpiresAt(),
+          },
+        })
+      );
+      logger.info(`Session ${sessionId}: Workflow snapshot saved. Reason: ${snapshot.reason}`);
+    } catch (error) {
+      logger.error(`Session ${sessionId}: Failed to save workflow snapshot:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clears a workflow snapshot.
+   */
+  async clearSnapshot(sessionId: string): Promise<void> {
+    const key = this.getKey(sessionId);
+    try {
+      await this.docClient.send(
+        new UpdateCommand({
+          TableName: this.tableName,
+          Key: { userId: key, timestamp: 0 },
+          UpdateExpression: 'SET workflowSnapshot = :null',
+          ExpressionAttributeValues: {
+            ':null': null,
+          },
+        })
+      );
+      logger.info(`Session ${sessionId}: Workflow snapshot cleared.`);
+    } catch (error) {
+      logger.error(`Session ${sessionId}: Failed to clear workflow snapshot:`, error);
+    }
+  }
+
+  /**
    * Gets the current session state.
    */
   async getState(sessionId: string): Promise<SessionState | null> {
@@ -520,6 +577,7 @@ export class SessionStateManager {
         processingStartedAt: result.Item.processingStartedAt,
         pendingMessages: (result.Item.pendingMessages as PendingMessage[]) ?? [],
         lastMessageAt: result.Item.lastMessageAt,
+        workflowSnapshot: result.Item.workflowSnapshot,
       };
     } catch (error) {
       logger.error(`Session ${sessionId}: Failed to get session state:`, error);

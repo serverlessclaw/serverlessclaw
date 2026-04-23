@@ -188,6 +188,13 @@ export class StreamingExecutor extends BaseExecutor {
 
         if (chunk.usage) {
           this.updateUsage(usage, { usage: chunk.usage }, options.activeProvider, options);
+
+          const { BudgetEnforcer } = await import('./budget-enforcer');
+          const budgetResult = await BudgetEnforcer.checkAsync(this.agentId, options, usage);
+          if (budgetResult && !budgetResult.isWarning) {
+            yield { content: budgetResult.responseText, usage } as unknown as MessageChunk;
+            return;
+          }
         }
 
         if (chunk.content || chunk.thought || chunk.tool_calls || chunk.usage) {
