@@ -166,7 +166,7 @@ test-e2e-deployed: ## Run E2E tests against deployed URL. Usage: make test-e2e-d
 	@$(call log_step,Running E2E tests against deployed URL...)
 	@if [ "$(URL)" = "" ]; then $(call log_error,URL is required); exit 1; fi
 	@$(call load_env); \
-	CI=true PLAYWRIGHT=true BASE_URL=$(URL) $(PNPM) exec playwright test
+	CI=true PLAYWRIGHT=true BASE_URL=$(URL) $(SST) shell --stage $(ENV) -- $(PNPM) exec playwright test
 
 test-affected: ## Run only tests in affected packages (via Turbo)
 	@$(call log_step,Running affected tests via Turbo...)

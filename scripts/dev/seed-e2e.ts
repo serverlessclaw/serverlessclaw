@@ -31,6 +31,25 @@ async function seed() {
   const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
 
   try {
+    // 0. Seed User Identity
+    console.log('👤 Seeding E2E User...');
+    const e2eUserId = 'dashboard-user';
+    await docClient.send(
+      new PutCommand({
+        TableName: memoryTable,
+        Item: {
+          userId: `${MEMORY_KEYS.WORKSPACE_PREFIX}USER#${e2eUserId}`,
+          timestamp: 0,
+          type: 'USER_IDENTITY',
+          role: 'ADMIN',
+          workspaceIds: ['default'],
+          authProvider: 'dashboard',
+          createdAt: now,
+          lastActiveAt: now,
+        },
+      })
+    );
+
     // 1. Seed Traces for 'Collaboration Test Trace'
     console.log('📝 Seeding Traces...');
     const traceId = 'trace_collaboration_test';
