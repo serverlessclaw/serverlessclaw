@@ -122,20 +122,23 @@ Silo 7 is the primary enforcement mechanism for Principle 10. By treating techni
 [ UI Blocks / Toast ] <--- (Findings: Pruned 5 tools, Culled 2 gaps)
 ```
 
-----------------------------------------------------------------------
+---
+
 [ Real-time Failure ] --- Trigger --- [ Dashboard/Agent ] (Immediate)
-        |
-        v
+|
+v
 [ DashboardFailureHandler ]
-    |
-    v
+|
+v
 [ MetabolismService ] : remediateDashboardFailure()
-    |
-    |-- (Fixable?) ----> [ Autonomous Repair ]
-    '-- (Complex?) ----> [ EvolutionScheduler ] (HITL)
+|
+|-- (Fixable?) ----> [ Autonomous Repair ]
+'-- (Complex?) ----> [ EvolutionScheduler ] (HITL)
+
 ```
 
 ## Operational Safeguards
 
 - **Multi-Tenant Isolation**: All repairs utilize `workspaceId` to ensure the metabolism of one tenant never leaks into or deletes another's memory.
 - **Atomic State Integrity**: Registry pruning and memory culling use **Field-Level Atomic Filtering** via `ConfigManager.atomicRemoveFromMapList`. This ensures that maintenance tasks never overwrite active agent configurations, even in highly concurrent swarm environments.
+```

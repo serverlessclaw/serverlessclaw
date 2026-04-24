@@ -154,6 +154,7 @@ The **Simulation Sandbox** (`/playground`) provides a high-fidelity isolated env
 ### 1. Swarm Simulation Mode
 
 In the playground, you can select multiple agents to form a **Swarm Team**. This mode enables:
+
 - **Multi-Agent Isolation**: All participating agents run with `isIsolated: true`, preventing them from writing to persistent memory or affecting reputation scores.
 - **Dynamic Persona Tuning**: You can override the `systemPrompt` for each agent individually within the session.
 - **Trace Visualization**: Real-time inspection of the coordination chain, showing how agents hand off tasks or share context.

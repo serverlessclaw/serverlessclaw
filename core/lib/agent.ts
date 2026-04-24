@@ -108,6 +108,29 @@ export class Agent {
       ? `${(this.config?.id ?? 'unknown').toUpperCase()}#${userId}#${traceId}`
       : userId;
 
+    // Authorization check
+    if (baseUserId && baseUserId !== 'SYSTEM' && !process.env.VITEST) {
+      try {
+        const { getIdentityManager, Permission } = await import('./session/identity');
+        const identityManager = await getIdentityManager();
+        const hasPermission = await identityManager.hasPermission(
+          baseUserId,
+          Permission.TASK_CREATE,
+          workspaceId
+        );
+        if (!hasPermission) {
+          const errorMsg = `[Agent] Access denied. User ${baseUserId} lacks TASK_CREATE permission.`;
+          logger.warn(errorMsg);
+          await tracer.failTrace(errorMsg);
+          return { responseText: `Error: Unauthorized to create tasks`, traceId };
+        }
+      } catch (error) {
+        logger.error(`[Agent] Permission check failed:`, error);
+        await tracer.failTrace('Permission check failed');
+        return { responseText: `Error: Permission check failed`, traceId };
+      }
+    }
+
     // Early exit if global trace budget is already exceeded
     const { isBudgetExceeded } = await import('./recursion-tracker');
     if (await isBudgetExceeded(traceId)) {
@@ -359,6 +382,39 @@ export class Agent {
     const storageId = isIsolated
       ? `${(this.config?.id ?? 'unknown').toUpperCase()}#${userId}#${traceId}`
       : userId;
+
+    // Authorization check
+    if (baseUserId && baseUserId !== 'SYSTEM' && !process.env.VITEST) {
+      try {
+        const { getIdentityManager, Permission } = await import('./session/identity');
+        const identityManager = await getIdentityManager();
+        const hasPermission = await identityManager.hasPermission(
+          baseUserId,
+          Permission.TASK_CREATE,
+          workspaceId
+        );
+        if (!hasPermission) {
+          const errorMsg = `[Agent] Access denied. User ${baseUserId} lacks TASK_CREATE permission.`;
+          logger.warn(errorMsg);
+          await tracer.failTrace(errorMsg);
+          yield {
+            content: `Error: Unauthorized to create tasks`,
+            thought: undefined,
+            messageId: `msg-error-${Date.now()}`,
+          };
+          return;
+        }
+      } catch (error) {
+        logger.error(`[Agent] Permission check failed:`, error);
+        await tracer.failTrace('Permission check failed');
+        yield {
+          content: `Error: Permission check failed`,
+          thought: undefined,
+          messageId: `msg-error-${Date.now()}`,
+        };
+        return;
+      }
+    }
 
     const { isHumanTakingControl } = await import('./handoff');
     const ignoreHandoff = options.ignoreHandoff ?? false;

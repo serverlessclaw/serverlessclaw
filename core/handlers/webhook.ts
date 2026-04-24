@@ -117,6 +117,26 @@ export const handler = async (
     `[WEBHOOK] Source: ${inbound.source} | User: ${userId} | Text: ${text.substring(0, 50)}`
   );
 
+  try {
+    if (!process.env.VITEST) {
+      const { getIdentityManager } = await import('../lib/session/identity');
+      const identityManager = await getIdentityManager();
+      const authResult = await identityManager.authenticate(
+        userId,
+        source === 'dashboard' || source === 'api_key' ? source : 'telegram', // Fallback for unsupported sources
+        { workspaceId, teamId, staffId }
+      );
+
+      if (!authResult.success) {
+        logger.warn(`[WEBHOOK] Authentication failed for ${userId}: ${authResult.error}`);
+        return { statusCode: 403, body: `Forbidden: ${authResult.error}` };
+      }
+    }
+  } catch (authError) {
+    logger.error(`[WEBHOOK] Identity verification error:`, authError);
+    return { statusCode: 403, body: 'Forbidden: Identity verification failed' };
+  }
+
   // Process Media/Attachments via Adapter
   const attachments: Attachment[] = [];
   if (adapter.processMedia) {

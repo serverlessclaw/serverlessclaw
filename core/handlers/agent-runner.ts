@@ -54,6 +54,28 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
 
   const baseUserId = extractBaseUserId(userId);
 
+  // Authorize User
+  try {
+    if (baseUserId && baseUserId !== 'SYSTEM' && !process.env.VITEST) {
+      const { getIdentityManager, Permission } = await import('../lib/session/identity');
+      const identityManager = await getIdentityManager();
+      const hasPermission = await identityManager.hasPermission(
+        baseUserId,
+        Permission.TASK_CREATE,
+        workspaceId
+      );
+      if (!hasPermission) {
+        logger.warn(
+          `[AgentRunner] Access denied. User ${baseUserId} lacks TASK_CREATE permission.`
+        );
+        return `Error: Unauthorized to create tasks in this workspace`;
+      }
+    }
+  } catch (error) {
+    logger.error(`[AgentRunner] Permission check failed:`, error);
+    return `Error: Permission check failed`;
+  }
+
   // Session lock management
   const sessionStateManager = new SessionStateManager();
   let heartbeatInterval: ReturnType<typeof setInterval> | undefined;

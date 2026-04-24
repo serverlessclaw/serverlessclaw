@@ -23,6 +23,8 @@ describe('IdentityManager', () => {
     putItem: ReturnType<typeof vi.fn>;
     deleteItem: ReturnType<typeof vi.fn>;
     scanByPrefix: ReturnType<typeof vi.fn>;
+    getDocClient: ReturnType<typeof vi.fn>;
+    getTableName: ReturnType<typeof vi.fn>;
   };
   let state: Map<string, any>;
 
@@ -57,6 +59,29 @@ describe('IdentityManager', () => {
       scanByPrefix: vi.fn().mockImplementation(async (prefix) => {
         return Array.from(state.values()).filter((item) => item.userId.startsWith(prefix));
       }),
+      getDocClient: vi.fn().mockReturnValue({
+        send: vi.fn().mockImplementation(async (cmd) => {
+          // Mock simple updates for test coverage
+          const key = cmd.input.Key.userId || cmd.input.Key.key;
+          const item = state.get(key);
+          if (item) {
+            if (cmd.input.UpdateExpression.includes('lastActiveAt')) {
+              item.lastActiveAt = cmd.input.ExpressionAttributeValues[':lastActiveAt'];
+            }
+            if (cmd.input.UpdateExpression.includes('#role')) {
+              item.role = cmd.input.ExpressionAttributeValues[':role'];
+            }
+            if (cmd.input.UpdateExpression.includes('list_append')) {
+              const ws = cmd.input.ExpressionAttributeValues[':workspaceId'][0];
+              item.workspaceIds = [...(item.workspaceIds || []), ws];
+            }
+            if (cmd.input.UpdateExpression.includes('workspaceIds = :workspaceIds')) {
+              item.workspaceIds = cmd.input.ExpressionAttributeValues[':workspaceIds'];
+            }
+          }
+        }),
+      }),
+      getTableName: vi.fn().mockReturnValue('mock-table'),
     };
     manager = new IdentityManager(mockBase as any);
   });
@@ -425,14 +450,8 @@ describe('IdentityManager', () => {
       const result = await manager.updateUserRole('user-1', UserRole.OWNER, 'superadmin');
 
       expect(result).toBe(true);
-      expect(mockBase.putItem).toHaveBeenCalled();
-      // The updateUserRole should call saveUser which calls putItem
-      // Find the call that has the updated role
-      const updateCall = mockBase.putItem.mock.calls.find(
-        (call: any[]) => call[0].role === UserRole.OWNER
-      );
-      expect(updateCall).toBeDefined();
-      expect(updateCall?.[0].role).toBe(UserRole.OWNER);
+      expect(mockBase.getDocClient).toHaveBeenCalled();
+      expect((await manager.getUser('user-1'))?.role).toBe(UserRole.OWNER);
     });
 
     it('should deny role change when caller is not OWNER or ADMIN', async () => {
@@ -492,7 +511,7 @@ describe('IdentityManager', () => {
       expect(result).toBe(true);
       expect((await manager.getUser('user-1'))?.workspaceIds).not.toContain('ws-1');
       expect((await manager.getUser('user-1'))?.workspaceIds).toContain('ws-2');
-      expect(mockBase.putItem).toHaveBeenCalled();
+      expect(mockBase.getDocClient).toHaveBeenCalled();
     });
 
     it('should handle removing non-member workspace gracefully', async () => {

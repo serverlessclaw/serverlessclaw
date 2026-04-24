@@ -1,3 +1,4 @@
+import { UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { logger } from '../../logger';
 import { MEMORY_KEYS, TIME } from '../../constants';
 import { generateSessionId } from '../../utils/id-generator';
@@ -47,7 +48,18 @@ export class IdentityManager {
 
       // Update last active time
       user.lastActiveAt = Date.now();
-      await this.saveUser(user);
+      const docClient = this.base.getDocClient();
+      const tableName = this.base.getTableName();
+      if (tableName) {
+        await docClient.send(
+          new UpdateCommand({
+            TableName: tableName,
+            Key: { userId: `${MEMORY_KEYS.WORKSPACE_PREFIX}USER#${userId}`, timestamp: 0 },
+            UpdateExpression: 'SET lastActiveAt = :lastActiveAt',
+            ExpressionAttributeValues: { ':lastActiveAt': user.lastActiveAt },
+          })
+        );
+      }
 
       // Create session with workspace context
       const session = await this.createSession(userId, workspaceId, metadata);
@@ -296,10 +308,27 @@ export class IdentityManager {
       return false;
     }
 
-    user.role = role;
-    await this.saveUser(user);
-    logger.info(`User role updated: ${userId} -> ${role}${callerId ? ` by ${callerId}` : ''}`);
-    return true;
+    const docClient = this.base.getDocClient();
+    const tableName = this.base.getTableName();
+    if (!tableName) return false;
+
+    try {
+      await docClient.send(
+        new UpdateCommand({
+          TableName: tableName,
+          Key: { userId: `${MEMORY_KEYS.WORKSPACE_PREFIX}USER#${userId}`, timestamp: 0 },
+          UpdateExpression: 'SET #role = :role, updatedAt = :updatedAt',
+          ConditionExpression: 'attribute_exists(userId)',
+          ExpressionAttributeNames: { '#role': 'role' },
+          ExpressionAttributeValues: { ':role': role, ':updatedAt': Date.now() },
+        })
+      );
+      logger.info(`User role updated: ${userId} -> ${role}${callerId ? ` by ${callerId}` : ''}`);
+      return true;
+    } catch (e) {
+      logger.error(`Failed to update role for user ${userId}:`, e);
+      return false;
+    }
   }
 
   /**
@@ -312,12 +341,35 @@ export class IdentityManager {
       return false;
     }
 
-    if (!user.workspaceIds.includes(workspaceId)) {
-      user.workspaceIds.push(workspaceId);
-      await this.saveUser(user);
-      logger.info(`User ${userId} added to workspace ${workspaceId}`);
+    if (user.workspaceIds.includes(workspaceId)) {
+      return true; // Already a member
     }
-    return true;
+
+    const docClient = this.base.getDocClient();
+    const tableName = this.base.getTableName();
+    if (!tableName) return false;
+
+    try {
+      await docClient.send(
+        new UpdateCommand({
+          TableName: tableName,
+          Key: { userId: `${MEMORY_KEYS.WORKSPACE_PREFIX}USER#${userId}`, timestamp: 0 },
+          UpdateExpression:
+            'SET workspaceIds = list_append(if_not_exists(workspaceIds, :empty), :workspaceId), updatedAt = :updatedAt',
+          ConditionExpression: 'attribute_exists(userId)',
+          ExpressionAttributeValues: {
+            ':empty': [],
+            ':workspaceId': [workspaceId],
+            ':updatedAt': Date.now(),
+          },
+        })
+      );
+      logger.info(`User ${userId} added to workspace ${workspaceId}`);
+      return true;
+    } catch (e) {
+      logger.error(`Failed to add user ${userId} to workspace ${workspaceId}:`, e);
+      return false;
+    }
   }
 
   /**
@@ -330,8 +382,28 @@ export class IdentityManager {
     const index = user.workspaceIds.indexOf(workspaceId);
     if (index > -1) {
       user.workspaceIds.splice(index, 1);
-      await this.saveUser(user);
-      logger.info(`User ${userId} removed from workspace ${workspaceId}`);
+      const docClient = this.base.getDocClient();
+      const tableName = this.base.getTableName();
+      if (!tableName) return false;
+
+      try {
+        await docClient.send(
+          new UpdateCommand({
+            TableName: tableName,
+            Key: { userId: `${MEMORY_KEYS.WORKSPACE_PREFIX}USER#${userId}`, timestamp: 0 },
+            UpdateExpression: 'SET workspaceIds = :workspaceIds, updatedAt = :updatedAt',
+            ConditionExpression: 'attribute_exists(userId)',
+            ExpressionAttributeValues: {
+              ':workspaceIds': user.workspaceIds,
+              ':updatedAt': Date.now(),
+            },
+          })
+        );
+        logger.info(`User ${userId} removed from workspace ${workspaceId}`);
+      } catch (e) {
+        logger.error(`Failed to remove user ${userId} from workspace ${workspaceId}:`, e);
+        return false;
+      }
     }
     return true;
   }
@@ -417,19 +489,22 @@ export class IdentityManager {
    */
   private async saveUser(user: UserIdentity): Promise<void> {
     try {
-      await this.base.putItem({
-        userId: `${MEMORY_KEYS.WORKSPACE_PREFIX}USER#${user.userId}`,
-        timestamp: 0,
-        type: 'USER_IDENTITY',
-        displayName: user.displayName,
-        email: user.email,
-        role: user.role,
-        workspaceIds: user.workspaceIds,
-        authProvider: user.authProvider,
-        createdAt: user.createdAt,
-        lastActiveAt: user.lastActiveAt,
-        updatedAt: Date.now(),
-      });
+      await this.base.putItem(
+        {
+          userId: `${MEMORY_KEYS.WORKSPACE_PREFIX}USER#${user.userId}`,
+          timestamp: 0,
+          type: 'USER_IDENTITY',
+          displayName: user.displayName,
+          email: user.email,
+          role: user.role,
+          workspaceIds: user.workspaceIds,
+          authProvider: user.authProvider,
+          createdAt: user.createdAt,
+          lastActiveAt: user.lastActiveAt,
+          updatedAt: Date.now(),
+        },
+        { ConditionExpression: 'attribute_not_exists(userId)' }
+      );
     } catch (error) {
       logger.error(`Failed to save user ${user.userId}:`, error);
     }

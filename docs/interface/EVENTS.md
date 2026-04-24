@@ -173,6 +173,7 @@ To prevent infinite routing loops (especially during failure handling and DLQ ro
 - **Observability**: Every injection triggers a `logger.warn` signal, allowing operators to trace the source of "dirty" events without compromising system uptime.
 
 ---
+
 - **DLQ_ROUTE Exception**: `DLQ_ROUTE` bypasses recursion increment and cannot be re-routed to DLQ again.
 
 ## Backbone Gap Management (April 2026)

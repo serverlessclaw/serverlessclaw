@@ -43,6 +43,27 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
       const sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
+      // Register session with IdentityManager
+      try {
+        const { getIdentityManager, UserRole } = await import('@claw/core/lib/session/identity');
+        const identityManager = await getIdentityManager();
+        const authResult = await identityManager.authenticate(sessionId, 'dashboard');
+
+        // Grant admin privileges to the dashboard user
+        if (
+          authResult.success &&
+          authResult.user?.role !== UserRole.ADMIN &&
+          authResult.user?.role !== UserRole.OWNER
+        ) {
+          await identityManager.updateUserRole(sessionId, UserRole.ADMIN, 'superadmin');
+        }
+      } catch (err) {
+        logger.error(
+          `[Auth:Login] Failed to register dashboard session with IdentityManager:`,
+          err
+        );
+      }
+
       response.cookies.set(AUTH.COOKIE_NAME, AUTH.COOKIE_VALUE, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
