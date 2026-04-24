@@ -52,5 +52,5 @@ tag: ## Create and push a git tag for the current release (for auditing)
 
 # Helper to get the deployment URL
 define get_url
-	$$($(SST) shell --stage $(ENV) "echo \$$API_URL")
+	$$($(SST) shell --stage $(ENV) -- sh -c 'echo $$$$SST_RESOURCE_ClawCenter | jq -r .url')
 endef
