@@ -200,6 +200,7 @@ describe('parallel-handler', () => {
         undefined,
         undefined,
         expect.objectContaining({ hasDependencies: false }),
+        undefined,
         undefined
       );
 
@@ -286,6 +287,7 @@ describe('parallel-handler', () => {
         undefined,
         undefined,
         expect.any(Object),
+        undefined,
         undefined
       );
     });
@@ -335,7 +337,8 @@ describe('parallel-handler', () => {
       expect(mockAggregatorMarkAsCompleted).toHaveBeenCalledWith(
         'user-123',
         'trace-cycle',
-        'failed'
+        'failed',
+        undefined
       );
       expect(mockEmitTypedEvent).toHaveBeenCalledWith(
         'events.handler',
@@ -413,7 +416,8 @@ describe('parallel-handler', () => {
           taskId: 'task-1',
           status: 'failed',
           error: expect.stringContaining('EventBridge throttled'),
-        })
+        }),
+        undefined
       );
     });
 
@@ -431,7 +435,8 @@ describe('parallel-handler', () => {
         expect.objectContaining({
           status: 'failed',
           error: expect.stringContaining('Dispatch failed'),
-        })
+        }),
+        undefined
       );
     });
 
@@ -459,7 +464,8 @@ describe('parallel-handler', () => {
       expect(mockAggregatorMarkAsCompleted).toHaveBeenCalledWith(
         'user-123',
         'trace-no-ready',
-        'failed'
+        'failed',
+        undefined
       );
       expect(mockEmitTypedEvent).toHaveBeenCalledWith(
         'events.handler',

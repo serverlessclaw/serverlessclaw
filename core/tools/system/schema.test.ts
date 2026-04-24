@@ -3,8 +3,6 @@ import { systemSchema } from './schema';
 
 describe('System Domain Tool Schemas', () => {
   const expectedToolNames = [
-    'runShellCommand',
-    'runTests',
     'triggerTrunkSync',
     'checkHealth',
     'runCognitiveHealthCheck',
@@ -60,8 +58,6 @@ describe('System Domain Tool Schemas', () => {
 
   it('should have required parameter fields listed correctly', () => {
     const requiredByTool: Record<string, string[]> = {
-      runShellCommand: ['command', 'dir_path'],
-      runTests: [],
       triggerTrunkSync: ['commitMessage'],
       debugAgent: ['agentId', 'level'],
       validateCode: [],

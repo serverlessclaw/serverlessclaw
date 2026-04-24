@@ -104,10 +104,12 @@ export async function handleSwarmDecomposition(
     (hasMissionMarkers || responseText.length > minLength)
   ) {
     const { decomposePlan } = await import('./decomposer');
-    const decomposed = decomposePlan(responseText, traceId || `plan-${Date.now()}`, [], {
+    const decomposed = await decomposePlan(responseText, traceId || `plan-${Date.now()}`, [], {
       defaultAgentId,
       maxSubTasks,
       minLength,
+      workspaceId: payload.workspaceId,
+      inferDependencies: true,
     });
 
     if (decomposed.wasDecomposed && decomposed.subTasks.length > 1) {

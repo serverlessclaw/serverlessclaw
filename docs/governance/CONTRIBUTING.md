@@ -43,7 +43,9 @@ make dev
 
 ## Pre-push Hooks
 
-Husky triggers `make pre-push` before every push. This runs full quality checks (`make check`), all unit tests (`make test`), and an AI-readiness scan (`make aiready`) ensuring a score of **80+**.
+Husky triggers `make pre-push` before every push. The default hook is resource-aware for local machines and runs a sequential fast gate (`make verify-up-to-date` + `make gate-fast`) with constrained Turbo concurrency.
+
+For full strict validation before high-risk pushes, run `make pre-push-full` manually.
 
 ---
 

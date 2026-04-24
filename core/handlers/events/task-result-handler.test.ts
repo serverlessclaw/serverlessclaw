@@ -375,7 +375,7 @@ describe('task-result-handler (parallel aggregator guard)', () => {
     );
 
     // Should have checked state but NOT added result
-    expect(mockGetState).toHaveBeenCalledWith('user-123', 'trace-abc');
+    expect(mockGetState).toHaveBeenCalledWith('user-123', 'trace-abc', undefined);
     expect(mockAddResult).not.toHaveBeenCalled();
   });
 
@@ -417,7 +417,7 @@ describe('task-result-handler (parallel aggregator guard)', () => {
       EventType.TASK_COMPLETED
     );
 
-    expect(mockGetState).toHaveBeenCalledWith('user-123', 'trace-xyz');
+    expect(mockGetState).toHaveBeenCalledWith('user-123', 'trace-xyz', undefined);
     expect(mockAddResult).toHaveBeenCalledWith(
       'user-123',
       'trace-xyz',
@@ -425,7 +425,8 @@ describe('task-result-handler (parallel aggregator guard)', () => {
         taskId: 'task-1',
         agentId: 'coder',
         status: 'success',
-      })
+      }),
+      undefined
     );
   });
 
@@ -450,7 +451,11 @@ describe('task-result-handler (parallel aggregator guard)', () => {
 
     // Now that traceId has a default in the schema (t-...), it's always present.
     // We check that it's called with a generated trace ID.
-    expect(mockGetState).toHaveBeenCalledWith('user-123', expect.stringMatching(/^t-\d+-/));
+    expect(mockGetState).toHaveBeenCalledWith(
+      'user-123',
+      expect.stringMatching(/^t-\d+-/),
+      undefined
+    );
   });
 });
 

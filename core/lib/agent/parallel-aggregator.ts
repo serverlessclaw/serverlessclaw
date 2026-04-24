@@ -37,6 +37,17 @@ export class ParallelAggregator {
   private tableName: string = getMemoryTableName() ?? 'MemoryTable';
 
   /**
+   * Builds a workspace-scoped partition key for parallel dispatch records.
+   * Backward compatible: if no workspaceId, uses legacy key format.
+   */
+  private buildPk(userId: string, traceId: string, workspaceId?: string): string {
+    if (workspaceId) {
+      return `${PARALLEL_PREFIX}${userId}#${workspaceId}#${traceId}`;
+    }
+    return `${PARALLEL_PREFIX}${userId}#${traceId}`;
+  }
+
+  /**
    * Estimates the byte size of a result object when serialized to JSON.
    */
   private estimateSize(obj: unknown): number {
@@ -56,7 +67,8 @@ export class ParallelAggregator {
     aggregationType?: 'summary' | 'agent_guided' | 'merge_patches',
     aggregationPrompt?: string,
     metadata?: Record<string, unknown>,
-    initialQuery?: string
+    initialQuery?: string,
+    workspaceId?: string
   ): Promise<void> {
     const expiresAt = Math.floor(Date.now() / TIME.MS_PER_SECOND) + TIME.SECONDS_IN_HOUR;
 
@@ -64,7 +76,7 @@ export class ParallelAggregator {
       new PutCommand({
         TableName: this.tableName,
         Item: {
-          userId: `${PARALLEL_PREFIX}${userId}#${traceId}`,
+          userId: this.buildPk(userId, traceId, workspaceId),
           timestamp: 0,
           taskCount,
           completedCount: 0,
@@ -81,6 +93,7 @@ export class ParallelAggregator {
           aggregationPrompt,
           initialQuery,
           metadata: metadata ?? {},
+          workspaceId,
         },
       })
     );
@@ -90,12 +103,12 @@ export class ParallelAggregator {
    * Retrieves the raw main item of a parallel dispatch without merging shards.
    * Useful for high-frequency metadata checks (e.g., DAG state transitions).
    */
-  async getRawState(userId: string, traceId: string) {
+  async getRawState(userId: string, traceId: string, workspaceId?: string) {
     const response = await docClient.send(
       new GetCommand({
         TableName: this.tableName,
         Key: {
-          userId: `${PARALLEL_PREFIX}${userId}#${traceId}`,
+          userId: this.buildPk(userId, traceId, workspaceId),
           timestamp: 0,
         },
         ConsistentRead: true,
@@ -111,7 +124,8 @@ export class ParallelAggregator {
   async addResult(
     userId: string,
     traceId: string,
-    result: AggregatedResult
+    result: AggregatedResult,
+    workspaceId?: string
   ): Promise<{
     isComplete: boolean;
     taskCount: number;
@@ -122,18 +136,18 @@ export class ParallelAggregator {
     aggregationType?: 'summary' | 'agent_guided' | 'merge_patches';
     aggregationPrompt?: string;
   } | null> {
-    const key = `${PARALLEL_PREFIX}${userId}#${traceId}`;
+    const key = this.buildPk(userId, traceId, workspaceId);
 
     try {
       // 1. Get raw state (no shard merge) to check size and idempotency
-      const current = await this.getRawState(userId, traceId);
+      const current = await this.getRawState(userId, traceId, workspaceId);
       if (!current || current.status !== 'pending') return null;
 
       const results_ids = (current.results_ids as string[]) || [];
       if (results_ids.includes(result.taskId)) {
         logger.info(`Result for task ${result.taskId} already recorded in trace ${traceId}`);
         // For idempotency, we return the full state including shards
-        const state = await this.getState(userId, traceId);
+        const state = await this.getState(userId, traceId, workspaceId);
         if (!state) return null;
 
         return {
@@ -303,7 +317,8 @@ export class ParallelAggregator {
   async markAsCompleted(
     userId: string,
     traceId: string,
-    status: 'success' | 'partial' | 'failed' | 'timed_out'
+    status: 'success' | 'partial' | 'failed' | 'timed_out',
+    workspaceId?: string
   ): Promise<boolean> {
     try {
       const isTimeout = status === 'timed_out';
@@ -312,7 +327,7 @@ export class ParallelAggregator {
         new UpdateCommand({
           TableName: this.tableName,
           Key: {
-            userId: `${PARALLEL_PREFIX}${userId}#${traceId}`,
+            userId: this.buildPk(userId, traceId, workspaceId),
             timestamp: 0,
           },
           UpdateExpression: 'SET #status = :status, completedAt = :now',
@@ -339,12 +354,12 @@ export class ParallelAggregator {
   /**
    * Retrieves the current state of a parallel dispatch, including all sharded results.
    */
-  async getState(userId: string, traceId: string) {
+  async getState(userId: string, traceId: string, workspaceId?: string) {
     const response = await docClient.send(
       new GetCommand({
         TableName: this.tableName,
         Key: {
-          userId: `${PARALLEL_PREFIX}${userId}#${traceId}`,
+          userId: this.buildPk(userId, traceId, workspaceId),
           timestamp: 0,
         },
         ConsistentRead: true,
@@ -383,14 +398,15 @@ export class ParallelAggregator {
     userId: string,
     traceId: string,
     dagState: DAGExecutionState,
-    expectedVersion: number
+    expectedVersion: number,
+    workspaceId?: string
   ): Promise<boolean> {
     try {
       await docClient.send(
         new UpdateCommand({
           TableName: this.tableName,
           Key: {
-            userId: `${PARALLEL_PREFIX}${userId}#${traceId}`,
+            userId: this.buildPk(userId, traceId, workspaceId),
             timestamp: 0,
           },
           UpdateExpression: 'SET metadata.dagState = :dagState, version = :nextVersion',
@@ -421,14 +437,15 @@ export class ParallelAggregator {
     traceId: string,
     taskId: string,
     progressPercent: number,
-    status: 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled' = 'in_progress'
+    status: 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled' = 'in_progress',
+    workspaceId?: string
   ): Promise<void> {
     try {
       await docClient.send(
         new UpdateCommand({
           TableName: this.tableName,
           Key: {
-            userId: `${PARALLEL_PREFIX}${userId}#${traceId}`,
+            userId: this.buildPk(userId, traceId, workspaceId),
             timestamp: 0,
           },
           UpdateExpression: `

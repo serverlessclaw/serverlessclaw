@@ -7,50 +7,6 @@ import { LLMProvider } from '../../lib/types/llm';
  */
 
 export const systemSchema: Record<string, IToolDefinition> = {
-  // File System (from fs.ts)
-  runShellCommand: {
-    type: ToolType.FUNCTION,
-    argSchema: z.any(),
-    connectionProfile: [],
-    connector_id: '',
-    auth: { type: 'api_key', resource_id: '' },
-    requiresApproval: true,
-    requiredPermissions: ['admin'],
-    name: 'runShellCommand',
-    description: 'Executes a shell command in the agent environment.',
-    parameters: {
-      type: 'object',
-      properties: {
-        command: { type: 'string', description: 'The shell command to execute.' },
-        dir_path: { type: 'string', description: 'Relative directory path.' },
-      },
-      required: ['command', 'dir_path'],
-      additionalProperties: false,
-    },
-  },
-  runTests: {
-    type: ToolType.FUNCTION,
-    argSchema: z.any(),
-    connectionProfile: [],
-    connector_id: '',
-    auth: { type: 'api_key', resource_id: '' },
-    requiresApproval: false,
-    requiredPermissions: [],
-    name: 'runTests',
-    description: 'Runs the project unit tests in the current or specified directory.',
-    parameters: {
-      type: 'object',
-      properties: {
-        dir_path: {
-          type: 'string',
-          description: 'Optional path to the directory to run tests in. Defaults to project root.',
-        },
-      },
-      required: [],
-      additionalProperties: false,
-    },
-  },
-
   // Git (from git.ts)
   triggerTrunkSync: {
     type: ToolType.FUNCTION,

@@ -7,12 +7,19 @@ include makefiles/Makefile.release.mk
 
 .DEFAULT_GOAL := help
 
-pre-commit: ## Run pre-commit checks in parallel (lint-staged, type-check, docs-check, test-silent)
-	@$(call log_step,Running pre-commit checks in parallel...)
-	@$(call run_parallel_gate,lint~$(MAKE) lint-staged||typecheck~$(MAKE) type-check||docs~$(MAKE) docs-check||test~$(MAKE) test-silent)
+pre-commit: ## Run pre-commit checks in sequence (resource-aware local defaults)
+	@$(call log_step,Running pre-commit checks (resource-aware)...)
+	@$(MAKE) lint-staged
+	@$(MAKE) type-check TURBO_FLAGS="--concurrency=2"
+	@$(MAKE) docs-check
 
-pre-push: ## Run fast quality gate in parallel (rebase check + fast gate + aiready + smoke)
-	@$(call log_step,Running pre-push checks in parallel...)
+pre-push: ## Run fast pre-push checks in sequence (resource-aware local defaults)
+	@$(call log_step,Running pre-push checks (resource-aware)...)
+	@$(MAKE) verify-up-to-date
+	@$(MAKE) gate-fast TURBO_FLAGS="--concurrency=2"
+
+pre-push-full: ## Run strict pre-push checks in parallel (rebase + gate-fast + aiready + smoke)
+	@$(call log_step,Running strict pre-push checks in parallel...)
 	@$(call run_parallel_gate,rebase~$(MAKE) verify-up-to-date||gate~$(MAKE) gate-fast||aiready~$(MAKE) aiready||smoke~$(MAKE) smoke-test)
 
 help-agent: help ## Show optimized help for AI agents

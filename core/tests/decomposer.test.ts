@@ -7,9 +7,9 @@ describe('decomposePlan', () => {
   const gapIds = ['GAP-1', 'GAP-2', 'GAP-3'];
 
   describe('short plan handling', () => {
-    it('should dispatch short plan as single task without decomposition', () => {
+    it('should dispatch short plan as single task without decomposition', async () => {
       const shortPlan = 'Fix the bug';
-      const result = decomposePlan(shortPlan, planId, gapIds);
+      const result = await decomposePlan(shortPlan, planId, gapIds);
 
       expect(result.wasDecomposed).toBe(false);
       expect(result.totalSubTasks).toBe(1);
@@ -17,11 +17,11 @@ describe('decomposePlan', () => {
       expect(result.subTasks[0].planId).toBe(planId);
     });
 
-    it('should force decomposition even for short plans when force=true', () => {
+    it('should force decomposition even for short plans when force=true', async () => {
       const shortPlan = `1. Fix the authentication bug
 2. Update the database schema
 3. Deploy the changes`;
-      const result = decomposePlan(shortPlan, planId, gapIds, { force: true });
+      const result = await decomposePlan(shortPlan, planId, gapIds, { force: true });
 
       expect(result.totalSubTasks).toBe(3);
       expect(result.wasDecomposed).toBe(true);
@@ -29,7 +29,7 @@ describe('decomposePlan', () => {
   });
 
   describe('heuristic decomposition by step markers', () => {
-    it('should decompose plan with numbered steps', () => {
+    it('should decompose plan with numbered steps', async () => {
       const plan = `
 1. Create the user authentication module with JWT support including proper token generation, validation, refresh mechanisms, and secure storage on the client side with httpOnly cookies and CSRF protection for the entire application stack
 2. Update the API gateway to include auth middleware that intercepts all incoming requests, validates tokens against the user store, checks permissions using the RBAC model, and returns appropriate error codes for unauthorized access attempts
@@ -37,14 +37,14 @@ describe('decomposePlan', () => {
 4. Update documentation with new auth flow including OpenAPI specifications, migration guides, example code snippets for all supported client SDKs, and troubleshooting guides for common integration issues
       `.trim();
 
-      const result = decomposePlan(plan, planId, gapIds);
+      const result = await decomposePlan(plan, planId, gapIds);
 
       expect(result.wasDecomposed).toBe(true);
       expect(result.totalSubTasks).toBeGreaterThan(1);
       expect(result.subTasks[0].task).toContain('authentication');
     });
 
-    it('should decompose plan with bullet points', () => {
+    it('should decompose plan with bullet points', async () => {
       const plan = `
 - Implement user registration endpoint with email verification, password strength validation, CAPTCHA protection, and rate limiting to prevent abuse and ensure only legitimate users can create accounts in the system
 - Add email verification flow with secure token generation, expiration handling, resend mechanisms, and proper error messaging for invalid or expired verification links that users receive in their inbox
@@ -52,13 +52,13 @@ describe('decomposePlan', () => {
 - Set up session management with concurrent session limits, idle timeout handling, secure cookie configuration, and proper cleanup of expired sessions to prevent session fixation and hijacking attacks
       `.trim();
 
-      const result = decomposePlan(plan, planId, gapIds);
+      const result = await decomposePlan(plan, planId, gapIds);
 
       expect(result.wasDecomposed).toBe(true);
       expect(result.totalSubTasks).toBeGreaterThan(1);
     });
 
-    it('should decompose plan with bullet points', () => {
+    it('should decompose plan with bullet points', async () => {
       const plan = `
 - Implement user registration endpoint with email verification, password strength validation, CAPTCHA protection, and rate limiting to prevent abuse and ensure only legitimate users can create accounts in the system
 - Add email verification flow with secure token generation, expiration handling, resend mechanisms, and proper error messaging for invalid or expired verification links that users receive in their inbox
@@ -66,26 +66,26 @@ describe('decomposePlan', () => {
 - Set up session management with concurrent session limits, idle timeout handling, secure cookie configuration, and proper cleanup of expired sessions to prevent session fixation and hijacking attacks
       `.trim();
 
-      const result = decomposePlan(plan, planId, gapIds);
+      const result = await decomposePlan(plan, planId, gapIds);
 
       expect(result.wasDecomposed).toBe(true);
       expect(result.totalSubTasks).toBeGreaterThan(1);
     });
 
-    it('should decompose plan with Step N markers', () => {
+    it('should decompose plan with Step N markers', async () => {
       const plan = `
 Step 1: Setup the database schema for users including all necessary tables, indexes, and migration scripts for the new user management system that will replace the legacy authentication module with modern security practices and proper data validation at the database level to ensure data integrity and prevent SQL injection attacks across the entire application stack
 Step 2: Create the API routes for user registration, login, password reset, and profile management with proper rate limiting, input validation, error handling, and comprehensive logging for audit purposes and monitoring dashboards
 Step 3: Add validation middleware for all incoming requests including schema validation, authentication token verification, permission checks, and request sanitization to prevent common web vulnerabilities and ensure data consistency across all service boundaries
       `.trim();
 
-      const result = decomposePlan(plan, planId, gapIds);
+      const result = await decomposePlan(plan, planId, gapIds);
 
       expect(result.wasDecomposed).toBe(true);
       expect(result.totalSubTasks).toBe(3);
     });
 
-    it('should decompose plan with paragraph splits as fallback', () => {
+    it('should decompose plan with paragraph splits as fallback', async () => {
       const plan = `
 First we need to create a new module for handling payments. This module should support multiple providers and be easily extensible.
 
@@ -94,7 +94,7 @@ Then we need to integrate Stripe as the primary payment provider. This involves 
 Finally we should add PayPal as a secondary option for international customers.
       `.trim();
 
-      const result = decomposePlan(plan, planId, gapIds, { minLength: 100 });
+      const result = await decomposePlan(plan, planId, gapIds, { minLength: 100 });
 
       expect(result.wasDecomposed).toBe(true);
       expect(result.totalSubTasks).toBeGreaterThan(1);
@@ -102,7 +102,7 @@ Finally we should add PayPal as a secondary option for international customers.
   });
 
   describe('maxSubTasks capping', () => {
-    it('should cap sub-tasks at maxSubTasks limit', () => {
+    it('should cap sub-tasks at maxSubTasks limit', async () => {
       const plan = `
 1. Task one: Implement the user authentication module with JWT support and proper token management including refresh tokens and secure storage mechanisms for the client side application that needs to handle multiple authentication flows
 2. Task two: Update the API gateway configuration to include the new authentication middleware and route all existing endpoints through the new auth layer while maintaining backwards compatibility with the legacy system during the migration period
@@ -113,13 +113,13 @@ Finally we should add PayPal as a secondary option for international customers.
 7. Task seven: Promote the authentication module to production after successful staging validation and coordinate the cutover with all dependent teams to minimize disruption to ongoing operations and user experience
       `.trim();
 
-      const result = decomposePlan(plan, planId, gapIds, { maxSubTasks: 3, minLength: 50 });
+      const result = await decomposePlan(plan, planId, gapIds, { maxSubTasks: 3, minLength: 50 });
 
       expect(result.totalSubTasks).toBe(3);
       expect(result.subTasks[2].task).toContain('Task seven');
     });
 
-    it('should append remaining content to last sub-task when capped', () => {
+    it('should append remaining content to last sub-task when capped', async () => {
       const plan = `
 1. First task description
 2. Second task description
@@ -127,7 +127,7 @@ Finally we should add PayPal as a secondary option for international customers.
 4. Fourth task description
       `.trim();
 
-      const result = decomposePlan(plan, planId, gapIds, { maxSubTasks: 2, minLength: 50 });
+      const result = await decomposePlan(plan, planId, gapIds, { maxSubTasks: 2, minLength: 50 });
 
       expect(result.totalSubTasks).toBe(2);
       expect(result.subTasks[1].task).toContain('Third');
@@ -136,37 +136,37 @@ Finally we should add PayPal as a secondary option for international customers.
   });
 
   describe('agent routing', () => {
-    it('should route research tasks to RESEARCHER', () => {
+    it('should route research tasks to RESEARCHER', async () => {
       const plan = `
 1. Research the best authentication patterns for serverless
 2. Investigate Auth0 vs Cognito pricing and features
       `.trim();
 
-      const result = decomposePlan(plan, planId, gapIds, { minLength: 50 });
+      const result = await decomposePlan(plan, planId, gapIds, { minLength: 50 });
 
       const researchTasks = result.subTasks.filter((s) => s.agentId === AgentType.RESEARCHER);
       expect(researchTasks.length).toBeGreaterThan(0);
     });
 
-    it('should route implementation tasks to CODER', () => {
+    it('should route implementation tasks to CODER', async () => {
       const plan = `
 1. Implement the user registration API endpoint
 2. Create database migration for users table
       `.trim();
 
-      const result = decomposePlan(plan, planId, gapIds, { minLength: 50 });
+      const result = await decomposePlan(plan, planId, gapIds, { minLength: 50 });
 
       const coderTasks = result.subTasks.filter((s) => s.agentId === AgentType.CODER);
       expect(coderTasks.length).toBeGreaterThan(0);
     });
 
-    it('should use defaultAgent when intent is ambiguous', () => {
+    it('should use defaultAgent when intent is ambiguous', async () => {
       const plan = `
-1. Review the current system architecture
-2. Update the deployment pipeline
-      `.trim();
+ 1. Complete the first phase of the project
+ 2. Finalize the second phase of the project
+       `.trim();
 
-      const result = decomposePlan(plan, planId, gapIds, {
+      const result = await decomposePlan(plan, planId, gapIds, {
         minLength: 50,
         defaultAgentId: AgentType.CODER,
       });
@@ -176,14 +176,14 @@ Finally we should add PayPal as a secondary option for international customers.
   });
 
   describe('gap distribution', () => {
-    it('should distribute gapIds across sub-tasks', () => {
+    it('should distribute gapIds across sub-tasks', async () => {
       const plan = `
 1. First task: Implement the core authentication module with JWT token generation, validation, and refresh mechanisms including secure password hashing with bcrypt and proper session management for distributed systems
 2. Second task: Create the authorization middleware that checks user permissions against the RBAC model and enforces access control policies at the API gateway level with proper caching for performance
 3. Third task: Write integration tests that verify the complete authentication and authorization flow including edge cases like token expiration, concurrent sessions, and privilege escalation attempts
       `.trim();
 
-      const result = decomposePlan(plan, planId, ['GAP-A', 'GAP-B'], { minLength: 30 });
+      const result = await decomposePlan(plan, planId, ['GAP-A', 'GAP-B'], { minLength: 30 });
 
       expect(result.subTasks[0].gapIds).toContain('GAP-A');
       expect(result.subTasks[1].gapIds).toContain('GAP-B');
@@ -191,7 +191,7 @@ Finally we should add PayPal as a secondary option for international customers.
   });
 
   describe('complexity estimation', () => {
-    it('should estimate higher complexity for longer plans', () => {
+    it('should estimate higher complexity for longer plans', async () => {
       const shortPlan = '1. Fix a simple typo';
       const longPlan = `
 1. Refactor the entire authentication module to use a new provider
@@ -201,32 +201,32 @@ Finally we should add PayPal as a secondary option for international customers.
 5. Update API documentation and migration guides for all consumers
       `.trim();
 
-      const shortResult = decomposePlan(shortPlan, planId, [], { force: true });
-      const longResult = decomposePlan(longPlan, planId, []);
+      const shortResult = await decomposePlan(shortPlan, planId, [], { force: true });
+      const longResult = await decomposePlan(longPlan, planId, []);
 
       expect(longResult.subTasks[0].complexity).toBeGreaterThanOrEqual(
         shortResult.subTasks[0].complexity
       );
     });
 
-    it('should increase complexity for technical keywords', () => {
+    it('should increase complexity for technical keywords', async () => {
       const plan = `
 1. Refactor the SST infrastructure to use new Lambda architecture
 2. Migrate DynamoDB tables with zero downtime
       `.trim();
 
-      const result = decomposePlan(plan, planId, [], { minLength: 50 });
+      const result = await decomposePlan(plan, planId, [], { minLength: 50 });
 
       expect(result.subTasks[0].complexity).toBeGreaterThanOrEqual(5);
     });
   });
 
   describe('no decomposition when no markers found', () => {
-    it('should return single task when no step markers are present', () => {
+    it('should return single task when no step markers are present', async () => {
       const plan =
         'This is a plan without any step markers or structure, just a continuous block of text describing what needs to be done in a vague way without any clear separation points or numbered lists or bullet points or paragraphs that could be split into multiple tasks for parallel execution by different agents';
 
-      const result = decomposePlan(plan, planId, gapIds);
+      const result = await decomposePlan(plan, planId, gapIds);
 
       expect(result.wasDecomposed).toBe(false);
       expect(result.totalSubTasks).toBe(1);
@@ -234,16 +234,16 @@ Finally we should add PayPal as a secondary option for international customers.
   });
 
   describe('default options', () => {
-    it('should use default min length of 500', () => {
+    it('should use default min length of 500', async () => {
       const plan = 'x'.repeat(499);
-      const result = decomposePlan(plan, planId, gapIds);
+      const result = await decomposePlan(plan, planId, gapIds);
 
       expect(result.wasDecomposed).toBe(false);
     });
 
-    it('should use default max sub-tasks of 5', () => {
+    it('should use default max sub-tasks of 5', async () => {
       const plan = Array.from({ length: 10 }, (_, i) => `${i + 1}. Task ${i + 1}`).join('\n');
-      const result = decomposePlan(plan, planId, gapIds, { minLength: 50 });
+      const result = await decomposePlan(plan, planId, gapIds, { minLength: 50 });
 
       expect(result.totalSubTasks).toBeLessThanOrEqual(5);
     });

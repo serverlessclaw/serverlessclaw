@@ -31,7 +31,7 @@ gate-tier-2: ## Thorough Tier 2 checks (via Turborepo)
 
 gate-fast: ## Fast local gate (only affected packages + principles)
 	@$(call log_step,Running fast local gate via Turbo...)
-	@$(PNPM) exec turbo run check test --filter="[origin/main]"
+	@$(PNPM) exec turbo run check test --filter="[origin/main]" $(TURBO_FLAGS)
 	@$(MAKE) principles-check
 
 principles-check: ## Verify architectural principles (P0/P1 issues)

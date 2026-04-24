@@ -5,13 +5,18 @@ import * as path from 'path';
 import { createWorkspace, createMergeWorkspace, cleanupWorkspace } from './workspace-manager';
 import { execSync } from 'child_process';
 
-vi.mock('child_process', () => ({
-  execSync: vi.fn((cmd) => {
+vi.mock('child_process', () => {
+  const mockExecSync = vi.fn((cmd: string) => {
     if (cmd.includes('git init') && (globalThis as any).__FAIL_GIT__) {
       throw new Error('git fail');
     }
-  }),
-}));
+  });
+  return {
+    __esModule: true,
+    default: { execSync: mockExecSync },
+    execSync: mockExecSync,
+  };
+});
 
 vi.mock('fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('fs/promises')>();

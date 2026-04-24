@@ -11,9 +11,14 @@ const ddbMock = mockClient(DynamoDBDocumentClient);
 const s3Mock = mockClient(S3Client);
 
 const mockExecSync = vi.fn();
-vi.mock('child_process', () => ({
-  execSync: (...args: any[]) => mockExecSync(...args),
-}));
+vi.mock('child_process', () => {
+  const mock = vi.fn((...args: any[]) => mockExecSync(...args));
+  return {
+    __esModule: true,
+    default: { execSync: mock },
+    execSync: mock,
+  };
+});
 
 const mockArchiveOn = vi.fn();
 const mockArchivePipe = vi.fn();
@@ -22,6 +27,7 @@ const mockArchiveFinalize = vi.fn();
 const mockCreateWriteStream = vi.fn();
 
 vi.mock('archiver', () => ({
+  __esModule: true,
   default: vi.fn(() => ({
     on: mockArchiveOn,
     pipe: mockArchivePipe,
@@ -30,9 +36,14 @@ vi.mock('archiver', () => ({
   })),
 }));
 
-vi.mock('fs', () => ({
-  createWriteStream: (...args: any[]) => mockCreateWriteStream(...args),
-}));
+vi.mock('fs', () => {
+  const mock = vi.fn((...args: any[]) => mockCreateWriteStream(...args));
+  return {
+    __esModule: true,
+    default: { createWriteStream: mock },
+    createWriteStream: mock,
+  };
+});
 
 vi.mock('fs/promises', () => ({
   readFile: vi.fn().mockResolvedValue(Buffer.from('test')),
@@ -400,7 +411,7 @@ describe('Deployment Tools', () => {
       });
 
       expect(result).toContain('FAILED_DOD');
-      expect(result).toContain('validated (validateCode) and tested');
+      expect(result).toContain('validated (validateCode) and package tests must pass');
     });
 
     it('skips validation when skipValidation is true', async () => {
@@ -485,7 +496,7 @@ describe('Deployment Tools', () => {
       });
 
       expect(result).toContain('FAILED_DOD');
-      expect(result).toContain('validated (validateCode) and tested');
+      expect(result).toContain('validated (validateCode) and package tests must pass');
     });
 
     it('returns FAILED_DOD when testing was not performed', async () => {
@@ -502,7 +513,7 @@ describe('Deployment Tools', () => {
       });
 
       expect(result).toContain('FAILED_DOD');
-      expect(result).toContain('validated (validateCode) and tested');
+      expect(result).toContain('validated (validateCode) and package tests must pass');
     });
 
     it('returns FAILED_DOD when recallKnowledge was not called', async () => {

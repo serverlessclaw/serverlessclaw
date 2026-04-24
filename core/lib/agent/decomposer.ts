@@ -28,6 +28,10 @@ export interface DecompositionOptions {
   maxSubTasks?: number;
   /** Whether to force decomposition even if short. */
   force?: boolean;
+  /** Workspace scope for dynamic agent cap and key scoping. */
+  workspaceId?: string;
+  /** Whether to infer sequential dependencies from step order (default: true). */
+  inferDependencies?: boolean;
 }
 
 /** A single decomposed sub-task from a strategic plan. */
@@ -62,6 +66,8 @@ export interface DecomposedPlan {
   totalSubTasks: number;
   /** Whether decomposition was applied (false = plan dispatched as-is). */
   wasDecomposed: boolean;
+  /** Lightweight pattern signature for metabolic waste tracking. */
+  patternSignature?: string;
 }
 
 /**
@@ -93,6 +99,72 @@ const DEFAULT_MIN_PLAN_LENGTH = 500;
 const DEFAULT_MAX_SUB_TASKS = 5;
 
 /**
+ * Absolute cap to prevent runaway decomposition regardless of agent pool size.
+ */
+const ABSOLUTE_MAX_SUB_TASKS = 8;
+
+/**
+ * Marker keywords that strongly indicate sequential execution intent.
+ * When these dominate the plan structure, we infer step-N depends on step-(N-1).
+ */
+const SEQUENTIAL_MARKERS = [
+  /^Then,\b/im,
+  /^Next,\b/im,
+  /^Finally,\b/im,
+  /^After\b/im,
+  /^Once\b/im,
+  /depends on/i,
+  /requires? (previous|step|task)/i,
+];
+
+/**
+ * Compute a dynamic maxSubTasks cap based on the enabled agent pool in a workspace.
+ * Falls back to DEFAULT_MAX_SUB_TASKS if registry lookup fails.
+ */
+async function getDynamicMaxSubTasks(
+  requestedMax: number | undefined,
+  workspaceId: string | undefined
+): Promise<number> {
+  const baseCap = requestedMax ?? DEFAULT_MAX_SUB_TASKS;
+  if (!workspaceId) return Math.min(baseCap, ABSOLUTE_MAX_SUB_TASKS);
+
+  try {
+    const { AgentRegistry } = await import('../registry/AgentRegistry');
+    const allConfigs = await AgentRegistry.getAllConfigs({ workspaceId });
+    const enabledCount = Object.values(allConfigs).filter((c) => c.enabled === true).length;
+    // Never decompose into more sub-tasks than we have healthy agents
+    const dynamicCap = Math.max(2, Math.min(enabledCount, baseCap));
+    return Math.min(dynamicCap, ABSOLUTE_MAX_SUB_TASKS);
+  } catch {
+    return Math.min(baseCap, ABSOLUTE_MAX_SUB_TASKS);
+  }
+}
+
+/**
+ * Determines if a plan segment contains strong sequential markers.
+ */
+function hasSequentialMarkers(text: string): boolean {
+  return SEQUENTIAL_MARKERS.some((pattern) => pattern.test(text));
+}
+
+/**
+ * Generates a lightweight pattern signature for metabolic waste tracking.
+ * Hashes the first 120 chars of the plan + the detected agent mix.
+ */
+function generatePatternSignature(plan: string, subTasks: PlanSubTask[]): string {
+  const prefix = plan.trim().substring(0, 120);
+  const agentMix = subTasks.map((s) => s.agentId).join(',');
+  const raw = `${prefix}::${agentMix}`;
+  let hash = 0;
+  for (let i = 0; i < raw.length; i++) {
+    const char = raw.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash |= 0;
+  }
+  return `pattern_${Math.abs(hash).toString(36)}`;
+}
+
+/**
  * Decomposes a strategic plan into sub-tasks if it exceeds the complexity threshold.
  * Uses heuristic splitting based on common step markers in plan text.
  *
@@ -102,14 +174,14 @@ const DEFAULT_MAX_SUB_TASKS = 5;
  * @param options - Optional decomposition controls.
  * @returns A DecomposedPlan with sub-tasks or the original plan as a single task.
  */
-export function decomposePlan(
+export async function decomposePlan(
   plan: string,
   planId: string,
   gapIds: string[],
   options: DecompositionOptions = {}
-): DecomposedPlan {
+): Promise<DecomposedPlan> {
   const minLength = options.minLength ?? DEFAULT_MIN_PLAN_LENGTH;
-  const maxTasks = options.maxSubTasks ?? DEFAULT_MAX_SUB_TASKS;
+  const maxTasks = await getDynamicMaxSubTasks(options.maxSubTasks, options.workspaceId);
 
   // 2026: Default to SuperClaw or Coder based on input
   const defaultAgent = options.defaultAgentId ?? AgentType.CODER;
@@ -188,14 +260,39 @@ export function decomposePlan(
     task: segment.trim(),
     gapIds: index < gapIds.length ? [gapIds[index % gapIds.length]] : gapIds.slice(0, 1),
     order: index,
-    dependencies: [], // Enable parallel execution by default for Swarm
+    dependencies: [], // Will be populated below if inference enabled
     complexity: estimateComplexity(segment),
     agentId: determineAgent(segment, defaultAgent),
   }));
 
+  // Infer sequential dependencies when markers indicate execution order matters
+  const shouldInferDeps = options.inferDependencies !== false;
+  if (shouldInferDeps && subTasks.length > 1) {
+    const globalSequential = hasSequentialMarkers(plan);
+    const sequentialRatio =
+      subTasks.filter((s) => hasSequentialMarkers(s.task)).length / subTasks.length;
+
+    // If either the full plan or >40% of segments contain sequential markers, infer deps
+    if (globalSequential || sequentialRatio > 0.4) {
+      for (let i = 1; i < subTasks.length; i++) {
+        // Each step depends on the previous step (order index)
+        subTasks[i].dependencies = [subTasks[i - 1].order];
+      }
+      logger.info(
+        `[Decomposer] Inferred sequential dependencies for ${subTasks.length} sub-tasks.`
+      );
+    }
+  }
+
+  const patternSignature = generatePatternSignature(plan, subTasks);
+
   logger.info(
-    `[Decomposer] Decomposed plan into ${subTasks.length} sub-tasks: ` +
-      subTasks.map((s) => `#${s.order}(${s.complexity} -> ${s.agentId})`).join(', ')
+    `[Decomposer] Decomposed plan into ${subTasks.length} sub-tasks (pattern=${patternSignature}): ` +
+      subTasks
+        .map(
+          (s) => `#${s.order}(${s.complexity} -> ${s.agentId})[deps=${s.dependencies.join(',')}]`
+        )
+        .join(', ')
   );
 
   return {
@@ -204,6 +301,7 @@ export function decomposePlan(
     subTasks,
     totalSubTasks: subTasks.length,
     wasDecomposed: true,
+    patternSignature,
   };
 }
 
@@ -278,11 +376,16 @@ function estimateComplexity(text: string): number {
  */
 function determineAgent(text: string, defaultAgent: string): string {
   // Priority 1: explicit goal header declaration
-  const goalHeader = text.match(/(?:^|\n)\s*###\s+Goal:\s+(RESEARCHER|CODER)\b/i);
+  const goalHeader = text.match(
+    /(?:^|\n)\s*###\s+Goal:\s+(RESEARCHER|CODER|QA|CRITIC|FACILITATOR)\b/i
+  );
   if (goalHeader) {
     const declared = goalHeader[1].toUpperCase();
     if (declared === 'RESEARCHER') return AgentType.RESEARCHER;
     if (declared === 'CODER') return AgentType.CODER;
+    if (declared === 'QA') return AgentType.QA;
+    if (declared === 'CRITIC') return AgentType.CRITIC;
+    if (declared === 'FACILITATOR') return AgentType.FACILITATOR;
   }
 
   const researchKeywords = [
@@ -308,9 +411,58 @@ function determineAgent(text: string, defaultAgent: string): string {
     /write (a )?(test|spec|docs)/i,
   ];
 
+  const qaKeywords = [
+    /\btest\b/i,
+    /\bverify\b/i,
+    /\bvalidate\b/i,
+    /\bcheck\b/i,
+    /\binspect\b/i,
+    /\bensure quality\b/i,
+    /\bquality assurance\b/i,
+    /\bregression test\b/i,
+    /\bunit test\b/i,
+    /\be2e test\b/i,
+  ];
+
+  const criticKeywords = [
+    /\breview\b/i,
+    /\bpeer review\b/i,
+    /\bcode review\b/i,
+    /\barchitectural review\b/i,
+    /\bsecurity review\b/i,
+    /\bevaluate\b/i,
+    /\bassess\b/i,
+    /\bcritique\b/i,
+    /\bfindings\b/i,
+  ];
+
+  const facilitatorKeywords = [
+    /\bconsensus\b/i,
+    /\bconflict resolution\b/i,
+    /\bmediate\b/i,
+    /\bfacilitate\b/i,
+    /\btie-break\b/i,
+    /\bdispute\b/i,
+    /\barbitration\b/i,
+    /\balignment\b/i,
+  ];
+
   const isResearch = researchKeywords.some((p) => p.test(text));
   const isCoding = coderKeywords.some((p) => p.test(text));
+  const isQA = qaKeywords.some((p) => p.test(text));
+  const isCritic = criticKeywords.some((p) => p.test(text));
+  const isFacilitator = facilitatorKeywords.some((p) => p.test(text));
 
+  // Detected specializations take priority over generic coding/research
+  if (isFacilitator && !isCoding && !isResearch) {
+    return AgentType.FACILITATOR;
+  }
+  if (isCritic && !isCoding && !isResearch) {
+    return AgentType.CRITIC;
+  }
+  if (isQA && !isCoding && !isResearch) {
+    return AgentType.QA;
+  }
   if (isResearch && !isCoding) {
     return AgentType.RESEARCHER;
   }

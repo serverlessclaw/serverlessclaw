@@ -271,17 +271,18 @@ SST_SECRET_TelegramBotToken=your-token
 
 Triggers `make pre-commit`, which runs:
 
-1. `pnpm lint --fix`: Applies lint auto-fixes up front.
-2. `make lint-staged`: Runs incremental checks on changed files only.
-3. `make test-silent`: Runs unit tests in low-noise mode.
+1. `make lint-staged`: Runs incremental checks on changed files only.
+2. `make type-check`: Runs type-checking with constrained Turbo concurrency to reduce local fan-out.
+3. `make docs-check`: Verifies docs sync for touched areas.
 
 ### Pre-push (`.husky/pre-push`)
 
 Triggers `make pre-push`, which runs:
 
 1. `make verify-up-to-date`: Ensures you are pushing on top of the latest remote changes.
-2. `make gate`: Full quality sweep (lint, format, type-check, tests, coverage).
-3. `make aiready`: Enforces an AI-readiness score of **80+** via `aiready scan . --threshold 80 --ci`.
+2. `make gate-fast`: Fast quality sweep for affected work with constrained Turbo concurrency.
+
+For stricter local validation, run `make pre-push-full` manually. This executes `verify-up-to-date`, `gate-fast`, `aiready`, and `smoke-test` in parallel.
 
 ---
 

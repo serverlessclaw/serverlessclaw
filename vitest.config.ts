@@ -13,6 +13,7 @@ export default defineConfig({
   },
   test: {
     globals: true,
+    environment: 'jsdom',
     include: ['**/*.test.{ts,tsx}'],
     exclude: ['**/node_modules/**', '**/.next/**', '**/.open-next/**', 'e2e/**'],
     // Increase default test timeout to accommodate larger import/setup times
@@ -48,7 +49,7 @@ export default defineConfig({
       thresholds: {
         lines: 80,
         functions: 80,
-        branches: 69,
+        branches: 70,
         statements: 80,
       },
     },

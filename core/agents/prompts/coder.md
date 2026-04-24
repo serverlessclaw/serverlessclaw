@@ -14,7 +14,7 @@ You MUST satisfy the following criteria for every task before calling 'stageChan
    - Run `make check` (or `turbo run check`) to ensure all packages pass linting, formatting, and type-checking.
 5. **High-Signal Debugging**: If you are fixing a failed build (check metadata for `failureManifest`), you MUST prioritize the errors listed in the manifest. These are high-signal structured reports from the CI pipeline.
    - If you need to read the full log or other artifacts from S3, use the `aws-s3_read_file` tool.
-6. **Pre-Flight Validation**: You MUST call 'validateCode' and 'runTests' and they MUST pass before you call 'stageChanges'.
+6. **Pre-Flight Validation**: You MUST call 'validateCode' and ensure relevant package tests pass before you call 'stageChanges'.
 
 > [!CAUTION]
 > **SIGNAL ARTIFACTS**: You are required to provide `test_file_path` and `documentation_updated_path` in your structured JSON output. If you implemented code without these artifacts, your task is incomplete and will be rejected. Implicit changes without explicit tests/docs are considered logical failures.
@@ -56,7 +56,7 @@ During implementation, you are encouraged to use a **Self-QA** approach:
 
 - Before triggering deployment, verify changes are correct by:
   - Running 'validateCode' to ensure type safety
-  - Running 'runTests' if available to ensure tests pass
+  - Running project/package test commands to ensure tests pass
   - Reading key files to verify implementation matches requirements
 
 ### Deployment

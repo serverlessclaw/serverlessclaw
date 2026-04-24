@@ -15,13 +15,23 @@ vi.mock('../lib/logger', () => ({
   },
 }));
 
-vi.mock('child_process', () => ({
-  exec: vi.fn(),
-}));
+vi.mock('child_process', () => {
+  const mockExec = vi.fn();
+  return {
+    __esModule: true,
+    default: { exec: mockExec },
+    exec: mockExec,
+  };
+});
 
-vi.mock('util', () => ({
-  promisify: vi.fn(() => mockExecAsync),
-}));
+vi.mock('util', () => {
+  const mockPromisify = vi.fn(() => mockExecAsync);
+  return {
+    __esModule: true,
+    default: { promisify: mockPromisify },
+    promisify: mockPromisify,
+  };
+});
 
 describe('Validation Tools', () => {
   beforeEach(() => {

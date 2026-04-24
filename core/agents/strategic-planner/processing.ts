@@ -365,7 +365,7 @@ export async function postProcessPlan(
         };
       } else {
         const { decomposePlan } = await import('../../lib/agent/decomposer');
-        decomposed = decomposePlan(plan, planId, processedGapIds, {
+        decomposed = await decomposePlan(plan, planId, processedGapIds, {
           maxSubTasks: 3,
         });
       }

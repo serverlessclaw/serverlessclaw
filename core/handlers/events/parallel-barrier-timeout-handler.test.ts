@@ -140,7 +140,12 @@ describe('parallel-barrier-timeout-handler', () => {
 
       await handleParallelBarrierTimeout(baseEventDetail);
 
-      expect(mockMarkAsCompleted).toHaveBeenCalledWith('user-123', 'trace-abc', 'success');
+      expect(mockMarkAsCompleted).toHaveBeenCalledWith(
+        'user-123',
+        'trace-abc',
+        'success',
+        undefined
+      );
     });
 
     it('emits PARALLEL_TASK_COMPLETED with timeout status when some tasks are missing', async () => {
@@ -162,7 +167,12 @@ describe('parallel-barrier-timeout-handler', () => {
 
       await handleParallelBarrierTimeout(baseEventDetail);
 
-      expect(mockMarkAsCompleted).toHaveBeenCalledWith('user-123', 'trace-abc', 'timed_out');
+      expect(mockMarkAsCompleted).toHaveBeenCalledWith(
+        'user-123',
+        'trace-abc',
+        'timed_out',
+        undefined
+      );
       expect(mockEmitEvent).toHaveBeenCalledWith(
         'events.handler',
         'parallel_task_completed',
@@ -197,7 +207,12 @@ describe('parallel-barrier-timeout-handler', () => {
 
       await handleParallelBarrierTimeout(baseEventDetail);
 
-      expect(mockMarkAsCompleted).toHaveBeenCalledWith('user-123', 'trace-abc', 'timed_out');
+      expect(mockMarkAsCompleted).toHaveBeenCalledWith(
+        'user-123',
+        'trace-abc',
+        'timed_out',
+        undefined
+      );
     });
 
     it('emits timeout status regardless of success rate when tasks are missing', async () => {
@@ -218,7 +233,12 @@ describe('parallel-barrier-timeout-handler', () => {
 
       await handleParallelBarrierTimeout(baseEventDetail);
 
-      expect(mockMarkAsCompleted).toHaveBeenCalledWith('user-123', 'trace-abc', 'timed_out');
+      expect(mockMarkAsCompleted).toHaveBeenCalledWith(
+        'user-123',
+        'trace-abc',
+        'timed_out',
+        undefined
+      );
     });
 
     it('skips when markAsCompleted returns false (race condition)', async () => {
@@ -253,7 +273,12 @@ describe('parallel-barrier-timeout-handler', () => {
 
       await handleParallelBarrierTimeout(baseEventDetail);
 
-      expect(mockMarkAsCompleted).toHaveBeenCalledWith('user-123', 'trace-abc', 'timed_out');
+      expect(mockMarkAsCompleted).toHaveBeenCalledWith(
+        'user-123',
+        'trace-abc',
+        'timed_out',
+        undefined
+      );
     });
   });
 });

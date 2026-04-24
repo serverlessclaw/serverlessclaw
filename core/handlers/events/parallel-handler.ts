@@ -26,6 +26,7 @@ export interface ParallelTaskEvent {
   aggregationPrompt?: ParallelDispatchParams['aggregationPrompt'];
   tokenBudget?: number;
   costLimit?: number;
+  workspaceId?: string;
 }
 
 const DEFAULT_BARRIER_TIMEOUT_MS = TIME.MS_PER_MINUTE * 5;
@@ -46,6 +47,7 @@ export async function handleParallelDispatch(
     aggregationPrompt,
     tokenBudget,
     costLimit,
+    workspaceId,
   } = event.detail;
 
   const timeoutMs =
@@ -113,7 +115,8 @@ export async function handleParallelDispatch(
     aggregationType,
     aggregationPrompt,
     aggregatorMetadata,
-    initialQuery
+    initialQuery,
+    workspaceId
   );
 
   // If dependencies are enabled, use DAG execution
@@ -128,7 +131,7 @@ export async function handleParallelDispatch(
       logger.error('Invalid dependency graph (cycle detected). Failing dispatch immediately.');
 
       // Mark aggregator as failed to prevent hanging barriers
-      await aggregator.markAsCompleted(userId, safeTraceId, 'failed');
+      await aggregator.markAsCompleted(userId, safeTraceId, 'failed', workspaceId);
 
       // Emit a completion event to notify orchestrator of failure
       const { emitTypedEvent } = await import('../../lib/utils/typed-emit');
@@ -146,6 +149,7 @@ export async function handleParallelDispatch(
         elapsedMs: 0,
         aggregationType,
         aggregationPrompt,
+        workspaceId,
       });
       return;
     }
@@ -157,7 +161,7 @@ export async function handleParallelDispatch(
       logger.error('No tasks ready to execute (all have unsatisfied dependencies)');
 
       // Mark aggregator as failed and emit terminal event to prevent stranded dispatch
-      await aggregator.markAsCompleted(userId, safeTraceId, 'failed');
+      await aggregator.markAsCompleted(userId, safeTraceId, 'failed', workspaceId);
 
       const { emitTypedEvent } = await import('../../lib/utils/typed-emit');
       await emitTypedEvent('events.handler', EventType.PARALLEL_TASK_COMPLETED, {
@@ -174,6 +178,7 @@ export async function handleParallelDispatch(
         elapsedMs: 0,
         aggregationType,
         aggregationPrompt,
+        workspaceId,
       });
       return;
     }
@@ -194,7 +199,8 @@ export async function handleParallelDispatch(
           sessionId,
           userId,
           perTaskBudget,
-          perTaskCost
+          perTaskCost,
+          workspaceId
         );
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
@@ -210,13 +216,18 @@ export async function handleParallelDispatch(
       );
       // Notify aggregator of dispatch failures (A6 Fix)
       for (const err of dagDispatchErrors) {
-        await aggregator.addResult(userId, safeTraceId, {
-          taskId: err.taskId,
-          agentId: tasks.find((t) => t.taskId === err.taskId)?.agentId || 'unknown',
-          status: 'failed',
-          error: `Dispatch failed: ${err.error}`,
-          durationMs: 0,
-        });
+        await aggregator.addResult(
+          userId,
+          safeTraceId,
+          {
+            taskId: err.taskId,
+            agentId: tasks.find((t) => t.taskId === err.taskId)?.agentId || 'unknown',
+            status: 'failed',
+            error: `Dispatch failed: ${err.error}`,
+            durationMs: 0,
+          },
+          workspaceId
+        );
       }
     }
 
@@ -239,6 +250,7 @@ export async function handleParallelDispatch(
           sessionId,
           depth: depth ?? 0,
           taskCount: tasks.length,
+          workspaceId,
         },
         targetTime,
         EventType.PARALLEL_BARRIER_TIMEOUT
@@ -293,7 +305,8 @@ export async function handleParallelDispatch(
         sessionId,
         userId,
         perTaskBudget,
-        perTaskCost
+        perTaskCost,
+        workspaceId
       );
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
@@ -309,13 +322,18 @@ export async function handleParallelDispatch(
     );
     // Notify aggregator of dispatch failures (A6 Fix)
     for (const err of dispatchErrors) {
-      await aggregator.addResult(userId, safeTraceId, {
-        taskId: err.taskId,
-        agentId: tasks.find((t) => t.taskId === err.taskId)?.agentId || 'unknown',
-        status: 'failed',
-        error: `Dispatch failed: ${err.error}`,
-        durationMs: 0,
-      });
+      await aggregator.addResult(
+        userId,
+        safeTraceId,
+        {
+          taskId: err.taskId,
+          agentId: tasks.find((t) => t.taskId === err.taskId)?.agentId || 'unknown',
+          status: 'failed',
+          error: `Dispatch failed: ${err.error}`,
+          durationMs: 0,
+        },
+        workspaceId
+      );
     }
   }
 
@@ -332,6 +350,7 @@ export async function handleParallelDispatch(
         sessionId,
         depth: depth ?? 0,
         taskCount: tasks.length,
+        workspaceId,
       },
       targetTime,
       EventType.PARALLEL_BARRIER_TIMEOUT
@@ -385,7 +404,8 @@ async function dispatchTask(
   sessionId: string | undefined,
   userId: string,
   tokenBudget?: number,
-  costLimit?: number
+  costLimit?: number,
+  workspaceId?: string
 ): Promise<void> {
   const { emitTypedEvent } = await import('../../lib/utils/typed-emit');
 
@@ -408,5 +428,6 @@ async function dispatchTask(
     sessionId,
     tokenBudget,
     costLimit,
+    workspaceId,
   });
 }

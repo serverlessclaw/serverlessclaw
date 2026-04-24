@@ -50,6 +50,6 @@ describe('Domain-Driven Tool Definitions Integrity', () => {
     expect(names).toContain('listAgents');
     expect(names).toContain('createWorkspace');
     expect(names).toContain('triggerDeployment');
-    expect(names).toContain('runShellCommand');
+    expect(names).toContain('validateCode');
   });
 });

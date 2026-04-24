@@ -45,7 +45,7 @@ export const stageChanges = {
         );
 
         if (!hasValidated || !hasTested) {
-          return 'FAILED_DOD: Changes must be validated (validateCode) and tested (runTests) before staging.';
+          return 'FAILED_DOD: Changes must be validated (validateCode) and package tests must pass before staging.';
         }
         if (!hasRecalledKnowledge) {
           return 'FAILED_DOD: Pre-flight checklist requires recalling relevant FACT#/LESSON# knowledge before coding. Call recallKnowledge first.';
@@ -152,7 +152,7 @@ export const generatePatch = {
         );
 
         if (!hasValidated || !hasTested) {
-          return 'FAILED_DOD: Changes must be validated (validateCode) and tested (runTests) before generating patch.';
+          return 'FAILED_DOD: Changes must be validated (validateCode) and package tests must pass before generating patch.';
         }
         if (!hasRecalledKnowledge) {
           return 'FAILED_DOD: Pre-flight checklist requires recalling relevant FACT#/LESSON# knowledge before coding. Call recallKnowledge first.';

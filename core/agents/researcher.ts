@@ -45,7 +45,7 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
     const { decomposePlan } = await import('../lib/agent/decomposer');
     const parentGapIds =
       (metadata?.gapIds as string[]) ?? (metadata?.coveredGapIds as string[]) ?? [];
-    const decomposed = decomposePlan(
+    const decomposed = await decomposePlan(
       task,
       payload.taskId || traceId || `plan-${Date.now()}`,
       parentGapIds,

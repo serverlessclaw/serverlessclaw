@@ -121,7 +121,7 @@ export const dispatchTask = {
     // Dynamic Plan Decomposition for large tasks
     const { decomposePlan } = await import('../../lib/agent/decomposer');
     const gapIds = (metadata.gapIds as string[]) || [];
-    const decomposition = decomposePlan(task, traceId || 'mission', gapIds);
+    const decomposition = await decomposePlan(task, traceId || 'mission', gapIds);
 
     if (decomposition.wasDecomposed) {
       logger.info(

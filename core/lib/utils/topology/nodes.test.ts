@@ -2,41 +2,59 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NODE_TYPE, NODE_TIER, NODE_ICON, INFRA_NODE_ID } from './constants';
 import * as fs from 'fs';
 
-vi.mock('fs', () => ({
-  readFileSync: vi.fn(),
-  existsSync: vi.fn(),
-}));
+vi.mock('fs', () => {
+  const mockReadFileSync = vi.fn();
+  const mockExistsSync = vi.fn();
+  return {
+    __esModule: true,
+    default: { readFileSync: mockReadFileSync, existsSync: mockExistsSync },
+    readFileSync: mockReadFileSync,
+    existsSync: mockExistsSync,
+  };
+});
 
-vi.mock('@aws-sdk/client-dynamodb', () => ({
-  DynamoDBClient: vi.fn().mockImplementation(function () {
-    return {
-      send: vi.fn().mockResolvedValue({ TableNames: ['serverlessclaw-local-MemoryTable'] }),
-    };
-  }),
-  ListTablesCommand: vi.fn(),
-}));
+vi.mock('@aws-sdk/client-dynamodb', () => {
+  const mockSend = vi.fn().mockResolvedValue({ TableNames: ['serverlessclaw-local-MemoryTable'] });
+  const mockDynamoDBClient = vi.fn().mockImplementation(function () {
+    return { send: mockSend };
+  });
+  return {
+    __esModule: true,
+    default: { DynamoDBClient: mockDynamoDBClient, ListTablesCommand: vi.fn() },
+    DynamoDBClient: mockDynamoDBClient,
+    ListTablesCommand: vi.fn(),
+  };
+});
 
-vi.mock('@aws-sdk/client-s3', () => ({
-  S3Client: vi.fn().mockImplementation(function () {
-    return {
-      send: vi
-        .fn()
-        .mockResolvedValue({ Buckets: [{ Name: 'serverlessclaw-local-KnowledgeBucket' }] }),
-    };
-  }),
-  ListBucketsCommand: vi.fn(),
-}));
+vi.mock('@aws-sdk/client-s3', () => {
+  const mockSend = vi
+    .fn()
+    .mockResolvedValue({ Buckets: [{ Name: 'serverlessclaw-local-KnowledgeBucket' }] });
+  const mockS3Client = vi.fn().mockImplementation(function () {
+    return { send: mockSend };
+  });
+  return {
+    __esModule: true,
+    default: { S3Client: mockS3Client, ListBucketsCommand: vi.fn() },
+    S3Client: mockS3Client,
+    ListBucketsCommand: vi.fn(),
+  };
+});
 
-vi.mock('@aws-sdk/client-lambda', () => ({
-  LambdaClient: vi.fn().mockImplementation(function () {
-    return {
-      send: vi.fn().mockResolvedValue({
-        Functions: [{ FunctionName: 'serverlessclaw-local-agent-runner' }],
-      }),
-    };
-  }),
-  ListFunctionsCommand: vi.fn(),
-}));
+vi.mock('@aws-sdk/client-lambda', () => {
+  const mockSend = vi.fn().mockResolvedValue({
+    Functions: [{ FunctionName: 'serverlessclaw-local-agent-runner' }],
+  });
+  const mockLambdaClient = vi.fn().mockImplementation(function () {
+    return { send: mockSend };
+  });
+  return {
+    __esModule: true,
+    default: { LambdaClient: mockLambdaClient, ListFunctionsCommand: vi.fn() },
+    LambdaClient: mockLambdaClient,
+    ListFunctionsCommand: vi.fn(),
+  };
+});
 
 vi.mock('../../backbone', () => ({
   BACKBONE_REGISTRY: {

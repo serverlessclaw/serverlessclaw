@@ -5,6 +5,7 @@ import { LRUSet } from '../../lib/utils/lru';
 import { getRecursionLimit } from '../../lib/recursion-tracker';
 import { routeToDlq } from '../route-to-dlq';
 import { emitMetrics, METRICS } from '../../lib/metrics';
+import { AgentRegistry } from '../../lib/registry/AgentRegistry';
 
 /**
  * In-memory fast-path dedup set for EventBridge's at-least-once delivery.
@@ -180,7 +181,7 @@ export async function handleTaskResult(
       import('../../lib/utils/typed-emit'),
     ]);
 
-    const existingState = await aggregator.getState(userId, traceId);
+    const existingState = await aggregator.getState(userId, traceId, workspaceId);
     if (!existingState) {
       logger.info(`No parallel dispatch state for traceId ${traceId}, skipping aggregation.`);
     } else {
@@ -188,15 +189,40 @@ export async function handleTaskResult(
       const isDagExecution = metadata?.hasDependencies === true;
       const taskId = (eventDetail.taskId as string) ?? agentId;
 
+      // Retry logic: for failed parallel tasks, attempt once with an alternative agent
+      if (isFailure) {
+        const retryDispatched = await handleParallelTaskRetry({
+          userId,
+          traceId,
+          taskId,
+          agentId,
+          response,
+          existingState,
+          sessionId,
+          depth,
+          workspaceId,
+          teamId,
+          staffId,
+        });
+        if (retryDispatched) {
+          return; // Retry dispatched; wait for retry result before aggregating
+        }
+      }
+
       // Add result incrementally (handles sharding automatically)
-      const aggregateState = await aggregator.addResult(userId, traceId, {
-        taskId,
-        agentId,
-        status: isFailure ? 'failed' : 'success',
-        result: response,
-        durationMs: 0,
-        patch: (eventDetail.metadata as Record<string, unknown>)?.patch as string | undefined,
-      });
+      const aggregateState = await aggregator.addResult(
+        userId,
+        traceId,
+        {
+          taskId,
+          agentId,
+          status: isFailure ? 'failed' : 'success',
+          result: response,
+          durationMs: 0,
+          patch: (eventDetail.metadata as Record<string, unknown>)?.patch as string | undefined,
+        },
+        workspaceId
+      );
 
       if (isDagExecution) {
         logger.info(`DAG task ${taskId} completed. Triggering DAG Supervisor.`);
@@ -242,7 +268,12 @@ export async function handleTaskResult(
         ]).catch(() => {});
 
         // Atomic completion check to prevent double-firing
-        const marked = await aggregator.markAsCompleted(userId, traceId, overallStatus);
+        const marked = await aggregator.markAsCompleted(
+          userId,
+          traceId,
+          overallStatus,
+          workspaceId
+        );
 
         if (marked) {
           await emitTypedEvent('events.handler', EventType.PARALLEL_TASK_COMPLETED, {
@@ -267,6 +298,127 @@ export async function handleTaskResult(
       }
       return;
     }
+  }
+
+  /**
+   * Attempts to retry a failed parallel sub-task with an alternative agent.
+   * Returns true if a retry was dispatched, false if the failure should be recorded.
+   */
+  async function handleParallelTaskRetry({
+    userId,
+    traceId,
+    taskId,
+    agentId,
+    response,
+    existingState,
+    sessionId,
+    depth,
+    workspaceId,
+    teamId,
+    staffId,
+  }: {
+    userId: string;
+    traceId: string;
+    taskId: string;
+    agentId: string;
+    response: string;
+    existingState: Awaited<
+      ReturnType<import('../../lib/agent/parallel-aggregator').ParallelAggregator['getState']>
+    >;
+    sessionId?: string;
+    depth?: number;
+    workspaceId?: string;
+    teamId?: string;
+    staffId?: string;
+  }): Promise<boolean> {
+    if (!existingState) return false;
+
+    const metadata = existingState.metadata as Record<string, unknown> | undefined;
+    const retries = (metadata?.retries as Record<string, number> | undefined) ?? {};
+    if (retries[taskId] && retries[taskId] > 0) {
+      return false; // Already retried this task once
+    }
+
+    // Find the original task definition
+    const tasks =
+      (metadata?.tasks as
+        | Array<{
+            taskId: string;
+            agentId: string;
+            task: string;
+            metadata?: Record<string, unknown>;
+          }>
+        | undefined) ?? [];
+    const originalTask = tasks.find((t) => t.taskId === taskId);
+    if (!originalTask) return false;
+
+    // Determine alternative agent
+    const alternativeAgent = await pickAlternativeAgent(agentId, workspaceId);
+    if (!alternativeAgent) return false;
+
+    // Record retry dispatch in aggregator metadata
+    const { aggregator } = await import('../../lib/agent/parallel-aggregator');
+    await aggregator.updateProgress(userId, traceId, taskId, 0, 'pending', workspaceId);
+
+    // Emit retry task
+    const { emitTypedEvent } = await import('../../lib/utils/typed-emit');
+    await emitTypedEvent('agent.parallel', `${alternativeAgent}_task` as EventType, {
+      userId,
+      taskId: `${taskId}__retry`,
+      task: `[RETRY of ${agentId}] ${originalTask.task}\n\nPrevious failure:\n${response}`,
+      metadata: {
+        ...originalTask.metadata,
+        parallelDispatchId: traceId,
+        isRetry: true,
+        originalTaskId: taskId,
+        originalAgentId: agentId,
+      },
+      traceId,
+      initiatorId: 'parallel-retry-dispatcher',
+      depth: (depth ?? 0) + 1,
+      sessionId,
+      workspaceId,
+      teamId,
+      staffId,
+    });
+
+    // Also update the retry count in the aggregator metadata atomically
+    // Using updateProgress to store retry state as a lightweight metadata update
+    await aggregator.updateProgress(userId, traceId, `${taskId}_retry`, 1, 'pending', workspaceId);
+
+    return true;
+  }
+
+  /**
+   * Picks an alternative agent for retrying a failed sub-task.
+   */
+  async function pickAlternativeAgent(
+    failedAgentId: string,
+    workspaceId?: string
+  ): Promise<string | null> {
+    const fallbackChain: Record<string, string[]> = {
+      [AgentType.CODER]: [AgentType.CRITIC, AgentType.QA, AgentType.RESEARCHER],
+      [AgentType.CRITIC]: [AgentType.QA, AgentType.RESEARCHER, AgentType.CODER],
+      [AgentType.QA]: [AgentType.RESEARCHER, AgentType.CODER, AgentType.CRITIC],
+      [AgentType.RESEARCHER]: [AgentType.CODER, AgentType.CRITIC, AgentType.QA],
+      [AgentType.FACILITATOR]: [AgentType.CRITIC, AgentType.QA],
+    };
+
+    const candidates = fallbackChain[failedAgentId] ?? [AgentType.CODER];
+
+    try {
+      for (const candidate of candidates) {
+        const config = await AgentRegistry.getAgentConfig(candidate, { workspaceId });
+        if (config && config.enabled === true) {
+          return candidate;
+        }
+      }
+    } catch {
+      // Registry may not be available in all environments
+    }
+
+    // Fallback: return first candidate without registry check
+    return candidates[0] ?? null;
   }
 
   // Non-parallel task — wake the initiator now

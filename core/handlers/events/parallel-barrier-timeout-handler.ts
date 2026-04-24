@@ -12,6 +12,7 @@ interface BarrierTimeoutEvent {
   sessionId?: string;
   depth?: number;
   taskCount: number;
+  workspaceId?: string;
 }
 
 const aggregator = new ParallelAggregator();
@@ -19,7 +20,7 @@ const aggregator = new ParallelAggregator();
 export async function handleParallelBarrierTimeout(
   eventDetail: Record<string, unknown>
 ): Promise<void> {
-  const { userId, traceId, initiatorId, sessionId, taskCount } =
+  const { userId, traceId, initiatorId, sessionId, taskCount, workspaceId } =
     eventDetail as unknown as BarrierTimeoutEvent;
 
   logger.info(`Handling parallel barrier timeout: traceId=${traceId}, taskCount=${taskCount}`);
@@ -29,7 +30,7 @@ export async function handleParallelBarrierTimeout(
     return;
   }
 
-  const state = await aggregator.getState(userId, traceId);
+  const state = await aggregator.getState(userId, traceId, workspaceId);
 
   if (!state) {
     logger.warn(`No parallel dispatch state found for ${traceId}, assuming already completed.`);
@@ -63,7 +64,7 @@ export async function handleParallelBarrierTimeout(
   // Use the calculated status if actually complete, otherwise use 'timed_out'.
   const effectiveStatus =
     completedCount >= totalTasks ? overallStatus : ParallelTaskStatus.TIMED_OUT;
-  const marked = await aggregator.markAsCompleted(userId, traceId, effectiveStatus);
+  const marked = await aggregator.markAsCompleted(userId, traceId, effectiveStatus, workspaceId);
 
   if (!marked) {
     logger.info(
@@ -122,6 +123,7 @@ export async function handleParallelBarrierTimeout(
       taskCount: totalTasks,
       completedCount: isActuallyTimeout ? totalTasks : completedCount,
       elapsedMs: Date.now() - ((state.createdAt as number) ?? Date.now()),
+      workspaceId,
     },
     { priority: EventPriority.HIGH }
   );

@@ -25,7 +25,7 @@ vi.mock('./prompts/index', () => ({
   1. 'validateCode'
   2. 'read_file'
   3. 'checkHealth'
-  4. 'runTests'`,
+  4. Package test command(s)`,
 }));
 
 vi.mock('../lib/utils/agent-helpers', () => ({
