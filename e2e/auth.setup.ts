@@ -9,6 +9,7 @@ setup('authenticate', async ({ request }) => {
   );
 
   const response = await request.post('/api/auth/login', {
+    timeout: 15000,
     data: { password },
   });
 

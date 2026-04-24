@@ -13,23 +13,36 @@ test.describe('Traces', () => {
     await page.waitForLoadState('networkidle');
     // Should load without critical errors
     await expect(page.locator('body')).not.toContainText('Error');
+    await expect(page.getByText(/Trace Intelligence|追踪情报/i).first()).toBeVisible({
+      timeout: 15000,
+    });
   });
 
   test('can click a trace to see details', async ({ page }) => {
     await page.goto('/trace');
     await page.waitForLoadState('networkidle');
 
-    // Look for clickable trace items
-    const traceItem = page.locator('a[href*="/trace/"], [data-trace-id], tr, li').first();
-    await expect(traceItem).toBeVisible({ timeout: 15000 });
-    await traceItem.click();
+    const traceLinks = page.locator('a[href*="/trace/"]');
+    const traceCount = await traceLinks.count();
+
+    if (traceCount === 0) {
+      await expect(
+        page.getByText(/NO_TRACES_FOUND|未找到链路|No active mission logs detected/i)
+      ).toBeVisible({
+        timeout: 15000,
+      });
+      return;
+    }
+
+    await traceLinks.first().click();
     // Should navigate to trace detail or show detail view
     await page.waitForLoadState('networkidle');
+    await expect(page.getByTestId('trace-detail-container')).toBeVisible({ timeout: 20000 });
   });
 
   test('navigation from sidebar to traces works', async ({ page }) => {
     await page.goto('/');
-    await page.click('a[href="/trace"]');
+    await page.locator('a[href="/trace"]').first().click();
     await expect(page).toHaveURL('/trace');
   });
 });

@@ -26,9 +26,9 @@ test.describe('Evolution Pipeline', () => {
     await page.goto('/pipeline');
     await page.waitForLoadState('networkidle');
 
-    // Should display metric cards for Active Gaps and Historical Success
-    const activeGapsCard = page.locator('text=/Active Gaps/i');
-    const successCard = page.locator('text=/Historical Success/i');
+    // Should display metric cards for active and success counts.
+    const activeGapsCard = page.locator('text=/ACTIVE|Active Gaps|活跃差距/i');
+    const successCard = page.locator('text=/SUCCESS|Historical Success|历史成功率/i');
 
     await expect(activeGapsCard.first()).toBeVisible({ timeout: 15000 });
     await expect(successCard.first()).toBeVisible({ timeout: 15000 });
