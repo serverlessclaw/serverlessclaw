@@ -48,9 +48,9 @@ export class WarmupManager extends BaseMemoryProvider {
   /**
    * Check if a server is currently warm (has recent warm state).
    */
-  async isServerWarm(serverName: string): Promise<boolean> {
+  async isServerWarm(serverName: string, workspaceId?: string): Promise<boolean> {
     try {
-      const item = await this.getWarmState(serverName);
+      const item = await this.getWarmState(serverName, workspaceId);
       if (!item) return false;
 
       const now = Math.floor(Date.now() / 1000);
@@ -64,13 +64,16 @@ export class WarmupManager extends BaseMemoryProvider {
   /**
    * Get warm state for a server from DynamoDB.
    */
-  async getWarmState(serverName: string): Promise<WarmupState | null> {
+  async getWarmState(serverName: string, workspaceId?: string): Promise<WarmupState | null> {
     try {
+      const pk = `WARM#${serverName}`;
+      const scopedPk = this.getScopedUserId(pk, { workspaceId });
+
       const items = await this.queryItemsPaginated({
         TableName: this.tableName,
         KeyConditionExpression: 'pk = :pk AND sk = :sk',
         ExpressionAttributeValues: {
-          ':pk': `WARM#${serverName}`,
+          ':pk': scopedPk,
           ':sk': 'STATE',
         },
       });
@@ -84,14 +87,20 @@ export class WarmupManager extends BaseMemoryProvider {
   /**
    * Record warm state after successful warmup.
    */
-  async recordWarmState(state: WarmupState): Promise<void> {
+  async recordWarmState(state: WarmupState, workspaceId?: string): Promise<void> {
     try {
+      const pk = `WARM#${state.server}`;
+      const scopedPk = this.getScopedUserId(pk, { workspaceId });
+
       await this.putItem({
-        pk: `WARM#${state.server}`,
+        pk: scopedPk,
         sk: 'STATE',
         ...state,
+        workspaceId,
       });
-      logger.info(`[WARMUP] Recorded warm state for ${state.server}`);
+      logger.info(
+        `[WARMUP] Recorded warm state for ${state.server} (WS: ${workspaceId || 'global'})`
+      );
     } catch (error) {
       logger.error(`[WARMUP] Failed to record warm state for ${state.server}:`, error);
       throw error;
@@ -103,7 +112,8 @@ export class WarmupManager extends BaseMemoryProvider {
    */
   async warmMcpServer(
     serverName: string,
-    warmedBy: 'webhook' | 'scheduler' | 'recovery' = 'webhook'
+    warmedBy: 'webhook' | 'scheduler' | 'recovery' = 'webhook',
+    workspaceId?: string
   ): Promise<WarmupState> {
     const arn = this.config.servers[serverName];
     if (!arn) {
@@ -139,6 +149,7 @@ export class WarmupManager extends BaseMemoryProvider {
               'x-mcp-server': serverName,
             },
             body: JSON.stringify(jsonRpcRequest),
+            workspaceId,
           }),
         })
       );
@@ -157,7 +168,7 @@ export class WarmupManager extends BaseMemoryProvider {
         coldStart,
       };
 
-      await this.recordWarmState(state);
+      await this.recordWarmState(state, workspaceId);
       return state;
     } catch (error) {
       logger.error(`[WARMUP] Failed to warm MCP server ${serverName}:`, error);
@@ -217,7 +228,8 @@ export class WarmupManager extends BaseMemoryProvider {
   async warmAgent(
     agentName: string,
     warmedBy: 'webhook' | 'scheduler' | 'recovery' = 'webhook',
-    shouldRecordLocally: boolean = false
+    shouldRecordLocally: boolean = false,
+    workspaceId?: string
   ): Promise<WarmupState> {
     const arn = this.config.agents[agentName];
     if (!arn) {
@@ -235,6 +247,7 @@ export class WarmupManager extends BaseMemoryProvider {
             type: 'WARMUP',
             source: 'warmup-manager',
             intent: 'proactive-smart-warmup',
+            workspaceId,
           }),
         })
       );
@@ -251,7 +264,7 @@ export class WarmupManager extends BaseMemoryProvider {
       };
 
       if (shouldRecordLocally) {
-        await this.recordWarmState(state);
+        await this.recordWarmState(state, workspaceId);
       }
 
       return state;
@@ -271,6 +284,7 @@ export class WarmupManager extends BaseMemoryProvider {
     intent?: string;
     sessionState?: SessionState | null;
     warmedBy?: 'webhook' | 'scheduler' | 'recovery';
+    workspaceId?: string;
   }): Promise<{ servers: string[]; agents: string[] }> {
     const warmedServers: string[] = [];
     const warmedAgents: string[] = [];
@@ -290,10 +304,10 @@ export class WarmupManager extends BaseMemoryProvider {
     // Warm MCP servers
     if (options.servers) {
       for (const server of options.servers) {
-        const isWarm = await this.isServerWarm(server);
+        const isWarm = await this.isServerWarm(server, options.workspaceId);
         if (!isWarm) {
           try {
-            await this.warmMcpServer(server, options.warmedBy || 'webhook');
+            await this.warmMcpServer(server, options.warmedBy || 'webhook', options.workspaceId);
             warmedServers.push(server);
           } catch (error) {
             logger.warn(`[WARMUP] Failed to warm server ${server}:`, error);
@@ -307,10 +321,10 @@ export class WarmupManager extends BaseMemoryProvider {
     // Warm agents
     if (agentsToWarm.length > 0) {
       for (const agent of agentsToWarm) {
-        const isWarm = await this.isServerWarm(agent);
+        const isWarm = await this.isServerWarm(agent, options.workspaceId);
         if (!isWarm) {
           try {
-            await this.warmAgent(agent, options.warmedBy || 'webhook');
+            await this.warmAgent(agent, options.warmedBy || 'webhook', true, options.workspaceId);
             warmedAgents.push(agent);
           } catch (error) {
             logger.warn(`[WARMUP] Failed to warm agent ${agent}:`, error);
@@ -327,13 +341,15 @@ export class WarmupManager extends BaseMemoryProvider {
   /**
    * Get all currently warm servers/agents.
    */
-  async getWarmServers(): Promise<WarmupState[]> {
+  async getWarmServers(workspaceId?: string): Promise<WarmupState[]> {
     try {
+      const pkPrefix = this.getScopedUserId('WARM#', { workspaceId });
+
       const items = await this.queryItemsPaginated({
         TableName: this.tableName,
         KeyConditionExpression: 'begins_with(pk, :prefix) AND sk = :sk',
         ExpressionAttributeValues: {
-          ':prefix': 'WARM#',
+          ':prefix': pkPrefix,
           ':sk': 'STATE',
         },
       });
@@ -351,13 +367,15 @@ export class WarmupManager extends BaseMemoryProvider {
   /**
    * Clean up expired warm states.
    */
-  async cleanupExpiredStates(): Promise<number> {
+  async cleanupExpiredStates(workspaceId?: string): Promise<number> {
     try {
+      const pkPrefix = this.getScopedUserId('WARM#', { workspaceId });
+
       const items = await this.queryItemsPaginated({
         TableName: this.tableName,
         KeyConditionExpression: 'begins_with(pk, :prefix) AND sk = :sk',
         ExpressionAttributeValues: {
-          ':prefix': 'WARM#',
+          ':prefix': pkPrefix,
           ':sk': 'STATE',
         },
       });
@@ -366,13 +384,13 @@ export class WarmupManager extends BaseMemoryProvider {
       let deleted = 0;
 
       for (const item of items.items) {
-        const state = item as unknown as WarmupState;
+        const state = item as any;
         if (state.ttl <= now) {
           await this.docClient.send(
             new DeleteCommand({
               TableName: this.tableName,
               Key: {
-                pk: `WARM#${state.server}`,
+                pk: item.pk,
                 sk: 'STATE',
               },
             })
@@ -381,7 +399,9 @@ export class WarmupManager extends BaseMemoryProvider {
         }
       }
 
-      logger.info(`[WARMUP] Cleaned up ${deleted} expired warm states`);
+      logger.info(
+        `[WARMUP] Cleaned up ${deleted} expired warm states (WS: ${workspaceId || 'global'})`
+      );
       return deleted;
     } catch (error) {
       logger.error('[WARMUP] Failed to cleanup expired states:', error);

@@ -30,15 +30,16 @@ export class MCPBridge {
     serverName: string,
     connectionString: string,
     env?: Record<string, string>,
-    options?: { skipHubRouting?: boolean; isRecursive?: boolean }
+    options?: { skipHubRouting?: boolean; isRecursive?: boolean; workspaceId?: string }
   ): Promise<ITool[]> {
-    const cacheKey = `mcp_tools_cache_${serverName}`;
+    const scopePrefix = options?.workspaceId ? `WS#${options.workspaceId}#` : '';
+    const cacheKey = `${scopePrefix}mcp_tools_cache_${serverName}`;
 
     // 0. Check for recent failures (Discovery Backoff)
     const lastFailure = this.lastFailures.get(cacheKey);
     if (lastFailure && Date.now() - lastFailure < this.FAILURE_BACKOFF_MS) {
       logger.info(
-        `[MCPBridge] Discovery recently failed for ${serverName}, skipping until backoff expires.`
+        `[MCPBridge] Discovery recently failed for ${serverName} (WS: ${options?.workspaceId || 'global'}), skipping until backoff expires.`
       );
       return [];
     }
@@ -47,7 +48,9 @@ export class MCPBridge {
     if (!options?.isRecursive) {
       const existingDiscovery = this.discovering.get(cacheKey);
       if (existingDiscovery) {
-        logger.info(`[MCPBridge] Discovery already in progress for ${serverName}, awaiting...`);
+        logger.info(
+          `[MCPBridge] Discovery already in progress for ${serverName} (WS: ${options?.workspaceId || 'global'}), awaiting...`
+        );
         return await existingDiscovery;
       }
     }
@@ -61,7 +64,7 @@ export class MCPBridge {
       if (!options?.isRecursive) {
         // 1. Check Distributed Lock
         lockManager = new LockManager();
-        lockId = `mcp_discovery_lock_${serverName}`;
+        lockId = `mcp_discovery_lock_${serverName}_${options?.workspaceId || 'global'}`;
         ownerId =
           process.env.AWS_LAMBDA_LOG_STREAM_NAME ||
           `node_${process.pid}_${Math.random().toString(36).substring(7)}`;
@@ -72,14 +75,19 @@ export class MCPBridge {
         if (hubUrl && isLocalCommand && !options?.skipHubRouting) {
           try {
             const hubServerUrl = `${hubUrl.replace(/\/$/, '')}/${serverName}`;
-            logger.info(`[MCPBridge] Attempting Hub connection for ${serverName}: ${hubServerUrl}`);
+            logger.info(
+              `[MCPBridge] Attempting Hub connection for ${serverName}: ${hubServerUrl} (WS: ${options?.workspaceId || 'global'})`
+            );
             const tools = await this.getToolsFromServer(serverName, hubServerUrl, env, {
+              ...options,
               skipHubRouting: true,
               isRecursive: true,
             });
             if (tools.length > 0) return tools;
           } catch {
-            logger.warn(`[MCPBridge] Hub connection failed for ${serverName}, switching to local.`);
+            logger.warn(
+              `[MCPBridge] Hub connection failed for ${serverName} (WS: ${options?.workspaceId || 'global'}), switching to local.`
+            );
           }
         }
       }
@@ -87,21 +95,31 @@ export class MCPBridge {
       const cacheTTL = parseInt(process.env.MCP_CACHE_TTL_MS ?? String(MCP.DEFAULT_CACHE_TTL_MS));
 
       const checkCache = async () => {
-        const cached = (await AgentRegistry.getRawConfig(cacheKey)) as {
+        const cached = (await AgentRegistry.getRawConfig(cacheKey, {
+          workspaceId: options?.workspaceId,
+        })) as {
           tools: Record<string, unknown>[];
           timestamp: number;
         } | null;
         if (cached && Date.now() - cached.timestamp < cacheTTL) {
-          logger.info(`[MCPBridge] Using cached tool definitions for MCP server ${serverName}`);
+          logger.info(
+            `[MCPBridge] Using cached tool definitions for MCP server ${serverName} (WS: ${options?.workspaceId || 'global'})`
+          );
           // Load overrides
-          const overrides = (await AgentRegistry.getRawConfig(
-            DYNAMO_KEYS.TOOL_METADATA_OVERRIDES
-          )) as Record<string, Partial<ITool>> | undefined;
+          const overrides = (await AgentRegistry.getRawConfig(DYNAMO_KEYS.TOOL_METADATA_OVERRIDES, {
+            workspaceId: options?.workspaceId,
+          })) as Record<string, Partial<ITool>> | undefined;
 
           return MCPToolMapper.mapCachedTools(
             serverName,
             cached.tools,
-            async () => await MCPClientManager.connect(serverName, connectionString, env),
+            async () =>
+              await MCPClientManager.connect(
+                serverName,
+                connectionString,
+                env,
+                options?.workspaceId
+              ),
             overrides
           );
         }
@@ -117,7 +135,7 @@ export class MCPBridge {
           if (acquired) break;
 
           logger.info(
-            `[MCPBridge] Discovery lock for ${serverName} held by another node, waiting...`
+            `[MCPBridge] Discovery lock for ${serverName} held by another node (WS: ${options?.workspaceId || 'global'}), waiting...`
           );
           await new Promise((r) => setTimeout(r, 2000));
 
@@ -126,33 +144,47 @@ export class MCPBridge {
         }
 
         if (!acquired) {
-          const errorMsg = `[MCPBridge] Failed to acquire discovery lock for ${serverName}. Aborting.`;
+          const errorMsg = `[MCPBridge] Failed to acquire discovery lock for ${serverName} (WS: ${options?.workspaceId || 'global'}). Aborting.`;
           logger.error(errorMsg);
           throw new Error(errorMsg);
         }
       }
 
       try {
-        const client = await MCPClientManager.connect(serverName, connectionString, env);
+        const client = await MCPClientManager.connect(
+          serverName,
+          connectionString,
+          env,
+          options?.workspaceId
+        );
         const response = await client.listTools();
 
         // Load overrides
-        const overrides = (await AgentRegistry.getRawConfig(
-          DYNAMO_KEYS.TOOL_METADATA_OVERRIDES
-        )) as Record<string, Partial<ITool>> | undefined;
+        const overrides = (await AgentRegistry.getRawConfig(DYNAMO_KEYS.TOOL_METADATA_OVERRIDES, {
+          workspaceId: options?.workspaceId,
+        })) as Record<string, Partial<ITool>> | undefined;
 
         // Update cache
-        await AgentRegistry.saveRawConfig(cacheKey, {
-          tools: response.tools,
-          timestamp: Date.now(),
-        });
+        await AgentRegistry.saveRawConfig(
+          cacheKey,
+          {
+            tools: response.tools,
+            timestamp: Date.now(),
+          },
+          { workspaceId: options?.workspaceId }
+        );
 
         return MCPToolMapper.mapTools(serverName, client, response.tools, overrides);
       } catch (e: unknown) {
-        logger.warn(`[MCPBridge] Failed to fetch tools from ${serverName}:`, e);
+        logger.warn(
+          `[MCPBridge] Failed to fetch tools from ${serverName} (WS: ${options?.workspaceId || 'global'}):`,
+          e
+        );
         this.lastFailures.set(cacheKey, Date.now());
-        MCPClientManager.deleteClient(serverName);
-        await AgentRegistry.saveRawConfig(cacheKey, null).catch(() => {});
+        MCPClientManager.deleteClient(serverName, options?.workspaceId);
+        await AgentRegistry.saveRawConfig(cacheKey, null, {
+          workspaceId: options?.workspaceId,
+        }).catch(() => {});
         return [];
       } finally {
         if (acquired) {
@@ -181,12 +213,12 @@ export class MCPBridge {
    */
   static async getExternalTools(
     requestedTools?: string[],
-    skipConnection: boolean = false
+    skipConnection: boolean = false,
+    workspaceId?: string
   ): Promise<ITool[]> {
-    const serversConfig = (await AgentRegistry.getRawConfig('mcp_servers')) as Record<
-      string,
-      string | MCPServerConfig
-    >;
+    const serversConfig = (await AgentRegistry.getRawConfig('mcp_servers', {
+      workspaceId,
+    })) as Record<string, string | MCPServerConfig>;
 
     const allTools: ITool[] = [];
     const finalConfig = serversConfig ?? {};
@@ -229,7 +261,7 @@ export class MCPBridge {
     }
 
     if (configUpdated) {
-      await AgentRegistry.saveRawConfig('mcp_servers', finalConfig);
+      await AgentRegistry.saveRawConfig('mcp_servers', finalConfig, { workspaceId });
     }
 
     const neededConfigs = Object.entries(finalConfig).filter(([name]) => {
@@ -295,9 +327,9 @@ export class MCPBridge {
       }
 
       try {
-        return await this.getToolsFromServer(name, connectionString, env);
+        return await this.getToolsFromServer(name, connectionString, env, { workspaceId });
       } catch (e) {
-        logger.error(`Discovery failed for MCP server ${name}:`, e);
+        logger.error(`Discovery failed for MCP server ${name} (WS: ${workspaceId}):`, e);
         return [];
       }
     });
@@ -313,24 +345,25 @@ export class MCPBridge {
   /**
    * Retrieves tool definitions from all cached MCP server results.
    */
-  static async getCachedTools(): Promise<Partial<ITool>[]> {
-    const serversConfig = (await AgentRegistry.getRawConfig('mcp_servers')) as Record<
-      string,
-      string | MCPServerConfig
-    >;
+  static async getCachedTools(workspaceId?: string): Promise<Partial<ITool>[]> {
+    const serversConfig = (await AgentRegistry.getRawConfig('mcp_servers', {
+      workspaceId,
+    })) as Record<string, string | MCPServerConfig>;
 
     if (!serversConfig) return [];
 
     const allCached: Partial<ITool>[] = [];
     const serverNames = Object.keys(serversConfig);
 
-    const overrides = (await AgentRegistry.getRawConfig(DYNAMO_KEYS.TOOL_METADATA_OVERRIDES)) as
-      | Record<string, Partial<ITool>>
-      | undefined;
+    const overrides = (await AgentRegistry.getRawConfig(DYNAMO_KEYS.TOOL_METADATA_OVERRIDES, {
+      workspaceId,
+    })) as Record<string, Partial<ITool>> | undefined;
+
+    const scopePrefix = workspaceId ? `WS#${workspaceId}#` : '';
 
     for (const name of serverNames) {
-      const cacheKey = `mcp_tools_cache_${name}`;
-      const cached = (await AgentRegistry.getRawConfig(cacheKey)) as {
+      const cacheKey = `${scopePrefix}mcp_tools_cache_${name}`;
+      const cached = (await AgentRegistry.getRawConfig(cacheKey, { workspaceId })) as {
         tools: Array<{ name: string; description?: string; inputSchema?: Record<string, unknown> }>;
       } | null;
       if (cached?.tools && Array.isArray(cached.tools)) {

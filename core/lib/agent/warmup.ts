@@ -10,7 +10,8 @@ export function triggerSmartWarmup(
   userText: string,
   depth: number,
   sessionId?: string,
-  sessionStateManager?: { getState: (id: string) => Promise<SessionState | null> }
+  sessionStateManager?: { getState: (id: string) => Promise<SessionState | null> },
+  workspaceId?: string
 ): void {
   if (depth === 0 && process.env.LAMBDA_TASK_ROOT) {
     import('../warmup/warmup-manager')
@@ -37,6 +38,7 @@ export function triggerSmartWarmup(
               intent: userText,
               sessionState,
               warmedBy: 'webhook',
+              workspaceId,
             })
             .catch((err) => logger.warn('[Warmup] Proactive trigger failed:', err));
         }

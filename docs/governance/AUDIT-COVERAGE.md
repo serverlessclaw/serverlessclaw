@@ -13,8 +13,8 @@ Last Updated: 2026-04-24
 | Silo  | Name           | Primary Focus                                   | Audit Count | Last Audited | Risk Level |
 | :---- | :------------- | :---------------------------------------------- | :---------: | :----------- | :--------- |
 | **1** | The Spine      | `core/lib/routing/`, `core/lib/backbone.ts`     |     9+      | 2026-04-24   | Medium     |
-| **2** | The Hand       | `core/lib/mcp.ts`, `core/lib/agent/executor.ts` |      4      | 2026-04-24   | Medium     |
-| **3** | The Shield     | `core/lib/safety/safety-engine.ts`              |     8+      | 2026-04-24   | High       |
+| **2** | The Hand       | `core/lib/mcp.ts`, `core/lib/agent/executor.ts` |      5      | 2026-04-24   | Medium     |
+| **3** | The Shield     | `core/lib/safety/safety-engine.ts`              |     9+      | 2026-04-24   | High       |
 | **4** | The Brain      | `core/lib/memory/`, `core/lib/rag/`             |      5      | 2026-04-24   | Medium     |
 | **5** | The Eye        | `core/lib/metrics/`, `core/lib/tracer/`         |      5      | 2026-04-24   | Medium     |
 | **6** | The Scales     | `core/lib/safety/trust-manager.ts`              |      5      | 2026-04-24   | High       |
@@ -38,9 +38,10 @@ Last Updated: 2026-04-24
 
 | Date       | Report                                        | Silos Covered         | Cross-Silo      | Key Findings                                           |
 | :--------- | :-------------------------------------------- | :-------------------- | :-------------- | :----------------------------------------------------- |
-| 2026-04-24 | `audit-2026-04-24-recovery-path.md`          | Shield, Spine, Brain  | E               | P0 Global trace coherence scan, Global circuit breaker |
+| 2026-04-24 | `audit-2026-04-24-mcp-isolation.md`           | Hand, Shield          | B, C            | P0 Global tool cache leak, Global client map leak      |
+| 2026-04-24 | `audit-2026-04-24-recovery-path.md`           | Shield, Spine, Brain  | E               | P0 Global trace coherence scan, Global circuit breaker |
 | 2026-04-24 | `audit-2026-04-24-trust-loop.md`              | Eye, Scales, Spine    | D               | P1 Global agent metrics leak, Non-scoped persistence   |
-| 2026-04-24 | `audit-2026-04-24-evolution-cycle.md`        | Hand, Shield, Scales  | B               | P0 Global safety policies, Broken trust feedback       |
+| 2026-04-24 | `audit-2026-04-24-evolution-cycle.md`         | Hand, Shield, Scales  | B               | P0 Global safety policies, Broken trust feedback       |
 | 2026-04-24 | `audit-2026-04-24-identity-journey.md`        | Brain, Spine, Shield  | C               | P0 Unauthenticated webhooks, Missing agent perms       |
 | 2026-04-23 | `audit-2026-04-23-trust-loop.md`              | Scales, Spine         | D               | FIXED: Multi-tenant leaks in TrustManager, AgentRouter |
 | 2026-04-23 | `AUDIT-2026-04-23-HAND-EVOLUTION-IDENTITY.md` | Hand                  | B, C            | FIXED: Truncated Class C list, Broken evolution loop   |

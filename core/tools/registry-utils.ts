@@ -11,15 +11,21 @@ import { logger } from '../lib/logger';
  * Dynamically retrieves the tools assigned to a specific agent.
  *
  * @param agentId - The ID of the agent to fetch tools for.
+ * @param options - Optional resolution parameters including workspace context.
  * @returns A promise that resolves to an array of ITool implementations.
  */
-export async function getAgentTools(agentId: string): Promise<ITool[]> {
+export async function getAgentTools(
+  agentId: string,
+  options?: { workspaceId?: string }
+): Promise<ITool[]> {
   const { AgentRegistry } = await import('../lib/registry');
-  const { MCPMultiplexer } = await import('../lib/mcp');
+  const { MCPBridge } = await import('../lib/mcp');
   const { TOOLS } = await import('./index');
 
-  logger.info(`[TOOLS] Resolving tools for: ${agentId}`);
-  const config = await AgentRegistry.getAgentConfig(agentId);
+  const workspaceId = options?.workspaceId;
+
+  logger.info(`[TOOLS] Resolving tools for: ${agentId} (WS: ${workspaceId || 'global'})`);
+  const config = await AgentRegistry.getAgentConfig(agentId, { workspaceId });
 
   if (!config || !config.tools) {
     logger.warn(`No tools configured for agent ${agentId}, returning empty set.`);
@@ -36,7 +42,7 @@ export async function getAgentTools(agentId: string): Promise<ITool[]> {
   logger.info(`[TOOLS] Local tools found: ${localTools.map((t) => t.name).join(', ')}`);
 
   // 2. Resolve external MCP tools if any match the requested tool names
-  const externalTools = await MCPMultiplexer.getExternalTools(config.tools);
+  const externalTools = await MCPBridge.getExternalTools(config.tools, false, workspaceId);
 
   // 3. Merge and deduplicate (Local tools take priority)
   const allToolsMap = new Map<string, ITool>();
@@ -80,6 +86,7 @@ export async function getAgentTools(agentId: string): Promise<ITool[]> {
               servers: serversToWarm,
               intent: `agent-needs-tools:${agentId}`,
               warmedBy: 'webhook', // Reusing webhook category for manual/agent triggers
+              workspaceId,
             })
             .catch((err) => logger.warn('[TOOLS] Smart warmup background error:', err));
         }

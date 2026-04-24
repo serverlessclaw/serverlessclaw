@@ -13,10 +13,11 @@ export class MCPToolMapper {
     serverName: string,
     client: Client,
     rawTools: unknown[],
-    overrides?: Record<string, Partial<ITool>>
+    overrides?: Record<string, Partial<ITool>>,
+    workspaceId?: string
   ): ITool[] {
     return rawTools.map((mcpTool) =>
-      this.mapMcpTool(serverName, mcpTool as any, async () => client, overrides)
+      this.mapMcpTool(serverName, mcpTool as any, async () => client, overrides, workspaceId)
     );
   }
 
@@ -28,10 +29,11 @@ export class MCPToolMapper {
     serverName: string,
     rawTools: unknown[],
     clientProvider: () => Promise<Client>,
-    overrides?: Record<string, Partial<ITool>>
+    overrides?: Record<string, Partial<ITool>>,
+    workspaceId?: string
   ): ITool[] {
     return rawTools.map((mcpTool) =>
-      this.mapMcpTool(serverName, mcpTool as any, clientProvider, overrides)
+      this.mapMcpTool(serverName, mcpTool as any, clientProvider, overrides, workspaceId)
     );
   }
 
@@ -42,7 +44,8 @@ export class MCPToolMapper {
     serverName: string,
     mcpTool: any,
     clientProvider: () => Promise<Client>,
-    overrides?: Record<string, Partial<ITool>>
+    overrides?: Record<string, Partial<ITool>>,
+    workspaceId?: string
   ): ITool {
     const isSequential =
       ['filesystem', 'git'].includes(serverName) ||
@@ -69,7 +72,14 @@ export class MCPToolMapper {
       sequential: override?.sequential ?? isSequential,
       pathKeys: pathKeys.length > 0 ? pathKeys : override?.pathKeys,
       execute: async (toolArgs: Record<string, unknown>) => {
-        return this.executeMcpTool(serverName, mcpTool.name, toolName, toolArgs, clientProvider);
+        return this.executeMcpTool(
+          serverName,
+          mcpTool.name,
+          toolName,
+          toolArgs,
+          clientProvider,
+          workspaceId
+        );
       },
     };
   }
@@ -79,7 +89,8 @@ export class MCPToolMapper {
     rawToolName: string,
     prefixedName: string,
     args: Record<string, unknown>,
-    clientProvider: () => Promise<Client>
+    clientProvider: () => Promise<Client>,
+    workspaceId?: string
   ): Promise<ToolResult> {
     try {
       const client = await clientProvider();
@@ -94,15 +105,17 @@ export class MCPToolMapper {
         {
           onFailure: (error: Error) => {
             if (isConnectionError(error)) {
-              logger.info(`[MCP] Resetting client for ${serverName} due to disconnection.`);
-              MCPClientManager.deleteClient(serverName);
+              logger.info(
+                `[MCP] Resetting client for ${serverName} (WS: ${workspaceId || 'global'}) due to disconnection.`
+              );
+              MCPClientManager.deleteClient(serverName, workspaceId);
             }
           },
         }
       );
     } catch (e: unknown) {
       logger.error(
-        `MCP Tool Execution Error (${serverName}:${rawToolName}):`,
+        `MCP Tool Execution Error (${serverName}:${rawToolName}) [WS: ${workspaceId || 'global'}]:`,
         e instanceof Error ? e.message : String(e)
       );
       throw e;

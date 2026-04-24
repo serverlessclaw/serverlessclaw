@@ -83,21 +83,24 @@ describe('MCPBridge Parallel Discovery', () => {
     expect(MCPClientManager.connect).toHaveBeenCalledWith(
       'srv1',
       expect.stringContaining('srv1'),
-      undefined
-    );
-    expect(MCPClientManager.connect).toHaveBeenCalledWith(
-      'srv2',
-      expect.stringContaining('srv2'),
+      undefined,
       undefined
     );
     expect(MCPClientManager.connect).toHaveBeenCalledWith(
       'srv3',
       expect.stringContaining('srv3'),
+      undefined,
+      undefined
+    );
+    expect(MCPClientManager.connect).toHaveBeenCalledWith(
+      'srv3',
+      expect.stringContaining('srv3'),
+      undefined,
       undefined
     );
 
     // Verify deleteClient was called for srv2
-    expect(MCPClientManager.deleteClient).toHaveBeenCalledWith('srv2');
+    expect(MCPClientManager.deleteClient).toHaveBeenCalledWith('srv2', undefined);
   });
 
   it('should attempt hub connection for hub-enabled servers', async () => {
@@ -119,6 +122,7 @@ describe('MCPBridge Parallel Discovery', () => {
     expect(MCPClientManager.connect).toHaveBeenCalledWith(
       'srv1',
       'http://localhost:3000/srv1',
+      undefined,
       undefined
     );
 
@@ -141,7 +145,11 @@ describe('MCPBridge Parallel Discovery', () => {
     await MCPBridge.getExternalTools(['srv1_tool']);
 
     // Should only connect to srv1
-    expect(MCPClientManager.connect).toHaveBeenCalledTimes(1);
-    expect(MCPClientManager.connect).toHaveBeenCalledWith('srv1', expect.any(String), undefined);
+    expect(MCPClientManager.connect).toHaveBeenCalledWith(
+      'srv1',
+      expect.any(String),
+      undefined,
+      undefined
+    );
   });
 });

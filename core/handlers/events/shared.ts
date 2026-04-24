@@ -235,7 +235,7 @@ export async function processEventWithAgent(
   }
 
   const { getAgentTools: loadAgentTools } = await import('../../tools/index');
-  const agentTools = await loadAgentTools(agentId);
+  const agentTools = await loadAgentTools(agentId, { workspaceId: options.workspaceId });
   const agent = new Agent(memory, provider, agentTools, { ...config });
 
   const sessionStateManager = new SessionStateManager();

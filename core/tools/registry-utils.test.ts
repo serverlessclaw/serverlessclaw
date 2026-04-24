@@ -7,7 +7,7 @@ const mockAgentRegistry = {
   getAgentConfig: vi.fn(),
 };
 
-const mockMCPMultiplexer = {
+const mockMCPBridge = {
   getExternalTools: vi.fn().mockResolvedValue([]),
 };
 
@@ -25,7 +25,7 @@ vi.mock('../lib/registry/index', () => ({
 }));
 
 vi.mock('../lib/mcp', () => ({
-  MCPMultiplexer: mockMCPMultiplexer,
+  MCPBridge: mockMCPBridge,
 }));
 
 vi.mock('./index', () => ({
@@ -62,12 +62,18 @@ describe('registry-utils', () => {
       mockAgentRegistry.getAgentConfig.mockResolvedValueOnce(null);
       const tools = await getAgentTools('unknown-agent');
       expect(tools).toEqual([]);
+      expect(mockAgentRegistry.getAgentConfig).toHaveBeenCalledWith('unknown-agent', {
+        workspaceId: undefined,
+      });
     });
 
     it('should return empty array if no tools are configured', async () => {
       mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({ id: 'a1', tools: [] });
       const tools = await getAgentTools('a1');
       expect(tools).toEqual([]);
+      expect(mockAgentRegistry.getAgentConfig).toHaveBeenCalledWith('a1', {
+        workspaceId: undefined,
+      });
     });
 
     it('should return local tools matched by name', async () => {
@@ -90,10 +96,11 @@ describe('registry-utils', () => {
         description: 'ext',
         parameters: {},
       } as ITool;
-      mockMCPMultiplexer.getExternalTools.mockResolvedValueOnce([mockExternalTool]);
+      mockMCPBridge.getExternalTools.mockResolvedValueOnce([mockExternalTool]);
 
       const tools = await getAgentTools('a1');
       expect(tools).toContain(mockExternalTool);
+      expect(mockMCPBridge.getExternalTools).toHaveBeenCalledWith(['mcpTool'], false, undefined);
     });
 
     it('should deduplicate tools, giving local tools priority', async () => {
@@ -107,7 +114,7 @@ describe('registry-utils', () => {
         description: 'external version',
         parameters: {},
       } as ITool;
-      mockMCPMultiplexer.getExternalTools.mockResolvedValueOnce([mockExternalTool]);
+      mockMCPBridge.getExternalTools.mockResolvedValueOnce([mockExternalTool]);
 
       const tools = await getAgentTools('a1');
       expect(tools).toHaveLength(1);
@@ -120,7 +127,7 @@ describe('registry-utils', () => {
         id: 'a1',
         tools: ['myServer_tool'],
       });
-      mockMCPMultiplexer.getExternalTools.mockResolvedValueOnce([
+      mockMCPBridge.getExternalTools.mockResolvedValueOnce([
         { name: 'myServer_tool', description: 'd', parameters: {} } as ITool,
       ]);
 
@@ -135,7 +142,7 @@ describe('registry-utils', () => {
         id: 'a1',
         tools: ['myServer_tool'],
       });
-      mockMCPMultiplexer.getExternalTools.mockResolvedValueOnce([
+      mockMCPBridge.getExternalTools.mockResolvedValueOnce([
         { name: 'myServer_tool', description: 'd', parameters: {} } as ITool,
       ]);
 

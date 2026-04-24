@@ -227,7 +227,7 @@ describe('MCPToolMapper', () => {
       const tools = MCPToolMapper.mapTools('srv', client, rawTools);
 
       await expect(tools[0].execute({})).rejects.toThrow('Connection closed');
-      expect(MCPClientManager.deleteClient).toHaveBeenCalledWith('srv');
+      expect(MCPClientManager.deleteClient).toHaveBeenCalledWith('srv', undefined);
     });
 
     it('does not delete client on non-connection errors', async () => {
@@ -255,7 +255,10 @@ describe('MCPToolMapper', () => {
       const tools = MCPToolMapper.mapTools('srv', client, rawTools);
 
       await expect(tools[0].execute({})).rejects.toThrow('fail');
-      expect(logger.error).toHaveBeenCalledWith('MCP Tool Execution Error (srv:tool):', 'fail');
+      expect(logger.error).toHaveBeenCalledWith(
+        'MCP Tool Execution Error (srv:tool) [WS: global]:',
+        'fail'
+      );
     });
 
     it('maps empty tools array', () => {
@@ -422,7 +425,7 @@ describe('MCPToolMapper', () => {
       const tools = MCPToolMapper.mapCachedTools('srv', rawTools, clientProvider);
 
       await expect(tools[0].execute({})).rejects.toThrow('Connection closed');
-      expect(MCPClientManager.deleteClient).toHaveBeenCalledWith('srv');
+      expect(MCPClientManager.deleteClient).toHaveBeenCalledWith('srv', undefined);
     });
 
     it('does not delete client on non-connection errors', async () => {
@@ -452,7 +455,10 @@ describe('MCPToolMapper', () => {
       const tools = MCPToolMapper.mapCachedTools('srv', rawTools, clientProvider);
 
       await expect(tools[0].execute({})).rejects.toThrow('fail');
-      expect(logger.error).toHaveBeenCalledWith('MCP Tool Execution Error (srv:tool):', 'fail');
+      expect(logger.error).toHaveBeenCalledWith(
+        'MCP Tool Execution Error (srv:tool) [WS: global]:',
+        'fail'
+      );
     });
 
     it('maps empty tools array', () => {
@@ -509,6 +515,7 @@ describe('MCPToolMapper', () => {
       }
 
       expect(MCPClientManager.deleteClient).toHaveBeenCalledTimes(errors.length);
+      expect(MCPClientManager.deleteClient).toHaveBeenCalledWith('srv', undefined);
     });
 
     it('returns false for non-Error objects', async () => {

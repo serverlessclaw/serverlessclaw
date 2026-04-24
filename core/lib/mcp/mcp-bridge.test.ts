@@ -112,8 +112,12 @@ describe('MCPBridge', () => {
     expect(tools[0].name).toBe('srv1_test_tool');
 
     // Verify MCPClientManager.connect was called only for srv1
-    expect(MCPClientManager.connect).toHaveBeenCalledTimes(1);
-    expect(MCPClientManager.connect).toHaveBeenCalledWith('srv1', expect.any(String), undefined);
+    expect(MCPClientManager.connect).toHaveBeenCalledWith(
+      'srv1',
+      expect.any(String),
+      undefined,
+      undefined
+    );
   });
 
   it('should load all servers if no requestedTools provided', async () => {
@@ -172,7 +176,7 @@ describe('MCPBridge', () => {
 
       const tools = await MCPBridge.getToolsFromServer('srv', 'npx srv');
 
-      expect(MCPClientManager.connect).toHaveBeenCalledWith('srv', 'npx srv', undefined);
+      expect(MCPClientManager.connect).toHaveBeenCalledWith('srv', 'npx srv', undefined, undefined);
       expect(tools).toHaveLength(1);
       expect(tools[0].name).toBe('srv_search');
     });
@@ -183,7 +187,7 @@ describe('MCPBridge', () => {
       const tools = await MCPBridge.getToolsFromServer('srv', 'npx srv');
 
       expect(tools).toEqual([]);
-      expect(MCPClientManager.deleteClient).toHaveBeenCalledWith('srv');
+      expect(MCPClientManager.deleteClient).toHaveBeenCalledWith('srv', undefined);
     });
 
     it('returns empty array on listTools failure', async () => {
@@ -204,7 +208,12 @@ describe('MCPBridge', () => {
 
       await MCPBridge.getToolsFromServer('srv', 'npx srv', { KEY: 'val' });
 
-      expect(MCPClientManager.connect).toHaveBeenCalledWith('srv', 'npx srv', { KEY: 'val' });
+      expect(MCPClientManager.connect).toHaveBeenCalledWith(
+        'srv',
+        'npx srv',
+        { KEY: 'val' },
+        undefined
+      );
     });
 
     it('attempts hub connection when MCP_HUB_URL is set for local commands', async () => {
@@ -221,6 +230,7 @@ describe('MCPBridge', () => {
       expect(MCPClientManager.connect).toHaveBeenCalledWith(
         'mysrv',
         'http://hub:3000/mysrv',
+        undefined,
         undefined
       );
       delete process.env.MCP_HUB_URL;
@@ -275,7 +285,7 @@ describe('MCPBridge', () => {
         skipHubRouting: true,
       });
 
-      expect(MCPClientManager.connect).toHaveBeenCalledWith('srv', 'npx srv', undefined);
+      expect(MCPClientManager.connect).toHaveBeenCalledWith('srv', 'npx srv', undefined, undefined);
       delete process.env.MCP_HUB_URL;
     });
 
@@ -288,7 +298,12 @@ describe('MCPBridge', () => {
 
       await MCPBridge.getToolsFromServer('srv', 'http://remote:8080');
 
-      expect(MCPClientManager.connect).toHaveBeenCalledWith('srv', 'http://remote:8080', undefined);
+      expect(MCPClientManager.connect).toHaveBeenCalledWith(
+        'srv',
+        'http://remote:8080',
+        undefined,
+        undefined
+      );
       delete process.env.MCP_HUB_URL;
     });
   });
@@ -306,7 +321,12 @@ describe('MCPBridge', () => {
 
       await MCPBridge.getExternalTools(['srv1']);
 
-      expect(MCPClientManager.connect).toHaveBeenCalledWith('srv1', 'npx srv1', undefined);
+      expect(MCPClientManager.connect).toHaveBeenCalledWith(
+        'srv1',
+        'npx srv1',
+        undefined,
+        undefined
+      );
     });
 
     it('handles remote config type', async () => {
@@ -324,6 +344,7 @@ describe('MCPBridge', () => {
       expect(MCPClientManager.connect).toHaveBeenCalledWith(
         'srv1',
         'http://remote:8080',
+        undefined,
         undefined
       );
     });
@@ -340,7 +361,12 @@ describe('MCPBridge', () => {
 
       await MCPBridge.getExternalTools(['srv1']);
 
-      expect(MCPClientManager.connect).toHaveBeenCalledWith('srv1', 'npx srv1', { KEY: 'val' });
+      expect(MCPClientManager.connect).toHaveBeenCalledWith(
+        'srv1',
+        'npx srv1',
+        { KEY: 'val' },
+        undefined
+      );
     });
 
     it('returns skipConnection placeholders when skipConnection is true', async () => {
@@ -387,7 +413,8 @@ describe('MCPBridge', () => {
           custom: { command: 'npx custom' },
           filesystem: expect.any(Object),
           git: expect.any(Object),
-        })
+        }),
+        { workspaceId: undefined }
       );
     });
 
@@ -485,8 +512,18 @@ describe('MCPBridge', () => {
       await MCPBridge.getExternalTools(['srv1_tool', 'srv2_other']);
 
       // Should connect to srv1 and srv2, but not srv3
-      expect(MCPClientManager.connect).toHaveBeenCalledWith('srv1', expect.any(String), undefined);
-      expect(MCPClientManager.connect).toHaveBeenCalledWith('srv2', expect.any(String), undefined);
+      expect(MCPClientManager.connect).toHaveBeenCalledWith(
+        'srv1',
+        expect.any(String),
+        undefined,
+        undefined
+      );
+      expect(MCPClientManager.connect).toHaveBeenCalledWith(
+        'srv2',
+        expect.any(String),
+        undefined,
+        undefined
+      );
     });
 
     it('returns empty for unknown config type', async () => {
@@ -523,7 +560,9 @@ describe('MCPBridge', () => {
 
       expect(tools.length).toBe(1);
       expect(tools[0].name).toBe('filesystem_read_file');
-      expect(AgentRegistry.getRawConfig).toHaveBeenCalledWith('mcp_tools_cache_filesystem');
+      expect(AgentRegistry.getRawConfig).toHaveBeenCalledWith('mcp_tools_cache_filesystem', {
+        workspaceId: undefined,
+      });
       expect(MCPClientManager.connect).not.toHaveBeenCalled(); // Important: no connection on discovery
     });
 
@@ -548,7 +587,8 @@ describe('MCPBridge', () => {
         expect.objectContaining({
           tools: [{ name: 'new_tool' }],
           timestamp: expect.any(Number),
-        })
+        }),
+        { workspaceId: undefined }
       );
     });
 

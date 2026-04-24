@@ -29,19 +29,25 @@ export class MCPClientManager {
     process.env.MCP_CONNECTION_TTL_MS ?? String(MCP.CONNECTION_TTL_MS)
   );
 
-  static getClient(name: string): Client | undefined {
-    const client = this.clients.get(name);
+  static getClient(name: string, workspaceId?: string): Client | undefined {
+    const scopePrefix = workspaceId ? `WS#${workspaceId}#` : '';
+    const cacheKey = `${scopePrefix}${name}`;
+
+    const client = this.clients.get(cacheKey);
     if (client) return client;
 
     for (const [key, val] of this.clients.entries()) {
-      if (key.startsWith(`${name}:`)) return val;
+      if (key.startsWith(`${cacheKey}:`)) return val;
     }
     return undefined;
   }
 
-  static deleteClient(name: string): void {
+  static deleteClient(name: string, workspaceId?: string): void {
+    const scopePrefix = workspaceId ? `WS#${workspaceId}#` : '';
+    const prefixKey = `${scopePrefix}${name}`;
+
     for (const key of Array.from(this.clients.keys())) {
-      if (key === name || key.startsWith(`${name}:`)) {
+      if (key === prefixKey || key.startsWith(`${prefixKey}:`)) {
         const client = this.clients.get(key);
         client?.close().catch(() => {});
         this.clients.delete(key);
@@ -49,7 +55,7 @@ export class MCPClientManager {
       }
     }
     for (const key of Array.from(this.connecting.keys())) {
-      if (key === name || key.startsWith(`${name}:`)) {
+      if (key === prefixKey || key.startsWith(`${prefixKey}:`)) {
         this.connecting.delete(key);
       }
     }
@@ -61,11 +67,13 @@ export class MCPClientManager {
   static async connect(
     serverName: string,
     connectionString: string,
-    env?: Record<string, string>
+    env?: Record<string, string>,
+    workspaceId?: string
   ): Promise<Client> {
     const isLocal = this.isLocalConnection(connectionString);
     const cwd = process.cwd();
-    const cacheKey = isLocal ? `${serverName}:${cwd}` : serverName;
+    const scopePrefix = workspaceId ? `WS#${workspaceId}#` : '';
+    const cacheKey = isLocal ? `${scopePrefix}${serverName}:${cwd}` : `${scopePrefix}${serverName}`;
 
     let client = this.clients.get(cacheKey);
     if (client) return client;
@@ -73,7 +81,13 @@ export class MCPClientManager {
     let connectingPromise = this.connecting.get(cacheKey);
     if (connectingPromise) return await connectingPromise;
 
-    connectingPromise = this.performConnect(serverName, connectionString, cacheKey, env);
+    connectingPromise = this.performConnect(
+      serverName,
+      connectionString,
+      cacheKey,
+      env,
+      workspaceId
+    );
     this.connecting.set(cacheKey, connectingPromise);
 
     try {
@@ -92,18 +106,21 @@ export class MCPClientManager {
     serverName: string,
     connectionString: string,
     cacheKey: string,
-    env?: Record<string, string>
+    env?: Record<string, string>,
+    workspaceId?: string
   ): Promise<Client> {
     const { getCircuitBreaker } = await import('../safety');
-    const cb = getCircuitBreaker(`mcp_health_${serverName}`);
+    const cb = getCircuitBreaker(`mcp_health_${serverName}`, workspaceId);
     const cbResult = await cb.canProceed('autonomous');
 
     if (!cbResult.allowed) {
-      logger.warn(`Circuit breaker OPEN for ${serverName}: ${cbResult.reason}`);
+      logger.warn(
+        `Circuit breaker OPEN for ${serverName} (WS: ${workspaceId || 'global'}): ${cbResult.reason}`
+      );
       throw new Error(`Circuit breaker open for ${serverName}: ${cbResult.reason}`);
     }
 
-    logger.info(`Starting new connection for ${serverName}`);
+    logger.info(`Starting new connection for ${serverName} (WS: ${workspaceId || 'global'})`);
     const transport = await TransportFactory.createTransport(serverName, connectionString, env);
 
     const newClient = new Client(
@@ -212,11 +229,26 @@ class TransportFactory {
       command = await this.resolveNpxPath(serverName);
     }
 
+    // Sanitize environment variables to prevent host secret leakage
+    const SAFE_ENV_VARS = [
+      'PATH',
+      'HOME',
+      'USER',
+      'LANG',
+      'LC_ALL',
+      'NODE_PATH',
+      'MCP_FILESYSTEM_PATH',
+    ];
+    const safeEnv: Record<string, string> = {};
+    for (const key of SAFE_ENV_VARS) {
+      if (process.env[key]) safeEnv[key] = process.env[key]!;
+    }
+
     return new StdioClientTransport({
       command,
       args,
       env: {
-        ...(process.env as Record<string, string>),
+        ...safeEnv,
         ...env,
         ...TRANSPORT_DEFAULTS.STDIO,
       },

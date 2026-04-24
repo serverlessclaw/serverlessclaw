@@ -156,7 +156,9 @@ describe('MCPClientManager', () => {
     const [client1, client2] = await Promise.all([p1, p2]);
 
     const { logger } = await import('../logger');
-    expect(logger.info).toHaveBeenCalledWith('Starting new connection for concurrent-server');
+    expect(logger.info).toHaveBeenCalledWith(
+      'Starting new connection for concurrent-server (WS: global)'
+    );
     expect(logger.info).toHaveBeenCalledTimes(1);
 
     expect(client1).toBe(client2);

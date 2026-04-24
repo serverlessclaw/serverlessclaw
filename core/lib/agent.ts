@@ -149,7 +149,13 @@ export class Agent {
 
     import('./agent/warmup')
       .then(({ triggerSmartWarmup }) => {
-        triggerSmartWarmup(userText, options.depth ?? 0, sessionId, options.sessionStateManager);
+        triggerSmartWarmup(
+          userText,
+          options.depth ?? 0,
+          sessionId,
+          options.sessionStateManager,
+          workspaceId
+        );
       })
       .catch(() => {});
 

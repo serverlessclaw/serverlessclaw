@@ -103,6 +103,7 @@ export const handler = async (
           agents: targets,
           intent: 'webhook-arrival',
           warmedBy: 'webhook',
+          workspaceId,
         });
       })
       .catch((err) => logger.warn('[WEBHOOK] Smart warmup background error:', err));
