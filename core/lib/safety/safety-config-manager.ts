@@ -11,26 +11,28 @@ interface CachedPolicies {
 
 /**
  * Manages safety policies, fetching them from DynamoDB with falling back to code defaults.
- * Implements in-memory caching to reduce DDB latency.
+ * Implements in-memory caching to reduce DDB latency, scoped by workspace.
  */
 export class SafetyConfigManager {
   private static readonly CACHE_TTL_MS = TIME.MS_PER_MINUTE;
   private static readonly CONFIG_KEY = 'safety_policies';
-  private static cache: CachedPolicies | null = null;
+  private static caches: Map<string, CachedPolicies> = new Map();
 
   /**
    * Retrieves the current safety policies for all tiers.
    * Checks DDB first, then falls back to DEFAULT_POLICIES.
    */
-  static async getPolicies(): Promise<Record<SafetyTier, SafetyPolicy>> {
+  static async getPolicies(workspaceId?: string): Promise<Record<SafetyTier, SafetyPolicy>> {
+    const cacheKey = workspaceId || 'global';
     // 1. Check Cache
-    if (this.cache && this.cache.expiresAt > Date.now()) {
-      return this.cache.value;
+    const cache = this.caches.get(cacheKey);
+    if (cache && cache.expiresAt > Date.now()) {
+      return cache.value;
     }
 
     try {
       // 2. Fetch from DDB
-      const ddbPolicies = await ConfigManager.getRawConfig(this.CONFIG_KEY);
+      const ddbPolicies = await ConfigManager.getRawConfig(this.CONFIG_KEY, { workspaceId });
 
       let policies: Record<SafetyTier, SafetyPolicy>;
       if (ddbPolicies && typeof ddbPolicies === 'object') {
@@ -40,7 +42,9 @@ export class SafetyConfigManager {
           if (Object.values(SafetyTier).includes(tier as SafetyTier)) {
             policies[tier as SafetyTier] = policy as SafetyPolicy;
           } else {
-            logger.warn(`[SafetyConfigManager] Ignoring unknown safety tier from DDB: ${tier}`);
+            logger.warn(
+              `[SafetyConfigManager] Ignoring unknown safety tier from DDB: ${tier} (WS: ${cacheKey})`
+            );
           }
         }
 
@@ -48,26 +52,29 @@ export class SafetyConfigManager {
         for (const tier of Object.values(SafetyTier)) {
           if (!(tier in (ddbPolicies as object))) {
             logger.warn(
-              `[SafetyConfigManager] Tier '${tier}' missing from DDB, using code defaults.`
+              `[SafetyConfigManager] Tier '${tier}' missing from DDB for ${cacheKey}, using code defaults.`
             );
           }
         }
 
-        logger.info('Safety policies loaded from DynamoDB');
+        logger.info(`Safety policies loaded from DynamoDB (WS: ${cacheKey})`);
       } else {
         policies = DEFAULT_POLICIES;
-        logger.info('Using default safety policies (no DDB override found)');
+        logger.info(`Using default safety policies for ${cacheKey} (no DDB override found)`);
       }
 
       // 3. Update Cache
-      this.cache = {
+      this.caches.set(cacheKey, {
         value: policies,
         expiresAt: Date.now() + this.CACHE_TTL_MS,
-      };
+      });
 
       return policies;
     } catch (e) {
-      logger.warn('Failed to fetch safety policies from DDB, falling back to defaults:', e);
+      logger.warn(
+        `Failed to fetch safety policies from DDB for ${cacheKey}, falling back to defaults:`,
+        e
+      );
       return DEFAULT_POLICIES;
     }
   }
@@ -75,8 +82,8 @@ export class SafetyConfigManager {
   /**
    * Retrieves a policy for a specific safety tier.
    */
-  static async getPolicy(tier: SafetyTier): Promise<SafetyPolicy> {
-    const policies = await this.getPolicies();
+  static async getPolicy(tier: SafetyTier, workspaceId?: string): Promise<SafetyPolicy> {
+    const policies = await this.getPolicies(workspaceId);
     return policies[tier] || DEFAULT_POLICIES[tier];
   }
 
@@ -84,23 +91,33 @@ export class SafetyConfigManager {
    * Saves or updates safety policies in the ConfigTable.
    * Enforces Principle 13 (Atomic State Integrity) by using atomic field updates.
    */
-  static async savePolicies(policies: Record<string, Partial<SafetyPolicy>>): Promise<void> {
+  static async savePolicies(
+    policies: Record<string, Partial<SafetyPolicy>>,
+    workspaceId?: string
+  ): Promise<void> {
+    const cacheKey = workspaceId || 'global';
     for (const [tier, policy] of Object.entries(policies)) {
       if (Object.values(SafetyTier).includes(tier as SafetyTier)) {
-        await ConfigManager.atomicUpdateMapEntity(this.CONFIG_KEY, tier, policy);
-        logger.info(`[SafetyConfigManager] Atomically updated safety policy for tier: ${tier}`);
+        await ConfigManager.atomicUpdateMapEntity(this.CONFIG_KEY, tier, policy, { workspaceId });
+        logger.info(
+          `[SafetyConfigManager] Atomically updated safety policy for tier: ${tier} (WS: ${cacheKey})`
+        );
       }
     }
 
     // Invalidate cache immediately to ensure next read sees the changes
-    this.cache = null;
-    logger.info('[SafetyConfigManager] Cache invalidated after atomic policy updates.');
+    this.caches.delete(cacheKey);
+    logger.info(`[SafetyConfigManager] Cache invalidated for ${cacheKey} after atomic updates.`);
   }
 
   /**
    * Clears the in-memory cache of safety policies.
    */
-  static clearCache(): void {
-    this.cache = null;
+  static clearCache(workspaceId?: string): void {
+    if (workspaceId) {
+      this.caches.delete(workspaceId);
+    } else {
+      this.caches.clear();
+    }
   }
 }

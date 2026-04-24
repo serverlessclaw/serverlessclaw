@@ -108,9 +108,14 @@ describe('SafetyConfigManager', () => {
       });
 
       expect(mockAtomicUpdate).toHaveBeenCalledTimes(1);
-      expect(mockAtomicUpdate).toHaveBeenCalledWith('safety_policies', SafetyTier.PROD, {
-        maxDeploymentsPerDay: 10,
-      });
+      expect(mockAtomicUpdate).toHaveBeenCalledWith(
+        'safety_policies',
+        SafetyTier.PROD,
+        {
+          maxDeploymentsPerDay: 10,
+        },
+        { workspaceId: undefined }
+      );
     });
 
     it('invalidates cache after save', async () => {

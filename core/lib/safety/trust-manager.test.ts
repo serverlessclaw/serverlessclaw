@@ -78,7 +78,8 @@ describe('TrustManager', () => {
       expect(mockAgentRegistry.atomicAddAgentField).toHaveBeenCalledWith(
         'test-agent',
         'trustScore',
-        -10
+        -10,
+        { workspaceId: undefined }
       );
     });
 
@@ -116,7 +117,8 @@ describe('TrustManager', () => {
       expect(mockAgentRegistry.atomicAddAgentField).toHaveBeenCalledWith(
         'test-agent',
         'trustScore',
-        -7.5
+        -7.5,
+        { workspaceId: undefined }
       );
 
       // Quality 10 -> 0.5x penalty. 50 - (5 * 0.5) = 47.5. delta = -2.5
@@ -127,7 +129,8 @@ describe('TrustManager', () => {
       expect(mockAgentRegistry.atomicAddAgentField).toHaveBeenCalledWith(
         'test-agent',
         'trustScore',
-        -2.5
+        -2.5,
+        { workspaceId: undefined }
       );
     });
 
@@ -167,7 +170,8 @@ describe('TrustManager', () => {
       expect(mockAgentRegistry.atomicAddAgentField).toHaveBeenCalledWith(
         'anomaly-agent',
         'trustScore',
-        -15.5
+        -15.5,
+        { workspaceId: undefined }
       );
     });
   });
@@ -185,12 +189,24 @@ describe('TrustManager', () => {
       mockAgentRegistry.atomicAddAgentField.mockResolvedValueOnce(82);
       const highQualityScore = await TrustManager.recordSuccess('test-agent', 10);
       expect(highQualityScore).toBe(82);
+      expect(mockAgentRegistry.atomicAddAgentField).toHaveBeenCalledWith(
+        'test-agent',
+        'trustScore',
+        2,
+        { workspaceId: undefined }
+      );
 
       // Quality 5 -> 1x bump. 5 * 0.2 = 1. Total bump = 1.
       mockAgentRegistry.getAgentConfig.mockResolvedValueOnce(getConfig(80));
       mockAgentRegistry.atomicAddAgentField.mockResolvedValueOnce(81);
       const avgQualityScore = await TrustManager.recordSuccess('test-agent', 5);
       expect(avgQualityScore).toBe(81);
+      expect(mockAgentRegistry.atomicAddAgentField).toHaveBeenCalledWith(
+        'test-agent',
+        'trustScore',
+        1,
+        { workspaceId: undefined }
+      );
 
       // Quality 0 -> 0x bump. 0 * 0.2 = 0. Total bump = 0.
       mockAgentRegistry.getAgentConfig.mockResolvedValueOnce(getConfig(80));
@@ -213,6 +229,12 @@ describe('TrustManager', () => {
 
       // Score should be clamped to MAX_SCORE (100)
       expect(newScore).toBe(100);
+      expect(mockAgentRegistry.atomicAddAgentField).toHaveBeenCalledWith(
+        'top-agent',
+        'trustScore',
+        expect.any(Number),
+        { workspaceId: undefined }
+      );
     });
   });
 
@@ -234,12 +256,14 @@ describe('TrustManager', () => {
       expect(mockAgentRegistry.atomicAddAgentField).toHaveBeenCalledWith(
         'high-trust',
         'trustScore',
-        -0.75 // - (0.5 * 1.5)
+        -0.75, // - (0.5 * 1.5)
+        { workspaceId: undefined }
       );
       expect(mockAgentRegistry.atomicAddAgentField).toHaveBeenCalledWith(
         'mid-trust',
         'trustScore',
-        -0.62 // - (0.5 * 1.25) = -0.625, rounded
+        -0.62, // - (0.5 * 1.25) = -0.625, rounded
+        { workspaceId: undefined }
       );
       expect(mockAgentRegistry.atomicAddAgentField).not.toHaveBeenCalledWith(
         'at-baseline',
@@ -265,6 +289,12 @@ describe('TrustManager', () => {
       const newScore = await TrustManager.recordSuccess('incomplete-agent', 10);
 
       expect(newScore).toBe(92); // 90 (DEFAULT_SCORE) + 2 (bump with quality 10)
+      expect(mockAgentRegistry.atomicAddAgentField).toHaveBeenCalledWith(
+        'incomplete-agent',
+        'trustScore',
+        2,
+        { workspaceId: undefined }
+      );
     });
 
     it('uses default score when config is null', async () => {
@@ -304,7 +334,12 @@ describe('TrustManager', () => {
       const result = await TrustManager.recordSuccess('enabled-agent');
 
       expect(result).toBe(81); // Default bump of 1
-      expect(mockAgentRegistry.atomicAddAgentField).toHaveBeenCalled();
+      expect(mockAgentRegistry.atomicAddAgentField).toHaveBeenCalledWith(
+        'enabled-agent',
+        'trustScore',
+        1,
+        { workspaceId: undefined }
+      );
     });
 
     it('allows trust update when enabled is undefined (backward compat)', async () => {
@@ -319,7 +354,12 @@ describe('TrustManager', () => {
       const result = await TrustManager.recordSuccess('legacy-agent');
 
       expect(result).toBe(81); // Default bump of 1
-      expect(mockAgentRegistry.atomicAddAgentField).toHaveBeenCalled();
+      expect(mockAgentRegistry.atomicAddAgentField).toHaveBeenCalledWith(
+        'legacy-agent',
+        'trustScore',
+        1,
+        { workspaceId: undefined }
+      );
     });
 
     it('skips penalty update when agent is disabled', async () => {

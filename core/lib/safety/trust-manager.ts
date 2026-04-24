@@ -49,8 +49,11 @@ export class TrustManager {
     }
     const penalty = TRUST.DEFAULT_PENALTY * severity * penaltyMultiplier;
 
-    const newScore = await this.updateTrustScore(agentId, penalty);
-    await this.logPenalty({ agentId, timestamp: Date.now(), reason, delta: penalty, newScore });
+    const newScore = await this.updateTrustScore(agentId, penalty, context?.workspaceId);
+    await this.logPenalty(
+      { agentId, timestamp: Date.now(), reason, delta: penalty, newScore },
+      context
+    );
 
     await emitEvent('system.trust', EventType.REPUTATION_UPDATE, {
       agentId,
@@ -76,9 +79,9 @@ export class TrustManager {
     }
     const bump = TRUST.DEFAULT_SUCCESS_BUMP * multiplier;
 
-    const newScore = await this.updateTrustScore(agentId, bump);
+    const newScore = await this.updateTrustScore(agentId, bump, context?.workspaceId);
     logger.info(
-      `[TrustManager] Agent ${agentId} earned trust. Quality: ${qualityScore ?? 'N/A'}. New Score: ${newScore}`
+      `[TrustManager] Agent ${agentId} earned trust (WS: ${context?.workspaceId || 'global'}). Quality: ${qualityScore ?? 'N/A'}. New Score: ${newScore}`
     );
 
     await emitEvent('system.trust', EventType.REPUTATION_UPDATE, {
@@ -99,7 +102,9 @@ export class TrustManager {
     context?: TrustContext
   ): Promise<number> {
     if (anomalies.length === 0) {
-      const config = await AgentRegistry.getAgentConfig(agentId);
+      const config = await AgentRegistry.getAgentConfig(agentId, {
+        workspaceId: context?.workspaceId,
+      });
       if (!config) throw new Error(`Agent ${agentId} not found`);
       return config.trustScore ?? TRUST.DEFAULT_SCORE;
     }
@@ -117,14 +122,17 @@ export class TrustManager {
       return `${a.type}: ${a.description}`;
     });
 
-    const newScore = await this.updateTrustScore(agentId, totalDelta);
-    await this.logPenalty({
-      agentId,
-      timestamp: Date.now(),
-      reason: `Batched Cognitive Anomalies: ${descriptions.join(' | ')}`,
-      delta: totalDelta,
-      newScore,
-    });
+    const newScore = await this.updateTrustScore(agentId, totalDelta, context?.workspaceId);
+    await this.logPenalty(
+      {
+        agentId,
+        timestamp: Date.now(),
+        reason: `Batched Cognitive Anomalies: ${descriptions.join(' | ')}`,
+        delta: totalDelta,
+        newScore,
+      },
+      context
+    );
 
     await emitEvent('system.trust', EventType.REPUTATION_UPDATE, {
       agentId,
@@ -138,8 +146,12 @@ export class TrustManager {
     return newScore;
   }
 
-  private static async updateTrustScore(agentId: string, delta: number): Promise<number> {
-    const config = await AgentRegistry.getAgentConfig(agentId);
+  private static async updateTrustScore(
+    agentId: string,
+    delta: number,
+    workspaceId?: string
+  ): Promise<number> {
+    const config = await AgentRegistry.getAgentConfig(agentId, { workspaceId });
     if (!config) throw new Error(`Agent ${agentId} not found`);
 
     if (config.enabled === false) {
@@ -150,28 +162,35 @@ export class TrustManager {
     if (delta === 0) return config.trustScore ?? TRUST.DEFAULT_SCORE;
 
     try {
-      const newScore = await AgentRegistry.atomicAddAgentField(agentId, 'trustScore', delta);
+      const newScore = await AgentRegistry.atomicAddAgentField(agentId, 'trustScore', delta, {
+        workspaceId,
+      });
 
       const clampedScore = Math.max(TRUST.MIN_SCORE, Math.min(TRUST.MAX_SCORE, newScore));
       if (clampedScore !== newScore) {
-        await AgentRegistry.atomicAddAgentField(agentId, 'trustScore', clampedScore - newScore);
+        await AgentRegistry.atomicAddAgentField(agentId, 'trustScore', clampedScore - newScore, {
+          workspaceId,
+        });
       }
 
-      await this.recordHistory(agentId, clampedScore);
+      await this.recordHistory(agentId, clampedScore, { workspaceId });
       return clampedScore;
     } catch (e) {
       logger.error(`[TrustManager] Failed to atomically update trust for ${agentId}:`, e);
       // Fallback only if agent config exists to determine a sensible fallback
       // SECURITY: Log audit event for fallback usage to detect potential attacks
-      const config = await AgentRegistry.getAgentConfig(agentId);
+      const config = await AgentRegistry.getAgentConfig(agentId, { workspaceId });
       const fallbackScore = config?.trustScore ?? TRUST.DEFAULT_SCORE;
-      await this.logFallback({
-        agentId,
-        timestamp: Date.now(),
-        attemptedDelta: delta,
-        fallbackScore,
-        error: e instanceof Error ? e.message : String(e),
-      });
+      await this.logFallback(
+        {
+          agentId,
+          timestamp: Date.now(),
+          attemptedDelta: delta,
+          fallbackScore,
+          error: e instanceof Error ? e.message : String(e),
+        },
+        { workspaceId }
+      );
       return fallbackScore;
     }
   }
@@ -226,18 +245,21 @@ export class TrustManager {
     );
   }
 
-  static async decayTrustScores(): Promise<void> {
-    const configs = await AgentRegistry.getAllConfigs();
+  static async decayTrustScores(workspaceId?: string): Promise<void> {
+    const configs = await AgentRegistry.getAllConfigs({ workspaceId });
     await Promise.all(
       Object.entries(configs)
         .filter(([id]) => !AgentRegistry.isBackboneAgent(id))
-        .map(([id, cfg]) => this.decayAgentTrust(id, cfg as { trustScore?: number }))
+        .map(([id, cfg]) =>
+          this.decayAgentTrust(id, cfg as { trustScore?: number }, { workspaceId })
+        )
     );
   }
 
   private static async decayAgentTrust(
     agentId: string,
-    config: { trustScore?: number }
+    config: { trustScore?: number },
+    context?: TrustContext
   ): Promise<void> {
     const score = config.trustScore;
     if (score === undefined || score < TRUST.DECAY_BASELINE) return;
@@ -248,8 +270,10 @@ export class TrustManager {
     const next = Math.max(TRUST.DECAY_BASELINE, score - TRUST.DECAY_RATE * multiplier);
     const delta = Math.round((next - score) * 100) / 100;
     if (delta < 0) {
-      await AgentRegistry.atomicAddAgentField(agentId, 'trustScore', delta)
-        .then((newScore) => this.recordHistory(agentId, newScore))
+      await AgentRegistry.atomicAddAgentField(agentId, 'trustScore', delta, {
+        workspaceId: context?.workspaceId,
+      })
+        .then((newScore) => this.recordHistory(agentId, newScore, context))
         .catch((err) => logger.error(`[TrustManager] Failed to decay score for ${agentId}:`, err));
     }
   }

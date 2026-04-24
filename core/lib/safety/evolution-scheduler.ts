@@ -59,6 +59,8 @@ export class EvolutionScheduler {
     }
     const actionId = `eve_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const now = Date.now();
+    const pk = `${EVOLUTION_PREFIX}${actionId}`;
+    const scopedUserId = this.base.getScopedUserId(pk, { workspaceId: params.workspaceId });
 
     const pending: PendingEvolution = {
       actionId,
@@ -81,13 +83,13 @@ export class EvolutionScheduler {
 
     await this.base.putItem({
       ...pending,
-      userId: `${EVOLUTION_PREFIX}${actionId}`,
+      userId: scopedUserId,
       timestamp: 0,
       type: 'PENDING_EVOLUTION',
     });
 
     logger.info(
-      `[EVOLUTION] Scheduled Class C action ${actionId} for proactive evolution in ${params.timeoutMs}ms`
+      `[EVOLUTION] Scheduled Class C action ${actionId} for proactive evolution in ${params.timeoutMs}ms (WS: ${params.workspaceId || 'global'})`
     );
     return actionId;
   }
@@ -95,7 +97,7 @@ export class EvolutionScheduler {
   /**
    * Finds all pending actions that have timed out and triggers them.
    */
-  async triggerTimedOutActions(): Promise<number> {
+  async triggerTimedOutActions(workspaceId?: string): Promise<number> {
     if (!this.base) {
       logger.warn('[EVOLUTION] No memory provider available, skipping trigger.');
       return 0;
@@ -103,19 +105,27 @@ export class EvolutionScheduler {
     const now = Date.now();
 
     // Query pending evolutions using the TypeTimestampIndex GSI
+    let filterExpr = '#status = :pending AND expiresAt <= :now';
+    const exprValues: Record<string, any> = {
+      ':type': 'PENDING_EVOLUTION',
+      ':pending': 'pending',
+      ':now': now,
+    };
+
+    if (workspaceId) {
+      filterExpr += ' AND workspaceId = :ws';
+      exprValues[':ws'] = workspaceId;
+    }
+
     const items = await this.base.queryItems({
       IndexName: 'TypeTimestampIndex',
       KeyConditionExpression: '#tp = :type',
-      FilterExpression: '#status = :pending AND expiresAt <= :now',
+      FilterExpression: filterExpr,
       ExpressionAttributeNames: {
         '#tp': 'type',
         '#status': 'status',
       },
-      ExpressionAttributeValues: {
-        ':type': 'PENDING_EVOLUTION',
-        ':pending': 'pending',
-        ':now': now,
-      },
+      ExpressionAttributeValues: exprValues,
     });
 
     const toTrigger = items as unknown as PendingEvolution[];
@@ -167,9 +177,11 @@ export class EvolutionScheduler {
     // Update status to triggered
     action.status = 'triggered';
     if (this.base) {
+      const pk = `${EVOLUTION_PREFIX}${action.actionId}`;
+      const scopedUserId = this.base.getScopedUserId(pk, { workspaceId: action.workspaceId });
       await this.base.putItem({
         ...action,
-        userId: `${EVOLUTION_PREFIX}${action.actionId}`,
+        userId: scopedUserId,
         timestamp: 0,
         type: 'PENDING_EVOLUTION',
       });
@@ -185,11 +197,14 @@ export class EvolutionScheduler {
     workspaceId?: string
   ): Promise<void> {
     if (!this.base) return;
+    const pk = `${EVOLUTION_PREFIX}${actionId}`;
+    const scopedUserId = this.base.getScopedUserId(pk, { workspaceId });
+
     const items = await this.base.queryItems({
       KeyConditionExpression: 'userId = :userId AND #timestamp = :zero',
       ExpressionAttributeNames: { '#timestamp': 'timestamp' },
       ExpressionAttributeValues: {
-        ':userId': `${EVOLUTION_PREFIX}${actionId}`,
+        ':userId': scopedUserId,
         ':zero': 0,
       },
     });
@@ -207,7 +222,7 @@ export class EvolutionScheduler {
 
     await this.base.putItem({
       ...action,
-      userId: `${EVOLUTION_PREFIX}${actionId}`,
+      userId: scopedUserId,
       timestamp: 0,
       type: 'PENDING_EVOLUTION',
     });

@@ -554,13 +554,15 @@ export class ConfigManager {
     key: string,
     entityId: string,
     updates: Record<string, unknown>,
-    retryCount: number = 0
+    options?: { workspaceId?: string; retryCount?: number }
   ): Promise<void> {
     const tableName = this._getTableName();
     if (!tableName) return;
 
-    this.configCache.delete(key);
+    const actualKey = options?.workspaceId ? `WS#${options.workspaceId}#${key}` : key;
+    this.configCache.delete(actualKey);
 
+    const retryCount = options?.retryCount ?? 0;
     const maxRetries = 3;
     const docClient = getDocClient();
     const sets: string[] = [];
@@ -577,7 +579,7 @@ export class ConfigManager {
       await docClient.send(
         new UpdateCommand({
           TableName: tableName,
-          Key: { key },
+          Key: { key: actualKey },
           UpdateExpression: `SET ${sets.join(', ')}`,
           ConditionExpression: 'attribute_exists(#val.#id)',
           ExpressionAttributeNames: names,
@@ -592,7 +594,7 @@ export class ConfigManager {
           await docClient.send(
             new UpdateCommand({
               TableName: tableName,
-              Key: { key },
+              Key: { key: actualKey },
               UpdateExpression: 'SET #val.#id = :entity',
               ConditionExpression: 'attribute_not_exists(#val.#id)',
               ExpressionAttributeNames: { '#val': 'value', '#id': entityId },
@@ -607,7 +609,7 @@ export class ConfigManager {
               await docClient.send(
                 new UpdateCommand({
                   TableName: tableName,
-                  Key: { key },
+                  Key: { key: actualKey },
                   UpdateExpression: 'SET #val = :rootObj',
                   ConditionExpression: 'attribute_not_exists(#val)',
                   ExpressionAttributeNames: { '#val': 'value' },
@@ -620,12 +622,18 @@ export class ConfigManager {
                 rootE.name === 'ConditionalCheckFailedException' &&
                 retryCount < maxRetries
               ) {
-                return this.atomicUpdateMapEntity(key, entityId, updates, retryCount + 1);
+                return this.atomicUpdateMapEntity(key, entityId, updates, {
+                  ...options,
+                  retryCount: retryCount + 1,
+                });
               }
               throw rootE;
             }
           } else if (innerE.name === 'ConditionalCheckFailedException' && retryCount < maxRetries) {
-            return this.atomicUpdateMapEntity(key, entityId, updates, retryCount + 1);
+            return this.atomicUpdateMapEntity(key, entityId, updates, {
+              ...options,
+              retryCount: retryCount + 1,
+            });
           } else {
             throw innerE;
           }

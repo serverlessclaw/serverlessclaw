@@ -324,6 +324,30 @@ export class ToolExecutor {
     const toolSuccess = isToolExecutionSuccessful(rawResult, resultText);
     logger.info(`[EXECUTOR] Tool Result: ${tool.name} | Success: ${toolSuccess}`);
 
+    // Update Trust Score (Principle 9/10: Autonomous Evolution)
+    try {
+      const { TrustManager } = await import('../safety/trust-manager');
+      const trustContext = {
+        workspaceId: execContext.workspaceId,
+        teamId: execContext.teamId,
+        staffId: execContext.staffId,
+      };
+
+      if (toolSuccess) {
+        await TrustManager.recordSuccess(execContext.agentId, 10, trustContext);
+      } else {
+        await TrustManager.recordFailure(
+          execContext.agentId,
+          `Tool ${tool.name} execution failed.`,
+          1,
+          0,
+          trustContext
+        );
+      }
+    } catch (trustError) {
+      logger.error('[EXECUTOR] Failed to update trust score:', trustError);
+    }
+
     const ui_blocks: Message['ui_blocks'] = [];
 
     // 4. Attachments & UI Blocks Collection
@@ -356,7 +380,6 @@ export class ToolExecutor {
         teamId: execContext.teamId,
         staffId: execContext.staffId,
       });
-      const toolSuccess = isToolExecutionSuccessful(rawResult, resultText);
       const estimatedInputTokens = Math.ceil(JSON.stringify(args).length / 4);
       const estimatedOutputTokens = Math.ceil(resultText.length / 4);
 

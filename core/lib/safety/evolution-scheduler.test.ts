@@ -31,14 +31,23 @@ describe('EvolutionScheduler', () => {
         logger.info('STORAGE: putting', item.userId);
         items.set(item.userId, item);
       }),
+      getScopedUserId: vi.fn((pk: string, scope?: any) => {
+        if (scope?.workspaceId) return `WS#${scope.workspaceId}#${pk}`;
+        return pk;
+      }),
       queryItems: vi.fn(async (params: any) => {
         const allItems = Array.from(items.values());
         logger.info('STORAGE: querying with params', JSON.stringify(params));
-        if (params.FilterExpression === '#status = :pending AND expiresAt <= :now') {
+        if (params.FilterExpression?.includes('#status = :pending AND expiresAt <= :now')) {
           const now = params.ExpressionAttributeValues[':now'];
-          const filtered = allItems.filter(
+          let filtered = allItems.filter(
             (item) => item.status === 'pending' && item.expiresAt <= now
           );
+          if (params.ExpressionAttributeValues[':ws']) {
+            filtered = filtered.filter(
+              (item) => item.workspaceId === params.ExpressionAttributeValues[':ws']
+            );
+          }
           logger.info('STORAGE: found', filtered.length, 'items');
           return filtered;
         }
@@ -61,7 +70,9 @@ describe('EvolutionScheduler', () => {
     expect(actionId).toBeDefined();
     expect(mockMemory.putItem).toHaveBeenCalled();
 
-    const stored = mockMemory.items.get(`EVOLUTION#PENDING#${actionId}`);
+    const stored = Array.from(mockMemory.items.values()).find(
+      (i: any) => i.actionId === actionId
+    ) as any;
     expect(stored.agentId).toBe('test-agent');
     expect(stored.status).toBe('pending');
   });
@@ -88,7 +99,9 @@ describe('EvolutionScheduler', () => {
       })
     );
 
-    const updated = mockMemory.items.get(`EVOLUTION#PENDING#${actionId}`);
+    const updated = Array.from(mockMemory.items.values()).find(
+      (i: any) => i.actionId === actionId
+    ) as any;
     expect(updated.status).toBe('triggered');
   });
 

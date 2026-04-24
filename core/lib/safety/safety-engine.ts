@@ -153,7 +153,7 @@ export class SafetyEngine extends SafetyBase {
 
     const normalizedAction = normalizeSafetyAction(action, context?.toolName);
 
-    const policy = await this.getResolvedPolicy(tier);
+    const policy = await this.getResolvedPolicy(tier, workspaceId);
     if (!policy) {
       return {
         allowed: false,
@@ -335,8 +335,8 @@ export class SafetyEngine extends SafetyBase {
     return finalApprovalResult;
   }
 
-  private async getResolvedPolicy(tier: SafetyTier): Promise<SafetyPolicy> {
-    const globalPolicies = await SafetyConfigManager.getPolicies();
+  private async getResolvedPolicy(tier: SafetyTier, workspaceId?: string): Promise<SafetyPolicy> {
+    const globalPolicies = await SafetyConfigManager.getPolicies(workspaceId);
     const base = globalPolicies[tier];
     const custom = this.policies.get(tier);
     return custom ? { ...base, ...custom } : base;
