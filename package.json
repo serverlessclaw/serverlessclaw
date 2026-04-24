@@ -28,6 +28,7 @@
     "check": "turbo run check",
     "gate": "turbo run gate",
     "aiready": "aiready scan",
+    "seed-e2e": "make seed-e2e",
     "principles": "npx tsx scripts/quality/verify-principles.ts"
   },
   "keywords": [

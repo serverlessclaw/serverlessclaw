@@ -33,28 +33,23 @@ export function extractBaseUserId(userId: string): string {
   return normalizeBaseUserId(userId);
 }
 
-/**
- * Detects if the current execution is part of an E2E or Unit test.
- */
 export function isE2ETest(): boolean {
   const lifecycle = process.env.npm_lifecycle_event || '';
   const isVitest =
     process.env.VITEST ||
     process.env.CLAW_TEST === 'true' ||
     process.env.CORE_TEST === 'true' ||
+    process.env.NODE_ENV === 'test' ||
+    (global as unknown as { __vitest_worker__?: unknown }).__vitest_worker__ !== undefined ||
     process.argv.some((arg) => arg.includes('vitest')) ||
     lifecycle.includes('test') ||
     lifecycle.includes('check') ||
-    (global as any).__CLAW_TEST__ === true ||
-    (global as any).CLAW_TEST === true ||
+    (global as unknown as { __CLAW_TEST__?: boolean }).__CLAW_TEST__ === true ||
+    (global as unknown as { CLAW_TEST?: boolean }).CLAW_TEST === true ||
+    (global as unknown as { IS_CLAW_TEST?: boolean }).IS_CLAW_TEST === true ||
     new Error().stack?.includes('.test.ts');
 
-  return !!(
-    process.env.PLAYWRIGHT ||
-    process.env.CI ||
-    process.env.NODE_ENV === 'test' ||
-    isVitest
-  );
+  return !!(process.env.PLAYWRIGHT || process.env.CI || isVitest);
 }
 
 /**

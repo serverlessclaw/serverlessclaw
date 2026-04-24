@@ -97,6 +97,14 @@ vi.mock('../lib/handoff', () => ({
   requestHandoff: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('../lib/utils/agent-helpers', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/utils/agent-helpers')>();
+  return {
+    ...actual,
+    isE2ETest: () => true,
+  };
+});
+
 describe('Webhook Handler Integration', () => {
   const mockContext = { awsRequestId: 'test-request-id' } as Context;
 

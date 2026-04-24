@@ -84,6 +84,14 @@ vi.mock('../tools/index', () => ({
   getAgentTools: vi.fn().mockResolvedValue([]),
 }));
 
+vi.mock('../lib/utils/agent-helpers', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/utils/agent-helpers')>();
+  return {
+    ...actual,
+    isE2ETest: () => true,
+  };
+});
+
 describe('Webhook Handler', () => {
   const mockContext = {
     awsRequestId: 'test-request-id',

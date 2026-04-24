@@ -263,7 +263,16 @@ define verify_up_to_date
        fi
 endef
 
-.PHONY: manifest
+.PHONY: manifest clean-ddb seed-e2e
+
+clean-ddb: ## Clean up temporary E2E/test data from DynamoDB
+	@$(call log_step,Cleaning DynamoDB test data for $(ENV)...)
+	@$(call load_env); $(SST) shell --stage $(ENV) -- npx tsx scripts/dev/clean-ddb.ts
+
+seed-e2e: ## Seed DynamoDB with data for E2E tests
+	@$(call log_step,Seeding DynamoDB for E2E tests in $(ENV)...)
+	@$(call load_env); $(SST) shell --stage $(ENV) -- npx tsx scripts/dev/seed-e2e.ts
+
 manifest: ## Generate a failure manifest from CI logs (LOG_DIR, OUTPUT_DIR)
 	@$(call log_step,Generating failure manifest...)
 	@LOG_DIR=$(or $(LOG_DIR),/tmp/ci-logs); \

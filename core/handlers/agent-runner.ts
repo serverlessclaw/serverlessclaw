@@ -11,6 +11,7 @@ import { Context } from 'aws-lambda';
 import {
   extractPayload,
   extractBaseUserId,
+  isE2ETest,
   detectFailure,
   isTaskPaused,
   validatePayload,
@@ -51,13 +52,10 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
   if (!validatePayload({ userId, task }, ['userId', 'task'])) {
     return;
   }
-
   const baseUserId = extractBaseUserId(userId);
 
-  /*
   // Authorize User
   try {
-    const { isE2ETest } = await import('../lib/utils/agent-helpers');
     if (baseUserId && baseUserId !== 'SYSTEM' && baseUserId !== 'dashboard-user' && !isE2ETest()) {
       const { getIdentityManager, Permission } = await import('../lib/session/identity');
       const identityManager = await getIdentityManager();
@@ -67,7 +65,9 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
         workspaceId
       );
       if (!hasPermission) {
-        logger.warn(`[AgentRunner] Access denied. User ${baseUserId} lacks TASK_CREATE permission.`);
+        logger.warn(
+          `[AgentRunner] Access denied. User ${baseUserId} lacks TASK_CREATE permission.`
+        );
         return `Error: Unauthorized to create tasks in this workspace`;
       }
     }
@@ -75,7 +75,6 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
     logger.error(`[AgentRunner] Permission check failed:`, error);
     return `Error: Permission check failed`;
   }
-  */
 
   // Session lock management
   const sessionStateManager = new SessionStateManager();

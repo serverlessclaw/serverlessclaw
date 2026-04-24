@@ -20,6 +20,7 @@ const mockAgent = {
 vi.mock('../lib/utils/agent-helpers', () => ({
   extractPayload: vi.fn((x) => x),
   extractBaseUserId: vi.fn((x) => x),
+  isE2ETest: vi.fn(() => true),
   detectFailure: vi.fn(() => false),
   isTaskPaused: vi.fn((resp) => resp?.startsWith('TASK_PAUSED')),
   validatePayload: vi.fn(() => true),

@@ -16,6 +16,7 @@ import { initializeTracer } from './agent/tracer-init';
 import { resolveAgentConfig } from './agent/config-resolver';
 import { validateAgentConfig } from './agent/validator';
 import { reportAgentMetrics } from './agent/metrics-helper';
+import { isE2ETest } from './utils/agent-helpers';
 
 // Re-export validation for backward compatibility and tests
 export { validateAgentConfig };
@@ -108,14 +109,8 @@ export class Agent {
       ? `${(this.config?.id ?? 'unknown').toUpperCase()}#${userId}#${traceId}`
       : userId;
 
-    /*
     // Authorization check
-    if (
-      baseUserId &&
-      baseUserId !== 'SYSTEM' &&
-      baseUserId !== 'dashboard-user' &&
-      !isE2ETest()
-    ) {
+    if (baseUserId && baseUserId !== 'SYSTEM' && baseUserId !== 'dashboard-user' && !isE2ETest()) {
       try {
         const { getIdentityManager, Permission } = await import('./session/identity');
         const identityManager = await getIdentityManager();
@@ -136,7 +131,6 @@ export class Agent {
         return { responseText: `Error: Permission check failed`, traceId };
       }
     }
-    */
 
     // Early exit if global trace budget is already exceeded
     const { isBudgetExceeded } = await import('./recursion-tracker');
@@ -396,14 +390,8 @@ export class Agent {
       ? `${(this.config?.id ?? 'unknown').toUpperCase()}#${userId}#${traceId}`
       : userId;
 
-    /*
     // Authorization check
-    if (
-      baseUserId &&
-      baseUserId !== 'SYSTEM' &&
-      baseUserId !== 'dashboard-user' &&
-      !isE2ETest()
-    ) {
+    if (baseUserId && baseUserId !== 'SYSTEM' && baseUserId !== 'dashboard-user' && !isE2ETest()) {
       try {
         const { getIdentityManager, Permission } = await import('./session/identity');
         const identityManager = await getIdentityManager();
@@ -434,7 +422,6 @@ export class Agent {
         return;
       }
     }
-    */
 
     const { isHumanTakingControl } = await import('./handoff');
     const ignoreHandoff = options.ignoreHandoff ?? false;

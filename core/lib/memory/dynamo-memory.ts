@@ -685,7 +685,7 @@ export class DynamoMemory extends BaseMemoryProvider implements IMemory {
     const response = await this.docClient.send(
       new GetCommand({
         TableName: this.tableName,
-        Key: { userId: key, nodeId: 'ROOT' },
+        Key: { userId: key, timestamp: 0 },
       })
     );
     return response.Item as Record<string, unknown> | undefined;

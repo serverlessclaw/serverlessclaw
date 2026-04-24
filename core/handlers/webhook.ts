@@ -1,6 +1,7 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
 import { sendOutboundMessage } from '../lib/outbound';
 import { logger } from '../lib/logger';
+import { isE2ETest } from '../lib/utils/agent-helpers';
 import {
   TraceSource,
   AgentType,
@@ -118,14 +119,13 @@ export const handler = async (
     `[WEBHOOK] Source: ${inbound.source} | User: ${userId} | Text: ${text.substring(0, 50)}`
   );
 
-  /*
   try {
     if (!isE2ETest()) {
       const { getIdentityManager } = await import('../lib/session/identity');
       const identityManager = await getIdentityManager();
       const authResult = await identityManager.authenticate(
         userId,
-        (source === 'dashboard' || source === 'api_key') ? source : 'telegram', // Fallback for unsupported sources
+        source === 'dashboard' || source === 'api_key' ? source : 'telegram', // Fallback for unsupported sources
         { workspaceId, teamId, staffId }
       );
 
@@ -138,7 +138,6 @@ export const handler = async (
     logger.error(`[WEBHOOK] Identity verification error:`, authError);
     return { statusCode: 403, body: 'Forbidden: Identity verification failed' };
   }
-  */
 
   // Process Media/Attachments via Adapter
   const attachments: Attachment[] = [];
