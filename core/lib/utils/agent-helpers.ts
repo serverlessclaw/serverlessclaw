@@ -34,6 +34,30 @@ export function extractBaseUserId(userId: string): string {
 }
 
 /**
+ * Detects if the current execution is part of an E2E or Unit test.
+ */
+export function isE2ETest(): boolean {
+  const lifecycle = process.env.npm_lifecycle_event || '';
+  const isVitest =
+    process.env.VITEST ||
+    process.env.CLAW_TEST === 'true' ||
+    process.env.CORE_TEST === 'true' ||
+    process.argv.some((arg) => arg.includes('vitest')) ||
+    lifecycle.includes('test') ||
+    lifecycle.includes('check') ||
+    (global as any).__CLAW_TEST__ === true ||
+    (global as any).CLAW_TEST === true ||
+    new Error().stack?.includes('.test.ts');
+
+  return !!(
+    process.env.PLAYWRIGHT ||
+    process.env.CI ||
+    process.env.NODE_ENV === 'test' ||
+    isVitest
+  );
+}
+
+/**
  * Extract and normalize payload from EventBridge event.
  * EventBridge wraps the payload in 'detail', but direct invocations pass it directly.
  *

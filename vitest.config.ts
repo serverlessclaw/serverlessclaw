@@ -18,6 +18,7 @@ export default defineConfig({
     // Increase default test timeout to accommodate larger import/setup times
     // when running the full monorepo test suite on CI or local machines.
     testTimeout: 20000,
+    setupFiles: [path.resolve(__dirname, './core/tests/setup.ts')],
     alias: {
       '@': path.resolve(__dirname, './dashboard/src'),
       '@claw/core': path.resolve(__dirname, './core'),

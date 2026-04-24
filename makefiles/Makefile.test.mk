@@ -160,13 +160,13 @@ test-component: ## Run component tests (via Turbo)
 
 test-e2e: ## Run E2E tests with Playwright (local dev server)
 	@$(call log_step,Running E2E tests (Isolated environment)...)
-	@unset npm_config_prefix && PLAYWRIGHT=true $(PNPM) exec playwright test $(if $(PW_SHARD),--shard=$(PW_SHARD),)
+	@unset npm_config_prefix && CI=true PLAYWRIGHT=true $(PNPM) exec playwright test $(if $(PW_SHARD),--shard=$(PW_SHARD),)
 
 test-e2e-deployed: ## Run E2E tests against deployed URL. Usage: make test-e2e-deployed URL=https://...
 	@$(call log_step,Running E2E tests against deployed URL...)
-	@if [ -z "$(URL)" ]; then $(call log_error,URL is required); exit 1; fi
+	@if [ "$(URL)" = "" ]; then $(call log_error,URL is required); exit 1; fi
 	@$(call load_env); \
-	PLAYWRIGHT=true BASE_URL=$(URL) $(PNPM) exec playwright test
+	CI=true PLAYWRIGHT=true BASE_URL=$(URL) $(PNPM) exec playwright test
 
 test-affected: ## Run only tests in affected packages (via Turbo)
 	@$(call log_step,Running affected tests via Turbo...)
