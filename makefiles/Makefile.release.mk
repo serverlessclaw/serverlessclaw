@@ -18,7 +18,7 @@ release: ## Full Release: Quality Gates -> Deploy -> Audit Tag (Auditing & Costs
 	@$(call log_info,Tier 2 passed. Starting deployment...)
 	@$(MAKE) deploy ENV=$(ENV) E2E=false
 	@$(MAKE) seed-e2e ENV=$(ENV)
-	# @$(MAKE) test-tier-3
+	@$(MAKE) test-tier-3
 	@$(MAKE) tag
 	@$(call log_success,Release completed successfully!)
 

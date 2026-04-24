@@ -154,7 +154,8 @@ describe('Dashboard API: POST /api/chat', () => {
       'sess-trunc',
       expect.objectContaining({
         lastMessage: 'A'.repeat(60) + '...',
-      })
+      }),
+      expect.objectContaining({ workspaceId: 'default' })
     );
   });
 
@@ -201,7 +202,8 @@ describe('Dashboard API: PATCH /api/chat', () => {
     expect(mockSaveConversationMeta).toHaveBeenCalledWith(
       'dashboard-user',
       's1',
-      expect.objectContaining({ title: 'New' })
+      expect.objectContaining({ title: 'New' }),
+      expect.objectContaining({ workspaceId: 'default' })
     );
   });
 });
@@ -215,7 +217,9 @@ describe('Dashboard API: DELETE /api/chat', () => {
     const data = await res.json();
 
     expect(data.success).toBe(true);
-    expect(mockDeleteConversation).toHaveBeenCalledWith('dashboard-user', 's1');
+    expect(mockDeleteConversation).toHaveBeenCalledWith('dashboard-user', 's1', {
+      workspaceId: 'default',
+    });
   });
 });
 
@@ -229,6 +233,9 @@ describe('Dashboard API: GET /api/chat', () => {
     const data = await res.json();
 
     expect(data.sessions).toHaveLength(1);
+    expect(mockListConversations).toHaveBeenCalledWith('dashboard-user', {
+      workspaceId: 'default',
+    });
   });
 
   it('returns history', async () => {
@@ -238,5 +245,8 @@ describe('Dashboard API: GET /api/chat', () => {
     const data = await res.json();
 
     expect(data.history).toHaveLength(1);
+    expect(mockGetHistory).toHaveBeenCalledWith('CONV#dashboard-user#s1', {
+      workspaceId: 'default',
+    });
   });
 });

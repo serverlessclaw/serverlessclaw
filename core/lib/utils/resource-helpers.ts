@@ -22,16 +22,8 @@ export function resolveSSTResourceValue(
     return process.env[fallbackEnvVar]!;
   }
 
-  // 2. Try traditional Resource access
-  try {
-    const resource = Resource as unknown as Record<string, Record<string, string>>;
-    const item = resource[resourceName];
-    if (item && item[property]) return item[property];
-  } catch {
-    // Resource access might throw if not linked
-  }
-
-  // 3. Try SST Ion JSON fallback (SST_RESOURCE_<Name>)
+  // 2. Try SST Ion JSON fallback (SST_RESOURCE_<Name>)
+  // Check this before hitting the Resource proxy to avoid triggering Proxy errors
   const ionEnvVar = `SST_RESOURCE_${resourceName}`;
   const ionValue = process.env[ionEnvVar];
   if (ionValue) {
@@ -45,6 +37,25 @@ export function resolveSSTResourceValue(
       if (property === 'name' || property === 'value') {
         return ionValue;
       }
+    }
+  }
+
+  // 3. Try traditional Resource access
+  // We check for SST_RESOURCE_App to avoid triggering the Proxy's "links not active" error
+  // BUT we allow it in test environments where Resource is often mocked
+  if (
+    process.env.SST_RESOURCE_App ||
+    process.env.SST_STAGE ||
+    process.env.VITEST ||
+    process.env.NODE_ENV === 'test' ||
+    process.env.PLAYWRIGHT
+  ) {
+    try {
+      const resource = Resource as unknown as Record<string, Record<string, string>>;
+      const item = resource[resourceName];
+      if (item && item[property]) return item[property];
+    } catch {
+      // Resource access might throw if not linked
     }
   }
 
@@ -65,13 +76,21 @@ export const getAwsRegion = () =>
 
 /** Gets application metadata (name and stage) */
 export function getAppInfo(): { name: string; stage: string } {
-  try {
-    const resource = Resource as unknown as Record<string, { name: string; stage: string }>;
-    if (resource.App) {
-      return { name: resource.App.name, stage: resource.App.stage };
+  if (
+    process.env.SST_RESOURCE_App ||
+    process.env.SST_STAGE ||
+    process.env.VITEST ||
+    process.env.NODE_ENV === 'test' ||
+    process.env.PLAYWRIGHT
+  ) {
+    try {
+      const resource = Resource as unknown as Record<string, { name: string; stage: string }>;
+      if (resource.App) {
+        return { name: resource.App.name, stage: resource.App.stage };
+      }
+    } catch {
+      // ignore
     }
-  } catch {
-    // ignore
   }
 
   const ionApp = process.env.SST_RESOURCE_App;

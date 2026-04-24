@@ -47,7 +47,7 @@ export async function addMessage(
     createdAt: Date.now(),
     type,
     expiresAt,
-    workspaceId,
+    workspaceId: workspaceId || undefined,
     ...scrubbedMessage,
   });
 }
@@ -118,7 +118,7 @@ export async function updateDistilledMemory(
     type: 'DISTILLED',
     expiresAt,
     content: facts,
-    workspaceId,
+    workspaceId: workspaceId || undefined,
   });
 }
 
@@ -206,26 +206,34 @@ export async function saveConversationMeta(
     workspaceId = scope.workspaceId;
   }
 
+  let updateExpr =
+    'SET sessionId = :sessionId, #tp = :type, expiresAt = :exp, title = :title, content = :content, isPinned = :pinned, updatedAt = :now, updatedAtNumeric = :now';
+  const exprVals: Record<string, unknown> = {
+    ':sessionId': sessionId,
+    ':type': type,
+    ':exp': expiresAt ?? null,
+    ':title': meta.title !== undefined ? meta.title : existingTitle,
+    ':content': meta.lastMessage !== undefined ? meta.lastMessage : existingContent,
+    ':pinned': meta.isPinned !== undefined ? meta.isPinned : existingIsPinned,
+    ':now': meta.updatedAt ?? Date.now(),
+  };
+
+  const finalWorkspaceId = workspaceId ?? existingWorkspaceId;
+  if (finalWorkspaceId) {
+    updateExpr += ', workspaceId = :workspaceId';
+    exprVals[':workspaceId'] = finalWorkspaceId;
+  }
+
   await base.updateItem({
     Key: {
       userId: partitionKey,
       timestamp: stableSortKey,
     },
-    UpdateExpression:
-      'SET sessionId = :sessionId, #tp = :type, expiresAt = :exp, title = :title, content = :content, isPinned = :pinned, updatedAt = :now, updatedAtNumeric = :now, workspaceId = :workspaceId',
+    UpdateExpression: updateExpr,
     ExpressionAttributeNames: {
       '#tp': 'type',
     },
-    ExpressionAttributeValues: {
-      ':sessionId': sessionId,
-      ':type': type,
-      ':exp': expiresAt ?? null,
-      ':title': meta.title !== undefined ? meta.title : existingTitle,
-      ':content': meta.lastMessage !== undefined ? meta.lastMessage : existingContent,
-      ':pinned': meta.isPinned !== undefined ? meta.isPinned : existingIsPinned,
-      ':now': meta.updatedAt ?? Date.now(),
-      ':workspaceId': workspaceId ?? existingWorkspaceId ?? null,
-    },
+    ExpressionAttributeValues: exprVals,
   });
 }
 
@@ -379,6 +387,6 @@ export async function updateSummary(
     type: 'SUMMARY',
     expiresAt,
     content: summary,
-    workspaceId,
+    workspaceId: workspaceId || undefined,
   });
 }

@@ -50,8 +50,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       source: incomingSource,
       overrideConfig,
       promptOverrides,
+      workspaceId: incomingWorkspaceId,
+      teamId,
+      staffId,
     } = await req.json();
 
+    const workspaceId = incomingWorkspaceId || 'default';
     const source = incomingSource || TraceSource.DASHBOARD;
 
     const userId = getUserId(req);
@@ -68,14 +72,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const primaryAgentId = agentIds && agentIds.length > 0 ? agentIds[0] : agentId;
 
     logger.info(
-      `[Chat API] POST - userId: ${userId}, sessionId: ${sessionId}, traceId: ${clientTraceId}, agentId: ${primaryAgentId}, agentIds: ${agentIds?.join(',')}, collabId: ${collaborationId}`
+      `[Chat API] POST - userId: ${userId}, sessionId: ${sessionId}, traceId: ${clientTraceId}, agentId: ${primaryAgentId}, workspaceId: ${workspaceId}`
     );
 
     // If we're in a collaboration session, we might need special logic in the future.
     // For now, we route to the specific agent requested.
 
-    const config = await AgentRegistry.getAgentConfig(primaryAgentId);
-    const agentTools = await getAgentTools(primaryAgentId);
+    const config = await AgentRegistry.getAgentConfig(primaryAgentId, { workspaceId });
+    const agentTools = await getAgentTools(primaryAgentId, { workspaceId });
 
     if (!config) {
       return NextResponse.json(
@@ -96,7 +100,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     let communicationMode: 'text' | 'json' = 'text';
     if (collaborationId) {
       const collab = collaborationId
-        ? await getMemory().getCollaboration(collaborationId as string)
+        ? await getMemory().getCollaboration(collaborationId as string, { workspaceId })
         : null;
       if (collab) {
         const hasHuman =
@@ -112,6 +116,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const agent = new Agent(getMemory(), getProvider(), agentTools, {
       ...config,
       ...(overrideConfig || {}),
+      workspaceId,
+      teamId,
+      staffId,
       systemPrompt:
         promptOverrides?.[primaryAgentId] ??
         overrideConfig?.systemPrompt ??
@@ -132,6 +139,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       profile,
       communicationMode,
       agentIds, // Pass the swarm context to the agent
+      workspaceId,
+      teamId,
+      staffId,
     });
 
     let finalResponse = '';
@@ -152,14 +162,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     // Update conversation metadata for the sidebar
     if (sessionId) {
-      await getMemory().saveConversationMeta(userId, sessionId, {
-        lastMessage:
-          finalResponse.length > 60 ? finalResponse.substring(0, 60) + '...' : finalResponse,
-        updatedAt: Date.now(),
-        // Store the last agent used in this session if it's not superclaw
-        metadata:
-          primaryAgentId !== AgentType.SUPERCLAW ? { lastAgentId: primaryAgentId } : undefined,
-      });
+      await getMemory().saveConversationMeta(
+        userId,
+        sessionId,
+        {
+          lastMessage:
+            finalResponse.length > 60 ? finalResponse.substring(0, 60) + '...' : finalResponse,
+          updatedAt: Date.now(),
+          // Store the last agent used in this session if it's not superclaw
+          metadata:
+            primaryAgentId !== AgentType.SUPERCLAW ? { lastAgentId: primaryAgentId } : undefined,
+        },
+        { workspaceId, teamId, staffId }
+      );
     }
 
     // Filter out synthetic thought markers ('…') that were only used to trigger the thinking indicator
@@ -191,18 +206,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
  */
 export async function PATCH(req: NextRequest): Promise<NextResponse> {
   try {
-    const { sessionId, title, isPinned } = await req.json();
+    const { sessionId, title, isPinned, workspaceId = 'default' } = await req.json();
     const userId = getUserId(req);
 
     if (!sessionId) {
       return NextResponse.json({ error: 'Missing sessionId' }, { status: 400 });
     }
 
-    await getMemory().saveConversationMeta(userId, sessionId, {
-      title,
-      isPinned,
-      updatedAt: Date.now(),
-    });
+    await getMemory().saveConversationMeta(
+      userId,
+      sessionId,
+      {
+        title,
+        isPinned,
+        updatedAt: Date.now(),
+      },
+      { workspaceId }
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -217,6 +237,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
 export async function DELETE(req: NextRequest): Promise<NextResponse> {
   try {
     const sessionId = req.nextUrl.searchParams.get('sessionId');
+    const workspaceId = req.nextUrl.searchParams.get('workspaceId') || 'default';
     const userId = getUserId(req);
 
     if (!sessionId) {
@@ -224,13 +245,15 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
     }
 
     if (sessionId === 'all') {
-      const sessions = await getMemory().listConversations(userId);
-      await Promise.all(sessions.map((s) => getMemory().deleteConversation(userId, s.sessionId)));
+      const sessions = await getMemory().listConversations(userId, { workspaceId });
+      await Promise.all(
+        sessions.map((s) => getMemory().deleteConversation(userId, s.sessionId, { workspaceId }))
+      );
       revalidatePath('/');
       return NextResponse.json({ success: true, count: sessions.length });
     }
 
-    await getMemory().deleteConversation(userId, sessionId);
+    await getMemory().deleteConversation(userId, sessionId, { workspaceId });
     revalidatePath('/');
 
     return NextResponse.json({ success: true });
@@ -246,10 +269,13 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const userId = getUserId(req);
   const sessionId = req.nextUrl.searchParams.get('sessionId');
+  const workspaceId = req.nextUrl.searchParams.get('workspaceId') || 'default';
   try {
     if (sessionId) {
       try {
-        const history = await getMemory().getHistory(`CONV#${userId}#${sessionId}`);
+        const history = await getMemory().getHistory(`CONV#${userId}#${sessionId}`, {
+          workspaceId,
+        });
         return NextResponse.json({ history });
       } catch (error) {
         logger.warn(
@@ -261,7 +287,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     } else {
       // List conversations - handle missing table gracefully
       try {
-        const sessions = await getMemory().listConversations(userId);
+        const sessions = await getMemory().listConversations(userId, { workspaceId });
         return NextResponse.json({ sessions });
       } catch (error) {
         logger.warn('[Chat API] Failed to list conversations, likely table not linked:', error);

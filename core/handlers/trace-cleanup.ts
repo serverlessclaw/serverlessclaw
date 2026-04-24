@@ -1,11 +1,8 @@
 import { QueryCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
-import { getDocClient } from '../lib/utils/ddb-client';
-import { Resource } from 'sst';
-import { SSTResource } from '../lib/types/system';
+import { getDocClient, getTraceTableName } from '../lib/utils/ddb-client';
 import { logger } from '../lib/logger';
 
 const docClient = getDocClient();
-const TRACE_TABLE_NAME = (Resource as unknown as SSTResource).TraceTable.name;
 const ORPHAN_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours
 const MAX_ITEMS_TO_SCAN = 1000;
 
@@ -26,13 +23,22 @@ export async function cleanupOrphanTraces(): Promise<TraceCleanupResult> {
   const now = Date.now();
   const threshold = Math.floor((now - ORPHAN_THRESHOLD_MS) / 1000); // Unix timestamp
 
-  logger.info(`[TRACE_CLEANUP] Starting orphan trace cleanup (threshold: ${threshold})`);
+  const tableName = getTraceTableName();
+  if (!tableName) {
+    logger.error('[TRACE_CLEANUP] TraceTable name not found.');
+    result.errors.push('TraceTable not found');
+    return result;
+  }
+
+  logger.info(
+    `[TRACE_CLEANUP] Starting orphan trace cleanup (threshold: ${threshold}, table: ${tableName})`
+  );
 
   try {
     // Find traces with STARTED status and old timestamp
     const response = await docClient.send(
       new QueryCommand({
-        TableName: TRACE_TABLE_NAME,
+        TableName: tableName,
         IndexName: 'status-index',
         KeyConditionExpression: '#status = :status AND #ts < :threshold',
         ExpressionAttributeNames: { '#status': 'status', '#ts': 'timestamp' },
@@ -61,7 +67,7 @@ export async function cleanupOrphanTraces(): Promise<TraceCleanupResult> {
           // Query for all nodes in this trace and delete them.
           const nodes = await docClient.send(
             new QueryCommand({
-              TableName: TRACE_TABLE_NAME,
+              TableName: tableName,
               KeyConditionExpression: 'traceId = :tid',
               ExpressionAttributeValues: { ':tid': trace.traceId },
               Limit: MAX_ITEMS_TO_SCAN,
@@ -72,7 +78,7 @@ export async function cleanupOrphanTraces(): Promise<TraceCleanupResult> {
             try {
               await docClient.send(
                 new DeleteCommand({
-                  TableName: TRACE_TABLE_NAME,
+                  TableName: tableName,
                   Key: { traceId: node.traceId, nodeId: node.nodeId },
                 })
               );
@@ -89,7 +95,7 @@ export async function cleanupOrphanTraces(): Promise<TraceCleanupResult> {
           // Delete the specific node and attempt to remove the summary row as well.
           await docClient.send(
             new DeleteCommand({
-              TableName: TRACE_TABLE_NAME,
+              TableName: tableName,
               Key: { traceId: trace.traceId, nodeId: trace.nodeId },
             })
           );
@@ -98,7 +104,7 @@ export async function cleanupOrphanTraces(): Promise<TraceCleanupResult> {
           try {
             await docClient.send(
               new DeleteCommand({
-                TableName: TRACE_TABLE_NAME,
+                TableName: tableName,
                 Key: { traceId: trace.traceId, nodeId: '__summary__' },
               })
             );
