@@ -407,7 +407,15 @@ export default function Sidebar() {
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                 className="p-1.5 rounded hover:bg-foreground/5 text-muted-foreground hover:text-cyber-green transition-colors"
               >
-                {mounted ? (theme === 'dark' ? <Sun size={12} /> : <Moon size={12} />) : <div className="w-3 h-3" />}
+                {mounted ? (
+                  theme === 'dark' ? (
+                    <Sun size={12} />
+                  ) : (
+                    <Moon size={12} />
+                  )
+                ) : (
+                  <div className="w-3 h-3" />
+                )}
               </button>
               <button
                 onClick={() => setLocale(locale === 'en' ? 'cn' : 'en')}
