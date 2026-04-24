@@ -52,15 +52,19 @@ async function persistToDynamoDB(metrics: MetricDatum[]): Promise<void> {
 
     const now = Date.now();
     for (const m of critical) {
+      const workspaceId = m.Dimensions?.find((d) => d.Name === 'WorkspaceId')?.Value;
+      const scopePrefix = workspaceId ? `WS#${workspaceId}#` : '';
+
       await docClient.send(
         new PutCommand({
           TableName: tableName,
           Item: {
-            key: `METRIC#${m.MetricName}#${now}#${Math.random().toString(36).slice(2, 8)}`,
+            key: `${scopePrefix}METRIC#${m.MetricName}#${now}#${Math.random().toString(36).slice(2, 8)}`,
             metricName: m.MetricName,
             value: m.Value,
             unit: m.Unit ?? 'Count',
             dimensions: m.Dimensions,
+            workspaceId,
             timestamp: now,
             expiresAt: Math.floor(now / 1000) + 7 * 86400, // 7 days retention
           },

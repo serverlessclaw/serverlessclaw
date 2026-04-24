@@ -93,13 +93,14 @@ export class TokenTracker {
         ? `${prefix}#TOKEN#${record.agentId}`
         : `TOKEN#${record.agentId}`;
 
-    const globalUserId = `GLOBAL#TOKEN#${record.agentId}`;
-
     const items = [{ ...record, userId: scopedUserId, expiresAt } as TokenUsageRecord];
 
-    // Always store a GLOBAL copy if we used a scoped prefix
-    if (scopedUserId !== globalUserId && (scope?.workspaceId || scope?.teamId)) {
-      items.push({ ...record, userId: globalUserId, expiresAt } as TokenUsageRecord);
+    // Only store GLOBAL copy if no scope is provided to reduce cross-tenant metadata leakage
+    if (!scope?.workspaceId && !scope?.teamId) {
+      const globalUserId = `GLOBAL#TOKEN#${record.agentId}`;
+      if (scopedUserId !== globalUserId) {
+        items.push({ ...record, userId: globalUserId, expiresAt } as TokenUsageRecord);
+      }
     }
 
     try {

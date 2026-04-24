@@ -178,6 +178,12 @@ export interface IAgentConfig {
   parallelToolCalls?: boolean;
   /** Default communication style (JSON for system, Text for human). */
   defaultCommunicationMode?: 'json' | 'text';
+  /** Workspace context for multi-tenant isolation and routing. */
+  workspaceId?: string;
+  /** Team context for isolation. */
+  teamId?: string;
+  /** Staff/User context for isolation. */
+  staffId?: string;
   /** MCP server ARN mappings for tool execution. */
   mcpServers?: Record<string, string>;
   /** Sampling temperature (0.0 to 1.0). Controls randomness. */

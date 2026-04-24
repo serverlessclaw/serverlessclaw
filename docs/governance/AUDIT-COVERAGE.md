@@ -12,12 +12,12 @@ Last Updated: 2026-04-24
 
 | Silo  | Name           | Primary Focus                                   | Audit Count | Last Audited | Risk Level |
 | :---- | :------------- | :---------------------------------------------- | :---------: | :----------- | :--------- |
-| **1** | The Spine      | `core/lib/routing/`, `core/lib/backbone.ts`     |     7+      | 2026-04-24   | Medium     |
+| **1** | The Spine      | `core/lib/routing/`, `core/lib/backbone.ts`     |     8+      | 2026-04-24   | Medium     |
 | **2** | The Hand       | `core/lib/mcp.ts`, `core/lib/agent/executor.ts` |      4      | 2026-04-24   | Medium     |
 | **3** | The Shield     | `core/lib/safety/safety-engine.ts`              |     7+      | 2026-04-24   | High       |
 | **4** | The Brain      | `core/lib/memory/`, `core/lib/rag/`             |      4      | 2026-04-24   | Medium     |
-| **5** | The Eye        | `core/lib/metrics/`, `core/lib/tracer/`         |      3      | 2026-04-15   | Medium     |
-| **6** | The Scales     | `core/lib/safety/trust-manager.ts`              |      4      | 2026-04-24   | High       |
+| **5** | The Eye        | `core/lib/metrics/`, `core/lib/tracer/`         |      4      | 2026-04-24   | Medium     |
+| **6** | The Scales     | `core/lib/safety/trust-manager.ts`              |      5      | 2026-04-24   | High       |
 | **7** | The Metabolism | `core/lib/maintenance/metabolism.ts`            |      2      | 2026-04-15   | Low        |
 
 ---
@@ -29,7 +29,7 @@ Last Updated: 2026-04-24
 | **A**       | Life of a Message | Spine → Brain → Eye    | 2           | 2026-04-23  |
 | **B**       | Evolution Cycle   | Hand → Shield → Scales | 3           | 2026-04-24  |
 | **C**       | Identity Journey  | Brain → Spine → Shield | 3           | 2026-04-24  |
-| **D**       | Trust Loop        | Eye → Scales → Spine   | 2           | 2026-04-23  |
+| **D**       | Trust Loop        | Eye → Scales → Spine   | 3           | 2026-04-24  |
 | **E**       | Recovery Path     | Shield → Spine → Brain | 2           | 2026-04-22  |
 
 ---
@@ -38,6 +38,7 @@ Last Updated: 2026-04-24
 
 | Date       | Report                                        | Silos Covered         | Cross-Silo      | Key Findings                                           |
 | :--------- | :-------------------------------------------- | :-------------------- | :-------------- | :----------------------------------------------------- |
+| 2026-04-24 | `audit-2026-04-24-trust-loop.md`              | Eye, Scales, Spine    | D               | P1 Global agent metrics leak, Non-scoped persistence   |
 | 2026-04-24 | `audit-2026-04-24-evolution-cycle.md`        | Hand, Shield, Scales  | B               | P0 Global safety policies, Broken trust feedback       |
 | 2026-04-24 | `audit-2026-04-24-identity-journey.md`        | Brain, Spine, Shield  | C               | P0 Unauthenticated webhooks, Missing agent perms       |
 | 2026-04-23 | `audit-2026-04-23-trust-loop.md`              | Scales, Spine         | D               | FIXED: Multi-tenant leaks in TrustManager, AgentRouter |

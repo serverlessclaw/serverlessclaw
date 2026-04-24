@@ -121,7 +121,9 @@ export class AgentRouter {
 
     const candidates = TIER_MODELS[tier] ?? TIER_MODELS[ModelTier.BALANCED];
     const selected =
-      candidates.length === 1 ? candidates[0] : await this.weightedModelSelection(candidates);
+      candidates.length === 1
+        ? candidates[0]
+        : await this.weightedModelSelection(candidates, config.workspaceId);
 
     logger.info(
       `[AgentRouter] Selected ${selected.provider}/${selected.model} (tier: ${tier}) for agent ${config.id}`
@@ -134,11 +136,14 @@ export class AgentRouter {
    * Performs weighted selection between candidates based on historical performance.
    */
   private static async weightedModelSelection(
-    candidates: { provider: string; model: string }[]
+    candidates: { provider: string; model: string }[],
+    workspaceId?: string
   ): Promise<{ provider: string; model: string }> {
     try {
       const performancePromises = candidates.map(async (c) => {
-        const rollups = await TokenTracker.getRollupRange(`${c.provider}_${c.model}`, 7);
+        const rollups = await TokenTracker.getRollupRange(`${c.provider}_${c.model}`, 7, {
+          workspaceId,
+        });
         const totalInvocations = rollups.reduce((s, r) => s + r.invocationCount, 0);
         const totalSuccesses = rollups.reduce((s, r) => s + r.successCount, 0);
         return totalInvocations > 0 ? totalSuccesses / totalInvocations + 0.1 : 0.6;
@@ -163,13 +168,16 @@ export class AgentRouter {
    */
   static async getMetrics(
     agentId: string,
-    capabilityScore = 1.0
+    capabilityScore = 1.0,
+    workspaceId?: string
   ): Promise<AgentPerformanceMetrics> {
     let successRate = 0.5;
     let avgTokens = 0;
 
     try {
-      const rollups = await TokenTracker.getRollupRange(agentId, this.ROLLBACK_DAYS);
+      const rollups = await TokenTracker.getRollupRange(agentId, this.ROLLBACK_DAYS, {
+        workspaceId,
+      });
       if (rollups.length > 0) {
         const totalInvocations = rollups.reduce((s, r) => s + r.invocationCount, 0);
         const totalSuccesses = rollups.reduce((s, r) => s + r.successCount, 0);
@@ -181,10 +189,12 @@ export class AgentRouter {
         avgTokens = totalInvocations > 0 ? totalTokens / totalInvocations : 0;
       }
     } catch (e) {
-      logger.warn(`Failed to get metrics for agent ${agentId}:`, e);
+      logger.warn(`Failed to get metrics for agent ${agentId} (WS: ${workspaceId}):`, e);
     }
 
-    const successWeight = await ConfigManager.getTypedConfig('router_success_weight', 1.0);
+    const successWeight = await ConfigManager.getTypedConfig('router_success_weight', 1.0, {
+      workspaceId,
+    });
     const compositeScore = capabilityScore * successRate * successWeight;
 
     return {
@@ -256,7 +266,9 @@ export class AgentRouter {
 
     // Fetch performance metrics and reputations in parallel
     const [metrics, reputations] = await Promise.all([
-      Promise.all(enabledIds.map((id) => this.getMetrics(id, capabilityScores?.[id] ?? 1.0))),
+      Promise.all(
+        enabledIds.map((id) => this.getMetrics(id, capabilityScores?.[id] ?? 1.0, workspaceId))
+      ),
       getReputations(sharedMemoryProvider, enabledIds, scope),
     ]);
 
