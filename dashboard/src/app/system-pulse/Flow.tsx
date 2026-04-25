@@ -323,12 +323,15 @@ export function FlowContent() {
 
       const topology: BlueprintTopology = await infraRes.json();
 
+      const topologyNodes = topology?.nodes || [];
+      const topologyEdges = topology?.edges || [];
+
       const newNodes: Node[] = [];
       const newEdges: Edge[] = [];
 
       // Degree calculation for spatial layout
       const nodeDegrees: Record<string, number> = {};
-      topology.edges.forEach((edge) => {
+      topologyEdges.forEach((edge) => {
         nodeDegrees[edge.source] = (nodeDegrees[edge.source] ?? 0) + 1;
         nodeDegrees[edge.target] = (nodeDegrees[edge.target] ?? 0) + 1;
       });
@@ -343,7 +346,7 @@ export function FlowContent() {
       };
 
       tiers.forEach((tier) => {
-        const nodesInTier = topology.nodes.filter(
+        const nodesInTier = topologyNodes.filter(
           (n) => (n.tier?.toUpperCase() || 'INFRA') === tier
         );
 
@@ -417,7 +420,7 @@ export function FlowContent() {
       });
 
       // Edge processing
-      topology.edges.forEach((edge) => {
+      topologyEdges.forEach((edge) => {
         const isMainOrch =
           edge.label === 'ORCHESTRATE' || (edge.source === 'superclaw' && edge.target === 'bus');
         const isBusSignal =
@@ -433,11 +436,11 @@ export function FlowContent() {
         if (isInvoke) strokeColor = FLOW_COLORS.VIVID_YELLOW;
         if (isProactive) strokeColor = FLOW_COLORS.FUCHSIA;
 
-        const isBiDirectional = topology.edges.some(
+        const isBiDirectional = topologyEdges.some(
           (e) => e.source === edge.target && e.target === edge.source
         );
-        const edgeIndex = topology.edges.indexOf(edge);
-        const reverseEdgeIndex = topology.edges.findIndex(
+        const edgeIndex = topologyEdges.indexOf(edge);
+        const reverseEdgeIndex = topologyEdges.findIndex(
           (e) => e.source === edge.target && e.target === edge.source
         );
         const isPrimary = !isBiDirectional || edgeIndex < reverseEdgeIndex;
@@ -498,7 +501,7 @@ export function FlowContent() {
   }, [fetchBlueprint, fitView]);
 
   return (
-    <div className="h-full w-full bg-background rounded-lg border border-border relative overflow-hidden">
+    <div className="absolute inset-0 bg-background rounded-lg border border-border overflow-hidden">
       {loading ? (
         <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-20 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-4">

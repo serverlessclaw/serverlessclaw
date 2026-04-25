@@ -296,7 +296,7 @@ export function useChatMessages(
           errorData = { error: 'Unknown error' };
         }
         const errorContent = errorData.details || errorData.error || AGENT_ERRORS.PROCESS_FAILURE;
-        logger.error('Chat API error:', errorData);
+        logger.error(`Chat API error (${response.status}):`, errorData);
         if (currentSessionId === activeSessionRef.current) {
           setMessages((prev: ChatMessage[]) => [
             ...prev,

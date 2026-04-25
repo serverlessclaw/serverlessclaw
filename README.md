@@ -1,7 +1,7 @@
 # Official ServerlessClaw: Autonomous AI Agent Swarm for AWS
 
 <p align="center">
-  <img src="./dashboard/public/system-pulse.png" alt="ServerlessClaw Dashboard - Real-time Infrastructure Topology" width="800">
+  <img src="./dashboard/public/neural-hub.png" alt="ServerlessClaw Neural Hub - Central Command and Cognitive Metrics" width="800">
 </p>
 
 <p align="center">
@@ -74,6 +74,14 @@ In 2026, **the 24/7 VPS mascot is dead.** Running AI agent swarms on persistent 
 Serverless Claw doesn't just execute code; it **improves itself**. But unlike raw autonomous systems, every evolution is gated by a **Council of Agents**.
 
 <p align="center">
+  <img src="./dashboard/public/system-pulse.png" alt="ServerlessClaw System Pulse - Real-time Infrastructure Topology" width="800">
+</p>
+
+---
+
+## Neural Observation & Trace Intelligence
+
+<p align="center">
   <img src="./dashboard/public/trace-portal.png" alt="ServerlessClaw Trace Portal - Neural Observation and Execution Paths" width="800">
 </p>
 
@@ -89,6 +97,10 @@ When you send a message, **SuperClaw** receives it, develops a plan with the **S
 
 ## 🤖 The Multi-Agent Ecosystem
 
+<p align="center">
+  <img src="./dashboard/public/agent-registry.png" alt="ServerlessClaw Agent Registry - Autonomous Persona Management" width="800">
+</p>
+
 | Agent                   | Responsibilities                                               |
 | :---------------------- | :------------------------------------------------------------- |
 | **SuperClaw**           | Orchestrator. Interprets intent, delegates tasks, and deploys. |
@@ -98,6 +110,14 @@ When you send a message, **SuperClaw** receives it, develops a plan with the **S
 | **Facilitator**         | Moderates collaboration between multiple agents and humans.    |
 | **Cognition Reflector** | Distills memory and identifies system-wide gaps.               |
 | **Critic Agents**       | Peer-reviewers for Security, Performance, and Architecture.    |
+
+---
+
+## 🛠️ Capability Matrix
+
+<p align="center">
+  <img src="./dashboard/public/capability-library.png" alt="ServerlessClaw Capability Library - Dynamic Tool and Skill Discovery" width="800">
+</p>
 
 ---
 

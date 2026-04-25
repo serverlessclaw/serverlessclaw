@@ -63,6 +63,9 @@ export default function TraceIntelligenceView({
   );
   const [sourceFilter, setSourceFilter] = useState<string>('all');
 
+  const [mountTime, setMountTime] = useState<number>(0);
+  const { t } = useTranslations();
+
   // Derive dateFilter from URL searchParams
   const startTimeParam = searchParams.get('startTime');
   const dateFilter = useMemo(() => {
@@ -76,7 +79,7 @@ export default function TraceIntelligenceView({
     if (diffHours <= 169 && diffHours >= 167) return '7d';
     if (startTimeNum === 0) return 'all';
     return 'custom';
-  }, [startTimeParam]);
+  }, [startTimeParam, mountTime]);
 
   const setDateFilter = (value: 'all' | '24h' | '7d') => {
     const params = new URLSearchParams(searchParams.toString());
@@ -92,8 +95,6 @@ export default function TraceIntelligenceView({
     router.push(`/trace?${params.toString()}`);
   };
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
-  const [mountTime, setMountTime] = useState<number>(0);
-  const { t } = useTranslations();
 
   // Capture mount time once to provide stable reference for date filtering
   React.useEffect(() => {

@@ -34,6 +34,7 @@ import { TenantProvider } from '@/components/Providers/TenantProvider';
 import { GlobalModals } from '@/components/GlobalModals';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import CommandPalette from '@/components/CommandPalette';
+import { MainLayout } from '@/components/Layout/MainLayout';
 
 export default async function RootLayout({
   children,
@@ -84,13 +85,7 @@ export default async function RootLayout({
                     <div className="flex h-screen w-full overflow-hidden">
                       <Sidebar />
                       <div className="flex-1 flex flex-col min-w-0 relative">
-                        <main
-                          id="main-content"
-                          className="flex-1 flex flex-col min-h-0 pt-16 lg:pt-0 p-6 lg:p-10"
-                        >
-                          <Breadcrumbs />
-                          {children}
-                        </main>
+                        <MainLayout>{children}</MainLayout>
                         <ChatBubble />
                       </div>
                     </div>

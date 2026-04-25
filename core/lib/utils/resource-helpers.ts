@@ -1,4 +1,5 @@
 import { Resource } from 'sst';
+import { logger } from '../logger';
 
 /**
  * Robustly resolves an SST resource property (e.g., 'name', 'value', 'endpoint')
@@ -45,17 +46,25 @@ export function resolveSSTResourceValue(
   // BUT we allow it in test environments where Resource is often mocked
   if (
     process.env.SST_RESOURCE_App ||
-    process.env.SST_STAGE ||
     process.env.VITEST ||
     process.env.NODE_ENV === 'test' ||
     process.env.PLAYWRIGHT
   ) {
     try {
+      // Use a more defensive approach to access Resource
       const resource = Resource as unknown as Record<string, Record<string, string>>;
-      const item = resource[resourceName];
-      if (item && item[property]) return item[property];
+      if (resource && typeof resource === 'object') {
+        const item = resource[resourceName];
+        if (item && item[property]) return item[property];
+      }
     } catch {
       // Resource access might throw if not linked
+      // We log it only if we were reasonably sure it should have worked
+      if (process.env.SST_RESOURCE_App) {
+        logger.debug(
+          `[ResourceHelpers] Failed to access Resource.${resourceName}.${property} even with SST_RESOURCE_App present`
+        );
+      }
     }
   }
 

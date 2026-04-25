@@ -90,15 +90,12 @@ class Logger {
     ...args: unknown[]
   ): void {
     const formatted = this.formatLog(level, message, context, ...args);
+    const prefix = `${formatted.prefix} ${formatted.message}`;
 
     if (formatted.context) {
-      console[consoleMethod](
-        `${formatted.prefix} ${formatted.message}`,
-        formatted.context,
-        ...formatted.args
-      );
+      console[consoleMethod](prefix, formatted.context, ...formatted.args);
     } else {
-      console[consoleMethod](`${formatted.prefix} ${formatted.message}`, ...formatted.args);
+      console[consoleMethod](prefix, ...formatted.args);
     }
   }
 
@@ -192,10 +189,11 @@ class Logger {
   error(message: unknown, contextOrArgs?: LogContext | unknown, ...args: unknown[]): void {
     if (this.level <= LogLevel.ERROR) {
       const msg = typeof message === 'string' ? message : String(message);
+      const isObject =
+        contextOrArgs && typeof contextOrArgs === 'object' && !Array.isArray(contextOrArgs);
+
       if (
-        contextOrArgs &&
-        typeof contextOrArgs === 'object' &&
-        !Array.isArray(contextOrArgs) &&
+        isObject &&
         ('traceId' in contextOrArgs ||
           'sessionId' in contextOrArgs ||
           'agentId' in contextOrArgs ||
@@ -203,6 +201,7 @@ class Logger {
       ) {
         this.output('error', 'ERROR', msg, contextOrArgs as LogContext, ...args);
       } else if (contextOrArgs !== undefined) {
+        // If it's an object that looks empty (like an Error), or just a primitive, log it as an argument
         this.output('error', 'ERROR', msg, undefined, contextOrArgs, ...args);
       } else {
         this.output('error', 'ERROR', msg, undefined, ...args);
