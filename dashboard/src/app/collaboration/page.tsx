@@ -11,6 +11,7 @@ import CognitiveHealthCard from '@/components/CognitiveHealthCard';
 import TrustGauge from '@/components/TrustGauge';
 import PageHeader from '@/components/PageHeader';
 import { useTranslations } from '@/components/Providers/TranslationsProvider';
+import { useTenant } from '@/components/Providers/TenantProvider';
 
 import { ReactFlowProvider } from '@xyflow/react';
 import { logger } from '@claw/core/lib/logger';
@@ -29,6 +30,7 @@ type Tab = 'consensus' | 'live';
 
 export default function CollaborationPage() {
   const { t } = useTranslations();
+  const { activeWorkspaceId } = useTenant();
   const [requests, setRequests] = useState<ConsensusRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('live'); // Default to live canvas
@@ -36,7 +38,10 @@ export default function CollaborationPage() {
   useEffect(() => {
     async function fetchConsensus() {
       try {
-        const res = await fetch('/api/consensus');
+        const url = new URL('/api/consensus', window.location.origin);
+        if (activeWorkspaceId) url.searchParams.set('workspaceId', activeWorkspaceId);
+
+        const res = await fetch(url.toString());
         const data = await res.json();
         setRequests(data.requests || []);
       } catch (e) {
@@ -47,7 +52,7 @@ export default function CollaborationPage() {
     }
 
     fetchConsensus();
-  }, []);
+  }, [activeWorkspaceId]);
 
   const tabs = [
     {

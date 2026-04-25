@@ -12,9 +12,10 @@ import { ProviderManager } from '@claw/core/lib/providers/index';
 import { getAgentTools } from '@claw/core/tools/index';
 import { Agent } from '@claw/core/lib/agent';
 import { SUPERCLAW_SYSTEM_PROMPT } from '@claw/core/agents/superclaw';
-import { TraceSource, AgentType, IAgentConfig } from '@claw/core/lib/types/index';
+import { AgentType, IAgentConfig, TraceSource } from '@claw/core/lib/types/index';
 import { AgentRegistry } from '@claw/core/lib/registry';
 import { logger } from '@claw/core/lib/logger';
+import { SessionStateManager } from '@claw/core/lib/session/session-state';
 
 let memoryInstance: CachedMemory | null = null;
 let providerInstance: ProviderManager | null = null;
@@ -132,70 +133,100 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         SUPERCLAW_SYSTEM_PROMPT,
     } as IAgentConfig);
 
-    // We use the streaming generator to trigger real-time MQTT emissions via AgentEmitter
-    // while the request remains open. Chunks are automatically sent to the dashboard via IoT Core.
-    const stream = agent.stream(storageId, text ?? '', {
-      sessionId,
-      source,
-      isIsolated,
-      attachments,
-      approvedToolCalls,
-      traceId: clientTraceId || undefined,
-      pageContext,
-      profile,
-      communicationMode,
-      agentIds, // Pass the swarm context to the agent
-      workspaceId,
-      teamId,
-      staffId,
-      userRole,
-    });
-
-    let finalResponse = '';
-    let finalThought = '';
-    let finalToolCalls: import('@claw/core/lib/types/index').ToolCall[] = [];
-    let finalMessageId = '';
-
-    for await (const chunk of stream) {
-      if (chunk.content) finalResponse += chunk.content;
-      if (chunk.thought) finalThought += chunk.thought;
-      if (chunk.tool_calls) finalToolCalls = chunk.tool_calls;
-      if (chunk.messageId) finalMessageId = chunk.messageId;
-    }
-
-    logger.info(
-      `[Chat API] Stream finished - sessionId: ${sessionId}, agent: ${primaryAgentId}, response length: ${finalResponse.length}`
-    );
-
-    // Update conversation metadata for the sidebar
+    // B3 Awareness: Acquire processing lock to prevent concurrent swarm collisions
+    const sessionStateManager = new SessionStateManager();
     if (sessionId) {
-      await getMemory().saveConversationMeta(
-        userId,
+      const canProcess = await sessionStateManager.acquireProcessing(
         sessionId,
+        `dashboard-${userId}`,
         {
-          lastMessage:
-            finalResponse.length > 60 ? finalResponse.substring(0, 60) + '...' : finalResponse,
-          updatedAt: Date.now(),
-          // Store the last agent used in this session if it's not superclaw
-          metadata:
-            primaryAgentId !== AgentType.SUPERCLAW ? { lastAgentId: primaryAgentId } : undefined,
-        },
-        { workspaceId, teamId, staffId }
+          workspaceId,
+          teamId,
+          staffId,
+        }
       );
+
+      if (!canProcess) {
+        logger.warn(
+          `[Chat API] Session ${sessionId} is busy. Rejecting concurrent request from ${userId}`
+        );
+        return NextResponse.json(
+          { error: 'Session is currently busy with another request.' },
+          { status: HTTP_STATUS.TOO_MANY_REQUESTS }
+        );
+      }
     }
 
-    // Filter out synthetic thought markers ('…') that were only used to trigger the thinking indicator
-    const meaningfulThought = (finalThought || '').trim();
-    const thoughtToReturn = meaningfulThought.length > 1 ? meaningfulThought : '';
+    try {
+      // We use the streaming generator to trigger real-time MQTT emissions via AgentEmitter
+      // while the request remains open. Chunks are automatically sent to the dashboard via IoT Core.
+      const stream = agent.stream(storageId, text ?? '', {
+        sessionId,
+        source,
+        isIsolated,
+        attachments,
+        approvedToolCalls,
+        traceId: clientTraceId || undefined,
+        pageContext,
+        profile,
+        communicationMode,
+        agentIds, // Pass the swarm context to the agent
+        workspaceId,
+        teamId,
+        staffId,
+        userRole,
+      });
 
-    return NextResponse.json({
-      reply: (finalResponse || '').trim(),
-      thought: thoughtToReturn,
-      agentName: config.name || primaryAgentId,
-      messageId: finalMessageId,
-      tool_calls: finalToolCalls,
-      sessionId: sessionId || undefined,
-    });
+      let finalResponse = '';
+      let finalThought = '';
+      let finalToolCalls: import('@claw/core/lib/types/index').ToolCall[] = [];
+      let finalMessageId = '';
+
+      for await (const chunk of stream) {
+        if (chunk.content) finalResponse += chunk.content;
+        if (chunk.thought) finalThought += chunk.thought;
+        if (chunk.tool_calls) finalToolCalls = chunk.tool_calls;
+        if (chunk.messageId) finalMessageId = chunk.messageId;
+      }
+
+      logger.info(
+        `[Chat API] Stream finished - sessionId: ${sessionId}, agent: ${primaryAgentId}, response length: ${finalResponse.length}`
+      );
+
+      // Update conversation metadata for the sidebar
+      if (sessionId) {
+        await getMemory().saveConversationMeta(
+          userId,
+          sessionId,
+          {
+            lastMessage:
+              finalResponse.length > 60 ? finalResponse.substring(0, 60) + '...' : finalResponse,
+            updatedAt: Date.now(),
+            // Store the last agent used in this session if it's not superclaw
+            metadata:
+              primaryAgentId !== AgentType.SUPERCLAW ? { lastAgentId: primaryAgentId } : undefined,
+          },
+          { workspaceId, teamId, staffId }
+        );
+      }
+
+      // Filter out synthetic thought markers ('…') that were only used to trigger the thinking indicator
+      const meaningfulThought = (finalThought || '').trim();
+      const thoughtToReturn = meaningfulThought.length > 1 ? meaningfulThought : '';
+
+      return NextResponse.json({
+        reply: (finalResponse || '').trim(),
+        thought: thoughtToReturn,
+        agentName: config.name || primaryAgentId,
+        messageId: finalMessageId,
+        tool_calls: finalToolCalls,
+        sessionId: sessionId || undefined,
+      });
+    } finally {
+      if (sessionId) {
+        await sessionStateManager.releaseProcessing(sessionId, `dashboard-${userId}`);
+      }
+    }
   } catch (error) {
     logger.error(UI_STRINGS.API_CHAT_ERROR, error);
     return NextResponse.json(

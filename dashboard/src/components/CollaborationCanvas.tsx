@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -20,6 +20,7 @@ import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import { useRealtime, RealtimeMessage } from '@/hooks/useRealtime';
+import { useTenant } from '@/components/Providers/TenantProvider';
 import { logger } from '@claw/core/lib/logger';
 
 import { TaskNodeData, HandoffData } from '@/lib/collaboration-utils';
@@ -38,9 +39,10 @@ export default function CollaborationCanvas() {
 function CollaborationCanvasContent() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const { activeWorkspaceId } = useTenant();
   const [loading, setLoading] = useState(true);
   const [isHumanActive, setIsHumanActive] = useState(false);
-  const [handoffData] = useState<HandoffData | null>(null);
+  const [handoffData, setHandoffData] = useState<HandoffData | null>(null);
   const [handoffResponse, setHandoffResponse] = useState('');
   const [submittingResponse, setSubmittingResponse] = useState(false);
   const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
@@ -50,7 +52,10 @@ function CollaborationCanvasContent() {
 
   const fetchActiveTasks = useCallback(async () => {
     try {
-      const response = await fetch('/api/collaboration');
+      const url = new URL('/api/collaboration', window.location.origin);
+      if (activeWorkspaceId) url.searchParams.set('workspaceId', activeWorkspaceId);
+
+      const response = await fetch(url.toString());
       const data = await response.json();
 
       if (!data.activeDispatches || data.activeDispatches.length === 0) {
@@ -292,7 +297,7 @@ function CollaborationCanvasContent() {
       logger.error('Failed to fetch collaboration data:', e);
       setLoading(false);
     }
-  }, [setNodes, setEdges]);
+  }, [setNodes, setEdges, activeWorkspaceId]);
 
   const handleRealtimeMessage = useCallback(
     (_topic: string, message: RealtimeMessage) => {
@@ -307,10 +312,27 @@ function CollaborationCanvasContent() {
       }
 
       if (type === 'handoff') {
+        interface HandoffSignalDetail {
+          taskId?: string;
+          agentId?: string;
+          message?: string;
+          reason?: string;
+          task?: string;
+          timestamp?: number;
+        }
+        const detail = message.detail as HandoffSignalDetail;
+        setHandoffData({
+          taskId: detail.taskId || 'unknown',
+          agentId: detail.agentId || 'unknown',
+          reason: detail.message || detail.reason || 'Human intervention requested',
+          context: detail.task || '',
+          timestamp: detail.timestamp || Date.now(),
+        });
         setIsHumanActive(true);
         if (handoffTimeoutRef.current) clearTimeout(handoffTimeoutRef.current);
         handoffTimeoutRef.current = setTimeout(() => {
           setIsHumanActive(false);
+          setHandoffData(null);
         }, 120000);
       }
     },
@@ -318,7 +340,13 @@ function CollaborationCanvasContent() {
   );
 
   const { isConnected } = useRealtime({
-    topics: ['collaborations/+/signal', 'workspaces/+/signal'],
+    topics: useMemo(
+      () =>
+        activeWorkspaceId
+          ? [`workspaces/${activeWorkspaceId}/signal`, 'collaborations/+/signal']
+          : ['collaborations/+/signal', 'workspaces/+/signal'],
+      [activeWorkspaceId]
+    ),
     onMessage: handleRealtimeMessage,
   });
 
@@ -341,6 +369,7 @@ function CollaborationCanvasContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           taskId: handoffData.taskId,
+          workspaceId: activeWorkspaceId || undefined,
           response: handoffResponse,
           approved,
         }),

@@ -14,6 +14,7 @@ import { useChatMessages } from './useChatMessages';
 import { useKeyboardShortcuts, type ShortcutDefinition } from '@/hooks/useKeyboardShortcuts';
 import { useTranslations } from '@/components/Providers/TranslationsProvider';
 import { useUICommand } from '@/components/Providers/UICommandProvider';
+import { useTenant } from '@/components/Providers/TenantProvider';
 import { AgentSelector } from './AgentSelector';
 import { AgentType } from '@claw/core/lib/types/index';
 import { logger } from '@claw/core/lib/logger';
@@ -47,6 +48,7 @@ const CHAT_STYLES = {
 export default function ChatContent() {
   const { t } = useTranslations();
   const { setActiveModal, activeModal } = useUICommand();
+  const { activeWorkspaceId } = useTenant();
   // --- UI and Session State ---
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -164,7 +166,8 @@ export default function ChatContent() {
     activeSessionId,
     setMessagesRef,
     setIsLoading,
-    isPostInFlight
+    isPostInFlight,
+    activeWorkspaceId
   );
 
   const {
@@ -196,7 +199,8 @@ export default function ChatContent() {
     seenMessageIds,
     fetchSessions,
     skipNextHistoryFetch,
-    activeSessionRef
+    activeSessionRef,
+    activeWorkspaceId
   );
 
   useEffect(() => {

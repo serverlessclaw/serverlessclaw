@@ -15,6 +15,7 @@ export function useChatConnection(
   setMessagesRef: React.MutableRefObject<React.Dispatch<React.SetStateAction<ChatMessage[]>>>,
   _setIsLoading: React.Dispatch<React.SetStateAction<boolean>>,
   isPostInFlight: React.MutableRefObject<boolean>,
+  workspaceId: string | null = null,
   disabled = false
 ) {
   const [pendingMessages, setPendingMessages] = useState<PendingMessage[]>([]);
@@ -31,7 +32,11 @@ export function useChatConnection(
     async (sessionId: string) => {
       if (isPostInFlight.current || sessionId === lastFetchedSessionRef.current) return;
       try {
-        const response = await fetch(`/api/chat?sessionId=${sessionId}`);
+        const url = new URL('/api/chat', window.location.origin);
+        url.searchParams.set('sessionId', sessionId);
+        if (workspaceId) url.searchParams.set('workspaceId', workspaceId);
+
+        const response = await fetch(url.toString());
         if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
           return;
         }
@@ -48,14 +53,18 @@ export function useChatConnection(
         logger.warn('Silent History fetch failed:', e);
       }
     },
-    [isPostInFlight, setMessagesRef]
+    [isPostInFlight, setMessagesRef, workspaceId]
   );
 
   const fetchPendingSilently = useCallback(
     async (sessionId: string) => {
       if (isPostInFlight.current) return;
       try {
-        const res = await fetch(`/api/pending-messages?sessionId=${sessionId}`);
+        const url = new URL('/api/pending-messages', window.location.origin);
+        url.searchParams.set('sessionId', sessionId);
+        if (workspaceId) url.searchParams.set('workspaceId', workspaceId);
+
+        const res = await fetch(url.toString());
         if (res.ok) {
           const data = await res.json();
           setPendingMessages(data.pendingMessages ?? []);
@@ -64,7 +73,7 @@ export function useChatConnection(
         // Silently ignore
       }
     },
-    [isPostInFlight]
+    [isPostInFlight, workspaceId]
   );
 
   const handleMessage = useCallback(
@@ -101,8 +110,15 @@ export function useChatConnection(
     fetchSessions,
     isLive: isRealtimeActive,
   } = useRealtime({
-    topics: useMemo(() => ['users/+/signal', 'users/+/sessions/+/signal'], []),
+    topics: useMemo(
+      () =>
+        workspaceId
+          ? [`workspaces/${workspaceId}/signal`, `users/+/signal`]
+          : ['users/+/signal', 'users/+/sessions/+/signal'],
+      [workspaceId]
+    ),
     onMessage: handleMessage,
+    workspaceId: workspaceId || undefined,
   });
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);

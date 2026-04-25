@@ -21,7 +21,6 @@ import {
   Vote,
   Sun,
   Moon,
-  Monitor,
   Keyboard,
   LogOut,
 } from 'lucide-react';
@@ -162,6 +161,12 @@ export default function Sidebar() {
       label: t('WORKSPACES'),
       subtitle: t('WORKSPACES_SUBTITLE'),
       icon: Building2,
+    },
+    {
+      href: '/users',
+      label: 'Users',
+      subtitle: 'Manage identities and access',
+      icon: Users,
     },
     { href: ROUTES.SETTINGS, label: t('CONFIG'), subtitle: t('SETTINGS_SUBTITLE'), icon: Settings },
   ];

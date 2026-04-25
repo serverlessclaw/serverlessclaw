@@ -76,12 +76,22 @@ Serverless Claw supports multi-human multi-agent collaboration through **Workspa
 
 ### Identity & Access Layer
 
-The `IdentityManager` (`core/lib/identity.ts`) provides:
+The `IdentityManager` (`core/lib/session/identity/manager.ts`) provides a centralized authority for:
 
-- **Authentication**: Session-based auth via Telegram, Dashboard, or API key.
-- **RBAC**: Role-based permission enforcement inside a workspace.
-- **Multi-Tenancy**: Users can belong to multiple workspaces with different roles.
-- **Resource Control**: Fine-grained access to specific agents, traces, and configurations.
+- **Identity Provisioning**: Creating and managing system users with unique IDs and display names.
+- **Secure Authentication**: Support for "Claw Keyphrases" (SHA-256 hashed passwords) for dashboard access, alongside API keys and session tokens.
+- **Multi-Tenant Isolation**: strict logical separation of data using `workspaceId` scoping across all memory and real-time streams.
+- **RBAC Enforcement**: Validating permissions (e.g., `AGENT_UPDATE`, `WORKSPACE_MEMBERS`) against user roles and ACL entries.
+- **Resource Level ACLs**: Fine-grained access control entries (ACEs) for individual agents, traces, or configurations.
+
+### User Management Workflow
+
+Administrators can manage the system's human participants via the **User Control Center** in the dashboard or the `/api/users` REST interface:
+
+1. **Provisioning**: Create a new user with a unique ID and a temporary Claw Keyphrase.
+2. **Role Assignment**: Assign a global role (`admin` or `member`) to define baseline permissions.
+3. **Workspace Enrollment**: Map users to one or more workspaces where they can participate in collaborations.
+4. **Credential Verification**: The system verifies the user's hashed keyphrase during the login handshake, generating a secure `claw_auth_session` cookie.
 
 ### Member Roles
 

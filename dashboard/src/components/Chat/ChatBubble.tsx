@@ -11,6 +11,7 @@ import { ChatInput } from './ChatInput';
 import { useChatConnection } from './useChatConnection';
 import { useChatMessages } from './useChatMessages';
 import { usePageContext } from '@/components/Providers/PageContextProvider';
+import { useTenant } from '@/components/Providers/TenantProvider';
 import { ChatMessage } from './types';
 
 /**
@@ -37,6 +38,7 @@ export default function ChatBubble() {
   const setMessagesRef = useRef<React.Dispatch<React.SetStateAction<ChatMessage[]>>>(() => {});
 
   const { context: pageContext } = usePageContext();
+  const { activeWorkspaceId } = useTenant();
 
   // Initialize Connection Hook (Sync Loop)
   const chatConnection = useChatConnection(
@@ -44,6 +46,7 @@ export default function ChatBubble() {
     setMessagesRef,
     setIsLoading,
     isPostInFlight,
+    activeWorkspaceId,
     pathname === '/chat' || pathname === '/'
   );
 
@@ -58,6 +61,7 @@ export default function ChatBubble() {
       chatConnection.fetchSessions,
       skipNextHistoryFetch,
       activeSessionRef,
+      activeWorkspaceId,
       pathname === '/chat' || pathname === '/'
     );
 

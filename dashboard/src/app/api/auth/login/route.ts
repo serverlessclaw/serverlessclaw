@@ -15,58 +15,62 @@ import { resolveSSTResourceValue } from '@claw/core/lib/utils/resource-helpers';
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    const { password } = await req.json();
+    const { userId, password } = await req.json();
     const isDev = process.env.NODE_ENV !== 'production';
-    let correctPassword = resolveSSTResourceValue(
-      'DashboardPassword',
-      'value',
-      'DASHBOARD_PASSWORD'
-    );
 
-    // Handle unset SST secrets in dev mode (SST uses placeholders like {{ Name }})
+    const { getIdentityManager, UserRole } = await import('@claw/core/lib/session/identity');
+    const identityManager = await getIdentityManager();
+
+    // 1. Check for Legacy/Root Dashboard Password
+    let rootPassword = resolveSSTResourceValue('DashboardPassword', 'value', 'DASHBOARD_PASSWORD');
     if (
       isDev &&
-      (!correctPassword || (typeof correctPassword === 'string' && correctPassword.includes('{{')))
+      (!rootPassword || (typeof rootPassword === 'string' && rootPassword.includes('{{')))
     ) {
-      correctPassword = 'test-password';
+      rootPassword = 'test-password';
     }
 
-    // Allow the correct password, or fallback to 'test-password' in development for E2E tests
-    const isAuthorized =
+    const isRootAuth =
+      (!userId || userId === 'dashboard-user') &&
       password &&
-      correctPassword &&
-      (password === correctPassword || (isDev && password === 'test-password'));
+      rootPassword &&
+      (password === rootPassword || (isDev && password === 'test-password'));
+
+    let finalUserId = 'dashboard-user';
+    let isAuthorized = isRootAuth;
+
+    // 2. Check for Specific User Identity
+    if (!isAuthorized && userId && password) {
+      isAuthorized = await identityManager.verifyPassword(userId, password);
+      if (isAuthorized) {
+        finalUserId = userId;
+      }
+    }
 
     if (isAuthorized) {
-      logger.info(`[Auth:Login] ✅ Authorized successful (isDev=${isDev})`);
+      logger.info(`[Auth:Login] ✅ Authorized successful for ${finalUserId} (isDev=${isDev})`);
       const response = NextResponse.json({ success: true });
 
-      const dashboardUserId = 'dashboard-user';
       let sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
       // Register session with IdentityManager
       try {
-        const { getIdentityManager, UserRole } = await import('@claw/core/lib/session/identity');
-        const identityManager = await getIdentityManager();
-        const authResult = await identityManager.authenticate(dashboardUserId, 'dashboard');
+        const authResult = await identityManager.authenticate(finalUserId, 'dashboard');
 
         if (authResult.session?.sessionId) {
           sessionId = authResult.session.sessionId;
         }
 
-        // Grant admin privileges to the dashboard user
+        // Auto-provision dashboard-user as admin if needed
         if (
-          authResult.success &&
+          finalUserId === 'dashboard-user' &&
           authResult.user?.role !== UserRole.ADMIN &&
           authResult.user?.role !== UserRole.OWNER
         ) {
-          await identityManager.updateUserRole(dashboardUserId, UserRole.ADMIN, 'superadmin');
+          await identityManager.updateUserRole(finalUserId, UserRole.ADMIN, 'superadmin');
         }
       } catch (err) {
-        logger.error(
-          `[Auth:Login] Failed to register dashboard session with IdentityManager:`,
-          err
-        );
+        logger.error(`[Auth:Login] Failed to register session for ${finalUserId}:`, err);
       }
 
       response.cookies.set(AUTH.COOKIE_NAME, AUTH.COOKIE_VALUE, {
@@ -77,7 +81,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         path: '/',
       });
 
-      response.cookies.set(AUTH.SESSION_USER_ID, dashboardUserId, {
+      response.cookies.set(AUTH.SESSION_USER_ID, finalUserId, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
@@ -88,9 +92,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return response;
     }
 
-    logger.warn(
-      `[Auth:Login] ❌ Unauthorized attempt. Correct password found: ${!!correctPassword}, isDev: ${isDev}`
-    );
+    logger.warn(`[Auth:Login] ❌ Unauthorized attempt for user: ${userId || 'root'}`);
     return NextResponse.json(
       { error: AUTH.ERROR_INVALID_CREDENTIALS },
       { status: HTTP_STATUS.UNAUTHORIZED }

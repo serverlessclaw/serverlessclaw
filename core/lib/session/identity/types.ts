@@ -63,6 +63,8 @@ export interface UserIdentity {
   createdAt: number;
   /** Last active timestamp. */
   lastActiveAt: number;
+  /** Securely hashed password/keyphrase. */
+  hashedPassword?: string;
 }
 
 /**

@@ -245,9 +245,15 @@ export class AgentEmitter {
       const baseUserId = extractBaseUserId(userId);
       const safeUserId = baseUserId.replace(/[#+]/g, '_');
 
-      const topic = sessionId
+      // Topic strategy: Use workspace topic for shared awareness if available, otherwise fallback to user-specific
+      let topic = sessionId
         ? `users/${safeUserId}/sessions/${sessionId}/signal`
         : `users/${safeUserId}/signal`;
+
+      if (workspaceId) {
+        topic = `workspaces/${workspaceId}/signal`;
+        logger.debug(`[EMITTER] Using shared workspace topic: ${topic}`);
+      }
 
       const { publishToRealtime } = await import('../utils/realtime');
 

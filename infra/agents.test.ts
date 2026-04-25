@@ -33,4 +33,34 @@ describe('EventBridge routing contracts', () => {
       expect(agentRunnerMatch).toBeTruthy();
     });
   });
+
+  describe('Enterprise Scale Filtering [Phase 15]', () => {
+    it('applies workspaceId existence filter to high-power multiplexer', () => {
+      const match = agentsSource.match(
+        /bus\.subscribe\('HighPowerSubscriber'[\s\S]*?\.\.\.tenantFilter/m
+      );
+      expect(match).toBeTruthy();
+    });
+
+    it('applies workspaceId existence filter to standard multiplexer', () => {
+      const match = agentsSource.match(
+        /bus\.subscribe\('StandardSubscriber'[\s\S]*?\.\.\.tenantFilter/m
+      );
+      expect(match).toBeTruthy();
+    });
+
+    it('applies workspaceId existence filter to light multiplexer', () => {
+      const match = agentsSource.match(
+        /bus\.subscribe\('LightSubscriber'[\s\S]*?\.\.\.tenantFilter/m
+      );
+      expect(match).toBeTruthy();
+    });
+
+    it('applies workspaceId existence filter to system event handler', () => {
+      const match = agentsSource.match(
+        /bus\.subscribe\('EventHandlerSubscriber'[\s\S]*?\.\.\.tenantFilter/m
+      );
+      expect(match).toBeTruthy();
+    });
+  });
 });

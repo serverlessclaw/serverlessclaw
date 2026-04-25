@@ -8,6 +8,7 @@ export interface UseRealtimeOptions {
   topics?: string[];
   onMessage?: (topic: string, payload: RealtimeMessage) => void;
   userId?: string;
+  workspaceId?: string;
 }
 
 /**

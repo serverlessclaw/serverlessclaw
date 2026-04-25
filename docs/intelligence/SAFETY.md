@@ -102,6 +102,33 @@ Writes to the following resources are blocked by default and require **Manual Ap
 
 ---
 
+## 🏢 Organizational RBAC (Phase 15)
+
+Serverless Claw implements a non-bypassable **Role-Based Access Control (RBAC)** layer within the Safety Engine to enforce organizational hierarchy.
+
+### 1. User Roles
+
+| Role       | Level | Description                                                                  |
+| :--------- | :---: | :--------------------------------------------------------------------------- |
+| **OWNER**  |   4   | Full system control. Can promote builds, change IAM, and delete workspaces.  |
+| **ADMIN**  |   3   | Administrative access. Can manage agents, members, and most Class C actions. |
+| **MEMBER** |   2   | Standard access. Can interact with agents and perform Class B tool tasks.    |
+| **VIEWER** |   1   | Read-only access. Can view dashboard and traces, but cannot trigger agents.  |
+
+### 2. Role-Gated Action Classes
+
+RBAC rules are enforced as **Hard Security Blocks** (non-bypassable by trust):
+
+- **Class C (Infrastructural)**: Restricted to **OWNER** and **ADMIN** roles. Includes deployments, configuration shifts, and sensitive resource modifications.
+- **Class B (Agentic)**: Restricted to **non-VIEWER** roles. Includes most tool executions (file writes, commands) and agent-driven swarms.
+- **Class D (Hard Block)**: Permanently blocked for **ALL ROLES**, including Owners. This prevents accidental or malicious self-destruction of the core system.
+
+### 3. Identity Propagation
+
+The user's role is captured at the entry point (Dashboard/Webhook) and **threaded through the asynchronous event bus**. Every agent in a multi-turn swarm knows the original requester's authority, ensuring that sub-tasks cannot be used to escalate privileges.
+
+---
+
 ## 🔄 Proactive Evolution (Class C Actions)
 
 Highly sensitive changes, such as IAM modifications or memory retention policy shifts, are classified as **Class C**. By default, these are never executed immediately but are scheduled with a **1-hour cooling period** for manual audit.

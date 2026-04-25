@@ -2,6 +2,7 @@ import { UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { logger } from '../../logger';
 import { MEMORY_KEYS, TIME } from '../../constants';
 import { generateSessionId } from '../../utils/id-generator';
+import { createHash } from 'crypto';
 import {
   UserRole,
   Permission,
@@ -34,7 +35,7 @@ export class IdentityManager {
       // Get or create user identity
       let user = await this.getUser(userId);
       if (!user) {
-        user = await this.createUser(userId, authProvider);
+        user = await this.createUser(userId, authProvider, metadata?.password as string);
       }
 
       // Validate workspace membership if workspaceId provided
@@ -134,7 +135,7 @@ export class IdentityManager {
     resourceType: 'agent' | 'workspace' | 'config' | 'trace',
     resourceId: string
   ): Promise<boolean> {
-    const user = await this.getUser(userId);
+    const user = await this.loadUser(userId);
     if (!user) return false;
 
     // Owners and admins have access to everything
@@ -196,6 +197,30 @@ export class IdentityManager {
       }
     }
     return this.loadUser(userId);
+  }
+
+  /**
+   * Get all registered users.
+   */
+  async getAllUsers(): Promise<UserIdentity[]> {
+    try {
+      const { getMemoryByType } = await import('../../memory/utils');
+      const items = await getMemoryByType(this.base, 'USER_IDENTITY', 1000);
+      return items.map((item) => ({
+        userId: (item.userId as string).split('#').pop()!,
+        displayName: (item.displayName as string) ?? '',
+        email: item.email as string | undefined,
+        role: item.role as UserRole,
+        workspaceIds: (item.workspaceIds as string[]) ?? [],
+        authProvider: item.authProvider as 'telegram' | 'dashboard' | 'api_key',
+        createdAt: item.createdAt as number,
+        lastActiveAt: item.lastActiveAt as number,
+        hashedPassword: item.hashedPassword as string | undefined,
+      }));
+    } catch (error) {
+      logger.error('Failed to list users:', error);
+      return [];
+    }
   }
 
   /**
@@ -455,6 +480,7 @@ export class IdentityManager {
           authProvider: item.authProvider as 'telegram' | 'dashboard' | 'api_key',
           createdAt: item.createdAt as number,
           lastActiveAt: item.lastActiveAt as number,
+          hashedPassword: item.hashedPassword as string | undefined,
         };
       }
     } catch (error) {
@@ -468,7 +494,8 @@ export class IdentityManager {
    */
   private async createUser(
     userId: string,
-    authProvider: 'telegram' | 'dashboard' | 'api_key'
+    authProvider: 'telegram' | 'dashboard' | 'api_key',
+    password?: string
   ): Promise<UserIdentity> {
     const newUser: UserIdentity = {
       userId,
@@ -478,6 +505,7 @@ export class IdentityManager {
       authProvider,
       createdAt: Date.now(),
       lastActiveAt: Date.now(),
+      hashedPassword: password ? this.hashPassword(userId, password) : undefined,
     };
 
     await this.saveUser(newUser);
@@ -501,6 +529,7 @@ export class IdentityManager {
           authProvider: user.authProvider,
           createdAt: user.createdAt,
           lastActiveAt: user.lastActiveAt,
+          hashedPassword: user.hashedPassword,
           updatedAt: Date.now(),
         },
         { ConditionExpression: 'attribute_not_exists(userId)' }
@@ -614,6 +643,76 @@ export class IdentityManager {
     } catch (error) {
       logger.error('Failed to cleanup expired sessions:', error);
       return 0;
+    }
+  }
+
+  /**
+   * Hash a password for storage using userId as salt.
+   */
+  private hashPassword(userId: string, password: string): string {
+    return createHash('sha256').update(`${userId}:${password}`).digest('hex');
+  }
+
+  /**
+   * Verify a password against stored hash.
+   */
+  async verifyPassword(userId: string, password: string): Promise<boolean> {
+    const user = await this.getUser(userId);
+    if (!user || !user.hashedPassword) return false;
+    return this.hashPassword(userId, password) === user.hashedPassword;
+  }
+
+  /**
+   * Update user details.
+   */
+  async updateUser(
+    userId: string,
+    updates: Partial<Pick<UserIdentity, 'displayName' | 'email' | 'role'>>,
+    callerId: string
+  ): Promise<boolean> {
+    const caller = await this.getUser(callerId);
+    if (!caller || (caller.role !== UserRole.OWNER && caller.role !== UserRole.ADMIN)) {
+      return false;
+    }
+
+    const docClient = this.base.getDocClient();
+    const tableName = this.base.getTableName();
+    if (!tableName) return false;
+
+    const expressions = [];
+    const values: Record<string, any> = { ':updatedAt': Date.now() };
+    const names: Record<string, string> = {};
+
+    if (updates.displayName) {
+      expressions.push('displayName = :displayName');
+      values[':displayName'] = updates.displayName;
+    }
+    if (updates.email) {
+      expressions.push('email = :email');
+      values[':email'] = updates.email;
+    }
+    if (updates.role) {
+      expressions.push('#role = :role');
+      values[':role'] = updates.role;
+      names['#role'] = 'role';
+    }
+
+    if (expressions.length === 0) return true;
+
+    try {
+      await docClient.send(
+        new UpdateCommand({
+          TableName: tableName,
+          Key: { userId: `${MEMORY_KEYS.WORKSPACE_PREFIX}USER#${userId}`, timestamp: 0 },
+          UpdateExpression: `SET ${expressions.join(', ')}, updatedAt = :updatedAt`,
+          ExpressionAttributeNames: Object.keys(names).length > 0 ? names : undefined,
+          ExpressionAttributeValues: values,
+        })
+      );
+      return true;
+    } catch (e) {
+      logger.error(`Failed to update user ${userId}:`, e);
+      return false;
     }
   }
 }

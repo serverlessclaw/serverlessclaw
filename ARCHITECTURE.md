@@ -19,6 +19,7 @@ This document covers the AWS topology and data flow. For operational instruction
 9.  **Multi-Lingual**: Implements a "Baseline English Prompt" strategy. Agents maintain high reasoning quality via English core prompts while communicating in the user's preferred language (English/Chinese) via dynamic runtime instruction injection.
 10. **JIT File Staging**: Implements a Just-In-Time media pipeline that intercept uploads, stages them in S3, and provides optimized cognitive context (base64/URLs) to agents, ensuring peak vision performance and trace-aware file management.
 11. **Shared Real-time Handshakes (Singleton UI Connectivity)**: To minimize AWS IoT Core authorizer costs and prevent "connection storms" during local development (HMR), the dashboard utilizes a singleton `RealtimeProvider`. This architecture ensures that regardless of the number of active components (Chat, Canvas, Agents), only **one physical WebSocket connection** is established per tab, reducing Lambda Authorizer invocations by >80%.
+12. **Multi-Tenant Identity Architecture**: Enforces strict logical isolation between different enterprise workspaces. Every cognitive signal, memory trace, and real-time event is tagged with a `workspaceId`, ensuring that humans and agents only interact within authorized security boundaries.
 
 ---
 
@@ -260,19 +261,19 @@ The system architecture follows a **Distributed Spine** model where all critical
           |-- (6) Selection Integrity (Verify agent.enabled === true)
           v
    [ Agent Execution (Silo 2: The Hand) ]
-           |-- (6) Unified Config (ConfigManager: 60s Cached Dynamic Lookups)
-           |-- (7) Security Enforcement (ToolSecurityValidator: Safety/RBAC/Breaker)
-           |-- (8) Budget Enforcement (BudgetEnforcer + TokenBudgetEnforcer: Session + Task-level Tokens/Cost)
-           |-- (9) Isolated Workspace (/tmp/claw-workspaces/<traceId>)
+           |-- (7) Unified Config (ConfigManager: 60s Cached Dynamic Lookups)
+           |-- (8) Security Enforcement (ToolSecurityValidator: Safety/RBAC/Breaker)
+           |-- (9) Budget Enforcement (BudgetEnforcer + TokenBudgetEnforcer: Session + Task-level Tokens/Cost)
+           |-- (10) Isolated Workspace (/tmp/claw-workspaces/<traceId>)
           v
   [ Outcome (Success/Failure) ]
           |
           v
   [ Silo 6: The Scales (TrustManager) ]
-          |-- (10) Quality-Weighted Reputation Update
-          |-- (11) Atomic History Recording (list_append)
-          |-- (12) Fail-Closed Integrity (Throw on update failure)
-          |-- (13) Capability Graduation (PromotionManager: PENDING -> PROMOTED)
+          |-- (11) Quality-Weighted Reputation Update
+          |-- (12) Atomic History Recording (list_append)
+          |-- (13) Fail-Closed Integrity (Throw on update failure)
+          |-- (14) Capability Graduation (PromotionManager: PENDING -> PROMOTED)
           v
   [ ConfigTable (DDB) ] <--- (Feedback Loop for Selection Integrity)
 
@@ -415,6 +416,7 @@ The dashboard implements a **Singleton Connectivity** model via the `RealtimePro
              |
              +---- [ user/123/signal ]
              +---- [ workspaces/abc/signal ]
+             +---- [ workspaces/def/signal ]
 ```
 
 1. **Singleton Gateway**: All dashboard features share a single MQTT client instance provided via React Context.
@@ -502,10 +504,32 @@ Serverless Claw utilizes a tiered logic system to ensure efficiency and cost-con
 
 The system supports multi-human multi-agent coordination through **Moderated Sessions** and **Workspaces**.
 
-- **Workspaces**: Identity management, RBAC, and multi-tenant isolation.
-- **Collaboration**: Facilitator-moderated sessions for strategic peer review.
+- **Workspaces**: Identity management, RBAC, and multi-tenant isolation. Every workspace acts as a sandbox for a specific swarm of agents and humans.
+- **Identity Management**: A centralized `IdentityManager` handles user provisioning, role-based access control (RBAC), and secure credential verification (Claw Keyphrases).
+- **Collaboration**: Facilitator-moderated sessions for strategic peer review, now scoped per workspace to prevent data leakage.
 
-For detailed role hierarchies and coordination diagrams, see [docs/interface/COLLABORATION.md](./docs/interface/COLLABORATION.md).
+### 5. Multi-Human Shared Awareness
+The system enables seamless multi-human & multi-agent collaboration via a tiered MQTT signaling strategy:
+
+- **Session Topic**: `users/{userId}/sessions/{sessionId}/signal` (Legacy/Isolated)
+- **Workspace Topic**: `workspaces/{workspaceId}/signal` (Enterprise Shared Awareness)
+
+When an agent operates within a Workspace, all real-time signals (chunks, thoughts, tool calls) are broadcast to the Workspace Topic. This ensures that every human currently viewing the workspace has immediate visual parity with the agent's progress, regardless of who initiated the request.
+
+#### Collision Prevention
+To prevent "race-to-the-finish" bugs in shared sessions, the system utilizes **Distributed Locking**:
+- **Agent Lock**: Prevents multiple agents from processing the same session concurrently.
+- **Dashboard API Lock**: Prevents multiple humans from triggering concurrent agent loops in the same session.
+
+```text
+[ IdentityManager ] <---> [ Auth API ] <---> [ Dashboard Login ]
+         |                       |
+         +--> [ User Table ]     +--> [ JWT / Cookie Session ]
+         |
+         +--> [ Workspace Memberships ]
+```
+
+For detailed role hierarchies, user management workflows, and coordination diagrams, see [docs/interface/COLLABORATION.md](./docs/interface/COLLABORATION.md).
 
 ---
 

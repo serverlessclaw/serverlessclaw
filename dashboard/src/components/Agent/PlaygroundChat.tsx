@@ -39,6 +39,7 @@ export default function PlaygroundChat({
       () => {}, // fetchSessions dummy
       skipNextHistoryFetch,
       activeSessionRef,
+      null, // workspaceId
       false // disabled
     );
 

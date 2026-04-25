@@ -29,6 +29,7 @@ export function useChatMessages(
   fetchSessions: () => void,
   skipNextHistoryFetch: React.MutableRefObject<boolean>,
   activeSessionRef: React.MutableRefObject<string>,
+  workspaceId: string | null = null,
   disabled = false
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -39,7 +40,11 @@ export function useChatMessages(
       if (!sessionId) return;
       setIsLoading(true);
       try {
-        const response = await fetch(`/api/chat?sessionId=${sessionId}`);
+        const url = new URL('/api/chat', window.location.origin);
+        url.searchParams.set('sessionId', sessionId);
+        if (workspaceId) url.searchParams.set('workspaceId', workspaceId);
+
+        const response = await fetch(url.toString());
         if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
           return;
         }
@@ -63,7 +68,7 @@ export function useChatMessages(
         setIsLoading(false);
       }
     },
-    [setIsLoading, seenMessageIds]
+    [setIsLoading, seenMessageIds, workspaceId]
   );
 
   // Handle immediate history fetch on session change
@@ -276,6 +281,7 @@ export function useChatMessages(
           agentIds,
           collaborationId,
           isIsolated,
+          workspaceId: workspaceId || undefined,
           source,
           overrideConfig,
           promptOverrides,
@@ -338,6 +344,7 @@ export function useChatMessages(
         body: JSON.stringify({
           text: comment || 'I approve the tool execution.',
           sessionId: currentSessionId,
+          workspaceId: workspaceId || undefined,
           approvedToolCalls: [callId],
         }),
       });
@@ -390,6 +397,7 @@ export function useChatMessages(
         body: JSON.stringify({
           text: comment || 'I reject this tool execution.',
           sessionId: currentSessionId,
+          workspaceId: workspaceId || undefined,
           rejectedToolCalls: [callId],
         }),
       });
@@ -435,6 +443,7 @@ export function useChatMessages(
         body: JSON.stringify({
           text: comment || 'Requesting clarification.',
           sessionId: currentSessionId,
+          workspaceId: workspaceId || undefined,
           clarifiedToolCalls: [callId],
         }),
       });
@@ -480,6 +489,7 @@ export function useChatMessages(
         body: JSON.stringify({
           text: comment || 'Stop the current task.',
           sessionId: currentSessionId,
+          workspaceId: workspaceId || undefined,
           cancelledTasks: [taskId],
         }),
       });

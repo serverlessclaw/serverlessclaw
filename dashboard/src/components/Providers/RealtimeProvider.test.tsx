@@ -6,6 +6,7 @@ import React from 'react';
 import { act, render, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { RealtimeProvider } from './RealtimeProvider';
+import { TenantProvider } from './TenantProvider';
 import { useRealtime } from '@/hooks/useRealtime';
 import { logger } from '@claw/core/lib/logger';
 
@@ -74,7 +75,15 @@ describe('RealtimeProvider loop prevention', () => {
     vi.clearAllMocks();
     mqttState.connections.length = 0;
 
-    (globalThis as any).fetch = vi.fn(async () => configResponse());
+    (globalThis as any).fetch = vi.fn(async (url: string) => {
+      if (url.includes('/api/workspaces')) {
+        return {
+          ok: true,
+          json: async () => ({ workspaces: [] }),
+        };
+      }
+      return configResponse();
+    });
 
     const store: Record<string, string> = {};
     Object.defineProperty(window, 'localStorage', {
@@ -91,9 +100,11 @@ describe('RealtimeProvider loop prevention', () => {
 
   it('enables mqtt auto-reconnect for resilient connection', async () => {
     render(
-      <RealtimeProvider>
-        <div>child</div>
-      </RealtimeProvider>
+      <TenantProvider>
+        <RealtimeProvider>
+          <div>child</div>
+        </RealtimeProvider>
+      </TenantProvider>
     );
 
     await waitFor(() => {
@@ -106,9 +117,11 @@ describe('RealtimeProvider loop prevention', () => {
 
   it('force-ends mqtt client during unmount cleanup', async () => {
     const { unmount } = render(
-      <RealtimeProvider>
-        <div>child</div>
-      </RealtimeProvider>
+      <TenantProvider>
+        <RealtimeProvider>
+          <div>child</div>
+        </RealtimeProvider>
+      </TenantProvider>
     );
 
     await waitFor(() => {
@@ -126,9 +139,11 @@ describe('RealtimeProvider loop prevention', () => {
     (globalThis as any).fetch = vi.fn(() => pending.promise);
 
     const { unmount } = render(
-      <RealtimeProvider>
-        <div>child</div>
-      </RealtimeProvider>
+      <TenantProvider>
+        <RealtimeProvider>
+          <div>child</div>
+        </RealtimeProvider>
+      </TenantProvider>
     );
 
     unmount();
@@ -143,9 +158,11 @@ describe('RealtimeProvider loop prevention', () => {
   it('is strict-mode safe and does not create duplicate mqtt clients', async () => {
     render(
       <React.StrictMode>
-        <RealtimeProvider>
-          <div>child</div>
-        </RealtimeProvider>
+        <TenantProvider>
+          <RealtimeProvider>
+            <div>child</div>
+          </RealtimeProvider>
+        </TenantProvider>
       </React.StrictMode>
     );
 
@@ -156,9 +173,11 @@ describe('RealtimeProvider loop prevention', () => {
 
   it('does not force-end client on error to allow auto-reconnect', async () => {
     render(
-      <RealtimeProvider>
-        <div>child</div>
-      </RealtimeProvider>
+      <TenantProvider>
+        <RealtimeProvider>
+          <div>child</div>
+        </RealtimeProvider>
+      </TenantProvider>
     );
 
     await waitFor(() => {
@@ -186,9 +205,11 @@ describe('RealtimeProvider loop prevention', () => {
     }
 
     render(
-      <RealtimeProvider>
-        <Consumer />
-      </RealtimeProvider>
+      <TenantProvider>
+        <RealtimeProvider>
+          <Consumer />
+        </RealtimeProvider>
+      </TenantProvider>
     );
 
     await waitFor(() => {
@@ -220,9 +241,11 @@ describe('RealtimeProvider loop prevention', () => {
 
   it('correctly constructs canonical AWS IoT WebSocket URL', async () => {
     render(
-      <RealtimeProvider>
-        <div>child</div>
-      </RealtimeProvider>
+      <TenantProvider>
+        <RealtimeProvider>
+          <div>child</div>
+        </RealtimeProvider>
+      </TenantProvider>
     );
 
     await waitFor(() => {
@@ -242,9 +265,11 @@ describe('RealtimeProvider loop prevention', () => {
     }));
 
     render(
-      <RealtimeProvider>
-        <div>child</div>
-      </RealtimeProvider>
+      <TenantProvider>
+        <RealtimeProvider>
+          <div>child</div>
+        </RealtimeProvider>
+      </TenantProvider>
     );
 
     // Wait a bit to ensure it doesn't crash
@@ -262,9 +287,11 @@ describe('RealtimeProvider loop prevention', () => {
     }
 
     render(
-      <RealtimeProvider>
-        <Consumer />
-      </RealtimeProvider>
+      <TenantProvider>
+        <RealtimeProvider>
+          <Consumer />
+        </RealtimeProvider>
+      </TenantProvider>
     );
 
     await waitFor(() => expect(mqttState.connect).toHaveBeenCalled());
@@ -282,9 +309,11 @@ describe('RealtimeProvider loop prevention', () => {
     const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
 
     render(
-      <RealtimeProvider>
-        <div>child</div>
-      </RealtimeProvider>
+      <TenantProvider>
+        <RealtimeProvider>
+          <div>child</div>
+        </RealtimeProvider>
+      </TenantProvider>
     );
 
     await waitFor(() => expect(mqttState.connect).toHaveBeenCalled());
@@ -308,9 +337,11 @@ describe('RealtimeProvider loop prevention', () => {
     });
 
     render(
-      <RealtimeProvider>
-        <div>child</div>
-      </RealtimeProvider>
+      <TenantProvider>
+        <RealtimeProvider>
+          <div>child</div>
+        </RealtimeProvider>
+      </TenantProvider>
     );
 
     await act(async () => {

@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button';
 import Typography from '@/components/ui/Typography';
 
 export default function LoginPage() {
+  const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -21,7 +22,7 @@ export default function LoginPage() {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ userId: userId.trim() || 'dashboard-user', password }),
       });
 
       if (response.ok) {
@@ -59,7 +60,21 @@ export default function LoginPage() {
           </Typography>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-6">
+        <form onSubmit={handleLogin} className="space-y-5">
+          <div className="space-y-2">
+            <label className="text-[10px] text-white font-bold uppercase tracking-widest block ml-1">
+              User Identity
+            </label>
+            <input
+              type="text"
+              value={userId}
+              onChange={(e) => setUserId(e.target.value)}
+              className="w-full bg-white/3 border border-white/10 rounded px-4 py-3 outline-none focus:border-cyber-green/50 transition-all text-sm font-mono placeholder:text-white/10"
+              placeholder="DASHBOARD_USER..."
+              disabled={loading}
+            />
+          </div>
+
           <div className="space-y-2">
             <label className="text-[10px] text-white font-bold uppercase tracking-widest block ml-1">
               Claw Keyphrase
@@ -69,7 +84,6 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                autoFocus
                 className="w-full bg-white/3 border border-white/10 rounded px-4 py-3 outline-none focus:border-cyber-green/50 transition-all text-sm font-mono placeholder:text-white/10"
                 placeholder="ENTER_PASSPHRASE..."
                 disabled={loading}

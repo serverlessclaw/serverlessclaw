@@ -5,6 +5,7 @@ import mqtt from 'mqtt';
 import type { ConversationMeta } from '@claw/core/lib/types/memory';
 import type { PendingMessage } from '@claw/core/lib/types/session';
 import { logger } from '@claw/core/lib/logger';
+import { useTenant } from './TenantProvider';
 
 export interface RealtimeMessage {
   'detail-type': string;
@@ -57,6 +58,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<Error | null>(null);
   const [sessions, setSessions] = useState<ConversationMeta[]>([]);
   const [pendingMessages, setPendingMessages] = useState<PendingMessage[]>([]);
+  const { activeWorkspaceId } = useTenant();
 
   const mqttClientRef = useRef<mqtt.MqttClient | null>(null);
   const isUnmountedRef = useRef<boolean>(false);
@@ -67,7 +69,10 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const fetchSessions = useCallback(async () => {
     if (isUnmountedRef.current) return;
     try {
-      const res = await fetch('/api/chat');
+      const url = new URL('/api/chat', window.location.origin);
+      if (activeWorkspaceId) url.searchParams.set('workspaceId', activeWorkspaceId);
+
+      const res = await fetch(url.toString());
       if (!res.ok) {
         logger.warn(`[Realtime] Failed to fetch sessions: HTTP ${res.status}`);
         return;
@@ -85,7 +90,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       logger.warn('[Realtime] Failed to fetch sessions', err);
     }
-  }, []);
+  }, [activeWorkspaceId]);
 
   const connect = useCallback(async () => {
     if (mqttClientRef.current || isUnmountedRef.current) return;
@@ -227,6 +232,11 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       }
     };
   }, [connect, fetchSessions]);
+
+  // Re-fetch sessions when workspace context changes
+  useEffect(() => {
+    fetchSessions();
+  }, [activeWorkspaceId, fetchSessions]);
 
   const subscribe = useCallback((topics: string[], callback: MessageCallback) => {
     const sub = { topics, callback };
