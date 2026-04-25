@@ -562,4 +562,32 @@ export const systemSchema: Record<string, IToolDefinition> = {
       additionalProperties: false,
     },
   },
+  promoteCapability: {
+    type: ToolType.FUNCTION,
+    argSchema: z.any(),
+    connectionProfile: ['config', 'bus'],
+    connector_id: '',
+    auth: { type: 'api_key', resource_id: '' },
+    requiresApproval: true,
+    requiredPermissions: ['admin'],
+    name: 'promoteCapability',
+    description:
+      'Autonomous release management: Graduates a new tool/agent from PENDING (HITL) to PROMOTED (AUTO) state after successful verification. Requires high agent trust.',
+    parameters: {
+      type: 'object',
+      properties: {
+        targetAgentId: {
+          type: 'string',
+          description: 'The ID of the agent whose capability is being promoted.',
+        },
+        toolName: { type: 'string', description: 'The name of the tool to activate/promote.' },
+        reason: {
+          type: 'string',
+          description: 'Justification for promotion based on successful test/usage data.',
+        },
+      },
+      required: ['targetAgentId', 'toolName', 'reason'],
+      additionalProperties: false,
+    },
+  },
 };

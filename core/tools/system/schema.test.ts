@@ -23,6 +23,7 @@ describe('System Domain Tool Schemas', () => {
     'scanMetabolism',
     'pauseWorkflow',
     'resumeWorkflow',
+    'promoteCapability',
   ];
 
   it('should export all expected tool definitions', () => {

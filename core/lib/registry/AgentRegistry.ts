@@ -524,6 +524,21 @@ export class AgentRegistry {
   }
 
   /**
+   * Updates an agent configuration in the ConfigTable.
+   *
+   * @param agentId - The ID of the agent to update.
+   * @param updates - Partial configuration updates to apply.
+   * @param options - Optional configuration (workspaceId).
+   */
+  static async updateAgentConfig(
+    agentId: string,
+    updates: Partial<IAgentConfig>,
+    options?: { workspaceId?: string }
+  ): Promise<void> {
+    await ConfigManager.atomicUpdateMapEntity(DYNAMO_KEYS.AGENTS_CONFIG, agentId, updates, options);
+  }
+
+  /**
    * Gets infrastructure configuration nodes.
    * @deprecated Use ConfigManager.getRawConfig directly.
    */

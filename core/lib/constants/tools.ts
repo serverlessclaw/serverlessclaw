@@ -77,6 +77,7 @@ export const TOOLS = {
   proposeAutonomyUpdate: 'proposeAutonomyUpdate',
   scanMetabolism: 'scanMetabolism',
   pulseCheck: 'pulseCheck',
+  promoteCapability: 'promoteCapability',
 } as const;
 
 /**

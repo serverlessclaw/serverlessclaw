@@ -1,6 +1,7 @@
 import * as gitTools from './git';
 import * as healthTools from './health';
 import * as validationTools from './validation';
+import * as promotionTools from './promotion';
 import * as hotConfigTools from './hot-config';
 import * as reputationTools from './reputation';
 import * as uiTools from './ui';
@@ -14,6 +15,7 @@ export const systemTools = {
   ...gitTools,
   ...healthTools,
   ...validationTools,
+  ...promotionTools,
   ...hotConfigTools,
   ...reputationTools,
   ...uiTools,
