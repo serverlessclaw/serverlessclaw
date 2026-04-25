@@ -135,6 +135,9 @@ export async function wakeupInitiator(
     sessionId,
     depth: depth,
     options,
+    workspaceId,
+    teamId,
+    staffId,
   });
 }
 
@@ -242,7 +245,12 @@ export async function processEventWithAgent(
   if (options.sessionId) {
     const lockAcquired = await sessionStateManager.acquireProcessing(
       options.sessionId,
-      `event-handler-${agentId}`
+      `event-handler-${agentId}`,
+      {
+        workspaceId: options.workspaceId,
+        teamId: options.teamId,
+        staffId: options.staffId,
+      }
     );
 
     if (!lockAcquired) {
@@ -363,6 +371,9 @@ export async function processEventWithAgent(
         initiatorId: options.initiatorId,
         depth: options.depth ?? 0,
         sessionId: options.sessionId,
+        workspaceId: options.workspaceId,
+        teamId: options.teamId,
+        staffId: options.staffId,
         metadata: { durationMs: Date.now() - startTime },
       });
     }

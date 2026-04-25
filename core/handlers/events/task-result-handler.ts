@@ -6,6 +6,7 @@ import { getRecursionLimit } from '../../lib/recursion-tracker';
 import { routeToDlq } from '../route-to-dlq';
 import { emitMetrics, METRICS } from '../../lib/metrics';
 import { AgentRegistry } from '../../lib/registry/AgentRegistry';
+import * as crypto from 'crypto';
 
 /**
  * In-memory fast-path dedup set for EventBridge's at-least-once delivery.
@@ -70,28 +71,45 @@ export async function handleTaskResult(
   const eventDetail = event.detail;
   const { logger } = await import('../../lib/logger');
 
-  // In-memory fast-path dedup — prefer EventBridge envelope id over detail id
-  const eventId =
-    (eventDetail.__envelopeId as string | undefined) ?? (event.id as string | undefined);
-  if (eventId) {
-    if (processedEvents.has(eventId)) {
-      logger.info(`Duplicate event ${eventId} detected in-memory, skipping.`);
-      import('../../lib/metrics/evolution-metrics').then(({ EVOLUTION_METRICS }) => {
-        EVOLUTION_METRICS.recordDuplicateSuppression('task-result-in-memory');
-      });
-      return;
-    }
-    processedEvents.add(eventId);
+  // 1. Stable Content Idempotency (Sh6 Fix)
+  // Derive a stable hash from the content to catch application-level double-emissions
+  const stablePayload = { ...eventDetail };
+  delete (stablePayload as any).__envelopeId; // Exclude volatile metadata
+  const contentHash = crypto
+    .createHash('sha256')
+    .update(JSON.stringify(stablePayload) + detailType)
+    .digest('hex')
+    .substring(0, 16);
 
-    // DynamoDB durable dedup for cold-start resilience
-    const isFirstProcessing = await checkAndMarkProcessed(eventId);
-    if (!isFirstProcessing) {
-      logger.info(`Duplicate event ${eventId} detected in DynamoDB, skipping.`);
-      import('../../lib/metrics/evolution-metrics').then(({ EVOLUTION_METRICS }) => {
-        EVOLUTION_METRICS.recordDuplicateSuppression('task-result-dynamodb');
-      });
-      return;
-    }
+  // Preference order:
+  // 1. Explicit idempotencyKey
+  // 2. EventBridge envelope ID (__envelopeId or root event.id)
+  // 3. Detail payload ID (common in tests/legacy)
+  // 4. Stable content hash (final guard)
+  const idempotencyKey =
+    (eventDetail.idempotencyKey as string) ||
+    (eventDetail.__envelopeId as string) ||
+    (event.id as string) ||
+    (eventDetail.id as string) ||
+    contentHash;
+
+  if (processedEvents.has(idempotencyKey)) {
+    logger.info(`Duplicate event ${idempotencyKey} detected in-memory, skipping.`);
+    import('../../lib/metrics/evolution-metrics').then(({ EVOLUTION_METRICS }) => {
+      EVOLUTION_METRICS.recordDuplicateSuppression('task-result-in-memory');
+    });
+    return;
+  }
+  processedEvents.add(idempotencyKey);
+
+  // DynamoDB durable dedup for cold-start resilience
+  const isFirstProcessing = await checkAndMarkProcessed(idempotencyKey);
+  if (!isFirstProcessing) {
+    logger.info(`Duplicate event ${idempotencyKey} detected in DynamoDB, skipping.`);
+    import('../../lib/metrics/evolution-metrics').then(({ EVOLUTION_METRICS }) => {
+      EVOLUTION_METRICS.recordDuplicateSuppression('task-result-dynamodb');
+    });
+    return;
   }
 
   const isFailure = detailType === EventType.TASK_FAILED;
@@ -238,6 +256,9 @@ export async function handleTaskResult(
             error: isFailure ? response : undefined,
             sessionId,
             depth,
+            workspaceId,
+            teamId,
+            staffId,
           }
         );
         return;

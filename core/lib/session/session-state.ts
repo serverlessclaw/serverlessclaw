@@ -63,7 +63,11 @@ export class SessionStateManager {
    * Attempts to acquire the processing lock for a session.
    * Uses unified LockManager for consistent distributed coordination.
    */
-  async acquireProcessing(sessionId: string, agentId: string): Promise<boolean> {
+  async acquireProcessing(
+    sessionId: string,
+    agentId: string,
+    scope?: { workspaceId?: string; teamId?: string; staffId?: string }
+  ): Promise<boolean> {
     const lockId = `${LOCK_PREFIX}${sessionId}`;
     const nowSec = Math.floor(Date.now() / TIME.MS_PER_SECOND);
     const lockExpiresAt = nowSec + LOCK_TTL_SECONDS;
@@ -84,13 +88,18 @@ export class SessionStateManager {
             TableName: this.tableName,
             Key: { userId: key, timestamp: 0 },
             UpdateExpression:
-              'SET processingAgentId = :agentId, processingStartedAt = :now, lockExpiresAt = :lockExp, expiresAt = :exp, pendingMessages = if_not_exists(pendingMessages, :empty)',
+              'SET processingAgentId = :agentId, processingStartedAt = :now, lockExpiresAt = :lockExp, expiresAt = :exp, ' +
+              'pendingMessages = if_not_exists(pendingMessages, :empty), ' +
+              'workspaceId = :ws, teamId = :team, staffId = :staff',
             ExpressionAttributeValues: {
               ':agentId': agentId,
               ':now': Date.now(),
               ':lockExp': lockExpiresAt,
               ':exp': this.getSessionExpiresAt(),
               ':empty': [],
+              ':ws': scope?.workspaceId ?? null,
+              ':team': scope?.teamId ?? null,
+              ':staff': scope?.staffId ?? null,
             },
           })
         );
@@ -158,6 +167,9 @@ export class SessionStateManager {
             traceId: `resume-${Date.now()}`,
             isContinuation: true,
             attachments: nextMsg.attachments,
+            workspaceId: attributes.workspaceId,
+            teamId: attributes.teamId,
+            staffId: attributes.staffId,
           });
 
           // 4. Remove the processed message from the queue

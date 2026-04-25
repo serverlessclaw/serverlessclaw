@@ -504,6 +504,11 @@ describe('EscalationManager', () => {
         undefined,
         undefined,
         'SystemGuard',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
         undefined
       );
     });
@@ -650,6 +655,11 @@ describe('EscalationManager', () => {
         undefined,
         'sess-1',
         'SystemGuard',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
         undefined
       );
     });

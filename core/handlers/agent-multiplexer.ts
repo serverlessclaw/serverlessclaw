@@ -182,7 +182,7 @@ export const handler = async (
   }
 
   if (sessionId && targetAgent) {
-    lockAcquired = await sessionStateManager.acquireProcessing(sessionId, targetAgent);
+    lockAcquired = await sessionStateManager.acquireProcessing(sessionId, targetAgent, scope);
 
     if (!lockAcquired) {
       logger.info(`[MULTIPLEXER] Session ${sessionId} busy. Queueing task for ${targetAgent}.`);

@@ -309,7 +309,7 @@ describe('task-result-handler (Bug 4 — duplicate event dedup)', () => {
     expect(mockSend.mock.calls.length).toBe(afterFirst);
   });
 
-  it('should still process events that have no id field', async () => {
+  it('should still process events that have no id field if content is different', async () => {
     const eventDetail = {
       userId: 'user-123',
       agentId: 'monitor',
@@ -319,22 +319,35 @@ describe('task-result-handler (Bug 4 — duplicate event dedup)', () => {
       depth: 1,
     };
 
-    // Both calls should process (no id to dedup on)
+    // First call
     await handleTaskResult(
       {
         'detail-type': EventType.TASK_COMPLETED,
         detail: eventDetail,
-        id: (eventDetail as any).__envelopeId || (eventDetail as any).id,
+        id: undefined,
       },
       EventType.TASK_COMPLETED
     );
     const afterFirst = mockSend.mock.calls.length;
+    expect(afterFirst).toBeGreaterThan(0);
 
+    // Second call with SAME content and no ID should be deduplicated by hash (Improvement!)
     await handleTaskResult(
       {
         'detail-type': EventType.TASK_COMPLETED,
         detail: eventDetail,
-        id: (eventDetail as any).__envelopeId || (eventDetail as any).id,
+        id: undefined,
+      },
+      EventType.TASK_COMPLETED
+    );
+    expect(mockSend.mock.calls.length).toBe(afterFirst);
+
+    // Third call with DIFFERENT content should process
+    await handleTaskResult(
+      {
+        'detail-type': EventType.TASK_COMPLETED,
+        detail: { ...eventDetail, response: 'Different response' },
+        id: undefined,
       },
       EventType.TASK_COMPLETED
     );

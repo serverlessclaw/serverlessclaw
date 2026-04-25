@@ -87,7 +87,8 @@ export class EscalationManager {
     question: string,
     originalTask: string,
     sessionId?: string,
-    policyId?: string
+    policyId?: string,
+    scope?: { workspaceId?: string; teamId?: string; staffId?: string }
   ): Promise<EscalationState> {
     try {
       const policy = policyId ? await this.getPolicyById(policyId) : await this.getPolicy(userId);
@@ -113,6 +114,9 @@ export class EscalationManager {
         currentLevelExpiresAt: Date.now() + firstLevel.timeoutMs,
         notifiedChannels: [],
         completed: false,
+        workspaceId: scope?.workspaceId,
+        teamId: scope?.teamId,
+        staffId: scope?.staffId,
       };
 
       // Save escalation state
@@ -184,7 +188,8 @@ export class EscalationManager {
         await this.scheduleLevelTimeout(state, nextLevel.timeoutMs);
 
         logger.info(
-          `Escalated to level ${state.currentLevel} for traceId=${traceId}, ` + `agentId=${agentId}`
+          `Escalated to level ${state.currentLevel} for traceId=${traceId}, ` +
+            `agentId=${agentId} (WS: ${state.workspaceId || 'global'})`
         );
       } else {
         // Final level exhausted
@@ -268,7 +273,11 @@ export class EscalationManager {
 
     for (const channel of currentLevel.channels) {
       try {
-        await this.sendToChannel(channel, state.userId, message, state.sessionId);
+        await this.sendToChannel(channel, state.userId, message, state.sessionId, {
+          workspaceId: state.workspaceId,
+          teamId: state.teamId,
+          staffId: state.staffId,
+        });
         state.notifiedChannels.push(channel);
       } catch (error) {
         logger.warn(`Failed to send escalation to ${channel}:`, error);
@@ -303,7 +312,8 @@ export class EscalationManager {
     channel: EscalationChannel,
     userId: string,
     message: string,
-    sessionId?: string
+    sessionId?: string,
+    scope?: { workspaceId?: string; teamId?: string; staffId?: string }
   ): Promise<void> {
     switch (channel) {
       case EscalationChannel.TELEGRAM:
@@ -316,7 +326,12 @@ export class EscalationManager {
           undefined,
           sessionId,
           'SystemGuard',
-          undefined
+          undefined,
+          undefined,
+          undefined,
+          scope?.workspaceId,
+          scope?.teamId,
+          scope?.staffId
         );
         break;
 
@@ -351,6 +366,9 @@ export class EscalationManager {
         sessionId: state.sessionId,
         currentLevel: state.currentLevel,
         policyId: state.policyId,
+        workspaceId: state.workspaceId,
+        teamId: state.teamId,
+        staffId: state.staffId,
       },
       targetTime,
       EventType.ESCALATION_LEVEL_TIMEOUT
@@ -410,6 +428,9 @@ export class EscalationManager {
         outcome,
         currentLevel: state.currentLevel,
         policyId: state.policyId,
+        workspaceId: state.workspaceId,
+        teamId: state.teamId,
+        staffId: state.staffId,
       },
       { priority: EventPriority.HIGH }
     );
@@ -434,7 +455,12 @@ export class EscalationManager {
       undefined,
       state.sessionId,
       'SystemGuard',
-      undefined
+      undefined,
+      undefined,
+      undefined,
+      state.workspaceId,
+      state.teamId,
+      state.staffId
     );
 
     // Emit task failed event
@@ -448,6 +474,9 @@ export class EscalationManager {
         error: `Escalation failed after ${state.currentLevel} levels. Question: ${question}`,
         traceId: state.traceId,
         sessionId: state.sessionId,
+        workspaceId: state.workspaceId,
+        teamId: state.teamId,
+        staffId: state.staffId,
       },
       { priority: EventPriority.CRITICAL }
     );
@@ -472,7 +501,12 @@ export class EscalationManager {
       undefined,
       state.sessionId,
       'SystemGuard',
-      undefined
+      undefined,
+      undefined,
+      undefined,
+      state.workspaceId,
+      state.teamId,
+      state.staffId
     );
   }
 
