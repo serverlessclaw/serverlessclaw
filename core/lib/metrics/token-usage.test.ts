@@ -359,7 +359,7 @@ describe('TokenTracker', () => {
 
       expect(mockSend).toHaveBeenCalledWith(expect.any(UpdateCommand));
       const cmd = mockSend.mock.calls[0][0] as UpdateCommand;
-      expect(cmd.input.Key?.userId).toMatch(/^TOOL_TOKEN#web_search#/);
+      expect(cmd.input.Key?.userId).toBe('TOOL_TOKEN#web_search');
     });
 
     it('should use default values when optional params omitted', async () => {
@@ -397,7 +397,7 @@ describe('TokenTracker', () => {
       await TokenTracker.getToolRollupRange('web_search', 7);
 
       const cmd = mockSend.mock.calls[0][0] as QueryCommand;
-      expect(cmd.input.ExpressionAttributeValues?.[':pk']).toMatch(/^TOOL_TOKEN#web_search#/);
+      expect(cmd.input.ExpressionAttributeValues?.[':pk']).toBe('TOOL_TOKEN#web_search');
       expect(cmd.input.KeyConditionExpression).toContain('#ts BETWEEN :start AND :end');
       expect(cmd.input.ExpressionAttributeNames).toEqual({ '#ts': 'timestamp' });
     });

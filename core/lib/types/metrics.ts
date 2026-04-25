@@ -41,6 +41,8 @@ export enum AnomalyType {
 export interface CognitiveMetric {
   /** Agent ID this metric belongs to. */
   agentId: string;
+  /** Optional workspace ID for tenant isolation. */
+  workspaceId?: string;
   /** Metric name (e.g., 'task_completion_rate', 'reasoning_coherence'). */
   name: string;
   /** Numeric value of the metric. */

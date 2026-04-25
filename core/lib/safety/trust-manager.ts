@@ -177,21 +177,8 @@ export class TrustManager {
       return clampedScore;
     } catch (e) {
       logger.error(`[TrustManager] Failed to atomically update trust for ${agentId}:`, e);
-      // Fallback only if agent config exists to determine a sensible fallback
-      // SECURITY: Log audit event for fallback usage to detect potential attacks
-      const config = await AgentRegistry.getAgentConfig(agentId, { workspaceId });
-      const fallbackScore = config?.trustScore ?? TRUST.DEFAULT_SCORE;
-      await this.logFallback(
-        {
-          agentId,
-          timestamp: Date.now(),
-          attemptedDelta: delta,
-          fallbackScore,
-          error: e instanceof Error ? e.message : String(e),
-        },
-        { workspaceId }
-      );
-      return fallbackScore;
+      // Fail-closed: Throw error to prevent silent drop of trust penalties
+      throw e;
     }
   }
 
@@ -201,32 +188,6 @@ export class TrustManager {
       ? `WS#${context.workspaceId}#${DYNAMO_KEYS.TRUST_PENALTY_LOG}`
       : DYNAMO_KEYS.TRUST_PENALTY_LOG;
     await ConfigManager.appendToList(key, penalty, { limit: 200 });
-  }
-
-  private static async logFallback(
-    fallback: {
-      agentId: string;
-      timestamp: number;
-      attemptedDelta: number;
-      fallbackScore: number;
-      error: string;
-    },
-    context?: TrustContext
-  ): Promise<void> {
-    const { ConfigManager } = await import('../registry/config');
-    const key = context?.workspaceId
-      ? `WS#${context.workspaceId}#${DYNAMO_KEYS.TRUST_PENALTY_LOG}`
-      : DYNAMO_KEYS.TRUST_PENALTY_LOG;
-    await ConfigManager.appendToList(
-      key,
-      {
-        ...fallback,
-        reason: `FALLBACK: atomic update failed - ${fallback.error}`,
-        delta: fallback.attemptedDelta,
-        newScore: fallback.fallbackScore,
-      },
-      { limit: 200 }
-    );
   }
 
   private static async recordHistory(

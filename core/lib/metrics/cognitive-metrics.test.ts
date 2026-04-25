@@ -262,6 +262,49 @@ describe('MetricsCollector', () => {
       expect.objectContaining({ error: expect.any(Error) })
     );
   });
+
+  describe('Tenant Isolation [Sh5]', () => {
+    it('should record metrics with workspaceId in partition key', async () => {
+      await collector.recordTaskCompletion(
+        'agent-1',
+        true,
+        150,
+        500,
+        { taskId: 'task-1' },
+        'workspace-abc'
+      );
+      await collector.flush();
+
+      expect(mockBase.putItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'WS#workspace-abc#HEALTH#METRIC#agent-1',
+          type: 'COGNITIVE_METRIC',
+        })
+      );
+    });
+
+    it('should record multiple metrics with different workspaceIds correctly', async () => {
+      await collector.recordTaskCompletion('agent-1', true, 100, 200, {}, 'ws-1');
+      await collector.recordTaskCompletion('agent-1', true, 100, 200, {}, 'ws-2');
+      await collector.flush();
+
+      expect(mockBase.putItem).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'WS#ws-1#HEALTH#METRIC#agent-1' })
+      );
+      expect(mockBase.putItem).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'WS#ws-2#HEALTH#METRIC#agent-1' })
+      );
+    });
+
+    it('should fall back to global prefix when workspaceId is missing', async () => {
+      await collector.recordTaskCompletion('agent-1', true, 100, 200);
+      await collector.flush();
+
+      expect(mockBase.putItem).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'HEALTH#METRIC#agent-1' })
+      );
+    });
+  });
 });
 
 describe('DegradationDetector', () => {
@@ -551,6 +594,27 @@ describe('HealthTrendAnalyzer', () => {
         ':end': windowEnd,
       },
     });
+  });
+
+  it('should query with workspaceId prefix when provided [Sh5]', async () => {
+    const windowStart = 1000000;
+    const windowEnd = 2000000;
+
+    await analyzer.getAggregatedMetrics(
+      'agent-1',
+      MetricsWindow.DAILY,
+      windowStart,
+      windowEnd,
+      'workspace-abc'
+    );
+
+    expect(mockBase.queryItems).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ExpressionAttributeValues: expect.objectContaining({
+          ':pk': 'WS#workspace-abc#HEALTH#METRIC#agent-1',
+        }),
+      })
+    );
   });
 
   it('should analyze memory health', async () => {

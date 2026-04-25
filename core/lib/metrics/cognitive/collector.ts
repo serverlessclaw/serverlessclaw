@@ -55,15 +55,16 @@ export class MetricsCollector {
     success: boolean,
     latencyMs: number,
     tokensUsed: number,
-    metadata?: Record<string, unknown>
+    metadata?: Record<string, unknown>,
+    workspaceId?: string
   ): Promise<void> {
     if (!this.config.enabled) return;
 
     const timestamp = Date.now();
     this.buffer.push(
-      { agentId, name: 'task_completed', value: success ? 1 : 0, timestamp, metadata },
-      { agentId, name: 'task_latency_ms', value: latencyMs, timestamp },
-      { agentId, name: 'tokens_used', value: tokensUsed, timestamp }
+      { agentId, workspaceId, name: 'task_completed', value: success ? 1 : 0, timestamp, metadata },
+      { agentId, workspaceId, name: 'task_latency_ms', value: latencyMs, timestamp },
+      { agentId, workspaceId, name: 'tokens_used', value: tokensUsed, timestamp }
     );
 
     const MAX_BUFFER_SIZE = 200;
@@ -86,26 +87,33 @@ export class MetricsCollector {
     coherenceScore: number,
     reasoningSteps: number,
     pivoted: boolean,
-    requestedClarification: boolean
+    requestedClarification: boolean,
+    workspaceId?: string
   ): Promise<void> {
     if (!this.config.enabled) return;
 
     const timestamp = Date.now();
     this.buffer.push(
-      { agentId, name: 'reasoning_coherence', value: coherenceScore, timestamp },
-      { agentId, name: 'reasoning_steps', value: reasoningSteps, timestamp },
-      { agentId, name: 'pivot', value: pivoted ? 1 : 0, timestamp },
-      { agentId, name: 'clarification_request', value: requestedClarification ? 1 : 0, timestamp }
+      { agentId, workspaceId, name: 'reasoning_coherence', value: coherenceScore, timestamp },
+      { agentId, workspaceId, name: 'reasoning_steps', value: reasoningSteps, timestamp },
+      { agentId, workspaceId, name: 'pivot', value: pivoted ? 1 : 0, timestamp },
+      {
+        agentId,
+        workspaceId,
+        name: 'clarification_request',
+        value: requestedClarification ? 1 : 0,
+        timestamp,
+      }
     );
   }
 
   /**
    * Record a self-correction event.
    */
-  async recordSelfCorrection(agentId: string): Promise<void> {
+  async recordSelfCorrection(agentId: string, workspaceId?: string): Promise<void> {
     if (!this.config.enabled) return;
     const timestamp = Date.now();
-    this.buffer.push({ agentId, name: 'self_correction', value: 1, timestamp });
+    this.buffer.push({ agentId, workspaceId, name: 'self_correction', value: 1, timestamp });
   }
 
   /**
@@ -114,14 +122,15 @@ export class MetricsCollector {
   async recordMemoryOperation(
     agentId: string,
     operation: 'read' | 'write' | 'hit' | 'miss',
-    latencyMs: number
+    latencyMs: number,
+    workspaceId?: string
   ): Promise<void> {
     if (!this.config.enabled) return;
 
     const timestamp = Date.now();
     this.buffer.push(
-      { agentId, name: `memory_${operation}`, value: 1, timestamp },
-      { agentId, name: 'memory_latency_ms', value: latencyMs, timestamp }
+      { agentId, workspaceId, name: `memory_${operation}`, value: 1, timestamp },
+      { agentId, workspaceId, name: 'memory_latency_ms', value: latencyMs, timestamp }
     );
   }
 
@@ -138,8 +147,9 @@ export class MetricsCollector {
 
     for (const metric of metricsToFlush) {
       try {
+        const prefix = metric.workspaceId ? `WS#${metric.workspaceId}#` : '';
         await this.base.putItem({
-          userId: `${MEMORY_KEYS.HEALTH_PREFIX}METRIC#${metric.agentId}`,
+          userId: `${prefix}${MEMORY_KEYS.HEALTH_PREFIX}METRIC#${metric.agentId}`,
           timestamp: metric.timestamp,
           type: 'COGNITIVE_METRIC',
           metricName: metric.name,

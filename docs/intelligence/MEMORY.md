@@ -376,11 +376,20 @@ Beyond conversation and knowledge, the system tracks its own performance to enab
 
 ### Agent Performance Rollups
 
-The `TokenTracker` maintains daily rollups for every agent, enabling the **Agent Router** to select candidates based on historical efficiency.
+The `TokenTracker` maintains daily rollups for every agent, enabling the **Agent Router** to select candidates based on historical efficiency. Supports **strict tenant isolation** via workspace scoping.
 
-- **Partition Key**: `TOKEN_ROLLUP#<agentId>`
+- **Partition Key**: `[WS#<workspaceId>#]TOKEN_ROLLUP#<agentId>`
 - **Sort Key**: `timestamp` (Day start)
 - **Metrics**: `avgTokensPerInvocation`, `successRate`, `totalInvocations`, `createdAt`.
+
+### Tool Performance Rollups
+
+The system tracks performance for each tool (e.g., `web_search`, `mcp_tool`) to identify degraded integrations.
+
+- **Partition Key**: `[WS#<workspaceId>#]TOOL_TOKEN#<toolName>`
+- **Sort Key**: `timestamp` (Day start)
+- **Metrics**: `invocationCount`, `successCount`, `totalDurationMs`, `avgDurationMs`.
+- **P1 Fix**: Partition keys no longer include date suffixes, allowing for efficient range queries via the sort key.
 
 ### Cost-Aware Routing
 

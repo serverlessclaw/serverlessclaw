@@ -68,10 +68,6 @@ function dayStart(ts: number = Date.now()): number {
   return d.getTime();
 }
 
-function dateKey(ts: number = Date.now()): string {
-  return new Date(ts).toISOString().slice(0, 10);
-}
-
 export class TokenTracker {
   static async recordInvocation(
     record: Omit<TokenUsageRecord, 'userId' | 'expiresAt'>,
@@ -325,17 +321,15 @@ export class TokenTracker {
     scope?: TokenScope
   ): Promise<void> {
     const ts = dayStart();
-    const dateStr = dateKey(ts);
     const expiresAt = Math.floor(Date.now() / 1000) + TTL_DAYS_ROLLUP * TIME.SECONDS_IN_DAY;
 
     const rollupKeys = [];
     if (!scope || (!scope.workspaceId && !scope.teamId)) {
-      rollupKeys.push(`TOOL_TOKEN#${toolName}#${dateStr}`);
+      rollupKeys.push(`TOOL_TOKEN#${toolName}`);
     } else {
-      rollupKeys.push(`GLOBAL#TOOL_TOKEN#${toolName}#${dateStr}`);
-      if (scope.workspaceId)
-        rollupKeys.push(`WS#${scope.workspaceId}#TOOL_TOKEN#${toolName}#${dateStr}`);
-      if (scope.teamId) rollupKeys.push(`TEAM#${scope.teamId}#TOOL_TOKEN#${toolName}#${dateStr}`);
+      rollupKeys.push(`GLOBAL#TOOL_TOKEN#${toolName}`);
+      if (scope.workspaceId) rollupKeys.push(`WS#${scope.workspaceId}#TOOL_TOKEN#${toolName}`);
+      if (scope.teamId) rollupKeys.push(`TEAM#${scope.teamId}#TOOL_TOKEN#${toolName}`);
     }
 
     for (const userId of rollupKeys) {
@@ -378,11 +372,11 @@ export class TokenTracker {
 
     let userId: string;
     if (scope?.workspaceId) {
-      userId = `WS#${scope.workspaceId}#TOOL_TOKEN#${toolName}#`;
+      userId = `WS#${scope.workspaceId}#TOOL_TOKEN#${toolName}`;
     } else if (scope?.teamId) {
-      userId = `TEAM#${scope.teamId}#TOOL_TOKEN#${toolName}#`;
+      userId = `TEAM#${scope.teamId}#TOOL_TOKEN#${toolName}`;
     } else {
-      userId = `TOOL_TOKEN#${toolName}#`;
+      userId = `TOOL_TOKEN#${toolName}`;
     }
 
     try {

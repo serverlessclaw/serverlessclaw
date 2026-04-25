@@ -376,4 +376,27 @@ describe('TrustManager', () => {
       expect(mockAgentRegistry.atomicAddAgentField).not.toHaveBeenCalled();
     });
   });
+
+  describe('Fail-Closed Integrity (Principle 13)', () => {
+    it('throws error (fails-closed) when atomic update fails during penalty [Sh6]', async () => {
+      mockAgentRegistry.getAgentConfig.mockResolvedValueOnce({
+        id: 'agent-1',
+        trustScore: 90,
+        enabled: true,
+      });
+      // Simulate DDB failure
+      mockAgentRegistry.atomicAddAgentField.mockRejectedValueOnce(new Error('DDB_FAILURE'));
+
+      await expect(TrustManager.recordFailure('agent-1', 'Critical error', 5)).rejects.toThrow(
+        'DDB_FAILURE'
+      );
+
+      // Verify that no fallback was used (the error propagated)
+      const { logger } = await import('../logger');
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to atomically update trust'),
+        expect.any(Error)
+      );
+    });
+  });
 });

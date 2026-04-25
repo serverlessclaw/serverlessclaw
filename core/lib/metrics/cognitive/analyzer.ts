@@ -20,13 +20,15 @@ export class HealthTrendAnalyzer {
     agentId: string,
     window: MetricsWindow,
     windowStart: number,
-    windowEnd: number
+    windowEnd: number,
+    workspaceId?: string
   ): Promise<AggregatedMetrics> {
+    const prefix = workspaceId ? `WS#${workspaceId}#` : '';
     const items = await this.base.queryItems({
       KeyConditionExpression: 'userId = :pk AND #ts BETWEEN :start AND :end',
       ExpressionAttributeNames: { '#ts': 'timestamp' },
       ExpressionAttributeValues: {
-        ':pk': `${MEMORY_KEYS.HEALTH_PREFIX}METRIC#${agentId}`,
+        ':pk': `${prefix}${MEMORY_KEYS.HEALTH_PREFIX}METRIC#${agentId}`,
         ':start': windowStart,
         ':end': windowEnd,
       },

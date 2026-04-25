@@ -270,6 +270,7 @@ The system architecture follows a **Distributed Spine** model where all critical
   [ Silo 6: The Scales (TrustManager) ]
           |-- (10) Quality-Weighted Reputation Update
           |-- (11) Atomic History Recording (list_append)
+          |-- (12) Fail-Closed Integrity (Throw on update failure)
           v
   [ ConfigTable (DDB) ] <--- (Feedback Loop for Selection Integrity)
 
@@ -430,9 +431,14 @@ The system maintains a continuous feedback loop between execution observability 
 (AUTO -> HITL)
 ```
 
-1. **Detection**: The `CognitiveHealthMonitor` orchestrates the observation pipeline. The **Collector** buffers raw telemetry, the **Analyzer** aggregates trends over time windows, and the **Detector** identifies reasoning loops or degradation.
-2. **Calibration**: `TrustManager` applies severity-based penalties or quality-weighted bumps based on signals from the monitor.
-3. **Enforcement**: If `TrustScore` drops below the autonomous threshold, the system automatically shifts to `HITL`.
+1. **Silo 5: The Eye (Observability & Health)**
+   - **Collector**: Buffers raw cognitive telemetry (success, latency, tokens, coherence) with **strict tenant isolation** using `WS#<workspaceId>` prefixes.
+   - **Analyzer**: Aggregates trends over time windows (HOURLY, DAILY, WEEKLY) to feed Silo 6.
+   - **Detector**: Identifies reasoning loops, degradation, and performance anomalies.
+2. **Silo 6: The Scales (Trust & Reputation)**
+   - **TrustManager**: Authoritative agent reputation scoring. Enforces **Fail-Closed Integrity** (Principle 13) during trust updates to prevent silent penalty drops.
+   - **Reputation Logic**: Dynamic weighted scoring based on task difficulty and historical consistency.
+   - **Selection Signal**: Feeds directly into `AgentRouter` to gate autonomous capabilities.
 
 ````
 
