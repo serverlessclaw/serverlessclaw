@@ -89,7 +89,7 @@
   },
   "devDependencies": {
     "@aiready/cli": "^0.15.22",
-    "@anthropic-ai/sdk": "^0.90.0",
+    "@anthropic-ai/sdk": "^0.91.0",
     "@aws-sdk/client-bedrock-runtime": "^3.1031.0",
     "@aws-sdk/client-cloudfront": "^3.1024.0",
     "@aws-sdk/client-cloudwatch-logs": "^3.1031.0",
