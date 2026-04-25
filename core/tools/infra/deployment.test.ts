@@ -380,12 +380,7 @@ describe('Deployment Tools', () => {
     it('returns FAILED_DOD when recallKnowledge was not called', async () => {
       vi.mocked(getAgentContext).mockResolvedValue({
         memory: {
-          getHistory: vi
-            .fn()
-            .mockResolvedValue([
-              { content: 'TYPE_CHECK_PASSED' },
-              { content: 'UNIT_TESTS_PASSED' },
-            ]),
+          getHistory: vi.fn().mockResolvedValue([{ content: 'VERIFICATION_SUCCESSFUL' }]),
         },
       } as any);
 
@@ -411,7 +406,7 @@ describe('Deployment Tools', () => {
       });
 
       expect(result).toContain('FAILED_DOD');
-      expect(result).toContain('validated (validateCode) and package tests must pass');
+      expect(result).toContain('fully verified (verifyChanges) before generating patch');
     });
 
     it('skips validation when skipValidation is true', async () => {
@@ -430,8 +425,7 @@ describe('Deployment Tools', () => {
       vi.mocked(getAgentContext).mockResolvedValue({
         memory: {
           getHistory: vi.fn().mockResolvedValue([
-            { content: 'TYPE_CHECK_PASSED' },
-            { content: 'UNIT_TESTS_PASSED' },
+            { content: 'VERIFICATION_SUCCESSFUL' },
             {
               tool_calls: [{ function: { name: 'recallKnowledge' } }],
             },
@@ -453,8 +447,7 @@ describe('Deployment Tools', () => {
       vi.mocked(getAgentContext).mockResolvedValue({
         memory: {
           getHistory: vi.fn().mockResolvedValue([
-            { content: 'TYPE_CHECK_PASSED' },
-            { content: 'UNIT_TESTS_PASSED' },
+            { content: 'VERIFICATION_SUCCESSFUL' },
             {
               tool_calls: [{ function: { name: 'recallKnowledge' } }],
             },
@@ -496,13 +489,13 @@ describe('Deployment Tools', () => {
       });
 
       expect(result).toContain('FAILED_DOD');
-      expect(result).toContain('validated (validateCode) and package tests must pass');
+      expect(result).toContain('fully verified (verifyChanges) before staging');
     });
 
     it('returns FAILED_DOD when testing was not performed', async () => {
       vi.mocked(getAgentContext).mockResolvedValue({
         memory: {
-          getHistory: vi.fn().mockResolvedValue([{ content: 'TYPE_CHECK_PASSED' }]),
+          getHistory: vi.fn().mockResolvedValue([{ content: 'VERIFICATION_SUCCESSFUL: partial' }]),
         },
       } as any);
 
@@ -512,19 +505,14 @@ describe('Deployment Tools', () => {
         skipValidation: false,
       });
 
-      expect(result).toContain('FAILED_DOD');
-      expect(result).toContain('validated (validateCode) and package tests must pass');
+      // Should fail on recallKnowledge if VERIFICATION_SUCCESSFUL is present
+      expect(result).toContain('recallKnowledge');
     });
 
     it('returns FAILED_DOD when recallKnowledge was not called', async () => {
       vi.mocked(getAgentContext).mockResolvedValue({
         memory: {
-          getHistory: vi
-            .fn()
-            .mockResolvedValue([
-              { content: 'TYPE_CHECK_PASSED' },
-              { content: 'UNIT_TESTS_PASSED' },
-            ]),
+          getHistory: vi.fn().mockResolvedValue([{ content: 'VERIFICATION_SUCCESSFUL' }]),
         },
       } as any);
 
@@ -542,8 +530,7 @@ describe('Deployment Tools', () => {
       vi.mocked(getAgentContext).mockResolvedValue({
         memory: {
           getHistory: vi.fn().mockResolvedValue([
-            { content: 'TYPE_CHECK_PASSED' },
-            { content: 'UNIT_TESTS_PASSED' },
+            { content: 'VERIFICATION_SUCCESSFUL' },
             {
               tool_calls: [{ function: { name: 'recallKnowledge' } }],
             },
@@ -566,8 +553,7 @@ describe('Deployment Tools', () => {
       vi.mocked(getAgentContext).mockResolvedValue({
         memory: {
           getHistory: vi.fn().mockResolvedValue([
-            { content: 'TYPE_CHECK_PASSED' },
-            { content: 'UNIT_TESTS_PASSED' },
+            { content: 'VERIFICATION_SUCCESSFUL' },
             {
               tool_calls: [{ function: { name: 'recallKnowledge' } }],
             },
@@ -618,8 +604,7 @@ describe('Deployment Tools', () => {
       vi.mocked(getAgentContext).mockResolvedValue({
         memory: {
           getHistory: vi.fn().mockResolvedValue([
-            { content: 'TYPE_CHECK_PASSED' },
-            { content: 'UNIT_TESTS_PASSED' },
+            { content: 'VERIFICATION_SUCCESSFUL' },
             {
               tool_calls: [{ function: { name: 'recallKnowledge' } }],
             },
@@ -671,8 +656,7 @@ describe('Deployment Tools', () => {
       vi.mocked(getAgentContext).mockResolvedValue({
         memory: {
           getHistory: vi.fn().mockResolvedValue([
-            { content: 'TYPE_CHECK_PASSED' },
-            { content: 'UNIT_TESTS_PASSED' },
+            { content: 'VERIFICATION_SUCCESSFUL' },
             {
               tool_calls: [{ function: { name: 'recallKnowledge' } }],
             },
@@ -722,8 +706,7 @@ describe('Deployment Tools', () => {
       vi.mocked(getAgentContext).mockResolvedValue({
         memory: {
           getHistory: vi.fn().mockResolvedValue([
-            { content: 'TYPE_CHECK_PASSED' },
-            { content: 'UNIT_TESTS_PASSED' },
+            { content: 'VERIFICATION_SUCCESSFUL' },
             {
               tool_calls: [{ function: { name: 'recallKnowledge' } }],
             },

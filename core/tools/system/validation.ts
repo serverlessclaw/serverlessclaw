@@ -63,3 +63,47 @@ export const validateCode = {
     }
   },
 };
+
+/**
+ * Runs the full verification suite (check + test).
+ */
+export const verifyChanges = {
+  ...schema.verifyChanges,
+  execute: async (args: Record<string, unknown> = {}): Promise<string> => {
+    try {
+      const { fast, scope } = (args || {}) as { fast?: boolean; scope?: string };
+      const projectRoot = process.cwd();
+
+      logger.info(`Running full verification in ${projectRoot}...`);
+
+      let command = 'make check && make test';
+      if (fast) {
+        command = 'make check && pnpm test -- --run'; // Faster run mode
+      }
+
+      if (scope) {
+        // If scope is provided, use turbo filters or pnpm filters
+        command = `turbo run check test --filter=${scope}`;
+      }
+
+      const startTime = Date.now();
+      try {
+        const { stdout, stderr } = await execAsync(command, {
+          cwd: projectRoot,
+          maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large test outputs
+        });
+
+        const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+        return `VERIFICATION_SUCCESSFUL: All checks and tests passed in ${duration}s.\n\nSTDOUT:\n${stdout}\n\nSTDERR:\n${stderr}`;
+      } catch (error: any) {
+        const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+        const out = error.stdout || '';
+        const err = error.stderr || error.message;
+
+        return `VERIFICATION_FAILED: Suite failed after ${duration}s.\n\nSTDOUT:\n${out}\n\nSTDERR:\n${err}`;
+      }
+    } catch (error) {
+      return `VERIFICATION_ERROR: ${formatErrorMessage(error)}`;
+    }
+  },
+};

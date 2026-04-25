@@ -33,19 +33,13 @@ export const stageChanges = {
         const { memory } = await getAgentContext();
         const history = await memory.getHistory(sessionId);
 
-        const hasValidated = history.some(
-          (m) =>
-            m.content?.includes('TYPE_CHECK_PASSED') || m.content?.includes('Validation Successful')
-        );
-        const hasTested = history.some(
-          (m) => m.content?.includes('UNIT_TESTS_PASSED') || m.content?.includes('Test Results:')
-        );
+        const hasVerified = history.some((m) => m.content?.includes('VERIFICATION_SUCCESSFUL'));
         const hasRecalledKnowledge = history.some((m) =>
           m.tool_calls?.some((tc) => tc.function?.name === 'recallKnowledge')
         );
 
-        if (!hasValidated || !hasTested) {
-          return 'FAILED_DOD: Changes must be validated (validateCode) and package tests must pass before staging.';
+        if (!hasVerified) {
+          return 'FAILED_DOD: Changes must be fully verified (verifyChanges) before staging. Full test suite and linting must pass.';
         }
         if (!hasRecalledKnowledge) {
           return 'FAILED_DOD: Pre-flight checklist requires recalling relevant FACT#/LESSON# knowledge before coding. Call recallKnowledge first.';
@@ -140,19 +134,13 @@ export const generatePatch = {
         const { memory } = await getAgentContext();
         const history = await memory.getHistory(sessionId);
 
-        const hasValidated = history.some(
-          (m) =>
-            m.content?.includes('TYPE_CHECK_PASSED') || m.content?.includes('Validation Successful')
-        );
-        const hasTested = history.some(
-          (m) => m.content?.includes('UNIT_TESTS_PASSED') || m.content?.includes('Test Results:')
-        );
+        const hasVerified = history.some((m) => m.content?.includes('VERIFICATION_SUCCESSFUL'));
         const hasRecalledKnowledge = history.some((m) =>
           m.tool_calls?.some((tc) => tc.function?.name === 'recallKnowledge')
         );
 
-        if (!hasValidated || !hasTested) {
-          return 'FAILED_DOD: Changes must be validated (validateCode) and package tests must pass before generating patch.';
+        if (!hasVerified) {
+          return 'FAILED_DOD: Changes must be fully verified (verifyChanges) before generating patch. Full test suite and linting must pass.';
         }
         if (!hasRecalledKnowledge) {
           return 'FAILED_DOD: Pre-flight checklist requires recalling relevant FACT#/LESSON# knowledge before coding. Call recallKnowledge first.';

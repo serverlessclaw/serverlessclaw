@@ -8,6 +8,7 @@ describe('System Domain Tool Schemas', () => {
     'runCognitiveHealthCheck',
     'debugAgent',
     'validateCode',
+    'verifyChanges',
     'switchModel',
     'checkReputation',
     'renderComponent',

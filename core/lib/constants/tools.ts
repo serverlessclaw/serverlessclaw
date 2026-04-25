@@ -16,6 +16,7 @@ export const TOOLS = {
   generatePatch: 'generatePatch',
   triggerDeployment: 'triggerDeployment',
   validateCode: 'validateCode',
+  verifyChanges: 'verifyChanges',
   triggerRollback: 'triggerRollback',
   triggerTrunkSync: 'triggerTrunkSync',
   discoverSkills: 'discoverSkills',

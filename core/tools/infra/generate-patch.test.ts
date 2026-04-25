@@ -32,8 +32,7 @@ describe('generatePatch Tool', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockMemory.getHistory.mockResolvedValue([
-      { content: 'TYPE_CHECK_PASSED' },
-      { content: 'UNIT_TESTS_PASSED' },
+      { content: 'VERIFICATION_SUCCESSFUL' },
       { tool_calls: [{ function: { name: 'recallKnowledge' } }] },
     ]);
     mockGetAgentContext.mockResolvedValue({ memory: mockMemory });
@@ -68,6 +67,7 @@ describe('generatePatch Tool', () => {
     const result = await generatePatch.execute({ sessionId: 'session-1' });
 
     expect(result).toContain('FAILED_DOD');
+    expect(result).toContain('fully verified (verifyChanges) before generating patch');
   });
 
   it('skips DoD validation when skipValidation is true', async () => {
