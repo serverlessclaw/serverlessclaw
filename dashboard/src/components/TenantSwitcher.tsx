@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { Building2, ChevronDown, Check, Plus, Globe } from 'lucide-react';
 import { useTenant } from '@/components/Providers/TenantProvider';
-import { useTranslations } from '@/components/Providers/TranslationsProvider';
 import Typography from '@/components/ui/Typography';
 import { ROUTES } from '@/lib/constants';
 import Link from 'next/link';
