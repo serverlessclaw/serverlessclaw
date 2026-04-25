@@ -163,20 +163,22 @@ export class SafetyEngine extends SafetyBase {
       };
     }
 
-    // Validation Pipeline
-    const validators = [
+    // 1. Hard Security Blocks (Non-Bypassable)
+    const hardValidators = [
       () => this.validateStaticPolicies(normalizedAction, ctx, tier),
       () => this.validateAccessControl(agentConfig, normalizedAction, ctx, tier, policy),
-      () =>
-        this.limiter.checkRateLimits(policy, normalizedAction, {
-          workspaceId: ctx.workspaceId,
-          teamId: ctx.teamId,
-          staffId: ctx.staffId,
-        }),
-      () => this.validateDynamicRestrictions(agentConfig, normalizedAction, ctx, tier, policy),
     ];
 
-    // P9 Fix: Proactive Evolution bypass for highly trusted agents in AUTO mode
+    for (const validator of hardValidators) {
+      const result = await validator();
+      if (!result.allowed || result.requiresApproval) {
+        if (result.violation) await this.logViolation(result.violation);
+        return result;
+      }
+    }
+
+    // 2. Trust-Driven Autonomy Bypass (Principle 9)
+    // Only applies if hard security blocks have passed.
     if (
       context?.isProactive &&
       (agentConfig?.trustScore ?? 0) >= TRUST.AUTONOMY_THRESHOLD &&
@@ -188,7 +190,18 @@ export class SafetyEngine extends SafetyBase {
       return { allowed: true, requiresApproval: false, appliedPolicy: 'principle_9_proactive' };
     }
 
-    for (const validator of validators) {
+    // 3. Dynamic & Soft Restrictions (Bypassable by Autonomy/Approval)
+    const dynamicValidators = [
+      () =>
+        this.limiter.checkRateLimits(policy, normalizedAction, {
+          workspaceId: ctx.workspaceId,
+          teamId: ctx.teamId,
+          staffId: ctx.staffId,
+        }),
+      () => this.validateDynamicRestrictions(agentConfig, normalizedAction, ctx, tier, policy),
+    ];
+
+    for (const validator of dynamicValidators) {
       const result = await validator();
       if (
         !result.allowed ||

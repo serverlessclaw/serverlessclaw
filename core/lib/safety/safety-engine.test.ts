@@ -547,5 +547,42 @@ describe('SafetyEngine', () => {
       expect(engine.isClassCAction('trust_manipulation')).toBe(false);
       expect(engine.isClassDAction('deployment')).toBe(false);
     });
+
+    it('should NOT bypass Class D block even if task is proactive [Perspective B]', async () => {
+      const { EvolutionMode } = await import('../types/agent');
+      const config = {
+        id: 'trusted-proactive-agent',
+        safetyTier: SafetyTier.LOCAL, // Even LOCAL tier should block Class D
+        trustScore: 98,
+        evolutionMode: EvolutionMode.AUTO,
+      } as IAgentConfig;
+
+      const result = await engine.evaluateAction(config, 'trust_manipulation', {
+        isProactive: true,
+      });
+
+      // Class D should always be blocked
+      expect(result.allowed).toBe(false);
+      expect(result.appliedPolicy).toBe('class_d_blocked');
+    });
+
+    it('should NOT bypass System Protected resources even if task is proactive [Perspective B]', async () => {
+      const { EvolutionMode } = await import('../types/agent');
+      const config = {
+        id: 'trusted-proactive-agent',
+        safetyTier: SafetyTier.LOCAL,
+        trustScore: 98,
+        evolutionMode: EvolutionMode.AUTO,
+      } as IAgentConfig;
+
+      const result = await engine.evaluateAction(config, 'file_operation', {
+        isProactive: true,
+        resource: 'core/lib/safety/safety-engine.ts', // Highly protected
+      });
+
+      // System protected should always be blocked unless manuallyApproved (which it isn't here)
+      expect(result.allowed).toBe(false);
+      expect(result.appliedPolicy).toBe('system_protection');
+    });
   });
 });
