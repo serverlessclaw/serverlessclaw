@@ -275,6 +275,9 @@ export async function processEventWithAgent(
   try {
     const startTime = Date.now();
 
+    // Sh9 Fix: Enforce JSON communication when initiator is another agent
+    const communicationMode = options.initiatorId ? 'json' : 'text';
+
     const stream = agent.stream(userId, `${options.handlerTitle}: ${taskContent}`, {
       context: options.context,
       isContinuation: options.isContinuation,
@@ -291,6 +294,7 @@ export async function processEventWithAgent(
       attachments: options.attachments,
       source: TraceSource.SYSTEM,
       sessionStateManager,
+      communicationMode, // Enforce based on initiator
       tokenBudget: options.tokenBudget,
       costLimit: options.costLimit,
       priorTokenUsage: options.priorTokenUsage,

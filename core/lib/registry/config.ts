@@ -211,19 +211,20 @@ export class ConfigManager {
   public static async appendToList(
     key: string,
     item: unknown,
-    options?: { limit?: number }
+    options?: { limit?: number; workspaceId?: string }
   ): Promise<void> {
     const tableName = this._getTableName();
     if (!tableName) return;
 
-    this.configCache.delete(key);
+    const effectiveKey = options?.workspaceId ? `WS#${options.workspaceId}#${key}` : key;
+    this.configCache.delete(effectiveKey);
 
     try {
       const { limit } = options || {};
       await getDocClient().send(
         new UpdateCommand({
           TableName: tableName,
-          Key: { key },
+          Key: { key: effectiveKey },
           UpdateExpression: 'SET #val = if_not_exists(#val, :empty_list)',
           ExpressionAttributeNames: { '#val': 'value' },
           ExpressionAttributeValues: { ':empty_list': [] },
@@ -233,7 +234,7 @@ export class ConfigManager {
       const result = await getDocClient().send(
         new UpdateCommand({
           TableName: tableName,
-          Key: { key },
+          Key: { key: effectiveKey },
           UpdateExpression: 'SET #val = list_append(#val, :items)',
           ExpressionAttributeNames: { '#val': 'value' },
           ExpressionAttributeValues: { ':items': [item] },
@@ -248,15 +249,15 @@ export class ConfigManager {
           .send(
             new UpdateCommand({
               TableName: tableName,
-              Key: { key },
+              Key: { key: effectiveKey },
               UpdateExpression: `REMOVE ${Array.from({ length: excess }, (_, i) => `#val[${i}]`).join(', ')}`,
               ExpressionAttributeNames: { '#val': 'value' },
             })
           )
-          .catch((e) => logger.debug(`List capping failed for ${key}:`, e));
+          .catch((e) => logger.debug(`List capping failed for ${effectiveKey}:`, e));
       }
     } catch (e) {
-      logger.error(`Failed to append to list ${key} in DDB:`, e);
+      logger.error(`Failed to append to list ${effectiveKey} in DDB:`, e);
       throw e;
     }
   }

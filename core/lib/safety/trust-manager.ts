@@ -182,10 +182,11 @@ export class TrustManager {
 
   private static async logPenalty(penalty: TrustPenalty, context?: TrustContext): Promise<void> {
     const { ConfigManager } = await import('../registry/config');
-    const key = context?.workspaceId
-      ? `WS#${context.workspaceId}#${DYNAMO_KEYS.TRUST_PENALTY_LOG}`
-      : DYNAMO_KEYS.TRUST_PENALTY_LOG;
-    await ConfigManager.appendToList(key, penalty, { limit: 200 });
+    const key = DYNAMO_KEYS.TRUST_PENALTY_LOG;
+    await ConfigManager.appendToList(key, penalty, {
+      limit: 200,
+      workspaceId: context?.workspaceId,
+    });
   }
 
   private static async recordHistory(
@@ -194,13 +195,11 @@ export class TrustManager {
     context?: TrustContext
   ): Promise<void> {
     const { ConfigManager } = await import('../registry/config');
-    const key = context?.workspaceId
-      ? `WS#${context.workspaceId}#trust:score_history#${agentId}`
-      : `trust:score_history#${agentId}`;
+    const key = `trust:score_history#${agentId}`;
     await ConfigManager.appendToList(
       key,
       { agentId, score, timestamp: Date.now() },
-      { limit: 200 }
+      { limit: 200, workspaceId: context?.workspaceId }
     );
   }
 

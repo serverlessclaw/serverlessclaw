@@ -1,43 +1,38 @@
-# Audit Report: Perspective B: Evolution Cycle - 2026-04-26
+# Audit Report: Evolution Cycle (Hand → Shield → Scales) - 2026-04-26
 
 ## 🎯 Objective
 
-Verify the "Evolution Cycle" (Perspective B: Hand → Shield → Scales), focusing on how the system's execution (Hand), safety enforcement (Shield), and trust scoring (Scales) interact to enable autonomous evolution (Principle 10) while maintaining strict multi-tenant isolation and security.
+Verify the integrity and safety of the system's evolution cycle, specifically focusing on how agent actions are executed (The Hand), enforced by safety policies (The Shield), and learned from via reputation updates (The Scales). The goal was to ensure that multi-tenant isolation, atomic state updates, and adaptive communication modes are correctly implemented throughout this cycle.
 
 ## 🎯 Finding Type
 
-- Bug
-- Vulnerability
-- Principle Violation
+- Bug (Principle 13/14 Violation)
+- Race Condition (Atomic State Integrity)
+- Anti-Pattern (Adaptive Mode failure)
+- Architectural Drift (Inconsistent Multi-tenancy)
 
 ## 🔍 Investigation Path
 
-- Started at: `docs/governance/AUDIT-COVERAGE.md` which highlighted Perspective B as needing verification of loop integrity.
-- Examined Hand: `core/lib/agent/tool-executor.ts` to see how tool results trigger trust updates.
-- Examined Shield: `core/lib/safety/safety-engine.ts` and `core/lib/safety/safety-base.ts` for safety evaluation and violation logging.
-- Examined Scales: `core/lib/safety/trust-manager.ts` and `core/lib/registry/AgentRegistry.ts` for trust score persistence.
-- Examined Evolution Loop: `core/agents/qa.ts` to see how high-level verification rewards or penalizes initiators.
-- Observed: Significant multi-tenant isolation leaks in the trust and violation persistence layers.
+- Started at: `core/lib/agent/executor.ts` (Silo 2: The Hand).
+- Followed: Traced tool execution flow through `ToolExecutor` and `ToolSecurityValidator`.
+- Observed: Identified that agents in autonomous mode might not be using structured communication when continuing tasks.
+- Followed: Examined `SafetyEngine` and `SafetyRateLimiter` (Silo 3: The Shield).
+- Observed: Verified fail-closed logic in rate limiting but found missing collision protection in violation logging.
+- Followed: Analyzed `TrustManager` and `ConfigManager` (Silo 6: The Scales).
+- Observed: Identified inconsistent multi-tenant scoping in `appendToList` and missing agent enabled checks in collaboration creation.
 
 ## 🚨 Findings
 
-| ID  | Title | Type | Severity | Location | Recommended Action |
-| :-- | :--- | :--- | :------- | :------- | :----------------- |
-| 1 | Global Trust Updates via SafetyEngine | Bug | P0 | `core/lib/safety/safety-base.ts:18` | Update `SafetyBase.recordSuccess` and `recordFailure` to accept and propagate `workspaceId` to `TrustManager`. |
-| 2 | Global Safety Violation Persistence | Bug | P0 | `core/lib/safety/safety-base.ts:114` | Update `SafetyBase.persistViolation` to include `workspaceId` in the Partition Key if present. |
-| 3 | QA Agent Workspace Context Leak | Bug | P0 | `core/agents/qa.ts:42` | Destructure `workspaceId`, `teamId`, and `staffId` from payload and pass them to trust recording methods. |
-| 4 | Inconsistent Initiator Scoping in Evolution | Bug | P1 | `core/lib/safety/safety-engine.ts:511` | Ensure `handleClassCAction` loads agent config using the correct `workspaceId` when checking blast radius limits. |
+| ID  | Title                                           | Type | Severity | Location                                   | Recommended Action                                                                                                                                                    |
+| :-- | :---------------------------------------------- | :--- | :------- | :----------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Missing Principle 14 Check in Collaboration     | Bug  | P1       | `core/lib/memory/collaboration-operations.ts:40` | Implement check to ensure `initialParticipants` of type `agent` are enabled before including them in a new collaboration.                                             |
+| 2   | Adaptive Mode Failure in Continuation           | Bug  | P2       | `core/handlers/events/shared.ts:285`       | Pass `communicationMode: 'json'` in `processEventWithAgent` when the initiator is another agent to ensure structured, machine-readable feedback.                      |
+| 3   | Inconsistent Multi-tenancy in `appendToList`    | Drift| P2       | `core/lib/registry/config.ts:211`          | Refactor `appendToList` to accept `workspaceId` in options and construction an `effectiveKey` with the `WS#` prefix, matching other `ConfigManager` methods.         |
+| 4   | Missing Collision Protection in Violation Logs  | Race | P2       | `core/lib/safety/safety-base.ts:133`       | Use `ConditionExpression` (e.g., `attribute_not_exists(timestamp)`) in `persistViolation` PutCommand to prevent overwrites under high millisecond-level concurrency. |
+| 5   | Missing Collaboration Context in Evolution      | Gap  | P2       | `core/lib/safety/evolution-scheduler.ts:200` | Fetch and include `shared#collab#` context summary when triggering proactive evolution for actions originating from collaborations.                                   |
 
 ## 💡 Architectural Reflections
 
-### The Trust Scoping Gap
-While `TrustManager` and `ConfigManager` support workspace-scoped configurations, the `SafetyEngine` (Shield) abstraction layers drop this context. This is a critical failure in the "Evolution Cycle" because an agent's trust score is its "reputation" that earns it autonomy (Principle 9). 
+The evolution cycle remains the most complex and critical part of the system. While major "God Mode" bypasses have been fixed, the boundaries between the Hand, Shield, and Scales still show signs of inconsistent multi-tenant handling. Specifically, the manual key prefixing in `TrustManager` vs. the encapsulated scoping in `ConfigManager` indicates that our multi-tenancy abstraction layer is not yet fully transparent.
 
-If a `Coder` agent performs poorly in Workspace A but well in Workspace B, their global reputation is averaged if the context is dropped. Even worse, if the updates are global, an agent might reach the `AUTONOMY_THRESHOLD` (90) globally based on data from other tenants, granting it bypasses (God Mode) in a sensitive production workspace where it hasn't yet earned that trust.
-
-### Persistence Key Fragmentation
-The `SafetyBase.persistViolation` method manually constructs Partition Keys instead of using the unified `BaseMemoryProvider.getScopedUserId` utility. This led directly to the P0 isolation bug where safety violations are stored in a global bucket.
-
-**Related Anti-Patterns**: 
-- **Siloed Context**: The Hand (`ToolExecutor`) was fixed to pass context, but the Shield (`SafetyEngine`) and the Evolution loop (`QA Agent`) were missed, creating an inconsistent system state.
-- **Missing Principle 14 (Selection Integrity)**: Trust updates through `SafetyEngine` implicitly select the global config instead of the workspace config.
+Furthermore, the "Adaptive Mode failure" (Anti-Pattern #9) is a subtle but impactful issue. It causes agents to waste tokens and reasoning capacity on conversational filler when communicating with peers, violating **Principle 10 (Lean Evolution)**. Transitioning to a mandatory JSON-only protocol for agent-to-agent EventBridge signals is highly recommended.

@@ -41,8 +41,17 @@ export async function createCollaboration(
   ];
 
   if (input.initialParticipants) {
+    const { AgentRegistry } = await import('../registry');
     for (const p of input.initialParticipants) {
       if (p.id !== ownerId) {
+        // Sh10: Verify agent is enabled before adding (Principle 14)
+        if (p.type === 'agent') {
+          const agentConfig = await AgentRegistry.getAgentConfig(p.id, { workspaceId });
+          if (agentConfig && agentConfig.enabled === false) {
+            throw new Error(`Agent ${p.id} is disabled and cannot be invited to collaboration.`);
+          }
+        }
+
         participants.push({
           type: p.type,
           id: p.id,

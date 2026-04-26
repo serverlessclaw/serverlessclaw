@@ -196,6 +196,24 @@ export class EvolutionScheduler {
 
     const originalTask = `Execute tool ${action.toolName || action.action} with args ${action.args ? JSON.stringify(action.args) : '{}'}`;
 
+    // Sh8 Fix: Fetch collaboration context if applicable
+    let contextSummary: string | undefined;
+    if (action.traceId) {
+      try {
+        const { BaseMemoryProvider } = await import('../memory/base');
+        const { getCollaboration } = await import('../memory/collaboration-operations');
+        const mem = new BaseMemoryProvider();
+        const collab = await getCollaboration(mem, action.traceId, {
+          workspaceId: action.workspaceId,
+        });
+        if (collab) {
+          contextSummary = `[Collab Context]: ${collab.name} - ${collab.description || 'No description'}`;
+        }
+      } catch {
+        // Silently skip if summary cannot be retrieved
+      }
+    }
+
     await emitTypedEvent('evolution.scheduler', EventType.STRATEGIC_TIE_BREAK, {
       userId: action.userId || 'SYSTEM',
       workspaceId: action.workspaceId,
@@ -203,7 +221,7 @@ export class EvolutionScheduler {
       teamId: action.teamId,
       staffId: action.staffId,
       agentId: action.agentId,
-      task: `Proactive evolution for: ${action.action} (Reason: ${action.reason})`,
+      task: `Proactive evolution for: ${action.action} (Reason: ${action.reason}) ${contextSummary ? `\n\n${contextSummary}` : ''}`,
       originalTask,
       traceId: action.traceId,
       sessionId: action.traceId,

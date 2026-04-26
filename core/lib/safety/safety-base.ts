@@ -143,15 +143,20 @@ export class SafetyBase {
             TableName: tableName,
             Item: {
               userId: pk,
-              timestamp: sk,
+              timestamp: sk + attempt, // Add attempt offset as micro-jitter for collisions
               type: 'SAFETY_VIOLATION',
               value: violation,
               expiresAt,
             },
+            ConditionExpression: 'attribute_not_exists(userId)', // PK+SK collision guard
           })
         );
         return true;
-      } catch (e) {
+      } catch (e: any) {
+        if (e.name === 'ConditionalCheckFailedException') {
+          // If collision at exact millisecond, loop will retry with jitter offset
+          continue;
+        }
         if (attempt === maxRetries) {
           logger.error(`[SafetyBase] Failed to persist violation ${pk} after retries: ${e}`);
         }
