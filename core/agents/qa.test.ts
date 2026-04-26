@@ -199,7 +199,11 @@ describe('QA Agent — REOPEN cap and HITL escalation', () => {
 
       await handler(BASE_PAYLOAD as any, {} as any);
 
-      expect(safetyEngineMocks.recordSuccess).toHaveBeenCalledWith('coder', 10);
+      expect(safetyEngineMocks.recordSuccess).toHaveBeenCalledWith('coder', 10, {
+        workspaceId: undefined,
+        teamId: undefined,
+        staffId: undefined,
+      });
     });
 
     it('calls recordFailure on unsatisfied verification', async () => {
@@ -220,7 +224,14 @@ describe('QA Agent — REOPEN cap and HITL escalation', () => {
 
       expect(safetyEngineMocks.recordFailure).toHaveBeenCalledWith(
         'coder',
-        expect.stringContaining('Missing implementation')
+        expect.stringContaining('Missing implementation'),
+        1,
+        0,
+        {
+          workspaceId: undefined,
+          teamId: undefined,
+          staffId: undefined,
+        }
       );
     });
   });

@@ -508,7 +508,9 @@ export class SafetyEngine extends SafetyBase {
   ): Promise<SafetyEvaluationResult | null> {
     const error = await this.enforceClassCBlastRadius(agentId, action);
     if (error) {
-      const tier = (await AgentRegistry.getAgentConfig(agentId))?.safetyTier ?? SafetyTier.PROD;
+      const tier =
+        (await AgentRegistry.getAgentConfig(agentId, { workspaceId: ctx.workspaceId }))
+          ?.safetyTier ?? SafetyTier.PROD;
       return this.handleViolation(ctx, tier, action, 'blast_radius_limit', error);
     }
 

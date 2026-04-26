@@ -27,6 +27,9 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
     sessionId,
     initiatorId,
     depth,
+    workspaceId,
+    teamId,
+    staffId,
   } = payload;
   const gapIds = payload.metadata?.gapIds as string[];
 
@@ -36,6 +39,7 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
   }
 
   const baseUserId = extractBaseUserId(userId);
+  const trustContext = { workspaceId, teamId, staffId };
 
   // 0. Discovery & Initialization
   const { config, memory } = await initAgent(AgentType.QA);
@@ -99,7 +103,7 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
         const { SafetyEngine } = await import('../lib/safety/safety-engine');
         const safety = new SafetyEngine();
         // Sh6: Pass the numeric score from the judge to reward high-quality work
-        await safety.recordSuccess(initiatorId, parsedData?.score);
+        await safety.recordSuccess(initiatorId, parsedData?.score, trustContext);
       } catch (e) {
         logger.warn(`Failed to record trust success for ${initiatorId}:`, e);
       }
@@ -150,7 +154,10 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
         const safety = new SafetyEngine();
         await safety.recordFailure(
           initiatorId,
-          `QA Verification Failed: ${auditReport.substring(0, 150)}`
+          `QA Verification Failed: ${auditReport.substring(0, 150)}`,
+          1,
+          0,
+          trustContext
         );
       } catch (e) {
         logger.warn(`Failed to record trust penalty for ${initiatorId}:`, e);

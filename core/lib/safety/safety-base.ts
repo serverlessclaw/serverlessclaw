@@ -27,16 +27,21 @@ export class SafetyBase {
     agentId: string,
     reason: string,
     severity?: number,
-    qualityScore?: number
+    qualityScore?: number,
+    context?: import('./trust-manager').TrustContext
   ): Promise<number> {
-    return TrustManager.recordFailure(agentId, reason, severity, qualityScore);
+    return TrustManager.recordFailure(agentId, reason, severity, qualityScore, context);
   }
 
   /**
    * Records a success for an agent and increments its trust score.
    */
-  async recordSuccess(agentId: string, qualityScore?: number): Promise<number> {
-    return TrustManager.recordSuccess(agentId, qualityScore);
+  async recordSuccess(
+    agentId: string,
+    qualityScore?: number,
+    context?: import('./trust-manager').TrustContext
+  ): Promise<number> {
+    return TrustManager.recordSuccess(agentId, qualityScore, context);
   }
 
   /**
@@ -123,7 +128,9 @@ export class SafetyBase {
     const maxRetries = 2;
     const now = Date.now();
     // Unique key per violation using MemoryTable schema (userId=PK, timestamp=SK)
-    const pk = `${MEMORY_KEYS.SAFETY_VIOLATION_PREFIX}${violation.agentId}`;
+    // Sh2: Ensure multi-tenant isolation of audit trails
+    const basePk = `${MEMORY_KEYS.SAFETY_VIOLATION_PREFIX}${violation.agentId}`;
+    const pk = violation.workspaceId ? `WS#${violation.workspaceId}#${basePk}` : basePk;
     const sk = now;
 
     // Retention follows Traces (30 days by default)
