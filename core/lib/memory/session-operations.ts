@@ -12,7 +12,6 @@ import type { BaseMemoryProvider } from './base';
 import { filterPIIFromObject } from '../utils/pii';
 import { queryLatestContentByUserId } from './utils';
 import { RETENTION } from '../constants/memory';
-import { logger } from '../logger';
 import { sessionIdToSortKey, fnv1aHash } from '../utils/id-generator';
 
 /**
@@ -144,29 +143,9 @@ export async function saveConversationMeta(
   const normalizedUserId = userId.replace(/^(SESSIONS#)+/, '');
   const { type } = await RetentionManager.getExpiresAt('SESSIONS', normalizedUserId);
 
-  const isPinned = meta.isPinned === true;
-  let expiresAt: number | undefined;
-
-  if (isPinned) {
-    // B1 Fix: Enforce maximum pinned session duration to prevent unbounded storage growth
-    // Pinned sessions now have a max TTL of 365 days (configurable via RETENTION.MAX_PINNED_SESSION_DAYS)
-    const maxPinnedTTLSeconds = RETENTION.MAX_PINNED_SESSION_DAYS * 24 * 60 * 60;
-    expiresAt = Math.floor(Date.now() / 1000) + maxPinnedTTLSeconds;
-    logger.info(
-      `[Session] Pinned session will auto-expire in ${RETENTION.MAX_PINNED_SESSION_DAYS} days`,
-      {
-        userId: normalizedUserId,
-        sessionId,
-      }
-    );
-  } else {
-    const retention = await RetentionManager.getExpiresAt('SESSIONS', normalizedUserId);
-    expiresAt = retention.expiresAt;
-  }
-
-  let stableSortKey = sessionIdToSortKey(sessionId);
-
   const partitionKey = base.getScopedUserId(`SESSIONS#${normalizedUserId}`, scope);
+  const sortKeyBase = sessionIdToSortKey(sessionId);
+  let stableSortKey = sortKeyBase;
 
   const existingItems = await base.queryItems({
     KeyConditionExpression: 'userId = :pk AND #ts = :ts',
@@ -179,24 +158,48 @@ export async function saveConversationMeta(
     },
   });
 
-  let existingTitle = 'New Conversation';
-  let existingContent = '';
-  let existingIsPinned = false;
-  let existingWorkspaceId: string | undefined = undefined;
+  const existing = existingItems.length > 0 ? existingItems[0] : null;
+  if (existing && (existing.sessionId as string | undefined) && existing.sessionId !== sessionId) {
+    // Collision detected (same timestamp part, different sessionId)
+    // Resolve by using the stable hash of the full sessionId
+    stableSortKey = Number(fnv1aHash(sessionId));
+  }
 
-  if (existingItems.length > 0) {
-    const existing = existingItems[0];
-    const existingSessionId = existing.sessionId as string | undefined;
-    if (existingSessionId && existingSessionId !== sessionId) {
-      // Collision detected (same timestamp part, different sessionId)
-      // Resolve by using the stable hash of the full sessionId
-      stableSortKey = Number(fnv1aHash(sessionId));
+  const updateExprParts: string[] = [
+    'sessionId = :sessionId',
+    '#tp = :type',
+    'updatedAt = :now',
+    'updatedAtNumeric = :now',
+  ];
+  const attrNames: Record<string, string> = { '#tp': 'type' };
+  const attrValues: Record<string, unknown> = {
+    ':sessionId': sessionId,
+    ':type': type,
+    ':now': meta.updatedAt ?? Date.now(),
+  };
+
+  // Only update isPinned and expiresAt if explicitly provided or if it's a new session
+  if (meta.isPinned !== undefined) {
+    updateExprParts.push('isPinned = :pinned');
+    attrValues[':pinned'] = meta.isPinned;
+
+    if (meta.isPinned) {
+      const maxPinnedTTLSeconds = RETENTION.MAX_PINNED_SESSION_DAYS * 24 * 60 * 60;
+      attrValues[':exp'] = Math.floor(Date.now() / 1000) + maxPinnedTTLSeconds;
     } else {
-      existingTitle = (existing.title as string) ?? existingTitle;
-      existingContent = (existing.content as string) ?? existingContent;
-      existingIsPinned = (existing.isPinned as boolean) ?? existingIsPinned;
-      existingWorkspaceId = existing.workspaceId as string | undefined;
+      const retention = await RetentionManager.getExpiresAt('SESSIONS', normalizedUserId);
+      attrValues[':exp'] = retention.expiresAt;
     }
+    updateExprParts.push('expiresAt = :exp');
+  }
+
+  if (meta.title !== undefined) {
+    updateExprParts.push('title = :title');
+    attrValues[':title'] = meta.title;
+  }
+  if (meta.lastMessage !== undefined) {
+    updateExprParts.push('content = :content');
+    attrValues[':content'] = meta.lastMessage;
   }
 
   let workspaceId: string | undefined;
@@ -205,23 +208,28 @@ export async function saveConversationMeta(
   } else if (scope) {
     workspaceId = scope.workspaceId;
   }
+  if (workspaceId) {
+    updateExprParts.push('workspaceId = :workspaceId');
+    attrValues[':workspaceId'] = workspaceId;
+  }
 
-  let updateExpr =
-    'SET sessionId = :sessionId, #tp = :type, expiresAt = :exp, title = :title, content = :content, isPinned = :pinned, updatedAt = :now, updatedAtNumeric = :now';
-  const exprVals: Record<string, unknown> = {
-    ':sessionId': sessionId,
-    ':type': type,
-    ':exp': expiresAt ?? null,
-    ':title': meta.title !== undefined ? meta.title : existingTitle,
-    ':content': meta.lastMessage !== undefined ? meta.lastMessage : existingContent,
-    ':pinned': meta.isPinned !== undefined ? meta.isPinned : existingIsPinned,
-    ':now': meta.updatedAt ?? Date.now(),
-  };
-
-  const finalWorkspaceId = workspaceId ?? existingWorkspaceId;
-  if (finalWorkspaceId) {
-    updateExpr += ', workspaceId = :workspaceId';
-    exprVals[':workspaceId'] = finalWorkspaceId;
+  // For NEW sessions, ensure defaults are set
+  if (!existing) {
+    if (meta.title === undefined) {
+      updateExprParts.push('title = :defaultTitle');
+      attrValues[':defaultTitle'] = 'New Conversation';
+    }
+    if (meta.lastMessage === undefined) {
+      updateExprParts.push('content = :defaultContent');
+      attrValues[':defaultContent'] = '';
+    }
+    if (meta.isPinned === undefined) {
+      updateExprParts.push('isPinned = :defaultPinned');
+      attrValues[':defaultPinned'] = false;
+      const retention = await RetentionManager.getExpiresAt('SESSIONS', normalizedUserId);
+      updateExprParts.push('expiresAt = :defaultExp');
+      attrValues[':defaultExp'] = retention.expiresAt;
+    }
   }
 
   await base.updateItem({
@@ -229,11 +237,9 @@ export async function saveConversationMeta(
       userId: partitionKey,
       timestamp: stableSortKey,
     },
-    UpdateExpression: updateExpr,
-    ExpressionAttributeNames: {
-      '#tp': 'type',
-    },
-    ExpressionAttributeValues: exprVals,
+    UpdateExpression: `SET ${updateExprParts.join(', ')}`,
+    ExpressionAttributeNames: attrNames,
+    ExpressionAttributeValues: attrValues,
   });
 }
 

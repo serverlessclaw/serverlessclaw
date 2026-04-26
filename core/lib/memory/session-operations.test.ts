@@ -186,7 +186,7 @@ describe('session-operations', () => {
           ExpressionAttributeValues: expect.objectContaining({
             ':sessionId': 'sess1',
             ':title': 'Chat 1',
-            ':pinned': false,
+            ':defaultPinned': false,
           }),
         })
       );

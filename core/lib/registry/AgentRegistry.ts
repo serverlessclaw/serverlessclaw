@@ -362,13 +362,10 @@ export class AgentRegistry {
     workspaceId: string = 'default',
     daysThreshold: number = 30
   ): Promise<number> {
-    const usageOptions = workspaceId !== 'default' ? { workspaceId } : {};
-    const usageKey =
-      workspaceId !== 'default'
-        ? `WS#${workspaceId}#${DYNAMO_KEYS.TOOL_USAGE_PREFIX}`
-        : DYNAMO_KEYS.TOOL_USAGE;
+    const scope = workspaceId !== 'default' ? { workspaceId } : undefined;
+    const usageKey = DYNAMO_KEYS.TOOL_USAGE;
 
-    const usage = (await ConfigManager.getRawConfig(usageKey)) as Record<
+    const usage = (await ConfigManager.getRawConfig(usageKey, scope)) as Record<
       string,
       { count: number; firstRegistered: number }
     >;
@@ -383,24 +380,21 @@ export class AgentRegistry {
 
     if (lowUtilTools.length === 0) return 0;
 
-    const allConfigs = await this.getAllConfigs(usageOptions);
+    const allConfigs = await this.getAllConfigs(scope);
     let totalPruned = 0;
 
     for (const agentId of Object.keys(allConfigs)) {
       // Fetch the full config which includes applied overrides
-      const config = await this.getAgentConfig(agentId, usageOptions);
+      const config = await this.getAgentConfig(agentId, scope);
       if (!config) continue;
 
       const pruneTargets = config.tools?.filter((t) => lowUtilTools.includes(t)) ?? [];
 
       if (pruneTargets.length > 0) {
-        const overridesKey =
-          workspaceId !== 'default'
-            ? `WS#${workspaceId}#${DYNAMO_KEYS.AGENT_TOOL_OVERRIDES}`
-            : DYNAMO_KEYS.AGENT_TOOL_OVERRIDES;
+        const overridesKey = DYNAMO_KEYS.AGENT_TOOL_OVERRIDES;
 
-        await ConfigManager.atomicRemoveFromMap(overridesKey, agentId, pruneTargets).catch((e) =>
-          logger.warn(`[REGISTRY] Failed to atomically prune batch tools for ${agentId}:`, e)
+        await ConfigManager.atomicRemoveFromMap(overridesKey, agentId, pruneTargets, scope).catch(
+          (e) => logger.warn(`[REGISTRY] Failed to atomically prune batch tools for ${agentId}:`, e)
         );
 
         totalPruned += pruneTargets.length;
@@ -537,8 +531,9 @@ export class AgentRegistry {
         })
       );
       return true;
-    } catch (e: any) {
-      if (e.name === 'ConditionalCheckFailedException' || e.name === 'ValidationException') {
+    } catch (e: unknown) {
+      const err = e as { name?: string };
+      if (err.name === 'ConditionalCheckFailedException' || err.name === 'ValidationException') {
         throw e;
       }
       logger.error(`[REGISTRY] Failed to conditionally set trustScore for ${agentId}:`, e);
@@ -592,6 +587,24 @@ export class AgentRegistry {
     options?: { workspaceId?: string }
   ): Promise<void> {
     await ConfigManager.atomicUpdateMapEntity(DYNAMO_KEYS.AGENTS_CONFIG, agentId, updates, options);
+  }
+
+  /**
+   * Atomically increments the trust score for an agent.
+   * Implements Principle 15 (Monotonic Progress).
+   */
+  static async atomicIncrementTrustScore(
+    agentId: string,
+    delta: number,
+    options: { workspaceId?: string; min?: number; max?: number } = {}
+  ): Promise<number> {
+    return ConfigManager.atomicIncrementMapField(
+      DYNAMO_KEYS.AGENTS_CONFIG,
+      agentId,
+      'trustScore',
+      delta,
+      options
+    );
   }
 
   /**

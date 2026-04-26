@@ -438,12 +438,14 @@ export class ConfigManager {
   public static async atomicRemoveFromMap(
     key: string,
     entityId: string,
-    itemsToRemove: unknown[]
+    itemsToRemove: unknown[],
+    options: { workspaceId?: string } = {}
   ): Promise<void> {
     const tableName = this._getTableName();
     if (!tableName) return;
 
-    this.configCache.delete(key);
+    const effectiveKey = options.workspaceId ? `WS#${options.workspaceId}#${key}` : key;
+    this.configCache.delete(effectiveKey);
 
     let retryCount = 0;
     const maxRetries = 5;
@@ -453,7 +455,7 @@ export class ConfigManager {
         const { Item } = await getDocClient().send(
           new GetCommand({
             TableName: tableName,
-            Key: { key },
+            Key: { key: effectiveKey },
             ProjectionExpression: '#val.#id',
             ExpressionAttributeNames: { '#val': 'value', '#id': entityId },
           })
@@ -472,7 +474,7 @@ export class ConfigManager {
         await getDocClient().send(
           new UpdateCommand({
             TableName: tableName,
-            Key: { key },
+            Key: { key: effectiveKey },
             UpdateExpression: 'SET #val.#id = :newList',
             ConditionExpression: '#val.#id = :oldList',
             ExpressionAttributeNames: { '#val': 'value', '#id': entityId },
@@ -494,12 +496,14 @@ export class ConfigManager {
     key: string,
     entityId: string,
     field: string,
-    itemsToRemove: unknown[]
+    itemsToRemove: unknown[],
+    options: { workspaceId?: string } = {}
   ): Promise<void> {
     const tableName = this._getTableName();
     if (!tableName) return;
 
-    this.configCache.delete(key);
+    const effectiveKey = options.workspaceId ? `WS#${options.workspaceId}#${key}` : key;
+    this.configCache.delete(effectiveKey);
 
     let retryCount = 0;
     const maxRetries = 5;
@@ -509,7 +513,7 @@ export class ConfigManager {
         const { Item } = await getDocClient().send(
           new GetCommand({
             TableName: tableName,
-            Key: { key },
+            Key: { key: effectiveKey },
             ProjectionExpression: '#val.#id.#field',
             ExpressionAttributeNames: { '#val': 'value', '#id': entityId, '#field': field },
           })
@@ -529,7 +533,7 @@ export class ConfigManager {
         await getDocClient().send(
           new UpdateCommand({
             TableName: tableName,
-            Key: { key },
+            Key: { key: effectiveKey },
             UpdateExpression: 'SET #val.#id.#field = :newList',
             ConditionExpression: '#val.#id.#field = :oldList',
             ExpressionAttributeNames: { '#val': 'value', '#id': entityId, '#field': field },
@@ -642,5 +646,75 @@ export class ConfigManager {
         throw e;
       }
     }
+  }
+
+  /**
+   * Atomically increments a numeric field within a map entity.
+   * Implements Principle 15 (Monotonic Progress).
+   */
+  public static async atomicIncrementMapField(
+    key: string,
+    entityId: string,
+    field: string,
+    delta: number,
+    options: { workspaceId?: string; min?: number; max?: number } = {}
+  ): Promise<number> {
+    const tableName = this._getTableName();
+    if (!tableName) throw new Error('ConfigTable not linked');
+
+    const effectiveKey = options.workspaceId ? `WS#${options.workspaceId}#${key}` : key;
+    this.configCache.delete(effectiveKey);
+
+    const { UpdateCommand, GetCommand } = await import('@aws-sdk/lib-dynamodb');
+
+    let retryCount = 0;
+    while (retryCount < 5) {
+      try {
+        const { Item } = await getDocClient().send(
+          new GetCommand({
+            TableName: tableName,
+            Key: { key: effectiveKey },
+          })
+        );
+        const current = Item?.value as Record<string, Record<string, unknown>>;
+        const entity = current?.[entityId] || {};
+        const currentValue = (entity[field] as number) ?? 0;
+
+        let newValue = currentValue + delta;
+        if (options.min !== undefined) newValue = Math.max(options.min, newValue);
+        if (options.max !== undefined) newValue = Math.min(options.max, newValue);
+
+        if (newValue === currentValue) return currentValue;
+
+        await getDocClient().send(
+          new UpdateCommand({
+            TableName: tableName,
+            Key: { key: effectiveKey },
+            UpdateExpression: `SET #val.#id.#field = :newVal`,
+            ConditionExpression:
+              'attribute_exists(#val.#id) AND (#val.#id.#field = :oldVal OR (attribute_not_exists(#val.#id.#field) AND :oldVal = :zero))',
+            ExpressionAttributeNames: {
+              '#val': 'value',
+              '#id': entityId,
+              '#field': field,
+            },
+            ExpressionAttributeValues: {
+              ':newVal': newValue,
+              ':oldVal': currentValue,
+              ':zero': 0,
+            },
+          })
+        );
+        return newValue;
+      } catch (e: unknown) {
+        const err = e as { name?: string };
+        if (err.name === 'ConditionalCheckFailedException') {
+          retryCount++;
+          continue;
+        }
+        throw e;
+      }
+    }
+    throw new Error(`Failed to atomically increment ${field} after ${retryCount} retries`);
   }
 }

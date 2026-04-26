@@ -151,49 +151,33 @@ export class TrustManager {
     delta: number,
     workspaceId?: string
   ): Promise<number> {
-    let retryCount = 0;
-    while (retryCount < 5) {
-      try {
-        const config = await AgentRegistry.getAgentConfig(agentId, { workspaceId });
-        if (!config) throw new Error(`Agent ${agentId} not found`);
-
-        if (config.enabled === false) {
-          logger.warn(`[TrustManager] Skipping trust update for disabled agent ${agentId}.`);
-          return config.trustScore ?? TRUST.DEFAULT_SCORE;
-        }
-
-        if (delta === 0) return config.trustScore ?? TRUST.DEFAULT_SCORE;
-
-        const currentScore = config.trustScore ?? TRUST.DEFAULT_SCORE;
-        const newScore = Math.max(TRUST.MIN_SCORE, Math.min(TRUST.MAX_SCORE, currentScore + delta));
-
-        if (newScore === currentScore) return currentScore;
-
-        const success = await AgentRegistry.atomicSetAgentTrustScore(
-          agentId,
-          currentScore,
-          newScore,
-          { workspaceId }
-        );
-        if (success) {
-          await this.recordHistory(agentId, newScore, { workspaceId });
-          return newScore;
-        }
-      } catch (e: any) {
-        if (e.name === 'ConditionalCheckFailedException' || e.name === 'ValidationException') {
-          retryCount++;
-          await new Promise((res) => setTimeout(res, Math.random() * 100)); // Jitter
-          continue;
-        }
-        logger.error(`[TrustManager] Failed to atomically update trust for ${agentId}:`, e);
-        // Fail-closed: Throw error to prevent silent drop of trust penalties
-        throw e;
-      }
+    const config = await AgentRegistry.getAgentConfig(agentId, { workspaceId });
+    if (!config) {
+      throw new Error(`Agent ${agentId} not found`);
     }
 
-    throw new Error(
-      `[TrustManager] Exhausted retries attempting to atomically update trustScore for ${agentId}`
-    );
+    // Principle 14: Selection Integrity - skip updates for disabled agents
+    if (config.enabled === false) {
+      return config.trustScore ?? TRUST.DEFAULT_SCORE;
+    }
+
+    if (delta === 0) {
+      return config.trustScore ?? TRUST.DEFAULT_SCORE;
+    }
+
+    try {
+      const newScore = await AgentRegistry.atomicIncrementTrustScore(agentId, delta, {
+        workspaceId,
+        min: TRUST.MIN_SCORE,
+        max: TRUST.MAX_SCORE,
+      });
+
+      await this.recordHistory(agentId, newScore, { workspaceId });
+      return newScore;
+    } catch (err) {
+      logger.error(`[TrustManager] Failed to atomically update trust for ${agentId}:`, err);
+      throw err;
+    }
   }
 
   private static async logPenalty(penalty: TrustPenalty, context?: TrustContext): Promise<void> {
@@ -252,7 +236,7 @@ export class TrustManager {
     const next = Math.max(TRUST.DECAY_BASELINE, score - TRUST.DECAY_RATE * multiplier);
     const delta = Math.round((next - score) * 100) / 100;
     if (delta < 0) {
-      await AgentRegistry.atomicSetAgentTrustScore(agentId, score, next, {
+      await AgentRegistry.atomicIncrementTrustScore(agentId, delta, {
         workspaceId: context?.workspaceId,
       })
         .then(() => this.recordHistory(agentId, next, context))

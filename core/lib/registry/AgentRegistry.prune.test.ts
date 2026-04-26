@@ -84,7 +84,8 @@ describe('AgentRegistry Pruning', () => {
     expect(ConfigManager.atomicRemoveFromMap).toHaveBeenCalledWith(
       DYNAMO_KEYS.AGENT_TOOL_OVERRIDES,
       'WS#default#agent1',
-      ['toolA']
+      ['toolA'],
+      undefined
     );
   });
 
@@ -121,7 +122,8 @@ describe('AgentRegistry Pruning', () => {
     expect(ConfigManager.atomicRemoveFromMap).toHaveBeenCalledWith(
       DYNAMO_KEYS.AGENT_TOOL_OVERRIDES,
       'superclaw',
-      ['toolA']
+      ['toolA'],
+      undefined
     );
   });
 

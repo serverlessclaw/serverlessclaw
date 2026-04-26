@@ -211,7 +211,7 @@ export class DistributedState {
         }
       }
 
-      if (!state) return true; // Safety fallback for corrupted record
+      if (!state) return false; // Safety fallback for corrupted record (Fail-Closed)
 
       // 2. Calculate refill
       const lastRefill = state.lastRefill as number;
