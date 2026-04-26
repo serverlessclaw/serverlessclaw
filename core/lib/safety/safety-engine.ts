@@ -261,7 +261,7 @@ export class SafetyEngine extends SafetyBase {
     const role = ctx.userRole;
 
     // SYSTEM and autonomous background tasks skip RBAC as they represent the hive itself
-    if (ctx.userId === 'SYSTEM' || !role) {
+    if (ctx.userId === 'SYSTEM') {
       return { allowed: true, requiresApproval: false };
     }
 

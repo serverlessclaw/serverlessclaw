@@ -1,36 +1,30 @@
-# Audit Report: Perspective C: Identity Journey - 2026-04-26
+# Audit Report: Identity Journey (Silo 3: The Shield) - 2026-04-26
 
 ## 🎯 Objective
 
-Verify the "Identity Journey" (Perspective C: Brain -> Spine -> Shield), specifically how identity and permissions (such as `workspaceId`, `teamId`, `staffId`) propagate correctly across all surfaces from the entry point through the routing layer to the execution shield.
+Verify identity and permissions propagate correctly across all surfaces, specifically focusing on Perspective C: The "Identity Journey" (Brain → Spine → Shield). The goal was to ensure that identity constraints and RBAC rules are strictly enforced by the `SafetyEngine` when agent actions are executed.
 
 ## 🎯 Finding Type
 
-- Bug 
+- Bug (Fail-Open RBAC Bypass)
 
 ## 🔍 Investigation Path
 
-- Started at: `docs/governance/AUDIT.md` and `docs/governance/ANTI-PATTERNS.md` to identify under-audited areas.
-- Selected Perspective C: Identity Journey.
-- Followed: Examined webhook entry points (`core/handlers/webhook.ts`), session state lock acquisition (`core/lib/session/session-state.ts`), and agent routing (`core/handlers/agent-runner.ts`).
-- Observed: Missing propagation of the identity scope parameter (`workspaceId`, `teamId`, `staffId`) during session lock acquisition, causing the session to drop tenant context.
+- Started at: `core/lib/safety/safety-engine.ts` (Silo 3: The Shield).
+- Followed: Traced the `evaluateAction` method signature to see how user identity (`userId` and `userRole`) is processed and validated within the `SafetyEngine`.
+- Observed: I noticed that `SafetyEngine.validateRBAC` uses `ctx.userRole` to enforce access controls. If `!role` is true, it immediately returns `{ allowed: true, requiresApproval: false }`, intending to whitelist SYSTEM tasks.
+- Followed: Traced upstream to where `evaluateAction` is called in the agent execution flow.
+- Observed: In `core/lib/agent/tool-security.ts`, the `ToolSecurityValidator.validate` method builds a `context` object to pass to `safety.evaluateAction`. Although `ToolExecutionContext` contains the `userRole` property, it is omitted when constructing the context object for the `SafetyEngine`. Consequently, `ctx.userRole` evaluates to `undefined`, which triggers the fallback in `validateRBAC` and allows unauthorized execution of restricted `Class C` actions (e.g., `iam_change`) by any user, including `VIEWER`.
 
 ## 🚨 Findings
 
-| ID  | Title | Type | Severity | Location | Recommended Action |
-| :-- | :--- | :--- | :------- | :------- | :----------------- |
-| 1 | Dropped Workspace/Tenant Scope on Session Lock Acquisition (`webhook.ts`) | Bug | P0 | `core/handlers/webhook.ts:185` | Update `sessionStateManager.acquireProcessing(chatId, lambdaRequestId, { workspaceId, teamId, staffId })` to correctly pass the identity scope. |
-| 2 | Dropped Workspace/Tenant Scope on Session Lock Acquisition (`agent-runner.ts`) | Bug | P0 | `core/handlers/agent-runner.ts:97` | Update `sessionStateManager.acquireProcessing(sessionId, agentId, { workspaceId, teamId, staffId })` to propagate the scope correctly. |
+| ID  | Title                                           | Type | Severity | Location                                   | Recommended Action                                                                                                                                                    |
+| :-- | :---------------------------------------------- | :--- | :------- | :----------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Fail-Open RBAC Bypass due to missing `userRole` | Bug  | P0       | `core/lib/agent/tool-security.ts:44`       | Pass `userRole: execContext.userRole` into the context object provided to `safety.evaluateAction` in `ToolSecurityValidator.validate`.                                |
+| 2   | Implicit System Whitelist causes Fail-Open      | Bug  | P1       | `core/lib/safety/safety-engine.ts:258-260` | Require an explicit `ctx.userId === 'SYSTEM'` match instead of implicitly treating `!role` as a system bypass in `validateRBAC` to enforce default-deny mechanisms. |
 
 ## 💡 Architectural Reflections
 
-### Context Dropping in `SessionStateManager.acquireProcessing`
-The `SessionStateManager.acquireProcessing` method accepts an optional third argument `scope` containing `{ workspaceId, teamId, staffId }`. If this argument is omitted, the DynamoDB UpdateCommand explicitly sets `workspaceId = null` (and similar for teamId/staffId). 
+The integration boundary between The Hand (`ToolExecutor` / `ToolSecurityValidator`) and The Shield (`SafetyEngine`) currently relies on loosely typed implicit context object mapping. Because TypeScript did not enforce that all optional properties mapped faithfully across boundaries, the omission of `userRole` went unnoticed, causing a fail-open state. 
 
-Because `webhook.ts` (the "Brain" entry point) and `agent-runner.ts` (the "Spine" worker) fail to pass this `scope` parameter when calling `acquireProcessing`, any active session effectively has its tenant context wiped out in the database. 
-
-When a session lock is released and pending messages are re-emitted (B3 Awareness / P0 Reliability Fix), they are re-emitted with `workspaceId: null`. This breaks tenant isolation and causes downstream components (like `AgentRouter` and `SafetyEngine` in the "Shield") to evaluate actions without the correct workspace context, potentially leading to unauthorized resource access or cross-tenant data contamination.
-
-**Related Anti-Patterns**: 
-- **Siloed Fixes**: A previous audit ("audit-2026-04-24-identity-journey.md") fixed unauthenticated webhooks but missed validating the full propagation of the authenticated scope into the session state manager. 
-- **Missing Scope Validation**: Functions that mutate state must enforce that required contextual dimensions (like `workspaceId` in a multi-tenant system) are explicitly passed. Making `scope` optional in `acquireProcessing` was an architectural misstep that allowed this bug to go unnoticed by the TypeScript compiler.
+This is a classic manifestation of Anti-Pattern #8 (Siloed Fixes leading to broken contracts) combined with a fail-open security bypass. To resolve this holistically, we should enforce strict cross-silo identity types (e.g., standardizing an `IdentityContext` interface that both `ToolExecutionContext` and `SafetyEngine` require explicitly).

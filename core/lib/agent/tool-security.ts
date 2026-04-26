@@ -40,6 +40,7 @@ export class ToolSecurityValidator {
       resource: resourcePath,
       traceId: execContext.traceId,
       userId: execContext.userId,
+      userRole: execContext.userRole,
       workspaceId: execContext.workspaceId,
       teamId: execContext.teamId,
       staffId: execContext.staffId,
