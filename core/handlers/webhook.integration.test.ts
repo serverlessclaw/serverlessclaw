@@ -144,7 +144,8 @@ describe('Webhook Handler Integration', () => {
     expect((result as any).statusCode).toBe(200);
     expect(mockSessionStateManagerInstance.acquireProcessing).toHaveBeenCalledWith(
       '789',
-      'test-request-id'
+      'test-request-id',
+      { workspaceId: undefined, teamId: undefined, staffId: undefined }
     );
     expect(mockSessionStateManagerInstance.releaseProcessing).toHaveBeenCalledWith(
       '789',

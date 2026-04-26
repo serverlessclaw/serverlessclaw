@@ -94,7 +94,11 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
   const HEARTBEAT_INTERVAL_MS = 60000; // Simplified fixed heartbeat (60s)
 
   if (sessionId && agentId) {
-    lockAcquired = await sessionStateManager.acquireProcessing(sessionId, agentId);
+    lockAcquired = await sessionStateManager.acquireProcessing(sessionId, agentId, {
+      workspaceId,
+      teamId,
+      staffId,
+    });
 
     if (!lockAcquired) {
       logger.info(`[AgentRunner] Session ${sessionId} busy. Queueing task for ${agentId}.`);

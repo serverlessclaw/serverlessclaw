@@ -182,7 +182,11 @@ export const handler = async (
 
   // 1. Try to acquire processing flag
   logger.info('[WEBHOOK] Checking processing status...');
-  const canProcess = await sessionStateManager.acquireProcessing(chatId, lambdaRequestId);
+  const canProcess = await sessionStateManager.acquireProcessing(chatId, lambdaRequestId, {
+    workspaceId,
+    teamId,
+    staffId,
+  });
 
   if (!canProcess) {
     logger.info(`[WEBHOOK] Session ${chatId} busy, queuing message...`);
