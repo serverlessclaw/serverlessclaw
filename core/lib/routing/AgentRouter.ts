@@ -27,6 +27,7 @@ export interface AgentPerformanceMetrics {
   avgTokensPerInvocation: number;
   capabilityScore: number;
   compositeScore: number;
+  trustScore?: number;
 }
 
 /**
@@ -163,13 +164,11 @@ export class AgentRouter {
     }
   }
 
-  /**
-   * Retrieves performance metrics for an agent.
-   */
   static async getMetrics(
     agentId: string,
     capabilityScore = 1.0,
-    workspaceId?: string
+    workspaceId?: string,
+    trustScore?: number
   ): Promise<AgentPerformanceMetrics> {
     let successRate = 0.5;
     let avgTokens = 0;
@@ -195,7 +194,10 @@ export class AgentRouter {
     const successWeight = await ConfigManager.getTypedConfig('router_success_weight', 1.0, {
       workspaceId,
     });
-    const compositeScore = capabilityScore * successRate * successWeight;
+
+    // P1 Fix: Normalize trustScore (0-100) to 0-1 and include in routing decision
+    const normalizedTrust = (trustScore ?? 80) / 100.0;
+    const compositeScore = capabilityScore * successRate * successWeight * normalizedTrust;
 
     return {
       agentId,
@@ -203,6 +205,7 @@ export class AgentRouter {
       avgTokensPerInvocation: Math.round(avgTokens),
       capabilityScore,
       compositeScore: Math.round(compositeScore * 1000) / 1000,
+      trustScore,
     };
   }
 
@@ -267,7 +270,15 @@ export class AgentRouter {
     // Fetch performance metrics and reputations in parallel
     const [metrics, reputations] = await Promise.all([
       Promise.all(
-        enabledIds.map((id) => this.getMetrics(id, capabilityScores?.[id] ?? 1.0, workspaceId))
+        enabledIds.map((id) => {
+          const config = configs[candidates.indexOf(id)];
+          return this.getMetrics(
+            id,
+            capabilityScores?.[id] ?? 1.0,
+            workspaceId,
+            config?.trustScore
+          );
+        })
       ),
       getReputations(sharedMemoryProvider, enabledIds, scope),
     ]);

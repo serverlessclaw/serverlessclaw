@@ -157,12 +157,16 @@ export class TokenTracker {
     const expiresAt = Math.floor(Date.now() / 1000) + TTL_DAYS_ROLLUP * TIME.SECONDS_IN_DAY;
 
     const rollupKeys = [];
-    if (!scope || (!scope.workspaceId && !scope.teamId)) {
-      rollupKeys.push(`TOKEN_ROLLUP#${agentId}`);
+    // Unified global aggregate
+    rollupKeys.push(`GLOBAL#TOKEN_ROLLUP#${agentId}`);
+
+    if (scope?.workspaceId) {
+      rollupKeys.push(`WS#${scope.workspaceId}#TOKEN_ROLLUP#${agentId}`);
+    } else if (scope?.teamId) {
+      rollupKeys.push(`TEAM#${scope.teamId}#TOKEN_ROLLUP#${agentId}`);
     } else {
-      rollupKeys.push(`GLOBAL#TOKEN_ROLLUP#${agentId}`);
-      if (scope.workspaceId) rollupKeys.push(`WS#${scope.workspaceId}#TOKEN_ROLLUP#${agentId}`);
-      if (scope.teamId) rollupKeys.push(`TEAM#${scope.teamId}#TOKEN_ROLLUP#${agentId}`);
+      // Legacy unscoped key for backward compatibility
+      rollupKeys.push(`TOKEN_ROLLUP#${agentId}`);
     }
 
     for (const userId of rollupKeys) {
@@ -288,7 +292,7 @@ export class TokenTracker {
     } else if (scope?.teamId) {
       userId = `TEAM#${scope.teamId}#TOKEN_ROLLUP#${agentId}`;
     } else {
-      userId = `TOKEN_ROLLUP#${agentId}`;
+      userId = `GLOBAL#TOKEN_ROLLUP#${agentId}`;
     }
 
     try {

@@ -1,33 +1,36 @@
-# Audit Report: Perspective D: Trust Loop - 2026-04-26
+# Audit Report: Trust Loop (Eye → Scales → Spine) - 2026-04-26
 
 ## 🎯 Objective
 
-Verify the "Trust Loop" (Perspective D: Eye -> Scales -> Spine), focusing on how feedback (failures, anomalies, successes) flows from observation into the `TrustManager` (Scales) and securely updates an agent's trust score without introducing race conditions or fail-open behaviors.
+Verify the integrity of the system's "Trust Loop" (Perspective D), ensuring that performance telemetry from the Eye correctly feeds reputation updates in the Scales, which then authoritative influence routing decisions in the Spine.
 
 ## 🎯 Finding Type
 
-- Bug
+- Bug (Telemetry Data Loss)
+- Architectural Drift (Disconnected Trust Loop)
+- Principle Violation (Non-Atomic Updates)
 
 ## 🔍 Investigation Path
 
-- Started at: `docs/governance/AUDIT.md` and `docs/governance/ANTI-PATTERNS.md` to identify under-audited areas.
-- Selected Perspective D: Trust Loop.
-- Examined `core/lib/safety/trust-manager.ts` and how it updates agent trust scores.
-- Noticed `TrustManager.updateTrustScore` calculated bounds by making a first non-clamped atomic update `AgentRegistry.atomicAddAgentField`, observing the new score, and if out of bounds (`< MIN_SCORE` or `> MAX_SCORE`), issuing a *second* atomic update to correct it.
-- Recognized this as a classic race condition (Anti-Pattern: "Direct object-level overwrite instead of atomic update" / "Race condition in TrustManager"). If two processes penalized an agent concurrently near 0, both would observe negative scores and both would apply positive clamping corrections, leading to the agent incorrectly gaining trust.
+- Started at: `core/lib/metrics/token-usage.ts` (Silo 5: The Eye).
+- Followed: Traced how token usage and success/failure records are rolled up and queried.
+- Observed: Identified that `TokenTracker.updateRollup` writes to `GLOBAL#...` for scoped data, but `getRollupRange` (used by the Router) never reads from this partition, causing global analysis to ignore tenant-specific successes/failures.
+- Followed: Analyzed `core/lib/routing/AgentRouter.ts` (Silo 1: The Spine) to see how it uses trust and reputation.
+- Observed: Discovered that `AgentRouter` ignores the `trustScore` (calculated by `TrustManager` in Silo 6) and instead only uses `reputation` (calculated in Silo 4). These two systems are disconnected, leading to inconsistent agent selection.
+- Followed: Examined `core/lib/memory/reputation-operations.ts` (Silo 4: The Brain).
+- Observed: Identified that `updateReputation` uses a Get-Calculate-Put pattern, violating **Principle 15 (Monotonic Progress)**.
 
 ## 🚨 Findings
 
-| ID  | Title | Type | Severity | Location | Recommended Action |
-| :-- | :--- | :--- | :------- | :------- | :----------------- |
-| 1 | Race Condition in Trust Score Clamping | Bug | P0 | `core/lib/safety/trust-manager.ts:167` | Replace the two-step `atomicAddAgentField` approach with a retry-based conditional optimistic locking method (`atomicSetAgentTrustScore`) that calculates bounds precisely in memory before atomically verifying and updating DynamoDB. |
+| ID  | Title                                           | Type | Severity | Location                                   | Recommended Action                                                                                                                                                    |
+| :-- | :---------------------------------------------- | :--- | :------- | :----------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Telemetry Fragmentation (Metrics Data Loss)     | Bug  | P1       | `core/lib/metrics/token-usage.ts:160, 285` | Update `getRollupRange` to query `GLOBAL#TOKEN_ROLLUP#` when no scope is provided, ensuring all tenant data is aggregated for global routing decisions.             |
+| 2   | Disconnected Trust Loop (Scales bypassed)       | Drift| P1       | `core/lib/routing/AgentRouter.ts:175, 305` | Incorporate agent `trustScore` into the composite score calculation in `AgentRouter`, ensuring that tool-level trust penalties actually impact agent selection.       |
+| 3   | Non-Atomic Reputation Updates (Principle 15)    | Race | P2       | `core/lib/memory/reputation-operations.ts` | Refactor `updateReputation` to use atomic DynamoDB `ADD` operations for counts and latency, rather than application-layer calculations based on stale reads.        |
+| 4   | Missing Trust-Driven Mode Enforcement           | Gap  | P2       | `core/lib/agent.ts`                        | Implement the "Trust < 95" threshold logic to force HITL (Human-in-the-Loop) mode for agents with degraded reputation, as described in `ARCHITECTURE.md`.            |
 
 ## 💡 Architectural Reflections
 
-### Non-Atomic State Clamping in DynamoDB
-DynamoDB `UpdateExpression` does not natively support `Math.min()` or `Math.max()`. To implement a bounded metric like `trustScore` (0 to 100), developers historically leaned on an anti-pattern: let DynamoDB do `ADD :val` natively, and if the result escapes the boundary, follow up with another `ADD` to pull it back. This inherently assumes no other process will mutate the score in between the two operations.
+The system currently maintains two parallel "truth" sources for agent reliability: **Reputation** (task-level) and **TrustScore** (tool-level). While these serve different granularities, they are currently silos that do not talk to each other. This creates a risk where an agent that fails 50% of its tool calls (low trust) but eventually finishes its tasks (high reputation) is still favored by the router, leading to inefficient "looping" behavior and wasted tokens.
 
-In a highly concurrent multi-agent system, multiple failures can be reported to the `TrustManager` simultaneously. When `trustScore` hovers near 0, dual negative updates will produce multiple positive pull-backs, compounding into a net-positive score change (i.e. rewarding an agent for failing).
-
-**Resolution:**
-The system was refactored to use an optimistic locking loop. We added `AgentRegistry.atomicSetAgentTrustScore(agentId, expectedOldScore, newScore)`, utilizing DynamoDB's `ConditionExpression`. If the score is modified by another thread mid-calculation, `ConditionalCheckFailedException` is thrown, caught, and gracefully retried. This strictly adheres to Principle 13 (Atomic State Integrity) and eliminates the vulnerability.
+To resolve this, we should unify Silo 6 (The Scales) and Silo 4 (The Brain: Reputation) into a single authoritative **Trust Engine** that feeds the Spine.

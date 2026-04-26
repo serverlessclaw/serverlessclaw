@@ -188,11 +188,21 @@ describe('TokenTracker', () => {
 
       expect(mockSend).toHaveBeenCalledWith(expect.any(UpdateCommand));
       const firstCall = mockSend.mock.calls[0][0] as UpdateCommand;
-      expect(firstCall.input.Key?.userId).toBe('TOKEN_ROLLUP#test-agent');
+      // Now defaults to GLOBAL aggregate
+      expect(firstCall.input.Key?.userId).toBe('GLOBAL#TOKEN_ROLLUP#test-agent');
     });
 
     it('should calculate average in second pass', async () => {
+      // 4 calls: 2 keys (GLOBAL and Legacy), each with 2 passes (init and avg)
       mockSend
+        .mockResolvedValueOnce({
+          Attributes: {
+            totalInputTokens: 100,
+            totalOutputTokens: 50,
+            invocationCount: 1,
+          },
+        })
+        .mockResolvedValueOnce({})
         .mockResolvedValueOnce({
           Attributes: {
             totalInputTokens: 100,
@@ -209,7 +219,7 @@ describe('TokenTracker', () => {
         success: true,
       });
 
-      expect(mockSend).toHaveBeenCalledTimes(2);
+      expect(mockSend).toHaveBeenCalledTimes(4);
       const secondCall = mockSend.mock.calls[1][0] as UpdateCommand;
       expect(secondCall.input.UpdateExpression).toBe(
         'SET avgTokensPerInvocation = :avgTokens, avgDurationMs = :avgDur, p50DurationMs = :p50, p95DurationMs = :p95, p99DurationMs = :p99, durationSamples = :samples'
@@ -218,7 +228,8 @@ describe('TokenTracker', () => {
     });
 
     it('should skip second pass when invocationCount is 0', async () => {
-      mockSend.mockResolvedValueOnce({
+      // 2 calls: 2 keys (GLOBAL and Legacy), each with 1 pass (init)
+      mockSend.mockResolvedValue({
         Attributes: {
           totalInputTokens: 0,
           totalOutputTokens: 0,
@@ -233,11 +244,12 @@ describe('TokenTracker', () => {
         success: false,
       });
 
-      expect(mockSend).toHaveBeenCalledTimes(1);
+      expect(mockSend).toHaveBeenCalledTimes(2);
     });
 
     it('should skip second pass when no Attributes', async () => {
-      mockSend.mockResolvedValueOnce({});
+      // 2 calls: 2 keys (GLOBAL and Legacy), each with 1 pass
+      mockSend.mockResolvedValue({});
 
       await TokenTracker.updateRollup('test-agent', {
         inputTokens: 50,
@@ -246,7 +258,7 @@ describe('TokenTracker', () => {
         success: true,
       });
 
-      expect(mockSend).toHaveBeenCalledTimes(1);
+      expect(mockSend).toHaveBeenCalledTimes(2);
     });
 
     it('should not throw on ConditionalCheckFailedException', async () => {
@@ -320,7 +332,7 @@ describe('TokenTracker', () => {
       await TokenTracker.getRollupRange('test-agent', 7);
 
       const cmd = mockSend.mock.calls[0][0] as QueryCommand;
-      expect(cmd.input.ExpressionAttributeValues?.[':pk']).toBe('TOKEN_ROLLUP#test-agent');
+      expect(cmd.input.ExpressionAttributeValues?.[':pk']).toBe('GLOBAL#TOKEN_ROLLUP#test-agent');
       expect(cmd.input.KeyConditionExpression).toContain('#ts BETWEEN :start AND :end');
       expect(cmd.input.ExpressionAttributeNames).toEqual({ '#ts': 'timestamp' });
     });

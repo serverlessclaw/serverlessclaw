@@ -124,6 +124,17 @@ export async function updateReputation(
   const errorType = options?.error ? options.error.slice(0, 50).replace(/[.#]/g, '_') : undefined;
 
   try {
+    // Sh12 Fix: Ensure errorDistribution is initialized to prevent ValidationException
+    // We use a Get-then-Update approach only if errorType is present to ensure atomicity
+    // for the map field update.
+    if (errorType) {
+      await base.updateItem({
+        Key: { userId: pk, timestamp: 0 },
+        UpdateExpression: 'SET errorDistribution = if_not_exists(errorDistribution, :empty_map)',
+        ExpressionAttributeValues: { ':empty_map': {} },
+      });
+    }
+
     await base.updateItem({
       Key: { userId: pk, timestamp: 0 },
       UpdateExpression:
