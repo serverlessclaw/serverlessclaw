@@ -163,6 +163,9 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
     const shouldSpeakDirectly =
       config?.category === 'social' || config?.defaultCommunicationMode === 'text';
 
+    // Anti-Pattern 10 Fix: Enforce JSON communication when initiator is another agent
+    const communicationMode = payload.initiatorId ? 'json' : config?.defaultCommunicationMode;
+
     // 2. Build Process Options
     const processOptions = buildProcessOptions({
       isContinuation,
@@ -178,7 +181,7 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
       userRole: userRole as import('../lib/types/agent').UserRole,
       source: TraceSource.SYSTEM,
       context,
-      communicationMode: config?.defaultCommunicationMode,
+      communicationMode,
       abortSignal: abortController.signal,
     });
 

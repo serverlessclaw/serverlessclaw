@@ -301,7 +301,7 @@ The system architecture follows a **Distributed Spine** model where all critical
           v
   [ Silo 6: The Scales (TrustManager) ]
           |-- (11) Quality-Weighted Reputation Update
-          |-- (12) Atomic History Recording (list_append with WorkspaceId)
+          |-- (12) Atomic History Recording (list_append with WorkspaceId isolation)
           |-- (13) Atomic Trust Score (Conditional atomicIncrementMapField)
           |-- (14) Fail-Closed Integrity (Throw on update failure)
           |-- (15) Capability Graduation (PromotionManager: PENDING -> PROMOTED)
@@ -478,7 +478,7 @@ The system maintains a continuous feedback loop between execution observability 
 ```
 
 1. **Silo 5: The Eye (Observability & Health)**
-   - **Collector**: Buffers raw cognitive telemetry (success, latency, tokens, coherence) with **strict tenant isolation** using `WS#<workspaceId>` prefixes.
+   - **Collector**: Buffers raw cognitive telemetry (success, latency, tokens, coherence) with **strict tenant isolation** using `WS#<workspaceId>` prefixes. Implements **Unique Timestamp Jittering** (millisecond offsets) to prevent data loss from concurrent metric emissions within the same collection cycle.
    - **Analyzer**: Aggregates trends over time windows (HOURLY, DAILY, WEEKLY) to feed Silo 6.
    - **Detector**: Identifies reasoning loops, degradation, and performance anomalies.
 2. **Silo 6: The Scales (Trust & Reputation)**

@@ -88,6 +88,19 @@ describe('Metrics', () => {
         { Name: 'Success', Value: 'false' },
       ]);
     });
+
+    it('should include scope dimensions when provided', () => {
+      const scope = {
+        workspaceId: 'ws-1',
+        teamId: 'team-1',
+        staffId: 'staff-1',
+      };
+      const metric = METRICS.agentInvoked('my-agent', true, scope);
+
+      expect(metric.Dimensions).toContainEqual({ Name: 'WorkspaceId', Value: 'ws-1' });
+      expect(metric.Dimensions).toContainEqual({ Name: 'TeamId', Value: 'team-1' });
+      expect(metric.Dimensions).toContainEqual({ Name: 'StaffId', Value: 'staff-1' });
+    });
   });
 
   describe('METRICS.agentDuration', () => {
@@ -307,6 +320,42 @@ describe('Metrics', () => {
       const metric = METRICS.protocolFallback('agent-1', 'mcp');
 
       expect(metric.Dimensions?.[2]).toEqual({ Name: 'FallbackMode', Value: 'none' });
+    });
+  });
+
+  describe('EventHandler metrics', () => {
+    it('eventHandlerInvoked should include scope', () => {
+      const metric = METRICS.eventHandlerInvoked('test_event', { workspaceId: 'ws-123' });
+      expect(metric.MetricName).toBe('EventHandlerInvoked');
+      expect(metric.Dimensions).toContainEqual({ Name: 'EventType', Value: 'test_event' });
+      expect(metric.Dimensions).toContainEqual({ Name: 'WorkspaceId', Value: 'ws-123' });
+    });
+
+    it('eventHandlerDuration should include scope', () => {
+      const metric = METRICS.eventHandlerDuration('test_event', 450, { workspaceId: 'ws-123' });
+      expect(metric.MetricName).toBe('EventHandlerDuration');
+      expect(metric.Value).toBe(450);
+      expect(metric.Dimensions).toContainEqual({ Name: 'WorkspaceId', Value: 'ws-123' });
+    });
+  });
+
+  describe('Swarm & Parallel metrics', () => {
+    it('swarmDecomposed should include subTaskCount and depth', () => {
+      const metric = METRICS.swarmDecomposed('agent-1', 5, 2, { workspaceId: 'ws-1' });
+      expect(metric.MetricName).toBe('SwarmDecomposed');
+      expect(metric.Value).toBe(5);
+      expect(metric.Dimensions).toContainEqual({ Name: 'Depth', Value: '2' });
+      expect(metric.Dimensions).toContainEqual({ Name: 'WorkspaceId', Value: 'ws-1' });
+    });
+
+    it('parallelDispatchCompleted should include successCount and status', () => {
+      const metric = METRICS.parallelDispatchCompleted('trace-1', 10, 8, 'partial_success', {
+        workspaceId: 'ws-1',
+      });
+      expect(metric.MetricName).toBe('ParallelDispatchCompleted');
+      expect(metric.Value).toBe(8);
+      expect(metric.Dimensions).toContainEqual({ Name: 'OverallStatus', Value: 'partial_success' });
+      expect(metric.Dimensions).toContainEqual({ Name: 'WorkspaceId', Value: 'ws-1' });
     });
   });
 });

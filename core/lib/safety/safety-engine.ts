@@ -172,6 +172,13 @@ export class SafetyEngine extends SafetyBase {
       () => this.validateStaticPolicies(normalizedAction, ctx, tier),
       () => this.validateRBAC(normalizedAction, ctx, tier),
       () => this.validateAccessControl(agentConfig, normalizedAction, ctx, tier, policy),
+      () =>
+        this.limiter.checkRateLimits(policy, normalizedAction, {
+          workspaceId: ctx.workspaceId,
+          teamId: ctx.teamId,
+          staffId: ctx.staffId,
+          orgId: ctx.orgId,
+        }),
     ];
 
     for (const validator of hardValidators) {
@@ -183,7 +190,7 @@ export class SafetyEngine extends SafetyBase {
     }
 
     // 2. Trust-Driven Autonomy Bypass (Principle 9)
-    // Only applies if hard security blocks have passed.
+    // Only applies if hard security blocks and hard rate limits have passed.
     if (
       context?.isProactive &&
       (agentConfig?.trustScore ?? 0) >= TRUST.AUTONOMY_THRESHOLD &&
@@ -197,13 +204,6 @@ export class SafetyEngine extends SafetyBase {
 
     // 3. Dynamic & Soft Restrictions (Bypassable by Autonomy/Approval)
     const dynamicValidators = [
-      () =>
-        this.limiter.checkRateLimits(policy, normalizedAction, {
-          workspaceId: ctx.workspaceId,
-          teamId: ctx.teamId,
-          staffId: ctx.staffId,
-          orgId: ctx.orgId,
-        }),
       () => this.validateDynamicRestrictions(agentConfig, normalizedAction, ctx, tier, policy),
     ];
 

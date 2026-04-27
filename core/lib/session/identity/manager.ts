@@ -23,6 +23,24 @@ export class IdentityManager {
     this.base = base;
   }
 
+  private getUserKey(userId: string, orgId?: string): string {
+    const prefix = orgId ? MEMORY_KEYS.ORG_PREFIX : MEMORY_KEYS.WORKSPACE_PREFIX;
+    const scope = orgId ? `ORG#${orgId}#` : '';
+    return `${prefix}${scope}USER#${userId}`;
+  }
+
+  private getSessionKey(sessionId: string, orgId?: string): string {
+    const prefix = orgId ? MEMORY_KEYS.ORG_PREFIX : MEMORY_KEYS.WORKSPACE_PREFIX;
+    const scope = orgId ? `ORG#${orgId}#` : '';
+    return `${prefix}${scope}SESSION#${sessionId}`;
+  }
+
+  private getAclKey(resourceType: string, resourceId: string, orgId?: string): string {
+    const prefix = orgId ? MEMORY_KEYS.ORG_PREFIX : MEMORY_KEYS.WORKSPACE_PREFIX;
+    const scope = orgId ? `ORG#${orgId}#` : '';
+    return `${prefix}${scope}ACL#${resourceType}#${resourceId}`;
+  }
+
   /**
    * Authenticate a user and create a session.
    */
@@ -32,14 +50,16 @@ export class IdentityManager {
     metadata?: Record<string, unknown>
   ): Promise<AuthResult> {
     try {
+      const orgId = metadata?.orgId as string | undefined;
+      const workspaceId = metadata?.workspaceId as string | undefined;
+
       // Get or create user identity
-      let user = await this.getUser(userId);
+      let user = await this.getUser(userId, undefined, orgId);
       if (!user) {
         user = await this.createUser(userId, authProvider, metadata?.password as string);
       }
 
       // Validate workspace membership if workspaceId provided
-      const workspaceId = metadata?.workspaceId as string | undefined;
       if (workspaceId && !user.workspaceIds.includes(workspaceId)) {
         return {
           success: false,
@@ -55,7 +75,7 @@ export class IdentityManager {
         await docClient.send(
           new UpdateCommand({
             TableName: tableName,
-            Key: { userId: `${MEMORY_KEYS.WORKSPACE_PREFIX}USER#${userId}`, timestamp: 0 },
+            Key: { userId: this.getUserKey(userId, orgId), timestamp: 0 },
             UpdateExpression: 'SET lastActiveAt = :lastActiveAt',
             ExpressionAttributeValues: { ':lastActiveAt': user.lastActiveAt },
           })
@@ -87,20 +107,20 @@ export class IdentityManager {
   /**
    * Validate a session.
    */
-  async validateSession(sessionId: string): Promise<Session | null> {
-    const session = await this.getSession(sessionId);
+  async validateSession(sessionId: string, orgId?: string): Promise<Session | null> {
+    const session = await this.getSession(sessionId, undefined, orgId);
     if (!session) return null;
 
     // Check expiration
     if (Date.now() > session.expiresAt) {
-      await this.terminateSession(sessionId);
+      await this.terminateSession(sessionId, orgId);
       logger.info(`Session expired: ${sessionId}`);
       return null;
     }
 
     // Update last activity
     session.lastActivityTime = Date.now();
-    await this.saveSession(session);
+    await this.saveSession(session, orgId);
     return session;
   }
 
@@ -111,9 +131,10 @@ export class IdentityManager {
   async hasPermission(
     userId: string,
     permission: Permission,
-    workspaceId?: string
+    workspaceId?: string,
+    orgId?: string
   ): Promise<boolean> {
-    const user = await this.getUser(userId);
+    const user = await this.getUser(userId, undefined, orgId);
     if (!user) return false;
 
     const rolePermissions = ROLE_PERMISSIONS[user.role];
@@ -133,9 +154,10 @@ export class IdentityManager {
   async hasResourceAccess(
     userId: string,
     resourceType: 'agent' | 'workspace' | 'config' | 'trace',
-    resourceId: string
+    resourceId: string,
+    orgId?: string
   ): Promise<boolean> {
-    const user = await this.loadUser(userId);
+    const user = await this.loadUser(userId, orgId);
     if (!user) return false;
 
     // Owners and admins have access to everything
@@ -144,7 +166,7 @@ export class IdentityManager {
     }
 
     // Check specific access control entries
-    const entry = await this.getAccessControlEntry(resourceType, resourceId);
+    const entry = await this.getAccessControlEntry(resourceType, resourceId, orgId);
 
     if (entry) {
       // Check if user ID is explicitly allowed
@@ -158,7 +180,7 @@ export class IdentityManager {
 
       // Check hierarchical inheritance - if parent resource is accessible, inherit permission
       if (entry.parentId) {
-        const parentEntry = await this.getAccessControlEntry('workspace', entry.parentId);
+        const parentEntry = await this.getAccessControlEntry('workspace', entry.parentId, orgId);
         if (parentEntry) {
           if (parentEntry.allowedUserIds?.includes(userId)) {
             return true;
@@ -188,15 +210,19 @@ export class IdentityManager {
    * @param userId - The user ID to retrieve
    * @param callerId - Optional caller ID for permission validation.
    */
-  async getUser(userId: string, callerId?: string): Promise<UserIdentity | undefined> {
+  async getUser(
+    userId: string,
+    callerId?: string,
+    orgId?: string
+  ): Promise<UserIdentity | undefined> {
     if (callerId && callerId !== userId) {
-      const hasAccess = await this.hasResourceAccess(callerId, 'agent', userId);
+      const hasAccess = await this.hasResourceAccess(callerId, 'agent', userId, orgId);
       if (!hasAccess) {
         logger.warn(`Permission denied: ${callerId} attempted to access user ${userId}`);
         return undefined;
       }
     }
-    return this.loadUser(userId);
+    return this.loadUser(userId, orgId);
   }
 
   /**
@@ -228,13 +254,17 @@ export class IdentityManager {
    * @param sessionId - The session ID to retrieve
    * @param callerId - Optional caller ID for permission validation.
    */
-  async getSession(sessionId: string, callerId?: string): Promise<Session | undefined> {
+  async getSession(
+    sessionId: string,
+    callerId?: string,
+    orgId?: string
+  ): Promise<Session | undefined> {
     try {
       const items = await this.base.queryItems({
         KeyConditionExpression: 'userId = :pk AND #ts = :zero',
         ExpressionAttributeNames: { '#ts': 'timestamp' },
         ExpressionAttributeValues: {
-          ':pk': `${MEMORY_KEYS.WORKSPACE_PREFIX}SESSION#${sessionId}`,
+          ':pk': this.getSessionKey(sessionId, orgId),
           ':zero': 0,
         },
       });
@@ -244,7 +274,7 @@ export class IdentityManager {
         const sessionUserId = item.sessionUserId as string;
 
         if (callerId && callerId !== sessionUserId) {
-          const hasAccess = await this.hasResourceAccess(callerId, 'trace', sessionUserId);
+          const hasAccess = await this.hasResourceAccess(callerId, 'trace', sessionUserId, orgId);
           if (!hasAccess) {
             logger.warn(`Permission denied: ${callerId} attempted to access session ${sessionId}`);
             return undefined;
@@ -270,10 +300,10 @@ export class IdentityManager {
   /**
    * Terminate a session.
    */
-  async terminateSession(sessionId: string): Promise<void> {
+  async terminateSession(sessionId: string, orgId?: string): Promise<void> {
     try {
       await this.base.deleteItem({
-        userId: `${MEMORY_KEYS.WORKSPACE_PREFIX}SESSION#${sessionId}`,
+        userId: this.getSessionKey(sessionId, orgId),
         timestamp: 0,
       });
       logger.info(`Session terminated: ${sessionId}`);
@@ -320,14 +350,19 @@ export class IdentityManager {
   /**
    * Update user role. Requires OWNER/ADMIN caller.
    */
-  async updateUserRole(userId: string, role: UserRole, callerId: string): Promise<boolean> {
-    const caller = await this.getUser(callerId);
+  async updateUserRole(
+    userId: string,
+    role: UserRole,
+    callerId: string,
+    orgId?: string
+  ): Promise<boolean> {
+    const caller = await this.getUser(callerId, undefined, orgId);
     if (!caller || (caller.role !== UserRole.OWNER && caller.role !== UserRole.ADMIN)) {
       logger.error(`Unauthorized role update attempt by ${callerId} for ${userId}`);
       return false;
     }
 
-    const user = await this.getUser(userId);
+    const user = await this.getUser(userId, undefined, orgId);
     if (!user) {
       logger.error(`User not found: ${userId}`);
       return false;
@@ -341,7 +376,7 @@ export class IdentityManager {
       await docClient.send(
         new UpdateCommand({
           TableName: tableName,
-          Key: { userId: `${MEMORY_KEYS.WORKSPACE_PREFIX}USER#${userId}`, timestamp: 0 },
+          Key: { userId: this.getUserKey(userId, orgId), timestamp: 0 },
           UpdateExpression: 'SET #role = :role, updatedAt = :updatedAt',
           ConditionExpression: 'attribute_exists(userId)',
           ExpressionAttributeNames: { '#role': 'role' },
@@ -359,8 +394,8 @@ export class IdentityManager {
   /**
    * Add user to workspace.
    */
-  async addUserToWorkspace(userId: string, workspaceId: string): Promise<boolean> {
-    const user = await this.getUser(userId);
+  async addUserToWorkspace(userId: string, workspaceId: string, orgId?: string): Promise<boolean> {
+    const user = await this.getUser(userId, undefined, orgId);
     if (!user) {
       logger.error(`User not found: ${userId}`);
       return false;
@@ -375,23 +410,30 @@ export class IdentityManager {
     if (!tableName) return false;
 
     try {
+      // Sh6 Fix: Enforce Principle 13 (Atomic State Integrity)
+      // and prevent duplicate membership via ConditionExpression
       await docClient.send(
         new UpdateCommand({
           TableName: tableName,
-          Key: { userId: `${MEMORY_KEYS.WORKSPACE_PREFIX}USER#${userId}`, timestamp: 0 },
+          Key: { userId: this.getUserKey(userId, orgId), timestamp: 0 },
           UpdateExpression:
             'SET workspaceIds = list_append(if_not_exists(workspaceIds, :empty), :workspaceId), updatedAt = :updatedAt',
-          ConditionExpression: 'attribute_exists(userId)',
+          ConditionExpression:
+            'attribute_exists(userId) AND NOT contains(workspaceIds, :workspaceIdStr)',
           ExpressionAttributeValues: {
             ':empty': [],
             ':workspaceId': [workspaceId],
+            ':workspaceIdStr': workspaceId,
             ':updatedAt': Date.now(),
           },
         })
       );
       logger.info(`User ${userId} added to workspace ${workspaceId}`);
       return true;
-    } catch (e) {
+    } catch (e: any) {
+      if (e.name === 'ConditionalCheckFailedException') {
+        return true; // Concurrent add or already exists
+      }
       logger.error(`Failed to add user ${userId} to workspace ${workspaceId}:`, e);
       return false;
     }
@@ -400,46 +442,64 @@ export class IdentityManager {
   /**
    * Remove user from workspace.
    */
-  async removeUserFromWorkspace(userId: string, workspaceId: string): Promise<boolean> {
-    const user = await this.getUser(userId);
-    if (!user) return false;
+  async removeUserFromWorkspace(
+    userId: string,
+    workspaceId: string,
+    orgId?: string
+  ): Promise<boolean> {
+    const docClient = this.base.getDocClient();
+    const tableName = this.base.getTableName();
+    if (!tableName) return false;
 
-    const index = user.workspaceIds.indexOf(workspaceId);
-    if (index > -1) {
-      user.workspaceIds.splice(index, 1);
-      const docClient = this.base.getDocClient();
-      const tableName = this.base.getTableName();
-      if (!tableName) return false;
+    const maxRetries = 3;
+    let retryCount = 0;
+
+    while (retryCount < maxRetries) {
+      const user = await this.getUser(userId, undefined, orgId);
+      if (!user) return false;
+
+      const index = user.workspaceIds.indexOf(workspaceId);
+      if (index === -1) return true; // Already removed
+
+      const newIds = user.workspaceIds.filter((id) => id !== workspaceId);
 
       try {
+        // Sh6 Fix: Enforce Principle 13 (Atomic State Integrity)
+        // Uses Optimistic Concurrency to prevent race conditions on list modification
         await docClient.send(
           new UpdateCommand({
             TableName: tableName,
-            Key: { userId: `${MEMORY_KEYS.WORKSPACE_PREFIX}USER#${userId}`, timestamp: 0 },
+            Key: { userId: this.getUserKey(userId, orgId), timestamp: 0 },
             UpdateExpression: 'SET workspaceIds = :workspaceIds, updatedAt = :updatedAt',
-            ConditionExpression: 'attribute_exists(userId)',
+            ConditionExpression: 'workspaceIds = :oldIds',
             ExpressionAttributeValues: {
-              ':workspaceIds': user.workspaceIds,
+              ':workspaceIds': newIds,
+              ':oldIds': user.workspaceIds,
               ':updatedAt': Date.now(),
             },
           })
         );
         logger.info(`User ${userId} removed from workspace ${workspaceId}`);
-      } catch (e) {
+        return true;
+      } catch (e: any) {
+        if (e.name === 'ConditionalCheckFailedException') {
+          retryCount++;
+          continue;
+        }
         logger.error(`Failed to remove user ${userId} from workspace ${workspaceId}:`, e);
         return false;
       }
     }
-    return true;
+    return false;
   }
 
   /**
    * Add access control entry.
    */
-  async addAccessControlEntry(entry: AccessControlEntry): Promise<void> {
+  async addAccessControlEntry(entry: AccessControlEntry, orgId?: string): Promise<void> {
     try {
       await this.base.putItem({
-        userId: `${MEMORY_KEYS.WORKSPACE_PREFIX}ACL#${entry.resourceType}#${entry.resourceId}`,
+        userId: this.getAclKey(entry.resourceType, entry.resourceId, orgId),
         timestamp: 0,
         type: 'ACCESS_CONTROL',
         resourceType: entry.resourceType,
@@ -458,13 +518,13 @@ export class IdentityManager {
   /**
    * Load user identity from storage.
    */
-  private async loadUser(userId: string): Promise<UserIdentity | undefined> {
+  private async loadUser(userId: string, orgId?: string): Promise<UserIdentity | undefined> {
     try {
       const items = await this.base.queryItems({
         KeyConditionExpression: 'userId = :pk AND #ts = :zero',
         ExpressionAttributeNames: { '#ts': 'timestamp' },
         ExpressionAttributeValues: {
-          ':pk': `${MEMORY_KEYS.WORKSPACE_PREFIX}USER#${userId}`,
+          ':pk': this.getUserKey(userId, orgId),
           ':zero': 0,
         },
       });
@@ -495,7 +555,8 @@ export class IdentityManager {
   private async createUser(
     userId: string,
     authProvider: 'telegram' | 'dashboard' | 'api_key',
-    password?: string
+    password?: string,
+    orgId?: string
   ): Promise<UserIdentity> {
     const newUser: UserIdentity = {
       userId,
@@ -508,18 +569,18 @@ export class IdentityManager {
       hashedPassword: password ? this.hashPassword(userId, password) : undefined,
     };
 
-    await this.saveUser(newUser);
+    await this.saveUser(newUser, orgId);
     return newUser;
   }
 
   /**
    * Save user to storage.
    */
-  private async saveUser(user: UserIdentity): Promise<void> {
+  private async saveUser(user: UserIdentity, orgId?: string): Promise<void> {
     try {
       await this.base.putItem(
         {
-          userId: `${MEMORY_KEYS.WORKSPACE_PREFIX}USER#${user.userId}`,
+          userId: this.getUserKey(user.userId, orgId),
           timestamp: 0,
           type: 'USER_IDENTITY',
           displayName: user.displayName,
@@ -559,17 +620,17 @@ export class IdentityManager {
       metadata,
     };
 
-    await this.saveSession(session);
+    await this.saveSession(session, metadata?.orgId as string | undefined);
     return session;
   }
 
   /**
    * Save session to storage.
    */
-  private async saveSession(session: Session): Promise<void> {
+  private async saveSession(session: Session, orgId?: string): Promise<void> {
     try {
       await this.base.putItem({
-        userId: `${MEMORY_KEYS.WORKSPACE_PREFIX}SESSION#${session.sessionId}`,
+        userId: this.getSessionKey(session.sessionId, orgId),
         timestamp: 0,
         type: 'SESSION',
         sessionUserId: session.userId,
@@ -590,14 +651,15 @@ export class IdentityManager {
    */
   private async getAccessControlEntry(
     resourceType: string,
-    resourceId: string
+    resourceId: string,
+    orgId?: string
   ): Promise<AccessControlEntry | undefined> {
     try {
       const items = await this.base.queryItems({
         KeyConditionExpression: 'userId = :pk AND #ts = :zero',
         ExpressionAttributeNames: { '#ts': 'timestamp' },
         ExpressionAttributeValues: {
-          ':pk': `${MEMORY_KEYS.WORKSPACE_PREFIX}ACL#${resourceType}#${resourceId}`,
+          ':pk': this.getAclKey(resourceType, resourceId, orgId),
           ':zero': 0,
         },
       });
@@ -631,7 +693,10 @@ export class IdentityManager {
       for (const item of items) {
         if (now > (item.expiresAt as number)) {
           const sessionId = (item.userId as string).split('#').pop()!;
-          await this.terminateSession(sessionId);
+          const orgId = (item.userId as string).includes('ORG#')
+            ? (item.userId as string).split('#')[2]
+            : undefined;
+          await this.terminateSession(sessionId, orgId);
           cleaned++;
         }
       }
@@ -668,9 +733,10 @@ export class IdentityManager {
   async updateUser(
     userId: string,
     updates: Partial<Pick<UserIdentity, 'displayName' | 'email' | 'role'>>,
-    callerId: string
+    callerId: string,
+    orgId?: string
   ): Promise<boolean> {
-    const caller = await this.getUser(callerId);
+    const caller = await this.getUser(callerId, undefined, orgId);
     if (!caller || (caller.role !== UserRole.OWNER && caller.role !== UserRole.ADMIN)) {
       return false;
     }
@@ -703,7 +769,7 @@ export class IdentityManager {
       await docClient.send(
         new UpdateCommand({
           TableName: tableName,
-          Key: { userId: `${MEMORY_KEYS.WORKSPACE_PREFIX}USER#${userId}`, timestamp: 0 },
+          Key: { userId: this.getUserKey(userId, orgId), timestamp: 0 },
           UpdateExpression: `SET ${expressions.join(', ')}, updatedAt = :updatedAt`,
           ExpressionAttributeNames: Object.keys(names).length > 0 ? names : undefined,
           ExpressionAttributeValues: values,
