@@ -35,7 +35,7 @@ describe('MissionBriefing Component', () => {
     expect(screen.getByText('agent-alpha')).toBeInTheDocument();
 
     // Check for new dynamic default mission data
-    expect(screen.getByText(/Operation_In_Progress/i)).toBeInTheDocument();
+    expect(screen.getByText(/Operation_SESS-1/i)).toBeInTheDocument();
   });
 
   it('renders even when sessionId is null (Persistence)', () => {
