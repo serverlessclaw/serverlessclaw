@@ -3,8 +3,8 @@ import { GET } from './route';
 import { NextRequest } from 'next/server';
 
 // Mock the core dependencies without breaking other constants
-vi.mock('@claw/core/lib/memory', () => ({
-  DynamoMemory: class {
+vi.mock('@claw/core/lib/memory/base', () => ({
+  BaseMemoryProvider: class {
     listByPrefix = vi.fn().mockImplementation(() => {
       const now = Date.now();
       return Promise.resolve([
