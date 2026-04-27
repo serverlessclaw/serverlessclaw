@@ -7,6 +7,8 @@ vi.mock('./registry/config', () => ({
     getRawConfig: vi.fn().mockResolvedValue(undefined),
     saveRawConfig: vi.fn().mockResolvedValue(undefined),
     deleteConfig: vi.fn().mockResolvedValue(undefined),
+    atomicAppendToList: vi.fn().mockResolvedValue(undefined),
+    atomicRemoveFromList: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -20,6 +22,8 @@ describe('FeatureFlags', () => {
     mockConfigManager.getTypedConfig.mockResolvedValue(true);
     mockConfigManager.getRawConfig.mockResolvedValue(undefined);
     mockConfigManager.saveRawConfig.mockResolvedValue(undefined);
+    mockConfigManager.atomicAppendToList.mockResolvedValue(undefined);
+    mockConfigManager.atomicRemoveFromList.mockResolvedValue(undefined);
     FeatureFlags.clearCache();
   });
 
@@ -145,43 +149,19 @@ describe('FeatureFlags', () => {
         description: 'A new feature',
       };
 
-      mockConfigManager.getTypedConfig.mockImplementation((key: string, def: any) => {
-        if (key === 'feature_flags_list') return Promise.resolve([]);
-        return Promise.resolve(def);
-      });
-
       await FeatureFlags.setFlag(flag);
 
-      expect(mockConfigManager.saveRawConfig).toHaveBeenCalledTimes(2);
+      expect(mockConfigManager.saveRawConfig).toHaveBeenCalledTimes(1);
       const [key1, value1, options1] = mockConfigManager.saveRawConfig.mock.calls[0];
       expect(key1).toBe('feature_flag_new_flag');
       expect(value1).toMatchObject({ name: 'new_flag', enabled: true, rolloutPercent: 25 });
       expect(options1.skipVersioning).toBe(true);
 
-      const [key2, value2, options2] = mockConfigManager.saveRawConfig.mock.calls[1];
-      expect(key2).toBe('feature_flags_list');
-      expect(value2).toEqual(['new_flag']);
-      expect(options2.skipVersioning).toBe(true);
-    });
-
-    it('should not update the list if flag is already present', async () => {
-      const flag: FeatureFlag = {
-        name: 'existing_flag',
-        enabled: true,
-        rolloutPercent: 25,
-        description: 'An existing feature',
-      };
-
-      mockConfigManager.getTypedConfig.mockImplementation((key: string, def: any) => {
-        if (key === 'feature_flags_list') return Promise.resolve(['existing_flag']);
-        return Promise.resolve(def);
-      });
-
-      await FeatureFlags.setFlag(flag);
-
-      expect(mockConfigManager.saveRawConfig).toHaveBeenCalledTimes(1);
-      const [key] = mockConfigManager.saveRawConfig.mock.calls[0];
-      expect(key).toBe('feature_flag_existing_flag');
+      expect(mockConfigManager.atomicAppendToList).toHaveBeenCalledWith(
+        'feature_flags_list',
+        ['new_flag'],
+        { preventDuplicates: true }
+      );
     });
 
     it('should clear the cache when flag is updated', async () => {
@@ -222,15 +202,16 @@ describe('FeatureFlags', () => {
         expiresAt: Math.floor(Date.now() / 1000) - 86400, // 1 day ago
       };
 
-      mockConfigManager.getTypedConfig.mockResolvedValueOnce(['expired_flag']);
+      mockConfigManager.getTypedConfig.mockResolvedValueOnce(['expired_flag']); // listFlags call
       mockConfigManager.getRawConfig.mockResolvedValueOnce(expiredFlag);
-      mockConfigManager.getTypedConfig.mockResolvedValueOnce(['expired_flag']); // for listFlags
       mockConfigManager.deleteConfig.mockResolvedValueOnce(undefined);
-      mockConfigManager.saveRawConfig.mockResolvedValueOnce(undefined); // update list
 
       const result = await FeatureFlags.pruneStaleFlags(30);
       expect(result).toBe(1);
       expect(mockConfigManager.deleteConfig).toHaveBeenCalledWith('feature_flag_expired_flag');
+      expect(mockConfigManager.atomicRemoveFromList).toHaveBeenCalledWith('feature_flags_list', [
+        'expired_flag',
+      ]);
     });
 
     it('should prune flags based on age threshold when no expiresAt', async () => {
@@ -242,14 +223,15 @@ describe('FeatureFlags', () => {
         createdAt: Date.now() - 31 * 24 * 60 * 60 * 1000, // 31 days ago
       };
 
-      mockConfigManager.getTypedConfig.mockResolvedValueOnce(['old_flag']);
+      mockConfigManager.getTypedConfig.mockResolvedValueOnce(['old_flag']); // listFlags call
       mockConfigManager.getRawConfig.mockResolvedValueOnce(oldFlag);
-      mockConfigManager.getTypedConfig.mockResolvedValueOnce(['old_flag']); // for listFlags
       mockConfigManager.deleteConfig.mockResolvedValueOnce(undefined);
-      mockConfigManager.saveRawConfig.mockResolvedValueOnce(undefined);
 
       const result = await FeatureFlags.pruneStaleFlags(30);
       expect(result).toBe(1);
+      expect(mockConfigManager.atomicRemoveFromList).toHaveBeenCalledWith('feature_flags_list', [
+        'old_flag',
+      ]);
     });
 
     it('should not prune flags within threshold', async () => {
@@ -261,13 +243,13 @@ describe('FeatureFlags', () => {
         createdAt: Date.now() - 7 * 24 * 60 * 60 * 1000, // 7 days ago
       };
 
-      mockConfigManager.getTypedConfig.mockResolvedValueOnce(['fresh_flag']);
+      mockConfigManager.getTypedConfig.mockResolvedValueOnce(['fresh_flag']); // listFlags call
       mockConfigManager.getRawConfig.mockResolvedValueOnce(freshFlag);
-      mockConfigManager.getTypedConfig.mockResolvedValueOnce(['fresh_flag']); // for listFlags
 
       const result = await FeatureFlags.pruneStaleFlags(30);
       expect(result).toBe(0);
       expect(mockConfigManager.deleteConfig).not.toHaveBeenCalled();
+      expect(mockConfigManager.atomicRemoveFromList).not.toHaveBeenCalled();
     });
 
     it('should update feature_flags_list after pruning', async () => {
@@ -286,23 +268,21 @@ describe('FeatureFlags', () => {
         createdAt: Date.now() - 7 * 24 * 60 * 60 * 1000,
       };
 
-      mockConfigManager.getTypedConfig
-        .mockResolvedValueOnce(['stale_flag', 'fresh_flag']) // listFlags call
-        .mockResolvedValueOnce(['stale_flag', 'fresh_flag']); // saveRawConfig call
+      mockConfigManager.getTypedConfig.mockResolvedValueOnce(['stale_flag', 'fresh_flag']); // listFlags call
 
       mockConfigManager.getRawConfig
         .mockResolvedValueOnce(staleFlag)
         .mockResolvedValueOnce(freshFlag);
 
       mockConfigManager.deleteConfig.mockResolvedValueOnce(undefined);
-      mockConfigManager.saveRawConfig.mockResolvedValueOnce(undefined);
 
       const result = await FeatureFlags.pruneStaleFlags(30);
       expect(result).toBe(1);
 
-      // Verify list was updated with only fresh_flag
-      const [, updatedList] = mockConfigManager.saveRawConfig.mock.calls[0];
-      expect(updatedList).toEqual(['fresh_flag']);
+      // Verify list was updated via atomicRemoveFromList
+      expect(mockConfigManager.atomicRemoveFromList).toHaveBeenCalledWith('feature_flags_list', [
+        'stale_flag',
+      ]);
     });
   });
 });
