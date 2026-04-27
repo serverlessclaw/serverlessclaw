@@ -188,21 +188,19 @@ export class MetricsCollector {
 
     const expiresAt = Math.floor((Date.now() + this.config.retentionDays * TIME.MS_PER_DAY) / 1000);
 
-    // Sh6 Fix: Track timestamps to prevent MS collisions for the same agent
-    const lastTimestamps = new Map<string, number>();
+    // Sh6 Fix: Ensure unique timestamps within this flush to prevent DynamoDB SK collisions
+    // We use a counter added to the base timestamp to guarantee uniqueness.
+    let globalCounter = 0;
 
     for (const metric of metricsToFlush) {
       try {
         const prefix = metric.workspaceId ? `WS#${metric.workspaceId}#` : '';
         const pk = `${prefix}${MEMORY_KEYS.HEALTH_PREFIX}METRIC#${metric.agentId}`;
 
-        // Ensure unique timestamp within this flush/partition
-        let ts = metric.timestamp;
-        const lastTs = lastTimestamps.get(pk) ?? 0;
-        if (ts <= lastTs) {
-          ts = lastTs + 0.0001; // Tiny offset
-        }
-        lastTimestamps.set(pk, ts);
+        // Add a tiny fractional increment based on a global counter for this flush.
+        // This guarantees uniqueness even if multiple record calls happen in the same MS.
+        const ts = metric.timestamp + globalCounter * 0.00001;
+        globalCounter++;
 
         await this.base.putItem({
           userId: pk,
