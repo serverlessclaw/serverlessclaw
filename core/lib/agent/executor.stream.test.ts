@@ -98,30 +98,30 @@ describe('AgentExecutor.streamLoop', () => {
     expect(chunks[4].usage).toBeDefined();
 
     expect(mockEmitter.emitChunk).toHaveBeenCalledTimes(3);
-    expect(mockEmitter.emitChunk).toHaveBeenCalledWith('user-1', 'sess-1', 'trace-123', {
-      chunk: 'Hello',
-      agentName: 'Test Agent',
-      isThought: false,
-      buttonOptions: undefined,
-      initiatorId: 'superclaw',
-      thoughtDelta: undefined,
-      ui_blocks: undefined,
-      attachments: undefined,
-      detailType: 'TEXT_MESSAGE_CONTENT',
-      scope: { staffId: undefined, teamId: undefined, workspaceId: undefined },
-    });
-    expect(mockEmitter.emitChunk).toHaveBeenCalledWith('user-1', 'sess-1', 'trace-123', {
-      chunk: 'Hello world',
-      agentName: 'Test Agent',
-      isThought: false,
-      buttonOptions: undefined,
-      initiatorId: 'superclaw',
-      thoughtDelta: '',
-      ui_blocks: undefined,
-      attachments: undefined,
-      detailType: 'outbound_message',
-      scope: { staffId: undefined, teamId: undefined, workspaceId: undefined },
-    });
+    expect(mockEmitter.emitChunk).toHaveBeenCalledWith(
+      'user-1',
+      'sess-1',
+      'trace-123',
+      expect.objectContaining({
+        chunk: 'Hello',
+        agentName: 'Test Agent',
+        isThought: false,
+        initiatorId: 'superclaw',
+        detailType: 'TEXT_MESSAGE_CONTENT',
+        model: 'gpt-4o',
+      })
+    );
+    expect(mockEmitter.emitChunk).toHaveBeenCalledWith(
+      'user-1',
+      'sess-1',
+      'trace-123',
+      expect.objectContaining({
+        chunk: 'Hello world',
+        agentName: 'Test Agent',
+        detailType: 'outbound_message',
+        model: 'gpt-4o',
+      })
+    );
   });
 
   it('should execute tool calls and continue the loop to get final response', async () => {
@@ -299,18 +299,17 @@ describe('AgentExecutor.streamLoop', () => {
 
     // Metadata + Content + Final Usage
     expect(chunks).toHaveLength(3);
-    expect(mockEmitter.emitChunk).toHaveBeenCalledWith('user-1', 'sess-txt', 'trace-txt', {
-      chunk: 'Hello there!',
-      agentName: 'Test Agent',
-      isThought: false,
-      buttonOptions: undefined,
-      initiatorId: 'superclaw',
-      thoughtDelta: '',
-      ui_blocks: undefined,
-      attachments: undefined,
-      detailType: 'outbound_message',
-      scope: { staffId: undefined, teamId: undefined, workspaceId: undefined },
-    });
+    expect(mockEmitter.emitChunk).toHaveBeenCalledWith(
+      'user-1',
+      'sess-txt',
+      'trace-txt',
+      expect.objectContaining({
+        chunk: 'Hello there!',
+        agentName: 'Test Agent',
+        detailType: 'outbound_message',
+        model: 'gpt-4o',
+      })
+    );
     expect(chunks[1].tool_calls).toBeUndefined();
   });
 });

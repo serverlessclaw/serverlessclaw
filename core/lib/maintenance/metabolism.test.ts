@@ -108,7 +108,9 @@ describe('MetabolismService', () => {
 
       const finding = await MetabolismService.remediateDashboardFailure(mockMemory, failure as any);
 
-      expect(AgentRegistry.pruneAgentTool).toHaveBeenCalledWith('coder', 'github_createIssue');
+      expect(AgentRegistry.pruneAgentTool).toHaveBeenCalledWith('coder', 'github_createIssue', {
+        workspaceId: 'ws-1',
+      });
       expect(finding?.actual).toContain('Pruned stale/failing tool overrides atomically');
     });
 

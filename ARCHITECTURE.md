@@ -19,8 +19,8 @@ This document covers the AWS topology and data flow. For operational instruction
 9.  **Multi-Lingual**: Implements a "Baseline English Prompt" strategy. Agents maintain high reasoning quality via English core prompts while communicating in the user's preferred language (English/Chinese) via dynamic runtime instruction injection.
 10. **JIT File Staging**: Implements a Just-In-Time media pipeline that intercept uploads, stages them in S3, and provides optimized cognitive context (base64/URLs) to agents, ensuring peak vision performance and trace-aware file management.
 11. **Shared Real-time Handshakes (Singleton UI Connectivity)**: To minimize AWS IoT Core authorizer costs and prevent "connection storms" during local development (HMR), the dashboard utilizes a singleton `RealtimeProvider`. This architecture ensures that regardless of the number of active components (Chat, Canvas, Agents), only **one physical WebSocket connection** is established per tab, reducing Lambda Authorizer invocations by >80%.
-13. **Mission Control Experience**: The dashboard transforms the standard chat interface into a high-fidelity "War Room". By integrating real-time telemetry (Trust, Stability, Budget) and operational phase tracking directly into the mission view, it reduces cognitive load and ensures the human remains the authoritative commander of the agentic swarm.
-14. **Multi-Human & Agent Presence**: Implements a real-time presence layer using MQTT `presence` signals. This allows multiple humans and agents to maintain shared awareness within a workspace, tracking who is active, their current status, and collaborative actions.
+12. **Mission Control Experience**: The dashboard transforms the standard chat interface into a high-fidelity "War Room". By integrating real-time telemetry (Trust, Stability, Budget) and operational phase tracking directly into the mission view, it reduces cognitive load and ensures the human remains the authoritative commander of the agentic swarm.
+13. **Multi-Human & Agent Presence**: Implements a real-time presence layer using MQTT `presence` signals. This allows multiple humans and agents to maintain shared awareness within a workspace, tracking who is active, their current status, and collaborative actions.
 
 ---
 
@@ -581,14 +581,14 @@ The system is designed for autonomous survival and continuous optimization throu
 ### Silo 7: Regenerative Metabolism Flow
 
 ```text
-[ Dashboard / Eye ] ---- (Failure Event) ----> [ MetabolismService ]
-                                                     |
-                                            [ Strategy Selection ]
-                                                     |
+[ Dashboard / Eye ] ---- (Failure Event + WSID) ----> [ MetabolismService ]
+                                                             |
+                                                    [ Strategy Selection ]
+                                                             |
           +-------------------------+----------------+-------------------------+
           |                         |                                          |
 [ Tool Pruning ]           [ Memory Recycling ]               [ Evolution Scheduling ]
-(Atomic Registry)          (Gap/Insight Sync)                 (HITL Fallback)
+(WS-Scoped Atomic)         (Gap/Insight Sync)                 (HITL Fallback)
           |                         |                                          |
           +-------------------------+----------------+-------------------------+
                                     |

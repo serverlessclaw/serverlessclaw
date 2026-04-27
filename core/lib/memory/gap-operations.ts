@@ -85,9 +85,12 @@ export async function archiveStaleGaps(
       await base.updateItem({
         Key: { userId: gap.id, timestamp: gap.timestamp },
         UpdateExpression: 'SET #status = :archived, updatedAt = :now',
+        ConditionExpression: '#status IN (:open, :planned)',
         ExpressionAttributeNames: { '#status': 'status' },
         ExpressionAttributeValues: {
           ':archived': GapStatus.ARCHIVED,
+          ':open': GapStatus.OPEN,
+          ':planned': GapStatus.PLANNED,
           ':now': Date.now(),
         },
       });

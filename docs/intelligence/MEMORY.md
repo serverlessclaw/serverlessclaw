@@ -216,12 +216,15 @@ Records of structurally failed strategic plans. This tier prevents the swarm fro
 
 - **Data Model**: JSON containing the plan hash, failure reason, and impacted gap IDs.
 - **Feedback Loop**:
+
   ```text
   [ Coder Agent ] --(1) record failure--> [ FAILED_PLAN# ]
                                               |
                                               v
   [ Strategic Planner ] <--(3) avoid anti-patterns
       (Design Phase)
+  ```
+
   ```
 
   ```

@@ -573,12 +573,6 @@ export class Agent {
         costLimit: sessionCostLimit || undefined,
       });
 
-      // Yield model info in the first chunk
-      yield {
-        modelName: finalModel,
-        model: finalModel,
-      } as any;
-
       for await (const chunk of stream) {
         if (chunk.content) fullContent += chunk.content;
         if (chunk.thought) fullThought += chunk.thought;

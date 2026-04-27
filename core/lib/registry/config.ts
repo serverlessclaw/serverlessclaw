@@ -316,13 +316,15 @@ export class ConfigManager {
     entityId: string,
     field: string,
     value: unknown,
-    retryCount: number = 0
+    options: { workspaceId?: string; retryCount?: number } = {}
   ): Promise<void> {
     const tableName = this._getTableName();
     if (!tableName) return;
 
-    this.configCache.delete(key);
+    const effectiveKey = options.workspaceId ? `WS#${options.workspaceId}#${key}` : key;
+    this.configCache.delete(effectiveKey);
 
+    const retryCount = options.retryCount ?? 0;
     const maxRetries = 3;
     const docClient = getDocClient();
 
@@ -330,7 +332,7 @@ export class ConfigManager {
       await docClient.send(
         new UpdateCommand({
           TableName: tableName,
-          Key: { key },
+          Key: { key: effectiveKey },
           UpdateExpression: 'SET #val.#id.#field = :value',
           ConditionExpression: 'attribute_exists(#val.#id)',
           ExpressionAttributeNames: { '#val': 'value', '#id': entityId, '#field': field },
@@ -344,7 +346,7 @@ export class ConfigManager {
           await docClient.send(
             new UpdateCommand({
               TableName: tableName,
-              Key: { key },
+              Key: { key: effectiveKey },
               UpdateExpression: 'SET #val.#id = :entityObj',
               ConditionExpression: 'attribute_not_exists(#val.#id)',
               ExpressionAttributeNames: { '#val': 'value', '#id': entityId },
@@ -358,7 +360,7 @@ export class ConfigManager {
               await docClient.send(
                 new UpdateCommand({
                   TableName: tableName,
-                  Key: { key },
+                  Key: { key: effectiveKey },
                   UpdateExpression: 'SET #val = :rootObj',
                   ConditionExpression: 'attribute_not_exists(#val)',
                   ExpressionAttributeNames: { '#val': 'value' },
@@ -371,12 +373,18 @@ export class ConfigManager {
                 rootE.name === 'ConditionalCheckFailedException' &&
                 retryCount < maxRetries
               ) {
-                return this.atomicUpdateMapField(key, entityId, field, value, retryCount + 1);
+                return this.atomicUpdateMapField(key, entityId, field, value, {
+                  ...options,
+                  retryCount: retryCount + 1,
+                });
               }
               throw rootE;
             }
           } else if (innerE.name === 'ConditionalCheckFailedException' && retryCount < maxRetries) {
-            return this.atomicUpdateMapField(key, entityId, field, value, retryCount + 1);
+            return this.atomicUpdateMapField(key, entityId, field, value, {
+              ...options,
+              retryCount: retryCount + 1,
+            });
           } else {
             throw innerE;
           }
@@ -388,24 +396,70 @@ export class ConfigManager {
   }
 
   /**
+   * Atomically appends items to a list in the ConfigTable.
+   * Ensures the list exists and prevents duplicates if desired.
+   */
+  public static async atomicAppendToList(
+    key: string,
+    items: any[],
+    options: { workspaceId?: string; preventDuplicates?: boolean } = {}
+  ): Promise<void> {
+    const tableName = this._getTableName();
+    if (!tableName) return;
+
+    const effectiveKey = options.workspaceId ? `WS#${options.workspaceId}#${key}` : key;
+    this.configCache.delete(effectiveKey);
+
+    const docClient = getDocClient();
+
+    // preventDuplicates logic requires current list
+    if (options.preventDuplicates) {
+      const current = await this.getTypedConfig<any[]>(key, [], options);
+      const filtered = items.filter((item) => !current.includes(item));
+      if (filtered.length === 0) return;
+      items = filtered;
+    }
+
+    try {
+      await docClient.send(
+        new UpdateCommand({
+          TableName: tableName,
+          Key: { key: effectiveKey },
+          UpdateExpression: 'SET #val = list_append(if_not_exists(#val, :empty), :items)',
+          ExpressionAttributeNames: { '#val': 'value' },
+          ExpressionAttributeValues: {
+            ':items': items,
+            ':empty': [],
+          },
+        })
+      );
+    } catch (e) {
+      logger.error(`Failed to atomically append to list ${effectiveKey}:`, e);
+      throw e;
+    }
+  }
+
+  /**
    * Atomically adds/subtracts a value for a specific field for an entity within a map-based configuration.
    */
   public static async atomicAddMapField(
     key: string,
     entityId: string,
     field: string,
-    delta: number
+    delta: number,
+    options: { workspaceId?: string } = {}
   ): Promise<number> {
     const tableName = this._getTableName();
     if (!tableName) return 0;
 
-    this.configCache.delete(key);
+    const effectiveKey = options.workspaceId ? `WS#${options.workspaceId}#${key}` : key;
+    this.configCache.delete(effectiveKey);
 
     try {
       const result = await getDocClient().send(
         new UpdateCommand({
           TableName: tableName,
-          Key: { key },
+          Key: { key: effectiveKey },
           UpdateExpression: 'SET #val.#id.#field = if_not_exists(#val.#id.#field, :zero) + :delta',
           ExpressionAttributeNames: { '#val': 'value', '#id': entityId, '#field': field },
           ExpressionAttributeValues: { ':delta': delta, ':zero': 0 },
@@ -414,7 +468,7 @@ export class ConfigManager {
       );
       return result.Attributes?.value?.[entityId]?.[field] ?? 0;
     } catch (e: unknown) {
-      logger.error(`Failed to atomically add ${delta} to ${key}/${entityId}.${field}:`, e);
+      logger.error(`Failed to atomically add ${delta} to ${effectiveKey}/${entityId}.${field}:`, e);
       throw e;
     }
   }
@@ -450,6 +504,61 @@ export class ConfigManager {
       logger.error(`Failed to atomically update ${key}/${entityId}.${field}:`, e);
       throw e;
     }
+  }
+
+  /**
+   * Atomically removes items from a top-level list in the ConfigTable.
+   * Implements a retry loop to handle concurrent updates.
+   */
+  public static async atomicRemoveFromList(
+    key: string,
+    itemsToRemove: any[],
+    options: { workspaceId?: string } = {}
+  ): Promise<void> {
+    const tableName = this._getTableName();
+    if (!tableName) return;
+
+    const effectiveKey = options.workspaceId ? `WS#${options.workspaceId}#${key}` : key;
+    this.configCache.delete(effectiveKey);
+
+    const docClient = getDocClient();
+    let retryCount = 0;
+    const maxRetries = 5;
+
+    while (retryCount < maxRetries) {
+      try {
+        const current = await this.getTypedConfig<any[]>(key, [], options);
+        const newList = current.filter((item) => !itemsToRemove.includes(item));
+
+        if (newList.length === current.length) return;
+
+        await docClient.send(
+          new UpdateCommand({
+            TableName: tableName,
+            Key: { key: effectiveKey },
+            UpdateExpression: 'SET #val = :newList',
+            ConditionExpression: '#val = :oldList',
+            ExpressionAttributeNames: { '#val': 'value' },
+            ExpressionAttributeValues: {
+              ':newList': newList,
+              ':oldList': current,
+            },
+          })
+        );
+        return;
+      } catch (e: any) {
+        if (e.name === 'ConditionalCheckFailedException') {
+          this.configCache.delete(effectiveKey);
+          retryCount++;
+          continue;
+        }
+        logger.error(`Failed to atomically remove from list ${effectiveKey}:`, e);
+        throw e;
+      }
+    }
+    throw new Error(
+      `Failed to atomically remove from list ${effectiveKey} after ${maxRetries} retries`
+    );
   }
 
   /**

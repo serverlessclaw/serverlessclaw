@@ -56,15 +56,11 @@ export class FeatureFlags {
     });
 
     try {
-      const list = await ConfigManager.getTypedConfig<string[]>('feature_flags_list', []);
-      if (!list.includes(flag.name)) {
-        await ConfigManager.saveRawConfig('feature_flags_list', [...list, flag.name], {
-          author: 'system:feature-flags',
-          skipVersioning: true,
-        });
-      }
+      await ConfigManager.atomicAppendToList('feature_flags_list', [flag.name], {
+        preventDuplicates: true,
+      });
     } catch (e) {
-      logger.warn(`Failed to update feature_flags_list:`, e);
+      logger.warn(`Failed to atomically update feature_flags_list:`, e);
     }
 
     this.cache.delete(flag.name);
@@ -120,12 +116,7 @@ export class FeatureFlags {
       }
 
       if (prunedNames.length > 0) {
-        const currentList = await ConfigManager.getTypedConfig<string[]>('feature_flags_list', []);
-        const newList = currentList.filter((name) => !prunedNames.includes(name));
-        await ConfigManager.saveRawConfig('feature_flags_list', newList, {
-          author: 'system:feature-flags',
-          skipVersioning: true,
-        });
+        await ConfigManager.atomicRemoveFromList('feature_flags_list', prunedNames);
       }
 
       return prunedNames.length;

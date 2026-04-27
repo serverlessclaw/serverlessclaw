@@ -220,11 +220,11 @@ participants.push({ id: agentId, type: 'agent' });
 await db.put({ userId, timestamp: now, ...entry }); // Second write at same MS overwrites first!
 
 // ✅ CORRECT
-await db.put({ 
-  userId, 
+await db.put({
+  userId,
   timestamp: now + attempt, // Use attempt as micro-jitter
-  ...entry, 
-  conditionExpression: 'attribute_not_exists(userId)' 
+  ...entry,
+  conditionExpression: 'attribute_not_exists(userId)',
 });
 ```
 

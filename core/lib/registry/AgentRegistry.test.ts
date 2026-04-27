@@ -269,7 +269,8 @@ describe('AgentRegistry', () => {
       expect(ConfigManager.atomicRemoveFromMap).toHaveBeenCalledWith(
         DYNAMO_KEYS.AGENT_TOOL_OVERRIDES,
         'agent1',
-        ['tool1']
+        ['tool1'],
+        undefined
       );
     });
 

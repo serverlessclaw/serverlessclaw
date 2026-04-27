@@ -44,7 +44,7 @@ vi.mock('./useChatMessages', () => ({
 
 vi.mock('@/components/Providers/TranslationsProvider', () => ({
   useTranslations: () => ({ t: (k: string) => k }),
-  TranslationsProvider: ({ children }: any) => <div>{children}</div>,
+  TranslationsProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock('@/components/Providers/UICommandProvider', () => ({
@@ -107,25 +107,31 @@ describe('ChatContent Component', () => {
   it('renders Mission Control layout by default (warRoomMode is on)', async () => {
     // Set to true explicitly
     mockStorage.setItem('claw_war_room_mode', 'true');
-    
+
     render(<ChatContent />);
-    
-    await waitFor(() => {
-      expect(screen.getByTestId('mission-briefing')).toBeInTheDocument();
-      expect(screen.getByTestId('mission-hud')).toBeInTheDocument();
-    }, { timeout: 2000 });
+
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('mission-briefing')).toBeInTheDocument();
+        expect(screen.getByTestId('mission-hud')).toBeInTheDocument();
+      },
+      { timeout: 2000 }
+    );
   });
 
   it('renders standard chat layout when warRoomMode is off', async () => {
     // Set to false explicitly
     mockStorage.setItem('claw_war_room_mode', 'false');
-    
+
     render(<ChatContent />);
-    
-    await waitFor(() => {
-      expect(screen.getByTestId('chat-header')).toBeInTheDocument();
-      expect(screen.getByTestId('message-list')).toBeInTheDocument();
-    }, { timeout: 2000 });
+
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('chat-header')).toBeInTheDocument();
+        expect(screen.getByTestId('message-list')).toBeInTheDocument();
+      },
+      { timeout: 2000 }
+    );
 
     expect(screen.queryByTestId('mission-briefing')).not.toBeInTheDocument();
     expect(screen.queryByTestId('mission-hud')).not.toBeInTheDocument();
@@ -133,13 +139,16 @@ describe('ChatContent Component', () => {
 
   it('persists sidebars even when activeSessionId is null if warRoomMode is on', async () => {
     mockStorage.setItem('claw_war_room_mode', 'true');
-    
+
     render(<ChatContent />);
-    
+
     // Persistence check: sidebars should be present during "New Chat" initialization
-    await waitFor(() => {
-      expect(screen.getByTestId('mission-briefing')).toBeInTheDocument();
-      expect(screen.getByTestId('mission-hud')).toBeInTheDocument();
-    }, { timeout: 2000 });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('mission-briefing')).toBeInTheDocument();
+        expect(screen.getByTestId('mission-hud')).toBeInTheDocument();
+      },
+      { timeout: 2000 }
+    );
   });
 });

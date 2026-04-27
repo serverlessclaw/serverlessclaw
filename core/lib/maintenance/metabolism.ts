@@ -252,7 +252,7 @@ export class MetabolismService {
         const agentId = failure.agentId || 'unknown';
 
         logger.info(`[Metabolism] Surgical remediation for tool: ${toolName}`);
-        pruned = await AgentRegistry.pruneAgentTool(agentId, toolName);
+        pruned = await AgentRegistry.pruneAgentTool(agentId, toolName, { workspaceId });
       }
 
       if (!pruned && workspaceId) {

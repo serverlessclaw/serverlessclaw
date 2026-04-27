@@ -249,4 +249,72 @@ describe('ConfigManager atomic operations', () => {
 
     expect(docClientMock.send).toHaveBeenCalledTimes(4);
   });
+
+  describe('atomicAppendToList', () => {
+    it('should append to list', async () => {
+      await ConfigManager.atomicAppendToList('test_list', ['new_item']);
+
+      expect(docClientMock.send).toHaveBeenCalled();
+      const command = docClientMock.send.mock.calls[0][0];
+      expect(command.input.UpdateExpression).toContain('list_append');
+      expect(command.input.ExpressionAttributeValues[':items']).toEqual(['new_item']);
+    });
+
+    it('should append to workspace scoped list', async () => {
+      await ConfigManager.atomicAppendToList('test_list', ['new_item'], { workspaceId: 'ws-1' });
+
+      expect(docClientMock.send).toHaveBeenCalled();
+      const command = docClientMock.send.mock.calls[0][0];
+      expect(command.input.Key.key).toBe('WS#ws-1#test_list');
+    });
+
+    it('should prevent duplicates if requested', async () => {
+      // Mock current list to contain 'existing'
+      docClientMock.send.mockResolvedValueOnce({ Item: { value: ['existing'] } });
+      // Second send should be the update
+      docClientMock.send.mockResolvedValueOnce({});
+
+      await ConfigManager.atomicAppendToList('test_list', ['existing', 'new'], {
+        preventDuplicates: true,
+      });
+
+      expect(docClientMock.send).toHaveBeenCalledTimes(2);
+      const command = docClientMock.send.mock.calls[1][0];
+      expect(command.input.ExpressionAttributeValues[':items']).toEqual(['new']);
+    });
+  });
+
+  describe('atomicRemoveFromList', () => {
+    it('should remove items from list with retries', async () => {
+      // 1. Get current list
+      docClientMock.send.mockResolvedValueOnce({ Item: { value: ['item1', 'item2'] } });
+      // 2. Update fails with race
+      const error = new Error('Race');
+      error.name = 'ConditionalCheckFailedException';
+      docClientMock.send.mockRejectedValueOnce(error);
+      // 3. Retry get
+      docClientMock.send.mockResolvedValueOnce({ Item: { value: ['item1', 'item2'] } });
+      // 4. Update succeeds
+      docClientMock.send.mockResolvedValueOnce({});
+
+      await ConfigManager.atomicRemoveFromList('test_list', ['item1']);
+
+      expect(docClientMock.send).toHaveBeenCalledTimes(4);
+      const command = docClientMock.send.mock.calls[3][0];
+      expect(command.input.ExpressionAttributeValues[':newList']).toEqual(['item2']);
+      expect(command.input.ConditionExpression).toBe('#val = :oldList');
+    });
+
+    it('should use workspaceId correctly', async () => {
+      docClientMock.send.mockResolvedValueOnce({ Item: { value: ['item1'] } });
+      docClientMock.send.mockResolvedValueOnce({});
+
+      await ConfigManager.atomicRemoveFromList('test_list', ['item1'], { workspaceId: 'ws-1' });
+
+      const getCommand = docClientMock.send.mock.calls[0][0];
+      const updateCommand = docClientMock.send.mock.calls[1][0];
+      expect(getCommand.input.Key.key).toBe('WS#ws-1#test_list');
+      expect(updateCommand.input.Key.key).toBe('WS#ws-1#test_list');
+    });
+  });
 });

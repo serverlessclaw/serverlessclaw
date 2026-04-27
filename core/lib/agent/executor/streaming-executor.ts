@@ -41,7 +41,11 @@ export class StreamingExecutor extends BaseExecutor {
         : this.agentId;
     const assistantMessageId = `${traceId}-${agentSuffix}`;
 
-    yield { messageId: assistantMessageId } as MessageChunk;
+    yield {
+      messageId: assistantMessageId,
+      modelName: options.activeModel,
+      model: options.activeModel,
+    } as MessageChunk;
 
     const cancellationMsg = await ExecutorHelper.checkCancellation(taskId);
     if (cancellationMsg) {

@@ -441,47 +441,13 @@ export class AgentRegistry {
     value: number,
     options?: { workspaceId?: string }
   ): Promise<number> {
-    const tableName = getConfigTableName();
-
-    if (!tableName) {
-      throw new Error('ConfigTable not linked. Cannot update agent field.');
-    }
-
-    const { UpdateCommand } = await import('@aws-sdk/lib-dynamodb');
-
-    const effectiveKey = options?.workspaceId
-      ? `WS#${options.workspaceId}#${DYNAMO_KEYS.AGENTS_CONFIG}`
-      : DYNAMO_KEYS.AGENTS_CONFIG;
-
-    try {
-      const response = await getDocClient().send(
-        new UpdateCommand({
-          TableName: tableName,
-          Key: { key: effectiveKey },
-          UpdateExpression:
-            'SET #agents.#id.#field = if_not_exists(#agents.#id.#field, :zero) + :val',
-          ExpressionAttributeNames: {
-            '#agents': 'value',
-            '#id': agentId,
-            '#field': field,
-          },
-          ExpressionAttributeValues: {
-            ':val': value,
-            ':zero': 0,
-          },
-          ReturnValues: 'ALL_NEW',
-        })
-      );
-
-      const updatedAgents = response.Attributes?.value as Record<string, Record<string, unknown>>;
-      return (updatedAgents?.[agentId]?.[field] as number) ?? 0;
-    } catch (e) {
-      logger.error(
-        `[REGISTRY] Failed to atomically update agent field '${field}' for ${agentId}:`,
-        e
-      );
-      throw e;
-    }
+    return ConfigManager.atomicAddMapField(
+      DYNAMO_KEYS.AGENTS_CONFIG,
+      agentId,
+      field,
+      value,
+      options
+    );
   }
 
   /**
@@ -554,24 +520,18 @@ export class AgentRegistry {
     toolName: string,
     options?: { workspaceId?: string }
   ): Promise<boolean> {
-    let pruned = false;
-
-    const overridesKey = options?.workspaceId
-      ? `WS#${options.workspaceId}#${DYNAMO_KEYS.AGENT_TOOL_OVERRIDES}`
-      : DYNAMO_KEYS.AGENT_TOOL_OVERRIDES;
-
-    // Prune from batch overrides
     try {
-      await ConfigManager.atomicRemoveFromMap(overridesKey, agentId, [toolName]);
-      pruned = true;
-    } catch (e) {
-      logger.warn(
-        `[REGISTRY] Failed to atomically prune batch tool '${toolName}' for ${agentId}:`,
-        e
+      await ConfigManager.atomicRemoveFromMap(
+        DYNAMO_KEYS.AGENT_TOOL_OVERRIDES,
+        agentId,
+        [toolName],
+        options
       );
+      return true;
+    } catch (e) {
+      logger.warn(`[REGISTRY] Failed to atomically prune tool '${toolName}' for ${agentId}:`, e);
+      return false;
     }
-
-    return pruned;
   }
 
   /**
