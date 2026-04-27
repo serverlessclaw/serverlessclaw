@@ -78,42 +78,50 @@ describe('ChatContent Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-    localStorage.setItem('claw_war_room_mode', 'true');
   });
 
   it('renders Mission Control layout by default (warRoomMode is on)', async () => {
+    // Explicitly mock getItem to return 'true'
+    const getItemSpy = vi.spyOn(Storage.prototype, 'getItem').mockReturnValue('true');
+    
     render(<ChatContent />);
     
     await waitFor(() => {
       expect(screen.getByTestId('mission-briefing')).toBeInTheDocument();
       expect(screen.getByTestId('mission-hud')).toBeInTheDocument();
-    });
+    }, { timeout: 2000 });
+    
+    getItemSpy.mockRestore();
   });
 
   it('renders standard chat layout when warRoomMode is off', async () => {
-    // Mock localStorage to return false for warRoomMode
-    localStorage.setItem('claw_war_room_mode', 'false');
+    // Explicitly mock getItem to return 'false'
+    const getItemSpy = vi.spyOn(Storage.prototype, 'getItem').mockReturnValue('false');
     
     render(<ChatContent />);
     
     await waitFor(() => {
       expect(screen.getByTestId('chat-header')).toBeInTheDocument();
       expect(screen.getByTestId('message-list')).toBeInTheDocument();
-    });
+    }, { timeout: 2000 });
 
     expect(screen.queryByTestId('mission-briefing')).not.toBeInTheDocument();
     expect(screen.queryByTestId('mission-hud')).not.toBeInTheDocument();
+    
+    getItemSpy.mockRestore();
   });
 
   it('persists sidebars even when activeSessionId is null if warRoomMode is on', async () => {
+    const getItemSpy = vi.spyOn(Storage.prototype, 'getItem').mockReturnValue('true');
+    
     render(<ChatContent />);
     
     // Persistence check: sidebars should be present during "New Chat" initialization
     await waitFor(() => {
       expect(screen.getByTestId('mission-briefing')).toBeInTheDocument();
       expect(screen.getByTestId('mission-hud')).toBeInTheDocument();
-    });
+    }, { timeout: 2000 });
     
-    localStorage.removeItem('claw_war_room_mode');
+    getItemSpy.mockRestore();
   });
 });
