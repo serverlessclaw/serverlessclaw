@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { emitMetrics, METRICS } from './metrics';
 
 const mockSend = vi.fn();
+const mockPutSend = vi.fn();
 
 vi.mock('@aws-sdk/client-cloudwatch', () => {
   return {
@@ -14,9 +15,22 @@ vi.mock('@aws-sdk/client-cloudwatch', () => {
   };
 });
 
+vi.mock('@aws-sdk/lib-dynamodb', () => ({
+  PutCommand: class {
+    constructor(public input: any) {}
+  },
+}));
+
+vi.mock('../utils/ddb-client', () => ({
+  getDocClient: () => ({ send: mockPutSend }),
+  getMemoryTableName: () => 'TestMemoryTable',
+  getConfigTableName: () => 'TestConfigTable',
+}));
+
 describe('Metrics', () => {
   beforeEach(() => {
     mockSend.mockReset();
+    mockPutSend.mockReset();
     vi.clearAllMocks();
   });
 
@@ -61,9 +75,26 @@ describe('Metrics', () => {
     });
 
     it('should handle CloudWatch send failure gracefully', async () => {
-      mockSend.mockRejectedValueOnce(new Error('CloudWatch unavailable'));
+      mockSend.mockRejectedValue(new Error('CloudWatch unavailable'));
+      mockPutSend.mockResolvedValue({});
 
       await expect(emitMetrics([METRICS.agentInvoked('agent')])).resolves.not.toThrow();
+    });
+
+    it('should fall back to DynamoDB when CloudWatch is unavailable', async () => {
+      mockSend.mockRejectedValue(new Error('CloudWatch unavailable'));
+      mockPutSend.mockResolvedValue({});
+
+      await emitMetrics([METRICS.agentInvoked('agent-1', true, { workspaceId: 'ws-123' })]);
+
+      // Verify DDB persistence
+      expect(mockPutSend).toHaveBeenCalled();
+      const putCall = mockPutSend.mock.calls[0][0];
+      expect(putCall.input.TableName).toBe('TestMemoryTable');
+      expect(putCall.input.Item.userId).toBe('WS#ws-123#METRIC#AgentInvocations');
+      expect(putCall.input.Item.type).toBe('METRIC');
+      expect(putCall.input.Item.metricName).toBe('AgentInvocations');
+      expect(putCall.input.Item.timestamp).toBeDefined();
     });
   });
 

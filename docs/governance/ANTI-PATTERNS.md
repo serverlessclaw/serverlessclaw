@@ -4,24 +4,32 @@ Based on audit findings and commit history patterns, this document tracks recurr
 
 ## Critical Anti-Patterns (Must Avoid)
 
-### 1. Fail-Open Rate Limiting
+### 1. Fail-Open Safety Checks (Rate Limits & Budgets)
 
-**What**: Rate limiting that returns `true` on DynamoDB failure instead of failing closed.
+**What**: Security/Safety checks that return `true` (allowed) or `false` (not-exceeded) on failure instead of failing closed.
 
 **Pattern**:
 
 ```typescript
-// ❌ WRONG
-const result = await rateLimit.consume(key);
-return result; // Returns true even on DB failure!
+// ❌ WRONG (Budget)
+try {
+  const exceeded = await checkBudget();
+  return exceeded; 
+} catch {
+  return false; // Returns false even on DB failure!
+}
 
 // ✅ CORRECT
-const result = await rateLimit.consume(key);
-if (!result) return false; // Fail-closed
-return true;
+try {
+  const exceeded = await checkBudget();
+  return exceeded;
+} catch (e) {
+  logger.error('Check failed', e);
+  return true; // Fail-closed: assume exceeded to prevent cost leak
+}
 ```
 
-**Occurrences**: 3+ times in 30 days (commits 1e8165f9, 0c25b53c, b6841dda)
+**Occurrences**: 4+ times in 30 days (commits 1e8165f9, 0c25b53c, b6841dda, and recursion-tracker bug)
 
 ---
 

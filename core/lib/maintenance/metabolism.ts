@@ -10,19 +10,25 @@ import { InsightCategory } from '../types/memory';
 import { EvolutionScheduler } from '../safety/evolution-scheduler';
 import { FailureEventPayload } from '../schema/events';
 import { FeatureFlags } from '../feature-flags';
+import { ConfigManager } from '../registry/config';
+import { DYNAMO_KEYS } from '../constants';
 
 /**
  * MetabolismService coordinates the "Regenerative Metabolism" silo.
  * It combines observation (auditing) with autonomous repairs (pruning/culling).
+ *
+ * Regenerative Metabolism Cycle:
+ * ┌──────────────┐      ┌──────────────┐      ┌──────────────┐
+ * │  Observation │─────▶│ Evaluation   │─────▶│ Remediation  │
+ * │ (AST Scans)  │      │ (Trust/Usage)│      │ (Pruning)    │
+ * └──────────────┘      └──────────────┘      └──────────────┘
+ *        ▲                                            │
+ *        └────────────────────────────────────────────┘
  */
 export class MetabolismService {
   /**
    * Runs a metabolism audit and performs regenerative repairs if requested.
    * Following the "Perform while Auditing" philosophy.
-   *
-   * @param memory - The memory provider instance for gap operations.
-   * @param options - Audit options.
-   * @returns A promise resolving to an array of audit findings.
    */
   static async runMetabolismAudit(
     memory: BaseMemoryProvider,
@@ -33,13 +39,16 @@ export class MetabolismService {
       staffId?: string;
     } = {}
   ): Promise<AuditFinding[]> {
+    if (!options.workspaceId) {
+      throw new Error('[Metabolism] Mandatory workspaceId missing in runMetabolismAudit');
+    }
     const findings: AuditFinding[] = [];
     const scope = {
       workspaceId: options.workspaceId,
       teamId: options.teamId,
       staffId: options.staffId,
     };
-    logger.info(`[Metabolism] Starting regenerative audit (repair: ${!!options.repair})`);
+    logger.info(`[Metabolism] Starting regenerative audit for WS: ${options.workspaceId}`);
 
     // 1. Perform automated repairs for stateless state (Registry/Memory)
     if (options.repair) {
@@ -68,7 +77,7 @@ export class MetabolismService {
    */
   private static async executeRepairs(
     memory: BaseMemoryProvider,
-    scope: { workspaceId?: string; teamId?: string; staffId?: string }
+    scope: { workspaceId: string; teamId?: string; staffId?: string }
   ): Promise<AuditFinding[]> {
     const repairFindings: AuditFinding[] = [];
     const workspaceId = scope.workspaceId;
@@ -148,16 +157,19 @@ export class MetabolismService {
       const allAgents = await AgentRegistry.getAllConfigs({ workspaceId: scope.workspaceId });
       let disabledCount = 0;
       for (const [agentId, config] of Object.entries(allAgents)) {
-        // Only target dynamic agents with critically low trust (< 20) that are still enabled
+        const lowTrustThreshold = await ConfigManager.getTypedConfig('low_trust_threshold', 20, {
+          workspaceId: scope.workspaceId,
+        });
+
         if (
           !AgentRegistry.isBackboneAgent(agentId) &&
           config.enabled !== false &&
-          (config.trustScore ?? 100) < 20
+          (config.trustScore ?? 100) < lowTrustThreshold
         ) {
           logger.warn(
-            `[Metabolism] Critically low trust detected for agent ${agentId}. Disabling.`
+            `[Metabolism] Automatically disabling low-trust agent: ${agentId} (Score: ${config.trustScore})`
           );
-          await AgentRegistry.updateAgentConfig(
+          await AgentRegistry.saveConfig(
             agentId,
             { enabled: false },
             { workspaceId: scope.workspaceId }
@@ -187,7 +199,7 @@ export class MetabolismService {
         repairFindings.push({
           silo: 'Metabolism',
           expected: 'Lean S3 staging storage',
-          actual: `Reclaimed ${reclaimed} stale objects from staging bucket.`,
+          actual: `Reclaimed ${reclaimed} stale objects from staging bucket for WS: ${workspaceId}.`,
           severity: 'P2',
           recommendation: 'Silo 7 (Regenerative Metabolism) S3 reclamation enforced.',
         });
@@ -201,42 +213,57 @@ export class MetabolismService {
 
   /**
    * Prunes stale objects from the staging bucket.
+   * Requirement: workspaceId MUST be provided to prevent global S3 traversal.
    */
-  private static async pruneStagingBucket(scope: { workspaceId?: string }): Promise<number> {
-    const bucketName = getStagingBucketName();
-    if (!bucketName || bucketName === 'StagingBucket') return 0;
+  private static async pruneStagingBucket(scope: { workspaceId: string }): Promise<number> {
+    const bucket = getStagingBucketName();
+    if (!bucket || bucket === 'StagingBucket') return 0;
+    if (!scope.workspaceId) {
+      logger.error('[Metabolism] Mandatory workspaceId missing in pruneStagingBucket');
+      return 0;
+    }
 
     try {
       const { S3Client, ListObjectsV2Command, DeleteObjectsCommand } =
         await import('@aws-sdk/client-s3');
-      const s3 = new S3Client({});
-
-      const prefix = scope.workspaceId ? `workspaces/${scope.workspaceId}/` : '';
-      const listCmd = new ListObjectsV2Command({
-        Bucket: bucketName,
-        Prefix: prefix,
-      });
-
-      const response = await s3.send(listCmd);
-      if (!response.Contents || response.Contents.length === 0) return 0;
+      const s3Client = new S3Client({});
 
       const retentionDays = getConfigValue('STAGING_RETENTION_DAYS');
-      const cutoff = Date.now() - retentionDays * 24 * 3600 * 1000;
-      const toDelete = response.Contents.filter(
-        (obj) => obj.Key && obj.LastModified && obj.LastModified.getTime() < cutoff
-      ).map((obj) => ({ Key: obj.Key! }));
+      let continuationToken: string | undefined;
+      let prunedCount = 0;
 
-      let deletedCount = 0;
-      for (let i = 0; i < toDelete.length; i += 1000) {
-        const batch = toDelete.slice(i, i + 1000);
-        const deleteCmd = new DeleteObjectsCommand({
-          Bucket: bucketName,
-          Delete: { Objects: batch },
-        });
-        await s3.send(deleteCmd);
-        deletedCount += batch.length;
-      }
-      return deletedCount;
+      do {
+        const listResponse = await s3Client.send(
+          new ListObjectsV2Command({
+            Bucket: bucket,
+            Prefix: `workspaces/${scope.workspaceId}/`,
+            ContinuationToken: continuationToken,
+          })
+        );
+
+        const contents = listResponse.Contents ?? [];
+        const toDelete = contents
+          .filter((obj) => {
+            if (!obj.LastModified || !obj.Key) return false;
+            const ageDays = (Date.now() - obj.LastModified.getTime()) / (1000 * 60 * 60 * 24);
+            return ageDays > retentionDays;
+          })
+          .map((obj) => ({ Key: obj.Key! }));
+
+        if (toDelete.length > 0) {
+          await s3Client.send(
+            new DeleteObjectsCommand({
+              Bucket: bucket,
+              Delete: { Objects: toDelete },
+            })
+          );
+          prunedCount += toDelete.length;
+        }
+
+        continuationToken = listResponse.NextContinuationToken;
+      } while (continuationToken);
+
+      return prunedCount;
     } catch (e) {
       logger.error('[Metabolism] Staging bucket pruning failed:', e);
       return 0;
@@ -330,6 +357,10 @@ export class MetabolismService {
     failure: FailureEventPayload
   ): Promise<AuditFinding | undefined> {
     const workspaceId = (failure as Record<string, unknown>).workspaceId as string | undefined;
+    if (!workspaceId) {
+      logger.warn('[Metabolism] Skipping real-time remediation: missing workspaceId');
+      return undefined;
+    }
     logger.info(
       `[Metabolism] Attempting immediate remediation for trace ${failure.traceId} in workspace ${workspaceId}`
     );
@@ -339,8 +370,6 @@ export class MetabolismService {
     // Strategy 1: Registry mismatch/stale overrides (Common dashboard issue)
     if (error.includes('tool') || error.includes('registry') || error.includes('override')) {
       let pruned = false;
-      // Surgical remediation: if error contains a specific tool name, prune THAT override specifically
-      // e.g. "Tool 'github_createIssue' failed" or "'github_createIssue' tool error"
       const toolMatch =
         failure.error.match(/tool\s+['"]([^'"]+)['"]/i) ||
         failure.error.match(/['"]([^'"]+)['"]\s+tool/i);
@@ -350,7 +379,13 @@ export class MetabolismService {
         const agentId = failure.agentId || 'unknown';
 
         logger.info(`[Metabolism] Surgical remediation for tool: ${toolName}`);
-        pruned = await AgentRegistry.pruneAgentTool(agentId, toolName, { workspaceId });
+        await ConfigManager.atomicRemoveFromMap(
+          DYNAMO_KEYS.AGENT_TOOL_OVERRIDES,
+          agentId,
+          [toolName],
+          { workspaceId }
+        );
+        pruned = true;
       }
 
       if (!pruned && workspaceId) {
@@ -411,6 +446,7 @@ export class MetabolismService {
       timeoutMs: 3600000, // 1 hour
       traceId: failure.traceId,
       userId: failure.userId,
+      workspaceId,
     });
 
     // Also propagate as a strategic gap for visibility
@@ -447,6 +483,16 @@ export class MetabolismService {
       const corePath = process.cwd() + '/core';
       const { readFile, readdir, stat } = await import('fs/promises');
       const { join } = await import('path');
+
+      /**
+       * MetabolismService - Integrity Diagram
+       * ------------------------------------
+       * MCP Scanner (AIReady) -> Native Fallback (File Audit)
+       *       |                       |
+       *       +-----> Remediation <---+
+       *                   |
+       *            [HITL Scheduler]
+       */
 
       const scanDir = async (dir: string, depth: number = 0): Promise<string[]> => {
         const maxDepth = getConfigValue('AUDIT_SCAN_DEPTH');

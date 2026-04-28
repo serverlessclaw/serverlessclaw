@@ -168,50 +168,63 @@ export async function incrementTokenUsage(traceId: string, tokens: number): Prom
 }
 
 /**
- * Checks if the cumulative token usage for a trace exceeds the global budget.
- *
- * @param traceId - The trace ID for the execution chain
- * @returns true if budget exceeded, false otherwise.
+ * Retrieves the current token usage for a trace.
  */
-export async function isBudgetExceeded(traceId: string): Promise<boolean> {
+export async function getTraceUsage(traceId: string): Promise<number> {
   try {
     const key = `${RECURSION_STACK_PREFIX}${traceId}`;
-    const budget = await ConfigManager.getTypedConfig(
-      CONFIG_KEYS.GLOBAL_TOKEN_BUDGET,
-      DEFAULT_GLOBAL_BUDGET
-    );
-
-    // Re-resolve budget carefully from system defaults if config lookup fails
-    const effectiveBudget = (budget as number) || DEFAULT_GLOBAL_BUDGET;
-
-    const { Item } = await docClient.send(
+    const response = await docClient.send(
       new GetCommand({
         TableName: getMemoryTableName(),
         Key: { userId: key, timestamp: 0 },
       })
     );
+    return (response.Item?.tokens as number) ?? 0;
+  } catch (error) {
+    logger.warn(`[RecursionTracker] Failed to get usage for ${traceId}:`, error);
+    return -1;
+  }
+}
 
-    const currentUsage = (Item?.tokens as number) ?? 0;
-    if (currentUsage > effectiveBudget) {
+/**
+ * Checks if the cumulative token budget for a trace has been exceeded.
+ * Scoped to workspaceId for proper multi-tenant enforcement.
+ */
+export async function isBudgetExceeded(traceId: string, workspaceId?: string): Promise<boolean> {
+  try {
+    const budget = await ConfigManager.getTypedConfig(
+      CONFIG_KEYS.GLOBAL_TOKEN_BUDGET,
+      DEFAULT_GLOBAL_BUDGET,
+      { workspaceId }
+    );
+
+    const usage = await getTraceUsage(traceId);
+
+    // Fail-Closed: If usage lookup failed, assume exceeded
+    if (usage === -1) return true;
+
+    if (usage >= (budget as number)) {
       logger.error(
-        `[BUDGET_EXCEEDED] Trace ${traceId} usage (${currentUsage}) exceeds budget (${effectiveBudget}).`
+        `[RecursionTracker] Trace ${traceId} exceeded token budget (${usage} >= ${budget})`
       );
       return true;
     }
 
-    // Proactive warning at 80% capacity
-    if (currentUsage > effectiveBudget * 0.8) {
+    // Warning at 80%
+    if (usage >= (budget as number) * 0.8) {
       logger.warn(
-        `[BUDGET_WARNING] Trace ${traceId} usage (${currentUsage}) at 80% of budget (${effectiveBudget}).`
+        `[RecursionTracker] Trace ${traceId} at 80% budget capacity (${usage}/${budget})`
       );
     }
 
     return false;
-  } catch (error) {
-    logger.warn(`[BUDGET] Error checking budget for ${traceId}:`, error);
-    return false; // Assume safe on error but log it
+  } catch (e) {
+    logger.error(`[RecursionTracker] Failed to check budget for ${traceId}:`, e);
+    // Fail-Closed Principle: If we can't verify budget, assume exceeded to prevent runaway costs
+    return true;
   }
 }
+
 /**
  * Get the current recursion depth for a trace
  * @param traceId - The trace ID for the execution chain

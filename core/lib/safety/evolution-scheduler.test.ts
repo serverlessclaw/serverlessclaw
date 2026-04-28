@@ -96,6 +96,8 @@ describe('EvolutionScheduler', () => {
       reason: 'security upgrade',
       timeoutMs: 1000,
       traceId: 'trace-1',
+      userId: 'user-1',
+      workspaceId: 'ws-1',
     });
 
     expect(actionId).toBeDefined();
@@ -106,6 +108,7 @@ describe('EvolutionScheduler', () => {
     ) as any;
     expect(stored.agentId).toBe('test-agent');
     expect(stored.status).toBe('pending');
+    expect(stored.workspaceId).toBe('ws-1');
   });
 
   it('should trigger timed out actions', async () => {
@@ -115,10 +118,12 @@ describe('EvolutionScheduler', () => {
       action: 'infra_topology',
       reason: 'optimization',
       timeoutMs: -100, // already expired
+      userId: 'user-1',
+      workspaceId: 'ws-1',
     });
 
     // 2. Trigger
-    const count = await scheduler.triggerTimedOutActions();
+    const count = await scheduler.triggerTimedOutActions('ws-1');
 
     expect(count).toBe(1);
     expect(emitTypedEvent).toHaveBeenCalledWith(
@@ -126,6 +131,7 @@ describe('EvolutionScheduler', () => {
       EventType.STRATEGIC_TIE_BREAK,
       expect.objectContaining({
         agentId: 'test-agent',
+        workspaceId: 'ws-1',
         metadata: expect.objectContaining({ actionId }),
       })
     );
@@ -136,15 +142,31 @@ describe('EvolutionScheduler', () => {
     expect(updated.status).toBe('triggered');
   });
 
+  it('should not trigger actions from different workspace', async () => {
+    await scheduler.scheduleAction({
+      agentId: 'test-agent',
+      action: 'iam_change',
+      reason: 'wrong workspace',
+      timeoutMs: -100,
+      userId: 'user-1',
+      workspaceId: 'ws-wrong',
+    });
+
+    const count = await scheduler.triggerTimedOutActions('ws-1');
+    expect(count).toBe(0);
+  });
+
   it('should not trigger actions that have not timed out', async () => {
     await scheduler.scheduleAction({
       agentId: 'test-agent',
       action: 'iam_change',
       reason: 'future change',
       timeoutMs: 10000, // way in the future
+      userId: 'user-1',
+      workspaceId: 'ws-1',
     });
 
-    const count = await scheduler.triggerTimedOutActions();
+    const count = await scheduler.triggerTimedOutActions('ws-1');
     expect(count).toBe(0);
     expect(emitTypedEvent).not.toHaveBeenCalled();
   });

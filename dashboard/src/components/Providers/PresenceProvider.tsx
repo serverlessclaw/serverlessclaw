@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
-import { useRealtimeContext } from './RealtimeProvider';
+import { useRealtimeContext, RealtimeMessage } from './RealtimeProvider';
 import { useTenant } from './TenantProvider';
 import { logger } from '@claw/core/lib/logger';
 
@@ -47,7 +46,8 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
     // Subscribe to workspace presence signals
     const unsubscribe = subscribe(
       [`workspaces/${activeWorkspaceId}/presence`],
-      (topic: string, payload: any) => {
+      (topic: string, message: RealtimeMessage) => {
+        const payload = message as unknown as PresenceInfo;
         if (payload.memberId === userId) return;
         setMembers((prev) => {
           const existingIndex = prev.findIndex((m) => m.memberId === payload.memberId);

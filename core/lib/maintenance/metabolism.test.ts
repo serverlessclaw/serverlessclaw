@@ -5,12 +5,21 @@ import { archiveStaleGaps, cullResolvedGaps, setGap } from '../memory/gap-operat
 import { FeatureFlags } from '../feature-flags';
 
 // Mock dependencies
-vi.mock('../registry/AgentRegistry', () => ({
-  AgentRegistry: {
-    pruneLowUtilizationTools: vi.fn().mockResolvedValue(0),
-    pruneAgentTool: vi.fn().mockResolvedValue(false),
+vi.mock('../registry/config', () => ({
+  ConfigManager: {
+    getTypedConfig: vi.fn().mockResolvedValue(20),
     getRawConfig: vi.fn(),
     saveRawConfig: vi.fn(),
+    atomicRemoveFromMap: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
+vi.mock('../registry/AgentRegistry', () => ({
+  AgentRegistry: {
+    isBackboneAgent: vi.fn().mockReturnValue(false),
+    getAllConfigs: vi.fn().mockResolvedValue({}),
+    saveConfig: vi.fn().mockResolvedValue(undefined),
+    pruneLowUtilizationTools: vi.fn().mockResolvedValue(0),
   },
 }));
 
@@ -125,6 +134,31 @@ describe('MetabolismService', () => {
       expect(findings.some((f) => f.actual.includes('Reclaimed 1 stale objects'))).toBe(true);
     });
 
+    it('should handle S3 pagination when pruning staging bucket', async () => {
+      // First page with a continuation token
+      mockS3Send.mockResolvedValueOnce({
+        Contents: [
+          { Key: 'page1-old', LastModified: new Date(Date.now() - 40 * 24 * 3600 * 1000) },
+        ],
+        NextContinuationToken: 'token-123',
+      });
+      // Second page
+      mockS3Send.mockResolvedValueOnce({}); // Delete response for page 1
+      mockS3Send.mockResolvedValueOnce({
+        Contents: [
+          { Key: 'page2-old', LastModified: new Date(Date.now() - 40 * 24 * 3600 * 1000) },
+        ],
+      });
+      mockS3Send.mockResolvedValueOnce({}); // Delete response for page 2
+
+      const findings = await MetabolismService.runMetabolismAudit(mockMemory, {
+        repair: true,
+      });
+
+      expect(mockS3Send).toHaveBeenCalledTimes(4); // List1, Delete1, List2, Delete2
+      expect(findings.some((f) => f.actual.includes('Reclaimed 2 stale objects'))).toBe(true);
+    });
+
     it('should fallback to native audit if MCP tools are missing', async () => {
       const findings = await MetabolismService.runMetabolismAudit(mockMemory, {
         workspaceId: 'ws-1',
@@ -145,13 +179,17 @@ describe('MetabolismService', () => {
         workspaceId: 'ws-1',
       };
 
-      vi.mocked(AgentRegistry.pruneAgentTool).mockResolvedValueOnce(true);
+      const { ConfigManager } = await import('../registry/config');
+      vi.mocked(ConfigManager.atomicRemoveFromMap).mockResolvedValueOnce(undefined);
 
       const finding = await MetabolismService.remediateDashboardFailure(mockMemory, failure as any);
 
-      expect(AgentRegistry.pruneAgentTool).toHaveBeenCalledWith('coder', 'github_createIssue', {
-        workspaceId: 'ws-1',
-      });
+      expect(ConfigManager.atomicRemoveFromMap).toHaveBeenCalledWith(
+        'agent_tool_overrides',
+        'coder',
+        ['github_createIssue'],
+        { workspaceId: 'ws-1' }
+      );
       expect(finding?.actual).toContain('Pruned stale/failing tool overrides atomically');
     });
 
@@ -164,7 +202,8 @@ describe('MetabolismService', () => {
         workspaceId: 'ws-1',
       };
 
-      vi.mocked(AgentRegistry.getRawConfig).mockResolvedValueOnce([]); // No tools found
+      const { ConfigManager } = await import('../registry/config');
+      vi.mocked(ConfigManager.getRawConfig).mockResolvedValueOnce([]); // No tools found
       vi.mocked(AgentRegistry.pruneLowUtilizationTools).mockResolvedValueOnce(1);
 
       const finding = await MetabolismService.remediateDashboardFailure(mockMemory, failure as any);

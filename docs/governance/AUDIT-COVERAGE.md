@@ -38,6 +38,8 @@ Last Updated: 2026-04-27
 
 | Date       | Report                                     | Silos Covered        | Cross-Silo | Key Findings                                                                                        |
 | :--------- | :----------------------------------------- | :------------------- | :--------- | :-------------------------------------------------------------------------------------------------- |
+| 2026-04-27 | `audit-2026-04-27-metabolism-evolution.md`  | Metabolism, Evolution | B, E       | FIXED: P1 Cross-Tenant Evolution, P1 Global S3 Pruning, P2 Scoping Inconsistencies |
+| 2026-04-27 | `audit-2026-04-27-perspective-a-remediation.md` | Spine, Brain, Eye    | A          | FIXED: P1 Spine Telemetry Blindness, P1 Fragmented Metrics Partition, P2 Non-GSI Compliance |
 | 2026-04-27 | `audit-2026-04-27-life-of-a-message-v2.md` | Spine, Brain, Eye    | A          | FIXED: P1 Missing metrics in non-streaming path, P1 Non-atomic persistence, P2 Multi-tenant regex   |
 | 2026-04-27 | `audit-2026-04-27-trust-loop.md`           | Scales, Eye          | D          | FIXED: P1 Cognitive metric collisions, P1 Trust history inconsistency, P1 Multi-tenant decay gap    |
 | 2026-04-27 | `audit-2026-04-27-perspective-a.md`        | Spine, Eye           | A          | FIXED: Telemetry Blindness in metrics, Scoping bugs in events, Cognitive data loss                  |

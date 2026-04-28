@@ -36,6 +36,11 @@ const CRITICAL_METRICS = new Set([
   'DeploymentCompleted',
   'CircuitBreakerTriggered',
   'RateLimitExceeded',
+  'DLQEvents',
+  'EventHandlerInvoked',
+  'EventHandlerDuration',
+  'EventHandlerErrorDuration',
+  'StorageError',
 ]);
 
 async function persistToDynamoDB(metrics: MetricDatum[]): Promise<void> {
@@ -44,10 +49,10 @@ async function persistToDynamoDB(metrics: MetricDatum[]): Promise<void> {
 
   try {
     const { PutCommand } = await import('@aws-sdk/lib-dynamodb');
-    const { getDocClient, getConfigTableName } = await import('../utils/ddb-client');
+    const { getDocClient, getMemoryTableName } = await import('../utils/ddb-client');
     const docClient = getDocClient();
 
-    const tableName = getConfigTableName();
+    const tableName = getMemoryTableName();
     if (!tableName) return;
 
     const now = Date.now();
@@ -55,17 +60,22 @@ async function persistToDynamoDB(metrics: MetricDatum[]): Promise<void> {
       const workspaceId = m.Dimensions?.find((d) => d.Name === 'WorkspaceId')?.Value;
       const scopePrefix = workspaceId ? `WS#${workspaceId}#` : '';
 
+      // Unified Metrics Partition Format:
+      // PK (userId): [Prefix]METRIC#[MetricName]
+      // SK (timestamp): Date.now()
+      // This enables efficient GSI querying via TypeTimestampIndex (type: 'METRIC')
       await docClient.send(
         new PutCommand({
           TableName: tableName,
           Item: {
-            key: `${scopePrefix}METRIC#${m.MetricName}#${now}#${Math.random().toString(36).slice(2, 8)}`,
+            userId: `${scopePrefix}METRIC#${m.MetricName}`,
+            timestamp: now + Math.random(), // Add micro-jitter to prevent collisions
+            type: 'METRIC',
             metricName: m.MetricName,
             value: m.Value,
             unit: m.Unit ?? 'Count',
             dimensions: m.Dimensions,
             workspaceId,
-            timestamp: now,
             expiresAt: Math.floor(now / 1000) + 7 * 86400, // 7 days retention
           },
         })

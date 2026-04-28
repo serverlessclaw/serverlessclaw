@@ -22,10 +22,25 @@ export const handler = async (_event: unknown, _context: Context): Promise<void>
   const evolutionScheduler = new EvolutionScheduler(memory);
 
   try {
-    // 1. Process Proactive Evolutions (Class C timeouts)
-    const evolutionCount = await evolutionScheduler.triggerTimedOutActions();
-    if (evolutionCount > 0) {
-      logger.info(`[MAINTENANCE] Triggered ${evolutionCount} proactive evolution actions`);
+    // 1. Process Proactive Evolutions & Trust Score Decay (Multi-tenant scoped)
+    await TrustManager.decayTrustScores(); // Global scores first
+
+    try {
+      const { listWorkspaceIds } = await import('../lib/memory/workspace-operations');
+      const workspaceIds = await listWorkspaceIds();
+
+      for (const workspaceId of workspaceIds) {
+        // Proactive evolution for each workspace
+        const evolutionCount = await evolutionScheduler.triggerTimedOutActions(workspaceId);
+        if (evolutionCount > 0) {
+          logger.info(`[MAINTENANCE] Triggered ${evolutionCount} actions in WS: ${workspaceId}`);
+        }
+
+        // Trust decay for each workspace
+        await TrustManager.decayTrustScores(workspaceId);
+      }
+    } catch (error) {
+      logger.warn('[MAINTENANCE] Multi-tenant maintenance cycle failed:', error);
     }
 
     // 2. Process Stale Collaborations (Conflict resolution timeouts)
@@ -37,7 +52,6 @@ export const handler = async (_event: unknown, _context: Context): Promise<void>
     const { TRUST } = await import('../lib/constants/system');
 
     for (const collab of staleCollabs) {
-      // Sh1 Fix: Enforce Principle 12 - Facilitator must be highly trusted for autonomous tie-break
       const facilitatorConfig = await AgentRegistry.getAgentConfig('facilitator');
       const trustScore = facilitatorConfig?.trustScore ?? TRUST.DEFAULT_SCORE;
 
@@ -48,14 +62,10 @@ export const handler = async (_event: unknown, _context: Context): Promise<void>
         continue;
       }
 
-      logger.info(
-        `[MAINTENANCE] Collaboration ${collab.collaborationId} timed out. Initializing strategic tie-break (Facilitator Trust: ${trustScore}).`
-      );
-
       await emitTypedEvent('maintenance.handler', EventType.STRATEGIC_TIE_BREAK, {
         userId: collab.syntheticUserId,
         agentId: 'facilitator',
-        task: `Strategic tie-break required for timed out collaboration: ${collab.name}. Rationale: The human participants or assigned admin failed to resolve conflicting instructions within the allotted ${CONFIG_DEFAULTS.TIE_BREAK_TIMEOUT_MS.code / 60000} minute window.`,
+        task: `Strategic tie-break required for timed out collaboration: ${collab.name}.`,
         sessionId: collab.sessionId,
         metadata: {
           collaborationId: collab.collaborationId,
@@ -65,31 +75,16 @@ export const handler = async (_event: unknown, _context: Context): Promise<void>
       });
     }
 
-    // 3. Stale Gap Archival (Existing functionality)
+    // 3. Stale Gap Archival
     const archivedGaps = await memory.archiveStaleGaps(CONFIG_DEFAULTS.STALE_GAP_DAYS.code);
     if (archivedGaps > 0) {
       logger.info(`[MAINTENANCE] Archived ${archivedGaps} stale capability gaps`);
     }
 
-    // 4. Cull resolved gaps older than retention threshold
+    // 4. Cull resolved gaps
     const culledGaps = await memory.cullResolvedGaps(CONFIG_DEFAULTS.GAPS_RETENTION_DAYS.code);
     if (culledGaps > 0) {
       logger.info(`[MAINTENANCE] Culled ${culledGaps} resolved capability gaps`);
-    }
-
-    // 4. Trust Score Decay (Silo 6: The Scales)
-    // Periodically decay trust scores to ensure continuous autonomy earning
-    // Sh6 Fix: Must iterate all workspaces to maintain multi-tenant trust integrity
-    await TrustManager.decayTrustScores(); // Global scores
-
-    try {
-      const { listWorkspaceIds } = await import('../lib/memory/workspace-operations');
-      const workspaceIds = await listWorkspaceIds();
-      for (const workspaceId of workspaceIds) {
-        await TrustManager.decayTrustScores(workspaceId);
-      }
-    } catch (error) {
-      logger.warn('[MAINTENANCE] Workspace trust decay failed:', error);
     }
 
     logger.info('[MAINTENANCE] cycle completed successfully.');

@@ -18,13 +18,13 @@ export interface PendingEvolution {
   args?: Record<string, unknown>;
   resource?: string;
   traceId?: string;
-  userId?: string;
-  workspaceId?: string;
+  userId: string; // Required for auditing
+  workspaceId: string; // Required for multi-tenancy
   orgId?: string;
   teamId?: string;
   staffId?: string;
   createdAt: number;
-  expiresAt: number; // The "Evolutionary Timeout" timestamp
+  expiresAt: number;
   status: 'pending' | 'triggered' | 'approved' | 'rejected';
 }
 
@@ -43,12 +43,12 @@ export class EvolutionScheduler {
     action: string;
     reason: string;
     timeoutMs: number;
+    userId: string;
+    workspaceId: string;
     toolName?: string;
     args?: Record<string, unknown>;
     resource?: string;
     traceId?: string;
-    userId?: string;
-    workspaceId?: string;
     orgId?: string;
     teamId?: string;
     staffId?: string;
@@ -89,43 +89,41 @@ export class EvolutionScheduler {
     });
 
     logger.info(
-      `[EVOLUTION] Scheduled Class C action ${actionId} for proactive evolution in ${params.timeoutMs}ms (WS: ${params.workspaceId || 'global'})`
+      `[EVOLUTION] Scheduled Class C action ${actionId} for proactive evolution (WS: ${params.workspaceId})`
     );
     return actionId;
   }
 
   /**
    * Finds all pending actions that have timed out and triggers them.
+   * Requirement: workspaceId MUST be provided to prevent cross-tenant execution.
    */
-  async triggerTimedOutActions(workspaceId?: string): Promise<number> {
+  async triggerTimedOutActions(workspaceId: string): Promise<number> {
     if (!this.base) {
       logger.warn('[EVOLUTION] No memory provider available, skipping trigger.');
       return 0;
     }
+    if (!workspaceId) {
+      logger.error('[EVOLUTION] Mandatory workspaceId missing in triggerTimedOutActions');
+      return 0;
+    }
     const now = Date.now();
 
-    // Query pending evolutions using the TypeTimestampIndex GSI
-    let filterExpr = '#status = :pending AND expiresAt <= :now';
-    const exprValues: Record<string, any> = {
-      ':type': 'PENDING_EVOLUTION',
-      ':pending': 'pending',
-      ':now': now,
-    };
-
-    if (workspaceId) {
-      filterExpr += ' AND workspaceId = :ws';
-      exprValues[':ws'] = workspaceId;
-    }
-
+    // Query pending evolutions using the WorkspaceTypeIndex GSI for efficient scoped lookup
     const items = await this.base.queryItems({
-      IndexName: 'TypeTimestampIndex',
-      KeyConditionExpression: '#tp = :type',
-      FilterExpression: filterExpr,
+      IndexName: 'WorkspaceTypeIndex',
+      KeyConditionExpression: 'workspaceId = :ws AND #tp = :type',
+      FilterExpression: '#status = :pending AND expiresAt <= :now',
       ExpressionAttributeNames: {
         '#tp': 'type',
         '#status': 'status',
       },
-      ExpressionAttributeValues: exprValues,
+      ExpressionAttributeValues: {
+        ':ws': workspaceId,
+        ':type': 'PENDING_EVOLUTION',
+        ':pending': 'pending',
+        ':now': now,
+      },
     });
 
     const toTrigger = items as unknown as PendingEvolution[];
@@ -133,8 +131,7 @@ export class EvolutionScheduler {
 
     for (const action of toTrigger) {
       try {
-        // Sh6 Fix: Enforce Principle 13 (Atomic State Integrity)
-        // Atomically claim the action before triggering to prevent double execution
+        // Enforce Principle 13 (Atomic State Integrity)
         const claimed = await this.claimActionForTrigger(action);
         if (claimed) {
           await this.triggerProactiveEvolution(action);

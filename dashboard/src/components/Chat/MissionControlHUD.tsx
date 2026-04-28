@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -19,10 +18,18 @@ import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import TrustGauge from '@/components/TrustGauge';
-import { useRealtimeContext } from '@/components/Providers/RealtimeProvider';
+import { useRealtimeContext, RealtimeMessage } from '@/components/Providers/RealtimeProvider';
 import { TranslationKey } from '@/components/Providers/TranslationsProvider';
 import { MissionMetadata } from '@claw/core/lib/types/memory';
 
+interface CognitiveSignalPayload {
+  type: string;
+  agentId?: string;
+  content?: string;
+  trust?: number;
+  stability?: number;
+  budget?: number;
+}
 interface MissionControlHUDProps {
   sessionId: string | null;
   mission?: MissionMetadata;
@@ -57,7 +64,8 @@ export const MissionControlHUD: React.FC<MissionControlHUDProps> = ({ sessionId,
 
     const unsubscribe = subscribe(
       [`sessions/${sessionId}/signal`],
-      (topic: string, payload: any) => {
+      (topic: string, message: RealtimeMessage) => {
+        const payload = message as unknown as CognitiveSignalPayload;
         if (payload.type === 'COGNITIVE_SIGNAL') {
           const newEvent: ActivityEvent = {
             id: Math.random().toString(36).substr(2, 9),

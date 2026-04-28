@@ -138,12 +138,13 @@ export class AgentRegistry {
     config: Partial<IAgentConfig>,
     options?: { workspaceId?: string }
   ): Promise<void> {
-    if (!config.name || !config.systemPrompt) throw new Error('Mandatory fields missing.');
+    // Mandatory fields check relaxed to allow partial updates (e.g., disabling an agent).
+    // Higher-level validation should ensure data integrity for full creation.
     const { hashString } = await import('../utils/crypto');
     const enriched = {
       ...config,
       lastUpdated: new Date().toISOString(),
-      metadata: { ...config.metadata, promptHash: hashString(config.systemPrompt) },
+      metadata: { ...config.metadata, promptHash: hashString(config.systemPrompt || '') },
     };
     await ConfigManager.atomicUpdateMapEntity(DYNAMO_KEYS.AGENTS_CONFIG, agentId, enriched, {
       increments: { version: 1 },
