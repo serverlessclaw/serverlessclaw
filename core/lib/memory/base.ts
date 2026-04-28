@@ -139,6 +139,9 @@ export class BaseMemoryProvider {
     try {
       await this.docClient.send(command);
     } catch (error) {
+      const errorName = (error as Error).name || 'UnknownError';
+      const { emitMetrics, METRICS } = await import('../metrics/metrics');
+      await emitMetrics([METRICS.storageError('putItem', errorName, tableName)]).catch(() => {});
       logger.error('Error putting item into DynamoDB:', error);
       throw error;
     }
@@ -168,6 +171,9 @@ export class BaseMemoryProvider {
         lastEvaluatedKey: response.LastEvaluatedKey,
       };
     } catch (error) {
+      const errorName = (error as Error).name || 'UnknownError';
+      const { emitMetrics, METRICS } = await import('../metrics/metrics');
+      await emitMetrics([METRICS.storageError('queryItems', errorName, tableName)]).catch(() => {});
       logger.error('Error querying DynamoDB:', error);
       throw error;
     }
@@ -214,6 +220,9 @@ export class BaseMemoryProvider {
         })
       );
     } catch (error) {
+      const errorName = (error as Error).name || 'UnknownError';
+      const { emitMetrics, METRICS } = await import('../metrics/metrics');
+      await emitMetrics([METRICS.storageError('deleteItem', errorName, tableName)]).catch(() => {});
       if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
         throw error;
       }
@@ -238,7 +247,14 @@ export class BaseMemoryProvider {
       TableName: tableName,
       ...params,
     } as import('@aws-sdk/lib-dynamodb').UpdateCommandInput);
-    return this.docClient.send(command);
+    try {
+      return await this.docClient.send(command);
+    } catch (error) {
+      const errorName = (error as Error).name || 'UnknownError';
+      const { emitMetrics, METRICS } = await import('../metrics/metrics');
+      await emitMetrics([METRICS.storageError('updateItem', errorName, tableName)]).catch(() => {});
+      throw error;
+    }
   }
 
   /**

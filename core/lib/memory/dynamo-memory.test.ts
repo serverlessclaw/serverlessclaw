@@ -227,19 +227,18 @@ describe('DynamoMemory Delegation Tests', () => {
       expect(ddbMock.commandCalls(QueryCommand).length).toBeGreaterThanOrEqual(1);
     });
 
-    it('should delegate updateDistilledMemory to SessionOps', async () => {
-      ddbMock.on(PutCommand).resolves({});
+    it('should delegate updateDistilledMemory to SessionOps using updateItem', async () => {
+      ddbMock.on(UpdateCommand).resolves({});
 
       await memory.updateDistilledMemory('user-1', 'distilled facts');
 
-      const calls = ddbMock.commandCalls(PutCommand);
+      const calls = ddbMock.commandCalls(UpdateCommand);
       expect(calls).toHaveLength(1);
-      expect(calls[0].args[0].input.Item).toMatchObject({
+      expect(calls[0].args[0].input.Key).toMatchObject({
         userId: 'DISTILLED#user-1',
         timestamp: 0,
-        type: 'DISTILLED',
-        content: 'distilled facts',
       });
+      expect(calls[0].args[0].input.UpdateExpression).toContain('content = :content');
     });
 
     it('should delegate saveConversationMeta to SessionOps', async () => {
@@ -314,13 +313,14 @@ describe('DynamoMemory Delegation Tests', () => {
       expect(result).toBe('test summary');
     });
 
-    it('should delegate updateSummary to SessionOps', async () => {
+    it('should delegate updateSummary to SessionOps with ConditionExpression', async () => {
       ddbMock.on(PutCommand).resolves({});
 
       await memory.updateSummary('user-1', 'new summary');
 
       const calls = ddbMock.commandCalls(PutCommand);
       expect(calls).toHaveLength(1);
+      expect(calls[0].args[0].input.ConditionExpression).toContain('attribute_not_exists');
     });
   });
 

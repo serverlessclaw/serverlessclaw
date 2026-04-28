@@ -111,13 +111,19 @@ export async function updateDistilledMemory(
     workspaceId = scope.workspaceId;
   }
 
-  await base.putItem({
-    userId: scopedUserId,
-    timestamp: 0,
-    type: 'DISTILLED',
-    expiresAt,
-    content: facts,
-    workspaceId: workspaceId || undefined,
+  await base.updateItem({
+    Key: {
+      userId: scopedUserId,
+      timestamp: 0,
+    },
+    UpdateExpression: 'SET #tp = :type, expiresAt = :exp, content = :content, workspaceId = :wid',
+    ExpressionAttributeNames: { '#tp': 'type' },
+    ExpressionAttributeValues: {
+      ':type': 'DISTILLED',
+      ':exp': expiresAt,
+      ':content': facts,
+      ':wid': workspaceId || 'global',
+    },
   });
 }
 
@@ -421,12 +427,18 @@ export async function updateSummary(
     workspaceId = scope.workspaceId;
   }
 
-  await base.putItem({
-    userId: scopedUserId,
-    timestamp: Date.now(),
-    type: 'SUMMARY',
-    expiresAt,
-    content: summary,
-    workspaceId: workspaceId || undefined,
-  });
+  await base.putItem(
+    {
+      userId: scopedUserId,
+      timestamp: Date.now(),
+      type: 'SUMMARY',
+      expiresAt,
+      content: summary,
+      workspaceId: workspaceId || undefined,
+    },
+    {
+      ConditionExpression: 'attribute_not_exists(userId) AND attribute_not_exists(#ts)',
+      ExpressionAttributeNames: { '#ts': 'timestamp' },
+    }
+  );
 }

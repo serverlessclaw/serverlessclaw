@@ -89,7 +89,8 @@ export async function handler(
   );
 
   // Flow Control (Rate limiting & Circuit breaker)
-  const flowResult = await FlowController.canProceed(detailType);
+  const workspaceId = (eventDetail.workspaceId as string) || undefined;
+  const flowResult = await FlowController.canProceed(detailType, workspaceId);
   if (!flowResult.allowed) {
     logger.warn(`[FLOW_CONTROL] ${flowResult.reason} for ${detailType}`);
     await routeToDlq(event, detailType, 'SYSTEM', traceId, flowResult.reason!, sessionId);
@@ -241,7 +242,7 @@ export async function handler(
     logger.error(`EventHandler failed for ${detailType}: ${errorMessage}`, error);
 
     // Record failure for flow control
-    await FlowController.recordFailure(detailType);
+    await FlowController.recordFailure(detailType, workspaceId);
 
     // Route to DLQ
     await routeToDlq(event, detailType, 'SYSTEM', traceId, errorMessage, sessionId);

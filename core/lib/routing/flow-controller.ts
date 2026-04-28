@@ -15,7 +15,7 @@ export class FlowController {
   /**
    * Checks if an event can proceed based on rate limits and circuit breaker state.
    */
-  static async canProceed(eventType: string): Promise<FlowControlResult> {
+  static async canProceed(eventType: string, workspaceId?: string): Promise<FlowControlResult> {
     const [circuitThreshold, circuitTimeout, rateCapacity, rateRefill] = await Promise.all([
       ConfigManager.getTypedConfig(
         CONFIG_DEFAULTS.EVENT_CIRCUIT_THRESHOLD.configKey!,
@@ -36,12 +36,14 @@ export class FlowController {
     ]);
 
     // 1. Rate Limiting check
-    if (!(await DistributedState.consumeToken(eventType, rateCapacity, rateRefill))) {
+    if (!(await DistributedState.consumeToken(eventType, rateCapacity, rateRefill, workspaceId))) {
       return { allowed: false, reason: 'Rate limit exceeded' };
     }
 
     // 2. Circuit Breaker check
-    if (await DistributedState.isCircuitOpen(eventType, circuitThreshold, circuitTimeout)) {
+    if (
+      await DistributedState.isCircuitOpen(eventType, circuitThreshold, circuitTimeout, workspaceId)
+    ) {
       return { allowed: false, reason: 'Circuit breaker open' };
     }
 
@@ -51,7 +53,7 @@ export class FlowController {
   /**
    * Records a failure for an event type.
    */
-  static async recordFailure(eventType: string): Promise<void> {
+  static async recordFailure(eventType: string, workspaceId?: string): Promise<void> {
     const circuitThreshold = await ConfigManager.getTypedConfig(
       CONFIG_DEFAULTS.EVENT_CIRCUIT_THRESHOLD.configKey!,
       CONFIG_DEFAULTS.EVENT_CIRCUIT_THRESHOLD.code
@@ -61,7 +63,7 @@ export class FlowController {
       CONFIG_DEFAULTS.EVENT_CIRCUIT_TIMEOUT_MS.code
     );
 
-    await DistributedState.recordFailure(eventType, circuitThreshold, circuitTimeout);
+    await DistributedState.recordFailure(eventType, circuitThreshold, circuitTimeout, workspaceId);
   }
 
   /**

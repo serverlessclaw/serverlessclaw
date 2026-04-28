@@ -149,15 +149,20 @@ describe('session-operations', () => {
   });
 
   describe('updateDistilledMemory', () => {
-    it('should update distilled memory with 2-year retention', async () => {
+    it('should update distilled memory with 2-year retention using updateItem', async () => {
       await updateDistilledMemory(mockBase, 'user123', 'User likes coffee');
 
-      expect(mockBase.putItem).toHaveBeenCalledWith(
+      expect(mockBase.updateItem).toHaveBeenCalledWith(
         expect.objectContaining({
-          userId: 'DISTILLED#user123',
-          timestamp: 0,
-          type: 'DISTILLED',
-          content: 'User likes coffee',
+          Key: {
+            userId: 'DISTILLED#user123',
+            timestamp: 0,
+          },
+          UpdateExpression: expect.stringContaining('content = :content'),
+          ExpressionAttributeValues: expect.objectContaining({
+            ':content': 'User likes coffee',
+            ':type': 'DISTILLED',
+          }),
         })
       );
     });
@@ -165,9 +170,11 @@ describe('session-operations', () => {
     it('should normalize userId', async () => {
       await updateDistilledMemory(mockBase, 'DISTILLED#user123', 'Facts');
 
-      expect(mockBase.putItem).toHaveBeenCalledWith(
+      expect(mockBase.updateItem).toHaveBeenCalledWith(
         expect.objectContaining({
-          userId: 'DISTILLED#user123',
+          Key: expect.objectContaining({
+            userId: 'DISTILLED#user123',
+          }),
         })
       );
     });
@@ -376,7 +383,7 @@ describe('session-operations', () => {
   });
 
   describe('updateSummary', () => {
-    it('should update conversation summary', async () => {
+    it('should update conversation summary with atomic conditions', async () => {
       await updateSummary(mockBase, 'user123', 'User discussed AI');
 
       expect(mockBase.putItem).toHaveBeenCalledWith(
@@ -384,6 +391,9 @@ describe('session-operations', () => {
           userId: 'SUMMARY#user123',
           type: 'SUMMARY',
           content: 'User discussed AI',
+        }),
+        expect.objectContaining({
+          ConditionExpression: expect.stringContaining('attribute_not_exists'),
         })
       );
     });

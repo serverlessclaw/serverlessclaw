@@ -553,4 +553,25 @@ export const METRICS = {
       Dimensions: dimensions,
     };
   },
+
+  storageError(
+    operation: string,
+    errorName: string,
+    tableName: string,
+    scope?: { workspaceId?: string; teamId?: string; staffId?: string }
+  ): MetricDatum {
+    const dimensions = [
+      { Name: 'Operation', Value: operation },
+      { Name: 'ErrorName', Value: errorName },
+      { Name: 'TableName', Value: tableName },
+    ];
+    if (scope?.workspaceId) dimensions.push({ Name: 'WorkspaceId', Value: scope.workspaceId });
+
+    return {
+      MetricName: 'StorageError',
+      Value: 1,
+      Unit: 'Count',
+      Dimensions: dimensions,
+    };
+  },
 };

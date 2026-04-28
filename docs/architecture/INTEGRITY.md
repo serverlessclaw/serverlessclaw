@@ -49,12 +49,12 @@ Token usage and recursion depth are tracked with strict `workspaceId` dimensioni
 
 Autonomous repairs ensure the system prunes its own technical debt and stale infrastructure.
 
-| Repair Target | Mechanism | Trigger |
-|---------------|-----------|---------|
-| S3 Staging | `pruneStagingBucket` | `STAGING_RETENTION_DAYS` (30d) |
-| Agent Tools | `pruneLowUtilizationTools` | Atomic Utilization Audit |
-| Memory Gaps | `cullResolvedGaps` | Resolution Event |
-| Dashboard | `remediateDashboardFailure` | Real-time Exception Handler |
+| Repair Target | Mechanism                   | Trigger                        |
+| ------------- | --------------------------- | ------------------------------ |
+| S3 Staging    | `pruneStagingBucket`        | `STAGING_RETENTION_DAYS` (30d) |
+| Agent Tools   | `pruneLowUtilizationTools`  | Atomic Utilization Audit       |
+| Memory Gaps   | `cullResolvedGaps`          | Resolution Event               |
+| Dashboard     | `remediateDashboardFailure` | Real-time Exception Handler    |
 
 ## 4. Recovery Path (Shield -> Spine -> Brain)
 

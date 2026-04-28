@@ -10,6 +10,14 @@ vi.mock('@aws-sdk/lib-dynamodb', () => import('../../__mocks__/dynamodb'));
 // Mock Lambda client
 vi.mock('@aws-sdk/client-lambda', () => import('../../__mocks__/lambda'));
 
+// Mock metrics
+vi.mock('../metrics/metrics', () => ({
+  emitMetrics: vi.fn().mockResolvedValue(undefined),
+  METRICS: {
+    storageError: vi.fn().mockReturnValue({}),
+  },
+}));
+
 // Mock logger
 vi.mock('../logger', () => ({
   logger: {

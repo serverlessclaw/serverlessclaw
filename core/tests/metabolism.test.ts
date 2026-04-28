@@ -70,9 +70,9 @@ describe('MetabolismService', () => {
       const findings = await MetabolismService.runMetabolismAudit(mockMemory as any, {
         repair: true,
       });
-      expect(AgentRegistry.pruneLowUtilizationTools).toHaveBeenCalledWith('default', 30);
-      expect(GapOps.archiveStaleGaps).toHaveBeenCalledWith(mockMemory, undefined, 'default');
-      expect(GapOps.cullResolvedGaps).toHaveBeenCalledWith(mockMemory, undefined, 'default');
+      expect(AgentRegistry.pruneLowUtilizationTools).toHaveBeenCalledWith(undefined, 30);
+      expect(GapOps.archiveStaleGaps).toHaveBeenCalledWith(mockMemory, undefined, undefined);
+      expect(GapOps.cullResolvedGaps).toHaveBeenCalledWith(mockMemory, undefined, undefined);
 
       // Verify repair findings are present
       const prunedFinding = findings.find((f) => f.actual.includes('Pruned 5'));

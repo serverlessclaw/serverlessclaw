@@ -36,17 +36,17 @@ Last Updated: 2026-04-27
 
 ## Audit Reports History
 
-| Date       | Report                                    | Silos Covered        | Cross-Silo | Key Findings                                                                                        |
-| :--------- | :---------------------------------------- | :------------------- | :--------- | :-------------------------------------------------------------------------------------------------- |
-| 2026-04-27 | `audit-2026-04-27-life-of-a-message-v2.md` | Spine, Brain, Eye    | A          | FIXED: P1 Missing metrics in non-streaming path, P1 Non-atomic persistence, P2 Multi-tenant regex |
-| 2026-04-27 | `audit-2026-04-27-trust-loop.md`          | Scales, Eye          | D          | FIXED: P1 Cognitive metric collisions, P1 Trust history inconsistency, P1 Multi-tenant decay gap    |
-| 2026-04-27 | `audit-2026-04-27-perspective-a.md`       | Spine, Eye           | A          | FIXED: Telemetry Blindness in metrics, Scoping bugs in events, Cognitive data loss                  |
-| 2026-04-27 | `audit-2026-04-27-metabolism-recovery.md` | Metabolism, Recovery | E          | FIXED: P1 Tool usage count loss, P1 LKG record collision, P2 Config atomicity, P2 Scan optimization |
-| 2026-04-27 | `audit-2026-04-27-identity-journey.md`    | Brain, Spine, Shield | C          | FIXED: P1 Identity race condition, P2 Safety bypasses, P2 Adaptive failure                          |
-| 2026-04-26 | `audit-2026-04-26-identity-journey.md`    | Brain, Spine, Shield | C          | PASSED: Verified Principle 12, 13, 14, 15 across silos.                                             |
-| 2026-04-26 | `audit-2026-04-26-trust-loop.md`          | Eye, Scales, Spine   | D          | FIXED: Disconnected trust engine, Telemetry data loss                                               |
-| 2026-04-26 | `audit-2026-04-26-evolution-cycle.md`     | Hand, Shield, Scales | B          | FIXED: Selection Integrity (Sh10), JSON Mode enforcement (Sh9)                                      |
-| 2026-04-26 | `audit-2026-04-26-life-of-a-message.md`   | Spine, Brain, Eye    | A          | FIXED: Fail-Closed rate limiting, Atomic session updates                                            |
+| Date       | Report                                     | Silos Covered        | Cross-Silo | Key Findings                                                                                        |
+| :--------- | :----------------------------------------- | :------------------- | :--------- | :-------------------------------------------------------------------------------------------------- |
+| 2026-04-27 | `audit-2026-04-27-life-of-a-message-v2.md` | Spine, Brain, Eye    | A          | FIXED: P1 Missing metrics in non-streaming path, P1 Non-atomic persistence, P2 Multi-tenant regex   |
+| 2026-04-27 | `audit-2026-04-27-trust-loop.md`           | Scales, Eye          | D          | FIXED: P1 Cognitive metric collisions, P1 Trust history inconsistency, P1 Multi-tenant decay gap    |
+| 2026-04-27 | `audit-2026-04-27-perspective-a.md`        | Spine, Eye           | A          | FIXED: Telemetry Blindness in metrics, Scoping bugs in events, Cognitive data loss                  |
+| 2026-04-27 | `audit-2026-04-27-metabolism-recovery.md`  | Metabolism, Recovery | E          | FIXED: P1 Tool usage count loss, P1 LKG record collision, P2 Config atomicity, P2 Scan optimization |
+| 2026-04-27 | `audit-2026-04-27-identity-journey.md`     | Brain, Spine, Shield | C          | FIXED: P1 Identity race condition, P2 Safety bypasses, P2 Adaptive failure                          |
+| 2026-04-26 | `audit-2026-04-26-identity-journey.md`     | Brain, Spine, Shield | C          | PASSED: Verified Principle 12, 13, 14, 15 across silos.                                             |
+| 2026-04-26 | `audit-2026-04-26-trust-loop.md`           | Eye, Scales, Spine   | D          | FIXED: Disconnected trust engine, Telemetry data loss                                               |
+| 2026-04-26 | `audit-2026-04-26-evolution-cycle.md`      | Hand, Shield, Scales | B          | FIXED: Selection Integrity (Sh10), JSON Mode enforcement (Sh9)                                      |
+| 2026-04-26 | `audit-2026-04-26-life-of-a-message.md`    | Spine, Brain, Eye    | A          | FIXED: Fail-Closed rate limiting, Atomic session updates                                            |
 
 ---
 

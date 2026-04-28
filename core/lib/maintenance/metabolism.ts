@@ -71,7 +71,7 @@ export class MetabolismService {
     scope: { workspaceId?: string; teamId?: string; staffId?: string }
   ): Promise<AuditFinding[]> {
     const repairFindings: AuditFinding[] = [];
-    const workspaceId = scope.workspaceId || 'default';
+    const workspaceId = scope.workspaceId;
 
     // Repair 1: Agent Registry Low-Utilization Tools (Principle 10)
     try {
@@ -226,15 +226,17 @@ export class MetabolismService {
         (obj) => obj.Key && obj.LastModified && obj.LastModified.getTime() < cutoff
       ).map((obj) => ({ Key: obj.Key! }));
 
-      if (toDelete.length === 0) return 0;
-
-      const deleteCmd = new DeleteObjectsCommand({
-        Bucket: bucketName,
-        Delete: { Objects: toDelete.slice(0, 1000) },
-      });
-
-      await s3.send(deleteCmd);
-      return Math.min(toDelete.length, 1000);
+      let deletedCount = 0;
+      for (let i = 0; i < toDelete.length; i += 1000) {
+        const batch = toDelete.slice(i, i + 1000);
+        const deleteCmd = new DeleteObjectsCommand({
+          Bucket: bucketName,
+          Delete: { Objects: batch },
+        });
+        await s3.send(deleteCmd);
+        deletedCount += batch.length;
+      }
+      return deletedCount;
     } catch (e) {
       logger.error('[Metabolism] Staging bucket pruning failed:', e);
       return 0;

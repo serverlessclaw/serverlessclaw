@@ -20,9 +20,15 @@ export class DistributedState {
    * Checks if a circuit breaker is open.
    * Enforces Principle 13 (Fail-Closed Strategy).
    */
-  static async isCircuitOpen(key: string, threshold: number, timeoutMs: number): Promise<boolean> {
+  static async isCircuitOpen(
+    key: string,
+    threshold: number,
+    timeoutMs: number,
+    workspaceId?: string
+  ): Promise<boolean> {
     try {
-      const fullKey = `CIRCUIT#${key}`;
+      const scopePrefix = workspaceId ? `WSID:${workspaceId}#` : '';
+      const fullKey = `${scopePrefix}CIRCUIT#${key}`;
       const result = await docClient.send(
         new GetCommand({
           TableName: TABLE_NAME,
@@ -99,9 +105,15 @@ export class DistributedState {
   /**
    * Records a failure for a circuit breaker.
    */
-  static async recordFailure(key: string, threshold: number, timeoutMs: number): Promise<void> {
+  static async recordFailure(
+    key: string,
+    threshold: number,
+    timeoutMs: number,
+    workspaceId?: string
+  ): Promise<void> {
     try {
-      const fullKey = `CIRCUIT#${key}`;
+      const scopePrefix = workspaceId ? `WSID:${workspaceId}#` : '';
+      const fullKey = `${scopePrefix}CIRCUIT#${key}`;
       const now = Date.now();
       const expiresAt = Math.floor((now + timeoutMs * 2) / 1000); // Buffer for TTL
 
@@ -156,16 +168,20 @@ export class DistributedState {
     key: string,
     capacity: number,
     refillMs: number,
+    workspaceId?: string,
     retryCount = 0
   ): Promise<boolean> {
     if (retryCount >= 5) {
       // Enforce Principle 13: Fail-Closed Strategy after retries to ensure rate limit integrity.
-      logger.warn(`[DISTRIBUTED_STATE] Rate limit retry limit exceeded for ${key}`);
+      logger.warn(
+        `[DISTRIBUTED_STATE] Rate limit retry limit exceeded for ${key} (WS: ${workspaceId})`
+      );
       return false;
     }
 
     try {
-      const fullKey = `RATE#${key}`;
+      const scopePrefix = workspaceId ? `WSID:${workspaceId}#` : '';
+      const fullKey = `${scopePrefix}RATE#${key}`;
       const now = Date.now();
       const expiresAt = Math.floor((now + refillMs * 2) / 1000);
 
@@ -249,9 +265,12 @@ export class DistributedState {
     } catch (e: unknown) {
       if ((e as { name?: string }).name === 'ConditionalCheckFailedException') {
         // Race condition - retry once
-        return DistributedState.consumeToken(key, capacity, refillMs, retryCount + 1);
+        return DistributedState.consumeToken(key, capacity, refillMs, workspaceId, retryCount + 1);
       }
-      logger.error(`[DISTRIBUTED_STATE] Rate limit check failed for ${key}:`, e);
+      logger.error(
+        `[DISTRIBUTED_STATE] Rate limit check failed for ${key} (WS: ${workspaceId}):`,
+        e
+      );
       // Enforce Principle 13: Fail-Closed Strategy. If rate limit status is unknown
       // due to system failure, we reject the operation to preserve stability.
       return false;
