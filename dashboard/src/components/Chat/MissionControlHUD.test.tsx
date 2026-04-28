@@ -104,7 +104,7 @@ describe('MissionControlHUD Component', () => {
   });
 
   it('updates metrics when a signal is received', async () => {
-    let signalCallback: any;
+    let signalCallback: any /* eslint-disable-line @typescript-eslint/no-explicit-any */;
     const subscribeMock = vi.fn((topics, callback) => {
       signalCallback = callback;
       return vi.fn(); // Unsubscribe

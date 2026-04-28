@@ -71,7 +71,7 @@ describe('RealtimeProvider', () => {
 
   it('handles MQTT messages and subscriptions', async () => {
     const callback = vi.fn();
-    let messageHandler: any;
+    let messageHandler: any /* eslint-disable-line @typescript-eslint/no-explicit-any */;
 
     mockMqttClient.on.mockImplementation((event, handler) => {
       if (event === 'message') messageHandler = handler;
@@ -104,7 +104,7 @@ describe('RealtimeProvider', () => {
 
   it('handles MQTT wildcards', async () => {
     const callback = vi.fn();
-    let messageHandler: any;
+    let messageHandler: any /* eslint-disable-line @typescript-eslint/no-explicit-any */;
 
     mockMqttClient.on.mockImplementation((event, handler) => {
       if (event === 'message') messageHandler = handler;

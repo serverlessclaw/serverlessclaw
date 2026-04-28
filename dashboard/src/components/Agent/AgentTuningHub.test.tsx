@@ -7,8 +7,8 @@ import { toast } from 'sonner';
 
 // Mock recharts
 vi.mock('recharts', () => ({
-  ResponsiveContainer: ({ children }: any) => <div>{children}</div>,
-  BarChart: ({ children }: any) => <div>{children}</div>,
+  ResponsiveContainer: ({ children }: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) => <div>{children}</div>,
+  BarChart: ({ children }: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) => <div>{children}</div>,
   Bar: () => <div />,
   XAxis: () => <div />,
   YAxis: () => <div />,

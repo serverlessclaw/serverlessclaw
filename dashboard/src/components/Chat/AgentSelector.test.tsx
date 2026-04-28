@@ -60,7 +60,7 @@ describe('AgentSelector Component', () => {
     },
   };
 
-  let resolveFetch: (value: any) => void;
+  let resolveFetch: (value: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) => void;
   let fetchPromise: Promise<any>;
 
   beforeEach(() => {
