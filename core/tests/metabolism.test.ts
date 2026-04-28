@@ -54,7 +54,10 @@ describe('MetabolismService', () => {
     it('should skip repairs if repair option is false', async () => {
       vi.mocked(MCPBridge.getToolsFromServer).mockResolvedValue([]);
 
-      await MetabolismService.runMetabolismAudit(mockMemory as any, { repair: false });
+      await MetabolismService.runMetabolismAudit(mockMemory as any, {
+        repair: false,
+        workspaceId: 'default',
+      });
 
       expect(AgentRegistry.pruneLowUtilizationTools).not.toHaveBeenCalled();
       expect(GapOps.archiveStaleGaps).not.toHaveBeenCalled();
@@ -69,10 +72,11 @@ describe('MetabolismService', () => {
 
       const findings = await MetabolismService.runMetabolismAudit(mockMemory as any, {
         repair: true,
+        workspaceId: 'default',
       });
-      expect(AgentRegistry.pruneLowUtilizationTools).toHaveBeenCalledWith(undefined, 30);
-      expect(GapOps.archiveStaleGaps).toHaveBeenCalledWith(mockMemory, undefined, undefined);
-      expect(GapOps.cullResolvedGaps).toHaveBeenCalledWith(mockMemory, undefined, undefined);
+      expect(AgentRegistry.pruneLowUtilizationTools).toHaveBeenCalledWith('default', 30);
+      expect(GapOps.archiveStaleGaps).toHaveBeenCalledWith(mockMemory, undefined, 'default');
+      expect(GapOps.cullResolvedGaps).toHaveBeenCalledWith(mockMemory, undefined, 'default');
 
       // Verify repair findings are present
       const prunedFinding = findings.find((f) => f.actual.includes('Pruned 5'));
@@ -90,6 +94,7 @@ describe('MetabolismService', () => {
 
       const findings = await MetabolismService.runMetabolismAudit(mockMemory as any, {
         repair: false,
+        workspaceId: 'default',
       });
 
       expect(findings).toEqual(
@@ -114,6 +119,7 @@ describe('MetabolismService', () => {
 
       const findings = await MetabolismService.runMetabolismAudit(mockMemory as any, {
         repair: false,
+        workspaceId: 'default',
       });
 
       expect(findings).toEqual(
@@ -128,6 +134,7 @@ describe('MetabolismService', () => {
 
       const findings = await MetabolismService.runMetabolismAudit(mockMemory as any, {
         repair: false,
+        workspaceId: 'default',
       });
 
       expect(findings).toEqual(

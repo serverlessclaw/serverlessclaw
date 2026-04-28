@@ -137,16 +137,20 @@ export function isTaskPaused(response: string): boolean {
  * Throws if config is not found or agent is disabled.
  *
  * @param agentId - The identifier or type of the agent.
+ * @param options - Optional configuration options (workspaceId, etc).
  * @returns A promise resolving to the agent configuration.
  */
 export async function loadAgentConfig(
-  agentId: string | AgentType
+  agentId: string | AgentType,
+  options?: { workspaceId?: string }
 ): Promise<import('../types/index').IAgentConfig> {
   const { AgentRegistry } = await import('../registry');
-  const config = await AgentRegistry.getAgentConfig(agentId);
+  const config = await AgentRegistry.getAgentConfig(agentId, options);
 
   if (!config) {
-    throw new Error(`Agent configuration for '${agentId}' not found in Registry`);
+    throw new Error(
+      `Agent configuration for '${agentId}' not found in Registry${options?.workspaceId ? ` for workspace ${options.workspaceId}` : ''}`
+    );
   }
 
   if (!config.enabled) {
@@ -209,21 +213,31 @@ export async function createAgent(
  * that every agent handler repeats.
  *
  * @param agentId - The agent identifier or type.
+ * @param options - Optional configuration options (workspaceId, etc).
  * @returns A promise resolving to { config, memory, provider, agent }.
  */
-export async function initAgent(agentId: string | AgentType): Promise<{
+export async function initAgent(
+  agentId: string | AgentType,
+  options?: { workspaceId?: string }
+): Promise<{
   config: import('../types/index').IAgentConfig;
   memory: import('../types/index').IMemory;
   provider: import('../providers/index').ProviderManager;
   agent: import('../agent').Agent;
 }> {
   const { ConfigManager } = (await import('../registry/config')) as {
-    ConfigManager: { getTypedConfig: <T>(key: string, defaultValue: T) => Promise<T> };
+    ConfigManager: {
+      getTypedConfig: <T>(
+        key: string,
+        defaultValue: T,
+        opts?: { workspaceId?: string }
+      ) => Promise<T>;
+    };
   };
   const [config, { memory, provider }, locale] = await Promise.all([
-    loadAgentConfig(agentId),
+    loadAgentConfig(agentId, options),
     getAgentContext(),
-    ConfigManager.getTypedConfig<string>(CONFIG_KEYS.ACTIVE_LOCALE, 'en'),
+    ConfigManager.getTypedConfig<string>(CONFIG_KEYS.ACTIVE_LOCALE, 'en', options),
   ]);
   const agent = await createAgent(String(agentId), config, memory, provider, locale);
   return { config, memory, provider, agent };
@@ -239,7 +253,7 @@ export async function processWithAgent(
   task: string,
   options: ProcessOptionsParams
 ) {
-  const { agent } = await initAgent(agentId);
+  const { agent } = await initAgent(agentId, { workspaceId: options.workspaceId });
   return agent.process(userId, task, buildProcessOptions(options));
 }
 

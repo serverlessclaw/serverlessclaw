@@ -17,6 +17,11 @@ vi.mock('@aws-sdk/client-dynamodb', () => ({
 vi.mock('@aws-sdk/lib-dynamodb', () => ({
   DynamoDBDocumentClient: { from: () => ({ send: mockSend }) },
 
+  GetCommand: class {
+    constructor(public p: Record<string, unknown>) {
+      Object.assign(this, p);
+    }
+  },
   PutCommand: class {
     constructor(public p: Record<string, unknown>) {
       Object.assign(this, p);
@@ -44,6 +49,10 @@ vi.mock('@claw/core/lib/registry/index', () => ({
 const mockGetConfigTableName = vi.fn().mockReturnValue('test-config-table');
 vi.mock('@claw/core/lib/utils/ddb-client', () => ({
   getConfigTableName: () => mockGetConfigTableName(),
+}));
+
+vi.mock('@claw/core/lib/registry/config/client', () => ({
+  getDocClient: () => ({ send: mockSend }),
 }));
 
 vi.mock('@claw/core/lib/backbone', () => ({

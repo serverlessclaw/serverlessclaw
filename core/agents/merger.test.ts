@@ -76,7 +76,7 @@ describe('Merger Agent Handler', () => {
 
     const result = await handler(event as any, {} as any);
 
-    expect(initAgent).toHaveBeenCalledWith(AgentType.MERGER);
+    expect(initAgent).toHaveBeenCalledWith(AgentType.MERGER, { workspaceId: undefined });
     expect(mockAgent.process).toHaveBeenCalledWith(
       'user-1',
       expect.stringContaining('Reconcile the following code patches'),

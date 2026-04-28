@@ -7,6 +7,10 @@ vi.mock('./handoff', () => ({
   isHumanTakingControl: vi.fn(),
 }));
 
+vi.mock('./recursion-tracker', () => ({
+  isBudgetExceeded: vi.fn().mockResolvedValue(false),
+}));
+
 vi.mock('./tracer', () => ({
   ClawTracer: vi.fn().mockImplementation(function () {
     return {

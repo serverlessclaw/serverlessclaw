@@ -29,6 +29,10 @@ vi.mock('./handoff', () => ({
   isHumanTakingControl: async (_: string) => true,
 }));
 
+vi.mock('./recursion-tracker', () => ({
+  isBudgetExceeded: vi.fn().mockResolvedValue(false),
+}));
+
 import { Agent } from './agent';
 
 describe('Agent handoff (human control) branches', () => {

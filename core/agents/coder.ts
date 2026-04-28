@@ -88,7 +88,7 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
   }
 
   // 2. Discovery & Initialization
-  const { config, memory } = await initAgent(AgentType.CODER);
+  const { config, memory } = await initAgent(AgentType.CODER, { workspaceId });
 
   // 3. Gap Management - PROGRESS (Phase B2: Atomic Transitions)
   if (gapIds && gapIds.length > 0) {

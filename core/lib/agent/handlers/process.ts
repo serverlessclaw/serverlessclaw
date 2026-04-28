@@ -17,6 +17,15 @@ import { reportAgentMetrics } from '../metrics-helper';
 import { isE2ETest } from '../../utils/agent-helpers';
 import { AGENT_SYSTEM_IDS, COMMUNICATION_MODES, TRACE_MESSAGES } from '../../constants/agent';
 
+/**
+ * Main handler for processing a user request through an agent.
+ * Manages tracer initialization, history retrieval, context preparation, and execution loop.
+ *
+ * @param agent - The agent instance providing subsystems.
+ * @param userId - The user ID or session ID initiating the request.
+ * @param userText - The raw input text from the user.
+ * @param options - Optional processing parameters.
+ */
 export async function handleProcess(
   agent: {
     memory: IMemory;

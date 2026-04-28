@@ -45,6 +45,14 @@ vi.mock('../agent/tracer-init', () => {
   };
 });
 
+vi.mock('../recursion-tracker', () => ({
+  isBudgetExceeded: vi.fn().mockResolvedValue(false),
+}));
+
+vi.mock('../handoff', () => ({
+  isHumanTakingControl: vi.fn().mockResolvedValue(false),
+}));
+
 import { Agent } from '../agent';
 import { IMemory, IProvider, MessageRole, ReasoningProfile } from '../types/index';
 import { TRACE_TYPES } from '../constants';

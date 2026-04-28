@@ -306,7 +306,8 @@ export async function resetRecoveryAttemptCount(base: BaseMemoryProvider): Promi
       userId: 'SYSTEM#RECOVERY#STATS',
       timestamp: 0,
     },
-    UpdateExpression: 'SET attempts = :zero, updatedAt = :now',
+    UpdateExpression: 'SET #field = :zero, updatedAt = :now',
+    ExpressionAttributeNames: { '#field': 'attempts' },
     ExpressionAttributeValues: {
       ':zero': 0,
       ':now': Date.now(),

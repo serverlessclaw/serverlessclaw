@@ -50,7 +50,7 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
   }
 
   // 1. Initialize agent
-  const { agent, memory } = await initAgent(AgentType.MERGER);
+  const { agent, memory } = await initAgent(AgentType.MERGER, { workspaceId: payload.workspaceId });
 
   // 1.5 Acquire gap locks to prevent concurrent state changes during reconciliation
   const gapIds = (metadata?.gapIds as string[]) ?? [];

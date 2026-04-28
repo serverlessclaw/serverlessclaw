@@ -78,6 +78,17 @@ vi.mock('../lib/agent/config-resolver', () => ({
   }),
 }));
 
+vi.mock('../lib/recursion-tracker', () => ({
+  isBudgetExceeded: vi.fn().mockResolvedValue(false),
+  getRecursionLimit: vi.fn().mockResolvedValue(10),
+  incrementRecursionDepth: vi.fn().mockResolvedValue(1),
+  incrementTokenUsage: vi.fn().mockResolvedValue(0),
+}));
+
+vi.mock('../lib/handoff', () => ({
+  isHumanTakingControl: vi.fn().mockResolvedValue(false),
+}));
+
 // Mock AgentRegistry
 vi.mock('../lib/registry', () => ({
   AgentRegistry: {

@@ -180,7 +180,7 @@ describe('DynamoMemory Retention', () => {
       expect(calls).toHaveLength(1);
       const input = calls[0].args[0].input;
       expect(input.UpdateExpression).toContain(
-        'metadata.#retryCount = if_not_exists(metadata.#retryCount, :zero) + :one'
+        'metadata.#field = if_not_exists(metadata.#field, :zero) + :one'
       );
       expect(input.ReturnValues).toBe('ALL_NEW');
     });

@@ -45,7 +45,9 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
   );
 
   // 1. Initialize agent
-  const { config, agent, memory } = await initAgent(AgentType.CRITIC);
+  const { config, agent, memory } = await initAgent(AgentType.CRITIC, {
+    workspaceId: payload.workspaceId,
+  });
 
   // 1.1 Handle Collaboration
   if (collaborationId) {

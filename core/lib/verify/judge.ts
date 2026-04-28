@@ -44,10 +44,10 @@ export class LLMJudge {
     task: string,
     implementation: string,
     criteria: string[],
-    context?: Record<string, unknown>,
+    context?: Record<string, unknown> & { workspaceId?: string },
     timeoutMs: number = LLMJudge.DEFAULT_TIMEOUT_MS
   ): Promise<JudgeResult> {
-    const { agent } = await initAgent(AgentType.JUDGE);
+    const { agent } = await initAgent(AgentType.JUDGE, { workspaceId: context?.workspaceId });
 
     const prompt = `
 # LLM-as-a-Judge: Semantic Evaluation

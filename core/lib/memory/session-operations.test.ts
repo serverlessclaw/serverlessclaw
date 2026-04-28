@@ -358,7 +358,10 @@ describe('session-operations', () => {
       expect(mockBase.updateItem).toHaveBeenCalledWith(
         expect.objectContaining({
           Key: { userId: 'SYSTEM#RECOVERY#STATS', timestamp: 0 },
-          UpdateExpression: 'SET attempts = :zero, updatedAt = :now',
+          UpdateExpression: 'SET #field = :zero, updatedAt = :now',
+          ExpressionAttributeNames: {
+            '#field': 'attempts',
+          },
           ExpressionAttributeValues: expect.objectContaining({
             ':zero': 0,
           }),

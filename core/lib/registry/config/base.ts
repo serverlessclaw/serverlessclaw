@@ -11,6 +11,13 @@ export class ConfigManagerBase {
   protected static readonly CACHE_TTL_MS = 60000; // 1 minute (60s)
 
   /**
+   * Clears the configuration cache. Primarily for testing.
+   */
+  public static clearCache(): void {
+    this.configCache.clear();
+  }
+
+  /**
    * Internal helper to safely get the ConfigTable name.
    */
   protected static _getTableName(): string | undefined {
@@ -45,9 +52,6 @@ export class ConfigManagerBase {
       logger.warn(`ConfigTable not linked. Skipping fetch for ${key}`);
       return undefined;
     }
-
-    const { emitMetrics, METRICS } = await import('../../metrics/metrics');
-    emitMetrics([METRICS.configAccessed(key, 'get', options)]).catch(() => {});
 
     const effectiveKey = this.getEffectiveKey(key, options);
 
@@ -107,9 +111,6 @@ export class ConfigManagerBase {
       return;
     }
 
-    const { emitMetrics, METRICS } = await import('../../metrics/metrics');
-    emitMetrics([METRICS.configAccessed(key, 'set', options)]).catch(() => {});
-
     const cacheKey = this.getEffectiveKey(key, options);
     this.configCache.delete(cacheKey);
 
@@ -160,9 +161,6 @@ export class ConfigManagerBase {
       logger.warn(`ConfigTable not linked. Skipping delete for ${key}`);
       return;
     }
-
-    const { emitMetrics, METRICS } = await import('../../metrics/metrics');
-    emitMetrics([METRICS.configAccessed(key, 'delete', options)]).catch(() => {});
 
     const effectiveKey = this.getEffectiveKey(key, options);
     this.configCache.delete(effectiveKey);

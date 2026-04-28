@@ -170,6 +170,13 @@ export async function DELETE(request: Request): Promise<NextResponse> {
       );
     }
 
+    if (!getConfigTableName()) {
+      return NextResponse.json(
+        { error: 'ConfigTable name is missing from resources.' },
+        { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
+      );
+    }
+
     const { ConfigManager } = await import('@claw/core/lib/registry/config');
     const { DYNAMO_KEYS } = await import('@claw/core/lib/constants');
 

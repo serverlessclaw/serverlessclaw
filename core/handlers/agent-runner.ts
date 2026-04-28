@@ -159,7 +159,7 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
       return `Error: Agent ${agentId} is disabled`;
     }
 
-    const { config, agent } = await initAgent(agentId);
+    const { config, agent } = await initAgent(agentId, { workspaceId });
     const shouldSpeakDirectly =
       config?.category === 'social' || config?.defaultCommunicationMode === 'text';
 

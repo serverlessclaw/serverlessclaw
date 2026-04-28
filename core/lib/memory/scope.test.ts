@@ -1,124 +1,114 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Agent } from '../agent';
-import {
-  IMemory,
-  IProvider,
-  MessageRole,
-  ReasoningProfile,
-  AttachmentType,
-  AgentCategory,
-} from '../types/index';
+import { IMemory, IProvider, MessageRole, ReasoningProfile } from '../types';
 
-vi.mock('../../tracer', () => {
-  const mockTracer = {
-    getTraceId: vi.fn().mockReturnValue('mock-trace-id'),
-    getNodeId: vi.fn().mockReturnValue('mock-node-id'),
-    getParentId: vi.fn().mockReturnValue('mock-parent-id'),
-    startTrace: vi.fn().mockResolvedValue('mock-trace-id'),
-    addStep: vi.fn().mockResolvedValue(undefined),
-    endTrace: vi.fn().mockResolvedValue(undefined),
-    failTrace: vi.fn().mockResolvedValue(undefined),
-    detectDrift: vi.fn().mockResolvedValue(undefined),
-  };
-  return {
-    ClawTracer: vi.fn().mockImplementation(function () {
-      return mockTracer;
-    }),
-  };
-});
+// Mock tracer
+const mockTracer = {
+  getNodeId: vi.fn().mockReturnValue('node-123'),
+  getParentId: vi.fn().mockReturnValue('parent-123'),
+  endTrace: vi.fn().mockResolvedValue(undefined),
+  failTrace: vi.fn().mockResolvedValue(undefined),
+  addStep: vi.fn().mockResolvedValue(undefined),
+  startTrace: vi.fn().mockResolvedValue(undefined),
+};
 
-vi.mock('../agent/tracer-init', () => {
-  const mockTracer = {
-    getTraceId: vi.fn().mockReturnValue('mock-trace-id'),
-    getNodeId: vi.fn().mockReturnValue('mock-node-id'),
-    getParentId: vi.fn().mockReturnValue('mock-parent-id'),
-    startTrace: vi.fn().mockResolvedValue('mock-trace-id'),
-    addStep: vi.fn().mockResolvedValue(undefined),
-    endTrace: vi.fn().mockResolvedValue(undefined),
-    failTrace: vi.fn().mockResolvedValue(undefined),
-    detectDrift: vi.fn().mockResolvedValue(undefined),
-  };
-  return {
-    initializeTracer: vi.fn().mockImplementation(async (userId) => ({
-      tracer: mockTracer,
-      traceId: 'mock-trace-id',
-      baseUserId: userId.replace('CONV#', '').split('#')[0],
-    })),
-  };
-});
+vi.mock('../agent/tracer-init', () => ({
+  initializeTracer: vi.fn().mockImplementation(async (userId) => ({
+    tracer: mockTracer,
+    traceId: 'mock-trace-id',
+    baseUserId: userId.replace('CONV#', '').split('#')[0],
+  })),
+}));
+
+vi.mock('../recursion-tracker', () => ({
+  isBudgetExceeded: vi.fn().mockResolvedValue(false),
+}));
+
+vi.mock('../handoff', () => ({
+  isHumanTakingControl: vi.fn().mockResolvedValue(false),
+}));
+
+vi.mock('../registry/config', () => ({
+  ConfigManager: {
+    getTypedConfig: vi.fn().mockResolvedValue(0),
+    getRawConfig: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
+vi.mock('../session/identity', () => ({
+  getIdentityManager: vi.fn().mockResolvedValue({
+    getUser: vi.fn().mockResolvedValue({ role: 'admin' }),
+    hasPermission: vi.fn().mockResolvedValue(true),
+  }),
+  Permission: { TASK_CREATE: 'task:create' },
+}));
 
 describe('Agent Memory Scoping', () => {
   let mockMemory: IMemory;
   let mockProvider: IProvider;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockMemory = {
       getHistory: vi.fn().mockResolvedValue([]),
-      getDistilledMemory: vi.fn().mockResolvedValue('Some facts'),
-      getLessons: vi.fn().mockResolvedValue([]),
-      getGlobalLessons: vi.fn().mockResolvedValue([]),
       addMessage: vi.fn().mockResolvedValue(undefined),
+      getDistilledMemory: vi.fn().mockResolvedValue(''),
       updateDistilledMemory: vi.fn().mockResolvedValue(undefined),
-      searchInsights: vi.fn().mockResolvedValue({ items: [] }),
+      getLessons: vi.fn().mockResolvedValue([]),
       getSummary: vi.fn().mockResolvedValue(null),
-      getScopedUserId: vi.fn().mockImplementation((uid: string) => uid),
+      searchInsights: vi.fn().mockResolvedValue({ items: [] }),
+      getGlobalLessons: vi.fn().mockResolvedValue([]),
+      getScopedUserId: vi.fn().mockImplementation((id) => id),
     } as unknown as IMemory;
 
     mockProvider = {
+      getCapabilities: vi.fn().mockResolvedValue({
+        contextWindow: 100000,
+        supportedAttachmentTypes: [],
+        supportedReasoningProfiles: [ReasoningProfile.STANDARD],
+      }),
       call: vi.fn().mockResolvedValue({
         role: MessageRole.ASSISTANT,
-        content: 'Hello',
-        traceId: 'test-trace',
-        messageId: 'test-msg',
-      }),
-      getCapabilities: vi.fn().mockResolvedValue({
-        supportedReasoningProfiles: [ReasoningProfile.STANDARD],
-        supportedAttachmentTypes: [AttachmentType.IMAGE, AttachmentType.FILE],
+        content: 'I am an AI assistant.',
+        traceId: 'mock-trace-id',
+        messageId: 'msg-123',
+        usage: { prompt_tokens: 10, completion_tokens: 10 },
       }),
     } as unknown as IProvider;
+
+    vi.clearAllMocks();
   });
 
   it('should use base user ID for distilled memory and lessons even if userId is session-prefixed', async () => {
+    const sessionUserId = 'CONV#dashboard-user#session_123';
+    const baseUserId = 'dashboard-user';
+
     const agent = new Agent(mockMemory, mockProvider, [], {
       id: 'test-agent',
       name: 'Test Agent',
       enabled: true,
-      systemPrompt: 'System prompt',
-      description: 'test-agent',
-      category: AgentCategory.SYSTEM,
-      icon: 'test',
-      tools: [],
+      systemPrompt: 'You are helpful.',
     });
-
-    const sessionUserId = 'CONV#dashboard-user#session_123';
-    const baseUserId = 'dashboard-user';
 
     await agent.process(sessionUserId, 'Who am I?');
 
     // Verify history uses the full session ID (storageId)
+    expect(mockMemory.addMessage).toHaveBeenCalled();
     expect(mockMemory.getHistory).toHaveBeenCalledWith(sessionUserId);
 
     // Verify distilled memory uses the base user ID
     expect(mockMemory.getDistilledMemory).toHaveBeenCalledWith(baseUserId);
-
-    // Verify lessons use the base user ID
     expect(mockMemory.getLessons).toHaveBeenCalledWith(baseUserId);
   });
 
   it('should use raw userId if no CONV# prefix is present', async () => {
+    const rawUserId = 'telegram-user-456';
+
     const agent = new Agent(mockMemory, mockProvider, [], {
       id: 'test-agent',
       name: 'Test Agent',
       enabled: true,
-      systemPrompt: 'System prompt',
-      description: 'test-agent',
-      category: AgentCategory.SYSTEM,
-      icon: 'test',
-      tools: [],
+      systemPrompt: 'You are helpful.',
     });
-
-    const rawUserId = 'telegram-user-456';
 
     await agent.process(rawUserId, 'Hello');
 

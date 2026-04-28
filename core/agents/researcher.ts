@@ -33,12 +33,13 @@ export const handler = async (event: AgentEvent, context: Context): Promise<stri
     depth,
     tokenBudget,
     costLimit,
+    workspaceId,
   } = payload;
 
   const isAggregation = task?.includes('[AGGREGATED_RESULTS]');
 
   // 1. Discovery & Initialization (config + context loaded in parallel)
-  const { memory, agent } = await initAgent(AgentType.RESEARCHER);
+  const { memory, agent } = await initAgent(AgentType.RESEARCHER, { workspaceId });
 
   // 2. Swarm Self-Organization: Decompose high-level goals into parallel exploration
   if (!isAggregation && (depth ?? 0) < SWARM.MAX_RECURSIVE_DEPTH && task) {

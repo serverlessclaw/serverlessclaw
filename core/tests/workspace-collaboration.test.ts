@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { collaborationTools } from '../tools/collaboration';
-const { createCollaboration } = collaborationTools;
+import { getCollaborationTools } from '../tools/collaboration';
+let createCollaboration: any;
 import { getAgentContext } from '../lib/utils/agent-helpers';
 
 // Mock agent-helpers
@@ -33,8 +33,10 @@ describe('Workspace-Collaboration Integration', () => {
   let mockMemory: any;
   let mockContext: any;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    const tools = await getCollaborationTools();
+    createCollaboration = tools.createCollaboration;
     mockMemory = {
       createCollaboration: vi.fn().mockResolvedValue({
         collaborationId: 'c-123',

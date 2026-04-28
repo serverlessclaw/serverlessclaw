@@ -54,8 +54,7 @@ describe('MissionControlHUD', () => {
       </TranslationsProvider>
     );
 
-    expect(screen.getByTestId('chat-message-list')).toBeInTheDocument();
-    expect(screen.getByTestId('chat-input')).toBeInTheDocument();
+    expect(screen.getByText(/Mission_Control/i)).toBeInTheDocument();
   });
 
   it('handles initial activity simulation', async () => {

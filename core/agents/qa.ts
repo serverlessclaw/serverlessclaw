@@ -41,8 +41,8 @@ export const handler = async (event: AgentEvent, _context: Context): Promise<voi
   const baseUserId = extractBaseUserId(userId);
   const trustContext = { workspaceId, teamId, staffId };
 
-  // 0. Discovery & Initialization
-  const { config, memory } = await initAgent(AgentType.QA);
+  // 2. Discovery & Initialization
+  const { config, memory } = await initAgent(AgentType.QA, { workspaceId: payload.workspaceId });
 
   // 1. Process QA Audit via unified lifecycle (Session Locking + Heartbeat)
   const { processEventWithAgent } = await import('../handlers/events/shared');

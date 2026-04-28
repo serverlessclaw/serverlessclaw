@@ -18,6 +18,25 @@ vi.mock('./registry/config', () => ({
   },
 }));
 
+// Mock recursion-tracker to avoid budget issues
+vi.mock('./recursion-tracker', () => ({
+  isBudgetExceeded: vi.fn().mockResolvedValue(false),
+}));
+
+// Mock handoff to avoid being blocked
+vi.mock('./handoff', () => ({
+  isHumanTakingControl: vi.fn().mockResolvedValue(false),
+}));
+
+// Mock identity manager for permission checks
+vi.mock('./session/identity', () => ({
+  getIdentityManager: vi.fn().mockResolvedValue({
+    getUser: vi.fn().mockResolvedValue({ role: 'admin' }),
+    hasPermission: vi.fn().mockResolvedValue(true),
+  }),
+  Permission: { TASK_CREATE: 'task:create' },
+}));
+
 // Mock Tracer
 vi.mock('./tracer', () => ({
   ClawTracer: class {

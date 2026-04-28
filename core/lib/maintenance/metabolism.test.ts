@@ -153,6 +153,7 @@ describe('MetabolismService', () => {
 
       const findings = await MetabolismService.runMetabolismAudit(mockMemory, {
         repair: true,
+        workspaceId: 'ws-1',
       });
 
       expect(mockS3Send).toHaveBeenCalledTimes(4); // List1, Delete1, List2, Delete2
@@ -197,7 +198,7 @@ describe('MetabolismService', () => {
       const failure = {
         traceId: 'trace-123',
         agentId: 'coder',
-        error: "Tool 'unknown_tool' failed",
+        error: 'Registry override failure',
         userId: 'user-1',
         workspaceId: 'ws-1',
       };
@@ -218,6 +219,7 @@ describe('MetabolismService', () => {
         agentId: 'coder',
         error: 'Unexpected database corruption',
         userId: 'user-1',
+        workspaceId: 'ws-1',
       };
 
       const finding = await MetabolismService.remediateDashboardFailure(mockMemory, failure as any);

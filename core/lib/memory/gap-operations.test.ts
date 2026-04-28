@@ -362,6 +362,7 @@ describe('Gap-Track Assignment', () => {
     });
 
     it('should fail fast when PLANNED transition cannot be applied', async () => {
+      ddbMock.on(QueryCommand).resolves({ Items: [] });
       ddbMock.on(UpdateCommand).rejects(
         Object.assign(new Error('ConditionalCheckFailedException'), {
           name: 'ConditionalCheckFailedException',

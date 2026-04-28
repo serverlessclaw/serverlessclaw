@@ -20,6 +20,17 @@ vi.mock('../lib/tracer', () => ({
   },
 }));
 
+vi.mock('../lib/recursion-tracker', () => ({
+  isBudgetExceeded: vi.fn().mockResolvedValue(false),
+  getRecursionLimit: vi.fn().mockResolvedValue(10),
+  incrementRecursionDepth: vi.fn().mockResolvedValue(1),
+  incrementTokenUsage: vi.fn().mockResolvedValue(0),
+}));
+
+vi.mock('../lib/handoff', () => ({
+  isHumanTakingControl: vi.fn().mockResolvedValue(false),
+}));
+
 import { Agent } from '../lib/agent';
 import { MessageRole, AttachmentType, ReasoningProfile } from '../lib/types/llm';
 import { AgentCategory } from '../lib/types';

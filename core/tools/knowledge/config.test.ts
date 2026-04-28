@@ -258,7 +258,7 @@ describe('setSystemConfig', () => {
     });
 
     expect(result).toContain('Successfully updated system configuration: recursion_limit');
-    expect(mockSaveRawConfig).toHaveBeenCalledWith('recursion_limit', '25');
+    expect(mockSaveRawConfig).toHaveBeenCalledWith('recursion_limit', '25', expect.anything());
   });
 
   it('returns failure message when save fails', async () => {
@@ -290,6 +290,6 @@ describe('setSystemConfig', () => {
     await setSystemConfig.execute({ key: 'test_key', value: 'test_value' });
 
     expect(mockSaveRawConfig).toHaveBeenCalledTimes(1);
-    expect(mockSaveRawConfig).toHaveBeenCalledWith('test_key', 'test_value');
+    expect(mockSaveRawConfig).toHaveBeenCalledWith('test_key', 'test_value', expect.anything());
   });
 });

@@ -10,6 +10,7 @@ import { UpdateCommand, GetCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb'
 vi.mock('sst', () => ({
   Resource: {
     MemoryTable: { name: 'test-memory-table' },
+    ConfigTable: { name: 'test-config-table' },
   },
 }));
 
@@ -31,6 +32,9 @@ vi.mock('@aws-sdk/lib-dynamodb', () => {
     DeleteCommand: class {
       constructor(public input: any) {}
     },
+    PutCommand: class {
+      constructor(public input: any) {}
+    },
   };
 });
 
@@ -39,9 +43,11 @@ vi.mock('@aws-sdk/client-dynamodb', () => ({
 }));
 
 describe('recursion-tracker', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     delete process.env.MEMORY_TABLE_NAME;
+    const { ConfigManager } = await import('./registry/config');
+    ConfigManager.clearCache();
   });
 
   describe('incrementRecursionDepth', () => {

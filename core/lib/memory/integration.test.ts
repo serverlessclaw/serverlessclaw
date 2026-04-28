@@ -75,9 +75,7 @@ describe('DynamoMemory Regression Tests', () => {
       const updateCalls = ddbMock.commandCalls(UpdateCommand);
       const input = updateCalls[0].args[0].input;
       expect(input.Key?.userId).toBe('SYSTEM#RECOVERY#STATS');
-      expect(input.UpdateExpression).toContain(
-        'SET attempts = if_not_exists(attempts, :zero) + :one'
-      );
+      expect(input.UpdateExpression).toContain('SET #field = if_not_exists(#field, :zero) + :one');
     });
 
     it('should reset attempt count to zero', async () => {
@@ -87,7 +85,7 @@ describe('DynamoMemory Regression Tests', () => {
 
       const updateCalls = ddbMock.commandCalls(UpdateCommand);
       const input = updateCalls[0].args[0].input;
-      expect(input.UpdateExpression).toContain('SET attempts = :zero');
+      expect(input.UpdateExpression).toContain('SET #field = :zero');
       expect(input.ExpressionAttributeValues?.[':zero']).toBe(0);
     });
   });
