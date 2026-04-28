@@ -144,7 +144,7 @@ const BRIDGE_DETAIL_PAYLOAD_SCHEMA = z
   .object({
     userId: z.string().default('dashboard-user'),
     sessionId: z.string().optional(),
-    messageId: z.string().default(() => generateMessageId('pending')),
+    messageId: z.string().optional(),
     traceId: z.string().default('unknown'),
     agentName: z.string().default('SuperClaw'),
     message: z.string().default(''),
@@ -159,7 +159,7 @@ const BRIDGE_DETAIL_PAYLOAD_SCHEMA = z
   .transform((data) => ({
     ...data,
     // Resolve the authoritative messageId at the source
-    messageId: data.messageId ?? data.traceId,
+    messageId: data.messageId || data.traceId || generateMessageId('pending'),
     // Pre-calculate baseUserId for the handler
     baseUserId: normalizeBaseUserId(data.userId),
   }));

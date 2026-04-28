@@ -124,7 +124,7 @@ describe('ClawTracer', () => {
         content: { results: [] },
       });
 
-      expect(mockSend).toHaveBeenCalledTimes(2);
+      expect(mockSend).toHaveBeenCalledTimes(4);
     });
 
     it('should handle all trace types in TraceType enum', () => {

@@ -15,7 +15,7 @@ const FNV_1A_OFFSET_32 = 0x811c9dc5;
  * @returns Unique session ID
  */
 export function generateSessionId(): string {
-  return `session_${Date.now()}_${randomBytes(4).toString('hex')}`;
+  return `session-${Date.now()}-${randomBytes(4).toString('hex')}`;
 }
 
 /**
@@ -41,7 +41,7 @@ export function generateCollaborationId(): string {
  * @returns Unique gap ID
  */
 export function generateGapId(): string {
-  return `gap_${Date.now()}_${randomBytes(4).toString('hex')}`;
+  return `gap-${Date.now()}-${randomBytes(4).toString('hex')}`;
 }
 
 /**
@@ -60,8 +60,8 @@ export function generateMessageId(type: string = 'assistant'): string {
  * @returns Unique ID with optional prefix
  */
 export function generateId(prefix?: string): string {
-  const base = `${Date.now()}_${randomBytes(4).toString('hex')}`;
-  return prefix ? `${prefix}_${base}` : base;
+  const base = `${Date.now()}-${randomBytes(4).toString('hex')}`;
+  return prefix ? `${prefix}-${base}` : base;
 }
 
 /**
