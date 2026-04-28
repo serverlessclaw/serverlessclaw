@@ -126,31 +126,6 @@ export const UNIVERSAL_SYSTEM_TOOLS = [
 ];
 
 /**
- * OpenAI-specific configuration and role mapping.
- */
-export const OPENAI = {
-  ROLES: {
-    USER: 'user',
-    ASSISTANT: 'assistant',
-    DEVELOPER: 'developer',
-  },
-  ITEM_TYPES: {
-    MESSAGE: 'message',
-    FUNCTION_CALL: 'function_call',
-    FUNCTION_CALL_OUTPUT: 'function_call_output',
-  },
-  CONTENT_TYPES: {
-    INPUT_TEXT: 'input_text',
-    INPUT_FILE: 'input_file',
-    IMAGE_URL: 'image_url',
-  },
-  DEFAULT_FILE_NAME: 'document.pdf',
-  DEFAULT_MIME_TYPE: 'application/octet-stream',
-  FUNCTION_TYPE: 'function',
-  MCP_TYPE: 'mcp',
-} as const;
-
-/**
  * Storage configuration and limits.
  */
 export const STORAGE = {

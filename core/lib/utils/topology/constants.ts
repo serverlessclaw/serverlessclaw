@@ -84,6 +84,29 @@ export const NODE_TIER = {
   INFRA: 'INFRA' as const,
 };
 
+/** Human-readable labels for topology nodes. */
+export const TOPOLOGY_LABELS = {
+  AGENT_BUS: 'AgentBus (EventBridge)',
+  ASYNC_QUEUE: 'Async Queue (SQS)',
+  WEBHOOK_API: 'Webhook API',
+  CLAW_DB: 'ClawDB (Single Table)',
+  KNOWLEDGE_STORAGE: 'Knowledge Storage (S3)',
+  DOCUMENT_STORE: 'Document Store (S3)',
+  OPEN_SEARCH: 'OpenSearch Vector DB',
+  STAGING_STORAGE: 'Staging Storage (S3)',
+  CLAW_CENTER: 'ClawCenter (Next.js)',
+  REALTIME_BRIDGE: 'Realtime Bridge (Lambda)',
+  REALTIME_BUS: 'Realtime Bus (IoT Core)',
+  HEARTBEAT_ENGINE: 'Heartbeat Engine',
+  CONCURRENCY_MONITOR: 'Concurrency Monitor',
+  EVENT_HANDLER: 'Event Handler',
+  DEAD_MANS_SWITCH: "Dead Man's Switch",
+  MCP_MULTIPLEXER: 'MCP Multiplexer (Lambda)',
+  MCP_WARMUP_HANDLER: 'MCP Warmup Handler',
+  DEAD_LETTER_QUEUE: 'Dead Letter Queue',
+  REALTIME_BUS_IOT: 'Realtime Bus (IoT)',
+} as const;
+
 /** Standard edge label vocabulary for topology links. */
 export const EDGE_LABEL = {
   INBOUND: 'INBOUND',

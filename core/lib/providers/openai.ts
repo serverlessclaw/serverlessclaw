@@ -502,22 +502,23 @@ export class OpenAIProvider implements IProvider {
         const delta = rawChunk.delta ?? rawChunk.item?.delta;
 
         const isContentEvent =
-          type === 'text.delta' ||
-          type === 'output_text.delta' ||
-          type === 'response.text.delta' ||
-          type === 'response.output_text.delta';
+          type === OPENAI.EVENT_TYPES.TEXT_DELTA ||
+          type === OPENAI.EVENT_TYPES.OUTPUT_TEXT_DELTA ||
+          type === OPENAI.EVENT_TYPES.RESPONSE_TEXT_DELTA ||
+          type === OPENAI.EVENT_TYPES.RESPONSE_OUTPUT_TEXT_DELTA;
         const isThoughtEvent =
-          type === 'reasoning.delta' ||
-          type === 'output_thought.delta' ||
-          type === 'thought.delta' ||
-          type === 'response.reasoning.delta' ||
-          type === 'response.output_thought.delta' ||
-          type === 'response.thought.delta' ||
+          type === OPENAI.EVENT_TYPES.REASONING_DELTA ||
+          type === OPENAI.EVENT_TYPES.OUTPUT_THOUGHT_DELTA ||
+          type === OPENAI.EVENT_TYPES.THOUGHT_DELTA ||
+          type === OPENAI.EVENT_TYPES.RESPONSE_REASONING_DELTA ||
+          type === OPENAI.EVENT_TYPES.RESPONSE_OUTPUT_THOUGHT_DELTA ||
+          type === OPENAI.EVENT_TYPES.RESPONSE_THOUGHT_DELTA ||
           !!rawChunk.delta?.reasoning_content ||
           !!rawChunk.item?.delta?.reasoning_content;
 
         const isReasoningSummaryItemDone =
-          type === 'output_item.done' || type === 'response.output_item.done';
+          type === OPENAI.EVENT_TYPES.OUTPUT_ITEM_DONE ||
+          type === OPENAI.EVENT_TYPES.RESPONSE_OUTPUT_ITEM_DONE;
 
         if (isContentEvent && delta) {
           const content = typeof delta === 'string' ? delta : (delta.value ?? delta.text ?? '');
@@ -537,14 +538,15 @@ export class OpenAIProvider implements IProvider {
             yield { thought };
           }
         } else if (
-          (type === 'message.delta' || type === 'response.message.delta') &&
+          (type === OPENAI.EVENT_TYPES.MESSAGE_DELTA ||
+            type === OPENAI.EVENT_TYPES.RESPONSE_MESSAGE_DELTA) &&
           rawChunk.delta
         ) {
           if (rawChunk.delta.content) yield { content: rawChunk.delta.content };
           if (rawChunk.delta.reasoning) yield { thought: rawChunk.delta.reasoning };
         } else if (
           isReasoningSummaryItemDone &&
-          rawChunk.item?.type === 'reasoning' &&
+          rawChunk.item?.type === OPENAI.STREAM_PROPS.REASONING &&
           Array.isArray(rawChunk.item?.summary)
         ) {
           const summaryText = OpenAIProvider.extractSummaryText(rawChunk.item.summary);
@@ -554,7 +556,10 @@ export class OpenAIProvider implements IProvider {
               yield { thought: thoughtChunk };
             }
           }
-        } else if (isReasoningSummaryItemDone && rawChunk.item?.type === 'function_call') {
+        } else if (
+          isReasoningSummaryItemDone &&
+          rawChunk.item?.type === OPENAI.STREAM_PROPS.FUNCTION_CALL
+        ) {
           yield {
             tool_calls: [
               {
@@ -568,7 +573,7 @@ export class OpenAIProvider implements IProvider {
             ],
           };
         } else if (
-          (type === 'usage' || type === 'response.usage') &&
+          (type === OPENAI.EVENT_TYPES.USAGE || type === OPENAI.EVENT_TYPES.RESPONSE_USAGE) &&
           (rawChunk.usage || rawChunk.response?.usage)
         ) {
           const usage = rawChunk.usage || rawChunk.response?.usage;
