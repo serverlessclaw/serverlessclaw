@@ -29,6 +29,7 @@ const {
     hasPermission: vi.fn().mockResolvedValue(true),
   }),
   mockVerifyAuth: vi.fn().mockResolvedValue({ success: true, userId: 'dashboard-user' }),
+  mockHasPermission: vi.fn().mockResolvedValue(true),
   mockAcquireProcessing: vi.fn().mockResolvedValue(true),
   mockReleaseProcessing: vi.fn().mockResolvedValue(undefined),
 }));
@@ -58,6 +59,10 @@ vi.mock('@claw/core/lib/memory', () => ({
 
 vi.mock('@claw/core/lib/utils/error', () => ({
   formatErrorMessage: (e: any) => e?.message || String(e),
+}));
+
+const { mockHasPermission } = vi.hoisted(() => ({
+  mockHasPermission: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock('@claw/core/lib/session/identity', () => ({
@@ -116,6 +121,7 @@ vi.mock('next/cache', () => ({ revalidatePath: mockRevalidatePath }));
 vi.mock('@claw/core/lib/constants', () => ({
   HTTP_STATUS: {
     BAD_REQUEST: 400,
+    FORBIDDEN: 403,
     INTERNAL_SERVER_ERROR: 500,
     OK: 200,
     TOO_MANY_REQUESTS: 429,
@@ -252,6 +258,25 @@ describe('Dashboard API: POST /api/chat', () => {
 
     expect(data.tool_calls).toHaveLength(1);
     expect(data.tool_calls[0].function.name).toBe('t1');
+  });
+
+  it('returns 403 when user lacks TASK_CREATE permission', async () => {
+    mockGetIdentityManager.mockResolvedValueOnce({
+      getUser: vi.fn().mockResolvedValue({ role: 'guest' }),
+      hasPermission: vi.fn().mockResolvedValue(false),
+    });
+
+    const req = makeRequest({ text: 'Hi' });
+    const searchParams = new URLSearchParams({ workspaceId: 'ws-1' });
+    (req as any).nextUrl = { searchParams };
+
+    const res = await (POST as any)(req);
+    const data = await res.json();
+    console.log('Response status:', res.status);
+    console.log('Response data:', data);
+
+    expect(res.status).toBe(403);
+    expect(data.error).toBe('Unauthorized workspace access or missing TASK_CREATE permission');
   });
 });
 

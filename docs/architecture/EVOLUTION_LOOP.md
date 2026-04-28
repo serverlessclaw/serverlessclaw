@@ -8,8 +8,8 @@ The **Cognitive Evolution Loop** is the core mechanism by which the Serverless C
        [ SIGNAL ]                      [ ANALYSIS ]                      [ REMEDIATION ]
     ------------------              -----------------                 -------------------
     |                |              |               |                 |                 |
-    |  Real-world    |------------->| Tuning Critic |---------------->| Proposed        |
-    |  Failure       | (EventBridge)| (LLM-based)   | (Metabolic Gap) | Persona Updates |
+    |  Real-world    |------------->| Cognition     |---------------->| Proposed        |
+    |  Failure       | (EventBridge)| Reflector     | (Metabolic Gap) | Persona Updates |
     |                |              |               |                 |                 |
     ------------------              -----------------                 -------------------
             ^                                                                  |
@@ -31,9 +31,13 @@ The **Cognitive Evolution Loop** is the core mechanism by which the Serverless C
 
 Every agent execution generates a trace. Failures are captured by the `reputation-handler` and aggregated into hourly buckets. Low reputation scores (Principle 12) trigger a "Metabolic Gap" signal.
 
-### 2. Tuning Critic (Intelligence Hub)
+### 2. Cognition Reflector (Intelligence Hub)
 
-The Intelligence Hub analyzes the error distribution. If a "Reasoning Failure" is detected, it pulls the full trace and initial context. A specialized LLM compares the intent vs. the result and generates an **Improved Prompt Snippet**.
+The Cognition Reflector analyzes the error distribution and session history. If a "Reasoning Failure" or "Knowledge Gap" is detected, it pulls the full trace and initial context. A specialized LLM compares the intent vs. the result and generates a **Reflection Report** containing updated facts, lessons, and capability gaps.
+
+#### Semantic Deduplication
+
+To prevent duplicate gap reports, the Reflector uses **Semantic Deduplication**. It queries existing open gaps and compares them against new findings. If a similar gap exists, it updates the existing gap's metadata (impact/urgency) instead of creating a new one.
 
 ### 3. Evolution Sandbox (Isolated Replay)
 

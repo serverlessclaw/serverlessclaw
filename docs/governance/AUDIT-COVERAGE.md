@@ -38,8 +38,8 @@ Last Updated: 2026-04-27
 
 | Date       | Report                                          | Silos Covered         | Cross-Silo | Key Findings                                                                                        |
 | :--------- | :---------------------------------------------- | :-------------------- | :--------- | :-------------------------------------------------------------------------------------------------- |
-| 2026-04-27 | `audit-2026-04-27-evolution-scoping.md`    | Hand, Brain          | B          | FIXED: P1 Tenant-Blind Config Load, P1 Unscoped Activation Chain                    |
-| 2026-04-27 | `audit-2026-04-27-identity-journey-v2.md`  | Brain, Hand          | C          | FIXED: P0 Global Identity Leakage, P0 Dashboard Bypass, P0 AST Tool Bypass                          |
+| 2026-04-27 | `audit-2026-04-27-evolution-scoping.md`         | Hand, Brain           | B          | FIXED: P1 Tenant-Blind Config Load, P1 Unscoped Activation Chain                                    |
+| 2026-04-27 | `audit-2026-04-27-identity-journey-v2.md`       | Brain, Hand           | C          | FIXED: P0 Global Identity Leakage, P0 Dashboard Bypass, P0 AST Tool Bypass                          |
 | 2026-04-27 | `audit-2026-04-27-metabolism-evolution.md`      | Metabolism, Evolution | B, E       | FIXED: P1 Cross-Tenant Evolution, P1 Global S3 Pruning, P2 Scoping Inconsistencies                  |
 | 2026-04-27 | `audit-2026-04-27-perspective-a-remediation.md` | Spine, Brain, Eye     | A          | FIXED: P1 Spine Telemetry Blindness, P1 Fragmented Metrics Partition, P2 Non-GSI Compliance         |
 | 2026-04-27 | `audit-2026-04-27-life-of-a-message-v2.md`      | Spine, Brain, Eye     | A          | FIXED: P1 Missing metrics in non-streaming path, P1 Non-atomic persistence, P2 Multi-tenant regex   |

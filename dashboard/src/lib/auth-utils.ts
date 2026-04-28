@@ -9,6 +9,22 @@ export function getUserId(req: NextRequest): string {
   if (!req.cookies) {
     return 'dashboard-user';
   }
+
+  // Security Fix: Verify both session ID and auth marker
+  const authCookie = req.cookies.get(AUTH.COOKIE_NAME);
   const sessionCookie = req.cookies.get(AUTH.SESSION_USER_ID);
-  return sessionCookie?.value || 'dashboard-user';
+
+  // If auth marker is missing or invalid, fallback to guest
+  if (!authCookie || authCookie.value !== AUTH.COOKIE_VALUE) {
+    return 'dashboard-user';
+  }
+
+  const userId = sessionCookie?.value || 'dashboard-user';
+
+  // Critical Security Fix: Blacklist SYSTEM identity to prevent spoofing
+  if (userId === 'SYSTEM') {
+    return 'dashboard-user';
+  }
+
+  return userId;
 }

@@ -8,14 +8,14 @@ This document defines the safety boundaries and policy enforcement mechanisms th
 
 The system employs a multi-layered safety architecture:
 
-| Guardrail              | Where Implemented           | Trigger                                                                                                                                             |
-| :--------------------- | :-------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Resource Labeling**  | `core/tools`                | Any write to a protected file (e.g., `.git`, `sst.config.ts`).                                                                                      |
-| **Safety Engine**      | `core/lib/safety-engine.ts` | Multi-dimensional policy enforcement (Tiers, Rates, Time).                                                                                          |
-| **Budget Enforcer**    | `core/lib/agent/executor`   | Token and cost limits exceeded (80% warning / 100% stop). Supports session-level budgets across multi-turn conversations via `TokenBudgetEnforcer`. |
-| **Recursion Guard**    | `core/handlers/events.ts`   | Prevents infinite loops (Depth > 15).                                                                                                               |
-| **Human-in-the-Loop**  | `AgentExecutor`             | Pauses execution for sensitive tools (e.g., `deleteDatabase`).                                                                                      |
-| **Context Compaction** | `core/lib/context.ts`       | Prevents context overflow during long autonomous missions.                                                                                          |
+| Guardrail              | Where Implemented           | Trigger                                                                                                                                                                                      |
+| :--------------------- | :-------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Resource Labeling**  | `core/tools`                | Any write to a protected file (e.g., `.git`, `sst.config.ts`).                                                                                                                               |
+| **Safety Engine**      | `core/lib/safety-engine.ts` | Multi-dimensional policy enforcement (Tiers, Rates, Time).                                                                                                                                   |
+| **Budget Enforcer**    | `core/lib/metrics`          | Token and cost limits exceeded (80% warning / 100% stop). Supports session-level budgets across multi-turn conversations via `TokenBudgetEnforcer` with DynamoDB persistence for durability. |
+| **Recursion Guard**    | `core/handlers/events.ts`   | Prevents infinite loops (Depth > 15).                                                                                                                                                        |
+| **Human-in-the-Loop**  | `AgentExecutor`             | Pauses execution for sensitive tools (e.g., `deleteDatabase`).                                                                                                                               |
+| **Context Compaction** | `core/lib/context.ts`       | Prevents context overflow during long autonomous missions.                                                                                                                                   |
 
 ---
 
@@ -134,6 +134,26 @@ The user's role is captured at the entry point (Dashboard/Webhook) and **threade
 Highly sensitive changes, such as IAM modifications or memory retention policy shifts, are classified as **Class C**. By default, these are never executed immediately but are scheduled with a **1-hour cooling period** for manual audit.
 
 **Exception (Principle 9):** If an agent has earned a `TrustScore >= 95` and is operating in `AUTO` mode, the system autonomously promotes the Class C action. In this scenario, the action executes immediately and the 1-hour HITL scheduling queue is bypassed.
+
+---
+
+## 💰 Token Budget Enforcement
+
+The `TokenBudgetEnforcer` is a non-bypassable safety layer designed to prevent runaway costs from stuck agents or infinite reasoning loops.
+
+### 1. Cost Tracking & Estimation
+
+The enforcer tracks both token usage (input/output) and estimated USD cost based on configurable rates. It persists session state to DynamoDB, allowing it to maintain budget awareness across cold starts and multi-turn interactions.
+
+### 2. Enforcement Thresholds
+
+- **Session Budget**: A hard limit on the total cost/tokens for a single session (e.g., $5.00).
+- **Agent Budget**: A per-call limit to prevent extremely expensive individual requests (e.g., $2.00).
+- **Velocity Detection**: Triggers warnings at 25%, 50%, and 75% budget consumption to provide early visibility into high-spend sessions.
+
+### 3. Fail-Closed Reliability
+
+If the enforcer cannot verify session history (e.g., DynamoDB outage), it defaults to a **Fail-Closed** state, blocking further agent execution to ensure no unrecorded costs are incurred.
 
 ---
 

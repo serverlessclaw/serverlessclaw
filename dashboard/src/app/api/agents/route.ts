@@ -3,18 +3,14 @@
  * Express-style dynamic route for managing agent configurations in the dashboard.
  */
 export const dynamic = 'force-dynamic';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, UpdateCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
-import { NextResponse } from 'next/server';
-import { HTTP_STATUS, DYNAMO_KEYS } from '@claw/core/lib/constants';
+import { NextRequest, NextResponse } from 'next/server';
+import { HTTP_STATUS } from '@claw/core/lib/constants';
 import { BACKBONE_REGISTRY } from '@claw/core/lib/backbone';
 import { logger } from '@claw/core/lib/logger';
-import { AgentRegistry } from '@claw/core/lib/registry/AgentRegistry';
+import { AgentRegistry } from '@claw/core/lib/registry';
 import { IAgentConfig } from '@claw/core/lib/types/agent';
 import { getConfigTableName } from '@claw/core/lib/utils/ddb-client';
-
-const client = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(client);
+import { getUserId } from '@/lib/auth-utils';
 
 /**
  * GET handler for agents configuration.
@@ -22,14 +18,30 @@ const docClient = DynamoDBDocumentClient.from(client);
  *
  * @returns A promise that resolves to a NextResponse containing the agents configurations.
  */
-export async function GET(request: Request): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
+    const userId = getUserId(request);
     const { searchParams } = new URL(request.url);
     const workspaceId =
-      searchParams.get('workspaceId') || request.headers.get('x-workspace-id') || undefined;
+      searchParams.get('workspaceId') || request.headers.get('x-workspace-id') || 'default';
 
-    const { AgentRegistry } = await import('@claw/core/lib/registry');
-    const configs = await AgentRegistry.getAllConfigs({ workspaceId: workspaceId ?? undefined });
+    const { getIdentityManager, Permission } = await import('@claw/core/lib/session/identity');
+    const identityManager = await getIdentityManager();
+
+    // Verify workspace access
+    const hasAccess = await identityManager.hasPermission(
+      userId,
+      Permission.AGENT_VIEW,
+      workspaceId
+    );
+    if (!hasAccess) {
+      return NextResponse.json(
+        { error: 'Unauthorized workspace access' },
+        { status: HTTP_STATUS.FORBIDDEN }
+      );
+    }
+
+    const configs = await AgentRegistry.getAllConfigs({ workspaceId });
     return NextResponse.json({ agents: configs });
   } catch (error) {
     logger.error('Failed to fetch agents:', error);
@@ -46,11 +58,29 @@ export async function GET(request: Request): Promise<NextResponse> {
 /**
  * POST handler for agents configuration.
  */
-export async function POST(request: Request): Promise<NextResponse> {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
+    const userId = getUserId(request);
     const { searchParams } = new URL(request.url);
     const workspaceId =
-      searchParams.get('workspaceId') || request.headers.get('x-workspace-id') || undefined;
+      searchParams.get('workspaceId') || request.headers.get('x-workspace-id') || 'default';
+
+    const { getIdentityManager, Permission } = await import('@claw/core/lib/session/identity');
+    const identityManager = await getIdentityManager();
+
+    // Verify update permission
+    const hasPermission = await identityManager.hasPermission(
+      userId,
+      Permission.AGENT_UPDATE,
+      workspaceId
+    );
+    if (!hasPermission) {
+      return NextResponse.json(
+        { error: 'Unauthorized to update agent configurations' },
+        { status: HTTP_STATUS.FORBIDDEN }
+      );
+    }
+
     const body = await request.json();
     let agentsToSave: Record<string, Partial<IAgentConfig>> = {};
 
@@ -80,7 +110,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     for (const [agentId, config] of Object.entries(agentsToSave)) {
-      await AgentRegistry.saveConfig(agentId, config, { workspaceId: workspaceId ?? undefined });
+      await AgentRegistry.saveConfig(agentId, config, { workspaceId });
     }
 
     return NextResponse.json({ success: true });
@@ -99,11 +129,29 @@ export async function POST(request: Request): Promise<NextResponse> {
 /**
  * PATCH handler for creating or updating a single agent.
  */
-export async function PATCH(request: Request): Promise<NextResponse> {
+export async function PATCH(request: NextRequest): Promise<NextResponse> {
   try {
+    const userId = getUserId(request);
     const { searchParams } = new URL(request.url);
     const workspaceId =
-      searchParams.get('workspaceId') || request.headers.get('x-workspace-id') || undefined;
+      searchParams.get('workspaceId') || request.headers.get('x-workspace-id') || 'default';
+
+    const { getIdentityManager, Permission } = await import('@claw/core/lib/session/identity');
+    const identityManager = await getIdentityManager();
+
+    // Verify update permission
+    const hasPermission = await identityManager.hasPermission(
+      userId,
+      Permission.AGENT_UPDATE,
+      workspaceId
+    );
+    if (!hasPermission) {
+      return NextResponse.json(
+        { error: 'Unauthorized to update agent configuration' },
+        { status: HTTP_STATUS.FORBIDDEN }
+      );
+    }
+
     const body = await request.json();
     const { agentId, config } = body as { agentId: string; config: Partial<IAgentConfig> };
 
@@ -131,7 +179,7 @@ export async function PATCH(request: Request): Promise<NextResponse> {
       );
     }
 
-    await AgentRegistry.saveConfig(agentId, config, { workspaceId: workspaceId ?? undefined });
+    await AgentRegistry.saveConfig(agentId, config, { workspaceId });
 
     return NextResponse.json({ success: true, agentId });
   } catch (error) {
@@ -149,12 +197,29 @@ export async function PATCH(request: Request): Promise<NextResponse> {
 /**
  * DELETE handler for removing a single non-backbone agent.
  */
-export async function DELETE(request: Request): Promise<NextResponse> {
+export async function DELETE(request: NextRequest): Promise<NextResponse> {
   try {
+    const userId = getUserId(request);
     const { searchParams } = new URL(request.url);
     const workspaceId =
-      searchParams.get('workspaceId') || request.headers.get('x-workspace-id') || undefined;
+      searchParams.get('workspaceId') || request.headers.get('x-workspace-id') || 'default';
     const agentId = searchParams.get('agentId');
+
+    const { getIdentityManager, Permission } = await import('@claw/core/lib/session/identity');
+    const identityManager = await getIdentityManager();
+
+    // Verify delete permission
+    const hasPermission = await identityManager.hasPermission(
+      userId,
+      Permission.AGENT_DELETE,
+      workspaceId
+    );
+    if (!hasPermission) {
+      return NextResponse.json(
+        { error: 'Unauthorized to delete agents' },
+        { status: HTTP_STATUS.FORBIDDEN }
+      );
+    }
 
     if (!agentId) {
       return NextResponse.json(
@@ -182,11 +247,11 @@ export async function DELETE(request: Request): Promise<NextResponse> {
 
     // Remove agent from agents_config atomically and scoped
     await ConfigManager.atomicRemoveFromMap(DYNAMO_KEYS.AGENTS_CONFIG, agentId, [], {
-      workspaceId: workspaceId ?? undefined,
+      workspaceId,
     });
 
     // Remove tool overrides scoped
-    await ConfigManager.deleteConfig(`${agentId}_tools`, { workspaceId: workspaceId ?? undefined });
+    await ConfigManager.deleteConfig(`${agentId}_tools`, { workspaceId });
 
     return NextResponse.json({ success: true, agentId });
   } catch (error) {

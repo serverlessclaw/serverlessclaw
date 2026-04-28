@@ -79,8 +79,22 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const storageId = sessionId ? `CONV#${userId}#${sessionId}` : userId;
 
     // Phase 15: RBAC Role Fetching
-    const { getIdentityManager } = await import('@claw/core/lib/session/identity');
+    const { getIdentityManager, Permission } = await import('@claw/core/lib/session/identity');
     const identityManager = await getIdentityManager();
+
+    // Verify workspace access and task creation permission
+    const hasPermission = await identityManager.hasPermission(
+      userId,
+      Permission.TASK_CREATE,
+      workspaceId
+    );
+    if (!hasPermission) {
+      return NextResponse.json(
+        { error: 'Unauthorized workspace access or missing TASK_CREATE permission' },
+        { status: HTTP_STATUS.FORBIDDEN }
+      );
+    }
+
     const identity = await identityManager.getUser(userId);
     const userRole = identity?.role;
 

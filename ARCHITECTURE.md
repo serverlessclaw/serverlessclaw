@@ -276,7 +276,7 @@ The primary interaction interface implements a three-column "War Room" model, sy
 
 The system architecture follows a **Distributed Spine** model where all critical state (routing, safety, trust) is synchronized via DynamoDB to ensure consistency across serverless execution boundaries.
 
-```text
+````text
   [ Inbound Event ]
           |
           v
@@ -315,10 +315,26 @@ The system architecture follows a **Distributed Spine** model where all critical
 To support autonomous swarm growth while maintaining the "Trunk is Sacred" rule, the system implements a multi-stage evolution pipeline:
 
 1. **Strategic Planning**: The Reflector and Planner identify and plan fixes for `strategic_gap` records.
+
+```mermaid
+graph TD
+    A[Conversation Finished] --> B{Reflector Agent}
+    B --> C[Fetch Execution Trace]
+    B --> D[Build Reflection Prompt]
+    D --> E[LLM: Generate Reflection Report]
+    E --> F[Processor: Handle Insights]
+    F --> G[Update Facts in Memory]
+    F --> H[Add Lessons]
+    F --> I[Identify/Update Gaps]
+    I --> J{EventBridge}
+    J --> K[Evolution Plan Event]
+    K --> L[Planner Agent]
+    F --> M[Resolve Gaps]
+````
+
 2. **Pre-flight Verification**: The **`verifyChanges`** tool executes the full project quality suite (`make check && make test`) locally in the agent's worker context. Passing this suite is a mandatory **Definition of Done (DoD)** requirement for staging or pushing code.
 3. **Trunk Integration**: Verified changes are pushed to `main` and deployed to `prod`.
 4. **Promotion Manager**: Post-deployment, the `PromotionManager` graduates capabilities from shadow mode (`SafetyTier.LOCAL`) to full autonomy (`SafetyTier.PROD`) based on sustained trust and verified live metrics.
-
 
 To ensure high-performance auditability and automatic data aging (Principle 1), all transient safety telemetry is persisted in the **MemoryTable**:
 
@@ -326,7 +342,19 @@ To ensure high-performance auditability and automatic data aging (Principle 1), 
 2. **Collision Guard**: Log persistence uses conditional writes with millisecond jitter to prevent overwrites under high concurrency.
 3. **Blast Radius Tracking**: Class C action frequency is tracked per agent/action using the `SAFETY#BLAST_RADIUS#` prefix with a **1-hour rolling window (TTL)**.
 4. **Storage Strategy**: This migration from `ConfigTable` to `MemoryTable` ensures that audit logs do not pollute persistent configuration state and are automatically reclaimed by DynamoDB after their operational relevance expires.
-```
+
+````
+
+## 🛡️ Security & RBAC Enforcement
+
+To ensure enterprise-grade multi-tenancy and prevent privilege escalation, the system enforces a strict security perimeter:
+
+1. **Identity Hardening**: `getUserId` in the dashboard (`dashboard/src/lib/auth-utils.ts`) verifies both the session ID and a dedicated auth marker cookie. It explicitly blacklists the `SYSTEM` identity to prevent spoofing of internal agent credentials.
+2. **Permission-Gated API Routes**: All critical dashboard API routes (`/api/chat`, `/api/agents`) verify the requesting user's permissions via the `IdentityManager`.
+   - **`TASK_CREATE`**: Required to initiate new chat sessions or tasks.
+   - **`AGENT_VIEW / UPDATE / DELETE`**: Required to manage agent configurations.
+3. **Workspace Isolation**: Permission checks are scoped to a specific `workspaceId` (passed via headers or query params), ensuring users cannot access or modify resources belonging to other tenants.
+4. **Token Budgeting**: The `TokenBudgetEnforcer` prevents runaway LLM costs by monitoring per-session token consumption and blocking requests that exceed the allocated budget.
 
 ---
 
@@ -337,12 +365,9 @@ To satisfy **Principle 5 (Low Latency)** and **Principle 10 (Lean Evolution)**, 
 1. **Modular Architecture**: The `ConfigManager` (`core/lib/registry/config.ts`) is refactored into specialized sub-modules within `core/lib/registry/config/` using an inheritance chain:
    ```text
    [ ConfigBase ] -> [ ConfigClient ] -> [ ConfigList ] -> [ ConfigMap ] -> [ ConfigManager ]
-   ```
-   This ensures high neural cohesion and stays within AI context limits during systemic audits.
-2. **Cached Dynamic Lookups**: Maintains a 60-second in-memory cache for all configuration keys. This reduces DynamoDB read IOPS by >90% during high-concurrency swarm missions.
-3. **Authoritative Async Bridge**: The `getDynamicConfigValue` utility provides a type-safe, non-blocking interface for fetching hot-swappable settings.
-4. **Atomic Writes & Invalidation**: Configuration updates use DynamoDB conditional writes to prevent lost updates. **Supports Principle 15 (Monotonic Progress) via `atomicIncrementMapField` for numeric counters.**
-5. **Centralized Table Resolution**: Table names are resolved via `ddb-client.ts`, supporting environment variable overrides for robust stage alignment.
+````
+
+This ensures high neural cohesion and stays within AI context limits during systemic audits. 2. **Cached Dynamic Lookups**: Maintains a 60-second in-memory cache for all configuration keys. This reduces DynamoDB read IOPS by >90% during high-concurrency swarm missions. 3. **Authoritative Async Bridge**: The `getDynamicConfigValue` utility provides a type-safe, non-blocking interface for fetching hot-swappable settings. 4. **Atomic Writes & Invalidation**: Configuration updates use DynamoDB conditional writes to prevent lost updates. **Supports Principle 15 (Monotonic Progress) via `atomicIncrementMapField` for numeric counters.** 5. **Centralized Table Resolution**: Table names are resolved via `ddb-client.ts`, supporting environment variable overrides for robust stage alignment.
 
 ---
 

@@ -1,5 +1,14 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TokenBudgetEnforcer, resetTokenBudgetEnforcer } from './token-budget-enforcer';
+
+const mockDocClient = vi.hoisted(() => ({
+  send: vi.fn().mockResolvedValue({ Items: [] }),
+}));
+
+vi.mock('../utils/ddb-client', () => ({
+  getDocClient: () => mockDocClient,
+  getMemoryTableName: () => 'MemoryTable',
+}));
 
 describe('TokenBudgetEnforcer', () => {
   let enforcer: TokenBudgetEnforcer;
@@ -89,6 +98,43 @@ describe('TokenBudgetEnforcer', () => {
     it('should return 0 for 0 tokens', () => {
       const cost = enforcer.estimateCost(0, 0);
       expect(cost).toBe(0);
+    });
+  });
+
+  describe('Durability & Cold Start', () => {
+    it('should recover session from DynamoDB on cold start', async () => {
+      mockDocClient.send.mockResolvedValueOnce({
+        Items: [
+          {
+            userId: 'BUDGET#session-cold',
+            history: [
+              {
+                promptTokens: 5000,
+                completionTokens: 2000,
+                estimatedCostUsd: 0.1,
+                timestamp: Date.now(),
+              },
+            ],
+          },
+        ],
+      });
+
+      // New enforcer instance to simulate cold start
+      const coldEnforcer = new TokenBudgetEnforcer();
+      const result = await coldEnforcer.recordUsage('session-cold', 1000, 500);
+
+      expect(result.sessionTokens).toBe(7000 + 1500);
+      expect(mockDocClient.send).toHaveBeenCalled();
+    });
+
+    it('should fail-closed if DynamoDB load fails', async () => {
+      mockDocClient.send.mockRejectedValueOnce(new Error('DynamoDB down'));
+
+      const coldEnforcer = new TokenBudgetEnforcer();
+      const result = await coldEnforcer.recordUsage('session-down', 1000, 500);
+
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('fail-closed');
     });
   });
 });

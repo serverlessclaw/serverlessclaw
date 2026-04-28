@@ -117,8 +117,8 @@ export class TokenBudgetEnforcer {
           },
         })
       );
-    } catch (e) {
-      logger.debug('[TokenBudgetEnforcer] Failed to persist session:', e);
+    } catch {
+      // Silently fail persistence, don't break the agent loop
     }
   }
 
@@ -139,10 +139,11 @@ export class TokenBudgetEnforcer {
       if (Items && Items.length > 0) {
         return (Items[0].history as TokenUsageRecord[]) || [];
       }
-    } catch (e) {
-      logger.debug('[TokenBudgetEnforcer] Failed to load session:', e);
+      return [];
+    } catch {
+      logger.error('[TokenBudgetEnforcer] Failed to load session (FAIL-CLOSED)');
+      throw new Error('Failed to load session history'); // Fail-closed
     }
-    return null;
   }
 
   /**
@@ -172,12 +173,22 @@ export class TokenBudgetEnforcer {
   ): Promise<BudgetCheckResult> {
     await this.ensureInitialized();
 
-    // Load from DynamoDB if not in memory (cold start recovery)
-    if (!this.sessions.has(sessionId)) {
-      const loaded = await this.loadSession(sessionId);
-      if (loaded && loaded.length > 0) {
-        this.sessions.set(sessionId, loaded);
+    try {
+      // Load from DynamoDB if not in memory (cold start recovery)
+      if (!this.sessions.has(sessionId)) {
+        const loaded = await this.loadSession(sessionId);
+        if (loaded) {
+          this.sessions.set(sessionId, loaded);
+        }
       }
+    } catch {
+      return {
+        allowed: false,
+        reason: 'Budget check failed: Unable to verify session history (fail-closed)',
+        sessionCostUsd: 0,
+        sessionTokens: 0,
+        percentUsed: 0,
+      };
     }
 
     const estimatedCostUsd = this.estimateCost(promptTokens, completionTokens);
