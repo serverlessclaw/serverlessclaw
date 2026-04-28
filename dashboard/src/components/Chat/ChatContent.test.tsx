@@ -6,7 +6,14 @@ import ChatContent from './ChatContent';
 
 // Mock sub-components
 vi.mock('./ChatSidebar', () => ({
-  ChatSidebar: ({ onSessionSelect, onNewChat, onDeleteSession, onDeleteAll }: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) => (
+  ChatSidebar: (
+    {
+      onSessionSelect,
+      onNewChat,
+      onDeleteSession,
+      onDeleteAll,
+    }: any /* eslint-disable-line @typescript-eslint/no-explicit-any */
+  ) => (
     <div data-testid="chat-sidebar">
       <button onClick={() => onSessionSelect('session-1')}>Select Session</button>
       <button onClick={() => onNewChat()}>New Chat</button>
@@ -16,7 +23,12 @@ vi.mock('./ChatSidebar', () => ({
   ),
 }));
 vi.mock('./ChatHeader', () => ({
-  ChatHeader: ({ saveTitle, setIsEditingTitle }: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) => (
+  ChatHeader: (
+    {
+      saveTitle,
+      setIsEditingTitle,
+    }: any /* eslint-disable-line @typescript-eslint/no-explicit-any */
+  ) => (
     <div data-testid="chat-header">
       <button onClick={() => setIsEditingTitle(true)}>Edit Title</button>
       <button onClick={() => saveTitle()}>Save Title</button>
