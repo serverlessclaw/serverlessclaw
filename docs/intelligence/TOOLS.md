@@ -198,7 +198,7 @@ Agents no longer receive all tools by default. They call `getAgentTools(agentId)
 
 Definitions are now strictly typed using a unified `JsonSchema` interface to ensure compatibility across providers.
 
-- **Interface**: `IToolDefinition` and `JsonSchema` in [`core/lib/types/agent.ts`](../../core/lib/types/agent.ts)
+- **Interface**: `IToolDefinition` and `JsonSchema` in [`core/lib/types/agent/index.ts`](../../core/lib/types/agent/index.ts)
 
 ### AI-Native Coding Standards (April 2026 Refresh)
 

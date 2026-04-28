@@ -1,5 +1,6 @@
 import { logger } from '../../lib/logger';
 import { DynamoMemory } from '../../lib/memory/dynamo-memory';
+import { BaseMemoryProvider } from '../../lib/memory/base';
 import { updateReputation } from '../../lib/memory/reputation-operations';
 import { recordAgentMetric } from '../../lib/metrics/agent-metrics';
 import { ReputationUpdatePayload } from '../../lib/types/reputation';
@@ -28,7 +29,7 @@ export async function handleReputationUpdate(eventDetail: Record<string, unknown
 
     // 1. Update rolling reputation stats if this is an execution result
     if (success !== undefined) {
-      const memory = new DynamoMemory();
+      const memory: BaseMemoryProvider = new DynamoMemory();
       await updateReputation(memory, agentId, success, durationMs ?? 0, {
         error,
         traceId,

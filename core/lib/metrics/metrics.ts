@@ -78,6 +78,7 @@ async function persistToDynamoDB(metrics: MetricDatum[]): Promise<void> {
             workspaceId,
             expiresAt: Math.floor(now / 1000) + 7 * 86400, // 7 days retention
           },
+          ConditionExpression: 'attribute_not_exists(userId)',
         })
       );
     }

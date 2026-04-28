@@ -5,6 +5,14 @@ import { logger } from '../logger';
 import { MCPClientManager } from './client-manager';
 import { jsonSchemaToZod } from '../utils/zod-utils';
 
+interface McpTool {
+  name: string;
+  description?: string;
+  inputSchema?: JsonSchema;
+  requiresApproval?: boolean;
+  requiredPermissions?: string[];
+}
+
 /**
  * Maps raw MCP tools to ServerlessClaw ITool interface.
  */
@@ -17,7 +25,7 @@ export class MCPToolMapper {
     workspaceId?: string
   ): ITool[] {
     return rawTools.map((mcpTool) =>
-      this.mapMcpTool(serverName, mcpTool as any, async () => client, overrides, workspaceId)
+      this.mapMcpTool(serverName, mcpTool as McpTool, async () => client, overrides, workspaceId)
     );
   }
 
@@ -33,7 +41,7 @@ export class MCPToolMapper {
     workspaceId?: string
   ): ITool[] {
     return rawTools.map((mcpTool) =>
-      this.mapMcpTool(serverName, mcpTool as any, clientProvider, overrides, workspaceId)
+      this.mapMcpTool(serverName, mcpTool as McpTool, clientProvider, overrides, workspaceId)
     );
   }
 
@@ -42,7 +50,7 @@ export class MCPToolMapper {
    */
   private static mapMcpTool(
     serverName: string,
-    mcpTool: any,
+    mcpTool: McpTool,
     clientProvider: () => Promise<Client>,
     overrides?: Record<string, Partial<ITool>>,
     workspaceId?: string
@@ -55,7 +63,7 @@ export class MCPToolMapper {
     const toolName = `${serverName}_${mcpTool.name}`;
     const override = overrides?.[toolName] || overrides?.[mcpTool.name];
 
-    const parameters = (mcpTool.inputSchema as JsonSchema) || { type: 'object', properties: {} };
+    const parameters = mcpTool.inputSchema || { type: 'object', properties: {} };
     const pathKeys = PathKeyDiscoverer.discover(parameters);
 
     return {

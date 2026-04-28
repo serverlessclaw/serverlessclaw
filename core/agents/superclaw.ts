@@ -5,10 +5,7 @@ import { IMemory } from '../lib/types/memory';
 import { IProvider, ReasoningProfile } from '../lib/types/llm';
 import { ITool } from '../lib/types/tool';
 import { IAgentConfig, SafetyTier } from '../lib/types/agent';
-import { SUPERCLAW_SYSTEM_PROMPT } from './prompts/index';
 import { SafetyEngine } from '../lib/safety/safety-engine';
-
-export { SUPERCLAW_SYSTEM_PROMPT };
 
 /**
  * SuperClaw Agent.

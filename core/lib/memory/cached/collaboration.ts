@@ -1,4 +1,4 @@
-import { DynamoMemory } from '../dynamo-memory';
+import type { IMemory } from '../../types/memory';
 import type {
   Collaboration,
   CollaborationRole,
@@ -10,7 +10,7 @@ import type {
  * Handles collaboration-related memory operations for the CachedMemory provider.
  */
 export class MemoryCollaboration {
-  constructor(private readonly underlying: DynamoMemory) {}
+  constructor(private readonly underlying: IMemory) {}
 
   async getCollaboration(
     collaborationId: string,

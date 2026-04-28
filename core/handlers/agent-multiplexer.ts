@@ -1,4 +1,4 @@
-import { AgentType, EventType } from '../lib/types/agent';
+import { AgentType, EventType, UserRole } from '../lib/types/agent';
 import { logger } from '../lib/logger';
 import { Context } from 'aws-lambda';
 import { handleWarmup } from '../lib/utils/agent-helpers';
@@ -58,7 +58,7 @@ export const handler = async (
     orgId: _orgId,
     teamId: _teamId,
     staffId: _staffId,
-    userRole: _userRole as any,
+    userRole: _userRole as UserRole,
   };
 
   // Session lock management

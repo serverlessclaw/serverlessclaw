@@ -11,7 +11,7 @@ import { DynamoMemory, CachedMemory } from '@claw/core/lib/memory';
 import { ProviderManager } from '@claw/core/lib/providers/index';
 import { getAgentTools } from '@claw/core/tools/index';
 import { Agent } from '@claw/core/lib/agent';
-import { SUPERCLAW_SYSTEM_PROMPT } from '@claw/core/agents/superclaw';
+import { SUPERCLAW_SYSTEM_PROMPT } from '@claw/core/agents/superclaw/constants';
 import { AgentType, IAgentConfig, TraceSource } from '@claw/core/lib/types/index';
 import { AgentRegistry } from '@claw/core/lib/registry';
 import { logger } from '@claw/core/lib/logger';

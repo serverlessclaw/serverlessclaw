@@ -384,8 +384,8 @@ export class WarmupManager extends BaseMemoryProvider {
       let deleted = 0;
 
       for (const item of items.items) {
-        const state = item as any;
-        if (state.ttl <= now) {
+        const state = item as Record<string, unknown>;
+        if (typeof state.ttl === 'number' && state.ttl <= now) {
           await this.docClient.send(
             new DeleteCommand({
               TableName: this.tableName,

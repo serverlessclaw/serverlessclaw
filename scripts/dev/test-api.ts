@@ -36,7 +36,7 @@ async function testChatWithFile() {
   const { ProviderManager } = await import('../core/lib/providers/index.ts');
   const { getAgentTools } = await import('../core/tools/index.ts');
   const { Agent } = await import('../core/lib/agent.ts');
-  const { SUPERCLAW_SYSTEM_PROMPT } = await import('../core/agents/superclaw.ts');
+  const { SUPERCLAW_SYSTEM_PROMPT } = await import('../core/agents/superclaw/constants.ts');
   const { TraceSource } = await import('../core/lib/types/index.ts');
 
   const sessionId = 'test-session-' + Date.now();

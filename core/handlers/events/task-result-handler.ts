@@ -1,4 +1,4 @@
-import { EventType, AgentType } from '../../lib/types/index';
+import { EventType, AgentType, UserRole } from '../../lib/types/index';
 import { COMPLETION_EVENT_SCHEMA, FAILURE_EVENT_SCHEMA } from '../../lib/schema/events';
 import { wakeupInitiator } from './shared';
 import { LRUSet } from '../../lib/utils/lru';
@@ -74,7 +74,7 @@ export async function handleTaskResult(
   // 1. Stable Content Idempotency (Sh6 Fix)
   // Derive a stable hash from the content to catch application-level double-emissions
   const stablePayload = { ...eventDetail };
-  delete (stablePayload as any).__envelopeId; // Exclude volatile metadata
+  delete (stablePayload as Record<string, unknown>).__envelopeId; // Exclude volatile metadata
   const contentHash = crypto
     .createHash('sha256')
     .update(JSON.stringify(stablePayload) + detailType)
@@ -465,6 +465,6 @@ export async function handleTaskResult(
     workspaceId,
     teamId,
     staffId,
-    userRole
+    userRole as UserRole
   );
 }

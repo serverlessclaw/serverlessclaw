@@ -1,4 +1,4 @@
-import { DynamoMemory } from '../dynamo-memory';
+import type { IMemory } from '../../types/memory';
 import { MemoryCaches } from '../cache';
 
 /**
@@ -6,7 +6,7 @@ import { MemoryCaches } from '../cache';
  * for the CachedMemory provider.
  */
 export class MemoryDelegator {
-  constructor(private readonly underlying: DynamoMemory) {}
+  constructor(private readonly underlying: IMemory) {}
 
   async getMemoryByTypePaginated(
     type: string,

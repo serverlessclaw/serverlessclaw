@@ -161,8 +161,8 @@ export class UserOps extends IdentityBase {
         })
       );
       return true;
-    } catch (e: any) {
-      if (e.name === 'ConditionalCheckFailedException') {
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === 'ConditionalCheckFailedException') {
         return false;
       }
       logger.error(`Failed to update user ${userId}:`, e);
@@ -197,8 +197,8 @@ export class UserOps extends IdentityBase {
       );
       logger.info(`User ${userId} added to workspace ${workspaceId}`);
       return true;
-    } catch (e: any) {
-      if (e.name === 'ConditionalCheckFailedException') {
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === 'ConditionalCheckFailedException') {
         // If the user doesn't exist, we should return false.
         const user = await this.loadUser(userId, orgId);
         return !!user;
@@ -248,8 +248,8 @@ export class UserOps extends IdentityBase {
         );
         logger.info(`User ${userId} removed from workspace ${workspaceId}`);
         return true;
-      } catch (e: any) {
-        if (e.name === 'ConditionalCheckFailedException') {
+      } catch (e: unknown) {
+        if (e instanceof Error && e.name === 'ConditionalCheckFailedException') {
           retryCount++;
           continue;
         }

@@ -173,8 +173,8 @@ export class EvolutionScheduler {
         })
       );
       return true;
-    } catch (e: any) {
-      if (e.name === 'ConditionalCheckFailedException') {
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === 'ConditionalCheckFailedException') {
         logger.debug(`[EVOLUTION] Action ${action.actionId} already claimed or status changed.`);
         return false;
       }
@@ -266,8 +266,8 @@ export class EvolutionScheduler {
           },
         })
       );
-    } catch (e: any) {
-      if (e.name === 'ConditionalCheckFailedException') {
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === 'ConditionalCheckFailedException') {
         logger.warn(`[EVOLUTION] Failed to update status for ${actionId}: already processed.`);
         return;
       }

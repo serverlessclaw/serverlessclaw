@@ -74,7 +74,7 @@ vi.mock('@aws-sdk/client-lambda', () => ({
 }));
 
 // Mock agent prompts to break dependency chains (preventing DynamoDB imports)
-vi.mock('../agents/superclaw', () => ({ SUPERCLAW_SYSTEM_PROMPT: 'test' }));
+
 vi.mock('../agents/coder', () => ({ CODER_SYSTEM_PROMPT: 'test' }));
 vi.mock('../agents/strategic-planner', () => ({ PLANNER_SYSTEM_PROMPT: 'test' }));
 vi.mock('../agents/cognition-reflector', () => ({ REFLECTOR_SYSTEM_PROMPT: 'test' }));

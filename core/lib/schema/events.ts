@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { AttachmentType } from '../types/llm';
 import { HealthSeverity, ParallelTaskStatus } from '../types/constants';
-import { EventType, AgentType } from '../types/index';
+import { EventType, AgentType, UserRole } from '../types/index';
 import { normalizeBaseUserId } from '../utils/normalize';
 import { generateId, generateMessageId } from '../utils/id-generator';
 
@@ -35,7 +35,7 @@ export const BASE_EVENT_SCHEMA = z.object({
   orgId: z.string().optional(),
   teamId: z.string().optional(),
   staffId: z.string().optional(),
-  userRole: z.string().optional(),
+  userRole: z.nativeEnum(UserRole).optional(),
   timestamp: z.number().default(() => Date.now()),
   tokenBudget: z.number().min(0).optional(),
   costLimit: z.number().min(0).optional(),

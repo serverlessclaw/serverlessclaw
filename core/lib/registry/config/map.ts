@@ -38,8 +38,11 @@ export class ConfigManagerMap extends ConfigManagerList {
           ExpressionAttributeValues: { ':value': value },
         })
       );
-    } catch (e: any) {
-      if (e.name === 'ValidationException' || e.name === 'ConditionalCheckFailedException') {
+    } catch (e: unknown) {
+      if (
+        e instanceof Error &&
+        (e.name === 'ValidationException' || e.name === 'ConditionalCheckFailedException')
+      ) {
         try {
           await docClient.send(
             new UpdateCommand({
@@ -51,8 +54,8 @@ export class ConfigManagerMap extends ConfigManagerList {
               ExpressionAttributeValues: { ':entityObj': { [field]: value } },
             })
           );
-        } catch (innerE: any) {
-          if (innerE.name === 'ValidationException') {
+        } catch (innerE: unknown) {
+          if (innerE instanceof Error && innerE.name === 'ValidationException') {
             try {
               await docClient.send(
                 new UpdateCommand({
@@ -64,8 +67,12 @@ export class ConfigManagerMap extends ConfigManagerList {
                   ExpressionAttributeValues: { ':rootObj': { [entityId]: { [field]: value } } },
                 })
               );
-            } catch (rootE: any) {
-              if (rootE.name === 'ConditionalCheckFailedException' && retryCount < maxRetries) {
+            } catch (rootE: unknown) {
+              if (
+                rootE instanceof Error &&
+                rootE.name === 'ConditionalCheckFailedException' &&
+                retryCount < maxRetries
+              ) {
                 return this.atomicUpdateMapField(key, entityId, field, value, {
                   ...options,
                   retryCount: retryCount + 1,
@@ -73,7 +80,11 @@ export class ConfigManagerMap extends ConfigManagerList {
               }
               throw rootE;
             }
-          } else if (innerE.name === 'ConditionalCheckFailedException' && retryCount < maxRetries) {
+          } else if (
+            innerE instanceof Error &&
+            innerE.name === 'ConditionalCheckFailedException' &&
+            retryCount < maxRetries
+          ) {
             return this.atomicUpdateMapField(key, entityId, field, value, {
               ...options,
               retryCount: retryCount + 1,

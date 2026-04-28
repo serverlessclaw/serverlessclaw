@@ -100,8 +100,11 @@ async function cleanupStaleGapLocks(): Promise<number> {
             })
           );
           deletedCount++;
-        } catch (deleteError: any) {
-          if (deleteError.name === 'ConditionalCheckFailedException') {
+        } catch (deleteError: unknown) {
+          if (
+            deleteError instanceof Error &&
+            deleteError.name === 'ConditionalCheckFailedException'
+          ) {
             logger.debug(`Skipping stale lock deletion: Lock was re-acquired`);
           } else {
             logger.warn(`Failed to delete stale gap lock:`, deleteError);

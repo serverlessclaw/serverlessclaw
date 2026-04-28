@@ -1,6 +1,7 @@
 import { BUILD_EVENT_SCHEMA } from '../../lib/schema/events';
 import { Context } from 'aws-lambda';
 import { wakeupInitiator } from './shared';
+import { UserRole } from '../../lib/types/agent';
 
 /**
  * Handles build failure events - triggers agent to investigate and fix.
@@ -93,7 +94,7 @@ export async function handleBuildFailure(
       workspaceId,
       teamId,
       staffId,
-      userRole
+      userRole as UserRole
     );
   }
 }
@@ -157,7 +158,7 @@ The QA Auditor will verify the changes shortly. Gaps are only marked **DONE** af
       workspaceId,
       teamId,
       staffId,
-      userRole
+      userRole as UserRole
     );
   }
 }

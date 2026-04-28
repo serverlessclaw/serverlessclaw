@@ -6,6 +6,7 @@ import { ClarificationStatus } from '../../lib/types/memory';
 import { addTraceStep } from '../../lib/utils/trace-helper';
 import { TRACE_TYPES } from '../../lib/constants';
 import { z } from 'zod';
+import { UserRole } from '../../lib/types/index';
 
 import { AGENT_PAYLOAD_SCHEMA } from '../../lib/schema/events';
 
@@ -162,6 +163,6 @@ export async function handleClarificationRequest(
     workspaceId,
     teamId,
     staffId,
-    userRole
+    userRole as UserRole
   );
 }

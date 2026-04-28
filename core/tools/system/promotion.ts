@@ -15,7 +15,7 @@ export const promoteCapability = {
     };
 
     const context = await getAgentContext();
-    const scope = (context as any).scope;
+    const scope = (context as { scope?: { workspaceId?: string } }).scope;
     const result = await PromotionManager.promoteCapability(targetAgentId, toolName, reason, scope);
 
     if (result.success) {

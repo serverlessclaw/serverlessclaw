@@ -33,8 +33,8 @@ export interface SessionState {
     timestamp: number;
     agentId: string;
     task: string;
-    state: any;
-    metadata?: any;
+    state: Record<string, unknown>;
+    metadata?: Record<string, unknown>;
   } | null;
   workspaceId?: string;
   teamId?: string;

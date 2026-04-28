@@ -1,4 +1,4 @@
-import { DynamoMemory } from '../dynamo-memory';
+import type { IMemory } from '../../types/memory';
 import { logger } from '../../logger';
 import { MemoryCaches, CacheKeys } from '../cache';
 import { MemoryInsight, GapStatus, GapTransitionResult, InsightMetadata } from '../../types/index';
@@ -7,7 +7,7 @@ import { MemoryInsight, GapStatus, GapTransitionResult, InsightMetadata } from '
  * Handles gap and plan-related memory operations for the CachedMemory provider.
  */
 export class MemoryGaps {
-  constructor(private readonly underlying: DynamoMemory) {}
+  constructor(private readonly underlying: IMemory) {}
 
   /**
    * Gets all gaps with caching by status.

@@ -1,4 +1,4 @@
-import { EventType } from '../../lib/types/index';
+import { EventType, UserRole } from '../../lib/types/index';
 import { sendOutboundMessage } from '../../lib/outbound';
 import { logger } from '../../lib/logger';
 import { emitTypedEvent } from '../../lib/utils/typed-emit';
@@ -84,7 +84,7 @@ export async function wakeupInitiator(
   workspaceId?: string,
   teamId?: string,
   staffId?: string,
-  userRole?: string
+  userRole?: UserRole
 ): Promise<void> {
   if (!initiatorId || !task) return;
 
@@ -227,7 +227,7 @@ export async function processEventWithAgent(
     workspaceId?: string;
     teamId?: string;
     staffId?: string;
-    userRole?: import('../../lib/types/agent').UserRole;
+    userRole?: UserRole;
     metadata?: Record<string, unknown>;
   }
 ): Promise<{
@@ -244,6 +244,11 @@ export async function processEventWithAgent(
   if (!config) {
     logger.error(`Agent configuration for '${agentId}' not found during event processing.`);
     throw new Error(`Agent configuration for '${agentId}' not found.`);
+  }
+
+  if (config.enabled === false) {
+    logger.warn(`Attempted to execute disabled agent: ${agentId}`);
+    throw new Error(`Agent '${agentId}' is disabled.`);
   }
 
   const { getAgentTools: loadAgentTools } = await import('../../tools/index');
@@ -390,7 +395,7 @@ export async function processEventWithAgent(
         workspaceId: options.workspaceId,
         teamId: options.teamId,
         staffId: options.staffId,
-        userRole: options.userRole as any,
+        userRole: options.userRole as UserRole,
         metadata: { durationMs: Date.now() - startTime },
       });
     }

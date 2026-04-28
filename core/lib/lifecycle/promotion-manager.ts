@@ -41,7 +41,7 @@ export class PromotionManager {
       // In our current system, tiers are per-agent, not yet per-tool.
       // So we promote the AGENT to PROD tier if they aren't already.
 
-      const updates: any = {};
+      const updates: Partial<import('../types/agent').IAgentConfig> = {};
       let changed = false;
 
       if (config.safetyTier !== SafetyTier.PROD) {
@@ -80,9 +80,18 @@ export class PromotionManager {
       }
 
       return { success: true, message: `Capability ${toolName} is already fully promoted.` };
-    } catch (error: any) {
-      logger.error(`[PROMOTION] Failed to promote capability:`, error);
-      return { success: false, message: `Internal error during promotion: ${error.message}` };
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === 'ConditionalCheckFailedException') {
+        return {
+          success: false,
+          message: 'Promotion conflict: Agent configuration was modified concurrently.',
+        };
+      }
+      logger.error(`[PROMOTION] Failed to promote capability:`, e);
+      return {
+        success: false,
+        message: `Internal error during promotion: ${e instanceof Error ? e.message : String(e)}`,
+      };
     }
   }
 }

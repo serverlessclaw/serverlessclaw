@@ -42,18 +42,20 @@ export const validateCode = {
       try {
         const { stdout } = await execAsync('npx tsc --noEmit', { cwd: targetDir });
         tscOut = stdout;
-      } catch (error: any) {
-        tscOut = error.stdout || error.message;
-        const stderr = error.stderr ? `\nSTDERR:\n${error.stderr}` : '';
+      } catch (error: unknown) {
+        const err = error as { stdout?: string; stderr?: string; message: string };
+        tscOut = err.stdout || err.message;
+        const stderr = err.stderr ? `\nSTDERR:\n${err.stderr}` : '';
         return `VALIDATION_FAILED (TypeScript): Codebase has type errors.\n\nDETAILS:\n${tscOut}${stderr}`;
       }
 
       try {
         const { stdout } = await execAsync('npx eslint . --fix-dry-run', { cwd: targetDir });
         lintOut = stdout;
-      } catch (error: any) {
-        lintOut = error.stdout || error.message;
-        const stderr = error.stderr ? `\nSTDERR:\n${error.stderr}` : '';
+      } catch (error: unknown) {
+        const err = error as { stdout?: string; stderr?: string; message: string };
+        lintOut = err.stdout || err.message;
+        const stderr = err.stderr ? `\nSTDERR:\n${err.stderr}` : '';
         return `VALIDATION_FAILED (ESLint): Codebase has linting errors.\n\nDETAILS:\n${lintOut}${stderr}`;
       }
 
@@ -95,10 +97,11 @@ export const verifyChanges = {
 
         const duration = ((Date.now() - startTime) / 1000).toFixed(1);
         return `VERIFICATION_SUCCESSFUL: All checks and tests passed in ${duration}s.\n\nSTDOUT:\n${stdout}\n\nSTDERR:\n${stderr}`;
-      } catch (error: any) {
+      } catch (error: unknown) {
         const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-        const out = error.stdout || '';
-        const err = error.stderr || error.message;
+        const errObj = error as { stdout?: string; stderr?: string; message: string };
+        const out = errObj.stdout || '';
+        const err = errObj.stderr || errObj.message;
 
         return `VERIFICATION_FAILED: Suite failed after ${duration}s.\n\nSTDOUT:\n${out}\n\nSTDERR:\n${err}`;
       }

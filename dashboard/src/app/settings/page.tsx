@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { CodeBuildClient, StartBuildCommand } from '@aws-sdk/client-codebuild';
 import SettingsForm from './SettingsForm';
 import DeploySyncStatus from '@/components/DeploySyncStatus';
-import { SYSTEM } from '@claw/core/lib/constants';
+import { SYSTEM, CONFIG_KEYS } from '@claw/core/lib/constants';
 import { EvolutionMode } from '@claw/core/lib/types/agent';
 import SettingsClient from './SettingsClient';
 import PageHeader from '@/components/PageHeader';
@@ -47,87 +47,91 @@ async function getConfig() {
       docClient.send(
         new GetCommand({
           TableName: tableName,
-          Key: { key: 'active_provider' },
+          Key: { key: CONFIG_KEYS.ACTIVE_PROVIDER },
         })
       ),
-      docClient.send(new GetCommand({ TableName: tableName, Key: { key: 'active_model' } })),
-      docClient.send(new GetCommand({ TableName: tableName, Key: { key: 'evolution_mode' } })),
       docClient.send(
-        new GetCommand({
-          TableName: tableName,
-          Key: { key: 'optimization_policy' },
-        })
+        new GetCommand({ TableName: tableName, Key: { key: CONFIG_KEYS.ACTIVE_MODEL } })
+      ),
+      docClient.send(
+        new GetCommand({ TableName: tableName, Key: { key: CONFIG_KEYS.EVOLUTION_MODE } })
       ),
       docClient.send(
         new GetCommand({
           TableName: tableName,
-          Key: { key: 'reflection_frequency' },
-        })
-      ),
-      docClient.send(
-        new GetCommand({
-          TableName: tableName,
-          Key: { key: 'strategic_review_frequency' },
+          Key: { key: CONFIG_KEYS.OPTIMIZATION_POLICY },
         })
       ),
       docClient.send(
         new GetCommand({
           TableName: tableName,
-          Key: { key: 'min_gaps_for_review' },
+          Key: { key: CONFIG_KEYS.REFLECTION_FREQUENCY },
         })
       ),
       docClient.send(
         new GetCommand({
           TableName: tableName,
-          Key: { key: 'max_tool_iterations' },
+          Key: { key: CONFIG_KEYS.STRATEGIC_REVIEW_FREQUENCY },
         })
       ),
       docClient.send(
         new GetCommand({
           TableName: tableName,
-          Key: { key: 'circuit_breaker_threshold' },
+          Key: { key: CONFIG_KEYS.MIN_GAPS_FOR_REVIEW },
         })
       ),
       docClient.send(
         new GetCommand({
           TableName: tableName,
-          Key: { key: 'consecutive_build_failures' },
+          Key: { key: CONFIG_KEYS.MAX_TOOL_ITERATIONS },
         })
       ),
       docClient.send(
         new GetCommand({
           TableName: tableName,
-          Key: { key: 'protected_resources' },
+          Key: { key: CONFIG_KEYS.CIRCUIT_BREAKER_THRESHOLD },
         })
       ),
       docClient.send(
         new GetCommand({
           TableName: tableName,
-          Key: { key: 'recursion_limit' },
+          Key: { key: CONFIG_KEYS.CONSECUTIVE_BUILD_FAILURES },
         })
       ),
       docClient.send(
         new GetCommand({
           TableName: tableName,
-          Key: { key: 'deploy_limit' },
+          Key: { key: CONFIG_KEYS.PROTECTED_RESOURCES },
         })
       ),
       docClient.send(
         new GetCommand({
           TableName: tableName,
-          Key: { key: 'escalation_enabled' },
+          Key: { key: CONFIG_KEYS.RECURSION_LIMIT },
         })
       ),
       docClient.send(
         new GetCommand({
           TableName: tableName,
-          Key: { key: 'protocol_fallback_enabled' },
+          Key: { key: CONFIG_KEYS.DEPLOY_LIMIT },
         })
       ),
       docClient.send(
         new GetCommand({
           TableName: tableName,
-          Key: { key: 'active_locale' },
+          Key: { key: CONFIG_KEYS.ESCALATION_ENABLED },
+        })
+      ),
+      docClient.send(
+        new GetCommand({
+          TableName: tableName,
+          Key: { key: CONFIG_KEYS.PROTOCOL_FALLBACK_ENABLED },
+        })
+      ),
+      docClient.send(
+        new GetCommand({
+          TableName: tableName,
+          Key: { key: CONFIG_KEYS.ACTIVE_LOCALE },
         })
       ),
     ]);
@@ -206,38 +210,38 @@ async function updateConfig(formData: FormData) {
       docClient.send(
         new PutCommand({
           TableName: tableName,
-          Item: { key: 'active_provider', value: provider },
+          Item: { key: CONFIG_KEYS.ACTIVE_PROVIDER, value: provider },
         })
       ),
       docClient.send(
         new PutCommand({
           TableName: tableName,
-          Item: { key: 'active_model', value: model },
+          Item: { key: CONFIG_KEYS.ACTIVE_MODEL, value: model },
         })
       ),
       docClient.send(
         new PutCommand({
           TableName: tableName,
-          Item: { key: 'evolution_mode', value: evolutionMode },
+          Item: { key: CONFIG_KEYS.EVOLUTION_MODE, value: evolutionMode },
         })
       ),
       docClient.send(
         new PutCommand({
           TableName: tableName,
-          Item: { key: 'optimization_policy', value: optimizationPolicy },
+          Item: { key: CONFIG_KEYS.OPTIMIZATION_POLICY, value: optimizationPolicy },
         })
       ),
       docClient.send(
         new PutCommand({
           TableName: tableName,
-          Item: { key: 'reflection_frequency', value: reflectionFrequency },
+          Item: { key: CONFIG_KEYS.REFLECTION_FREQUENCY, value: reflectionFrequency },
         })
       ),
       docClient.send(
         new PutCommand({
           TableName: tableName,
           Item: {
-            key: 'strategic_review_frequency',
+            key: CONFIG_KEYS.STRATEGIC_REVIEW_FREQUENCY,
             value: strategicReviewFrequency,
           },
         })
@@ -246,7 +250,7 @@ async function updateConfig(formData: FormData) {
         new PutCommand({
           TableName: tableName,
           Item: {
-            key: 'min_gaps_for_review',
+            key: CONFIG_KEYS.MIN_GAPS_FOR_REVIEW,
             value: minGapsForReview,
           },
         })
@@ -255,7 +259,7 @@ async function updateConfig(formData: FormData) {
         new PutCommand({
           TableName: tableName,
           Item: {
-            key: 'max_tool_iterations',
+            key: CONFIG_KEYS.MAX_TOOL_ITERATIONS,
             value: maxToolIterations,
           },
         })
@@ -264,7 +268,7 @@ async function updateConfig(formData: FormData) {
         new PutCommand({
           TableName: tableName,
           Item: {
-            key: 'circuit_breaker_threshold',
+            key: CONFIG_KEYS.CIRCUIT_BREAKER_THRESHOLD,
             value: circuitBreakerThreshold,
           },
         })
@@ -273,7 +277,7 @@ async function updateConfig(formData: FormData) {
         new PutCommand({
           TableName: tableName,
           Item: {
-            key: 'recursion_limit',
+            key: CONFIG_KEYS.RECURSION_LIMIT,
             value: recursionLimit,
           },
         })
@@ -282,7 +286,7 @@ async function updateConfig(formData: FormData) {
         new PutCommand({
           TableName: tableName,
           Item: {
-            key: 'deploy_limit',
+            key: CONFIG_KEYS.DEPLOY_LIMIT,
             value: deployLimit,
           },
         })
@@ -291,7 +295,7 @@ async function updateConfig(formData: FormData) {
         new PutCommand({
           TableName: tableName,
           Item: {
-            key: 'escalation_enabled',
+            key: CONFIG_KEYS.ESCALATION_ENABLED,
             value: escalationEnabled,
           },
         })
@@ -300,7 +304,7 @@ async function updateConfig(formData: FormData) {
         new PutCommand({
           TableName: tableName,
           Item: {
-            key: 'protocol_fallback_enabled',
+            key: CONFIG_KEYS.PROTOCOL_FALLBACK_ENABLED,
             value: protocolFallbackEnabled,
           },
         })
@@ -309,7 +313,7 @@ async function updateConfig(formData: FormData) {
         new PutCommand({
           TableName: tableName,
           Item: {
-            key: 'protected_resources',
+            key: CONFIG_KEYS.PROTECTED_RESOURCES,
             value: protectedResources,
           },
         })
@@ -318,7 +322,7 @@ async function updateConfig(formData: FormData) {
         new PutCommand({
           TableName: tableName,
           Item: {
-            key: 'active_locale',
+            key: CONFIG_KEYS.ACTIVE_LOCALE,
             value: activeLocale,
           },
         })

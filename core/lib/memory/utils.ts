@@ -470,8 +470,12 @@ export async function atomicIncrement(
       ConditionExpression: 'attribute_exists(userId)',
       ReturnValues: 'ALL_NEW',
     });
-    const attributes = result?.Attributes as Record<string, any>;
-    return (nestedInMetadata ? attributes?.metadata?.[field] : attributes?.[field]) || 0;
+    const attributes = result?.Attributes as Record<string, unknown> | undefined;
+    if (!attributes) return 0;
+    const val = nestedInMetadata
+      ? (attributes.metadata as Record<string, number> | undefined)?.[field]
+      : (attributes[field] as number | undefined);
+    return val || 0;
   } catch (error) {
     logger.error(`[atomicIncrement] Failed for ${userId}:`, error);
     throw error;
@@ -498,8 +502,8 @@ export async function putWithCollisionRetry(
         ExpressionAttributeNames: { '#ts': 'timestamp' },
       });
       return;
-    } catch (e: any) {
-      if (e.name === 'ConditionalCheckFailedException') {
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === 'ConditionalCheckFailedException') {
         retryCount++;
         continue;
       }

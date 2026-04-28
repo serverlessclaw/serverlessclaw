@@ -115,7 +115,7 @@ The bus provides tools to inspect and replay failed events.
 
 Standard event types and their default priority levels are centrally defined to maintain system-wide consistency.
 
-- **Enum**: `EventType` in [`core/lib/types/agent.ts`](../../core/lib/types/agent.ts).
+- **Enum**: `EventType` in [`core/lib/types/agent/index.ts`](../../core/lib/types/agent/index.ts).
 - **Mapping**: `EVENT_PRIORITY_MAP` in [`core/lib/utils/bus.ts`](../../core/lib/utils/bus.ts).
 
 ## Spine Event Flow

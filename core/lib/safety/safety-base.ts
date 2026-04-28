@@ -154,8 +154,8 @@ export class SafetyBase {
           })
         );
         return true;
-      } catch (e: any) {
-        if (e.name === 'ConditionalCheckFailedException') {
+      } catch (e: unknown) {
+        if (e instanceof Error && e.name === 'ConditionalCheckFailedException') {
           // If collision at exact millisecond, loop will retry with jitter offset
           continue;
         }

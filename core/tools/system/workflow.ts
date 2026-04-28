@@ -12,7 +12,7 @@ export const pauseWorkflow = {
   execute: async (args: Record<string, unknown>): Promise<string> => {
     const { reason, metadata, sessionId, executorAgentId, originalUserTask, userId } = args as {
       reason: string;
-      metadata?: any;
+      metadata?: Record<string, unknown>;
       sessionId: string;
       executorAgentId: string;
       originalUserTask: string;

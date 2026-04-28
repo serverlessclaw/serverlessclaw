@@ -1,5 +1,5 @@
 import { TASK_EVENT_SCHEMA } from '../../lib/schema/events';
-import { AgentType } from '../../lib/types/index';
+import { AgentType, UserRole } from '../../lib/types/index';
 import { logger } from '../../lib/logger';
 import { Context } from 'aws-lambda';
 import { handleRecursionLimitExceeded, processEventWithAgent } from './shared';
@@ -91,6 +91,6 @@ export async function handleContinuationTask(
     workspaceId,
     teamId,
     staffId,
-    userRole: userRole as any,
+    userRole: userRole as UserRole,
   });
 }

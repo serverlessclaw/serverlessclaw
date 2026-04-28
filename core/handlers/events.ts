@@ -102,7 +102,7 @@ export async function handler(
   // We prioritize a hash of the content over the envelopeId because envelopeId is unique per emission.
   const hash = crypto.createHash('sha256');
   const stablePayload = { ...eventDetail };
-  delete (stablePayload as any).__envelopeId; // Exclude metadata
+  delete (stablePayload as Record<string, unknown>).__envelopeId; // Exclude metadata
   hash.update(JSON.stringify(stablePayload) + detailType);
   const contentHash = hash.digest('hex').substring(0, 16);
 
@@ -138,9 +138,16 @@ export async function handler(
       Object.values(DEFAULT_EVENT_ROUTING).map((r) => `${r.module}:${r.function}`)
     );
 
-    const routingTable: Record<string, any> = { ...DEFAULT_EVENT_ROUTING };
+    const routingTable: Record<
+      string,
+      { module: string; function: string; passContext?: boolean }
+    > = {
+      ...DEFAULT_EVENT_ROUTING,
+    };
     if (rawRoutingTable !== DEFAULT_EVENT_ROUTING) {
-      for (const [eventType, entry] of Object.entries(rawRoutingTable as Record<string, any>)) {
+      for (const [eventType, entry] of Object.entries(
+        rawRoutingTable as Record<string, { module: string; function: string }>
+      )) {
         const routeEntry = entry as { module: string; function: string };
         const combination = `${routeEntry.module}:${routeEntry.function}`;
         if (ALLOWED_COMBINATIONS.has(combination)) {
@@ -207,18 +214,21 @@ export async function handler(
       }
     }
 
-    const handlerModuleAny = handlerModule as any;
-    if (handlerModuleAny && handlerModuleAny[routing.function]) {
+    const handlerModuleTyped = handlerModule as Record<
+      string,
+      (event: Record<string, unknown>, contextOrType?: any, type?: string) => Promise<void>
+    >;
+    if (handlerModuleTyped && handlerModuleTyped[routing.function]) {
       // Inject EventBridge envelope id for idempotency dedup (used by downstream handlers)
       if (envelopeId) {
-        eventDetail.__envelopeId = envelopeId;
+        (eventDetail as Record<string, unknown>).__envelopeId = envelopeId;
       }
 
       // Call the handler
       if (routing.passContext) {
-        await handlerModuleAny[routing.function](eventDetail, context, detailType);
+        await handlerModuleTyped[routing.function](eventDetail, context, detailType);
       } else {
-        await handlerModuleAny[routing.function](eventDetail, detailType);
+        await handlerModuleTyped[routing.function](eventDetail, detailType);
       }
 
       // Idempotency already marked atomically via checkAndMarkIdempotent before this point

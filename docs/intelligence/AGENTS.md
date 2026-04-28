@@ -12,7 +12,7 @@ We distinguish between **Autonomous Agents** (LLM-powered decision-makers) and *
 
 | Agent                   | Host (Tier)  | Responsibilities                                                                                                     |
 | :---------------------- | :----------- | :------------------------------------------------------------------------------------------------------------------- |
-| **SuperClaw**           | `Standard`   | **Nimble Orchestrator**. See [`core/agents/superclaw.ts`](../../core/agents/superclaw.ts).                           |
+| **SuperClaw**           | `Standard`   | **Nimble Orchestrator**. See [`core/agents/superclaw.ts`](../../core/agents/superclaw.ts) and [`constants.ts`](../../core/agents/superclaw/constants.ts). |
 | **Coder Agent**         | `High-Power` | Writes code, validates deployments. See [`core/agents/coder.ts`](../../core/agents/coder.ts).                        |
 | **Researcher**          | `High-Power` | Deep exploration. See [RESEARCH.md](./RESEARCH.md) & [`core/agents/researcher.ts`](../../core/agents/researcher.ts). |
 | **Strategic Planner**   | `High-Power` | **Technical Auditor**. See [`core/agents/strategic-planner.ts`](../../core/agents/strategic-planner.ts).             |
@@ -51,7 +51,7 @@ The system identity is defined in `core/lib/backbone.ts`. This centralized regis
 
 To evolve the system with a new specialized node:
 
-1.  **Implement**: Create `core/agents/<name>.ts` with agent logic and tools.
+1.  **Implement**: Create `core/agents/<name>.ts` (or `core/agents/<name>/index.ts`) with agent logic and tools. Modular constants should go in `core/agents/<name>/constants.ts`.
 2.  **Register Identity**: Add the agent to `BACKBONE_REGISTRY` in `core/lib/backbone.ts`.
 3.  **Link Infra**: In `infra/agents.ts`, create the Lambda and link necessary resources.
 4.  **Subscribe**: Ensure the agent is subscribed to its task type in the EventBus.

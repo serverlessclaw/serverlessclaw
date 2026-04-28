@@ -10,14 +10,15 @@ import {
 import { getAgentBusName } from './resource-helpers';
 import { EventType } from '../types/index';
 import { logger } from '../logger';
+import { BUS, TIME } from '../constants';
 
-const MAX_RETRIES = 3;
-const INITIAL_BACKOFF_MS = 100;
-const DLQ_TYPE = 'DLQ_EVENT';
-const IDEMPOTENCY_TYPE = 'IDEMPOTENCY';
-const IDEMPOTENCY_PREFIX = 'IDEMPOTENCY#';
-const IDEMPOTENCY_TTL_SECONDS = 3600; // 1 hour
-const DLQ_PREFIX = 'EVENTBUS#DLQ';
+const MAX_RETRIES = BUS.MAX_RETRIES;
+const INITIAL_BACKOFF_MS = BUS.INITIAL_BACKOFF_MS;
+const DLQ_TYPE = BUS.DLQ_TYPE;
+const IDEMPOTENCY_TYPE = BUS.IDEMPOTENCY_TYPE;
+const IDEMPOTENCY_PREFIX = BUS.IDEMPOTENCY_PREFIX;
+const IDEMPOTENCY_TTL_SECONDS = BUS.IDEMPOTENCY_TTL_SECONDS;
+const DLQ_PREFIX = BUS.DLQ_PREFIX;
 
 export enum EventPriority {
   CRITICAL = 'CRITICAL',
@@ -205,7 +206,7 @@ async function storeInDLQ(
   try {
     const tableName = await getMemoryTableName();
     const now = Date.now();
-    const expiresAt = Math.floor(now / 1000) + 86400; // 24 hours for DLQ
+    const expiresAt = Math.floor(now / 1000) + TIME.SECONDS_IN_DAY; // 24 hours for DLQ
 
     // Use deterministic key if provided, otherwise generate from event content
     const dlqKey = idempotencyKey
@@ -374,7 +375,7 @@ export async function getDlqEntries(limit = 50): Promise<DlqEntry[]> {
         },
         ExpressionAttributeValues: {
           ':type': DLQ_TYPE,
-          ':cutoff': Date.now() - 86400000, // Last 24 hours
+          ':cutoff': Date.now() - TIME.MS_PER_DAY, // Last 24 hours
         },
         ScanIndexForward: false, // Newest first
         Limit: limit,

@@ -1,5 +1,5 @@
 import { HEALTH_REPORT_EVENT_SCHEMA } from '../../lib/schema/events';
-import { AgentType } from '../../lib/types/agent';
+import { AgentType, UserRole } from '../../lib/types/agent';
 import { Context } from 'aws-lambda';
 import { processEventWithAgent } from './shared';
 
@@ -55,6 +55,6 @@ SuperClaw response: ${responseText}`,
     workspaceId,
     teamId,
     staffId,
-    userRole: userRole as any,
+    userRole: userRole as UserRole,
   });
 }
