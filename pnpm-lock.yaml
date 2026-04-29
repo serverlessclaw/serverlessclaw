@@ -32,8 +32,8 @@ importers:
   .:
     dependencies:
       '@aiready/ast-mcp-server':
-        specifier: 0.8.2
-        version: 0.8.2(eslint@10.2.1(jiti@2.6.1))(typescript@6.0.2)
+        specifier: 0.8.3
+        version: 0.8.3(eslint@10.2.1(jiti@2.6.1))(typescript@6.0.2)
       '@octokit/rest':
         specifier: ^22.0.1
         version: 22.0.1
@@ -223,8 +223,8 @@ importers:
   core:
     dependencies:
       '@aiready/ast-mcp-server':
-        specifier: 0.8.2
-        version: 0.8.2(eslint@10.2.1(jiti@2.6.1))(typescript@6.0.2)
+        specifier: 0.8.3
+        version: 0.8.3(eslint@10.2.1(jiti@2.6.1))(typescript@6.0.2)
       '@anthropic-ai/sdk':
         specifier: ^0.91.0
         version: 0.91.1(zod@4.3.6)
@@ -449,11 +449,11 @@ packages:
     engines: {node: '>=18.0.0'}
     hasBin: true
 
-  '@aiready/ast-mcp-server@0.8.2':
-    resolution: {integrity: sha512-6GkEasXGrb0PMOivEfiyiuYfS5cB4wT2Ht/69JAgLL12ujLhj3rqL+VRjHLAlGjHTXhf3xtP7LLh94XZvN6Z4A==}
+  '@aiready/ast-mcp-server@0.8.3':
+    resolution: {integrity: sha512-/0Bey8leoexWKlsfcoXkXMhmREeb4eeruR0xlz94TBtbVAhDncLs7dmpU2PcZYTunyk1x4cbIODaBHtxJFrXpQ==}
     hasBin: true
     peerDependencies:
-      typescript: ^5.9.3
+      typescript: ^6.0.0
 
   '@aiready/change-amplification@0.14.20':
     resolution: {integrity: sha512-fZFX/ORDADEBX/6RyY0ZT56TebwzjxWUbFfKTWA3yr4gunBkZehS5+r+fTrhHMBmZzkBTEHBa1c3qXHE28fQdw==}
@@ -483,8 +483,8 @@ packages:
   '@aiready/core@0.28.0':
     resolution: {integrity: sha512-U8+OC1bEMFG0VXONx6SUXTjVinEcSzZ7D1D5ySnmsLypJpMXvPdDUB1QR57tbUuhN0kKjtg3u8vVmkW3YjhsTA==}
 
-  '@aiready/core@0.29.4':
-    resolution: {integrity: sha512-13mS/PPPdHQg9FBUcYcoyZIXPKW0EF/oZNdKPIbfgX0WO9T4YSmODTP9mvP/BGLoGL2Azah6mZ2aYIrcG4HO4Q==}
+  '@aiready/core@0.29.5':
+    resolution: {integrity: sha512-QD5P/BKBkmYYnV4L9TH4idFeKpk8bRhXhk5pO6kp6SKCWsvrJGoPsh5NvJXuWQiSMbwGBdNYC6g50DVDkXjISA==}
 
   '@aiready/deps@0.14.20':
     resolution: {integrity: sha512-oWCFENQbtWl1yr7RQfkcysXJ2tzNqj/H1ZgD7rKdnE3gIHR3bZOjSnDqK4/sgK/StBjgTGVZLWp3by5M1AxnKQ==}
@@ -2405,9 +2405,6 @@ packages:
   '@tootallnate/quickjs-emscripten@0.23.0':
     resolution: {integrity: sha512-C5Mc6rdnsaJDjO3UpGW/CQTHtCKaYlScZTly4JIu97Jxo/odCiH0ITnDXSJPTOrEKk/ycSZ0AOgTmkDtkOsvIA==}
 
-  '@ts-morph/common@0.26.1':
-    resolution: {integrity: sha512-Sn28TGl/4cFpcM+jwsH1wLncYq3FtN/BIpem+HOygfBWPT5pAeS5dB4VFVzV8FbnOKHpDLZmvAl4AjPEev5idA==}
-
   '@ts-morph/common@0.29.0':
     resolution: {integrity: sha512-35oUmphHbJvQ/+UTwFNme/t2p3FoKiGJ5auTjjpNTop2dyREspirjMy82PLSC1pnDJ8ah1GU98hwpVt64YXQsg==}
 
@@ -3995,10 +3992,6 @@ packages:
     resolution: {integrity: sha512-kNFPyjhh5cKjrUltxs+wFx+ZkbRaxxmZ+X0ZU31SOsxCEtP9VPgtq2teZw1DebupL5GmDaNQ6yKMMVcM41iqDg==}
     engines: {node: '>=8.6.0'}
 
-  fast-glob@3.3.3:
-    resolution: {integrity: sha512-7MptL8U0cqcFdzIzwOTHoilX9x5BrNqye7Z/LuC7kCMRio1EMSyqRK3BEAUD7sXRq4iT4AzTVuZdhgQ2TCvYLg==}
-    engines: {node: '>=8.6.0'}
-
   fast-json-stable-stringify@2.1.0:
     resolution: {integrity: sha512-lhd/wF+Lk98HZoTCtlVraHtfh5XYijIjalXck7saUtuanSDyLMxnHhSXEDJqHxD7msR8D0uCmqlkwjCV8xvwHw==}
 
@@ -4992,10 +4985,6 @@ packages:
   minimatch@5.1.9:
     resolution: {integrity: sha512-7o1wEA2RyMP7Iu7GNba9vc0RWWGACJOCZBJX2GJWip0ikV+wcOsgVuY9uE8CPiyQhkGFSlhuSkZPavN7u1c2Fw==}
     engines: {node: '>=10'}
-
-  minimatch@9.0.9:
-    resolution: {integrity: sha512-OBwBN9AL4dqmETlpS2zasx+vTeWclWzkblfZk7KTA5j3jeOONz/tRCnZomUyvNg83wL5Zv9Ss6HMJXAgL8R2Yg==}
-    engines: {node: '>=16 || 14 >=14.17'}
 
   minimist@1.2.8:
     resolution: {integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==}
@@ -6100,9 +6089,6 @@ packages:
     peerDependencies:
       typescript: '>=4.8.4'
 
-  ts-morph@25.0.1:
-    resolution: {integrity: sha512-QJEiTdnz1YjrB3JFhd626gX4rKHDLSjSVMvGGG4v7ONc3RBwa0Eei98G9AT9uNFDMtV54JyuXsFeC+OH0n6bXQ==}
-
   ts-morph@28.0.0:
     resolution: {integrity: sha512-Wp3tnZ2bzwxyTZMtgWVzXDfm7lB1Drz+y9DmmYH/L702PQhPyVrp3pkou3yIz4qjS14GY9kcpmLiOOMvl8oG1g==}
 
@@ -6636,16 +6622,16 @@ snapshots:
       - tree-sitter
       - typescript
 
-  '@aiready/ast-mcp-server@0.8.2(eslint@10.2.1(jiti@2.6.1))(typescript@6.0.2)':
+  '@aiready/ast-mcp-server@0.8.3(eslint@10.2.1(jiti@2.6.1))(typescript@6.0.2)':
     dependencies:
-      '@aiready/core': 0.29.4(eslint@10.2.1(jiti@2.6.1))
+      '@aiready/core': 0.29.5(eslint@10.2.1(jiti@2.6.1))
       '@aiready/hygiene-audit': 0.8.0(eslint@10.2.1(jiti@2.6.1))
-      '@modelcontextprotocol/sdk': 1.29.0(zod@3.25.76)
+      '@modelcontextprotocol/sdk': 1.29.0(zod@4.3.6)
       '@vscode/ripgrep': 1.17.1
       glob: 13.0.6
-      ts-morph: 25.0.1
+      ts-morph: 28.0.0
       typescript: 6.0.2
-      zod: 3.25.76
+      zod: 4.3.6
     transitivePeerDependencies:
       - '@cfworker/json-schema'
       - eslint
@@ -6763,7 +6749,7 @@ snapshots:
       - supports-color
       - tree-sitter
 
-  '@aiready/core@0.29.4(eslint@10.2.1(jiti@2.6.1))':
+  '@aiready/core@0.29.5(eslint@10.2.1(jiti@2.6.1))':
     dependencies:
       '@octokit/rest': 22.0.1
       '@typescript-eslint/parser': 8.59.1(eslint@10.2.1(jiti@2.6.1))(typescript@6.0.2)
@@ -9703,12 +9689,6 @@ snapshots:
 
   '@tootallnate/quickjs-emscripten@0.23.0': {}
 
-  '@ts-morph/common@0.26.1':
-    dependencies:
-      fast-glob: 3.3.3
-      minimatch: 9.0.9
-      path-browserify: 1.0.1
-
   '@ts-morph/common@0.29.0':
     dependencies:
       minimatch: 10.2.5
@@ -11566,14 +11546,6 @@ snapshots:
       merge2: 1.4.1
       micromatch: 4.0.8
 
-  fast-glob@3.3.3:
-    dependencies:
-      '@nodelib/fs.stat': 2.0.5
-      '@nodelib/fs.walk': 1.2.8
-      glob-parent: 5.1.2
-      merge2: 1.4.1
-      micromatch: 4.0.8
-
   fast-json-stable-stringify@2.1.0: {}
 
   fast-levenshtein@2.0.6: {}
@@ -12776,10 +12748,6 @@ snapshots:
       brace-expansion: 5.0.5
 
   minimatch@5.1.9:
-    dependencies:
-      brace-expansion: 5.0.5
-
-  minimatch@9.0.9:
     dependencies:
       brace-expansion: 5.0.5
 
@@ -14104,11 +14072,6 @@ snapshots:
   ts-api-utils@2.5.0(typescript@6.0.2):
     dependencies:
       typescript: 6.0.2
-
-  ts-morph@25.0.1:
-    dependencies:
-      '@ts-morph/common': 0.26.1
-      code-block-writer: 13.0.3
 
   ts-morph@28.0.0:
     dependencies:
