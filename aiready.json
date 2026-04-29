@@ -3,7 +3,7 @@
   "threshold": 80,
   "scan": {
     "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
-    "exclude": ["**/node_modules/**", "**/.sst/**", "**/.next/**", "**/.aiready/**"],
+    "exclude": ["**/node_modules/**", "**/.sst/**", "**/.next/**", "**/.aiready/**", "**/.opencode/**", "**/.kilo/**"],
     "tools": [
       "pattern-detect",
       "context-analyzer",

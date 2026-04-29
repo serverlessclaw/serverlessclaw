@@ -1,5 +1,5 @@
 import type { TopologyNode, TopologyEdge } from '../../types/index';
-import { EDGE_LABEL, NODE_TYPE, INFRA_NODE_ID } from './constants';
+import { EDGE_LABEL, NODE_TYPE, INFRA_NODE_ID, MAPPING_PROFILE } from './constants';
 import { BACKBONE_REGISTRY } from '../../backbone';
 
 /**
@@ -12,34 +12,35 @@ import { BACKBONE_REGISTRY } from '../../backbone';
 export function mapProfileToResource(profile: string, busId: string): string | null {
   const lowerProfile = profile.toLowerCase();
 
-  if (lowerProfile === 'bus' || lowerProfile === INFRA_NODE_ID.AGENT_BUS) return busId;
+  if (lowerProfile === MAPPING_PROFILE.BUS || lowerProfile === INFRA_NODE_ID.AGENT_BUS)
+    return busId;
   if (
-    lowerProfile === 'memory' ||
+    lowerProfile === MAPPING_PROFILE.MEMORY ||
     lowerProfile === INFRA_NODE_ID.MEMORY_TABLE ||
     lowerProfile === 'memorytable'
   )
     return INFRA_NODE_ID.MEMORY_TABLE;
   if (
-    lowerProfile === 'config' ||
+    lowerProfile === MAPPING_PROFILE.CONFIG ||
     lowerProfile === INFRA_NODE_ID.CONFIG_TABLE ||
     lowerProfile === 'configtable'
   )
     return INFRA_NODE_ID.CONFIG_TABLE;
   if (
-    lowerProfile === 'trace' ||
+    lowerProfile === MAPPING_PROFILE.TRACE ||
     lowerProfile === INFRA_NODE_ID.TRACE_TABLE ||
     lowerProfile === 'tracetable'
   )
     return INFRA_NODE_ID.TRACE_TABLE;
-  if (lowerProfile === 'storage' || lowerProfile === INFRA_NODE_ID.STAGING_BUCKET)
+  if (lowerProfile === MAPPING_PROFILE.STORAGE || lowerProfile === INFRA_NODE_ID.STAGING_BUCKET)
     return INFRA_NODE_ID.STAGING_BUCKET;
   if (
     lowerProfile === 'codebuild' ||
-    lowerProfile === 'deployer' ||
+    lowerProfile === MAPPING_PROFILE.DEPLOYER ||
     lowerProfile === INFRA_NODE_ID.DEPLOYER
   )
     return INFRA_NODE_ID.DEPLOYER;
-  if (lowerProfile === 'knowledge' || lowerProfile === INFRA_NODE_ID.KNOWLEDGE_BUCKET)
+  if (lowerProfile === MAPPING_PROFILE.KNOWLEDGE || lowerProfile === INFRA_NODE_ID.KNOWLEDGE_BUCKET)
     return INFRA_NODE_ID.KNOWLEDGE_BUCKET;
   if (lowerProfile === INFRA_NODE_ID.SCHEDULER) return INFRA_NODE_ID.SCHEDULER;
   if (lowerProfile === INFRA_NODE_ID.NOTIFIER) return INFRA_NODE_ID.NOTIFIER;
@@ -59,12 +60,13 @@ export function mapProfileToResource(profile: string, busId: string): string | n
 
   if (isMcpProfile) return mcpMultiplexerId;
 
-  if (lowerProfile === 'sqs' || lowerProfile === INFRA_NODE_ID.SQS) return INFRA_NODE_ID.SQS;
-  if (lowerProfile === 'docs' || lowerProfile === INFRA_NODE_ID.DOCUMENTS)
+  if (lowerProfile === MAPPING_PROFILE.SQS || lowerProfile === INFRA_NODE_ID.SQS)
+    return INFRA_NODE_ID.SQS;
+  if (lowerProfile === MAPPING_PROFILE.DOCS || lowerProfile === INFRA_NODE_ID.DOCUMENTS)
     return INFRA_NODE_ID.DOCUMENTS;
-  if (lowerProfile === 'search' || lowerProfile === INFRA_NODE_ID.OPEN_SEARCH)
+  if (lowerProfile === MAPPING_PROFILE.SEARCH || lowerProfile === INFRA_NODE_ID.OPEN_SEARCH)
     return INFRA_NODE_ID.OPEN_SEARCH;
-  if (lowerProfile === 'api' || lowerProfile === INFRA_NODE_ID.API)
+  if (lowerProfile === MAPPING_PROFILE.API || lowerProfile === INFRA_NODE_ID.API)
     return INFRA_NODE_ID.WEBHOOK_API;
 
   return null;

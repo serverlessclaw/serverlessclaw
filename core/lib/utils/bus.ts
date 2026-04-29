@@ -63,6 +63,15 @@ let _db: DynamoDBDocumentClient | null = null;
 let _busName: string | null = null;
 let _memoryTableName: string | null = null;
 
+const STATUS = {
+  RESERVED: 'RESERVED',
+  COMMITTED: 'COMMITTED',
+  FAILED: 'FAILED',
+};
+
+/**
+ * Initializes and returns the EventBridge client instance.
+ */
 function getEventBridge(): EventBridgeClient {
   if (!_eventbridge) _eventbridge = new EventBridgeClient({});
   return _eventbridge;
@@ -75,6 +84,9 @@ export function resetEventBridge(): void {
   _eventbridge = null;
 }
 
+/**
+ * Initializes and returns the DynamoDB document client instance.
+ */
 function getDb(): DynamoDBDocumentClient {
   if (!_db) {
     const client = new DynamoDBClient({});
@@ -92,6 +104,9 @@ export function resetDb(): void {
   _db = null;
 }
 
+/**
+ * Retrieves the EventBridge bus name from environment configuration.
+ */
 async function getBusName(): Promise<string> {
   if (_busName === null) {
     _busName = getAgentBusName() ?? 'AgentBus';
@@ -99,6 +114,9 @@ async function getBusName(): Promise<string> {
   return _busName;
 }
 
+/**
+ * Retrieves the DynamoDB table name for memory and idempotency storage.
+ */
 async function getMemoryTableName(): Promise<string> {
   if (_memoryTableName === null) {
     const { getMemoryTableName: getTableName } = await import('./ddb-client');
@@ -107,6 +125,9 @@ async function getMemoryTableName(): Promise<string> {
   return _memoryTableName;
 }
 
+/**
+ * Categorizes an error as transient or permanent for retry logic.
+ */
 function categorizeError(error: unknown): ErrorCategory {
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
@@ -137,6 +158,9 @@ function categorizeError(error: unknown): ErrorCategory {
   return ErrorCategory.UNKNOWN;
 }
 
+/**
+ * Reserves an idempotency key in DynamoDB to prevent concurrent duplicate processing.
+ */
 async function reserveIdempotencyKey(key: string): Promise<boolean> {
   try {
     const tableName = await getMemoryTableName();
@@ -149,7 +173,7 @@ async function reserveIdempotencyKey(key: string): Promise<boolean> {
           userId: `${IDEMPOTENCY_PREFIX}${key}`,
           timestamp: 0,
           type: IDEMPOTENCY_TYPE,
-          status: 'RESERVED',
+          status: STATUS.RESERVED,
           expiresAt,
         },
         ConditionExpression: 'attribute_not_exists(userId)',
@@ -165,6 +189,9 @@ async function reserveIdempotencyKey(key: string): Promise<boolean> {
   }
 }
 
+/**
+ * Commits an idempotency key once the event has been successfully emitted.
+ */
 async function commitIdempotencyKey(key: string, eventId?: string): Promise<void> {
   try {
     const tableName = await getMemoryTableName();
@@ -178,7 +205,7 @@ async function commitIdempotencyKey(key: string, eventId?: string): Promise<void
         UpdateExpression: 'SET #status = :committed, eventId = :eventId, committedAt = :now',
         ExpressionAttributeNames: { '#status': 'status' },
         ExpressionAttributeValues: {
-          ':committed': 'COMMITTED',
+          ':committed': STATUS.COMMITTED,
           ':eventId': eventId ?? 'N/A',
           ':now': Date.now(),
         },
@@ -190,6 +217,9 @@ async function commitIdempotencyKey(key: string, eventId?: string): Promise<void
   }
 }
 
+/**
+ * Persists a failed event to the Dead Letter Queue in DynamoDB.
+ */
 async function storeInDLQ(
   source: string,
   type: string,
@@ -250,6 +280,14 @@ async function storeInDLQ(
   }
 }
 
+/**
+ * Emits an event to the EventBridge bus with retry logic and DLQ fallback.
+ * @param source - The event source.
+ * @param type - The event type or detail type.
+ * @param detail - The event payload.
+ * @param options - Emission options (priority, idempotency, retries).
+ * @returns Result status with event ID if successful.
+ */
 export async function emitEvent(
   source: string,
   type: EventType | string,

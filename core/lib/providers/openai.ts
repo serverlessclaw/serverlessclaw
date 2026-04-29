@@ -13,48 +13,22 @@ import {
 import { OPENAI } from '../constants';
 import { logger } from '../logger';
 import { normalizeProfile, capEffort, resolveProviderApiKey } from './utils';
-
-interface OpenAIResponse {
-  output_text?: string;
-  output_thought?: string;
-  output?: Array<{
-    id?: string;
-    type: string;
-    call_id?: string;
-    name?: string;
-    arguments?: string;
-    summary?: Array<{
-      type?: string;
-      text?: string;
-    }>;
-  }>;
-  usage?: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
-}
+import { OpenAIResponse } from './openai/types';
+import {
+  shouldRequestReasoningSummary,
+  isReasoningSummaryUnsupportedError,
+  extractSummaryText,
+  extractReasoningSummary,
+  splitThoughtIntoChunks,
+  mapMessagesToResponsesInput,
+  mapToolsToOpenAI,
+} from './openai/utils';
 
 const REASONING_MAP: Record<ReasoningProfile, OpenAI.ReasoningEffort> = {
   [ReasoningProfile.FAST]: 'low',
   [ReasoningProfile.STANDARD]: 'medium',
   [ReasoningProfile.THINKING]: 'xhigh',
   [ReasoningProfile.DEEP]: 'xhigh',
-};
-
-type ContentItem =
-  | { type: string; text: string }
-  | { type: string; image_url: { url: string } }
-  | { type: string; filename: string; file_data: string };
-
-type ToolConfig = {
-  type: string;
-  server_label?: string;
-  connector_id?: string;
-  name?: string;
-  description?: string;
-  parameters?: Record<string, unknown>;
-  strict?: boolean;
 };
 
 /**
@@ -67,6 +41,10 @@ export class OpenAIProvider implements IProvider {
 
   constructor(private model: string = OpenAIModel.GPT_5_4) {}
 
+  /**
+   * Lazily initializes and returns the OpenAI client instance.
+   * Handles API key rotation if the key is updated in the environment.
+   */
   private get client(): OpenAI {
     const apiKey = resolveProviderApiKey('OpenAI', 'OpenAIApiKey', 'OPENAI_API_KEY');
 
@@ -77,171 +55,15 @@ export class OpenAIProvider implements IProvider {
     return OpenAIProvider._client;
   }
 
-  private static shouldRequestReasoningSummary(
-    model: string,
-    requestedProfile: ReasoningProfile
-  ): boolean {
-    const isGpt5Family = model.includes('gpt-5');
-    const isThinkingMode =
-      requestedProfile === ReasoningProfile.THINKING || requestedProfile === ReasoningProfile.DEEP;
-    return isGpt5Family && isThinkingMode;
-  }
-
-  private static isReasoningSummaryUnsupportedError(err: unknown): boolean {
-    const message = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
-    return (
-      message.includes('reasoning.summary') ||
-      (message.includes('summary') && message.includes('reasoning')) ||
-      message.includes('unknown parameter') ||
-      message.includes('unsupported')
-    );
-  }
-
-  private static extractSummaryText(summary?: Array<{ text?: string }>): string {
-    if (!Array.isArray(summary)) return '';
-    return summary
-      .map((s) => s?.text ?? '')
-      .filter((text) => text.trim().length > 0)
-      .join('\n\n')
-      .trim();
-  }
-
-  private static extractReasoningSummary(output?: OpenAIResponse['output']): string | undefined {
-    if (!Array.isArray(output)) return undefined;
-
-    const collected: string[] = [];
-    for (const item of output) {
-      if (item.type !== 'reasoning') continue;
-      const text = OpenAIProvider.extractSummaryText(item.summary);
-      if (text.length > 0) {
-        collected.push(text);
-      }
-    }
-
-    return collected.length > 0 ? collected.join('\n\n') : undefined;
-  }
-
-  private static splitThoughtIntoChunks(text: string, targetChunkSize = 80): string[] {
-    if (!text) return [];
-    if (text.length <= targetChunkSize) return [text];
-
-    const tokens = text.split(/(\s+)/);
-    const chunks: string[] = [];
-    let current = '';
-
-    for (const token of tokens) {
-      if (current.length > 0 && (current + token).length > targetChunkSize) {
-        chunks.push(current);
-        current = token;
-      } else {
-        current += token;
-      }
-    }
-
-    if (current.length > 0) {
-      chunks.push(current);
-    }
-
-    return chunks;
-  }
-
   /**
-   * Maps internal Message[] to OpenAI Responses API input format.
+   * Executes a non-streaming call to the OpenAI Responses API.
+   * @param messages - Array of conversation history.
+   * @param tools - Optional list of available tools.
+   * @param profile - Reasoning profile (FAST, STANDARD, THINKING, DEEP).
+   * @param model - Specific model override.
+   * @param responseFormat - Schema for structured output.
+   * @returns A Promise resolving to the assistant's message.
    */
-  private static mapMessagesToResponsesInput(messages: Message[]): Array<Record<string, unknown>> {
-    return messages.flatMap((m) => {
-      if (m.role === MessageRole.TOOL) {
-        return [
-          {
-            type: OPENAI.ITEM_TYPES.FUNCTION_CALL_OUTPUT,
-            call_id: m.tool_call_id ?? '',
-            output: m.content ?? '',
-          },
-        ];
-      }
-
-      const items: Array<Record<string, unknown>> = [];
-
-      // 1. Add message content if present
-      if (m.content || (m.attachments && m.attachments.length > 0)) {
-        let role: 'user' | 'assistant' | 'system' | 'developer' = OPENAI.ROLES.USER;
-        if (m.role === MessageRole.SYSTEM) role = OPENAI.ROLES.DEVELOPER;
-        else if (m.role === MessageRole.ASSISTANT) role = OPENAI.ROLES.ASSISTANT;
-        else if (m.role === MessageRole.DEVELOPER) role = OPENAI.ROLES.DEVELOPER;
-
-        const content: ContentItem[] = [];
-        if (m.content) content.push({ type: OPENAI.CONTENT_TYPES.INPUT_TEXT, text: m.content });
-
-        if (m.attachments) {
-          m.attachments.forEach((att) => {
-            if (att.type === 'image') {
-              content.push({
-                type: OPENAI.CONTENT_TYPES.IMAGE_URL,
-                image_url: {
-                  url: att.url ?? `data:${att.mimeType ?? 'image/png'};base64,${att.base64}`,
-                },
-              });
-            } else if (att.type === 'file') {
-              content.push({
-                type: OPENAI.CONTENT_TYPES.INPUT_FILE,
-                filename: att.name ?? OPENAI.DEFAULT_FILE_NAME,
-                file_data: `data:${att.mimeType ?? OPENAI.DEFAULT_MIME_TYPE};base64,${att.base64}`,
-              });
-            }
-          });
-        }
-
-        items.push({
-          type: OPENAI.ITEM_TYPES.MESSAGE,
-          role,
-          content:
-            content.length === 1 && content[0].type === OPENAI.CONTENT_TYPES.INPUT_TEXT
-              ? m.content
-              : content,
-        });
-      }
-
-      // 2. Add tool calls as separate items (flattened)
-      if (m.tool_calls && m.tool_calls.length > 0) {
-        for (const tc of m.tool_calls) {
-          items.push({
-            type: OPENAI.ITEM_TYPES.FUNCTION_CALL,
-            call_id: tc.id,
-            name: tc.function.name,
-            arguments: tc.function.arguments,
-          });
-        }
-      }
-
-      return items;
-    });
-  }
-
-  /**
-   * Maps internal ITool[] to OpenAI API tool format.
-   */
-  private static mapToolsToOpenAI(tools: ITool[]): ToolConfig[] {
-    return tools.map((t) => {
-      if (t.connector_id) {
-        return {
-          type: OPENAI.MCP_TYPE,
-          server_label: t.name,
-          connector_id: t.connector_id,
-        };
-      }
-      if (t.type && t.type !== OPENAI.FUNCTION_TYPE) {
-        return { type: t.type };
-      }
-      return {
-        type: OPENAI.FUNCTION_TYPE,
-        name: t.name,
-        description: t.description,
-        parameters: t.parameters as unknown as Record<string, unknown>,
-        strict: false,
-      };
-    });
-  }
-
   async call(
     messages: Message[],
     tools?: ITool[],
@@ -282,12 +104,9 @@ export class OpenAIProvider implements IProvider {
 
     logger.info(`Using OpenAI Responses API for model ${activeModel}`);
 
-    const responsesInput = OpenAIProvider.mapMessagesToResponsesInput(messages);
+    const responsesInput = mapMessagesToResponsesInput(messages);
 
-    const shouldRequestSummary = OpenAIProvider.shouldRequestReasoningSummary(
-      activeModel,
-      requestedProfile
-    );
+    const shouldRequestSummary = shouldRequestReasoningSummary(activeModel, requestedProfile);
 
     const requestPayload: Record<string, unknown> = {
       model: activeModel as OpenAI.ResponsesModel,
@@ -317,7 +136,7 @@ export class OpenAIProvider implements IProvider {
       ...(hasTools
         ? {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            tools: OpenAIProvider.mapToolsToOpenAI(tools) as any,
+            tools: mapToolsToOpenAI(tools) as any,
           }
         : {}),
       ...(temperature !== undefined ? { temperature } : {}),
@@ -331,7 +150,7 @@ export class OpenAIProvider implements IProvider {
       try {
         response = (await client.responses.create(requestPayload)) as unknown as OpenAIResponse;
       } catch (err) {
-        if (!shouldRequestSummary || !OpenAIProvider.isReasoningSummaryUnsupportedError(err)) {
+        if (!shouldRequestSummary || !isReasoningSummaryUnsupportedError(err)) {
           throw err;
         }
 
@@ -349,8 +168,7 @@ export class OpenAIProvider implements IProvider {
 
       // Extract output
       const content = response.output_text ?? '';
-      const thought =
-        response.output_thought ?? OpenAIProvider.extractReasoningSummary(response.output);
+      const thought = response.output_thought ?? extractReasoningSummary(response.output);
       const toolCalls: Message['tool_calls'] = [];
 
       if (response.output && Array.isArray(response.output)) {
@@ -391,6 +209,10 @@ export class OpenAIProvider implements IProvider {
     }
   }
 
+  /**
+   * Executes a streaming call to the OpenAI Responses API.
+   * Yields content, thought, and tool call chunks as they arrive.
+   */
   async *stream(
     messages: Message[],
     tools?: ITool[],
@@ -424,12 +246,9 @@ export class OpenAIProvider implements IProvider {
       capabilities.maxReasoningEffort
     );
 
-    const responsesInput = OpenAIProvider.mapMessagesToResponsesInput(messages);
+    const responsesInput = mapMessagesToResponsesInput(messages);
 
-    const shouldRequestSummary = OpenAIProvider.shouldRequestReasoningSummary(
-      activeModel,
-      requestedProfile
-    );
+    const shouldRequestSummary = shouldRequestReasoningSummary(activeModel, requestedProfile);
 
     const requestPayload: Record<string, unknown> = {
       model: activeModel as OpenAI.ResponsesModel,
@@ -459,7 +278,7 @@ export class OpenAIProvider implements IProvider {
       ...(tools && tools.length > 0
         ? {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            tools: OpenAIProvider.mapToolsToOpenAI(tools) as any,
+            tools: mapToolsToOpenAI(tools) as any,
           }
         : {}),
       ...(temperature !== undefined ? { temperature } : {}),
@@ -475,7 +294,7 @@ export class OpenAIProvider implements IProvider {
           requestPayload
         )) as unknown as AsyncIterable<unknown>;
       } catch (err) {
-        if (!shouldRequestSummary || !OpenAIProvider.isReasoningSummaryUnsupportedError(err)) {
+        if (!shouldRequestSummary || !isReasoningSummaryUnsupportedError(err)) {
           throw err;
         }
 
@@ -498,7 +317,6 @@ export class OpenAIProvider implements IProvider {
         const type = rawChunk.type || '';
 
         // Support both direct deltas and nested item deltas (2026 Responses API)
-        // Some events are prefixed with "response."
         const delta = rawChunk.delta ?? rawChunk.item?.delta;
 
         const isContentEvent =
@@ -549,9 +367,9 @@ export class OpenAIProvider implements IProvider {
           rawChunk.item?.type === OPENAI.STREAM_PROPS.REASONING &&
           Array.isArray(rawChunk.item?.summary)
         ) {
-          const summaryText = OpenAIProvider.extractSummaryText(rawChunk.item.summary);
+          const summaryText = extractSummaryText(rawChunk.item.summary);
           if (summaryText.length > 0) {
-            const summaryChunks = OpenAIProvider.splitThoughtIntoChunks(summaryText);
+            const summaryChunks = splitThoughtIntoChunks(summaryText);
             for (const thoughtChunk of summaryChunks) {
               yield { thought: thoughtChunk };
             }
@@ -594,6 +412,10 @@ export class OpenAIProvider implements IProvider {
     }
   }
 
+  /**
+   * Returns the capabilities of the provider for the given model.
+   * @param model - The model identifier.
+   */
   async getCapabilities(model?: string) {
     const activeModel = model ?? this.model;
     const isReasoningModel = activeModel.includes('gpt-5');

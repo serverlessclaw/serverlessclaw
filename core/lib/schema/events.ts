@@ -1,128 +1,145 @@
 import { z } from 'zod';
-import { AttachmentType } from '../types/llm';
-import { HealthSeverity, ParallelTaskStatus } from '../types/constants';
-import { EventType, AgentType, UserRole } from '../types/index';
+import { HealthSeverity } from '../types/constants';
+import { EventType, AgentType } from '../types/index';
 import { normalizeBaseUserId } from '../utils/normalize';
-import { generateId, generateMessageId } from '../utils/id-generator';
+import { generateMessageId } from '../utils/id-generator';
 
-export const ATTACHMENT_SCHEMA = z
-  .object({
-    type: z.nativeEnum(AttachmentType),
-    url: z.string().optional(),
-    base64: z.string().optional(),
-    name: z.string().optional(),
-    mimeType: z.string().optional(),
-  })
-  .refine((attachment) => Boolean(attachment.url || attachment.base64), {
-    message: 'Attachment must include either url or base64 payload',
-  });
+import { BASE_EVENT_SCHEMA, ATTACHMENT_SCHEMA } from './events/base';
+import {
+  CONSENSUS_REQUEST_SCHEMA,
+  CONSENSUS_VOTE_SCHEMA,
+  CONSENSUS_REACHED_SCHEMA,
+  REPUTATION_UPDATE_SCHEMA,
+} from './events/protocol';
+import {
+  PARALLEL_TASK_DISPATCH_SCHEMA,
+  PARALLEL_TASK_COMPLETED_EVENT_SCHEMA,
+  PARALLEL_BARRIER_TIMEOUT_SCHEMA,
+} from './events/parallel';
 
-/**
- * Base schema for all event payloads.
- */
-export const BASE_EVENT_SCHEMA = z.object({
-  source: z.string().default('unknown'),
-  userId: z.string().default('SYSTEM'),
-  traceId: z.string().default(() => generateId('t')),
-  taskId: z.string().default(() => generateId('task')),
-  nodeId: z.string().optional(),
-  parentId: z.string().optional(),
-  agentId: z.string().optional(),
-  initiatorId: z.string().default('orchestrator'),
-  depth: z.number().default(0),
-  sessionId: z.string().default('default-session'),
-  workspaceId: z.string().optional(),
-  orgId: z.string().optional(),
-  teamId: z.string().optional(),
-  staffId: z.string().optional(),
-  userRole: z.nativeEnum(UserRole).optional(),
-  timestamp: z.number().default(() => Date.now()),
-  tokenBudget: z.number().min(0).optional(),
-  costLimit: z.number().min(0).optional(),
-  priorTokenUsage: z
-    .object({
-      inputTokens: z.number().default(0),
-      outputTokens: z.number().default(0),
-      totalTokens: z.number().default(0),
-    })
-    .optional(),
-});
+export * from './events/base';
+export * from './events/metadata';
+export * from './events/protocol';
+export * from './events/parallel';
 
 /**
  * Schema for AgentPayload.
+ * Standardized payload for most agent-to-agent communication.
  */
 export const AGENT_PAYLOAD_SCHEMA = BASE_EVENT_SCHEMA.extend({
+  /** Primary task description. */
   task: z.string().default(''),
+  /** Optional completion response. */
   response: z.string().optional(),
+  /** Extensible metadata record. */
   metadata: z.record(z.string(), z.unknown()).default({}),
+  /** Array of associated attachments. */
   attachments: z.array(ATTACHMENT_SCHEMA).default([]),
+  /** Flag indicating if this task is a continuation. */
   isContinuation: z.boolean().default(false),
 });
 
 /**
  * Schema for TaskEvent.
+ * Lightweight wrapper for task assignments.
  */
 export const TASK_EVENT_SCHEMA = BASE_EVENT_SCHEMA.extend({
+  /** Task description. */
   task: z.string(),
+  /** Flag indicating if this task is a continuation. */
   isContinuation: z.boolean().optional(),
+  /** Task-specific metadata. */
   metadata: z.record(z.string(), z.unknown()).optional(),
+  /** Task-specific attachments. */
   attachments: z.array(ATTACHMENT_SCHEMA).optional(),
 });
 
 /**
  * Schema for BuildEvent.
+ * Tracking for infrastructure and code builds.
  */
 export const BUILD_EVENT_SCHEMA = BASE_EVENT_SCHEMA.extend({
+  /** Unique identifier for the build job. */
   buildId: z.string(),
+  /** Name of the project being built. */
   projectName: z.string().optional(),
+  /** Associated task description. */
   task: z.string().optional(),
+  /** Truncated error logs for failure analysis. */
   errorLogs: z.string().optional(),
+  /** GAPs being addressed by this build. */
   gapIds: z.array(z.string()).optional(),
+  /** Structured failure manifest. */
   failureManifest: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**
  * Schema for CompletionEvent.
+ * Emitted when an agent completes its primary task.
  */
 export const COMPLETION_EVENT_SCHEMA = BASE_EVENT_SCHEMA.extend({
+  /** Identifier of the completing agent. */
   agentId: z.string().default('unknown'),
+  /** Original task description. */
   task: z.string().default(''),
+  /** The final response or result. */
   response: z.string(),
+  /** Results attachments. */
   attachments: z.array(ATTACHMENT_SCHEMA).default([]),
+  /** Final metadata. */
   metadata: z.record(z.string(), z.unknown()).default({}),
+  /** Whether the user has already been notified. */
   userNotified: z.boolean().default(false),
 });
 
 /**
  * Schema for OutboundMessageEvent.
+ * Direct communication to the user.
  */
 export const OUTBOUND_MESSAGE_EVENT_SCHEMA = BASE_EVENT_SCHEMA.extend({
+  /** The message text. */
   message: z.string(),
+  /** Display name of the sender. */
   agentName: z.string().default('SuperClaw'),
+  /** Context identifiers used to generate the message. */
   memoryContexts: z.array(z.string()).default([]),
+  /** Message attachments. */
   attachments: z.array(ATTACHMENT_SCHEMA).default([]),
+  /** Message-specific metadata. */
   metadata: z.record(z.string(), z.unknown()).default({}),
 });
 
 /**
  * Schema for FailureEvent.
+ * Standardized error reporting across agents.
  */
 export const FAILURE_EVENT_SCHEMA = BASE_EVENT_SCHEMA.extend({
+  /** Identifier of the failing agent. */
   agentId: z.string().default('unknown'),
+  /** Description of the task that failed. */
   task: z.string().default(''),
+  /** Error message or stack trace. */
   error: z.string(),
+  /** Failure context attachments. */
   attachments: z.array(ATTACHMENT_SCHEMA).default([]),
+  /** Error-specific metadata. */
   metadata: z.record(z.string(), z.unknown()).default({}),
+  /** Whether the user has already been notified. */
   userNotified: z.boolean().default(false),
 });
 
 /**
  * Schema for HealthReportEvent.
+ * Component-level health monitoring.
  */
 export const HEALTH_REPORT_EVENT_SCHEMA = BASE_EVENT_SCHEMA.extend({
+  /** Component name (e.g. "Lambda", "DynamoDB"). */
   component: z.string(),
+  /** Description of the health issue. */
   issue: z.string(),
+  /** Severity level. */
   severity: z.nativeEnum(HealthSeverity),
+  /** Additional diagnostic context. */
   context: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -130,9 +147,13 @@ export const HEALTH_REPORT_EVENT_SCHEMA = BASE_EVENT_SCHEMA.extend({
  * Schema for ProactiveHeartbeatPayload.
  */
 export const PROACTIVE_HEARTBEAT_PAYLOAD_SCHEMA = BASE_EVENT_SCHEMA.extend({
+  /** Identifier of the agent. */
   agentId: z.string(),
+  /** Current task being worked on. */
   task: z.string(),
+  /** Active goal identifier. */
   goalId: z.string(),
+  /** Heartbeat metadata. */
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -171,222 +192,74 @@ export const BRIDGE_EVENT_SCHEMA = z.object({
   'detail-type': z.string(),
   detail: BRIDGE_DETAIL_PAYLOAD_SCHEMA,
 });
-/**
- * Schema for ParallelTaskCompletedEvent.
- */
-export const PARALLEL_TASK_COMPLETED_EVENT_SCHEMA = BASE_EVENT_SCHEMA.extend({
-  overallStatus: z.nativeEnum(ParallelTaskStatus),
-  results: z.array(
-    z.object({
-      taskId: z.string(),
-      agentId: z.string(),
-      status: z.string(),
-      result: z.string().optional().nullable(),
-      error: z.string().optional().nullable(),
-      patch: z.string().optional().nullable(),
-    })
-  ),
-  taskCount: z.number(),
-  completedCount: z.number(),
-  elapsedMs: z.number().optional(),
-  aggregationType: z.enum(['summary', 'agent_guided', 'merge_patches']).optional(),
-  aggregationPrompt: z.string().optional(),
-});
-
-// ============================================================================
-// Typed Metadata Schemas (Structural Enforcement)
-// ============================================================================
-// These schemas replace the generic Record<string, unknown> metadata type
-// with specific shapes for common use cases. Downstream consumers no longer
-// need type assertions like `(metadata?.gapIds as string[])`.
-// ============================================================================
-
-/** Metadata schema for Coder tasks (gap tracking, build IDs). */
-export const CODER_TASK_METADATA = z
-  .object({
-    gapIds: z.array(z.string()).default([]),
-    buildId: z.string().nullable().default(null),
-    targetFile: z.string().nullable().default(null),
-    branch: z.string().nullable().default(null),
-  })
-  .default({ gapIds: [], buildId: null, targetFile: null, branch: null });
-
-/** Metadata schema for QA audit tasks. */
-export const QA_AUDIT_METADATA = z
-  .object({
-    gapIds: z.array(z.string()).default([]),
-    buildId: z.string().nullable().default(null),
-    deploymentUrl: z.string().nullable().default(null),
-  })
-  .default({ gapIds: [], buildId: null, deploymentUrl: null });
-
-/** Metadata schema for Strategic Planner tasks. */
-export const PLANNER_TASK_METADATA = z
-  .object({
-    gapId: z.string().nullable().default(null),
-    category: z.string().nullable().default(null),
-    priority: z.number().nullable().default(null),
-  })
-  .default({ gapId: null, category: null, priority: null });
-
-/** Metadata schema for build-related tasks. */
-export const BUILD_TASK_METADATA = z
-  .object({
-    gapIds: z.array(z.string()).default([]),
-    buildId: z.string().nullable().default(null),
-    projectName: z.string().nullable().default(null),
-  })
-  .default({ gapIds: [], buildId: null, projectName: null });
-
-/** Metadata schema for clarification requests. */
-export const CLARIFICATION_TASK_METADATA = z
-  .object({
-    question: z.string().nullable().default(null),
-    originalTask: z.string().nullable().default(null),
-    retryCount: z.number().default(0),
-  })
-  .default({ question: null, originalTask: null, retryCount: 0 });
-/** Metadata schema for research tasks. */
-export const RESEARCH_TASK_METADATA = z
-  .object({
-    researchMode: z.enum(['evolution', 'domain']).default('domain'),
-    depth: z.number().default(2),
-    timeBudgetMs: z.number().optional(),
-    parallel: z.boolean().default(false),
-  })
-  .default({ researchMode: 'domain', depth: 2, parallel: false });
-
-// ============================================================================
-// Consensus Protocol Schemas
-// ============================================================================
-
-/** Schema for consensus request events. */
-export const CONSENSUS_REQUEST_SCHEMA = BASE_EVENT_SCHEMA.extend({
-  proposal: z.string(),
-  mode: z.enum(['majority', 'unanimous', 'weighted']).default('majority'),
-  voterIds: z.array(z.string()).min(1),
-  timeoutMs: z.number().default(60000),
-  metadata: z.record(z.string(), z.unknown()).default({}),
-});
-
-/** Schema for individual consensus vote events. */
-export const CONSENSUS_VOTE_SCHEMA = BASE_EVENT_SCHEMA.extend({
-  consensusId: z.string(),
-  voterId: z.string(),
-  vote: z.enum(['approve', 'reject', 'abstain']),
-  reasoning: z.string().optional(),
-  weight: z.number().default(1.0),
-});
-
-/** Schema for reputation update events. */
-export const REPUTATION_UPDATE_SCHEMA = BASE_EVENT_SCHEMA.extend({
-  agentId: z.string(),
-  success: z.boolean(),
-  durationMs: z.number(),
-  error: z.string().optional(),
-  taskComplexity: z.number().optional(),
-});
-
-/** Schema for parallel task dispatch events. */
-export const PARALLEL_TASK_DISPATCH_SCHEMA = BASE_EVENT_SCHEMA.extend({
-  tasks: z.array(
-    z.object({
-      taskId: z.string(),
-      agentId: z.string(),
-      task: z.string(),
-      metadata: z.record(z.string(), z.unknown()).optional(),
-      dependsOn: z.array(z.string()).optional(),
-    })
-  ),
-  initialQuery: z.string().optional(),
-  barrierTimeoutMs: z.number().optional(),
-  aggregationType: z.enum(['summary', 'agent_guided', 'merge_patches']).optional(),
-  aggregationPrompt: z.string().optional(),
-});
-
-/** Schema for consensus result events. */
-export const CONSENSUS_REACHED_SCHEMA = BASE_EVENT_SCHEMA.extend({
-  consensusId: z.string(),
-  proposal: z.string(),
-  result: z.enum(['approved', 'rejected', 'timeout']),
-  mode: z.enum(['majority', 'unanimous', 'weighted']),
-  approveCount: z.number(),
-  rejectCount: z.number(),
-  abstainCount: z.number(),
-  totalVoters: z.number(),
-  votes: z.array(
-    z.object({
-      voterId: z.string(),
-      vote: z.enum(['approve', 'reject', 'abstain']),
-      reasoning: z.string().optional(),
-      weight: z.number(),
-    })
-  ),
-});
 
 /** Schema for coder task completion events. */
 export const CODER_TASK_COMPLETED_SCHEMA = BASE_EVENT_SCHEMA.extend({
+  /** Original task description. */
   task: z.string(),
+  /** Optional final response. */
   response: z.string().optional(),
+  /** Whether the suggested patch was applied. */
   patchApplied: z.boolean().optional(),
+  /** GAPs addressed by the coder. */
   gapIds: z.array(z.string()).optional(),
 });
 
 /** Schema for task cancellation events. */
 export const TASK_CANCELLED_SCHEMA = BASE_EVENT_SCHEMA.extend({
+  /** Reason for cancellation. */
   reason: z.string().optional(),
+  /** Identifier of the parallel dispatch that was cancelled. */
   parallelDispatchId: z.string().optional(),
 });
 
-/** Schema for human handoff events. */
+/**
+ * Schema for human handoff events.
+ */
 export const HANDOFF_SCHEMA = BASE_EVENT_SCHEMA.extend({
+  /** Type of handoff (approval, clarification, or full escalation). */
   handoffType: z.enum(['approval', 'clarification', 'escalation']),
+  /** Human-readable message explaining the handoff. */
   message: z.string().optional(),
+  /** Optional epoch timestamp when the handoff request expires. */
   expiresAt: z.number().optional(),
 });
 
-/** Schema for escalation level timeout events from the scheduler. */
+/**
+ * Schema for escalation level timeout events from the scheduler.
+ */
 export const ESCALATION_LEVEL_TIMEOUT_SCHEMA = z.object({
+  /** Trace ID for correlation. */
   traceId: z.string(),
+  /** Identifier of the agent being escalated. */
   agentId: z.string(),
+  /** User ID associated with the task. */
   userId: z.string(),
+  /** Original question or task description. */
   question: z.string().optional(),
+  /** Original task. */
   originalTask: z.string().optional(),
+  /** Current escalation level (1-indexed). */
   currentLevel: z.number(),
+  /** Policy identifier for rule lookup. */
   policyId: z.string(),
 });
 
-/** Schema for escalation completed events. */
+/**
+ * Schema for escalation completed events.
+ */
 export const ESCALATION_COMPLETED_SCHEMA = z.object({
+  /** Trace ID for correlation. */
   traceId: z.string(),
+  /** Identifier of the escalated agent. */
   agentId: z.string(),
+  /** User ID associated with the task. */
   userId: z.string(),
+  /** Final outcome of the escalation process. */
   outcome: z.enum(['resolved', 'escalated_to_human', 'abandoned']),
+  /** Final resolution text or summary. */
   resolution: z.string().optional(),
 });
-
-// Zod-inferred types for metadata schemas
-export type CoderTaskMetadata = z.infer<typeof CODER_TASK_METADATA>;
-export type QaAuditMetadata = z.infer<typeof QA_AUDIT_METADATA>;
-export type PlannerTaskMetadata = z.infer<typeof PLANNER_TASK_METADATA>;
-export type BuildTaskMetadata = z.infer<typeof BUILD_TASK_METADATA>;
-export type ClarificationTaskMetadata = z.infer<typeof CLARIFICATION_TASK_METADATA>;
-
-// ============================================================================
-// Structural Enforcement: Zod-Inferred Types (Source of Truth)
-// ============================================================================
-// These types are derived from the Zod schemas above, ensuring the TypeScript
-// type system always matches the runtime validation behavior (including defaults
-// and transformations). Use these types in handler code that calls .parse().
-// The hand-written interfaces in core/lib/types/agent.ts remain for backward
-// compatibility but may diverge from runtime behavior.
-// ============================================================================
-
-/** Zod-inferred type for Attachment (matches ATTACHMENT_SCHEMA runtime output). */
-export type AttachmentPayload = z.infer<typeof ATTACHMENT_SCHEMA>;
-
-/** Zod-inferred type for BaseEvent (matches BASE_EVENT_SCHEMA runtime output with defaults applied). */
-export type BaseEventPayload = z.infer<typeof BASE_EVENT_SCHEMA>;
 
 /** Zod-inferred type for AgentPayload (matches AGENT_PAYLOAD_SCHEMA runtime output). */
 export type AgentPayloadInferred = z.infer<typeof AGENT_PAYLOAD_SCHEMA>;
@@ -415,34 +288,44 @@ export type ProactiveHeartbeatPayloadInferred = z.infer<typeof PROACTIVE_HEARTBE
 /** Zod-inferred type for BridgeEvent detail (matches BRIDGE_DETAIL_PAYLOAD_SCHEMA after transform). */
 export type BridgeDetailPayload = z.infer<typeof BRIDGE_DETAIL_PAYLOAD_SCHEMA>;
 
-export const PARALLEL_BARRIER_TIMEOUT_SCHEMA = BASE_EVENT_SCHEMA.extend({
-  barrierId: z.string(),
-  traceId: z.string(),
-  timedOutTasks: z.array(z.string()),
-});
-
-export const ORCHESTRATION_SIGNAL_SCHEMA = z.object({
-  traceId: z.string(),
-  agentId: z.string(),
-  signal: z.string(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-});
-
+/** Schema for DLQ routing events. */
 export const DLQ_ROUTE_SCHEMA = BASE_EVENT_SCHEMA.extend({
+  /** Category of the event for routing. */
   eventCategory: z.string().default('dlq_routing'),
+  /** Original detail type. */
   detailType: z.string(),
+  /** The full original event payload. */
   originalEvent: z.record(z.string(), z.unknown()),
+  /** Envelope identifier. */
   envelopeId: z.string().optional(),
+  /** Error that caused DLQ routing. */
   errorMessage: z.string().optional(),
+  /** Current retry count. */
   retryCount: z.number().default(0),
 });
 
 /** Schema for pulse check events. */
 export const PULSE_EVENT_SCHEMA = BASE_EVENT_SCHEMA.extend({
+  /** Target agent for the pulse check. */
   targetAgentId: z.string(),
+  /** Ping timestamp. */
   timestamp: z.number(),
+  /** Pong timestamp. */
   responseTimestamp: z.number().optional(),
+  /** Pulse status. */
   status: z.enum(['ping', 'pong']).default('ping'),
+});
+
+/** Schema for orchestration signals. */
+export const ORCHESTRATION_SIGNAL_SCHEMA = z.object({
+  /** Trace ID for correlation. */
+  traceId: z.string(),
+  /** Identifier of the agent receiving the signal. */
+  agentId: z.string(),
+  /** The signal command. */
+  signal: z.string(),
+  /** Optional signal metadata. */
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**
