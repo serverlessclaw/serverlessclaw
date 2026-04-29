@@ -42,6 +42,7 @@ export async function createCollaboration(
 
   if (input.initialParticipants) {
     const { AgentRegistry } = await import('../registry');
+    let pIdx = 1;
     for (const p of input.initialParticipants) {
       if (p.id !== ownerId) {
         // Sh10: Verify agent is enabled before adding (Principle 14)
@@ -56,7 +57,7 @@ export async function createCollaboration(
           type: p.type,
           id: p.id,
           role: p.role,
-          joinedAt: now,
+          joinedAt: now + pIdx++, // Ensure uniqueness within this collab
         });
       }
     }
@@ -110,16 +111,41 @@ export async function createCollaboration(
       `${COLLAB_INDEX_PREFIX}${participant.type}#${participant.id}`,
       scope || workspaceId
     );
-    await base.putItem({
-      userId: indexPk,
-      timestamp: now,
-      type: 'COLLABORATION_INDEX',
-      collaborationId,
-      role: participant.role,
-      collaborationName: input.name,
-      status: 'active',
-      workspaceId,
-    });
+
+    // Sh12: Prevent millisecond collision overwrites via retry and jitter
+    let attempt = 0;
+    let success = false;
+    while (attempt < 5 && !success) {
+      try {
+        await base.putItem(
+          {
+            userId: indexPk,
+            timestamp: participant.joinedAt + attempt,
+            type: 'COLLABORATION_INDEX',
+            collaborationId,
+            role: participant.role,
+            collaborationName: input.name,
+            status: 'active',
+            workspaceId,
+          },
+          {
+            ConditionExpression: 'attribute_not_exists(userId)',
+          }
+        );
+        // Sync the actual used timestamp back to participant for cleanup
+        participant.joinedAt += attempt;
+        success = true;
+      } catch (e) {
+        if ((e as Error).name === 'ConditionalCheckFailedException') {
+          attempt++;
+        } else {
+          throw e;
+        }
+      }
+    }
+    if (!success) {
+      logger.warn(`Failed to index participant ${participant.id} after 5 attempts`);
+    }
   }
 
   logger.info(
@@ -173,9 +199,44 @@ export async function addCollaborationParticipant(
     }
   }
 
-  const pk = base.getScopedUserId(`${COLLAB_PREFIX}${collaborationId}`, scope || workspaceId);
+  // Add index entry for new participant (Sh12: Millisecond Collision Protection)
+  let attempt = 0;
+  let success = false;
+  const indexPk = base.getScopedUserId(
+    `${COLLAB_INDEX_PREFIX}${newParticipant.type}#${newParticipant.id}`,
+    scope
+  );
+
+  while (attempt < 5 && !success) {
+    try {
+      await base.putItem(
+        {
+          userId: indexPk,
+          timestamp: participant.joinedAt + attempt,
+          type: 'COLLABORATION_INDEX',
+          collaborationId,
+          role: newParticipant.role,
+          collaborationName: collaboration.name,
+          status: 'active',
+          workspaceId,
+        },
+        {
+          ConditionExpression: 'attribute_not_exists(userId)',
+        }
+      );
+      participant.joinedAt += attempt; // Sync for storage in collaboration record
+      success = true;
+    } catch (e) {
+      if ((e as Error).name === 'ConditionalCheckFailedException') {
+        attempt++;
+      } else {
+        throw e;
+      }
+    }
+  }
 
   // Update collaboration metadata atomically (Principle 13)
+  const pk = base.getScopedUserId(`${COLLAB_PREFIX}${collaborationId}`, scope || workspaceId);
   await base.updateItem({
     Key: {
       userId: pk,
@@ -188,22 +249,6 @@ export async function addCollaborationParticipant(
       ':newParticipant': [participant],
       ':now': now,
     },
-  });
-
-  // Add index entry for new participant
-  const indexPk = base.getScopedUserId(
-    `${COLLAB_INDEX_PREFIX}${newParticipant.type}#${newParticipant.id}`,
-    scope
-  );
-  await base.putItem({
-    userId: indexPk,
-    timestamp: now,
-    type: 'COLLABORATION_INDEX',
-    collaborationId,
-    role: newParticipant.role,
-    collaborationName: collaboration.name,
-    status: 'active',
-    workspaceId,
   });
 
   logger.info(

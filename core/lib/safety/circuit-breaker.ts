@@ -55,12 +55,15 @@ export class CircuitBreaker {
         new GetCommand({ TableName: getConfigTableName(), Key: { key: this.stateKey } })
       );
       if (Item?.value) return { ...this.freshState(), ...Item.value };
-    } catch {
-      logger.warn(
-        `Failed to load circuit breaker state for ${this.stateKey} (WS: ${this.workspaceId}), using fresh state.`
+      return this.freshState();
+    } catch (e) {
+      logger.error(
+        `[CircuitBreaker] Failed to load state for ${this.stateKey} (WS: ${this.workspaceId}). Failsafe to OPEN state.`,
+        e
       );
+      // Fail-closed: if we can't load the circuit state, assume it's open for safety
+      return { ...this.freshState(), state: 'open', lastStateChange: Date.now() };
     }
-    return this.freshState();
   }
 
   private async saveStateWithRetry(

@@ -64,4 +64,26 @@ vi.mock('../lib/metrics/token-budget-enforcer', async (importOriginal) => {
   };
 });
 
+// Global mock for CircuitBreaker to ensure tests don't fail due to DDB outages
+vi.mock('../lib/safety/circuit-breaker', async (importOriginal) => {
+  const actual = (await importOriginal()) as {
+    getCircuitBreaker: (...args: unknown[]) => { canProceed: (...args: unknown[]) => unknown };
+    [key: string]: unknown;
+  };
+  return {
+    ...actual,
+    getCircuitBreaker: (...args: unknown[]) => {
+      const instance = actual.getCircuitBreaker(...args);
+      // Only mock canProceed if we are NOT in a circuit-breaker test file
+      if (
+        typeof expect !== 'undefined' &&
+        !/circuit-breaker.*\.test/.test(expect.getState().testPath || '')
+      ) {
+        instance.canProceed = vi.fn().mockResolvedValue({ allowed: true, state: 'closed' });
+      }
+      return instance;
+    },
+  };
+});
+
 // Shared mocks or global settings can be added here

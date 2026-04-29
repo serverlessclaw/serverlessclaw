@@ -13,6 +13,7 @@ export interface LockOptions {
   ttlSeconds: number;
   ownerId: string;
   prefix?: string;
+  workspaceId?: string;
 }
 
 interface LockState {
@@ -30,9 +31,10 @@ export class LockManager {
     this.tableName = getMemoryTableName() ?? 'MemoryTable';
   }
 
-  private getFullId(lockId: string, prefix?: string): string {
-    const p = prefix !== undefined ? prefix : this.defaultPrefix;
-    return lockId.startsWith(p) ? lockId : `${p}${lockId}`;
+  private getFullId(lockId: string, options?: { prefix?: string; workspaceId?: string }): string {
+    const p = options?.prefix !== undefined ? options.prefix : this.defaultPrefix;
+    const baseId = lockId.startsWith(p) ? lockId : `${p}${lockId}`;
+    return options?.workspaceId ? `WS#${options.workspaceId}#${baseId}` : baseId;
   }
 
   /**
@@ -61,7 +63,10 @@ export class LockManager {
    * could both acquire an expired lock simultaneously.
    */
   async acquire(lockId: string, options: LockOptions): Promise<boolean> {
-    const fullId = this.getFullId(lockId, options.prefix);
+    const fullId = this.getFullId(lockId, {
+      prefix: options.prefix,
+      workspaceId: options.workspaceId,
+    });
     const now = Math.floor(Date.now() / 1000);
     const expiresAt = now + options.ttlSeconds;
 
@@ -104,7 +109,10 @@ export class LockManager {
    * Renews an existing lock if the owner still holds it.
    */
   async renew(lockId: string, options: LockOptions): Promise<boolean> {
-    const fullId = this.getFullId(lockId, options.prefix);
+    const fullId = this.getFullId(lockId, {
+      prefix: options.prefix,
+      workspaceId: options.workspaceId,
+    });
     const now = Math.floor(Date.now() / 1000);
     const expiresAt = now + options.ttlSeconds;
 
@@ -140,8 +148,12 @@ export class LockManager {
    * Explicitly releases a lock if the owner still holds it.
    * Allows release if: (a) owner matches, OR (b) lock has expired and we're the last known owner.
    */
-  async release(lockId: string, ownerId: string, prefix?: string): Promise<boolean> {
-    const fullId = this.getFullId(lockId, prefix);
+  async release(
+    lockId: string,
+    ownerId: string,
+    options?: { prefix?: string; workspaceId?: string }
+  ): Promise<boolean> {
+    const fullId = this.getFullId(lockId, options);
     const now = Math.floor(Date.now() / 1000);
 
     try {

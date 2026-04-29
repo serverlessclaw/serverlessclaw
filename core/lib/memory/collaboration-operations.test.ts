@@ -688,6 +688,39 @@ describe('edge cases', () => {
     expect(indexEntry.userId).toBe('COLLAB_INDEX#human#user-1');
   });
 
+  it('should retry indexing on millisecond collision (ConditionalCheckFailedException)', async () => {
+    const base = createMockBase();
+    const collab: Collaboration = {
+      collaborationId: 'collab-1',
+      name: 'Test',
+      sessionId: 'sess-1',
+      syntheticUserId: 'shared#collab#collab-1',
+      owner: { type: 'agent', id: 'owner-1' },
+      participants: [{ type: 'agent', id: 'owner-1', role: 'owner', joinedAt: MOCK_NOW }],
+      createdAt: MOCK_NOW,
+      updatedAt: MOCK_NOW,
+      lastActivityAt: MOCK_NOW,
+      status: 'active',
+    };
+    base.queryItems.mockResolvedValue([collab]);
+
+    // Fail first attempt, succeed second
+    const conditionalError = new Error('Collision');
+    conditionalError.name = 'ConditionalCheckFailedException';
+    base.putItem.mockRejectedValueOnce(conditionalError).mockResolvedValueOnce(undefined);
+    base.updateItem.mockResolvedValue(undefined);
+
+    await addCollaborationParticipant(base, 'collab-1', 'owner-1', 'agent', {
+      type: 'human',
+      id: 'human-2',
+      role: 'editor',
+    });
+
+    expect(base.putItem).toHaveBeenCalledTimes(2);
+    // Second call should have incremented timestamp
+    expect(base.putItem.mock.calls[1][0].timestamp).toBe(MOCK_NOW + 1);
+  });
+
   it('should handle owner type mismatch in access check', async () => {
     const base = createMockBase();
     const collab: Collaboration = {

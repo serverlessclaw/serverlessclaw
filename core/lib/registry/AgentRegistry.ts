@@ -138,8 +138,9 @@ export class AgentRegistry {
     config: Partial<IAgentConfig>,
     options?: { workspaceId?: string }
   ): Promise<void> {
-    if (!config.name || !config.systemPrompt) {
-      throw new Error('Agent name and systemPrompt are required');
+    // Only validate if they are explicitly provided in the partial config
+    if (config.name === '' || config.systemPrompt === '') {
+      throw new Error('Agent name and systemPrompt cannot be empty if provided');
     }
     const { hashString } = await import('../utils/crypto');
     const enriched = {

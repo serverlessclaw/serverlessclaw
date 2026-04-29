@@ -338,7 +338,7 @@ graph TD
 
 To ensure high-performance auditability and automatic data aging (Principle 1), all transient safety telemetry is persisted in the **MemoryTable**:
 
-1. **Safety Violations**: Every blocked or approval-required action is logged with a `SAFETY#VIOLATION#<agentId>` prefix and a **30-day TTL**. **Multi-tenant isolated via `WS#<workspaceId>` Partition Key.**
+1. **Safety Violations, Sessions & Locks**: Every blocked action, active session state, and distributed lock is logged with its respective prefix (`SAFETY#VIOLATION#`, `SESSION_STATE#`, `LOCK#SESSION#`) and a appropriate TTL. **Multi-tenant isolated via `WS#<workspaceId>` Partition Key.**
 2. **Collision Guard**: Log persistence uses conditional writes with millisecond jitter to prevent overwrites under high concurrency.
 3. **Blast Radius Tracking**: Class C action frequency is tracked per agent/action using the `SAFETY#BLAST_RADIUS#` prefix with a **1-hour rolling window (TTL)**.
 4. **Storage Strategy**: This migration from `ConfigTable` to `MemoryTable` ensures that audit logs do not pollute persistent configuration state and are automatically reclaimed by DynamoDB after their operational relevance expires.

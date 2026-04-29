@@ -95,16 +95,30 @@ describe('ToolSecurityValidator', () => {
     expect(result.requiresApproval).toBe(true);
   });
 
-  it('allows sensitive actions in AUTO mode if safety engine allows', async () => {
+  it('allows sensitive actions in AUTO mode IF safety engine promotes them', async () => {
     const autoContext = {
       ...mockExecContext,
       agentConfig: { ...mockExecContext.agentConfig, evolutionMode: EvolutionMode.AUTO },
     };
-    mockEvaluateAction.mockResolvedValueOnce({ allowed: true, requiresApproval: true });
+    // If SafetyEngine cleared requiresApproval (Principle 9 promotion), it should be allowed
+    mockEvaluateAction.mockResolvedValueOnce({ allowed: true, requiresApproval: false });
 
     const result = await ToolSecurityValidator.validate(mockTool, mockToolCall, {}, autoContext);
     expect(result.allowed).toBe(true);
     expect(result.modifiedArgs?.manuallyApproved).toBe(true);
+  });
+
+  it('still requires approval in AUTO mode if safety engine explicitly mandates it', async () => {
+    const autoContext = {
+      ...mockExecContext,
+      agentConfig: { ...mockExecContext.agentConfig, evolutionMode: EvolutionMode.AUTO },
+    };
+    // If SafetyEngine STAYS requiresApproval: true, we must respect it even in AUTO mode
+    mockEvaluateAction.mockResolvedValueOnce({ allowed: true, requiresApproval: true });
+
+    const result = await ToolSecurityValidator.validate(mockTool, mockToolCall, {}, autoContext);
+    expect(result.allowed).toBe(false);
+    expect(result.requiresApproval).toBe(true);
   });
 
   it('enforces RBAC permissions', async () => {

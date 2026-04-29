@@ -87,9 +87,17 @@ describe('AgentExecutor - Session Injection', () => {
     );
 
     // Verify clearing
-    expect(mockSessionStateManager.clearPendingMessages).toHaveBeenCalledWith('sess-1', ['p1']);
+    expect(mockSessionStateManager.clearPendingMessages).toHaveBeenCalledWith(
+      'sess-1',
+      ['p1'],
+      expect.any(Object)
+    );
     // Verify renewal
-    expect(mockSessionStateManager.renewProcessing).toHaveBeenCalledWith('sess-1', 'agent-1');
+    expect(mockSessionStateManager.renewProcessing).toHaveBeenCalledWith(
+      'sess-1',
+      'agent-1',
+      expect.any(Object)
+    );
   });
 
   it('should skip old pending messages to avoid duplicate injection', async () => {
@@ -186,7 +194,15 @@ describe('AgentExecutor - Session Injection', () => {
     expect(messages.some((m) => m.content?.includes('Update 2'))).toBe(true);
 
     // Verify clear was called for both
-    expect(mockSessionStateManager.clearPendingMessages).toHaveBeenCalledWith('sess-1', ['p1']);
-    expect(mockSessionStateManager.clearPendingMessages).toHaveBeenCalledWith('sess-1', ['p2']);
+    expect(mockSessionStateManager.clearPendingMessages).toHaveBeenCalledWith(
+      'sess-1',
+      ['p1'],
+      expect.any(Object)
+    );
+    expect(mockSessionStateManager.clearPendingMessages).toHaveBeenCalledWith(
+      'sess-1',
+      ['p2'],
+      expect.any(Object)
+    );
   });
 });

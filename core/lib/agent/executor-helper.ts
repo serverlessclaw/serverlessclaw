@@ -32,9 +32,10 @@ export class ExecutorHelper {
     agentId: string,
     lastInjectedMessageTimestamp: number,
     sessionStateManager: import('../session/session-state').SessionStateManager,
-    traceId: string
+    traceId: string,
+    scope?: { workspaceId?: string; teamId?: string; staffId?: string }
   ): Promise<number> {
-    const pendingMessages = await sessionStateManager.getPendingMessages(sessionId);
+    const pendingMessages = await sessionStateManager.getPendingMessages(sessionId, scope);
     const newMessages = pendingMessages.filter((m) => m.timestamp > lastInjectedMessageTimestamp);
 
     if (newMessages.length > 0) {
@@ -59,8 +60,8 @@ export class ExecutorHelper {
       }
 
       const processedIds = newMessages.map((m) => m.id);
-      await sessionStateManager.renewProcessing(sessionId, agentId);
-      await sessionStateManager.clearPendingMessages(sessionId, processedIds);
+      await sessionStateManager.renewProcessing(sessionId, agentId, scope);
+      await sessionStateManager.clearPendingMessages(sessionId, processedIds, scope);
       logger.info(`[EXECUTOR] ${processedIds.length} pending messages cleared`);
 
       return maxTimestamp;

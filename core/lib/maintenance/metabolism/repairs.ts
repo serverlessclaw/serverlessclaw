@@ -7,7 +7,6 @@ import { ConfigManager } from '../../registry/config';
 import { FeatureFlags } from '../../feature-flags';
 import { AuditFinding } from '../../../agents/cognition-reflector/lib/audit-definitions';
 import { getStagingBucketName } from '../../utils/resource-helpers';
-import { getConfigValue } from '../../config/config-defaults';
 
 /**
  * Executes autonomous repairs on system state.
@@ -145,6 +144,14 @@ export async function executeRepairs(
     }
   } catch (e) {
     logger.error('[Metabolism] S3 reclamation failed:', e);
+    repairFindings.push({
+      silo: 'Metabolism',
+      expected: 'S3 staging reclamation completion',
+      actual: `S3 reclamation failed: ${e instanceof Error ? e.message : String(e)}`,
+      severity: 'P1',
+      recommendation:
+        'Check S3 permissions (DeleteObjects) and IAM policy for the metabolism role.',
+    });
   }
 
   return repairFindings;
@@ -166,7 +173,9 @@ export async function pruneStagingBucket(scope: { workspaceId: string }): Promis
       await import('@aws-sdk/client-s3');
     const s3Client = new S3Client({});
 
-    const retentionDays = getConfigValue('STAGING_RETENTION_DAYS');
+    const retentionDays = await ConfigManager.getTypedConfig('staging_retention_days', 30, {
+      workspaceId: scope.workspaceId,
+    });
     let continuationToken: string | undefined;
     let prunedCount = 0;
 
@@ -203,7 +212,7 @@ export async function pruneStagingBucket(scope: { workspaceId: string }): Promis
 
     return prunedCount;
   } catch (e) {
-    logger.error('[Metabolism] Staging bucket pruning failed:', e);
-    return 0;
+    logger.error(`[Metabolism] Error pruning staging bucket: ${e}`);
+    throw e;
   }
 }

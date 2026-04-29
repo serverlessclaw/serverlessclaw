@@ -168,6 +168,20 @@ describe('MetabolismService', () => {
       // Should find at least the native scan finding
       expect(findings.some((f) => f.actual.includes('Scanning codebase'))).toBe(true);
     });
+
+    it('should report a finding when S3 staging reclamation fails', async () => {
+      mockS3Send.mockRejectedValueOnce(new Error('Access Denied'));
+
+      const findings = await MetabolismService.runMetabolismAudit(mockMemory, {
+        repair: true,
+        workspaceId: 'ws-1',
+      });
+
+      expect(findings.some((f) => f.actual.includes('S3 reclamation failed: Access Denied'))).toBe(
+        true
+      );
+      expect(findings.some((f) => f.severity === 'P1')).toBe(true);
+    });
   });
 
   describe('remediateDashboardFailure', () => {

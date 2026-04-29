@@ -52,12 +52,29 @@ export class SessionStateManager {
     this.lockManager = new LockManager(this.docClient);
   }
 
+  private getScopedKey(
+    baseId: string,
+    scope?: { workspaceId?: string; teamId?: string; staffId?: string }
+  ): string {
+    if (!scope || (!scope.workspaceId && !scope.teamId && !scope.staffId)) return baseId;
+
+    const segments = ['WS'];
+    if (scope.teamId) segments.push(`TEAM:${scope.teamId}`);
+    if (scope.staffId) segments.push(`STAFF:${scope.staffId}`);
+    if (scope.workspaceId) segments.push(scope.workspaceId);
+
+    return `${segments.join('#')}#${baseId}`;
+  }
+
   private get tableName(): string {
     return getMemoryTableName() ?? 'MemoryTable';
   }
 
-  private getKey(sessionId: string): string {
-    return `${SESSION_PREFIX}${sessionId}`;
+  private getKey(
+    sessionId: string,
+    scope?: { workspaceId?: string; teamId?: string; staffId?: string }
+  ): string {
+    return this.getScopedKey(`${SESSION_PREFIX}${sessionId}`, scope);
   }
 
   private getSessionExpiresAt(): number {
@@ -81,12 +98,13 @@ export class SessionStateManager {
       ownerId: agentId,
       ttlSeconds: LOCK_TTL_SECONDS,
       prefix: '', // We already prefixed it
+      workspaceId: scope?.workspaceId,
     });
 
     if (acquired) {
       this.lastRenewedAt.set(sessionId, Date.now());
       // Also update the session record to reflect who is processing (B3 Awareness)
-      const key = this.getKey(sessionId);
+      const key = this.getKey(sessionId, scope);
       try {
         await this.docClient.send(
           new UpdateCommand({
@@ -122,15 +140,22 @@ export class SessionStateManager {
   /**
    * Releases the processing lock for a session and re-emits any pending messages.
    */
-  async releaseProcessing(sessionId: string, agentId: string): Promise<void> {
+  async releaseProcessing(
+    sessionId: string,
+    agentId: string,
+    scope?: { workspaceId?: string; teamId?: string; staffId?: string }
+  ): Promise<void> {
     const lockId = `${LOCK_PREFIX}${sessionId}`;
     this.lastRenewedAt.delete(sessionId);
     // 1. Release the lock item itself
-    await this.lockManager.release(lockId, agentId, '');
+    await this.lockManager.release(lockId, agentId, {
+      prefix: '',
+      workspaceId: scope?.workspaceId,
+    });
 
     // 2. ALWAYS attempt to clear session metadata to prevent zombie "Processing" states in UI,
     // regardless of whether the lock release succeeded (it might have already expired).
-    const key = this.getKey(sessionId);
+    const key = this.getKey(sessionId, scope);
     try {
       const result = await this.docClient.send(
         new UpdateCommand({
@@ -178,7 +203,7 @@ export class SessionStateManager {
           });
 
           // 4. Remove the processed message from the queue
-          await this.removePendingMessage(sessionId, nextMsg.id);
+          await this.removePendingMessage(sessionId, nextMsg.id, scope);
         }
       }
 
@@ -195,7 +220,11 @@ export class SessionStateManager {
   /**
    * Renews the processing lock TTL. Called periodically during long-running tasks.
    */
-  async renewProcessing(sessionId: string, agentId: string): Promise<boolean> {
+  async renewProcessing(
+    sessionId: string,
+    agentId: string,
+    scope?: { workspaceId?: string; teamId?: string; staffId?: string }
+  ): Promise<boolean> {
     const lockId = `${LOCK_PREFIX}${sessionId}`;
     const nowSec = Math.floor(Date.now() / TIME.MS_PER_SECOND);
     const newLockExpiresAt = nowSec + LOCK_TTL_SECONDS;
@@ -204,12 +233,13 @@ export class SessionStateManager {
       ownerId: agentId,
       ttlSeconds: LOCK_TTL_SECONDS,
       prefix: '',
+      workspaceId: scope?.workspaceId,
     });
 
     if (renewed) {
       this.lastRenewedAt.set(sessionId, Date.now());
       // Sync the new expiry into the session record for B3 Awareness
-      const key = this.getKey(sessionId);
+      const key = this.getKey(sessionId, scope);
       try {
         await this.docClient.send(
           new UpdateCommand({
@@ -236,16 +266,20 @@ export class SessionStateManager {
    * Automatically renews the processing lock if it's nearing expiration.
    * Uses a threshold (default 50% of TTL) to avoid excessive DDB calls.
    */
-  async autoRenew(sessionId: string, agentId: string, force: boolean = false): Promise<void> {
+  async autoRenew(
+    sessionId: string,
+    agentId: string,
+    options?: { force?: boolean; workspaceId?: string; teamId?: string; staffId?: string }
+  ): Promise<void> {
     const lastRenewed = this.lastRenewedAt.get(sessionId);
-    if (!lastRenewed && !force) return;
+    if (!lastRenewed && !options?.force) return;
 
     const now = Date.now();
     const thresholdMs = (LOCK_TTL_SECONDS * 1000) / 2; // Renew at 50% mark
 
-    if (force || now - (lastRenewed ?? 0) > thresholdMs) {
+    if (options?.force || now - (lastRenewed ?? 0) > thresholdMs) {
       logger.debug(`[AUTO_RENEW] Nearing lock expiration for session ${sessionId}. Renewing...`);
-      await this.renewProcessing(sessionId, agentId);
+      await this.renewProcessing(sessionId, agentId, options);
     }
   }
 
@@ -256,9 +290,10 @@ export class SessionStateManager {
   async addPendingMessage(
     sessionId: string,
     content: string,
-    attachments?: PendingMessage['attachments']
+    attachments?: PendingMessage['attachments'],
+    scope?: { workspaceId?: string; teamId?: string; staffId?: string }
   ): Promise<void> {
-    const key = this.getKey(sessionId);
+    const key = this.getKey(sessionId, scope);
     const now = Date.now();
     const messageId = generateMessageId('pending');
 
@@ -283,18 +318,18 @@ export class SessionStateManager {
             timestamp: 0,
           },
           UpdateExpression:
-            'SET pendingMessages = list_append(if_not_exists(pendingMessages, :empty), :msg), lastMessageAt = :now, expiresAt = :exp',
+            'SET pendingMessages = list_append(if_not_exists(pendingMessages, :empty), :msg), lastMessageAt = :now, expiresAt = :exp, workspaceId = :ws, teamId = :team, staffId = :staff',
           ConditionExpression:
             'attribute_not_exists(pendingMessages) OR size(pendingMessages) < :max',
-          ExpressionAttributeNames: {
-            '#pm': 'pendingMessages',
-          },
           ExpressionAttributeValues: {
             ':empty': [],
             ':msg': [pendingMessage],
             ':now': now,
             ':exp': this.getSessionExpiresAt(),
             ':max': MAX_PENDING,
+            ':ws': scope?.workspaceId ?? null,
+            ':team': scope?.teamId ?? null,
+            ':staff': scope?.staffId ?? null,
           },
         })
       );
@@ -318,8 +353,11 @@ export class SessionStateManager {
   /**
    * Retrieves all pending messages for a session.
    */
-  async getPendingMessages(sessionId: string): Promise<PendingMessage[]> {
-    const key = this.getKey(sessionId);
+  async getPendingMessages(
+    sessionId: string,
+    scope?: { workspaceId?: string; teamId?: string; staffId?: string }
+  ): Promise<PendingMessage[]> {
+    const key = this.getKey(sessionId, scope);
 
     try {
       const result = await this.docClient.send(
@@ -348,15 +386,19 @@ export class SessionStateManager {
    * Clears specific pending messages for a session to avoid race conditions.
    * Uses optimistic locking with pendingMessages field to handle concurrent modifications.
    */
-  async clearPendingMessages(sessionId: string, messageIds: string[]): Promise<void> {
+  async clearPendingMessages(
+    sessionId: string,
+    messageIds: string[],
+    scope?: { workspaceId?: string; teamId?: string; staffId?: string }
+  ): Promise<void> {
     if (messageIds.length === 0) return;
 
-    const key = this.getKey(sessionId);
+    const key = this.getKey(sessionId, scope);
     const MAX_ATTEMPTS = 3;
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       try {
-        const currentMessages = await this.getPendingMessages(sessionId);
+        const currentMessages = await this.getPendingMessages(sessionId, scope);
         const remainingMessages = currentMessages.filter((m) => !messageIds.includes(m.id));
 
         if (remainingMessages.length === currentMessages.length) {
@@ -409,13 +451,17 @@ export class SessionStateManager {
    * Removes a specific pending message by ID.
    * Now uses retry logic and optimistic locking (P1 Race Fix).
    */
-  async removePendingMessage(sessionId: string, messageId: string): Promise<boolean> {
-    const key = this.getKey(sessionId);
+  async removePendingMessage(
+    sessionId: string,
+    messageId: string,
+    scope?: { workspaceId?: string; teamId?: string; staffId?: string }
+  ): Promise<boolean> {
+    const key = this.getKey(sessionId, scope);
     const MAX_ATTEMPTS = 3;
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       try {
-        const messages = await this.getPendingMessages(sessionId);
+        const messages = await this.getPendingMessages(sessionId, scope);
         const filtered = messages.filter((m) => m.id !== messageId);
 
         if (filtered.length === messages.length) {
@@ -465,14 +511,15 @@ export class SessionStateManager {
   async updatePendingMessage(
     sessionId: string,
     messageId: string,
-    newContent: string
+    newContent: string,
+    scope?: { workspaceId?: string; teamId?: string; staffId?: string }
   ): Promise<boolean> {
-    const key = this.getKey(sessionId);
+    const key = this.getKey(sessionId, scope);
     const MAX_ATTEMPTS = 3;
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       try {
-        const messages = await this.getPendingMessages(sessionId);
+        const messages = await this.getPendingMessages(sessionId, scope);
         const updated = messages.map((m) =>
           m.id === messageId ? { ...m, content: newContent, timestamp: Date.now() } : m
         );
@@ -522,9 +569,10 @@ export class SessionStateManager {
    */
   async saveSnapshot(
     sessionId: string,
-    snapshot: NonNullable<SessionState['workflowSnapshot']>
+    snapshot: NonNullable<SessionState['workflowSnapshot']>,
+    scope?: { workspaceId?: string; teamId?: string; staffId?: string }
   ): Promise<void> {
-    const key = this.getKey(sessionId);
+    const key = this.getKey(sessionId, scope);
     try {
       await this.docClient.send(
         new UpdateCommand({
@@ -547,8 +595,11 @@ export class SessionStateManager {
   /**
    * Clears a workflow snapshot.
    */
-  async clearSnapshot(sessionId: string): Promise<void> {
-    const key = this.getKey(sessionId);
+  async clearSnapshot(
+    sessionId: string,
+    scope?: { workspaceId?: string; teamId?: string; staffId?: string }
+  ): Promise<void> {
+    const key = this.getKey(sessionId, scope);
     try {
       await this.docClient.send(
         new UpdateCommand({
@@ -569,8 +620,11 @@ export class SessionStateManager {
   /**
    * Gets the current session state.
    */
-  async getState(sessionId: string): Promise<SessionState | null> {
-    const key = this.getKey(sessionId);
+  async getState(
+    sessionId: string,
+    scope?: { workspaceId?: string; teamId?: string; staffId?: string }
+  ): Promise<SessionState | null> {
+    const key = this.getKey(sessionId, scope);
 
     try {
       const result = await this.docClient.send(
@@ -603,32 +657,6 @@ export class SessionStateManager {
     } catch (error) {
       logger.error(`Session ${sessionId}: Failed to get session state:`, error);
       return null;
-    }
-  }
-
-  /**
-   * Checks if a session is currently being processed.
-   */
-  async isProcessing(sessionId: string): Promise<boolean> {
-    const key = this.getKey(sessionId);
-    try {
-      const result = await this.docClient.send(
-        new GetCommand({
-          TableName: this.tableName,
-          Key: { userId: key, timestamp: 0 },
-          ConsistentRead: true,
-        })
-      );
-
-      if (!result.Item || !result.Item.processingAgentId) return false;
-
-      const lockExpiresAt = (result.Item.lockExpiresAt as number) || 0;
-      const now = Math.floor(Date.now() / TIME.MS_PER_SECOND);
-
-      return now < lockExpiresAt;
-    } catch (error) {
-      logger.error(`Session ${sessionId}: Failed to check processing status:`, error);
-      return false;
     }
   }
 }

@@ -190,7 +190,11 @@ export const handler = async (
 
   if (!canProcess) {
     logger.info(`[WEBHOOK] Session ${chatId} busy, queuing message...`);
-    await sessionStateManager.addPendingMessage(chatId, text, attachments);
+    await sessionStateManager.addPendingMessage(chatId, text, attachments, {
+      workspaceId,
+      teamId,
+      staffId,
+    });
     return { statusCode: 200, body: 'Message queued for processing' };
   }
 
@@ -350,7 +354,11 @@ export const handler = async (
     throw err;
   } finally {
     // 5. Release processing flag
-    await sessionStateManager.releaseProcessing(chatId, lambdaRequestId);
+    await sessionStateManager.releaseProcessing(chatId, lambdaRequestId, {
+      workspaceId,
+      teamId,
+      staffId,
+    });
   }
 
   return { statusCode: 200, body: 'OK' };

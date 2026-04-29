@@ -149,7 +149,8 @@ describe('Webhook Handler Integration', () => {
     );
     expect(mockSessionStateManagerInstance.releaseProcessing).toHaveBeenCalledWith(
       '789',
-      'test-request-id'
+      'test-request-id',
+      { workspaceId: undefined, teamId: undefined, staffId: undefined }
     );
   });
 

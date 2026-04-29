@@ -72,7 +72,12 @@ export abstract class BaseExecutor {
         this.agentId,
         this.lastInjectedMessageTimestamp,
         options.sessionStateManager,
-        options.traceId
+        options.traceId,
+        {
+          workspaceId: options.workspaceId,
+          teamId: options.teamId,
+          staffId: options.staffId,
+        }
       );
     }
 

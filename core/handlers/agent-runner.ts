@@ -109,7 +109,11 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
     const runHeartbeat = async () => {
       try {
         if (!lockAcquired) return;
-        const renewed = await sessionStateManager.renewProcessing(sessionId, agentId);
+        const renewed = await sessionStateManager.renewProcessing(sessionId, agentId, {
+          workspaceId,
+          teamId,
+          staffId,
+        });
         if (!renewed) {
           logger.warn(`[AgentRunner] Failed to renew lock for ${sessionId}. Lock lost.`);
           lockAcquired = false;
@@ -136,7 +140,11 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
   if (currentDepth === null) {
     if (lockAcquired && sessionId) {
       if (heartbeatInterval) clearInterval(heartbeatInterval);
-      await sessionStateManager.releaseProcessing(sessionId, agentId);
+      await sessionStateManager.releaseProcessing(sessionId, agentId, {
+        workspaceId,
+        teamId,
+        staffId,
+      });
     }
     return `Error: Recursion limit exceeded for trace ${traceId}`;
   }
@@ -293,7 +301,11 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
   } finally {
     if (heartbeatInterval) clearInterval(heartbeatInterval);
     if (lockAcquired && sessionId && agentId) {
-      await sessionStateManager.releaseProcessing(sessionId, agentId);
+      await sessionStateManager.releaseProcessing(sessionId, agentId, {
+        workspaceId,
+        teamId,
+        staffId,
+      });
     }
   }
 }

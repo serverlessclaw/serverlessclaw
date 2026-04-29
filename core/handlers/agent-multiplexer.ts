@@ -144,7 +144,7 @@ export const handler = async (
 
   // Check collaboration timeout if this is part of an active session
   if (sessionId && _traceId) {
-    const sessionState = await sessionStateManager.getState(sessionId);
+    const sessionState = await sessionStateManager.getState(sessionId, scope);
     if (sessionState && sessionState.lastMessageAt) {
       const isTimedOut = await checkCollaborationTimeout(
         {
@@ -189,7 +189,12 @@ export const handler = async (
 
     if (!lockAcquired) {
       logger.info(`[MULTIPLEXER] Session ${sessionId} busy. Queueing task for ${targetAgent}.`);
-      await sessionStateManager.addPendingMessage(sessionId, `${targetAgent}: ${detailType}`, []);
+      await sessionStateManager.addPendingMessage(
+        sessionId,
+        `${targetAgent}: ${detailType}`,
+        [],
+        scope
+      );
       return {
         status: 'QUEUED',
         message: `Session busy. Task added to pending queue for ${targetAgent}.`,
@@ -210,7 +215,7 @@ export const handler = async (
 
     if (currentDepth === null) {
       if (lockAcquired && sessionId) {
-        await sessionStateManager.releaseProcessing(sessionId, targetAgent);
+        await sessionStateManager.releaseProcessing(sessionId, targetAgent, scope);
       }
       return `Error: Recursion limit exceeded for trace ${_traceId}`;
     }
@@ -225,7 +230,7 @@ export const handler = async (
 
     // Ensure lock is renewed just before dispatch to give the next handler full TTL
     if (lockAcquired && sessionId && targetAgent) {
-      await sessionStateManager.renewProcessing(sessionId, targetAgent);
+      await sessionStateManager.renewProcessing(sessionId, targetAgent, scope);
     }
 
     const agentModule = await import(handlerPath);
@@ -241,7 +246,7 @@ export const handler = async (
   } finally {
     // Cleanup: release lock
     if (lockAcquired && sessionId && targetAgent) {
-      await sessionStateManager.releaseProcessing(sessionId, targetAgent);
+      await sessionStateManager.releaseProcessing(sessionId, targetAgent, scope);
     }
   }
 };

@@ -22,6 +22,24 @@ We use DynamoDB `ConditionExpression` to prevent "Last Write Wins" race conditio
      |<-- Error (Conflict)|                      |
 ```
 
+## 1b. Collaboration Index Jitter (Perspective C)
+
+To prevent overwrites when multiple collaborations share a participant at the same millisecond, the system uses a jittered retry loop.
+
+```ascii
+  Identity Service        DynamoDB (Collab Index)
+         |                        |
+         |-- Put (T=now) -------->|
+         |    w/ attribute_not_exists(userId)
+         |                        |
+         |<-- Conflict (409) -----|
+         |                        |
+         |-- Put (T=now+1) ------>|
+         |                        |
+         |<-- Success (200) ------|
+         |                        |
+```
+
 ## 2. Multi-Tenant Budget Enforcement (Shield)
 
 Token usage and recursion depth are tracked with strict `workspaceId` dimensioning to prevent cross-tenant budget leakage.

@@ -72,8 +72,15 @@ export class ToolSecurityValidator {
     }
 
     const requiresApproval = safetyResult.requiresApproval || tool.requiresApproval;
-    const safetyAllowsInAutoMode = evolutionMode === EvolutionMode.AUTO && safetyResult.allowed;
-    const effectiveApproved = isApproved || (safetyAllowsInAutoMode && !tool.requiresApproval);
+    // Note: safetyResult.allowed being true with requiresApproval true means it's a soft restriction.
+    // In AUTO mode, we only bypass if the SafetyEngine itself didn't flag it as requiring approval
+    // (it would have already handled Principle 9 trust-based promotion internally).
+    const effectiveApproved =
+      isApproved ||
+      (evolutionMode === EvolutionMode.AUTO &&
+        safetyResult.allowed &&
+        !safetyResult.requiresApproval &&
+        !tool.requiresApproval);
 
     // Self-approval block
     if (args.manuallyApproved === true && !effectiveApproved) {

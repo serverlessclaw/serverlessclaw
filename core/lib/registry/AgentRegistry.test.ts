@@ -203,6 +203,21 @@ describe('AgentRegistry', () => {
       expect(ConfigManager.atomicUpdateMapEntity).toHaveBeenCalled();
     });
 
+    it('should allow partial updates without name/systemPrompt', async () => {
+      const partialConfig = { enabled: false };
+      await AgentRegistry.saveConfig('facilitator', partialConfig);
+
+      expect(ConfigManager.atomicUpdateMapEntity).toHaveBeenCalledWith(
+        DYNAMO_KEYS.AGENTS_CONFIG,
+        'facilitator',
+        expect.objectContaining({
+          enabled: false,
+          lastUpdated: expect.any(String),
+        }),
+        expect.anything()
+      );
+    });
+
     it('should implement cognitive lineage with versioning and hashing', async () => {
       const config = { id: 'evolution-bot', name: 'Evolution Bot', systemPrompt: 'Be helpful.' };
 
