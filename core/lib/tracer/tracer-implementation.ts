@@ -407,11 +407,13 @@ export class ClawTracer {
 
   /**
    * Retrieves all nodes belonging to a specific traceId.
+   * Includes workspaceId verification for multi-tenant isolation.
    *
    * @param traceId - The trace ID to retrieve.
+   * @param workspaceId - Optional workspaceId for isolation check.
    * @returns A promise resolving to an array of trace nodes.
    */
-  static async getTrace(traceId: string): Promise<Trace[]> {
+  static async getTrace(traceId: string, workspaceId?: string): Promise<Trace[]> {
     const response = await getDocClient().send(
       new QueryCommand({
         TableName: getTraceTableName(),
@@ -419,7 +421,16 @@ export class ClawTracer {
         ExpressionAttributeValues: { ':tid': traceId },
       })
     );
-    return (response.Items as Trace[]) ?? [];
+
+    const items = (response.Items as Trace[]) ?? [];
+
+    if (workspaceId && items.length > 0) {
+      // All nodes in a trace should share the same workspaceId
+      // We check the summary node or the first available node
+      return items.filter((item) => item.workspaceId === workspaceId);
+    }
+
+    return items;
   }
 
   /**

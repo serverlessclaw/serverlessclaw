@@ -55,6 +55,7 @@ export interface DlqEntry {
   correlationId?: string;
   createdAt: number;
   expiresAt: number;
+  workspaceId?: string;
 }
 
 let _eventbridge: EventBridgeClient | null = null;
@@ -208,10 +209,13 @@ async function storeInDLQ(
     const now = Date.now();
     const expiresAt = Math.floor(now / 1000) + TIME.SECONDS_IN_DAY; // 24 hours for DLQ
 
+    const workspaceId = (detail.workspaceId as string) || undefined;
+    const scopePrefix = workspaceId ? `WS#${workspaceId}#` : '';
+
     // Use deterministic key if provided, otherwise generate from event content
     const dlqKey = idempotencyKey
-      ? `${DLQ_PREFIX}#${idempotencyKey}`
-      : `${DLQ_PREFIX}#${now}#${type.slice(0, 20)}`;
+      ? `${scopePrefix}${DLQ_PREFIX}#${idempotencyKey}`
+      : `${scopePrefix}${DLQ_PREFIX}#${now}#${type.slice(0, 20)}`;
 
     await getDb().send(
       new PutCommand({
@@ -231,6 +235,7 @@ async function storeInDLQ(
           correlationId: options.correlationId,
           createdAt: now,
           expiresAt,
+          workspaceId,
         },
       })
     );
@@ -238,7 +243,7 @@ async function storeInDLQ(
     const priorityLabel = options.priority ?? EventPriority.NORMAL;
     const errorCat = options.errorCategory ?? ErrorCategory.UNKNOWN;
     logger.warn(
-      `Event stored in DLQ: ${source}/${type} | Retries: ${options.retryCount}/${options.maxRetries} | Priority: ${priorityLabel} | Error: ${errorCat}`
+      `Event stored in DLQ: ${source}/${type} (WS: ${workspaceId || 'GLOBAL'}) | Retries: ${options.retryCount}/${options.maxRetries} | Priority: ${priorityLabel} | Error: ${errorCat}`
     );
   } catch (dlqError) {
     logger.error('Failed to store event in DLQ:', dlqError);
@@ -298,14 +303,20 @@ export async function emitEvent(
           continue;
         }
         // Final attempt also failed — store in DLQ and return failure
-        await storeInDLQ(source, type as string, detail, {
-          retryCount: attempt,
-          maxRetries,
-          lastError: `EventBridge FailedEntryCount=${result.FailedEntryCount}`,
-          errorCategory: ErrorCategory.UNKNOWN,
-          priority,
-          correlationId,
-        });
+        await storeInDLQ(
+          source,
+          type as string,
+          detail,
+          {
+            retryCount: attempt,
+            maxRetries,
+            lastError: `EventBridge FailedEntryCount=${result.FailedEntryCount}`,
+            errorCategory: ErrorCategory.UNKNOWN,
+            priority,
+            correlationId,
+          },
+          idempotencyKey
+        );
         return { success: false, reason: 'DLQ' };
       }
 
@@ -326,14 +337,20 @@ export async function emitEvent(
       );
 
       if (isPermanent) {
-        await storeInDLQ(source, type as string, detail, {
-          retryCount: attempt,
-          maxRetries,
-          lastError: error instanceof Error ? error.message : String(error),
-          errorCategory,
-          priority,
-          correlationId,
-        });
+        await storeInDLQ(
+          source,
+          type as string,
+          detail,
+          {
+            retryCount: attempt,
+            maxRetries,
+            lastError: error instanceof Error ? error.message : String(error),
+            errorCategory,
+            priority,
+            correlationId,
+          },
+          idempotencyKey
+        );
         return { success: false, reason: 'PERMANENT_ERROR' };
       }
 
@@ -341,14 +358,20 @@ export async function emitEvent(
         const backoff = INITIAL_BACKOFF_MS * Math.pow(2, attempt - 1);
         await sleep(backoff);
       } else if (attempt >= maxRetries) {
-        await storeInDLQ(source, type as string, detail, {
-          retryCount: attempt,
-          maxRetries,
-          lastError: error instanceof Error ? error.message : String(error),
-          errorCategory,
-          priority,
-          correlationId,
-        });
+        await storeInDLQ(
+          source,
+          type as string,
+          detail,
+          {
+            retryCount: attempt,
+            maxRetries,
+            lastError: error instanceof Error ? error.message : String(error),
+            errorCategory,
+            priority,
+            correlationId,
+          },
+          idempotencyKey
+        );
         return { success: false, reason: 'DLQ' };
       }
     }
@@ -361,7 +384,10 @@ async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function getDlqEntries(limit = 50): Promise<DlqEntry[]> {
+export async function getDlqEntries(
+  options: { limit?: number; workspaceId?: string } = {}
+): Promise<DlqEntry[]> {
+  const { limit = 50, workspaceId } = options;
   try {
     const tableName = await getMemoryTableName();
     const result = await getDb().send(
@@ -378,11 +404,17 @@ export async function getDlqEntries(limit = 50): Promise<DlqEntry[]> {
           ':cutoff': Date.now() - TIME.MS_PER_DAY, // Last 24 hours
         },
         ScanIndexForward: false, // Newest first
-        Limit: limit,
+        Limit: workspaceId ? limit * 5 : limit, // Fetch more if filtering by workspace
       })
     );
 
-    return (result.Items ?? []) as DlqEntry[];
+    let items = (result.Items ?? []) as DlqEntry[];
+
+    if (workspaceId) {
+      items = items.filter((item) => item.workspaceId === workspaceId);
+    }
+
+    return items.slice(0, limit);
   } catch (error) {
     logger.error('Failed to get DLQ entries:', error);
     return [];

@@ -267,6 +267,25 @@ try {
 
 ---
 
+### 14. Global Telemetry (Missing WorkspaceId)
+
+**What**: Emitting metrics, traces, or DLQ entries without `WorkspaceId` dimensions or prefixes, leading to tenant data mixing or blindness in multi-tenant environments.
+
+**Pattern**:
+
+```typescript
+// ❌ WRONG
+emitMetrics([METRICS.dlqEvents(1)]); // Metric is global, no tenant filtering possible
+
+// ✅ CORRECT
+const scope = { workspaceId: event.workspaceId };
+emitMetrics([METRICS.dlqEvents(1, scope)]); // Partitioned via dimension
+```
+
+**Occurrences**: Fixed 6+ instances across Spine, Brain, and Eye in audit round 2026-04-29.
+
+---
+
 ## How to Use This Document
 
 1. **During Code Review**: Check this document before submitting

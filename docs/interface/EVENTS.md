@@ -108,6 +108,7 @@ Errors are classified to optimize retry behavior:
 Failed events are automatically stored in the DLQ with full metadata including retry counts and error categories.
 
 - **Schema**: See `DlqEntry` interface in [`core/lib/utils/bus.ts`](../../core/lib/utils/bus.ts).
+- **Multi-tenant Isolation**: DLQ entries are partitioned by `workspaceId` in the Partition Key (`WS#<workspaceId>#DLQ#<idempotencyKey>`) to ensure strict tenant isolation and prevent data leakage during recovery.
 
 The bus provides tools to inspect and replay failed events.
 

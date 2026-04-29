@@ -42,7 +42,7 @@ vi.mock('../lib/logger', () => ({
 }));
 
 describe('Circuit Breaker Integration', () => {
-  const cb = getCircuitBreaker('test-cb');
+  const cb = getCircuitBreaker('test-cb', 'ws-123');
 
   beforeEach(() => {
     vi.clearAllMocks();

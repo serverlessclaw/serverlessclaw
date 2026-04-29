@@ -329,7 +329,8 @@ export class ContextManager {
     userId: string,
     provider: IProvider,
     history: Message[],
-    traceId?: string
+    traceId?: string,
+    scope?: { workspaceId?: string; teamId?: string; staffId?: string }
   ): Promise<void> {
     const previousSummary = await memory.getSummary(userId);
     const keyFacts = this.extractKeyFacts(history);
@@ -371,22 +372,25 @@ export class ContextManager {
       if (response.usage && (response.usage.total_tokens ?? 0) > 0) {
         try {
           const { TokenTracker } = await import('../metrics/token-usage');
-          await TokenTracker.recordInvocation({
-            timestamp: Date.now(),
-            traceId: '',
-            agentId: 'context-manager',
-            provider: 'summarization',
-            model: 'unknown',
-            inputTokens: response.usage.prompt_tokens,
-            outputTokens: response.usage.completion_tokens,
-            totalTokens:
-              response.usage.total_tokens ??
-              response.usage.prompt_tokens + response.usage.completion_tokens,
-            toolCalls: 0,
-            taskType: 'summarization',
-            success: true,
-            durationMs: 0,
-          });
+          await TokenTracker.recordInvocation(
+            {
+              timestamp: Date.now(),
+              traceId: '',
+              agentId: 'context-manager',
+              provider: 'summarization',
+              model: 'unknown',
+              inputTokens: response.usage.prompt_tokens,
+              outputTokens: response.usage.completion_tokens,
+              totalTokens:
+                response.usage.total_tokens ??
+                response.usage.prompt_tokens + response.usage.completion_tokens,
+              toolCalls: 0,
+              taskType: 'summarization',
+              success: true,
+              durationMs: 0,
+            },
+            scope
+          );
         } catch {
           // non-critical
         }

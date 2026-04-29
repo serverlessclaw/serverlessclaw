@@ -29,6 +29,8 @@ export interface Trace {
   parentId?: string;
   /** The ID of the user or session the trace belongs to. */
   userId: string;
+  /** Optional workspace ID for multi-tenant isolation. */
+  workspaceId?: string;
   /** The origin of the request (e.g., 'dashboard', 'telegram', 'system'). */
   source: TraceSource | string;
   /** The ID of the agent executing this trace node. */

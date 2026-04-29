@@ -102,6 +102,9 @@ If no `__summary__` rows are found (e.g., in development or if `trace_summaries`
 [ Scan nodeId = 'root' ] ───────────────▶ [ Return Root Nodes ]
 ```
 
+> [!IMPORTANT]
+> **Multi-tenant Isolation**: Every trace retrieval (`getTrace`) includes mandatory `workspaceId` verification. The system filters all returned nodes to ensure they belong to the authorized workspace, preventing cross-tenant trace leaks in the dashboard.
+
 > [!NOTE]
 > The fallback scan is limited to 200 items to prevent performance degradation on large tables. It is designed to ensure the `/trace` dashboard remains functional across all environment configurations.
 

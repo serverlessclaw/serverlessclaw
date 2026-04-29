@@ -205,6 +205,25 @@ export class ToolExecutor {
         traceId: execContext.traceId,
         messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       });
+
+      // Record JSON parsing failure as a trust penalty
+      try {
+        const { TrustManager } = await import('../safety/trust-manager');
+        await TrustManager.recordFailure(
+          execContext.agentId,
+          `Tool ${tool.name} failed: Malformed JSON arguments`,
+          1,
+          0,
+          {
+            workspaceId: execContext.workspaceId,
+            teamId: execContext.teamId,
+            staffId: execContext.staffId,
+          }
+        );
+      } catch (trustError) {
+        logger.error('[EXECUTOR] Failed to record parsing failure:', trustError);
+      }
+
       return { toolCallCount: 0 };
     }
 
@@ -297,14 +316,34 @@ export class ToolExecutor {
         args = tool.argSchema.parse(args) as Record<string, unknown>;
       } catch (schemaError) {
         logger.error(`Argument validation failed for tool ${tool.name}:`, schemaError);
+        const errMsg = schemaError instanceof Error ? schemaError.message : String(schemaError);
         messages.push({
           role: MessageRole.TOOL,
           tool_call_id: toolCall.id,
           name: toolCall.function.name,
-          content: `FAILED: Argument validation error: ${schemaError instanceof Error ? schemaError.message : String(schemaError)}`,
+          content: `FAILED: Argument validation error: ${errMsg}`,
           traceId: execContext.traceId,
           messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         });
+
+        // Record schema validation failure as a trust penalty
+        try {
+          const { TrustManager } = await import('../safety/trust-manager');
+          await TrustManager.recordFailure(
+            execContext.agentId,
+            `Tool ${tool.name} failed: Argument validation error: ${errMsg}`,
+            1,
+            0,
+            {
+              workspaceId: execContext.workspaceId,
+              teamId: execContext.teamId,
+              staffId: execContext.staffId,
+            }
+          );
+        } catch (trustError) {
+          logger.error('[EXECUTOR] Failed to record validation failure:', trustError);
+        }
+
         return { toolCallCount: 0 };
       }
     }
@@ -446,7 +485,8 @@ export class ToolExecutor {
           toolSuccess,
           Math.round(toolDurationMs),
           estimatedInputTokens,
-          estimatedOutputTokens
+          estimatedOutputTokens,
+          scope
         ).catch(() => {});
 
         // Phase 16: Evolution Analytics (Tool ROI)

@@ -141,7 +141,10 @@ export class BaseMemoryProvider {
     } catch (error) {
       const errorName = (error as Error).name || 'UnknownError';
       const { emitMetrics, METRICS } = await import('../metrics/metrics');
-      await emitMetrics([METRICS.storageError('putItem', errorName, tableName)]).catch(() => {});
+      const workspaceId = (item as any).workspaceId || undefined;
+      await emitMetrics([
+        METRICS.storageError('putItem', errorName, tableName, { workspaceId }),
+      ]).catch(() => {});
       logger.error('Error putting item into DynamoDB:', error);
       throw error;
     }
@@ -173,7 +176,10 @@ export class BaseMemoryProvider {
     } catch (error) {
       const errorName = (error as Error).name || 'UnknownError';
       const { emitMetrics, METRICS } = await import('../metrics/metrics');
-      await emitMetrics([METRICS.storageError('queryItems', errorName, tableName)]).catch(() => {});
+      const workspaceId = (params as any).ExpressionAttributeValues?.[':workspaceId'];
+      await emitMetrics([
+        METRICS.storageError('queryItems', errorName, tableName, { workspaceId }),
+      ]).catch(() => {});
       logger.error('Error querying DynamoDB:', error);
       throw error;
     }
@@ -222,7 +228,17 @@ export class BaseMemoryProvider {
     } catch (error) {
       const errorName = (error as Error).name || 'UnknownError';
       const { emitMetrics, METRICS } = await import('../metrics/metrics');
-      await emitMetrics([METRICS.storageError('deleteItem', errorName, tableName)]).catch(() => {});
+
+      // Attempt to extract workspaceId from userId prefix (WS#workspaceId#...)
+      let workspaceId: string | undefined;
+      if (userId.startsWith('WS#')) {
+        const parts = userId.split('#');
+        workspaceId = parts[1];
+      }
+
+      await emitMetrics([
+        METRICS.storageError('deleteItem', errorName, tableName, { workspaceId }),
+      ]).catch(() => {});
       if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
         throw error;
       }
@@ -252,7 +268,10 @@ export class BaseMemoryProvider {
     } catch (error) {
       const errorName = (error as Error).name || 'UnknownError';
       const { emitMetrics, METRICS } = await import('../metrics/metrics');
-      await emitMetrics([METRICS.storageError('updateItem', errorName, tableName)]).catch(() => {});
+      const workspaceId = (command.input.ExpressionAttributeValues as any)?.[':workspaceId'];
+      await emitMetrics([
+        METRICS.storageError('updateItem', errorName, tableName, { workspaceId }),
+      ]).catch(() => {});
       throw error;
     }
   }

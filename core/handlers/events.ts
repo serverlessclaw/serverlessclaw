@@ -51,6 +51,8 @@ export async function handler(
 
   const traceId = eventDetail.traceId as string;
   const sessionId = eventDetail.sessionId as string;
+  const workspaceId = (eventDetail.workspaceId as string) || undefined;
+  const scope = { workspaceId };
 
   if (detailType === EventType.DLQ_ROUTE) {
     logger.warn(
@@ -68,7 +70,7 @@ export async function handler(
         `[RECURSION] Limit exceeded for trace ${traceId} (Depth: ${currentDepth}, Limit: ${recursionLimit})`
       );
       await routeToDlq(event, detailType, 'SYSTEM', traceId, `Recursion limit exceeded`, sessionId);
-      emitMetrics([METRICS.dlqEvents(1)]).catch(() => {});
+      emitMetrics([METRICS.dlqEvents(1, scope)]).catch(() => {});
       return;
     }
 
@@ -84,17 +86,16 @@ export async function handler(
   });
 
   // Emit entry metric
-  emitMetrics([METRICS.eventHandlerInvoked(detailType)]).catch((err) =>
+  emitMetrics([METRICS.eventHandlerInvoked(detailType, scope)]).catch((err) =>
     logger.warn(`Metrics emission failed for ${detailType}:`, err)
   );
 
   // Flow Control (Rate limiting & Circuit breaker)
-  const workspaceId = (eventDetail.workspaceId as string) || undefined;
   const flowResult = await FlowController.canProceed(detailType, workspaceId);
   if (!flowResult.allowed) {
     logger.warn(`[FLOW_CONTROL] ${flowResult.reason} for ${detailType}`);
     await routeToDlq(event, detailType, 'SYSTEM', traceId, flowResult.reason!, sessionId);
-    emitMetrics([METRICS.dlqEvents(1)]).catch(() => {});
+    emitMetrics([METRICS.dlqEvents(1, scope)]).catch(() => {});
     return;
   }
 
@@ -124,7 +125,7 @@ export async function handler(
   if (retryCount > maxRetryCount) {
     logger.warn(`[RETRY] Exceeded max retries (${maxRetryCount}) for ${detailType}`);
     await routeToDlq(event, detailType, 'SYSTEM', traceId, 'Max retry count exceeded', sessionId);
-    emitMetrics([METRICS.dlqEvents(1)]).catch(() => {});
+    emitMetrics([METRICS.dlqEvents(1, scope)]).catch(() => {});
     return;
   }
 
@@ -164,7 +165,7 @@ export async function handler(
     if (!routing) {
       logger.warn(`Unhandled event type: ${detailType}. Routing to DLQ.`);
       await routeToDlq(event, detailType, 'SYSTEM', traceId, undefined, sessionId);
-      emitMetrics([METRICS.dlqEvents(1)]).catch(() => {});
+      emitMetrics([METRICS.dlqEvents(1, scope)]).catch(() => {});
       return;
     }
 
@@ -195,21 +196,21 @@ export async function handler(
             const errorMsg = `[SAFE_MODE] Critical fallback lookup failed for ${fallbackModuleName}: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`;
             logger.error(errorMsg);
             await routeToDlq(event, detailType, 'SYSTEM', traceId, errorMsg, sessionId);
-            emitMetrics([METRICS.dlqEvents(1)]).catch(() => {});
+            emitMetrics([METRICS.dlqEvents(1, scope)]).catch(() => {});
             throw new Error(errorMsg);
           }
         } else {
           const errorMsg = `[SAFE_MODE] Primary lookup failed and no fallback exists for ${detailType}`;
           logger.error(errorMsg);
           await routeToDlq(event, detailType, 'SYSTEM', traceId, errorMsg, sessionId);
-          emitMetrics([METRICS.dlqEvents(1)]).catch(() => {});
+          emitMetrics([METRICS.dlqEvents(1, scope)]).catch(() => {});
           throw new Error(errorMsg);
         }
       } else {
         const errorMsg = `Already using default routing and lookup failed: ${importError instanceof Error ? importError.message : String(importError)}`;
         logger.error(errorMsg);
         await routeToDlq(event, detailType, 'SYSTEM', traceId, errorMsg, sessionId);
-        emitMetrics([METRICS.dlqEvents(1)]).catch(() => {});
+        emitMetrics([METRICS.dlqEvents(1, scope)]).catch(() => {});
         throw new Error(errorMsg);
       }
     }
@@ -235,7 +236,7 @@ export async function handler(
 
       // Emit success timing metric
       const durationMs = performance.now() - startTime;
-      emitMetrics([METRICS.eventHandlerDuration(detailType, durationMs)]).catch((err) =>
+      emitMetrics([METRICS.eventHandlerDuration(detailType, durationMs, scope)]).catch((err) =>
         logger.warn(`Metrics emission failed for ${detailType} duration:`, err)
       );
 
@@ -256,10 +257,10 @@ export async function handler(
 
     // Route to DLQ
     await routeToDlq(event, detailType, 'SYSTEM', traceId, errorMessage, sessionId);
-    emitMetrics([METRICS.dlqEvents(1)]).catch(() => {});
+    emitMetrics([METRICS.dlqEvents(1, scope)]).catch(() => {});
 
     // Emit error timing metric
-    emitMetrics([METRICS.eventHandlerErrorDuration(detailType, elapsed)]).catch((err) =>
+    emitMetrics([METRICS.eventHandlerErrorDuration(detailType, elapsed, scope)]).catch((err) =>
       logger.warn(`Metrics emission failed for ${detailType} error:`, err)
     );
 

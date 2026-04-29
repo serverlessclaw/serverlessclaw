@@ -433,6 +433,9 @@ To ensure "small" sessions are never blocked by unrelated runaway background tas
 [ traceId Resolution ] <-------------------------------------------------+
 (ProviderManager)
         |
+        +----(2) [ workspaceId provided? ] --- [YES] ---> [ Filter Traces by WSID ]
+        |                                      [NO ] ---> [ Global Trace Access ]
+        |
         +---- Falls back to 'session-<id>' if missing (Session Isolation)
         |
         v

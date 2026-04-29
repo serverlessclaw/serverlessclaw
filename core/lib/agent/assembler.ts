@@ -208,7 +208,8 @@ export class AgentAssembler {
         storageId,
         provider,
         fullHistory,
-        currentMessage.traceId
+        currentMessage.traceId,
+        scope
       ).catch((err) => logger.error('Background summarization failed:', err));
     }
 

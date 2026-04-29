@@ -98,6 +98,28 @@ describe('Event Bus', () => {
       expect(eventBridgeMock.calls()).toHaveLength(1); // No retries
       expect(ddbMock.calls()).toHaveLength(1); // Stored in DLQ
     });
+
+    it('should include workspaceId in DLQ key and item when provided', async () => {
+      eventBridgeMock.on(PutEventsCommand).rejects(new Error('Access Denied'));
+      ddbMock.on(PutCommand).resolves({});
+
+      await emitEvent(
+        'test.source',
+        'test.event',
+        { data: 'test', workspaceId: 'ws-123' },
+        { idempotencyKey: 'idem-1' }
+      );
+
+      expect(ddbMock.calls()).toHaveLength(2); // 1 for Idempotency Reserve, 1 for DLQ
+      const dlqCall = ddbMock.calls().find((c) => {
+        const input = c.args[0].input as any;
+        return input.Item?.type === 'DLQ_EVENT';
+      });
+      expect(dlqCall).toBeDefined();
+      const input = dlqCall?.args[0].input as PutCommandInput;
+      expect(input.Item?.userId).toBe('WS#ws-123#EVENTBUS#DLQ#idem-1');
+      expect(input.Item?.workspaceId).toBe('ws-123');
+    });
   });
 
   describe('Convenience Helpers', () => {
@@ -199,6 +221,21 @@ describe('Event Bus', () => {
       const input = ddbMock.call(0).args[0].input as QueryCommandInput;
       expect(input.IndexName).toBe('TypeTimestampIndex');
       expect(input.ExpressionAttributeValues?.[':type']).toBe('DLQ_EVENT');
+    });
+
+    it('should filter DLQ entries by workspaceId', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [
+          { userId: 'DLQ#1', workspaceId: 'ws-1', type: 'DLQ_EVENT' },
+          { userId: 'DLQ#2', workspaceId: 'ws-2', type: 'DLQ_EVENT' },
+          { userId: 'DLQ#3', workspaceId: 'ws-1', type: 'DLQ_EVENT' },
+        ],
+      });
+
+      const entries = await getDlqEntries({ workspaceId: 'ws-1' });
+
+      expect(entries).toHaveLength(2);
+      expect(entries.every((e) => e.workspaceId === 'ws-1')).toBe(true);
     });
 
     it('should purge DLQ entry', async () => {

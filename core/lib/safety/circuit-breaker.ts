@@ -155,8 +155,9 @@ export class CircuitBreaker {
       await this.logStateChange(finalState, type, ctx);
       try {
         const { emitMetrics, METRICS } = await import('../metrics');
+        const scope = { workspaceId: this.workspaceId };
         await emitMetrics([
-          METRICS.circuitBreakerTriggered(type as 'deploy' | 'recovery' | 'gap' | 'event'),
+          METRICS.circuitBreakerTriggered(type as 'deploy' | 'recovery' | 'gap' | 'event', scope),
         ]);
       } catch {
         // Metrics emission failure should not block circuit breaker operation
