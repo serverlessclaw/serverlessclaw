@@ -59,7 +59,8 @@ export async function handleProcess(
     attachments: incomingAttachments,
     source = TraceSource.UNKNOWN,
     responseFormat: initialResponseFormat,
-    communicationMode = agent.config?.defaultCommunicationMode ?? 'text',
+    communicationMode = agent.config?.defaultCommunicationMode ??
+      (options.initiatorId ? 'json' : 'text'),
     taskTimeoutMs,
     priorTokenUsage,
     skipUserSave = false,

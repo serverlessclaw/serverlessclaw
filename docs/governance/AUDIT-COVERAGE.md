@@ -27,7 +27,7 @@ Last Updated: 2026-04-29
 | Perspective | Name              | Description            | Usage Count | Last Tested |
 | :---------- | :---------------- | :--------------------- | :---------- | :---------- |
 | **A**       | Life of a Message | Spine → Brain → Eye    | 7           | 2026-04-29  |
-| **B**       | Evolution Cycle   | Hand → Shield → Scales | 6           | 2026-04-29  |
+| **B**       | Evolution Cycle   | Hand → Shield → Scales | 7           | 2026-04-29  |
 | **C**       | Identity Journey  | Brain → Spine → Shield | 7           | 2026-04-29  |
 | **D**       | Trust Loop        | Eye → Scales → Spine   | 7           | 2026-04-29  |
 | **E**       | Recovery Path     | Shield → Spine → Brain | 7           | 2026-04-29  |
@@ -38,10 +38,12 @@ Last Updated: 2026-04-29
 
 | Date       | Report                                          | Silos Covered         | Cross-Silo | Key Findings                                                                                        |
 | :--------- | :---------------------------------------------- | :-------------------- | :--------- | :-------------------------------------------------------------------------------------------------- |
-| 2026-04-29 | `audit-2026-04-29-life-of-a-message-v3.md`     | Spine, Brain, Eye     | A          | FIXED: P1 Telemetry blindness in spine, P1 DLQ multi-tenant leak, P1 Cross-tenant trace leak        |
-| 2026-04-29 | `audit-2026-04-29-recovery-path.md`            | Shield, Spine, Brain  | E          | FIXED: P1 Fail-open CB state, P1 Multi-tenant Session PK gap, P1 Unscoped Distributed Locks       |
-| 2026-04-29 | `audit-2026-04-29-identity-journey-v3.md`      | Shield, Brain         | C          | FIXED: P1 Fail-open agent selection in collaborations, P2 Orphaned fail-open circuit breaker      |
-| 2026-04-29 | `audit-2026-04-29-metabolism-identity.md`     | Metabolism, Identity  | C, D       | FIXED: P1 Registry partial update, P1 Participant index collision, P1 S3 Reclamation telemetry |
+| 2026-04-29 | `audit-2026-04-29-identity-metabolism.md`      | Brain, Shield, Metabolism | C, D       | FIXED: P1 Global telemetry blindness in evolution metrics, P1 Missing workspaceId in Tool ROI. |
+| 2026-04-29 | `audit-2026-04-29-evolution-cycle-v2.md`       | Hand, Shield, Scales  | B          | FIXED: P1 Blind Tool Failures (JSON/Zod), P1 Adaptive Mode routing bug, P1 Selection Integrity   |
+| 2026-04-29 | `audit-2026-04-29-life-of-a-message-v3.md`      | Spine, Brain, Eye     | A          | FIXED: P1 Telemetry blindness in spine, P1 DLQ multi-tenant leak, P1 Cross-tenant trace leak        |
+| 2026-04-29 | `audit-2026-04-29-recovery-path.md`             | Shield, Spine, Brain  | E          | FIXED: P1 Fail-open CB state, P1 Multi-tenant Session PK gap, P1 Unscoped Distributed Locks         |
+| 2026-04-29 | `audit-2026-04-29-identity-journey-v3.md`       | Shield, Brain         | C          | FIXED: P1 Fail-open agent selection in collaborations, P2 Orphaned fail-open circuit breaker        |
+| 2026-04-29 | `audit-2026-04-29-metabolism-identity.md`       | Metabolism, Identity  | C, D       | FIXED: P1 Registry partial update, P1 Participant index collision, P1 S3 Reclamation telemetry      |
 | 2026-04-29 | `audit-2026-04-29-evolution-hand.md`            | Hand, Scales          | B          | FIXED: P1 Blind Security Failures, P1 Blind Execution Crashes, P1 Inconsistent Success Detection    |
 | 2026-04-29 | `audit-2026-04-29-message-metabolism.md`        | Eye, Metabolism       | A          | FIXED: P1 Collaboration race condition, P1 Telemetry blindness, P2 Stale tool pruning gap           |
 | 2026-04-27 | `audit-2026-04-27-evolution-scoping.md`         | Hand, Brain           | B          | FIXED: P1 Tenant-Blind Config Load, P1 Unscoped Activation Chain                                    |

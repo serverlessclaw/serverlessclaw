@@ -492,6 +492,7 @@ export class ToolExecutor {
         // Phase 16: Evolution Analytics (Tool ROI)
         const { EVOLUTION_METRICS } = await import('../metrics/evolution-metrics');
         EVOLUTION_METRICS.recordToolExecution(tool.name, toolSuccess, Math.round(toolDurationMs), {
+          workspaceId: execContext.workspaceId,
           orgId: execContext.orgId,
         });
 
@@ -499,6 +500,7 @@ export class ToolExecutor {
         const totalTokens = estimatedInputTokens + estimatedOutputTokens;
         const estimatedValue = toolSuccess ? 1.0 : 0.0;
         EVOLUTION_METRICS.recordToolROI(tool.name, estimatedValue, totalTokens, {
+          workspaceId: execContext.workspaceId,
           orgId: execContext.orgId,
         });
       } catch {

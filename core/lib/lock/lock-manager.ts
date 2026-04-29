@@ -98,6 +98,14 @@ export class LockManager {
     } catch (error: unknown) {
       if ((error as Error).name === 'ConditionalCheckFailedException') {
         logger.debug(`Lock [${fullId}] acquisition failed: already held or not expired.`);
+        try {
+          const { EVOLUTION_METRICS } = await import('../metrics/evolution-metrics');
+          EVOLUTION_METRICS.recordLockContention(lockId, options.ownerId, {
+            workspaceId: options.workspaceId,
+          });
+        } catch {
+          /* ignore metrics errors */
+        }
         return false;
       }
       logger.error(`Error acquiring lock [${fullId}]:`, error);

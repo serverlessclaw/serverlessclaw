@@ -560,10 +560,10 @@ To prevent race conditions in multi-agent swarms, all collaboration operations a
 
 ### 🍱 Partitioning Scheme
 
-| PK (userId)          | Type       | Description                                            |
-| :------------------- | :--------- | :----------------------------------------------------- |
-| `shared#collab#<ID>` | `MESSAGE`  | Shared message history for multi-agent hubs.           |
-| `COLLABORATION#<ID>` | `METADATA` | Core configuration, owner, and participant roster.     |
-| `COLLAB_INDEX#<PID>` | `INDEX`    | Shard for participant lookup (List my collaborations). |
-| `[WS#<WSID>#]SESSION_STATE#<ID>` | `METADATA` | Multi-turn session state and pending messages.          |
+| PK (userId)                      | Type       | Description                                            |
+| :------------------------------- | :--------- | :----------------------------------------------------- |
+| `shared#collab#<ID>`             | `MESSAGE`  | Shared message history for multi-agent hubs.           |
+| `COLLABORATION#<ID>`             | `METADATA` | Core configuration, owner, and participant roster.     |
+| `COLLAB_INDEX#<PID>`             | `INDEX`    | Shard for participant lookup (List my collaborations). |
+| `[WS#<WSID>#]SESSION_STATE#<ID>` | `METADATA` | Multi-turn session state and pending messages.         |
 | `[WS#<WSID>#]LOCK#SESSION#<ID>`  | `LOCK`     | Session concurrency lock (5-minute TTL).               |

@@ -268,6 +268,21 @@ export async function updateGapStatus(
     const err = error as { name?: string };
     if (err.name === 'ConditionalCheckFailedException') {
       if (guard) {
+        try {
+          const { EVOLUTION_METRICS } = await import('../metrics/evolution-metrics');
+          const workspaceId = typeof scope === 'string' ? scope : scope?.workspaceId;
+          EVOLUTION_METRICS.recordTransitionRejection(
+            gapId,
+            target.status ?? 'unknown',
+            status,
+            'guard-mismatch',
+            {
+              workspaceId,
+            }
+          );
+        } catch {
+          /* ignore */
+        }
         return {
           success: false,
           error: `Cannot transition gap ${gapId} from ${target.status} to ${status}: expected ${guard.expectedStatus}`,
@@ -313,7 +328,16 @@ export async function acquireGapLock(
       },
     });
     return true;
-  } catch {
+  } catch (error: unknown) {
+    if ((error as Error).name === 'ConditionalCheckFailedException') {
+      try {
+        const { EVOLUTION_METRICS } = await import('../metrics/evolution-metrics');
+        const workspaceId = typeof scope === 'string' ? scope : scope?.workspaceId;
+        EVOLUTION_METRICS.recordLockContention(normalizedGapId, agentId, { workspaceId });
+      } catch {
+        /* ignore */
+      }
+    }
     return false;
   }
 }

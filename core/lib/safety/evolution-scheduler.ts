@@ -81,12 +81,15 @@ export class EvolutionScheduler {
       status: 'pending',
     };
 
-    await this.base.putItem({
-      ...pending,
-      userId: scopedUserId,
-      timestamp: 0,
-      type: 'PENDING_EVOLUTION',
-    });
+    await this.base.putItem(
+      {
+        ...pending,
+        userId: scopedUserId,
+        timestamp: 0,
+        type: 'PENDING_EVOLUTION',
+      },
+      { ConditionExpression: 'attribute_not_exists(userId)' }
+    );
 
     logger.info(
       `[EVOLUTION] Scheduled Class C action ${actionId} for proactive evolution (WS: ${params.workspaceId})`
