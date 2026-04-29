@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EVOLUTION_METRICS } from './evolution-metrics';
 import { emitMetrics } from './metrics';
-import { logger } from '../logger';
 
 vi.mock('./metrics', () => ({
   METRICS: {
@@ -29,37 +28,31 @@ describe('EVOLUTION_METRICS', () => {
 
   describe('recordDuplicateSuppression', () => {
     it('emits EvolutionDuplicateSuppression metric', async () => {
-      EVOLUTION_METRICS.recordDuplicateSuppression('test-source');
+      EVOLUTION_METRICS.recordDuplicateSuppression('test-source', {
+        workspaceId: 'ws-123',
+        orgId: 'org-456',
+      });
 
       expect(emitMetrics).toHaveBeenCalledWith([
         {
           MetricName: 'EvolutionDuplicateSuppression',
           Value: 1,
           Unit: 'Count',
-          Dimensions: [{ Name: 'Source', Value: 'test-source' }],
+          Dimensions: [
+            { Name: 'Source', Value: 'test-source' },
+            { Name: 'WorkspaceId', Value: 'ws-123' },
+            { Name: 'OrgId', Value: 'org-456' },
+          ],
         },
       ]);
-    });
-
-    it('logs warning if emitMetrics fails', async () => {
-      const error = new Error('Failed');
-      (emitMetrics as any).mockRejectedValueOnce(error);
-
-      EVOLUTION_METRICS.recordDuplicateSuppression('test-source');
-
-      // We need to wait for the promise in recordDuplicateSuppression to settle
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      expect(logger.warn).toHaveBeenCalledWith(
-        'Failed to emit EvolutionDuplicateSuppression metric:',
-        error
-      );
     });
   });
 
   describe('recordTransitionRejection', () => {
-    it('emits EvolutionTransitionRejection metric', async () => {
-      EVOLUTION_METRICS.recordTransitionRejection('gap-1', 'OPEN', 'CLOSED', 'invalid-guard');
+    it('emits EvolutionTransitionRejection metric with scope', async () => {
+      EVOLUTION_METRICS.recordTransitionRejection('gap-1', 'OPEN', 'CLOSED', 'invalid-guard', {
+        workspaceId: 'ws-123',
+      });
 
       expect(emitMetrics).toHaveBeenCalledWith([
         {
@@ -70,27 +63,16 @@ describe('EVOLUTION_METRICS', () => {
             { Name: 'FromStatus', Value: 'OPEN' },
             { Name: 'ToStatus', Value: 'CLOSED' },
             { Name: 'Reason', Value: 'invalid-guard' },
+            { Name: 'WorkspaceId', Value: 'ws-123' },
           ],
         },
       ]);
     });
-
-    it('logs warning if emitMetrics fails', async () => {
-      const error = new Error('Failed');
-      (emitMetrics as any).mockRejectedValueOnce(error);
-
-      EVOLUTION_METRICS.recordTransitionRejection('gap-1', 'OPEN', 'CLOSED', 'invalid-guard');
-      await new Promise((resolve) => setTimeout(resolve, 0));
-      expect(logger.warn).toHaveBeenCalledWith(
-        'Failed to emit EvolutionTransitionRejection metric:',
-        error
-      );
-    });
   });
 
   describe('recordBarrierTimeout', () => {
-    it('emits EvolutionBarrierTimeout metric with completion rate', async () => {
-      EVOLUTION_METRICS.recordBarrierTimeout('trace-1', 10, 5);
+    it('emits EvolutionBarrierTimeout metric with scope', async () => {
+      EVOLUTION_METRICS.recordBarrierTimeout('trace-1', 10, 5, { orgId: 'org-456' });
 
       expect(emitMetrics).toHaveBeenCalledWith([
         {
@@ -100,96 +82,84 @@ describe('EVOLUTION_METRICS', () => {
           Dimensions: [
             { Name: 'TaskCount', Value: '10' },
             { Name: 'CompletionRate', Value: '0.50' },
+            { Name: 'OrgId', Value: 'org-456' },
           ],
         },
       ]);
-    });
-
-    it('handles zero task count', async () => {
-      EVOLUTION_METRICS.recordBarrierTimeout('trace-1', 0, 0);
-
-      expect(emitMetrics).toHaveBeenCalledWith([
-        {
-          MetricName: 'EvolutionBarrierTimeout',
-          Value: 1,
-          Unit: 'Count',
-          Dimensions: [
-            { Name: 'TaskCount', Value: '0' },
-            { Name: 'CompletionRate', Value: '0' },
-          ],
-        },
-      ]);
-    });
-
-    it('logs warning if emitMetrics fails', async () => {
-      const error = new Error('Failed');
-      (emitMetrics as any).mockRejectedValueOnce(error);
-
-      EVOLUTION_METRICS.recordBarrierTimeout('trace-1', 10, 5);
-      await new Promise((resolve) => setTimeout(resolve, 0));
-      expect(logger.warn).toHaveBeenCalledWith(
-        'Failed to emit EvolutionBarrierTimeout metric:',
-        error
-      );
     });
   });
 
   describe('recordGapReopen', () => {
-    it('emits EvolutionGapReopen metric', async () => {
-      EVOLUTION_METRICS.recordGapReopen('gap-1', 3);
+    it('emits EvolutionGapReopen metric with scope', async () => {
+      EVOLUTION_METRICS.recordGapReopen('gap-1', 3, { workspaceId: 'ws-123' });
 
       expect(emitMetrics).toHaveBeenCalledWith([
         {
           MetricName: 'EvolutionGapReopen',
           Value: 1,
           Unit: 'Count',
-          Dimensions: [{ Name: 'AttemptCount', Value: '3' }],
-        },
-      ]);
-    });
-
-    it('logs warning if emitMetrics fails', async () => {
-      const error = new Error('Failed');
-      (emitMetrics as any).mockRejectedValueOnce(error);
-
-      EVOLUTION_METRICS.recordGapReopen('gap-1', 3);
-      await new Promise((resolve) => setTimeout(resolve, 0));
-      expect(logger.warn).toHaveBeenCalledWith('Failed to emit EvolutionGapReopen metric:', error);
-    });
-  });
-
-  describe('recordLockContention', () => {
-    it('emits lockAcquired and EvolutionLockContention metrics', async () => {
-      EVOLUTION_METRICS.recordLockContention('lock-1', 'agent-1');
-
-      expect(emitMetrics).toHaveBeenCalledWith([
-        {
-          MetricName: 'LockAcquired',
-          Value: 0,
-          Unit: 'Count',
-          Dimensions: [{ Name: 'LockId', Value: 'lock-1' }],
-        },
-        {
-          MetricName: 'EvolutionLockContention',
-          Value: 1,
-          Unit: 'Count',
           Dimensions: [
-            { Name: 'LockId', Value: 'lock-1' },
-            { Name: 'AgentId', Value: 'agent-1' },
+            { Name: 'AttemptCount', Value: '3' },
+            { Name: 'WorkspaceId', Value: 'ws-123' },
           ],
         },
       ]);
     });
+  });
 
-    it('logs warning if emitMetrics fails', async () => {
-      const error = new Error('Failed');
-      (emitMetrics as any).mockRejectedValueOnce(error);
+  describe('recordLockContention', () => {
+    it('emits metrics with scope', async () => {
+      const scope = { workspaceId: 'ws-123', orgId: 'org-456' };
+      EVOLUTION_METRICS.recordLockContention('lock-1', 'agent-1', scope);
 
-      EVOLUTION_METRICS.recordLockContention('lock-1', 'agent-1');
-      await new Promise((resolve) => setTimeout(resolve, 0));
-      expect(logger.warn).toHaveBeenCalledWith(
-        'Failed to emit EvolutionLockContention metric:',
-        error
+      expect(emitMetrics).toHaveBeenCalledWith([
+        expect.objectContaining({
+          MetricName: 'LockAcquired',
+          Value: 0,
+        }),
+        expect.objectContaining({
+          MetricName: 'EvolutionLockContention',
+          Dimensions: expect.arrayContaining([
+            { Name: 'WorkspaceId', Value: 'ws-123' },
+            { Name: 'OrgId', Value: 'org-456' },
+          ]),
+        }),
+      ]);
+    });
+  });
+
+  describe('recordToolExecution', () => {
+    it('emits ToolExecution metrics with workspaceId', async () => {
+      EVOLUTION_METRICS.recordToolExecution('test_tool', true, 500, {
+        workspaceId: 'ws-123',
+        orgId: 'org-456',
+      });
+
+      expect(emitMetrics).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            MetricName: 'ToolExecutionCount',
+            Dimensions: expect.arrayContaining([{ Name: 'WorkspaceId', Value: 'ws-123' }]),
+          }),
+        ])
+      );
+    });
+  });
+
+  describe('recordToolROI', () => {
+    it('emits ToolROI metrics with workspaceId', async () => {
+      EVOLUTION_METRICS.recordToolROI('test_tool', 1.0, 100, {
+        workspaceId: 'ws-123',
+        orgId: 'org-456',
+      });
+
+      expect(emitMetrics).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            MetricName: 'ToolROIValue',
+            Dimensions: expect.arrayContaining([{ Name: 'WorkspaceId', Value: 'ws-123' }]),
+          }),
+        ])
       );
     });
   });

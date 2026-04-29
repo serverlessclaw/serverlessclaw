@@ -137,6 +137,7 @@ To detect drift between raw metrics and visual reporting, the **ConsistencyProbe
 Execution latency and token consumption are tracked per-agent and per-trace:
 
 - **Metrics**: Percentiles (p50, p95) are calculated via the `CognitiveMetrics` background handlers and visualized in the System Pulse.
+- **Evolution ROI**: Real-time tool performance and ROI metrics are tracked via `EvolutionMetrics` with mandatory multi-tenant scoping, enabling per-workspace cost/benefit analysis.
 
 ### 3. Proactive Failure Emission
 

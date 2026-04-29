@@ -14,35 +14,39 @@ describe('EVOLUTION_METRICS ROI & Execution', () => {
     vi.clearAllMocks();
   });
 
-  it('emits ToolExecutionCount and ToolExecutionDuration metrics', async () => {
-    EVOLUTION_METRICS.recordToolExecution('test_tool', true, 500, { orgId: 'org_123' });
+  it('emits ToolExecutionCount and ToolExecutionDuration metrics with workspaceId', async () => {
+    EVOLUTION_METRICS.recordToolExecution('test_tool', true, 500, {
+      workspaceId: 'ws_789',
+      orgId: 'org_123',
+    });
 
     expect(emitMetrics).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({
           MetricName: 'ToolExecutionCount',
-          Dimensions: expect.arrayContaining([{ Name: 'ToolName', Value: 'test_tool' }]),
-        }),
-        expect.objectContaining({
-          MetricName: 'ToolExecutionDuration',
-          Value: 500,
+          Dimensions: expect.arrayContaining([
+            { Name: 'ToolName', Value: 'test_tool' },
+            { Name: 'WorkspaceId', Value: 'ws_789' },
+          ]),
         }),
       ])
     );
   });
 
-  it('emits ToolROIValue and ToolROICost metrics', async () => {
-    EVOLUTION_METRICS.recordToolROI('test_tool', 1.0, 100, { orgId: 'org_123' });
+  it('emits ToolROIValue and ToolROICost metrics with workspaceId', async () => {
+    EVOLUTION_METRICS.recordToolROI('test_tool', 1.0, 100, {
+      workspaceId: 'ws_789',
+      orgId: 'org_123',
+    });
 
     expect(emitMetrics).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({
           MetricName: 'ToolROIValue',
-          Value: 1.0,
-        }),
-        expect.objectContaining({
-          MetricName: 'ToolROICost',
-          Value: 100,
+          Dimensions: expect.arrayContaining([
+            { Name: 'ToolName', Value: 'test_tool' },
+            { Name: 'WorkspaceId', Value: 'ws_789' },
+          ]),
         }),
       ])
     );

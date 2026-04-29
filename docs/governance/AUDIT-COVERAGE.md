@@ -29,7 +29,7 @@ Last Updated: 2026-04-29
 | **A**       | Life of a Message | Spine → Brain → Eye    | 7           | 2026-04-29  |
 | **B**       | Evolution Cycle   | Hand → Shield → Scales | 7           | 2026-04-29  |
 | **C**       | Identity Journey  | Brain → Spine → Shield | 7           | 2026-04-29  |
-| **D**       | Trust Loop        | Eye → Scales → Spine   | 7           | 2026-04-29  |
+| **D**       | Trust Loop        | Eye → Scales → Spine   | 8           | 2026-04-29  |
 | **E**       | Recovery Path     | Shield → Spine → Brain | 7           | 2026-04-29  |
 
 ---
@@ -38,6 +38,7 @@ Last Updated: 2026-04-29
 
 | Date       | Report                                          | Silos Covered         | Cross-Silo | Key Findings                                                                                        |
 | :--------- | :---------------------------------------------- | :-------------------- | :--------- | :-------------------------------------------------------------------------------------------------- |
+| 2026-04-29 | `audit-2026-04-29-trust-loop-v2.md`            | Scales, Eye, Spine    | D          | FIXED: P1 Missing collab context summary (Anti-Pattern 8), P1 Collab Creation Race Condition (Anti-Pattern 11) |
 | 2026-04-29 | `audit-2026-04-29-identity-metabolism.md`      | Brain, Shield, Metabolism | C, D       | FIXED: P1 Global telemetry blindness in evolution metrics, P1 Missing workspaceId in Tool ROI. |
 | 2026-04-29 | `audit-2026-04-29-evolution-cycle-v2.md`       | Hand, Shield, Scales  | B          | FIXED: P1 Blind Tool Failures (JSON/Zod), P1 Adaptive Mode routing bug, P1 Selection Integrity   |
 | 2026-04-29 | `audit-2026-04-29-life-of-a-message-v3.md`      | Spine, Brain, Eye     | A          | FIXED: P1 Telemetry blindness in spine, P1 DLQ multi-tenant leak, P1 Cross-tenant trace leak        |

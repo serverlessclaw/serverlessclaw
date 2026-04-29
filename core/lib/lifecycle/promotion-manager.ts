@@ -3,6 +3,7 @@ import { AgentRegistry } from '../registry/AgentRegistry';
 import { EvolutionMode, SafetyTier } from '../types/agent';
 import { emitEvent } from '../utils/bus';
 import { EventType } from '../types/agent';
+import { MessageRole } from '../types/llm';
 
 /**
  * PromotionManager — Capability Graduation Logic
@@ -19,6 +20,7 @@ export class PromotionManager {
     agentId: string,
     toolName: string,
     reason: string,
+    userId?: string,
     scope?: { workspaceId?: string }
   ): Promise<{ success: boolean; message: string }> {
     try {
@@ -72,6 +74,29 @@ export class PromotionManager {
           workspaceId: scope?.workspaceId,
           metadata: { toolName, reason, trustScore },
         });
+
+        // 4. Summarize context for collaborations
+        if (userId && userId.startsWith('shared#collab#')) {
+          try {
+            const { getAgentContext } = await import('../utils/agent-helpers');
+            const { memory } = await getAgentContext();
+
+            const message = `🚀 **Agent Promotion**\n\nAgent **${agentId}** has autonomously acquired the capability to use \`${toolName}\`.\n\n*Reason*: ${reason}\n*Trust Score*: ${trustScore}\n*Status*: Upgraded to PROD tier (Autonomous Mode)`;
+
+            await memory.addMessage(
+              userId,
+              {
+                role: MessageRole.SYSTEM,
+                content: message,
+                traceId: `promotion-${Date.now()}`,
+                messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+              },
+              scope
+            );
+          } catch (e) {
+            logger.warn(`Failed to append promotion summary to collaboration ${userId}:`, e);
+          }
+        }
 
         return {
           success: true,

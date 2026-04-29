@@ -28,20 +28,20 @@ The metabolism operates on two distinct loops:
        |  "Perform While Auditing"      |  |
        |                                |  /
        +--------------------------------+ /
-                |              |
-                | (Repair)     | (Propagate)
-                v              v
-       .----------------.    .----------------.
-      /  METABOLISM    /|   /   STRATEGIC    /|
-     /    SERVICE     / |  /    PLANNER     / |
-    +----------------+  | +----------------+  |
-    |  - Prune Tools |  | |  - Execute P1  |  |
-    |  - Cull Gaps   |  | |    Maintenance |  |
-    |  - AIReady MCP |  / |    Gaps        |  /
-    +----------------+ /  +----------------+ /
-           ^                  |
-           |                  |
-           '------------------'
+                |              |               |
+                | (Repair)     | (Propagate)   | (Reclaim)
+                v              v               v
+       .----------------.    .----------------.    .----------------.
+      /  METABOLISM    /|   /   STRATEGIC    /|   /     S3 RE-     /|
+     /    SERVICE     / |  /    PLANNER     / |  /     CLAMATION  / |
+    +----------------+  | +----------------+  | +----------------+  |
+    |  - Prune Tools |  | |  - Execute P1  |  | |  - Purge Stale |  |
+    |  - Cull Gaps   |  | |    Maintenance |  | |    Staging     |  |
+    |  - AIReady MCP |  / |    Gaps        |  / |    Buckets     |  /
+    +----------------+ /  +----------------+ /  +----------------+ /
+           ^                  |                |
+           |                  |                |
+           '------------------'----------------'
            (Architectural Decay Recycled)
 ```
 
@@ -88,11 +88,13 @@ The central coordinator that manages the lifecycle of metabolic audits. It prior
 ### 2. Autonomous Repair Protocols
 
 - **Surgical Atomic Pruning**: An event-driven bridge for live remediation. If a tool fails in the dashboard, the metabolism service identifies the specific tool and delegates an atomic removal to `AgentRegistry.pruneAgentTool`. (Enforces **Principle 13**).
+- **S3 Staging Reclamation**: Automatically purges stale multi-tenant staging buckets that are older than 24 hours. Uses `workspaceId` prefix filtering to ensure multi-tenant isolation during cleanup.
 - **Tool Pruning**: Automatically removes dynamic tool overrides from the `AgentRegistry` if they have 0 executions over a configurable window (default 30 days). Supports both workspace-scoped agents (when `workspaceId` provided) and backbone agents (when `workspaceId` undefined).
 - **Per-Workspace Tool Usage**: Tool usage is tracked across three dimensions:
   - Global: `tool_usage_global` - system-wide tool popularity
   - Per-agent: `tool_usage_{agentId}` - agent-specific usage
   - Per-workspace: `WS#{workspaceId}#tool_usage` - workspace-isolated tracking (new)
+- **Evolution Telemetry**: All maintenance and evolution events (lock contention, transition rejections, tool ROI) are emitted with mandatory `WorkspaceId` and `OrgId` dimensions to ensure multi-tenant observability integrity.
 - **Memory Culling**: Purges knowledge gaps in `DONE` or `DEPLOYED` status that are older than **60 days** (configurable via `GAPS_RETENTION_DAYS`). Both archival (stale OPEN gaps >30 days) and culling (resolved gaps >60 days) run in the periodic maintenance cycle.
 - **Feature Flag Pruning**: Automatically removes stale feature flags that have either expired (`expiresAt` timestamp in past) or exceeded the age threshold (default 30 days). Integrates with `FeatureFlags.pruneStaleFlags()` during the periodic maintenance cycle.
 - **Native Fallback**: A resilient scanner that performs basic debt identification (e.g., scanning for orphans or TODOs) even when the AIReady MCP server is offline. Scan depth is configurable via `AUDIT_SCAN_DEPTH` (default: 3 levels).

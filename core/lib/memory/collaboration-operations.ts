@@ -106,6 +106,7 @@ export async function createCollaboration(
   );
 
   // Index for each participant
+  let syncRequired = false;
   for (const participant of participants) {
     const indexPk = base.getScopedUserId(
       `${COLLAB_INDEX_PREFIX}${participant.type}#${participant.id}`,
@@ -133,7 +134,10 @@ export async function createCollaboration(
           }
         );
         // Sync the actual used timestamp back to participant for cleanup
-        participant.joinedAt += attempt;
+        if (attempt > 0) {
+          participant.joinedAt += attempt;
+          syncRequired = true;
+        }
         success = true;
       } catch (e) {
         if ((e as Error).name === 'ConditionalCheckFailedException') {
@@ -146,6 +150,16 @@ export async function createCollaboration(
     if (!success) {
       logger.warn(`Failed to index participant ${participant.id} after 5 attempts`);
     }
+  }
+
+  // If any participant timestamp drifted due to millisecond collision, sync the main record
+  if (syncRequired) {
+    await base.updateItem({
+      TableName: base['tableName'] || 'MemoryTable',
+      Key: { userId: pk, timestamp: 0 },
+      UpdateExpression: 'SET participants = :p',
+      ExpressionAttributeValues: { ':p': participants },
+    });
   }
 
   logger.info(
