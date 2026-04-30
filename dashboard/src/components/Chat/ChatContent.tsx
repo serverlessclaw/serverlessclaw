@@ -343,6 +343,20 @@ export default function ChatContent() {
   };
 
   const handleOptionClick = async (value: string, comment?: string) => {
+    if (value === 'FORCE_UNLOCK') {
+      // Find the last user message to retry with force: true
+      const lastUserMsg = [...messages].reverse().find((msg) => msg.role === 'user');
+      if (lastUserMsg) {
+        sendMessage(lastUserMsg.content, {
+          agentId: currentAgentId,
+          collaborationId: collaborationId || undefined,
+          profile: showThinking ? 'thinking' : 'fast',
+          force: true,
+        });
+      }
+      return;
+    }
+
     if (value.startsWith('APPROVE_TOOL_CALL:')) {
       await handleToolApproval(value.split(':')[1], comment);
     } else if (value.startsWith('REJECT_TOOL_CALL:')) {
@@ -593,6 +607,12 @@ export default function ChatContent() {
                   profile: showThinking ? 'thinking' : 'fast',
                 });
                 setInput('');
+                // Force scroll to bottom on user send
+                setTimeout(() => {
+                  if (scrollRef.current) {
+                    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                  }
+                }, 10);
               }}
               attachments={attachments}
               onRemoveAttachment={(i) =>

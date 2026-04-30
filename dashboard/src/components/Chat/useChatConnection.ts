@@ -79,7 +79,6 @@ export function useChatConnection(
   const handleMessage = useCallback(
     (topic: string, data: RealtimeMessage) => {
       const currentActiveId = activeSessionRef.current;
-      logger.info(`[useChatConnection] Raw signal on ${topic}:`, data);
 
       const normalized: IncomingChunk & { 'detail-type'?: string } = {
         ...(typeof data.detail === 'object' && data.detail !== null ? data.detail : {}),
@@ -88,14 +87,14 @@ export function useChatConnection(
 
       if (shouldProcessChunk(normalized, currentActiveId, 'dashboard-user')) {
         logger.info(
-          `[useChatConnection] ✅ Processing chunk: ${normalized.messageId} (msg: ${normalized.message?.length ?? 0} chars)`
+          `[SIGNAL] ✅ Processing chunk: ${normalized.messageId} (msg: ${normalized.message?.length ?? 0} chars)`
         );
         setMessagesRef.current((prev) =>
           applyChunkToMessages(prev, normalized, seenMessageIds.current)
         );
       } else {
         logger.warn(
-          `[useChatConnection] ⚠️ Chunk ignored (filter): ${normalized.messageId} on topic ${topic}`
+          `[SIGNAL] ⚠️ Chunk ignored (filter): ${normalized.messageId} on topic ${topic}`
         );
         if (currentActiveId && !isPostInFlight.current) {
           fetchHistorySilently(currentActiveId);
@@ -118,7 +117,7 @@ export function useChatConnection(
       [workspaceId]
     ),
     onMessage: handleMessage,
-    workspaceId: workspaceId || undefined,
+    workspaceId: workspaceId || 'default',
   });
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);

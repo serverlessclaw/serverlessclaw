@@ -97,7 +97,7 @@ describe('AgentExecutor.streamLoop', () => {
     expect(chunks[3].usage).toBeDefined();
     expect(chunks[4].usage).toBeDefined();
 
-    expect(mockEmitter.emitChunk).toHaveBeenCalledTimes(3);
+    expect(mockEmitter.emitChunk).toHaveBeenCalledTimes(4);
     expect(mockEmitter.emitChunk).toHaveBeenCalledWith(
       'user-1',
       'sess-1',
@@ -311,5 +311,37 @@ describe('AgentExecutor.streamLoop', () => {
       })
     );
     expect(chunks[1].tool_calls).toBeUndefined();
+  });
+
+  it('should propagate workspaceId scope to all emission calls', async () => {
+    const executor = new AgentExecutor(mockProvider as any, [], 'test-agent', 'Test Agent');
+
+    async function* mockStream() {
+      yield { content: 'Scoped' };
+    }
+    mockProvider.stream.mockReturnValue(mockStream());
+
+    const stream = executor.streamLoop(
+      [],
+      getDefaultOptions({
+        emitter: mockEmitter as any,
+        sessionId: 'sess-1',
+        workspaceId: 'default',
+      })
+    );
+
+    for await (const _ of stream) {
+      // consume stream for test
+    }
+
+    expect(mockEmitter.emitChunk).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.any(String),
+      expect.objectContaining({
+        detailType: 'TEXT_MESSAGE_START',
+        scope: { workspaceId: 'default', teamId: undefined, staffId: undefined },
+      })
+    );
   });
 });

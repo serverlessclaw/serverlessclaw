@@ -32,6 +32,8 @@ export const OPENAI = {
     RESPONSE_OUTPUT_ITEM_DONE: 'response.output_item.done',
     MESSAGE_DELTA: 'message.delta',
     RESPONSE_MESSAGE_DELTA: 'response.message.delta',
+    REASONING_SUMMARY_DELTA: 'reasoning_summary_text.delta',
+    RESPONSE_REASONING_SUMMARY_DELTA: 'response.reasoning_summary_text.delta',
     USAGE: 'usage',
     RESPONSE_USAGE: 'response.usage',
   },

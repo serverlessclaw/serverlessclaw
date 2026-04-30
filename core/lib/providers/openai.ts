@@ -316,6 +316,10 @@ export class OpenAIProvider implements IProvider {
         const rawChunk = chunk as any;
         const type = rawChunk.type || '';
 
+        logger.info(
+          `[OPENAI:STREAM] Type: ${type}, DeltaType: ${typeof rawChunk.delta}, ItemType: ${rawChunk.item?.type}`
+        );
+
         // Support both direct deltas and nested item deltas (2026 Responses API)
         const delta = rawChunk.delta ?? rawChunk.item?.delta;
 
@@ -331,6 +335,8 @@ export class OpenAIProvider implements IProvider {
           type === OPENAI.EVENT_TYPES.RESPONSE_REASONING_DELTA ||
           type === OPENAI.EVENT_TYPES.RESPONSE_OUTPUT_THOUGHT_DELTA ||
           type === OPENAI.EVENT_TYPES.RESPONSE_THOUGHT_DELTA ||
+          type === OPENAI.EVENT_TYPES.REASONING_SUMMARY_DELTA ||
+          type === OPENAI.EVENT_TYPES.RESPONSE_REASONING_SUMMARY_DELTA ||
           !!rawChunk.delta?.reasoning_content ||
           !!rawChunk.item?.delta?.reasoning_content;
 

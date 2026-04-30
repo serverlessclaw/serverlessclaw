@@ -131,13 +131,11 @@ export function useChatMessages(
 
         updated[existingIdx] = {
           ...existing,
-          content:
-            existing.content && existing.content.trim().length > 0
-              ? existing.content
-              : data.reply !== undefined
-                ? data.reply
-                : existing.content,
-          thought: isMeaningfulThought ? data.thought : existing.thought,
+          content: data.reply || existing.content,
+          thought:
+            data.thought && data.thought.length > (existing.thought?.length ?? 0)
+              ? data.thought
+              : existing.thought || data.thought,
           tool_calls: data.tool_calls || existing.tool_calls,
           agentName: data.agentName || existing.agentName,
           ui_blocks: data.ui_blocks || existing.ui_blocks,
@@ -208,6 +206,7 @@ export function useChatMessages(
       source?: string;
       overrideConfig?: Record<string, unknown>;
       promptOverrides?: Record<string, string>;
+      force?: boolean;
     } = {}
   ) => {
     const {
@@ -220,6 +219,7 @@ export function useChatMessages(
       source,
       overrideConfig,
       promptOverrides,
+      force = false,
     } = options;
 
     if (!text.trim() && attachments.length === 0) return;
@@ -298,6 +298,7 @@ export function useChatMessages(
           source,
           overrideConfig,
           promptOverrides,
+          force,
         }),
       });
 
@@ -306,9 +307,33 @@ export function useChatMessages(
         try {
           errorData = await response.json();
         } catch {
-          errorData = { error: 'Unknown error' };
+          errorData = { error: 'Unknown response format' };
         }
-        const errorContent = errorData.details || errorData.error || AGENT_ERRORS.PROCESS_FAILURE;
+
+        // Specific handling for 429 (Session Busy)
+        if (response.status === 429) {
+          logger.warn(`[Chat API] Session ${currentSessionId} is busy.`, errorData);
+          if (currentSessionId === activeSessionRef.current) {
+            setMessages((prev: ChatMessage[]) => [
+              ...prev,
+              {
+                role: 'assistant',
+                content:
+                  'Session is currently busy with another request. If you believe this is a mistake, you can try again with "Force Unlock".',
+                agentName: 'SystemGuard',
+                isError: true,
+                errorType: 'busy',
+              },
+            ]);
+          }
+          fetchSessions();
+          return;
+        }
+
+        const errorContent =
+          errorData.details ||
+          errorData.error ||
+          (response.status === 429 ? 'Session is busy.' : AGENT_ERRORS.PROCESS_FAILURE);
         logger.error(`Chat API error (${response.status}):`, errorData);
         if (currentSessionId === activeSessionRef.current) {
           setMessages((prev: ChatMessage[]) => [

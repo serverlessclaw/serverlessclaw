@@ -356,6 +356,7 @@ describe('AgentEmitter', () => {
     });
 
     it('uses traceId-agentId as messageId for worker agents (no superclaw/orchestrator)', async () => {
+      emitter = new AgentEmitter({ id: 'agent1', name: 'TestAgent', workerFeedback: true } as any);
       mockPublishToRealtime.mockResolvedValue(undefined);
       await emitter.emitChunk('user1', 'session1', 'trace1', {
         chunk: 'hello',
@@ -461,6 +462,20 @@ describe('AgentEmitter', () => {
       const payload = mockPublishToRealtime.mock.calls[0][1];
       expect(payload['detail-type']).toBe('TEXT_MESSAGE_CONTENT');
       expect(payload['type']).toBe('TEXT_MESSAGE_CONTENT');
+    });
+
+    it('publishes to workspace topic when scope provided', async () => {
+      mockPublishToRealtime.mockResolvedValue(undefined);
+      await emitter.emitChunk('user1', 'session1', 'trace1', {
+        chunk: 'hello',
+        agentName: undefined,
+        isThought: false,
+        buttonOptions: undefined,
+        initiatorId: 'orchestrator',
+        scope: { workspaceId: 'default' },
+      });
+      expect(mockPublishToRealtime).toHaveBeenCalledTimes(1);
+      expect(mockPublishToRealtime.mock.calls[0][0]).toBe('workspaces/default/signal');
     });
   });
 });

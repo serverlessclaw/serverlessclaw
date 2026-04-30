@@ -1,4 +1,5 @@
 import { BaseMemoryProvider } from './base';
+import { IMemory } from '../types/index';
 import { MEMORY_KEYS, RETENTION, TIME } from '../constants';
 import { logger } from '../logger';
 import { ContextualScope } from '../types/memory';
@@ -20,10 +21,10 @@ export interface FailedPlan {
  * (Principle 16: Evolution Analytics)
  */
 export class NegativeMemory {
-  private base: BaseMemoryProvider;
+  private base: IMemory;
 
-  constructor(base?: BaseMemoryProvider) {
-    this.base = base ?? new BaseMemoryProvider();
+  constructor(base?: IMemory) {
+    this.base = base ?? (new BaseMemoryProvider() as unknown as IMemory);
   }
 
   /**

@@ -29,7 +29,7 @@ export class Agent {
     public readonly tools: ITool[],
     public readonly config: IAgentConfig
   ) {
-    this.emitter = new AgentEmitter();
+    this.emitter = new AgentEmitter(config);
     this.executor = new AgentExecutor(
       provider,
       tools,

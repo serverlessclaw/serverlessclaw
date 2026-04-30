@@ -71,9 +71,7 @@ export class AgentAssembler {
 
     // 1. Memory Retrieval (parallelized)
     const { NegativeMemory } = await import('../memory/negative-memory');
-    const negMemory = new NegativeMemory(
-      memory as unknown as import('../memory/base').BaseMemoryProvider
-    );
+    const negMemory = new NegativeMemory(memory);
     const scope = { workspaceId, orgId, teamId, staffId };
 
     const [history, [distilled, lessons, prefPrefixed, prefRaw, globalLessons, negativeContext]] =

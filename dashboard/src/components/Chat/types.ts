@@ -27,6 +27,7 @@ export interface ChatMessage {
   messageId?: string;
   agentName?: string;
   isError?: boolean;
+  errorType?: 'busy' | 'connection' | 'process' | string;
   /** Whether this message is queued for processing (not yet delivered to agent) */
   isQueued?: boolean;
   /** The pending message ID for queued messages (used for edit/remove) */

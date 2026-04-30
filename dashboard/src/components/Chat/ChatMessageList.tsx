@@ -354,6 +354,20 @@ const ChatMessageRow = memo(function ChatMessageRow({
                   )}
                 </Card>
 
+                {m.isError && m.errorType === 'busy' && (
+                  <div className="mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onOptionClick?.('FORCE_UNLOCK')}
+                      className="text-[10px] text-amber-500 border-amber-500/50 hover:bg-amber-500/10 flex items-center gap-2"
+                    >
+                      <Terminal size={12} />
+                      Force Unlock Session
+                    </Button>
+                  </div>
+                )}
+
                 {!m.isThinking && m.content && (
                   <div
                     className={`absolute top-2 ${
@@ -545,6 +559,38 @@ export function ChatMessageList({
         m.agentName?.toLowerCase().includes(lowerQuery)
     );
   }, [messages, msgSearchQuery]);
+
+  // Auto-scroll logic
+  React.useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    // We check if the user is currently at the bottom (with a bit of buffer)
+    // If they are, we keep them at the bottom when new messages arrive.
+    const threshold = 150;
+    const isAtBottom =
+      container.scrollHeight - container.scrollTop <= container.clientHeight + threshold;
+
+    // Determine if we should force scroll (e.g. new message just sent or first response chunk)
+    const lastMessage = messages[messages.length - 1];
+    const shouldForceScroll = lastMessage?.role === 'user' || (messages.length > 0 && isAtBottom);
+
+    if (shouldForceScroll || isAtBottom) {
+      // Use requestAnimationFrame to ensure the DOM has rendered the new messages
+      requestAnimationFrame(() => {
+        container.scrollTop = container.scrollHeight;
+      });
+    }
+  }, [messages, scrollRef]);
+
+  // Force scroll to bottom when the component mounts or messages change for the first time in a session
+  React.useEffect(() => {
+    const container = scrollRef.current;
+    if (container && messages.length > 0) {
+      container.scrollTop = container.scrollHeight;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages.length === 0]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-transparent relative">

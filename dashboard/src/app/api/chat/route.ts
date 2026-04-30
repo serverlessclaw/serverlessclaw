@@ -70,6 +70,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       workspaceId: incomingWorkspaceId,
       teamId,
       staffId,
+      force,
     } = await req.json();
 
     const workspaceId = incomingWorkspaceId || 'default';
@@ -166,6 +167,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // B3 Awareness: Acquire processing lock to prevent concurrent swarm collisions
     const sessionStateManager = new SessionStateManager();
     if (sessionId) {
+      if (force) {
+        logger.info(`[Chat API] Force unlock requested for session ${sessionId} by ${userId}`);
+        await sessionStateManager.releaseProcessing(sessionId, `dashboard-${userId}`, {
+          workspaceId,
+          teamId,
+          staffId,
+        });
+      }
+
       const canProcess = await sessionStateManager.acquireProcessing(
         sessionId,
         `dashboard-${userId}`,
@@ -181,7 +191,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           `[Chat API] Session ${sessionId} is busy. Rejecting concurrent request from ${userId}`
         );
         return NextResponse.json(
-          { error: 'Session is currently busy with another request.' },
+          {
+            error: 'Session is currently busy with another request.',
+            details:
+              'This session is locked by another active process. You can try again in a few minutes or use "Force Unlock" if you believe the process is stuck.',
+          },
           { status: HTTP_STATUS.TOO_MANY_REQUESTS }
         );
       }
@@ -262,7 +276,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       });
     } finally {
       if (sessionId) {
-        await sessionStateManager.releaseProcessing(sessionId, `dashboard-${userId}`);
+        await sessionStateManager.releaseProcessing(sessionId, `dashboard-${userId}`, {
+          workspaceId,
+          teamId,
+          staffId,
+        });
       }
     }
   } catch (error) {

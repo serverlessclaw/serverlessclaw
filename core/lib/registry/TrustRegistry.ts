@@ -64,6 +64,54 @@ export class TrustRegistry {
       return true;
     } catch (e: unknown) {
       const err = e as { name?: string };
+
+      // If the agent doesn't exist, and we're setting an initial score (expected 100), try to create it
+      if (
+        (err.name === 'ValidationException' || err.name === 'ConditionalCheckFailedException') &&
+        expectedOldScore === 100
+      ) {
+        try {
+          await getDocClient().send(
+            new UpdateCommand({
+              TableName: tableName,
+              Key: { key: effectiveKey },
+              UpdateExpression: 'SET #agents.#id = :agentObj',
+              ConditionExpression: 'attribute_not_exists(#agents.#id)',
+              ExpressionAttributeNames: { '#agents': 'value', '#id': agentId },
+              ExpressionAttributeValues: {
+                ':agentObj': { trustScore: newScore },
+              },
+            })
+          );
+          return true;
+        } catch (innerE: unknown) {
+          if ((innerE as any).name === 'ValidationException') {
+            try {
+              await getDocClient().send(
+                new UpdateCommand({
+                  TableName: tableName,
+                  Key: { key: effectiveKey },
+                  UpdateExpression: 'SET #agents = :rootObj',
+                  ConditionExpression: 'attribute_not_exists(#agents)',
+                  ExpressionAttributeNames: { '#agents': 'value' },
+                  ExpressionAttributeValues: {
+                    ':rootObj': { [agentId]: { trustScore: newScore } },
+                  },
+                })
+              );
+              return true;
+            } catch (rootE: unknown) {
+              logger.error(
+                `[TrustRegistry] Failed to initialize agents map for ${agentId}:`,
+                rootE
+              );
+              throw rootE;
+            }
+          }
+          throw innerE;
+        }
+      }
+
       if (err.name === 'ConditionalCheckFailedException' || err.name === 'ValidationException') {
         throw e;
       }

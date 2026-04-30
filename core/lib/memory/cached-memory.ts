@@ -592,6 +592,18 @@ export class CachedMemory implements IMemory {
   async listByPrefix(p: string) {
     return this.delegator.listByPrefix(p);
   }
+
+  async queryItems(params: Record<string, unknown>): Promise<Record<string, unknown>[]> {
+    return this.underlying.queryItems(params);
+  }
+
+  async putItem(
+    item: Record<string, unknown>,
+    params?: Partial<Record<string, unknown>>
+  ): Promise<void> {
+    return this.underlying.putItem(item, params as any);
+  }
+
   async saveClarificationRequest(
     s: ClarificationState,
     scope?: string | import('../types/memory').ContextualScope

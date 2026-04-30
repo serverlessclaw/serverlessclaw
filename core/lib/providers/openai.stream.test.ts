@@ -149,4 +149,30 @@ describe('OpenAIProvider.stream', () => {
     expect(chunks[0].tool_calls![0].function.name).toBe('listAgents');
     expect(chunks[0].tool_calls![0].id).toBe('call_123');
   });
+
+  it('should handle response.reasoning_summary_text.delta from GPT-5', async () => {
+    async function* mockAsyncStream() {
+      yield { type: 'response.reasoning_summary_text.delta', delta: 'Thinking about' };
+      yield { type: 'response.reasoning_summary_text.delta', delta: ' the answer' };
+      yield { type: 'response.output_text.delta', delta: 'Final answer' };
+    }
+
+    mockCreate.mockResolvedValue(mockAsyncStream());
+
+    const chunks = [];
+    const stream = provider.stream(
+      [{ role: 'user' as any, content: 'hi', traceId: 't1', messageId: 'm1' }],
+      [],
+      ReasoningProfile.THINKING
+    );
+
+    for await (const chunk of stream) {
+      chunks.push(chunk);
+    }
+
+    expect(chunks).toHaveLength(3);
+    expect(chunks[0].thought).toBe('Thinking about');
+    expect(chunks[1].thought).toBe(' the answer');
+    expect(chunks[2].content).toBe('Final answer');
+  });
 });

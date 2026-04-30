@@ -107,7 +107,7 @@ export class ConfigManagerMap extends ConfigManagerList {
     entityId: string,
     field: string,
     delta: number,
-    options: { workspaceId?: string } = {}
+    options: { workspaceId?: string; retryCount?: number } = {}
   ): Promise<number> {
     const tableName = this._getTableName();
     if (!tableName) return 0;
@@ -115,12 +115,17 @@ export class ConfigManagerMap extends ConfigManagerList {
     const effectiveKey = this.getEffectiveKey(key, options);
     this.configCache.delete(effectiveKey);
 
+    const retryCount = options.retryCount ?? 0;
+    const maxRetries = 3;
+    const docClient = getDocClient();
+
     try {
-      const result = await getDocClient().send(
+      const result = await docClient.send(
         new UpdateCommand({
           TableName: tableName,
           Key: { key: effectiveKey },
           UpdateExpression: 'SET #val.#id.#field = if_not_exists(#val.#id.#field, :zero) + :delta',
+          ConditionExpression: 'attribute_exists(#val.#id)',
           ExpressionAttributeNames: { '#val': 'value', '#id': entityId, '#field': field },
           ExpressionAttributeValues: { ':delta': delta, ':zero': 0 },
           ReturnValues: 'ALL_NEW',
@@ -128,6 +133,65 @@ export class ConfigManagerMap extends ConfigManagerList {
       );
       return result.Attributes?.value?.[entityId]?.[field] ?? 0;
     } catch (e: unknown) {
+      if (
+        e instanceof Error &&
+        (e.name === 'ValidationException' || e.name === 'ConditionalCheckFailedException')
+      ) {
+        try {
+          // Fallback 1: Try to create the entity object within the map
+          await docClient.send(
+            new UpdateCommand({
+              TableName: tableName,
+              Key: { key: effectiveKey },
+              UpdateExpression: 'SET #val.#id = :entityObj',
+              ConditionExpression: 'attribute_not_exists(#val.#id)',
+              ExpressionAttributeNames: { '#val': 'value', '#id': entityId },
+              ExpressionAttributeValues: { ':entityObj': { [field]: delta } },
+            })
+          );
+          return delta;
+        } catch (innerE: unknown) {
+          if (innerE instanceof Error && innerE.name === 'ValidationException') {
+            try {
+              // Fallback 2: Try to create the root map object
+              await docClient.send(
+                new UpdateCommand({
+                  TableName: tableName,
+                  Key: { key: effectiveKey },
+                  UpdateExpression: 'SET #val = :rootObj',
+                  ConditionExpression: 'attribute_not_exists(#val)',
+                  ExpressionAttributeNames: { '#val': 'value' },
+                  ExpressionAttributeValues: { ':rootObj': { [entityId]: { [field]: delta } } },
+                })
+              );
+              return delta;
+            } catch (rootE: unknown) {
+              if (
+                rootE instanceof Error &&
+                rootE.name === 'ConditionalCheckFailedException' &&
+                retryCount < maxRetries
+              ) {
+                return this.atomicAddMapField(key, entityId, field, delta, {
+                  ...options,
+                  retryCount: retryCount + 1,
+                });
+              }
+              throw rootE;
+            }
+          } else if (
+            innerE instanceof Error &&
+            innerE.name === 'ConditionalCheckFailedException' &&
+            retryCount < maxRetries
+          ) {
+            return this.atomicAddMapField(key, entityId, field, delta, {
+              ...options,
+              retryCount: retryCount + 1,
+            });
+          } else {
+            throw innerE;
+          }
+        }
+      }
       logger.error(`Failed to atomically add ${delta} to ${effectiveKey}/${entityId}.${field}:`, e);
       throw e;
     }
@@ -142,7 +206,7 @@ export class ConfigManagerMap extends ConfigManagerList {
     entityId: string,
     field: string,
     delta: number,
-    options: { workspaceId?: string; min?: number; max?: number } = {}
+    options: { workspaceId?: string; min?: number; max?: number; retryCount?: number } = {}
   ): Promise<number> {
     const tableName = this._getTableName();
     if (!tableName) return 0;
@@ -150,14 +214,18 @@ export class ConfigManagerMap extends ConfigManagerList {
     const effectiveKey = this.getEffectiveKey(key, options);
     this.configCache.delete(effectiveKey);
 
+    const retryCount = options.retryCount ?? 0;
+    const maxRetries = 3;
+    const docClient = getDocClient();
     const { min = -Infinity, max = Infinity } = options;
 
     try {
-      const result = await getDocClient().send(
+      const result = await docClient.send(
         new UpdateCommand({
           TableName: tableName,
           Key: { key: effectiveKey },
           UpdateExpression: 'SET #val.#id.#field = if_not_exists(#val.#id.#field, :zero) + :delta',
+          ConditionExpression: 'attribute_exists(#val.#id)',
           ExpressionAttributeNames: { '#val': 'value', '#id': entityId, '#field': field },
           ExpressionAttributeValues: { ':delta': delta, ':zero': 0 },
           ReturnValues: 'ALL_NEW',
@@ -165,7 +233,7 @@ export class ConfigManagerMap extends ConfigManagerList {
       );
       const newValue = result.Attributes?.value?.[entityId]?.[field] ?? 0;
 
-      // Clamping if needed (Note: this is not perfectly atomic for clamping, but consistent with old implementation)
+      // Clamping if needed
       if (newValue < min || newValue > max) {
         const clamped = Math.min(Math.max(newValue, min), max);
         await this.atomicUpdateMapField(key, entityId, field, clamped, options);
@@ -174,6 +242,67 @@ export class ConfigManagerMap extends ConfigManagerList {
 
       return newValue;
     } catch (e: unknown) {
+      if (
+        e instanceof Error &&
+        (e.name === 'ValidationException' || e.name === 'ConditionalCheckFailedException')
+      ) {
+        try {
+          const initialValue = Math.min(Math.max(delta, min), max);
+          await docClient.send(
+            new UpdateCommand({
+              TableName: tableName,
+              Key: { key: effectiveKey },
+              UpdateExpression: 'SET #val.#id = :entityObj',
+              ConditionExpression: 'attribute_not_exists(#val.#id)',
+              ExpressionAttributeNames: { '#val': 'value', '#id': entityId },
+              ExpressionAttributeValues: { ':entityObj': { [field]: initialValue } },
+            })
+          );
+          return initialValue;
+        } catch (innerE: unknown) {
+          if (innerE instanceof Error && innerE.name === 'ValidationException') {
+            try {
+              const initialValue = Math.min(Math.max(delta, min), max);
+              await docClient.send(
+                new UpdateCommand({
+                  TableName: tableName,
+                  Key: { key: effectiveKey },
+                  UpdateExpression: 'SET #val = :rootObj',
+                  ConditionExpression: 'attribute_not_exists(#val)',
+                  ExpressionAttributeNames: { '#val': 'value' },
+                  ExpressionAttributeValues: {
+                    ':rootObj': { [entityId]: { [field]: initialValue } },
+                  },
+                })
+              );
+              return initialValue;
+            } catch (rootE: unknown) {
+              if (
+                rootE instanceof Error &&
+                rootE.name === 'ConditionalCheckFailedException' &&
+                retryCount < maxRetries
+              ) {
+                return this.atomicIncrementMapField(key, entityId, field, delta, {
+                  ...options,
+                  retryCount: retryCount + 1,
+                });
+              }
+              throw rootE;
+            }
+          } else if (
+            innerE instanceof Error &&
+            innerE.name === 'ConditionalCheckFailedException' &&
+            retryCount < maxRetries
+          ) {
+            return this.atomicIncrementMapField(key, entityId, field, delta, {
+              ...options,
+              retryCount: retryCount + 1,
+            });
+          } else {
+            throw innerE;
+          }
+        }
+      }
       logger.error(
         `Failed to atomically increment ${effectiveKey}/${entityId}.${field} by ${delta}:`,
         e

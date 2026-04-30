@@ -256,6 +256,13 @@ export class AgentEmitter {
         ? `users/${safeUserId}/sessions/${sessionId}/signal`
         : `users/${safeUserId}/signal`;
 
+      if (!isRoot && !this.config?.workerFeedback) {
+        logger.debug(
+          `[AgentEmitter] Skipping emission for worker agent ${agentId} (workerFeedback disabled)`
+        );
+        return;
+      }
+
       if (workspaceId) {
         topic = `workspaces/${workspaceId}/signal`;
         logger.debug(`[EMITTER] Using shared workspace topic: ${topic}`);
@@ -285,6 +292,7 @@ export class AgentEmitter {
         isThought,
         options: buttonOptions,
         agentName: agentName ?? this.config?.name ?? 'SuperClaw',
+        emittedAt: Date.now(),
         thought: thoughtDelta,
         ui_blocks,
         attachments: safeAttachments,

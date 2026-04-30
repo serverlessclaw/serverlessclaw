@@ -18,6 +18,7 @@ export function useRealtime({
   topics = [],
   onMessage,
   userId: userIdOption,
+  workspaceId,
 }: UseRealtimeOptions = {}) {
   const {
     isConnected,
@@ -38,8 +39,12 @@ export function useRealtime({
 
   const allTopics = useMemo(() => {
     const defaultTopics = [`users/${userId}/#`];
+    if (workspaceId) {
+      defaultTopics.push(`workspaces/${workspaceId}/#`);
+      defaultTopics.push(`workspaces/${workspaceId}/sessions/#`);
+    }
     return Array.from(new Set([...defaultTopics, ...topics])).sort();
-  }, [topics, userId]);
+  }, [topics, userId, workspaceId]);
 
   useEffect(() => {
     if (!onMessageRef.current) return;

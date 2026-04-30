@@ -147,6 +147,17 @@ describe('shouldProcessChunk', () => {
     };
     expect(shouldProcessChunk(chunk, 'sess-1', 'user-1')).toBe(false);
   });
+
+  it('allows chunks for dashboard-user when sessionId matches', () => {
+    const chunk: IncomingChunk & { 'detail-type': string } = {
+      message: 'hi',
+      messageId: 't1',
+      userId: 'session_123',
+      sessionId: 'sess-1',
+      'detail-type': 'TEXT_MESSAGE_CONTENT',
+    };
+    expect(shouldProcessChunk(chunk, 'sess-1', 'dashboard-user')).toBe(true);
+  });
 });
 
 describe('applyChunkToMessages', () => {

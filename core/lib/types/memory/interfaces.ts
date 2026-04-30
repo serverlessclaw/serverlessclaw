@@ -215,6 +215,19 @@ export interface IMemory extends IHistoryStore, IKnowledgeStore, IGapManager {
    */
   listByPrefix(prefix: string): Promise<Record<string, unknown>[]>;
 
+  /**
+   * Low-level query for items from the underlying storage.
+   * @param params - Query parameters.
+   */
+  queryItems(params: Record<string, unknown>): Promise<Record<string, unknown>[]>;
+
+  /**
+   * Low-level put for an item into the underlying storage.
+   * @param item - The item to store.
+   * @param params - Optional parameters.
+   */
+  putItem(item: Record<string, unknown>, params?: Partial<Record<string, unknown>>): Promise<void>;
+
   /** Saves a clarification request to DynamoDB for state persistence. */
   saveClarificationRequest(
     state: Omit<ClarificationState, 'type' | 'expiresAt' | 'timestamp'>,

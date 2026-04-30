@@ -18,7 +18,7 @@ import { BaseExecutor } from './base-executor';
  * Streaming executor implementation.
  */
 export class StreamingExecutor extends BaseExecutor {
-  async *streamLoop(messages: Message[], options: ExecutorOptions): AsyncIterable<MessageChunk> {
+  async *streamLoop(messages: Message[], options: ExecutorOptions): AsyncGenerator<MessageChunk> {
     const {
       maxIterations,
       tracer,
@@ -138,6 +138,16 @@ export class StreamingExecutor extends BaseExecutor {
         options.activeProfile === ReasoningProfile.DEEP ||
         normalizedProfile === 'thinking' ||
         normalizedProfile === 'deep';
+
+      // B3: Emit start event to initialize UI state
+      if (emitter) {
+        await emitter.emitChunk(userId, sessionId, traceId, {
+          detailType: EventType.TEXT_MESSAGE_START,
+          agentName: this.agentName,
+          initiatorId: options.currentInitiator,
+          scope,
+        });
+      }
 
       if (shouldPrefaceThinking && emitter) {
         await emitter.emitChunk(userId, sessionId, traceId, {
