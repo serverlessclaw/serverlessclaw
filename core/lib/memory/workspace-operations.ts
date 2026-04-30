@@ -138,6 +138,15 @@ export async function inviteMember(
   workspace.members.push(newMember);
   workspace.updatedAt = Date.now();
 
+  // Sh10: Verify agent is enabled before adding (Principle 14)
+  if (input.type === 'agent') {
+    const { AgentRegistry } = await import('../registry');
+    const agentConfig = await AgentRegistry.getAgentConfig(input.memberId);
+    if (!agentConfig || agentConfig.enabled !== true) {
+      throw new Error(`Agent ${input.memberId} is disabled and cannot be invited to a workspace.`);
+    }
+  }
+
   await ConfigManager.saveRawConfig(workspaceKey(workspaceId), workspace);
   logger.info(`[Workspace] Member invited: ${input.memberId} to ${workspaceId} as ${input.role}`);
   return workspace;

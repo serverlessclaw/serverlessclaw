@@ -15,6 +15,13 @@ const mockSaveRawConfig = vi.fn();
 
 const mockAppendToList = vi.fn();
 
+vi.mock('../registry/AgentRegistry', () => ({
+  AgentRegistry: {
+    getAgentConfig: vi.fn(),
+    getFallbackAgents: vi.fn().mockReturnValue([]),
+  },
+}));
+
 vi.mock('../registry/config', () => ({
   ConfigManager: {
     getRawConfig: (...args: unknown[]) => mockGetRawConfig(...args),
@@ -121,6 +128,11 @@ describe('Workspace Operations', () => {
         status: 'active',
       };
       mockGetRawConfig.mockResolvedValue(ws);
+      const { AgentRegistry } = await import('../registry/AgentRegistry');
+      vi.mocked(AgentRegistry.getAgentConfig).mockResolvedValueOnce({
+        id: 'coder',
+        enabled: true,
+      } as any);
 
       const result = await inviteMember('ws-test', 'user-123', {
         workspaceId: 'ws-test',
@@ -133,6 +145,83 @@ describe('Workspace Operations', () => {
       expect(result.members).toHaveLength(2);
       expect(result.members[1].memberId).toBe('coder');
       expect(result.members[1].role).toBe('collaborator');
+    });
+
+    it('should prevent inviting a disabled agent', async () => {
+      const { AgentRegistry } = await import('../registry/AgentRegistry');
+      const ws = {
+        workspaceId: 'ws-test',
+        name: 'Test',
+        ownerId: 'user-123',
+        members: [
+          {
+            memberId: 'user-123',
+            type: 'human',
+            displayName: 'Alice',
+            role: 'owner',
+            joinedAt: Date.now(),
+            active: true,
+          },
+        ],
+        activeCollaborations: [],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        status: 'active',
+      };
+      mockGetRawConfig.mockResolvedValue(ws);
+      vi.mocked(AgentRegistry.getAgentConfig).mockResolvedValueOnce({
+        id: 'disabled-agent',
+        enabled: false,
+      } as any);
+
+      await expect(
+        inviteMember('ws-test', 'user-123', {
+          workspaceId: 'ws-test',
+          memberId: 'disabled-agent',
+          type: 'agent',
+          displayName: 'Disabled Agent',
+          role: 'collaborator',
+        })
+      ).rejects.toThrow(/is disabled/);
+    });
+
+    it('should allow inviting an enabled agent', async () => {
+      const { AgentRegistry } = await import('../registry/AgentRegistry');
+      const ws = {
+        workspaceId: 'ws-test',
+        name: 'Test',
+        ownerId: 'user-123',
+        members: [
+          {
+            memberId: 'user-123',
+            type: 'human',
+            displayName: 'Alice',
+            role: 'owner',
+            joinedAt: Date.now(),
+            active: true,
+          },
+        ],
+        activeCollaborations: [],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        status: 'active',
+      };
+      mockGetRawConfig.mockResolvedValue(ws);
+      vi.mocked(AgentRegistry.getAgentConfig).mockResolvedValueOnce({
+        id: 'enabled-agent',
+        enabled: true,
+      } as any);
+
+      const result = await inviteMember('ws-test', 'user-123', {
+        workspaceId: 'ws-test',
+        memberId: 'enabled-agent',
+        type: 'agent',
+        displayName: 'Enabled Agent',
+        role: 'collaborator',
+      });
+
+      expect(result.members).toHaveLength(2);
+      expect(result.members[1].memberId).toBe('enabled-agent');
     });
 
     it('should reject duplicate members', async () => {

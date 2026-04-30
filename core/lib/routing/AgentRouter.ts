@@ -248,7 +248,7 @@ export class AgentRouter {
   ): Promise<string> {
     if (candidates.length === 0) throw new Error('No candidate agents provided');
 
-    const workspaceId = typeof scope === 'string' ? undefined : scope?.workspaceId;
+    const workspaceId = typeof scope === 'string' ? scope : scope?.workspaceId;
     const configs = await Promise.all(
       candidates.map((id) => AgentRegistry.getAgentConfig(id, { workspaceId }))
     );

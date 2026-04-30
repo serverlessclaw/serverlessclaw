@@ -273,5 +273,24 @@ describe('AgentRouter', () => {
         'Critical: All target and backbone fallback agents are disabled.'
       );
     });
+
+    it('should correctly resolve workspaceId when scope is a string', async () => {
+      const { AgentRegistry } = await import('../../registry/AgentRegistry');
+      const scope = 'ws-string-id';
+      const candidates = ['agent-1'];
+
+      vi.mocked(AgentRegistry.getAgentConfig).mockResolvedValueOnce({
+        id: 'agent-1',
+        enabled: true,
+        trustScore: 100,
+      } as any);
+
+      await AgentRouter.selectBestAgent(candidates, {}, scope);
+
+      expect(AgentRegistry.getAgentConfig).toHaveBeenCalledWith(
+        'agent-1',
+        expect.objectContaining({ workspaceId: scope })
+      );
+    });
   });
 });
