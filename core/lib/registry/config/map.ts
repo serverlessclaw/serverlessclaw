@@ -606,6 +606,9 @@ export class ConfigManagerMap extends ConfigManagerList {
       orgId?: string;
       retryCount?: number;
       increments?: Record<string, number>;
+      conditionExpression?: string;
+      expressionAttributeNames?: Record<string, string>;
+      expressionAttributeValues?: Record<string, unknown>;
     }
   ): Promise<void> {
     const tableName = this._getTableName();
@@ -618,8 +621,14 @@ export class ConfigManagerMap extends ConfigManagerList {
     const maxRetries = 3;
     const docClient = getDocClient();
     const sets: string[] = [];
-    const names: Record<string, string> = { '#val': 'value', '#id': entityId };
-    const values: Record<string, unknown> = {};
+    const names: Record<string, string> = {
+      '#val': 'value',
+      '#id': entityId,
+      ...(options?.expressionAttributeNames || {}),
+    };
+    const values: Record<string, unknown> = {
+      ...(options?.expressionAttributeValues || {}),
+    };
 
     let valIdx = 0;
     Object.entries(updates).forEach(([field, value]) => {
@@ -642,6 +651,10 @@ export class ConfigManagerMap extends ConfigManagerList {
     }
 
     const updateExpression = `SET ${sets.join(', ')}`;
+    let conditionExpression = 'attribute_exists(#val.#id)';
+    if (options?.conditionExpression) {
+      conditionExpression = `(${conditionExpression}) AND (${options.conditionExpression})`;
+    }
 
     try {
       await docClient.send(
@@ -649,7 +662,7 @@ export class ConfigManagerMap extends ConfigManagerList {
           TableName: tableName,
           Key: { key: actualKey },
           UpdateExpression: updateExpression,
-          ConditionExpression: 'attribute_exists(#val.#id)',
+          ConditionExpression: conditionExpression,
           ExpressionAttributeNames: names,
           ExpressionAttributeValues: values,
         })
@@ -659,6 +672,16 @@ export class ConfigManagerMap extends ConfigManagerList {
         e instanceof Error &&
         (e.name === 'ValidationException' || e.name === 'ConditionalCheckFailedException')
       ) {
+        // If we had a custom condition and it failed, we shouldn't attempt the fallbacks
+        // as they are meant for "attribute_exists" failures (entity/root map not existing).
+        if (
+          e.name === 'ConditionalCheckFailedException' &&
+          options?.conditionExpression &&
+          !e.message.includes('attribute_exists')
+        ) {
+          throw e;
+        }
+
         try {
           const initialObject = { ...updates };
           if (options?.increments) {

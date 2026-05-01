@@ -11,6 +11,7 @@ vi.mock('../registry/config', () => ({
     getRawConfig: vi.fn(),
     saveRawConfig: vi.fn(),
     atomicRemoveFromMap: vi.fn().mockResolvedValue(undefined),
+    atomicRemoveFieldsFromMap: vi.fn().mockResolvedValue(undefined),
   },
 }));
 

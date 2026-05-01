@@ -133,15 +133,48 @@ export class AgentRegistry {
     return { nodes: Array.isArray(config) ? config : [], edges: [] };
   }
 
+  static async disableAgentIfTrustLow(
+    agentId: string,
+    threshold: number,
+    options?: { workspaceId?: string }
+  ): Promise<boolean> {
+    try {
+      await ConfigManager.atomicUpdateMapEntity(
+        DYNAMO_KEYS.AGENTS_CONFIG,
+        agentId,
+        { enabled: false, lastUpdated: new Date().toISOString() },
+        {
+          workspaceId: options?.workspaceId,
+          increments: { version: 1 },
+          conditionExpression: '(#val.#id.#trust < :threshold) AND (#val.#id.#enabled <> :false)',
+          expressionAttributeNames: { '#trust': 'trustScore', '#enabled': 'enabled' },
+          expressionAttributeValues: { ':threshold': threshold, ':false': false },
+        }
+      );
+      return true;
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === 'ConditionalCheckFailedException') {
+        return false; // Condition not met (trust improved or already disabled)
+      }
+      throw e;
+    }
+  }
+
   static async saveConfig(
     agentId: string,
     config: Partial<IAgentConfig>,
-    options?: { workspaceId?: string }
+    options?: {
+      workspaceId?: string;
+      conditionExpression?: string;
+      expressionAttributeNames?: Record<string, string>;
+      expressionAttributeValues?: Record<string, unknown>;
+    }
   ): Promise<void> {
     // Only validate if they are explicitly provided in the partial config
     if (config.name === '' || config.systemPrompt === '') {
       throw new Error('Agent name and systemPrompt cannot be empty if provided');
     }
+    const existing = await this.getAgentConfig(agentId, options);
     const { hashString } = await import('../utils/crypto');
     const enriched: any = {
       ...config,
@@ -150,17 +183,65 @@ export class AgentRegistry {
 
     // Prevent wiping existing metadata (Anti-pattern 6: Direct object-level overwrite)
     if (config.metadata !== undefined || config.systemPrompt !== undefined) {
-      const existing = await this.getAgentConfig(agentId, options);
       enriched.metadata = { ...existing?.metadata, ...config.metadata };
       if (config.systemPrompt !== undefined) {
         enriched.metadata.promptHash = hashString(config.systemPrompt);
       }
     }
 
-    await ConfigManager.atomicUpdateMapEntity(DYNAMO_KEYS.AGENTS_CONFIG, agentId, enriched, {
+    const updateOptions: any = {
       increments: { version: 1 },
       workspaceId: options?.workspaceId,
-    });
+      conditionExpression: options?.conditionExpression,
+      expressionAttributeNames: options?.expressionAttributeNames,
+      expressionAttributeValues: options?.expressionAttributeValues,
+    };
+
+    if (existing && existing.version !== undefined) {
+      const versionCondition = '#val.#id.#version = :expectedVersion';
+      const versionNames = { '#version': 'version' };
+      const versionValues = { ':expectedVersion': existing.version };
+
+      if (updateOptions.conditionExpression) {
+        updateOptions.conditionExpression = `(${updateOptions.conditionExpression}) AND (${versionCondition})`;
+        updateOptions.expressionAttributeNames = {
+          ...updateOptions.expressionAttributeNames,
+          ...versionNames,
+        };
+        updateOptions.expressionAttributeValues = {
+          ...updateOptions.expressionAttributeValues,
+          ...versionValues,
+        };
+      } else {
+        updateOptions.conditionExpression = versionCondition;
+        updateOptions.expressionAttributeNames = versionNames;
+        updateOptions.expressionAttributeValues = versionValues;
+      }
+    }
+
+    try {
+      await ConfigManager.atomicUpdateMapEntity(
+        DYNAMO_KEYS.AGENTS_CONFIG,
+        agentId,
+        enriched,
+        updateOptions
+      );
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === 'ConditionalCheckFailedException') {
+        // If it was our custom condition that failed, we might not want to retry
+        // But for simplicity, and because we merge existing.version, retry is usually fine
+        // unless the custom condition is "fixed" (e.g. trustScore < 20).
+        // If trustScore is now 30, retry will again find it is NOT < 20 and fail again or skip.
+
+        logger.warn(
+          `[AgentRegistry] Conditional check failed for agent ${agentId}, retrying/skipping...`
+        );
+        // If it's just a version mismatch, retry.
+        // If it's a custom condition, the retry will re-evaluate the logic before calling saveConfig again.
+        return this.saveConfig(agentId, config, options);
+      }
+      throw e;
+    }
 
     try {
       const { discoverSystemTopology } = await import('../utils/topology');

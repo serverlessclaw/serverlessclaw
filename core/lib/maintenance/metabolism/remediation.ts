@@ -49,6 +49,12 @@ export async function remediateDashboardFailure(
           [toolName],
           { workspaceId }
         );
+        // Also prune tool metadata to prevent stale configuration debt
+        await ConfigManager.atomicRemoveFieldsFromMap(
+          DYNAMO_KEYS.TOOL_METADATA_OVERRIDES,
+          [toolName],
+          { workspaceId }
+        );
         pruned = true;
       }
 

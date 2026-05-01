@@ -107,12 +107,16 @@ export async function executeRepairs(
         logger.warn(
           `[Metabolism] Automatically disabling low-trust agent: ${agentId} (Score: ${config.trustScore})`
         );
-        await AgentRegistry.saveConfig(
-          agentId,
-          { enabled: false },
-          { workspaceId: scope.workspaceId }
-        );
-        disabledCount++;
+        const disabled = await AgentRegistry.disableAgentIfTrustLow(agentId, lowTrustThreshold, {
+          workspaceId: scope.workspaceId,
+        });
+        if (disabled) {
+          disabledCount++;
+        } else {
+          logger.info(
+            `[Metabolism] Trust-based disable skipped for ${agentId} (Trust improved concurrently)`
+          );
+        }
       }
     }
 
