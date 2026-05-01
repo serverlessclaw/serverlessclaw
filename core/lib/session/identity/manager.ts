@@ -131,7 +131,11 @@ export class IdentityManager extends IdentityBase {
 
     if (!this.accessOps.hasPermissionSync(user.role, permission)) return false;
 
-    if (workspaceId && this.accessOps.isWorkspaceScoped(permission)) {
+    if (this.accessOps.isWorkspaceScoped(permission)) {
+      // OWNER and ADMIN are global roles and bypass workspace-membership checks
+      if (user.role === UserRole.OWNER || user.role === UserRole.ADMIN) return true;
+
+      if (!workspaceId) return false;
       return user.workspaceIds.includes(workspaceId);
     }
 

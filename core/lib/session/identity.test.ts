@@ -266,14 +266,15 @@ describe('IdentityManager', () => {
 
     it('should grant limited permissions to MEMBER', async () => {
       await manager.authenticate('member-1', 'telegram');
+      await manager.addUserToWorkspace('member-1', 'ws-1');
 
-      expect(await manager.hasPermission('member-1', Permission.AGENT_VIEW)).toBe(true);
-      expect(await manager.hasPermission('member-1', Permission.TASK_CREATE)).toBe(true);
-      expect(await manager.hasPermission('member-1', Permission.DASHBOARD_VIEW)).toBe(true);
+      expect(await manager.hasPermission('member-1', Permission.AGENT_VIEW, 'ws-1')).toBe(true);
+      expect(await manager.hasPermission('member-1', Permission.TASK_CREATE, 'ws-1')).toBe(true);
+      expect(await manager.hasPermission('member-1', Permission.DASHBOARD_VIEW, 'ws-1')).toBe(true);
       // MEMBER should not have create/delete/update permissions
-      expect(await manager.hasPermission('member-1', Permission.AGENT_CREATE)).toBe(false);
-      expect(await manager.hasPermission('member-1', Permission.AGENT_DELETE)).toBe(false);
-      expect(await manager.hasPermission('member-1', Permission.CONFIG_UPDATE)).toBe(false);
+      expect(await manager.hasPermission('member-1', Permission.AGENT_CREATE, 'ws-1')).toBe(false);
+      expect(await manager.hasPermission('member-1', Permission.AGENT_DELETE, 'ws-1')).toBe(false);
+      expect(await manager.hasPermission('member-1', Permission.CONFIG_UPDATE, 'ws-1')).toBe(false);
     });
 
     it('should grant read-only permissions to VIEWER', async () => {
@@ -286,15 +287,36 @@ describe('IdentityManager', () => {
       });
       await manager.authenticate('viewer-1', 'telegram');
       await manager.updateUserRole('viewer-1', UserRole.VIEWER, 'superadmin');
+      await manager.addUserToWorkspace('viewer-1', 'ws-1');
 
-      expect(await manager.hasPermission('viewer-1', Permission.AGENT_VIEW)).toBe(true);
-      expect(await manager.hasPermission('viewer-1', Permission.TASK_VIEW)).toBe(true);
-      expect(await manager.hasPermission('viewer-1', Permission.CONFIG_VIEW)).toBe(true);
-      expect(await manager.hasPermission('viewer-1', Permission.DASHBOARD_VIEW)).toBe(true);
+      expect(await manager.hasPermission('viewer-1', Permission.AGENT_VIEW, 'ws-1')).toBe(true);
+      expect(await manager.hasPermission('viewer-1', Permission.TASK_VIEW, 'ws-1')).toBe(true);
+      expect(await manager.hasPermission('viewer-1', Permission.CONFIG_VIEW, 'ws-1')).toBe(true);
+      expect(await manager.hasPermission('viewer-1', Permission.DASHBOARD_VIEW, 'ws-1')).toBe(true);
       // VIEWER should not have any create/update/delete permissions
-      expect(await manager.hasPermission('viewer-1', Permission.TASK_CREATE)).toBe(false);
-      expect(await manager.hasPermission('viewer-1', Permission.AGENT_CREATE)).toBe(false);
-      expect(await manager.hasPermission('viewer-1', Permission.EVOLUTION_APPROVE)).toBe(false);
+      expect(await manager.hasPermission('viewer-1', Permission.TASK_CREATE, 'ws-1')).toBe(false);
+      expect(await manager.hasPermission('viewer-1', Permission.AGENT_CREATE, 'ws-1')).toBe(false);
+      expect(await manager.hasPermission('viewer-1', Permission.EVOLUTION_APPROVE, 'ws-1')).toBe(
+        false
+      );
+    });
+
+    it('should enforce workspace isolation for scoped permissions', async () => {
+      await manager.authenticate('member-1', 'telegram');
+      await manager.addUserToWorkspace('member-1', 'ws-allowed');
+
+      // 1. Success case: user in workspace
+      expect(await manager.hasPermission('member-1', Permission.TASK_CREATE, 'ws-allowed')).toBe(
+        true
+      );
+
+      // 2. Failure case: user NOT in workspace
+      expect(await manager.hasPermission('member-1', Permission.TASK_CREATE, 'ws-blocked')).toBe(
+        false
+      );
+
+      // 3. Failure case: no workspaceId provided for scoped permission (Fail-Closed)
+      expect(await manager.hasPermission('member-1', Permission.TASK_CREATE)).toBe(false);
     });
   });
 
