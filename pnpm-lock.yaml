@@ -57,7 +57,7 @@ importers:
         version: 6.0.3
       zod:
         specifier: ^4.3.6
-        version: 4.4.1
+        version: 4.4.2
     devDependencies:
       '@aiready/cli':
         specifier: ^0.15.22
@@ -100,7 +100,7 @@ importers:
         version: 10.0.1(eslint@10.3.0(jiti@2.6.1))
       '@modelcontextprotocol/sdk':
         specifier: 1.29.0
-        version: 1.29.0(zod@4.4.1)
+        version: 1.29.0(zod@4.4.2)
       '@playwright/test':
         specifier: ^1.59.1
         version: 1.59.1
@@ -209,7 +209,7 @@ importers:
         version: 0.8.3(eslint@10.3.0(jiti@2.6.1))(typescript@6.0.3)
       '@anthropic-ai/sdk':
         specifier: ^0.92.0
-        version: 0.92.0(zod@4.4.1)
+        version: 0.92.0(zod@4.4.2)
       '@aws-sdk/client-bedrock-runtime':
         specifier: ^3.1010.0
         version: 3.1040.0
@@ -248,7 +248,7 @@ importers:
         version: 3.1040.0(@aws-sdk/client-dynamodb@3.1040.0)
       '@aws/run-mcp-servers-with-aws-lambda':
         specifier: ^0.5.0
-        version: 0.5.17(zod@4.4.1)
+        version: 0.5.17(zod@4.4.2)
       '@cyanheads/git-mcp-server':
         specifier: ^2.10.5
         version: 2.15.0
@@ -257,19 +257,19 @@ importers:
         version: 1.3.1
       '@kirkdeam/puppeteer-mcp-server':
         specifier: ^1.1.0
-        version: 1.1.0(typescript@6.0.3)(zod@4.4.1)
+        version: 1.1.0(typescript@6.0.3)(zod@4.4.2)
       '@mcp-server/google-search-mcp':
         specifier: ^1.0.3
         version: 1.0.3
       '@modelcontextprotocol/sdk':
         specifier: 1.29.0
-        version: 1.29.0(zod@4.4.1)
+        version: 1.29.0(zod@4.4.2)
       '@modelcontextprotocol/server-filesystem':
         specifier: 2026.1.14
-        version: 2026.1.14(zod@4.4.1)
+        version: 2026.1.14(zod@4.4.2)
       '@openai/agents-core':
         specifier: ^0.8.0
-        version: 0.8.5(ws@8.20.0)(zod@4.4.1)
+        version: 0.8.5(ws@8.20.0)(zod@4.4.2)
       '@serverlessclaw/integration-github':
         specifier: workspace:*
         version: link:../integrations/github
@@ -284,13 +284,13 @@ importers:
         version: 1.1.2
       openai:
         specifier: ^6.31.0
-        version: 6.35.0(ws@8.20.0)(zod@4.4.1)
+        version: 6.35.0(ws@8.20.0)(zod@4.4.2)
       uuid:
         specifier: ^14.0.0
         version: 14.0.0
       zod:
         specifier: ^4.3.6
-        version: 4.4.1
+        version: 4.4.2
     devDependencies:
       eslint:
         specifier: ^10.2.0
@@ -363,7 +363,7 @@ importers:
         version: 4.12.11
       zod:
         specifier: ^4.3.6
-        version: 4.4.1
+        version: 4.4.2
     devDependencies:
       '@tailwindcss/postcss':
         specifier: ^4
@@ -6584,8 +6584,8 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
-  zod@4.4.1:
-    resolution: {integrity: sha512-a6ENMBBGZBsnlSebQ/eKCguSBeGKSf4O7BPnqVPmYGtpBYI7VSqoVqw+QcB7kPRjbqPwhYTpFbVj/RqNz/CT0Q==}
+  zod@4.4.2:
+    resolution: {integrity: sha512-IynmDyxsEsb9RKzO3J9+4SxXnl2FTFSzNBaKKaMV6tsSk0rw9gYw9gs+JFCq/qk2LCZ78KDwyj+Z289TijSkUw==}
 
   zustand@4.5.7:
     resolution: {integrity: sha512-CHOUy7mu3lbD6o6LJLfllpjkzhHXSBlX8B9+qPddUsIfeF5S/UZ5q0kmCsnRqT1UHFQZchNFDDzMbQsuesHWlw==}
@@ -6644,12 +6644,12 @@ snapshots:
     dependencies:
       '@aiready/core': 0.29.5(eslint@10.3.0(jiti@2.6.1))
       '@aiready/hygiene-audit': 0.8.0(eslint@10.3.0(jiti@2.6.1))
-      '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.1)
+      '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.2)
       '@vscode/ripgrep': 1.17.1
       glob: 13.0.6
       ts-morph: 28.0.0
       typescript: 6.0.3
-      zod: 4.4.1
+      zod: 4.4.2
     transitivePeerDependencies:
       - '@cfworker/json-schema'
       - eslint
@@ -6741,7 +6741,7 @@ snapshots:
       tree-sitter-wasms: 0.1.13
       typescript: 6.0.3
       web-tree-sitter: 0.26.8
-      zod: 4.4.1
+      zod: 4.4.2
     transitivePeerDependencies:
       - eslint
       - supports-color
@@ -6764,7 +6764,7 @@ snapshots:
       tree-sitter-wasms: 0.1.13
       typescript: 6.0.3
       web-tree-sitter: 0.26.8
-      zod: 4.4.1
+      zod: 4.4.2
     transitivePeerDependencies:
       - eslint
       - supports-color
@@ -6844,11 +6844,11 @@ snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
 
-  '@anthropic-ai/sdk@0.92.0(zod@4.4.1)':
+  '@anthropic-ai/sdk@0.92.0(zod@4.4.2)':
     dependencies:
       json-schema-to-ts: 3.1.1
     optionalDependencies:
-      zod: 4.4.1
+      zod: 4.4.2
 
   '@asamuzakjp/css-color@5.1.11':
     dependencies:
@@ -8359,14 +8359,14 @@ snapshots:
 
   '@aws/lambda-invoke-store@0.2.4': {}
 
-  '@aws/run-mcp-servers-with-aws-lambda@0.5.17(zod@4.4.1)':
+  '@aws/run-mcp-servers-with-aws-lambda@0.5.17(zod@4.4.2)':
     dependencies:
       '@aws-crypto/sha256-js': 5.2.0
       '@aws-sdk/client-lambda': 3.1040.0
       '@aws-sdk/credential-provider-node': 3.972.37
       '@aws-sdk/protocol-http': 3.374.0
       '@aws-sdk/types': 3.973.8
-      '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.1)
+      '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.2)
       '@smithy/signature-v4': 5.3.14
       winston: 3.19.0
     transitivePeerDependencies:
@@ -8905,9 +8905,9 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@kirkdeam/puppeteer-mcp-server@1.1.0(typescript@6.0.3)(zod@4.4.1)':
+  '@kirkdeam/puppeteer-mcp-server@1.1.0(typescript@6.0.3)(zod@4.4.2)':
     dependencies:
-      '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.1)
+      '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.2)
       puppeteer: 22.15.0(typescript@6.0.3)
     transitivePeerDependencies:
       - '@cfworker/json-schema'
@@ -8956,7 +8956,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@modelcontextprotocol/sdk@1.29.0(zod@4.4.1)':
+  '@modelcontextprotocol/sdk@1.29.0(zod@4.4.2)':
     dependencies:
       '@hono/node-server': 2.0.1(hono@4.12.16)
       ajv: 8.18.0
@@ -8973,18 +8973,18 @@ snapshots:
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
       raw-body: 3.0.2
-      zod: 4.4.1
-      zod-to-json-schema: 3.25.2(zod@4.4.1)
+      zod: 4.4.2
+      zod-to-json-schema: 3.25.2(zod@4.4.2)
     transitivePeerDependencies:
       - supports-color
 
-  '@modelcontextprotocol/server-filesystem@2026.1.14(zod@4.4.1)':
+  '@modelcontextprotocol/server-filesystem@2026.1.14(zod@4.4.2)':
     dependencies:
-      '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.1)
+      '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.2)
       diff: 5.2.2
       glob: 13.0.6
       minimatch: 10.2.5
-      zod-to-json-schema: 3.25.2(zod@4.4.1)
+      zod-to-json-schema: 3.25.2(zod@4.4.2)
     transitivePeerDependencies:
       - '@cfworker/json-schema'
       - supports-color
@@ -9130,13 +9130,13 @@ snapshots:
     dependencies:
       '@octokit/openapi-types': 27.0.0
 
-  '@openai/agents-core@0.8.5(ws@8.20.0)(zod@4.4.1)':
+  '@openai/agents-core@0.8.5(ws@8.20.0)(zod@4.4.2)':
     dependencies:
       debug: 4.4.3
-      openai: 6.35.0(ws@8.20.0)(zod@4.4.1)
+      openai: 6.35.0(ws@8.20.0)(zod@4.4.2)
     optionalDependencies:
-      '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.1)
-      zod: 4.4.1
+      '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.2)
+      zod: 4.4.2
     transitivePeerDependencies:
       - '@cfworker/json-schema'
       - supports-color
@@ -11459,8 +11459,8 @@ snapshots:
       '@babel/parser': 7.29.2
       eslint: 10.3.0(jiti@2.6.1)
       hermes-parser: 0.25.1
-      zod: 4.4.1
-      zod-validation-error: 4.0.2(zod@4.4.1)
+      zod: 4.4.2
+      zod-validation-error: 4.0.2(zod@4.4.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -12478,12 +12478,12 @@ snapshots:
 
   mcp-fetch-server@1.1.2:
     dependencies:
-      '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.1)
+      '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.2)
       '@mozilla/readability': 0.6.0
       jsdom: 28.1.0
       private-ip: 3.0.2
       turndown: 7.2.4
-      zod: 4.4.1
+      zod: 4.4.2
     transitivePeerDependencies:
       - '@cfworker/json-schema'
       - '@noble/hashes'
@@ -13074,10 +13074,10 @@ snapshots:
     dependencies:
       mimic-function: 5.0.1
 
-  openai@6.35.0(ws@8.20.0)(zod@4.4.1):
+  openai@6.35.0(ws@8.20.0)(zod@4.4.2):
     optionalDependencies:
       ws: 8.20.0
-      zod: 4.4.1
+      zod: 4.4.2
 
   openid-client@5.6.4:
     dependencies:
@@ -14797,19 +14797,19 @@ snapshots:
     dependencies:
       zod: 3.25.76
 
-  zod-to-json-schema@3.25.2(zod@4.4.1):
+  zod-to-json-schema@3.25.2(zod@4.4.2):
     dependencies:
-      zod: 4.4.1
+      zod: 4.4.2
 
-  zod-validation-error@4.0.2(zod@4.4.1):
+  zod-validation-error@4.0.2(zod@4.4.2):
     dependencies:
-      zod: 4.4.1
+      zod: 4.4.2
 
   zod@3.23.8: {}
 
   zod@3.25.76: {}
 
-  zod@4.4.1: {}
+  zod@4.4.2: {}
 
   zustand@4.5.7(@types/react@19.2.14)(immer@11.1.4)(react@19.2.5):
     dependencies:
