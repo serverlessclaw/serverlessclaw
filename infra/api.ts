@@ -117,6 +117,14 @@ export function configureApiRoutes(api: sst.aws.ApiGatewayV2, ctx: SharedContext
         actions: ['events:ListEventBuses'],
         resources: ['*'],
       },
+      {
+        actions: ['s3:ListAllMyBuckets'],
+        resources: ['*'],
+      },
+      {
+        actions: ['iot:DescribeEndpoint'],
+        resources: ['*'],
+      },
     ],
     architecture: LAMBDA_ARCHITECTURE,
     memory: '128 MB',
