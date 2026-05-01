@@ -31,25 +31,21 @@ vi.mock('../logger', () => ({
 }));
 
 // Mock ConfigManager
-vi.mock('../registry/config', () => ({
-  ConfigManager: {
+const { mockConfigManager } = vi.hoisted(() => ({
+  mockConfigManager: {
     appendToList: vi.fn().mockResolvedValue(undefined),
+    atomicUpdateMapEntity: vi.fn(),
+    getEffectiveKey: vi.fn((k) => k),
   },
 }));
 
-describe('TrustManager Concurrency', () => {
-  const { mockConfigManager } = vi.hoisted(() => ({
-    mockConfigManager: {
-      appendToList: vi.fn().mockResolvedValue(undefined),
-      atomicUpdateMapEntity: vi.fn(),
-    },
-  }));
+vi.mock('../registry/config', () => ({
+  ConfigManager: mockConfigManager,
+}));
 
+describe('TrustManager Concurrency', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mock('../registry/config', () => ({
-      ConfigManager: mockConfigManager,
-    }));
   });
 
   it('FIXED: Multiple concurrent decay calls are idempotent', async () => {
