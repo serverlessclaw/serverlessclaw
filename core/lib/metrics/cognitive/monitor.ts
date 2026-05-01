@@ -78,6 +78,7 @@ export class CognitiveHealthMonitor {
 
     const trustManagerPromises: Promise<number>[] = [];
     const results = await Promise.all(metricsPromises);
+    const windowId = new Date(now).toISOString().substring(0, 13); // Align to the hour
 
     for (let i = 0; i < agents.length; i++) {
       const agentId = agents[i];
@@ -93,7 +94,10 @@ export class CognitiveHealthMonitor {
           const baseDelay = 100;
           for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-              return await TrustManager.recordAnomalies(agentId, anomalies, { workspaceId });
+              return await TrustManager.recordAnomalies(agentId, anomalies, {
+                workspaceId,
+                windowId,
+              });
             } catch (err) {
               if (attempt === maxRetries) {
                 logger.error(

@@ -792,7 +792,7 @@ describe('CognitiveHealthMonitor', () => {
           type: expect.any(String),
         }),
       ]),
-      { workspaceId: undefined }
+      expect.objectContaining({ workspaceId: undefined, windowId: expect.any(String) })
     );
   });
 

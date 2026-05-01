@@ -14,7 +14,14 @@ export class TrustRegistry {
   static async atomicIncrementTrustScore(
     agentId: string,
     delta: number,
-    options: { workspaceId?: string; min?: number; max?: number } = {}
+    options: {
+      workspaceId?: string;
+      min?: number;
+      max?: number;
+      conditionExpression?: string;
+      expressionAttributeNames?: Record<string, string>;
+      expressionAttributeValues?: Record<string, unknown>;
+    } = {}
   ): Promise<number> {
     return ConfigManager.atomicIncrementMapField(
       DYNAMO_KEYS.AGENTS_CONFIG,

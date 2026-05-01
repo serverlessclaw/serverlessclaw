@@ -38,6 +38,7 @@ Last Updated: 2026-05-01
 
 | Date       | Report                                          | Silos Covered             | Cross-Silo | Key Findings                                                                                                   |
 | :--------- | :---------------------------------------------- | :------------------------ | :--------- | :------------------------------------------------------------------------------------------------------------- |
+| 2026-05-01 | `audit-2026-05-01-trust-loop.md`              | Scales, Eye, Metabolism   | D          | FIXED: P1 Double Decay in TrustManager, P2 redundant anomaly penalization.                                     |
 | 2026-05-01 | `audit-2026-05-01-identity-journey.md`         | Brain, Spine, Shield      | C          | FIXED: P1 Fail-Open RBAC Bypass in IdentityManager. Updated tests to enforce workspace isolation.              |
 | 2026-05-01 | `audit-2026-05-01-shield-metabolism.md`        | Shield, Metabolism        | C, D, E    | FIXED: P1 Race Condition in Trust Clamping, P2 S3 Reclamation Telemetry Blindness, P2 Lock Release Race        |
 | 2026-05-01 | `audit-2026-05-01-the-shield-identity.md`       | Shield                    | C          | FIXED: P0 Fail-Open RBAC Viewer Bypass, P1 Fail-Open Policy Fallback, P1 Blind Tool Failures                   |

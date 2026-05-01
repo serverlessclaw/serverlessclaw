@@ -99,7 +99,7 @@ export class TrustManager {
   static async recordAnomalies(
     agentId: string,
     anomalies: CognitiveAnomaly[],
-    context?: TrustContext
+    context?: TrustContext & { windowId?: string }
   ): Promise<number> {
     if (anomalies.length === 0) {
       const config = await AgentRegistry.getAgentConfig(agentId, {
@@ -107,6 +107,16 @@ export class TrustManager {
       });
       if (!config) throw new Error(`Agent ${agentId} not found`);
       return config.trustScore ?? TRUST.DEFAULT_SCORE;
+    }
+
+    // Principle 13: Idempotency check for anomaly reporting
+    if (context?.windowId) {
+      const config = await AgentRegistry.getAgentConfig(agentId, {
+        workspaceId: context?.workspaceId,
+      });
+      if (config?.lastAnomalyCalibrationAt === context.windowId) {
+        return config.trustScore ?? TRUST.DEFAULT_SCORE;
+      }
     }
 
     let totalDelta = 0;
@@ -122,28 +132,68 @@ export class TrustManager {
       return `${a.type}: ${a.description}`;
     });
 
-    const newScore = await this.updateTrustScore(agentId, totalDelta, context?.workspaceId);
-    await this.logPenalty(
-      {
+    try {
+      const { ConfigManager } = await import('../registry/config');
+      const updates: Record<string, unknown> = {
+        lastUpdated: new Date().toISOString(),
+      };
+      if (context?.windowId) {
+        updates.lastAnomalyCalibrationAt = context.windowId;
+      }
+
+      // Use atomicUpdateMapEntity to increment trustScore and set lastAnomalyCalibrationAt atomically
+      await ConfigManager.atomicUpdateMapEntity(DYNAMO_KEYS.AGENTS_CONFIG, agentId, updates, {
+        workspaceId: context?.workspaceId,
+        increments: { trustScore: totalDelta },
+        conditionExpression: context?.windowId
+          ? 'attribute_not_exists(#lac) OR #lac <> :windowId'
+          : undefined,
+        expressionAttributeNames: context?.windowId ? { '#lac': 'lastAnomalyCalibrationAt' } : {},
+        expressionAttributeValues: context?.windowId ? { ':windowId': context.windowId } : {},
+      });
+
+      // Fetch fresh score for return and history
+      const updated = await AgentRegistry.getAgentConfig(agentId, {
+        workspaceId: context?.workspaceId,
+      });
+      const score = updated?.trustScore ?? 0;
+
+      await this.logPenalty(
+        {
+          agentId,
+          timestamp: Date.now(),
+          reason: `Batched Cognitive Anomalies: ${descriptions.join(' | ')}`,
+          delta: totalDelta,
+          newScore: score,
+        },
+        context
+      );
+
+      await emitEvent('system.trust', EventType.REPUTATION_UPDATE, {
         agentId,
-        timestamp: Date.now(),
-        reason: `Batched Cognitive Anomalies: ${descriptions.join(' | ')}`,
-        delta: totalDelta,
-        newScore,
-      },
-      context
-    );
+        trustScore: score,
+        metadata: {
+          type: 'anomaly_penalty_batch',
+          count: anomalies.length,
+          delta: totalDelta,
+          windowId: context?.windowId,
+        },
+        workspaceId: context?.workspaceId,
+        teamId: context?.teamId,
+        staffId: context?.staffId,
+      });
 
-    await emitEvent('system.trust', EventType.REPUTATION_UPDATE, {
-      agentId,
-      trustScore: newScore,
-      metadata: { type: 'anomaly_penalty_batch', count: anomalies.length, delta: totalDelta },
-      workspaceId: context?.workspaceId,
-      teamId: context?.teamId,
-      staffId: context?.staffId,
-    });
-
-    return newScore;
+      return score;
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'ConditionalCheckFailedException') {
+        // Already recorded for this window
+        const config = await AgentRegistry.getAgentConfig(agentId, {
+          workspaceId: context?.workspaceId,
+        });
+        return config?.trustScore ?? TRUST.DEFAULT_SCORE;
+      }
+      throw err;
+    }
   }
 
   private static async updateTrustScore(
@@ -223,23 +273,58 @@ export class TrustManager {
 
   private static async decayAgentTrust(
     agentId: string,
-    config: { trustScore?: number },
+    config: { trustScore?: number; lastDecayedAt?: string },
     context?: TrustContext
   ): Promise<void> {
     const score = config.trustScore;
     if (score === undefined || score < TRUST.DECAY_BASELINE) return;
+
+    // Principle 13: Idempotency check - skip if already decayed today
+    const today = new Date().toISOString().split('T')[0];
+    if (config.lastDecayedAt === today) return;
 
     let multiplier = 1;
     if (score >= TRUST.AUTONOMY_THRESHOLD) multiplier = 1.5;
     else if (score >= 85) multiplier = 1.25;
     const next = Math.max(TRUST.DECAY_BASELINE, score - TRUST.DECAY_RATE * multiplier);
     const delta = Math.round((next - score) * 100) / 100;
+
     if (delta < 0) {
-      await AgentRegistry.atomicIncrementTrustScore(agentId, delta, {
-        workspaceId: context?.workspaceId,
-      })
-        .then((newScore) => this.recordHistory(agentId, newScore, context))
-        .catch((err) => logger.error(`[TrustManager] Failed to decay score for ${agentId}:`, err));
+      try {
+        const { AgentRegistry } = await import('../registry');
+        const { ConfigManager } = await import('../registry/config');
+
+        await ConfigManager.atomicUpdateMapEntity(
+          DYNAMO_KEYS.AGENTS_CONFIG,
+          agentId,
+          { lastDecayedAt: today, lastUpdated: new Date().toISOString() },
+          {
+            workspaceId: context?.workspaceId,
+            increments: { trustScore: delta },
+            conditionExpression: 'attribute_not_exists(#val.#id.#ld) OR #val.#id.#ld <> :today',
+            expressionAttributeNames: { '#ld': 'lastDecayedAt' },
+            expressionAttributeValues: { ':today': today },
+          }
+        );
+
+        logger.info(
+          `[TrustManager] Decayed trust for ${agentId} by ${delta} (WS: ${context?.workspaceId || 'global'})`
+        );
+
+        // Fetch fresh score for history
+        const updated = await AgentRegistry.getAgentConfig(agentId, {
+          workspaceId: context?.workspaceId,
+        });
+        if (updated) {
+          await this.recordHistory(agentId, updated.trustScore ?? next, context);
+        }
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'ConditionalCheckFailedException') {
+          // Already decayed by another process
+          return;
+        }
+        logger.error(`[TrustManager] Failed to decay score for ${agentId}:`, err);
+      }
     }
   }
 }

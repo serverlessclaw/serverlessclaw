@@ -219,7 +219,15 @@ export class ConfigManagerMap extends ConfigManagerList {
     entityId: string,
     field: string,
     delta: number,
-    options: { workspaceId?: string; min?: number; max?: number; retryCount?: number } = {}
+    options: {
+      workspaceId?: string;
+      min?: number;
+      max?: number;
+      retryCount?: number;
+      conditionExpression?: string;
+      expressionAttributeNames?: Record<string, string>;
+      expressionAttributeValues?: Record<string, unknown>;
+    } = {}
   ): Promise<number> {
     const tableName = this._getTableName();
     if (!tableName) return 0;
@@ -233,14 +241,28 @@ export class ConfigManagerMap extends ConfigManagerList {
     const { min = -Infinity, max = Infinity } = options;
 
     try {
+      let conditionExpression = 'attribute_exists(#val.#id)';
+      if (options.conditionExpression) {
+        conditionExpression = `(${conditionExpression}) AND (${options.conditionExpression})`;
+      }
+
       const result = await docClient.send(
         new UpdateCommand({
           TableName: tableName,
           Key: { key: effectiveKey },
           UpdateExpression: 'SET #val.#id.#field = if_not_exists(#val.#id.#field, :zero) + :delta',
-          ConditionExpression: 'attribute_exists(#val.#id)',
-          ExpressionAttributeNames: { '#val': 'value', '#id': entityId, '#field': field },
-          ExpressionAttributeValues: { ':delta': delta, ':zero': 0 },
+          ConditionExpression: conditionExpression,
+          ExpressionAttributeNames: {
+            '#val': 'value',
+            '#id': entityId,
+            '#field': field,
+            ...(options.expressionAttributeNames || {}),
+          },
+          ExpressionAttributeValues: {
+            ':delta': delta,
+            ':zero': 0,
+            ...(options.expressionAttributeValues || {}),
+          },
           ReturnValues: 'ALL_NEW',
         })
       );

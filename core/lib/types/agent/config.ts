@@ -47,6 +47,8 @@ export interface IAgentConfig {
   version?: number;
   lastTraceId?: string;
   lastUpdated?: string;
+  lastDecayedAt?: string;
+  lastAnomalyCalibrationAt?: string;
   metadata?: Record<string, unknown>;
   workerFeedback?: boolean;
 }
