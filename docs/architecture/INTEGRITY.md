@@ -88,3 +88,38 @@ The "Dead Man's Switch" provides a guaranteed fallback when high-level agents fa
        |
        +--(Critical)--> [ Dead Man's Switch ] --> [ Emergency Rollback ]
 ```
+
+## 5. Modular Configuration Hierarchy (Silo 5)
+
+To maintain AI context integrity and modularity, `ConfigManager` is implemented via a multi-level inheritance chain.
+
+```ascii
++-----------------------------+
+|      ConfigManager Base     | (CRUD, Caching, Scoping)
++--------------+--------------+
+               |
+               v
++--------------+--------------+
+|      ConfigManager List     | (Atomic List Appends/Removals)
++--------------+--------------+
+               |
+               v
++--------------+--------------+
+|   ConfigManager Map Atomic  | (Atomic Numeric Increments)
++--------------+--------------+
+               |
+               v
++--------------+--------------+
+| ConfigManager Map Colls     | (Collections within Map Entities)
++--------------+--------------+
+               |
+               v
++--------------+--------------+
+|      ConfigManager Map      | (Basic Entity Operations)
++--------------+--------------+
+               |
+               v
++--------------+--------------+
+|       ConfigManager         | (Agent Overrides & Entry Point)
++-----------------------------+
+```
