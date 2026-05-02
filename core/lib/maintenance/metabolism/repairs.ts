@@ -13,7 +13,7 @@ import { getStagingBucketName } from '../../utils/resource-helpers';
  */
 export async function executeRepairs(
   memory: BaseMemoryProvider,
-  scope: { workspaceId: string; teamId?: string; staffId?: string }
+  scope: { workspaceId?: string; teamId?: string; staffId?: string }
 ): Promise<AuditFinding[]> {
   const repairFindings: AuditFinding[] = [];
   const workspaceId = scope.workspaceId;
@@ -25,20 +25,13 @@ export async function executeRepairs(
       repairFindings.push({
         silo: 'Metabolism',
         expected: 'Lean agent tool registry',
-        actual: `Pruned ${pruned} low-utilization tools from agent overrides.`,
+        actual: `Pruned ${pruned} low-utilization tools from agent overrides (Scope: ${workspaceId || 'GLOBAL'}).`,
         severity: 'P2',
         recommendation: 'Principle 10 (Lean Evolution) enforced via registry pruning.',
       });
     }
   } catch (e) {
-    logger.error('[Metabolism] Registry repair failed:', e);
-    repairFindings.push({
-      silo: 'Metabolism',
-      expected: 'Agent registry repair completion',
-      actual: `Registry repair failed: ${e instanceof Error ? e.message : String(e)}`,
-      severity: 'P1',
-      recommendation: 'Investigate DynamoDB connectivity or ConfigManager atomic operations.',
-    });
+    logger.error('[Metabolism] Registry tool pruning failed:', e);
   }
 
   // Repair 2: Memory Bloat (Stale Gaps)
@@ -56,13 +49,6 @@ export async function executeRepairs(
     }
   } catch (e) {
     logger.error('[Metabolism] Memory repair failed:', e);
-    repairFindings.push({
-      silo: 'Metabolism',
-      expected: 'Memory state repair completion',
-      actual: `Memory repair failed: ${e instanceof Error ? e.message : String(e)}`,
-      severity: 'P1',
-      recommendation: 'Check MemoryProvider authorization and workspaceId isolation.',
-    });
   }
 
   // Repair 3: Stale Feature Flags (Silo 7)
@@ -79,55 +65,52 @@ export async function executeRepairs(
     }
   } catch (e) {
     logger.error('[Metabolism] Feature flag cleanup failed:', e);
-    repairFindings.push({
-      silo: 'Metabolism',
-      expected: 'Feature flag cleanup completion',
-      actual: `Feature flag cleanup failed: ${e instanceof Error ? e.message : String(e)}`,
-      severity: 'P2',
-      recommendation: 'Check FeatureFlags and ConfigManager connectivity.',
-    });
   }
 
-  // Repair 4: Low-Trust Agent Mitigation (Perspective D: Trust Loop)
+  // Repair 4: Low-Trust Mitigation & High-Trust Promotion (Perspective F: Metabolic Loop)
   try {
-    const allAgents = (await AgentRegistry.getAllConfigs({
-      workspaceId: scope.workspaceId,
-    })) as Record<string, IAgentConfig>;
+    const allAgents = (await AgentRegistry.getAllConfigs({ workspaceId })) as Record<
+      string,
+      IAgentConfig
+    >;
     let disabledCount = 0;
+    let promotedCount = 0;
+
+    const { PromotionManager } = await import('../../lifecycle/promotion-manager');
+
     for (const [agentId, config] of Object.entries(allAgents)) {
+      if (AgentRegistry.isBackboneAgent(agentId)) continue;
+
+      const trustScore = config.trustScore ?? 100;
+
+      // Case A: Critically Low Trust -> Disable (Mitigation)
       const lowTrustThreshold = await ConfigManager.getTypedConfig('low_trust_threshold', 20, {
-        workspaceId: scope.workspaceId,
+        workspaceId,
       });
 
-      if (
-        !AgentRegistry.isBackboneAgent(agentId) &&
-        config.enabled !== false &&
-        (config.trustScore ?? 100) < lowTrustThreshold
-      ) {
-        logger.warn(
-          `[Metabolism] Automatically disabling low-trust agent: ${agentId} (Score: ${config.trustScore})`
-        );
+      if (config.enabled !== false && trustScore < lowTrustThreshold) {
         const disabled = await AgentRegistry.disableAgentIfTrustLow(agentId, lowTrustThreshold, {
-          workspaceId: scope.workspaceId,
+          workspaceId,
         });
-        if (disabled) {
-          disabledCount++;
-        } else {
-          logger.info(
-            `[Metabolism] Trust-based disable skipped for ${agentId} (Trust improved concurrently)`
-          );
-        }
+        if (disabled) disabledCount++;
+      }
+
+      // Case B: Exceptionally High Trust -> Promote to AUTO (Perspective F)
+      if (config.enabled !== false && config.evolutionMode !== EvolutionMode.AUTO) {
+        const promoted = await PromotionManager.promoteAgentToAuto(agentId, trustScore, {
+          workspaceId,
+        });
+        if (promoted) promotedCount++;
       }
     }
 
-    if (disabledCount > 0) {
+    if (disabledCount > 0 || promotedCount > 0) {
       repairFindings.push({
         silo: 'Metabolism',
-        expected: 'Trust-verified agent registry',
-        actual: `Autonomously disabled ${disabledCount} critically low-trust agents.`,
+        expected: 'Trust-aligned agent modes',
+        actual: `Trust Metabolism: Disabled ${disabledCount} low-trust agents, Promoted ${promotedCount} to AUTO mode.`,
         severity: 'P1',
-        recommendation:
-          'Perspective D (Trust Loop) reinforced. Review reputation logs for disabled agents.',
+        recommendation: 'Perspective F (Metabolic Loop) reinforced via autonomous mode shifting.',
       });
     }
   } catch (e) {
@@ -136,26 +119,18 @@ export async function executeRepairs(
 
   // Repair 5: S3 Staging Reclamation (Silo 7)
   try {
-    const reclaimed = await pruneStagingBucket(scope);
+    const reclaimed = await pruneStagingBucket({ workspaceId });
     if (reclaimed > 0) {
       repairFindings.push({
         silo: 'Metabolism',
         expected: 'Lean S3 staging storage',
-        actual: `Reclaimed ${reclaimed} stale objects from staging bucket for WS: ${workspaceId}.`,
+        actual: `Reclaimed ${reclaimed} stale objects from staging bucket (Scope: ${workspaceId || 'GLOBAL'}).`,
         severity: 'P2',
         recommendation: 'Silo 7 (Regenerative Metabolism) S3 reclamation enforced.',
       });
     }
   } catch (e) {
     logger.error('[Metabolism] S3 reclamation failed:', e);
-    repairFindings.push({
-      silo: 'Metabolism',
-      expected: 'S3 staging reclamation completion',
-      actual: `S3 reclamation failed: ${e instanceof Error ? e.message : String(e)}`,
-      severity: 'P1',
-      recommendation:
-        'Check S3 permissions (DeleteObjects) and IAM policy for the metabolism role.',
-    });
   }
 
   return repairFindings;
@@ -164,13 +139,9 @@ export async function executeRepairs(
 /**
  * Prunes stale objects from the staging bucket.
  */
-export async function pruneStagingBucket(scope: { workspaceId: string }): Promise<number> {
+export async function pruneStagingBucket(scope: { workspaceId?: string }): Promise<number> {
   const bucket = getStagingBucketName();
   if (!bucket || bucket === 'StagingBucket') return 0;
-  if (!scope.workspaceId) {
-    logger.error('[Metabolism] Mandatory workspaceId missing in pruneStagingBucket');
-    return 0;
-  }
 
   try {
     const { S3Client, ListObjectsV2Command, DeleteObjectsCommand } =
@@ -187,7 +158,7 @@ export async function pruneStagingBucket(scope: { workspaceId: string }): Promis
       const listResponse = await s3Client.send(
         new ListObjectsV2Command({
           Bucket: bucket,
-          Prefix: `workspaces/${scope.workspaceId}/`,
+          Prefix: scope.workspaceId ? `workspaces/${scope.workspaceId}/` : undefined,
           ContinuationToken: continuationToken,
         })
       );

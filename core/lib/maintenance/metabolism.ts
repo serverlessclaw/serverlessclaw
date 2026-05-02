@@ -20,16 +20,15 @@ export class MetabolismService {
       staffId?: string;
     } = {}
   ): Promise<AuditFinding[]> {
-    if (!options.workspaceId) {
-      throw new Error('[Metabolism] Mandatory workspaceId missing in runMetabolismAudit');
-    }
     const findings: AuditFinding[] = [];
     const scope = {
       workspaceId: options.workspaceId,
       teamId: options.teamId,
       staffId: options.staffId,
     };
-    logger.info(`[Metabolism] Starting regenerative audit for WS: ${options.workspaceId}`);
+    logger.info(
+      `[Metabolism] Starting regenerative audit for scope: ${options.workspaceId || 'GLOBAL'}`
+    );
 
     // 1. Perform automated repairs for stateless state
     if (options.repair) {

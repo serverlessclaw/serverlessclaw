@@ -18,11 +18,11 @@ Last Updated: 2026-05-02
 | **4** | The Brain      | `core/lib/memory/`, `core/lib/rag/`             | 16          | 2026-05-02   | Low        |
 | **5** | The Eye        | `core/lib/metrics/`, `core/lib/tracer/`         | 15          | 2026-05-02   | Low        |
 | **6** | The Scales     | `core/lib/safety/trust-manager.ts`              | 15          | 2026-05-02   | Low        |
-| **7** | The Metabolism | `core/lib/maintenance/metabolism.ts`            | 8           | 2026-05-01   | Low        |
+| **7** | The Metabolism | `core/lib/maintenance/metabolism.ts`            | 9           | 2026-05-02   | Low        |
 
 ---
 
-## Cross-Silo Perspectives (A-E) Coverage
+## Cross-Silo Perspectives (A-F) Coverage
 
 | Perspective | Name              | Description            | Usage Count | Last Tested |
 | :---------- | :---------------- | :--------------------- | :---------- | :---------- |
@@ -31,7 +31,7 @@ Last Updated: 2026-05-02
 | **C**       | Identity Journey  | Brain → Spine → Shield | 10          | 2026-05-01  |
 | **D**       | Trust Loop        | Eye → Scales → Spine   | 12          | 2026-05-02  |
 | **E**       | Recovery Path     | Shield → Spine → Brain | 10          | 2026-05-02  |
-| **F**       | Metabolic Loop    | Metabolism ↔ Scales ↔ Spine | 0           | N/A         |
+| **F**       | Metabolic Loop    | Metabolism ↔ Scales ↔ Spine | 1           | 2026-05-02  |
 
 ---
 
@@ -39,6 +39,7 @@ Last Updated: 2026-05-02
 
 | Date       | Report                                             | Silos Covered                    | Cross-Silo | Key Findings                                                                                                    |
 | :--------- | :------------------------------------------------- | :------------------------------- | :--------- | :-------------------------------------------------------------------------------------------------------------- |
+| 2026-05-02 | `audit-2026-05-02-metabolic-loop.md`               | Metabolism, Scales, Spine        | F          | FIXED: P1 Disconnected autonomous mode shift, P1 Global backbone metabolism blind spot, P2 S3 listing efficiency. |
 | 2026-05-02 | `audit-2026-05-02-life-of-a-message.md`            | Spine, Brain, Eye                | A          | FIXED: P1 Non-atomic snapshots & tracer updates, P2 In-memory multi-tenant filtering, P2 Observability gaps.    |
 | 2026-05-02 | `audit-2026-05-02-recovery-path.md`                | Shield, Spine, Brain             | E          | FIXED: P1 Non-idempotent session resumption, P2 DLQ retry data loss window. Improved error classification.      |
 | 2026-05-02 | `audit-2026-05-02-trust-loop.md`                   | Eye, Scales, Spine               | D          | FIXED: P2 Blind Tool Hallucinations (missing tool penalty), P2 Trust update observability gaps.                 |
