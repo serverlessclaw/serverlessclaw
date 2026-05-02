@@ -272,13 +272,41 @@ describe('Event Bus', () => {
       const result = await retryDlqEntry(entry);
 
       expect(result).toBe(true);
+      
+      // Should emit first
       expect(eventBridgeMock.calls()).toHaveLength(1);
+      
+      // Should purge AFTER emit (DDB Delete)
+      const deleteCall = ddbMock.calls().find(c => c.args[0] instanceof DeleteCommand);
+      expect(deleteCall).toBeDefined();
+    });
 
-      // There may be multiple DynamoDB calls (idempotency Put/Update etc.).
-      // Ensure at least one DeleteCommand was executed to purge the DLQ entry.
-      const deleteCalls = ddbMock.calls().filter((c) => c.args[0] instanceof DeleteCommand);
-      expect(deleteCalls.length).toBeGreaterThanOrEqual(1);
-      expect(deleteCalls[0].args[0] instanceof DeleteCommand).toBe(true);
+    it('should purge DLQ entry if retry returns DUPLICATE (already in progress)', async () => {
+      // Mock idempotency reservation failure (DUPLICATE)
+      const error = new Error('ConditionalCheckFailed');
+      error.name = 'ConditionalCheckFailedException';
+      ddbMock.on(PutCommand).rejects(error);
+      ddbMock.on(DeleteCommand).resolves({});
+
+      const entry = {
+        userId: 'DLQ#test#duplicate',
+        timestamp: 999,
+        type: 'DLQ_EVENT',
+        source: 'test.source',
+        detailType: 'test.event',
+        detail: '{"data":"test"}',
+        retryCount: 1,
+        maxRetries: 3,
+        priority: EventPriority.NORMAL,
+        createdAt: 999,
+        expiresAt: 1999,
+      };
+
+      const result = await retryDlqEntry(entry);
+
+      expect(result).toBe(true); // Should return true because it's handled
+      const deleteCall = ddbMock.calls().find(c => c.args[0] instanceof DeleteCommand);
+      expect(deleteCall).toBeDefined(); // Should still purge
     });
   });
 });

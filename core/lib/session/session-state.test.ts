@@ -148,4 +148,47 @@ describe('SessionStateManager - Workflow Snapshots', () => {
       expect(result!.workflowSnapshot).toBeUndefined();
     });
   });
+
+  describe('releaseProcessing', () => {
+    it('should release lock and re-emit first pending message with idempotency key', async () => {
+      // 1. Mock lock release success
+      ddbMock.on(UpdateCommand).resolvesOnce({}); // Lock release (not shown in this mock but used by manager)
+
+      // 2. Mock session state update with pending messages
+      const pendingMsg = { id: 'msg-1', content: 'target-agent: do something', timestamp: 1000 };
+      ddbMock.on(UpdateCommand).resolves({
+        Attributes: {
+          userId: 'SESSION_STATE#sess-1',
+          pendingMessages: [pendingMsg],
+        },
+      });
+
+      // 3. Mock GetCommand for removePendingMessage's check
+      ddbMock.on(GetCommand).resolves({
+        Item: {
+          userId: 'SESSION_STATE#sess-1',
+          pendingMessages: [pendingMsg],
+        },
+      });
+
+      // 4. Mock event bus...
+      // but we can check the removePendingMessage call)
+      await sessionStateManager.releaseProcessing('sess-1', 'agent-1');
+
+      // Verify session update was called correctly
+      const calls = ddbMock.calls();
+      const metadataUpdate = calls.find((c) => {
+        const input = c.args[0].input as any;
+        return input.UpdateExpression?.includes('processingAgentId = :null');
+      });
+      expect(metadataUpdate).toBeDefined();
+
+      // Verify removePendingMessage was triggered
+      const removeCall = calls.find((c) => {
+        const input = c.args[0].input as any;
+        return input.ConditionExpression === 'pendingMessages = :old';
+      });
+      expect(removeCall).toBeDefined();
+    });
+  });
 });

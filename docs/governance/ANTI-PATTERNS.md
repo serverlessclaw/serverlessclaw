@@ -339,6 +339,51 @@ async function decayTrust() {
 
 ---
 
+### 17. Non-Idempotent Recovery Resumption
+
+**What**: Resuming a chain of messages after a failure without using deterministic idempotency keys for the re-emitted events.
+
+**Risk**: Double execution of tasks if the metadata cleanup fails or is delayed.
+
+**Pattern**:
+
+```typescript
+// ❌ WRONG
+await emitEvent('resume', 'task', { ...msg });
+await removePendingMessage(msg.id); // If this fails, msg is emitted again on next recovery!
+
+// ✅ CORRECT
+const idempotencyKey = `resume:${sessionId}:${msg.id}`;
+await emitEvent('resume', 'task', { ...msg }, { idempotencyKey });
+await removePendingMessage(msg.id);
+```
+
+**Occurrences**: Fixed in `session-state.ts` (Audit 2026-05-02).
+
+---
+
+### 18. Purge-before-Emit (DLQ Retry Data Loss)
+
+**What**: Purging an entry from a Dead Letter Queue before confirming successful emission of the retry event.
+
+**Risk**: Permanent loss of event data if the process crashes or fails between the purge and the emission.
+
+**Pattern**:
+
+```typescript
+// ❌ WRONG
+await purgeDlqEntry(entry);
+await emitEvent(entry.source, entry.detailType, entry.detail); // CRASH HERE = DATA LOST 💥
+
+// ✅ CORRECT (Idempotent At-Least-Once)
+await emitEvent(entry.source, entry.detailType, entry.detail, { idempotencyKey: entry.id });
+await purgeDlqEntry(entry);
+```
+
+**Occurrences**: Fixed in `bus.ts` (Audit 2026-05-02).
+
+---
+
 ## How to Use This Document
 
 1. **During Code Review**: Check this document before submitting

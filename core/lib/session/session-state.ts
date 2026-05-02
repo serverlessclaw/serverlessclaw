@@ -189,18 +189,24 @@ export class SessionStateManager {
           const taskContent = content.substring(separatorIndex + 1).trim();
 
           const { emitEvent } = await import('../utils/bus');
+          const idempotencyKey = `resume:${sessionId}:${nextMsg.id}`;
 
-          await emitEvent(`${agentId}.session-release`, `dynamic_${targetAgentId}_task`, {
-            userId: attributes.userId?.replace(SESSION_PREFIX, '') || 'unknown',
-            task: taskContent,
-            sessionId,
-            traceId: `resume-${Date.now()}`,
-            isContinuation: true,
-            attachments: nextMsg.attachments,
-            workspaceId: attributes.workspaceId,
-            teamId: attributes.teamId,
-            staffId: attributes.staffId,
-          });
+          await emitEvent(
+            `${agentId}.session-release`,
+            `dynamic_${targetAgentId}_task`,
+            {
+              userId: attributes.userId?.replace(SESSION_PREFIX, '') || 'unknown',
+              task: taskContent,
+              sessionId,
+              traceId: `resume-${nextMsg.id}`,
+              isContinuation: true,
+              attachments: nextMsg.attachments,
+              workspaceId: attributes.workspaceId,
+              teamId: attributes.teamId,
+              staffId: attributes.staffId,
+            },
+            { idempotencyKey }
+          );
 
           // 4. Remove the processed message from the queue
           await this.removePendingMessage(sessionId, nextMsg.id, scope);

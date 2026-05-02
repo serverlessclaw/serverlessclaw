@@ -162,6 +162,15 @@ describe('ToolExecutor', () => {
 
       expect(result.toolCallCount).toBe(0);
       expect(messages[0].content).toBe('EXECUTED_BY_PROVIDER');
+
+      // Verify trust penalty recorded (Finding 1 Remediation)
+      expect(mockRecordFailure).toHaveBeenCalledWith(
+        'agent1',
+        expect.stringContaining('Tool missing-tool requested but not found in registry.'),
+        1.5,
+        0,
+        expect.any(Object)
+      );
     });
 
     it('returns paused when tool requires approval but not approved', async () => {

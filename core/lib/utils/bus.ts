@@ -466,9 +466,6 @@ export async function getDlqEntries(
  */
 export async function retryDlqEntry(entry: DlqEntry): Promise<boolean> {
   try {
-    // Purge the original entry first to prevent accumulation of duplicate failures
-    await purgeDlqEntry(entry);
-
     const detail = JSON.parse(entry.detail);
 
     // Use a stable idempotency key to protect against concurrent retries of the same entry
@@ -481,7 +478,13 @@ export async function retryDlqEntry(entry: DlqEntry): Promise<boolean> {
       idempotencyKey,
     });
 
-    return result.success;
+    // If emission succeeded or was blocked as a duplicate (meaning it already succeeded), purge the original
+    if (result.success || result.reason === 'DUPLICATE') {
+      await purgeDlqEntry(entry);
+      return true;
+    }
+
+    return false;
     // If emitEvent fails, it will write to DLQ again with a new key — that new entry is the correct survivor
   } catch (error) {
     logger.error('Failed to retry DLQ entry:', error);

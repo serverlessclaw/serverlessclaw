@@ -76,13 +76,15 @@ Autonomous repairs ensure the system prunes its own technical debt and stale inf
 
 ## 4. Recovery Path (Shield -> Spine -> Brain)
 
-The "Dead Man's Switch" provides a guaranteed fallback when high-level agents fail.
+Detailed documentation of the idempotent resumption and DLQ retry logic can be found in [RECOVERY-PATH.md](./RECOVERY-PATH.md).
+
+The system uses a tiered fallback mechanism ("Dead Man's Switch") to handle failures at different layers:
 
 ```ascii
 [ Failure Detected ]
        |
        v
-[ dashboard-failure-handler ] --(Success)--> [ REPAIRED ]
+[ health-handler ] --(Success)--> [ REPAIRED ]
        |
        +--(Complex)--> [ EvolutionScheduler ] --> [ HITL Remediation ]
        |

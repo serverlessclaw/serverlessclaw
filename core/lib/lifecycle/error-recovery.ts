@@ -152,8 +152,8 @@ export function classifyError(error: Error | string | Record<string, unknown>): 
   }
 
   // Check for specific AWS/DynamoDB errors by name or message
-  if (error instanceof Error || typeof error === 'object') {
-    const errorName = error?.name || '';
+  if (error instanceof Error || (typeof error === 'object' && error !== null)) {
+    const errorName = (error as any).name || '';
     if (
       errorName === 'ConditionalCheckFailedException' ||
       message.includes('ConditionalCheckFailedException')
@@ -162,11 +162,32 @@ export function classifyError(error: Error | string | Record<string, unknown>): 
     }
     if (
       errorName === 'ProvisionedThroughputExceededException' ||
-      message.includes('ProvisionedThroughputExceededException')
+      errorName === 'ThroughputExceededException' ||
+      message.includes('ProvisionedThroughputExceededException') ||
+      message.includes('ThroughputExceededException')
     ) {
       return ErrorClass.TRANSIENT;
     }
-    if (errorName === 'RequestLimitExceeded' || message.includes('RequestLimitExceeded')) {
+    if (
+      errorName === 'RequestLimitExceeded' ||
+      errorName === 'ThrottlingException' ||
+      message.includes('RequestLimitExceeded') ||
+      message.includes('ThrottlingException')
+    ) {
+      return ErrorClass.TRANSIENT;
+    }
+    if (
+      errorName === 'TransactionCanceledException' ||
+      message.includes('TransactionCanceledException')
+    ) {
+      // Transactions can fail due to concurrency or transient conflicts, usually retryable
+      return ErrorClass.TRANSIENT;
+    }
+    if (
+      errorName === 'InternalServerError' ||
+      errorName === 'ServiceUnavailableException' ||
+      message.includes('InternalServerError')
+    ) {
       return ErrorClass.TRANSIENT;
     }
     if (errorName === 'ValidationException' || message.includes('ValidationException')) {

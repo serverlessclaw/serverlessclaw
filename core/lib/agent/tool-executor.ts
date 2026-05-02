@@ -188,6 +188,25 @@ export class ToolExecutor {
         traceId: execContext.traceId,
         messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       });
+
+      // Record failure if no implementation found (Anti-Pattern 13: Blind Tool Failure)
+      try {
+        const { TrustManager } = await import('../safety/trust-manager');
+        await TrustManager.recordFailure(
+          execContext.agentId,
+          `Tool ${toolCall.function.name} requested but not found in registry.`,
+          1.5, // Penalty for hallucinating missing tools
+          0,
+          {
+            workspaceId: execContext.workspaceId,
+            teamId: execContext.teamId,
+            staffId: execContext.staffId,
+          }
+        );
+      } catch (e) {
+        logger.error('[EXECUTOR] Failed to record missing tool failure:', e);
+      }
+
       return { toolCallCount: 0 };
     }
 
@@ -444,6 +463,17 @@ export class ToolExecutor {
       }
     } catch (trustError) {
       logger.error('[EXECUTOR] Failed to update trust score:', trustError);
+      try {
+        const { reportHealthIssue } = await import('../lifecycle/health');
+        await reportHealthIssue({
+          component: 'TrustManager',
+          issue: `Trust update failed for ${execContext.agentId}. Persistence layer may be unstable.`,
+          severity: 'medium',
+          userId: execContext.userId,
+        });
+      } catch {
+        // Ignore secondary health reporting failures
+      }
     }
 
     const ui_blocks: Message['ui_blocks'] = [];
