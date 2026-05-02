@@ -3,7 +3,9 @@
 ###############################################################################
 include makefiles/Makefile.shared.mk
 
-.PHONY: check gate gate-deploy gate-tier-1 gate-tier-2 gate-fast fix lint lint-fix format format-check type-check aiready lint-staged build-integrations build-cli
+.PHONY: check gate gate-deploy gate-tier-1 gate-tier-2 gate-fast fix lint lint-fix format format-check type-check aiready aeo lint-staged build-integrations build-cli
+
+aeo: aiready docs-check ## Run all Agentic Engine Optimization (AEO) checks
 
 build-integrations: ## Build all integration packages (@serverlessclaw/integration-*)
 	@$(call log_step,Building integrations via Turbo...)

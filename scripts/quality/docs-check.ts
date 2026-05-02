@@ -43,58 +43,46 @@ export class DocumentationValidator {
   private strict: boolean;
   private issues: DocIssue[] = [];
 
-  // Mapping of code changes to required documentation updates
-  private docMappings: DocMapping[] = [
-    {
-      codePattern: /^(?!.*\.test\.ts$).*\/core\/agents\/.*\.ts$/,
-      docFile: 'docs/intelligence/AGENTS.md',
-      description: 'Agent changes require AGENTS.md update',
-    },
-    {
-      codePattern: /^(?!.*\.test\.ts$).*\/core\/tools\/.*\.ts$/,
-      docFile: 'docs/intelligence/TOOLS.md',
-      description: 'Tool changes require TOOLS.md update',
-    },
-    {
-      codePattern: /core\/handlers\/events\.ts$/,
-      docFile: 'docs/intelligence/SWARM.md',
-      description: 'Event handler changes require SWARM.md update',
-    },
-    {
-      codePattern: /core\/handlers\/monitor\.ts$/,
-      docFile: 'docs/system/RESILIENCE.md',
-      description: 'Monitor changes require RESILIENCE.md update',
-    },
-    {
-      codePattern: /core\/lib\/types\/.*\.ts$/,
-      docFile: 'ARCHITECTURE.md',
-      description: 'Type changes may require ARCHITECTURE.md update',
-    },
-    {
-      codePattern: /core\/lib\/memory\/.*\.ts$/,
-      docFile: 'docs/intelligence/MEMORY.md',
-      description: 'Memory changes require MEMORY.md update',
-    },
-    {
-      codePattern: /core\/lib\/providers\/.*\.ts$/,
-      docFile: 'docs/intelligence/LLM.md',
-      description: 'Provider changes require LLM.md update',
-    },
-    {
-      codePattern: /infra\/.*\.ts$/,
-      docFile: 'docs/system/PROVISIONING.md',
-      description: 'Infrastructure changes require PROVISIONING.md update',
-    },
-    {
-      codePattern: /makefiles\/.*\.mk$/,
-      docFile: 'docs/governance/DEVOPS.md',
-      description: 'Makefile changes require DEVOPS.md update',
-    },
-  ];
+  // Mapping of code changes to required documentation updates (loaded from JSON)
+  private docMappings: DocMapping[] = [];
 
   constructor(rootDir: string, strict: boolean = false) {
     this.rootDir = rootDir;
     this.strict = strict;
+    this.loadMappings();
+  }
+
+  /**
+   * Load documentation mappings from .github/doc-mapping.json
+   */
+  private loadMappings(): void {
+    const mappingPath = join(this.rootDir, '.github/doc-mapping.json');
+    if (!existsSync(mappingPath)) {
+      console.warn('⚠️  Warning: .github/doc-mapping.json not found. Using empty mappings.');
+      return;
+    }
+
+    try {
+      const data = JSON.parse(readFileSync(mappingPath, 'utf-8'));
+      this.docMappings = data.mappings.map((m: any) => {
+        // Convert glob-style patterns to RegExp if they aren't already regex-like
+        let pattern = m.pattern;
+        if (!pattern.startsWith('^') && (pattern.includes('*') || pattern.includes('/**'))) {
+          pattern = '^' + pattern
+            .replace(/\./g, '\\.')
+            .replace(/\*\*/g, '.*')
+            .replace(/\*/g, '[^/]*') + '$';
+        }
+        
+        return {
+          codePattern: new RegExp(pattern),
+          docFile: m.docs[0],
+          description: m.description || `Changes in ${m.pattern} require documentation updates`,
+        };
+      });
+    } catch (error) {
+      console.error('❌ Error parsing doc-mapping.json:', error);
+    }
   }
 
   /**

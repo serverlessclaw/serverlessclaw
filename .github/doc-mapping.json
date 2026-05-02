@@ -1,0 +1,46 @@
+{
+  "version": "1.0.0",
+  "config": {
+    "docsDir": "docs",
+    "instructionsDir": ".github/instructions"
+  },
+  "mappings": [
+    {
+      "pattern": "core/agents/**",
+      "docs": ["docs/intelligence/AGENTS.md", "docs/intelligence/SWARM.md"],
+      "instructions": [".github/instructions/engineering/standards.md"],
+      "diagramsRequired": true
+    },
+    {
+      "pattern": "core/tools/**",
+      "docs": ["docs/intelligence/TOOLS.md", "docs/interface/PROTOCOL.md"],
+      "instructions": [".github/instructions/engineering/standards.md"]
+    },
+    {
+      "pattern": "core/handlers/**",
+      "docs": ["docs/interface/EVENTS.md", "ARCHITECTURE.md"],
+      "instructions": [".github/instructions/engineering/standards.md"]
+    },
+    {
+      "pattern": "core/lib/memory/**",
+      "docs": ["docs/intelligence/MEMORY.md"],
+      "instructions": [".github/instructions/engineering/standards.md"]
+    },
+    {
+      "pattern": "core/lib/providers/**",
+      "docs": ["docs/intelligence/LLM.md"],
+      "instructions": [".github/instructions/engineering/standards.md"]
+    },
+    {
+      "pattern": "infra/**",
+      "docs": ["ARCHITECTURE.md", "docs/system/PROVISIONING.md"],
+      "instructions": [".github/instructions/devops/infra-checklist.md"],
+      "diagramsRequired": true
+    },
+    {
+      "pattern": "makefiles/**",
+      "docs": ["docs/governance/DEVOPS.md"],
+      "instructions": [".github/instructions/devops/operations.md"]
+    }
+  ]
+}

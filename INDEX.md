@@ -4,7 +4,7 @@
 
 ## Agent Entry Files
 
-- [`.github/copilot-instructions.md`](./.github/copilot-instructions.md): Copilot-specific startup instructions that route to this index and devops docs.
+- [`.github/instructions/entrypoint.md`](./.github/instructions/entrypoint.md): The main hub for all AI agents. Start here.
 - [`INDEX.md#agent-instructions-checklist`](#agent-instructions-checklist): Mandatory agent checklists, quality gates, and operational rules.
 
 ## Hub-and-Spoke Map
