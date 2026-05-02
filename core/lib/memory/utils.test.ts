@@ -83,8 +83,13 @@ describe('memory/utils', () => {
         expect.objectContaining({
           IndexName: 'TypeTimestampIndex',
           KeyConditionExpression: '#tp = :type',
+          FilterExpression:
+            'attribute_not_exists(workspaceId) AND NOT begins_with(userId, :orgPrefixMarker)',
           ExpressionAttributeNames: { '#tp': 'type' },
-          ExpressionAttributeValues: { ':type': 'GAP' },
+          ExpressionAttributeValues: {
+            ':type': 'GAP',
+            ':orgPrefixMarker': 'ORG#',
+          },
           Limit: 50,
           ScanIndexForward: false,
         })
@@ -380,8 +385,13 @@ describe('memory/utils', () => {
         expect.objectContaining({
           IndexName: 'TypeTimestampIndex',
           KeyConditionExpression: '#tp = :type',
+          FilterExpression:
+            'attribute_not_exists(workspaceId) AND NOT begins_with(userId, :orgPrefixMarker)',
           ExpressionAttributeNames: { '#tp': 'type' },
-          ExpressionAttributeValues: { ':type': 'LESSON' },
+          ExpressionAttributeValues: {
+            ':type': 'LESSON',
+            ':orgPrefixMarker': 'ORG#',
+          },
           Limit: 10,
           ScanIndexForward: false,
         })

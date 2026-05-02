@@ -45,6 +45,7 @@ export function applyWorkspaceIsolation(
   scope?: string | import('../types/memory').ContextualScope
 ): void {
   const workspaceId = typeof scope === 'string' ? scope : scope?.workspaceId;
+  const orgId = typeof scope === 'string' ? undefined : scope?.orgId;
 
   if (workspaceId) {
     // Principle 14: Selection Integrity
@@ -61,12 +62,29 @@ export function applyWorkspaceIsolation(
       ':pkPrefix': `WS#${workspaceId}#`,
       ':globalPrefix': 'SYSTEM#', // Common global prefix (e.g. SYSTEM#GLOBAL)
     };
-  } else {
-    // Strictly isolate to items WITHOUT a workspaceId to prevent cross-tenant leakage
-    const isolationExpr = 'attribute_not_exists(workspaceId)';
+  } else if (orgId) {
+    // Principle 14: Org Isolation
+    // Isolate to items within the specific organization
+    const isolationExpr = 'begins_with(userId, :orgPrefix)';
     params.FilterExpression = params.FilterExpression
       ? `(${params.FilterExpression as string}) AND (${isolationExpr})`
       : isolationExpr;
+
+    params.ExpressionAttributeValues = {
+      ...((params.ExpressionAttributeValues as Record<string, unknown>) || {}),
+      ':orgPrefix': `ORG#ORG#${orgId}#`,
+    };
+  } else {
+    // Strictly isolate to items WITHOUT a workspaceId or Org prefix to prevent cross-tenant leakage
+    const isolationExpr =
+      'attribute_not_exists(workspaceId) AND NOT begins_with(userId, :orgPrefixMarker)';
+    params.FilterExpression = params.FilterExpression
+      ? `(${params.FilterExpression as string}) AND (${isolationExpr})`
+      : isolationExpr;
+    params.ExpressionAttributeValues = {
+      ...((params.ExpressionAttributeValues as Record<string, unknown>) || {}),
+      ':orgPrefixMarker': 'ORG#',
+    };
   }
 }
 
@@ -108,9 +126,10 @@ export async function getMemoryByTypePaginated(
 export async function getMemoryByType(
   base: BaseMemoryProvider,
   type: string,
-  limit: number = 100
+  limit: number = 100,
+  scope?: string | import('../types/memory').ContextualScope
 ): Promise<Record<string, unknown>[]> {
-  const { items } = await getMemoryByTypePaginated(base, type, limit);
+  const { items } = await getMemoryByTypePaginated(base, type, limit, undefined, scope);
   return items;
 }
 

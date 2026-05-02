@@ -198,8 +198,8 @@ export class IdentityManager extends IdentityBase {
     return this.userOps.loadUser(userId, orgId);
   }
 
-  async getAllUsers(): Promise<UserIdentity[]> {
-    return this.userOps.getAllUsers();
+  async getAllUsers(orgId?: string): Promise<UserIdentity[]> {
+    return this.userOps.getAllUsers(orgId);
   }
 
   async getSession(

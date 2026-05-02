@@ -13,6 +13,7 @@ This directory contains agent-optimized instructions that act as the interface b
 4.  **If DevOps (CI/CD/Make)**: Load [Operational Rules](./devops/operations.md).
 
 ## Synchronization Rule (AEO-1)
+
 - The documentation in `docs/` is the **Source of Truth**.
 - These instructions are **Operational Constraints**.
 - If a doc in `docs/` changes, you MUST verify if any corresponding rule in this directory needs updating.

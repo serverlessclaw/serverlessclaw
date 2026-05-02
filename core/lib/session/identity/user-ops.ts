@@ -96,10 +96,15 @@ export class UserOps extends IdentityBase {
   /**
    * Get all registered users.
    */
-  async getAllUsers(): Promise<UserIdentity[]> {
+  async getAllUsers(orgId?: string): Promise<UserIdentity[]> {
     try {
       const { getMemoryByType } = await import('../../memory/utils');
-      const items = await getMemoryByType(this.base, 'USER_IDENTITY', 1000);
+      const items = await getMemoryByType(
+        this.base,
+        'USER_IDENTITY',
+        1000,
+        orgId ? { orgId } : undefined
+      );
       return items.map((item) => ({
         userId: (item.userId as string).split('#').pop()!,
         displayName: (item.displayName as string) ?? '',

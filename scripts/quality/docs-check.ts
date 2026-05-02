@@ -68,12 +68,12 @@ export class DocumentationValidator {
         // Convert glob-style patterns to RegExp if they aren't already regex-like
         let pattern = m.pattern;
         if (!pattern.startsWith('^') && (pattern.includes('*') || pattern.includes('/**'))) {
-          pattern = '^' + pattern
-            .replace(/\./g, '\\.')
-            .replace(/\*\*/g, '.*')
-            .replace(/\*/g, '[^/]*') + '$';
+          pattern =
+            '^' +
+            pattern.replace(/\./g, '\\.').replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*') +
+            '$';
         }
-        
+
         return {
           codePattern: new RegExp(pattern),
           docFile: m.docs[0],

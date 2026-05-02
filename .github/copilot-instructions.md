@@ -5,6 +5,7 @@
 > [`.github/instructions/entrypoint.md`](./instructions/entrypoint.md)
 
 ## Quick Routing
+
 - **Engineering Rules**: [`.github/instructions/engineering/standards.md`](./instructions/engineering/standards.md)
 - **Architecture Map**: [`.github/instructions/architecture/mapping.md`](./instructions/architecture/mapping.md)
 - **DevOps/Deploy**: [`.github/instructions/devops/operations.md`](./instructions/devops/operations.md)

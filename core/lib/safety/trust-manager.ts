@@ -146,7 +146,7 @@ export class TrustManager {
         workspaceId: context?.workspaceId,
         increments: { trustScore: totalDelta },
         conditionExpression: context?.windowId
-          ? 'attribute_not_exists(#lac) OR #lac <> :windowId'
+          ? 'attribute_not_exists(#val.#id.#lac) OR #val.#id.#lac <> :windowId'
           : undefined,
         expressionAttributeNames: context?.windowId ? { '#lac': 'lastAnomalyCalibrationAt' } : {},
         expressionAttributeValues: context?.windowId ? { ':windowId': context.windowId } : {},
