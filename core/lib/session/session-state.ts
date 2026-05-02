@@ -585,9 +585,11 @@ export class SessionStateManager {
           TableName: this.tableName,
           Key: { userId: key, timestamp: 0 },
           UpdateExpression: 'SET workflowSnapshot = :snapshot, expiresAt = :exp',
+          ConditionExpression: 'processingAgentId = :agentId',
           ExpressionAttributeValues: {
             ':snapshot': snapshot,
             ':exp': this.getSessionExpiresAt(),
+            ':agentId': snapshot.agentId,
           },
         })
       );

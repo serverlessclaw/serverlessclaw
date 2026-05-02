@@ -93,6 +93,7 @@ export async function handler(
     sessionId: eventDetail.sessionId ?? 'N/A',
     traceId: eventDetail.traceId ?? 'unknown',
     envelopeId: envelopeId ?? 'N/A',
+    workspaceId: workspaceId || 'GLOBAL',
   });
 
   // Emit entry metric
@@ -303,7 +304,8 @@ export async function handler(
       issue: `Failed to process event ${detailType}: ${errorMessage}`,
       severity: 'high',
       userId: 'SYSTEM',
-      traceId: 'unknown',
+      traceId,
+      workspaceId,
       context: { detailType, error: errorMessage },
     });
 

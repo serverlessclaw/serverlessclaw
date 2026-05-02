@@ -16,7 +16,7 @@ sequenceDiagram
     Agent->>Lock: acquire()
     Agent->>Session: addPendingMessage(Task A)
     Note over Agent: Agent Crashes! 💥
-    
+
     Note over Agent,DLQ: RECOVERY PATH
     Session->>Lock: check expired locks
     Session->>Lock: acquire()
@@ -50,5 +50,5 @@ graph TD
 ## Key Mechanisms
 
 1.  **Deterministic Idempotency Keys**: Derived from unique message IDs (`resume:sessionId:msgId`) to ensure that even if metadata cleanup fails, the side effect (event emission) is only processed once.
-2.  **Emit-then-Purge Strategy**: In the DLQ retry path, the event is emitted *before* the DLQ entry is purged. Idempotency guards prevent duplicates, and the purge only happens upon confirmed success or confirmed duplication.
+2.  **Emit-then-Purge Strategy**: In the DLQ retry path, the event is emitted _before_ the DLQ entry is purged. Idempotency guards prevent duplicates, and the purge only happens upon confirmed success or confirmed duplication.
 3.  **Fail-Closed Circuit Breakers**: Distributed state checks (`isCircuitOpen`, `consumeToken`) default to "Closed" (rejected) on system failures to prevent cascading instability.

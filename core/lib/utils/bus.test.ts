@@ -272,12 +272,12 @@ describe('Event Bus', () => {
       const result = await retryDlqEntry(entry);
 
       expect(result).toBe(true);
-      
+
       // Should emit first
       expect(eventBridgeMock.calls()).toHaveLength(1);
-      
+
       // Should purge AFTER emit (DDB Delete)
-      const deleteCall = ddbMock.calls().find(c => c.args[0] instanceof DeleteCommand);
+      const deleteCall = ddbMock.calls().find((c) => c.args[0] instanceof DeleteCommand);
       expect(deleteCall).toBeDefined();
     });
 
@@ -305,7 +305,7 @@ describe('Event Bus', () => {
       const result = await retryDlqEntry(entry);
 
       expect(result).toBe(true); // Should return true because it's handled
-      const deleteCall = ddbMock.calls().find(c => c.args[0] instanceof DeleteCommand);
+      const deleteCall = ddbMock.calls().find((c) => c.args[0] instanceof DeleteCommand);
       expect(deleteCall).toBeDefined(); // Should still purge
     });
   });

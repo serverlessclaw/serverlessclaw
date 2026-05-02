@@ -384,6 +384,29 @@ await purgeDlqEntry(entry);
 
 ---
 
+### 19. In-Memory Multi-Tenant Filtering
+
+**What**: Performing a global database query and then filtering results by `WorkspaceId` in application memory instead of using server-side filters (Partition Keys, Global Secondary Indexes, or FilterExpressions).
+
+**Risk**: Multi-tenant data leakage if the filter is forgotten or bypassed. Performance degradation as the database returns irrelevant data that is then discarded.
+
+**Pattern**:
+
+```typescript
+// ❌ WRONG
+const items = await db.query({ KeyCondition: 'id = :id' });
+return items.filter((i) => i.workspaceId === currentWs);
+
+// ✅ CORRECT
+return await db.query({
+  KeyCondition: 'id = :id',
+  FilterExpression: 'workspaceId = :ws',
+  ExpressionAttributeValues: { ':id': id, ':ws': currentWs }
+});
+```
+
+**Occurrences**: Fixed in `ClawTracer.getTrace` (Audit 2026-05-02).
+
 ## How to Use This Document
 
 1. **During Code Review**: Check this document before submitting

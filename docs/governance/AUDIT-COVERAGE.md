@@ -12,11 +12,11 @@ Last Updated: 2026-05-01
 
 | Silo  | Name           | Primary Code Paths                              | Audit Count | Last Audited | Risk Level |
 | :---- | :------------- | :---------------------------------------------- | :---------- | :----------- | :--------- |
-| **1** | The Spine      | `core/handlers/events.ts`, `core/lib/bus.ts`    | 17          | 2026-05-02   | Low        |
+| **1** | The Spine      | `core/handlers/events.ts`, `core/lib/bus.ts`    | 18          | 2026-05-02   | Low        |
 | **2** | The Hand       | `core/lib/mcp.ts`, `core/lib/agent/executor.ts` | 10          | 2026-05-01   | Low        |
 | **3** | The Shield     | `core/lib/safety/safety-engine.ts`              | 18          | 2026-05-02   | Low        |
-| **4** | The Brain      | `core/lib/memory/`, `core/lib/rag/`             | 15          | 2026-05-02   | Low        |
-| **5** | The Eye        | `core/lib/metrics/`, `core/lib/tracer/`         | 14          | 2026-05-02   | Low        |
+| **4** | The Brain      | `core/lib/memory/`, `core/lib/rag/`             | 16          | 2026-05-02   | Low        |
+| **5** | The Eye        | `core/lib/metrics/`, `core/lib/tracer/`         | 15          | 2026-05-02   | Low        |
 | **6** | The Scales     | `core/lib/safety/trust-manager.ts`              | 15          | 2026-05-02   | Low        |
 | **7** | The Metabolism | `core/lib/maintenance/metabolism.ts`            | 8           | 2026-05-01   | Low        |
 
@@ -26,7 +26,7 @@ Last Updated: 2026-05-01
 
 | Perspective | Name              | Description            | Usage Count | Last Tested |
 | :---------- | :---------------- | :--------------------- | :---------- | :---------- |
-| **A**       | Life of a Message | Spine → Brain → Eye    | 8           | 2026-05-01  |
+| **A**       | Life of a Message | Spine → Brain → Eye    | 9           | 2026-05-02  |
 | **B**       | Evolution Cycle   | Hand → Shield → Scales | 7           | 2026-04-29  |
 | **C**       | Identity Journey  | Brain → Spine → Shield | 10          | 2026-05-01  |
 | **D**       | Trust Loop        | Eye → Scales → Spine   | 12          | 2026-05-02  |
@@ -38,6 +38,7 @@ Last Updated: 2026-05-01
 
 | Date       | Report                                             | Silos Covered                    | Cross-Silo | Key Findings                                                                                                    |
 | :--------- | :------------------------------------------------- | :------------------------------- | :--------- | :-------------------------------------------------------------------------------------------------------------- |
+| 2026-05-02 | `audit-2026-05-02-life-of-a-message.md`            | Spine, Brain, Eye                | A          | FIXED: P1 Non-atomic snapshots & tracer updates, P2 In-memory multi-tenant filtering, P2 Observability gaps.    |
 | 2026-05-02 | `audit-2026-05-02-recovery-path.md`                | Shield, Spine, Brain             | E          | FIXED: P1 Non-idempotent session resumption, P2 DLQ retry data loss window. Improved error classification.      |
 | 2026-05-02 | `audit-2026-05-02-trust-loop.md`                   | Eye, Scales, Spine               | D          | FIXED: P2 Blind Tool Hallucinations (missing tool penalty), P2 Trust update observability gaps.                 |
 | 2026-05-02 | `audit-2026-05-02-tool-acquisition.md`             | Hand                             | B          | FIXED: P2 Missing Tool Acquisition Cost Estimation and Budget Enforcement                                       |

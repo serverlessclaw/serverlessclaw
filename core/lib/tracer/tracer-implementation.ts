@@ -140,6 +140,7 @@ export class ClawTracer {
             TableName: this.getTableName(),
             Key: { traceId: this.traceId, nodeId: '__summary__' },
             UpdateExpression: `SET ${updateExprParts.join(', ')}`,
+            ConditionExpression: 'attribute_exists(traceId)',
             ExpressionAttributeNames: attrNames,
             ExpressionAttributeValues: attrValues,
           })
@@ -250,6 +251,7 @@ export class ClawTracer {
         TableName: this.getTableName(),
         Key: { traceId: this.traceId, nodeId: this.nodeId },
         UpdateExpression: 'SET #steps = list_append(if_not_exists(#steps, :empty_list), :step)',
+        ConditionExpression: 'attribute_exists(traceId)',
         ExpressionAttributeNames: { '#steps': 'steps' },
         ExpressionAttributeValues: {
           ':step': [fullStep],
@@ -279,6 +281,7 @@ export class ClawTracer {
         Key: { traceId: this.traceId, nodeId: this.nodeId },
         UpdateExpression:
           'SET #status = :status, finalResponse = :resp, endTime = :end, metadata = :meta',
+        ConditionExpression: 'attribute_exists(traceId)',
         ExpressionAttributeNames: { '#status': 'status' },
         ExpressionAttributeValues: {
           ':status': TRACE_STATUS.COMPLETED,
@@ -340,6 +343,7 @@ export class ClawTracer {
         Key: { traceId: this.traceId, nodeId: this.nodeId },
         UpdateExpression:
           'SET #status = :status, failureReason = :reason, endTime = :end, metadata = :meta',
+        ConditionExpression: 'attribute_exists(traceId)',
         ExpressionAttributeNames: { '#status': 'status' },
         ExpressionAttributeValues: {
           ':status': TRACE_STATUS.FAILED,
@@ -418,7 +422,11 @@ export class ClawTracer {
       new QueryCommand({
         TableName: getTraceTableName(),
         KeyConditionExpression: 'traceId = :tid',
-        ExpressionAttributeValues: { ':tid': traceId },
+        FilterExpression: workspaceId ? 'workspaceId = :ws' : undefined,
+        ExpressionAttributeValues: {
+          ':tid': traceId,
+          ...(workspaceId ? { ':ws': workspaceId } : {}),
+        },
       })
     );
 
