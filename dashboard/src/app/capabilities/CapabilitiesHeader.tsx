@@ -3,7 +3,6 @@
 import React from 'react';
 import Typography from '@/components/ui/Typography';
 import Badge from '@/components/ui/Badge';
-import { useTranslations } from '@/components/Providers/TranslationsProvider';
 import PageHeader from '@/components/PageHeader';
 
 interface CapabilitiesHeaderProps {
@@ -12,8 +11,6 @@ interface CapabilitiesHeaderProps {
 }
 
 export default function CapabilitiesHeader({ localCount, bridgeCount }: CapabilitiesHeaderProps) {
-  const { t } = useTranslations();
-
   return (
     <PageHeader
       titleKey="CAPABILITIES_TITLE"

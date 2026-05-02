@@ -9,15 +9,11 @@ import {
   Trash2,
   RefreshCw,
   Plus,
-  Zap,
-  Target,
-  Activity,
   Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import Typography from '@/components/ui/Typography';
-import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { THEME } from '@/lib/theme';
@@ -85,9 +81,6 @@ export default function ScheduleList() {
       !s.Name.startsWith('RecoverySchedule') &&
       !s.Name.startsWith('StrategicReviewSchedule')
   );
-
-  const plannerSchedule = schedules.find((s) => s?.Name?.includes('PLANNER'));
-  const nextEvolution = plannerSchedule ? getNextRun(plannerSchedule) : 'None Scheduled';
 
   const handleTrigger = async (name: string) => {
     setActionInProgress(name + '-trigger');

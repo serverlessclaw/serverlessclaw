@@ -3,13 +3,8 @@ import Link from 'next/link';
 import PageHeader from '@/components/PageHeader';
 import {
   ArrowLeft,
-  Shield,
-  Zap,
-  History,
-  TrendingUp,
   AlertTriangle,
   Settings,
-  Bot,
 } from 'lucide-react';
 import { AgentRegistry } from '@claw/core/lib/registry/AgentRegistry';
 import { DynamoMemory, getReputation } from '@claw/core/lib/memory';
@@ -49,7 +44,6 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
   }
 
   const successRate = reputation?.successRate ?? 0;
-  const avgLatency = reputation?.avgLatencyMs ?? 0;
   const totalTasks = (reputation?.tasksCompleted ?? 0) + (reputation?.tasksFailed ?? 0);
 
   return (

@@ -601,7 +601,7 @@ export class CachedMemory implements IMemory {
     item: Record<string, unknown>,
     params?: Partial<Record<string, unknown>>
   ): Promise<void> {
-    return this.underlying.putItem(item, params as any);
+    return this.underlying.putItem(item, params as Partial<Record<string, unknown>>);
   }
 
   async saveClarificationRequest(

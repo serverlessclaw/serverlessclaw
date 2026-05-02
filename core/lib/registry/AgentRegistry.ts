@@ -176,7 +176,7 @@ export class AgentRegistry {
     }
     const existing = await this.getAgentConfig(agentId, options);
     const { hashString } = await import('../utils/crypto');
-    const enriched: any = {
+    const enriched: Record<string, unknown> = {
       ...config,
       lastUpdated: new Date().toISOString(),
     };
@@ -185,7 +185,7 @@ export class AgentRegistry {
     if (config.metadata !== undefined || config.systemPrompt !== undefined) {
       enriched.metadata = { ...existing?.metadata, ...config.metadata };
       if (config.systemPrompt !== undefined) {
-        enriched.metadata.promptHash = hashString(config.systemPrompt);
+        (enriched.metadata as any).promptHash = hashString(config.systemPrompt);
       }
     }
 

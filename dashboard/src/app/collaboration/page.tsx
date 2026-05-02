@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 
-import { Vote, Activity, ShieldAlert, Cpu } from 'lucide-react';
+import { Vote, Activity, Cpu } from 'lucide-react';
 import Typography from '@/components/ui/Typography';
 import Badge from '@/components/ui/Badge';
 import SwarmConsensusView from '@/components/SwarmConsensusView';

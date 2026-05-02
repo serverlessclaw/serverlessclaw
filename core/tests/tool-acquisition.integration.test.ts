@@ -280,4 +280,103 @@ describe('Tool Acquisition Integration', () => {
 
     expect(result.responseText).toContain('ready to use it');
   });
+
+  it('should reject tool acquisition if it exceeds the session token budget', async () => {
+    // 1. Setup the "Skeleton" Agent
+    const agentConfig = {
+      id: 'skeleton-agent',
+      name: 'Skeleton',
+      enabled: true,
+      systemPrompt: 'You are a skeleton agent.',
+      category: AgentCategory.SYSTEM,
+      tools: ['installSkill'],
+    };
+
+    vi.mocked(AgentRegistry.getAgentConfig).mockResolvedValue(agentConfig as any);
+
+    // Mock TokenBudgetEnforcer to fail the budget check
+    const tokenBudgetModule = await import('../lib/metrics/token-budget-enforcer');
+    vi.spyOn(tokenBudgetModule, 'getTokenBudgetEnforcer').mockReturnValue({
+      recordUsage: vi.fn().mockResolvedValue({
+        allowed: false,
+        reason: 'Session token budget exhausted',
+        sessionCostUsd: 0,
+        sessionTokens: 0,
+        percentUsed: 100,
+      }),
+    } as any);
+
+    const installSkillTool = {
+      name: 'installSkill',
+      description: 'Adds a tool to roster',
+      execute: async ({
+        skillName,
+        agentId,
+        sessionId,
+      }: {
+        skillName: string;
+        agentId: string;
+        sessionId?: string;
+      }) => {
+        try {
+          await SkillRegistry.installSkill(agentId, skillName, { sessionId });
+          return `Successfully installed ${skillName}`;
+        } catch (error: any) {
+          return `FAILED: ${error.message}`;
+        }
+      },
+    };
+
+    let callCount = 0;
+    mockProvider.call = vi.fn().mockImplementation(async () => {
+      callCount++;
+      if (callCount === 1) {
+        return {
+          role: MessageRole.ASSISTANT,
+          content: 'Installing it now.',
+          traceId: 'test-trace-id',
+          messageId: 'msg-1',
+          tool_calls: [
+            {
+              id: 'call-install',
+              type: 'function',
+              function: {
+                name: 'installSkill',
+                arguments:
+                  '{"skillName": "target_tool", "agentId": "skeleton-agent", "sessionId": "sess-123"}',
+              },
+            },
+          ],
+        };
+      }
+      return {
+        role: MessageRole.ASSISTANT,
+        content: 'I failed to install the tool due to budget limits.',
+        traceId: 'test-trace-id',
+        messageId: 'msg-2',
+      };
+    });
+
+    const agent = new Agent(
+      mockMemory,
+      mockProvider,
+      [installSkillTool as any],
+      agentConfig as any
+    );
+    await agent.process('user-1', 'Install the target tool.');
+
+    expect(mockAddStep).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'tool_result',
+        content: expect.objectContaining({
+          toolName: 'installSkill',
+          result: expect.stringContaining("[BUDGET_EXCEEDED] Cannot install skill 'target_tool'"),
+        }),
+      })
+    );
+
+    // Verify registry was NOT updated
+    const { ConfigManager } = await import('../lib/registry/config');
+    expect(ConfigManager.atomicAppendToMapList).not.toHaveBeenCalled();
+  });
 });

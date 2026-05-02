@@ -79,7 +79,7 @@ export class ConfigManagerMapAtomic extends ConfigManagerList {
                 rootE.name === 'ConditionalCheckFailedException' &&
                 retryCount < maxRetries
               ) {
-                return (this as any).atomicAddMapField(key, entityId, field, delta, {
+                return ConfigManagerMapAtomic.atomicAddMapField(key, entityId, field, delta, {
                   ...options,
                   retryCount: retryCount + 1,
                 });
@@ -91,7 +91,7 @@ export class ConfigManagerMapAtomic extends ConfigManagerList {
             innerE.name === 'ConditionalCheckFailedException' &&
             retryCount < maxRetries
           ) {
-            return (this as any).atomicAddMapField(key, entityId, field, delta, {
+            return ConfigManagerMapAtomic.atomicAddMapField(key, entityId, field, delta, {
               ...options,
               retryCount: retryCount + 1,
             });
@@ -189,9 +189,10 @@ export class ConfigManagerMapAtomic extends ConfigManagerList {
             clampError.name === 'ConditionalCheckFailedException'
           ) {
             // Value was corrected or changed back into range concurrently - fetch fresh state
-            const fresh = await (this as any).getMapEntity(key, entityId, {
+            const rootMap = (await ConfigManagerMapAtomic.getRawConfig(key, {
               workspaceId: options.workspaceId,
-            });
+            })) as Record<string, any>;
+            const fresh = rootMap?.[entityId];
             return (fresh?.[field] as number) ?? clamped;
           }
           throw clampError;
@@ -240,7 +241,7 @@ export class ConfigManagerMapAtomic extends ConfigManagerList {
                 rootE.name === 'ConditionalCheckFailedException' &&
                 retryCount < maxRetries
               ) {
-                return (this as any).atomicIncrementMapField(key, entityId, field, delta, {
+                return ConfigManagerMapAtomic.atomicIncrementMapField(key, entityId, field, delta, {
                   ...options,
                   retryCount: retryCount + 1,
                 });
@@ -252,7 +253,7 @@ export class ConfigManagerMapAtomic extends ConfigManagerList {
             innerE.name === 'ConditionalCheckFailedException' &&
             retryCount < maxRetries
           ) {
-            return (this as any).atomicIncrementMapField(key, entityId, field, delta, {
+            return ConfigManagerMapAtomic.atomicIncrementMapField(key, entityId, field, delta, {
               ...options,
               retryCount: retryCount + 1,
             });
@@ -399,7 +400,7 @@ export class ConfigManagerMapAtomic extends ConfigManagerList {
                 rootE.name === 'ConditionalCheckFailedException' &&
                 retryCount < maxRetries
               ) {
-                return (this as any).atomicUpdateMapEntity(key, entityId, updates, {
+                return ConfigManagerMapAtomic.atomicUpdateMapEntity(key, entityId, updates, {
                   ...options,
                   retryCount: retryCount + 1,
                 });
@@ -411,7 +412,7 @@ export class ConfigManagerMapAtomic extends ConfigManagerList {
             innerE.name === 'ConditionalCheckFailedException' &&
             retryCount < maxRetries
           ) {
-            return (this as any).atomicUpdateMapEntity(key, entityId, updates, {
+            return ConfigManagerMapAtomic.atomicUpdateMapEntity(key, entityId, updates, {
               ...options,
               retryCount: retryCount + 1,
             });

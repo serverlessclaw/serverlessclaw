@@ -41,7 +41,7 @@ export function createMCPServers(ctx: SharedContext): MCPServerResources {
     dev: false as const,
     architecture: LAMBDA_ARCHITECTURE as 'arm64' | 'x86_64',
     nodejs: { loader: NODEJS_LOADERS },
-    logging: { retention: LOG_RETENTION_PERIOD as any },
+    logging: { retention: LOG_RETENTION_PERIOD as never },
     url: { authorization: 'iam' as const },
   };
 

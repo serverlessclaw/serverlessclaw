@@ -32,7 +32,6 @@ export const dynamic = 'force-dynamic';
 import { ThemeProvider } from '@/components/Providers/ThemeProvider';
 import { TenantProvider } from '@/components/Providers/TenantProvider';
 import { GlobalModals } from '@/components/GlobalModals';
-import Breadcrumbs from '@/components/Breadcrumbs';
 import CommandPalette from '@/components/CommandPalette';
 import { MainLayout } from '@/components/Layout/MainLayout';
 

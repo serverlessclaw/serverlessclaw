@@ -25,7 +25,8 @@ export async function GET(req: NextRequest) {
     const users = await manager.getAllUsers();
     // Strip sensitive info
     const safeUsers = users.map((u) => {
-      const { hashedPassword, ...safe } = u;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { hashedPassword: _hashedPassword, ...safe } = u;
       return safe;
     });
 

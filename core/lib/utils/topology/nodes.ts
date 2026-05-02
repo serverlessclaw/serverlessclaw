@@ -397,7 +397,7 @@ export function mergeBackboneNodes(nodes: TopologyNode[]): TopologyNode[] {
 
       mergedNodes.push({
         id: lowerAgentId,
-        type: (isLogic ? NODE_TYPE.INFRA : NODE_TYPE.AGENT) as any,
+        type: (isLogic ? NODE_TYPE.INFRA : NODE_TYPE.AGENT) as 'infra' | 'agent',
         label: agentConfig.topologyOverride?.label || agentConfig.name || lowerAgentId,
         icon:
           agentConfig.topologyOverride?.icon ??
@@ -445,7 +445,7 @@ export function addDynamicAgents(nodes: TopologyNode[], items: unknown[]): Topol
 
     finalNodes.push({
       id: lowerAgentId,
-      type: (isLogic ? NODE_TYPE.INFRA : NODE_TYPE.AGENT) as any,
+      type: (isLogic ? NODE_TYPE.INFRA : NODE_TYPE.AGENT) as 'infra' | 'agent',
       label: agentConfig.topologyOverride?.label || agentConfig.name || lowerAgentId,
       icon: agentConfig.topologyOverride?.icon ?? (isLogic ? NODE_ICON.GEAR : NODE_ICON.BOT),
       tier:

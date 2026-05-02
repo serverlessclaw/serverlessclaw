@@ -191,6 +191,7 @@ export async function searchInsights(
         category?: InsightCategory;
         limit?: number;
         scope?: ContextualScope;
+        userId?: string;
       },
   queryText?: string,
   category?: InsightCategory,
@@ -265,16 +266,9 @@ export async function searchInsights(
   // 3. Execute Query (Hierarchical fallback if needed)
   let items: MemoryInsight[];
 
-  // If orgId or userId provided, we might search multiple scopes
-  const searchScopes = [pk];
-  if (orgId && !resolvedUserId)
-    searchScopes.push(base.getScopedUserId(`ORG#${orgId}`, resolvedScope));
-  if (!resolvedUserId && pk !== base.getScopedUserId('SYSTEM#GLOBAL'))
-    searchScopes.push(base.getScopedUserId('SYSTEM#GLOBAL', resolvedScope));
-
   if (resolvedUserId && orgId) {
     // Specific hierarchical search: User -> Org -> Global
-    const results = await Promise.all([
+    const queries = [
       queryByTypeAndMap(base, {
         ...params,
         ExpressionAttributeValues: {
@@ -286,17 +280,42 @@ export async function searchInsights(
         ...params,
         ExpressionAttributeValues: {
           ...(params.ExpressionAttributeValues as Record<string, unknown>),
-          ':userId': base.getScopedUserId(`ORG#${orgId}`, resolvedScope),
+          ':userId': base.getScopedUserId(`ORG#${orgId}`),
         },
       }),
       queryByTypeAndMap(base, {
         ...params,
         ExpressionAttributeValues: {
           ...(params.ExpressionAttributeValues as Record<string, unknown>),
-          ':userId': base.getScopedUserId('SYSTEM#GLOBAL', resolvedScope),
+          ':userId': base.getScopedUserId('SYSTEM#GLOBAL'),
         },
       }),
-    ]);
+    ];
+
+    // Include workspace-scoped org/global if searching within a workspace
+    const workspaceId = resolveScopeId(resolvedScope);
+    if (workspaceId) {
+      queries.push(
+        queryByTypeAndMap(base, {
+          ...params,
+          ExpressionAttributeValues: {
+            ...(params.ExpressionAttributeValues as Record<string, unknown>),
+            ':userId': base.getScopedUserId(`ORG#${orgId}`, resolvedScope),
+          },
+        })
+      );
+      queries.push(
+        queryByTypeAndMap(base, {
+          ...params,
+          ExpressionAttributeValues: {
+            ...(params.ExpressionAttributeValues as Record<string, unknown>),
+            ':userId': base.getScopedUserId('SYSTEM#GLOBAL', resolvedScope),
+          },
+        })
+      );
+    }
+
+    const results = await Promise.all(queries);
     items = results.flatMap((r) => r);
   } else {
     items = await queryByTypeAndMap(base, params);

@@ -55,12 +55,16 @@ export async function handleCognitiveHealthCheck(
  * Alerts when health is degraded.
  */
 async function alertDegradedHealth(
-  snapshot: any,
+  snapshot: {
+    overallScore: number;
+    anomalies: { severity: string }[];
+    agentMetrics: { agentId: string; taskCompletionRate: number; errorRate: number }[];
+  },
   label: string,
   workspaceId?: string
 ): Promise<void> {
   const criticalAnomalies = snapshot.anomalies.filter(
-    (a: any) => a.severity === 'critical' || a.severity === 'high'
+    (a: { severity: string }) => a.severity === 'critical' || a.severity === 'high'
   );
 
   try {
@@ -78,11 +82,13 @@ async function alertDegradedHealth(
           overallScore: snapshot.overallScore,
           anomalyCount: snapshot.anomalies.length,
           criticalCount: criticalAnomalies.length,
-          agentMetrics: snapshot.agentMetrics.map((m: any) => ({
-            agentId: m.agentId,
-            completionRate: m.taskCompletionRate,
-            errorRate: m.errorRate,
-          })),
+          agentMetrics: snapshot.agentMetrics.map(
+            (m: { agentId: string; taskCompletionRate: number; errorRate: number }) => ({
+              agentId: m.agentId,
+              completionRate: m.taskCompletionRate,
+              errorRate: m.errorRate,
+            })
+          ),
         },
       },
       { priority }

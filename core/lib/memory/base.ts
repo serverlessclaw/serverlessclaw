@@ -143,7 +143,9 @@ export class BaseMemoryProvider {
       const { emitMetrics, METRICS } = await import('../metrics/metrics');
       const workspaceId = (item as any).workspaceId || undefined;
       await emitMetrics([
-        METRICS.storageError('putItem', errorName, tableName, { workspaceId }),
+        METRICS.storageError('putItem', errorName, tableName, {
+          workspaceId: workspaceId as string,
+        }),
       ]).catch(() => {});
       logger.error('Error putting item into DynamoDB:', error);
       throw error;
@@ -176,9 +178,12 @@ export class BaseMemoryProvider {
     } catch (error) {
       const errorName = (error as Error).name || 'UnknownError';
       const { emitMetrics, METRICS } = await import('../metrics/metrics');
-      const workspaceId = (params as any).ExpressionAttributeValues?.[':workspaceId'];
+      const workspaceId = (params as Record<string, Record<string, unknown>>)
+        .ExpressionAttributeValues?.[':workspaceId'];
       await emitMetrics([
-        METRICS.storageError('queryItems', errorName, tableName, { workspaceId }),
+        METRICS.storageError('queryItems', errorName, tableName, {
+          workspaceId: workspaceId as any,
+        }),
       ]).catch(() => {});
       logger.error('Error querying DynamoDB:', error);
       throw error;
@@ -268,9 +273,13 @@ export class BaseMemoryProvider {
     } catch (error) {
       const errorName = (error as Error).name || 'UnknownError';
       const { emitMetrics, METRICS } = await import('../metrics/metrics');
-      const workspaceId = (command.input.ExpressionAttributeValues as any)?.[':workspaceId'];
+      const workspaceId = (command.input.ExpressionAttributeValues as Record<string, unknown>)?.[
+        ':workspaceId'
+      ];
       await emitMetrics([
-        METRICS.storageError('updateItem', errorName, tableName, { workspaceId }),
+        METRICS.storageError('updateItem', errorName, tableName, {
+          workspaceId: workspaceId as any,
+        }),
       ]).catch(() => {});
       throw error;
     }

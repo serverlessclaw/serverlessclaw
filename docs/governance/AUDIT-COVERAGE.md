@@ -38,6 +38,7 @@ Last Updated: 2026-05-01
 
 | Date       | Report                                          | Silos Covered             | Cross-Silo | Key Findings                                                                                                   |
 | :--------- | :---------------------------------------------- | :------------------------ | :--------- | :------------------------------------------------------------------------------------------------------------- |
+| 2026-05-02 | `audit-2026-05-02-tool-acquisition.md`         | Hand                      | B          | FIXED: P2 Missing Tool Acquisition Cost Estimation and Budget Enforcement                                      |
 | 2026-05-01 | `audit-2026-05-01-identity-journey-refactoring.md`| Spine, Brain, Shield, Metabolism | C, D | FIXED: P1 Critical AI Context Overflow in Config module via inheritance-based refactoring. Verified isolation. |
 | 2026-05-01 | `audit-2026-05-01-brain-isolation.md`          | Brain, Hand, Spine        | A          | FIXED: P1 Critical Memory Isolation Leakage, P2 Global Item Invisibility in workspaces. Verified Silo 2 Budget. |
 | 2026-05-01 | `audit-2026-05-01-recovery-path.md`            | Shield, Spine, Brain      | E          | FIXED: P1 Sticky Recovery Counter, P2 Conservative lock cleanup, P2 Global remediation bypass.                 |
@@ -79,11 +80,11 @@ Last Updated: 2026-05-01
 
 ### High Priority (Needs Re-Audit)
 
-1. **The Brain (Silo 4)** - Focus next audit on vector store multi-tenant isolation and RAG leakage.
+1. **None at this time.** (Silo 4 vector store was audited and confirmed as a future milestone gap).
 
 ### Medium Priority (Rarely Audited)
 
-1. **The Hand (Silo 2)** - Verify tool acquisition cost estimation and budget enforcement.
+1. **None at this time.** (Silo 2 Hand tool acquisition cost verified).
 
 ---
 

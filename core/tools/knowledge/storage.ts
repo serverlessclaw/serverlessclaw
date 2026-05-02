@@ -48,13 +48,14 @@ export const discoverSkills = {
 export const installSkill = {
   ...schema.installSkill,
   execute: async (args: Record<string, unknown>): Promise<string> => {
-    const { skillName, agentId, workspaceId } = args as {
+    const { skillName, agentId, workspaceId, sessionId } = args as {
       skillName: string;
       agentId: string;
       workspaceId?: string;
+      sessionId?: string;
     };
     try {
-      await SkillRegistry.installSkill(skillName, agentId, { workspaceId });
+      await SkillRegistry.installSkill(agentId, skillName, { workspaceId, sessionId });
       return `Skill '${skillName}' successfully installed for agent ${agentId}`;
     } catch (error) {
       return `Failed to install skill: ${formatErrorMessage(error)}`;

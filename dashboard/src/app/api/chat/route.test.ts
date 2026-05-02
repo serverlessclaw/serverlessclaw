@@ -61,7 +61,8 @@ vi.mock('@claw/core/lib/utils/error', () => ({
   formatErrorMessage: (e: any) => e?.message || String(e),
 }));
 
-const { mockHasPermission } = vi.hoisted(() => ({
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const { mockHasPermission: _mockHasPermission } = vi.hoisted(() => ({
   mockHasPermission: vi.fn().mockResolvedValue(true),
 }));
 

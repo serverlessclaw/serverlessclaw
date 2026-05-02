@@ -51,15 +51,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       logger.info(`[Auth:Login] ✅ Authorized successful for ${finalUserId} (isDev=${isDev})`);
       const response = NextResponse.json({ success: true });
 
-      let sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-
       // Register session with IdentityManager
       try {
         const authResult = await identityManager.authenticate(finalUserId, 'dashboard');
-
-        if (authResult.session?.sessionId) {
-          sessionId = authResult.session.sessionId;
-        }
 
         // Auto-provision dashboard-user as admin if needed
         if (

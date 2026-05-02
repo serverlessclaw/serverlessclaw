@@ -7,14 +7,12 @@ import {
   Shield,
   Mail,
   Clock,
-  MoreHorizontal,
   Trash2,
   Edit2,
   ShieldCheck,
   Search,
   Filter,
   X,
-  Key,
 } from 'lucide-react';
 import Typography from '@/components/ui/Typography';
 import Card from '@/components/ui/Card';
@@ -22,7 +20,6 @@ import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import PageHeader from '@/components/PageHeader';
-import { useTranslations } from '@/components/Providers/TranslationsProvider';
 import { logger } from '@claw/core/lib/logger';
 
 interface UserIdentity {
@@ -35,7 +32,6 @@ interface UserIdentity {
 }
 
 export default function UsersPage() {
-  const { t } = useTranslations();
   const [users, setUsers] = useState<UserIdentity[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');

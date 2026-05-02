@@ -103,5 +103,42 @@ describe('Memory Leakage & Visibility Audit (Post-Fix)', () => {
       expect(result.items.find((i) => i.content === 'Truly global lesson')).toBeDefined();
       expect(result.items.find((i) => i.content === 'WS2 secret')).toBeUndefined();
     });
+
+    it('should INCLUDE truly global items when searching with resolvedUserId and orgId', async () => {
+      ddbMock.on(QueryCommand).resolves({
+        Items: [
+          {
+            userId: 'SYSTEM#GLOBAL',
+            timestamp: 1,
+            type: 'MEMORY:INSIGHT',
+            content: 'Truly global fact',
+            workspaceId: undefined,
+          },
+        ],
+      });
+
+      const result = await searchInsights(
+        memory,
+        {
+          userId: 'USER123',
+          scope: { workspaceId: 'WS1' },
+        },
+        undefined,
+        undefined,
+        50,
+        undefined,
+        undefined,
+        'ORG123'
+      );
+
+      expect(result.items.length).toBeGreaterThan(0);
+
+      const calls = ddbMock.calls();
+      const queriedUserIds = calls.map(
+        (c) => (c.args[0].input as Record<string, any>).ExpressionAttributeValues[':userId']
+      );
+      expect(queriedUserIds).toContain('SYSTEM#GLOBAL');
+      expect(queriedUserIds).toContain('ORG#ORG123');
+    });
   });
 });

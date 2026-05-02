@@ -92,7 +92,7 @@ export class TrustRegistry {
           );
           return true;
         } catch (innerE: unknown) {
-          if ((innerE as any).name === 'ValidationException') {
+          if (innerE instanceof Error && innerE.name === 'ValidationException') {
             try {
               await getDocClient().send(
                 new UpdateCommand({

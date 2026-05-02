@@ -14,7 +14,7 @@ process.env.CORE_TEST = 'true';
 
 // Global mock for TokenBudgetEnforcer to ensure tests don't fail due to DDB outages
 vi.mock('@claw/core/lib/metrics/token-budget-enforcer', async (importOriginal) => {
-  const actual = (await importOriginal()) as any;
+  const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
     getTokenBudgetEnforcer: () => ({
@@ -40,7 +40,7 @@ vi.mock('@claw/core/lib/metrics/token-budget-enforcer', async (importOriginal) =
 
 // Also handle relative imports
 vi.mock('../lib/metrics/token-budget-enforcer', async (importOriginal) => {
-  const actual = (await importOriginal()) as any;
+  const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
     getTokenBudgetEnforcer: () => ({

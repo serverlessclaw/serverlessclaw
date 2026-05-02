@@ -251,7 +251,7 @@ export async function handler(
 
     const handlerModuleTyped = handlerModule as Record<
       string,
-      (event: Record<string, unknown>, contextOrType?: any, type?: string) => Promise<void>
+      (event: Record<string, unknown>, contextOrType?: unknown, type?: string) => Promise<void>
     >;
     if (handlerModuleTyped && handlerModuleTyped[routing.function]) {
       // Inject EventBridge envelope id for idempotency dedup (used by downstream handlers)

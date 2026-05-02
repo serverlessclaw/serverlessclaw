@@ -68,10 +68,10 @@ export class SkillRegistry {
   static async installSkill(
     agentId: string,
     skillName: string,
-    options?: { ttlMinutes?: number; workspaceId?: string }
+    options?: { ttlMinutes?: number; workspaceId?: string; sessionId?: string }
   ): Promise<void> {
     const { ConfigManager } = await import('./registry/config');
-    const { ttlMinutes, workspaceId } = options || {};
+    const { ttlMinutes, workspaceId, sessionId } = options || {};
 
     const currentConfig = await AgentRegistry.getAgentConfig(agentId, { workspaceId });
     if (!currentConfig) throw new Error(`Agent ${agentId} not found`);
@@ -84,6 +84,39 @@ export class SkillRegistry {
     );
 
     if (exists) return;
+
+    // Tool Acquisition Cost Estimation
+    const availableSkills = await this.findSkillsByKeyword(skillName, { workspaceId });
+    const targetSkill = availableSkills.find((s) => s.name === skillName);
+
+    if (targetSkill) {
+      const estimatedTokens = Math.ceil(
+        (targetSkill.name.length +
+          targetSkill.description.length +
+          (targetSkill.parameters ? JSON.stringify(targetSkill.parameters).length : 0)) /
+          4
+      );
+
+      // Budget Enforcement
+      if (sessionId) {
+        const { getTokenBudgetEnforcer } = await import('./metrics/token-budget-enforcer');
+        const enforcer = getTokenBudgetEnforcer();
+
+        const budgetResult = await enforcer.recordUsage(
+          sessionId,
+          estimatedTokens, // treated as input token cost
+          0,
+          agentId,
+          workspaceId
+        );
+
+        if (!budgetResult.allowed) {
+          throw new Error(
+            `[BUDGET_EXCEEDED] Cannot install skill '${skillName}'. Acquisition cost (${estimatedTokens} tokens) exceeds session budget.`
+          );
+        }
+      }
+    }
 
     const newTool = ttlMinutes
       ? { name: skillName, expiresAt: Date.now() + ttlMinutes * 60 * 1000 }
