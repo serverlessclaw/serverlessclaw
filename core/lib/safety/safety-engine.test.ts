@@ -165,7 +165,10 @@ describe('SafetyEngine', () => {
     it('uses PROD tier by default if agentConfig.safetyTier is missing', async () => {
       const config = { id: 'test', name: 'Test' };
       // PROD requires deploy approval by default (either via time_restriction_approval, class_c_approval_required, or prod_deployment_approval)
-      const result = await engine.evaluateAction(config, 'deployment', { userId: 'SYSTEM' });
+      const result = await engine.evaluateAction(config, 'deployment', {
+        userId: 'SYSTEM',
+        workspaceId: 'ws1',
+      });
       expect(result.requiresApproval).toBe(true);
       expect(result.appliedPolicy).toMatch(
         /deployment_approval|time_restriction_approval|class_c_approval_required/
@@ -174,7 +177,10 @@ describe('SafetyEngine', () => {
 
     it('returns error for unknown tier', async () => {
       const config = { id: 'test', name: 'Test', safetyTier: 'invalid' as any };
-      const result = await engine.evaluateAction(config, 'any', { userId: 'SYSTEM' });
+      const result = await engine.evaluateAction(config, 'any', {
+        userId: 'SYSTEM',
+        workspaceId: 'ws1',
+      });
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain('Unknown safety tier');
     });
@@ -194,23 +200,34 @@ describe('SafetyEngine', () => {
         tools: [],
       } as IAgentConfig;
 
-      const codeResult = await engine.evaluateAction(config, 'code_change', { userId: 'SYSTEM' });
+      const codeResult = await engine.evaluateAction(config, 'code_change', {
+        userId: 'SYSTEM',
+        workspaceId: 'ws1',
+      });
       expect(codeResult.requiresApproval).toBe(false);
 
-      const deployResult = await engine.evaluateAction(config, 'deployment', { userId: 'SYSTEM' });
+      const deployResult = await engine.evaluateAction(config, 'deployment', {
+        userId: 'SYSTEM',
+        workspaceId: 'ws1',
+      });
       expect(deployResult.requiresApproval).toBe(true);
 
       const fileResult = await engine.evaluateAction(config, 'file_operation', {
         userId: 'SYSTEM',
+        workspaceId: 'ws1',
       });
       expect(fileResult.requiresApproval).toBe(false);
 
       const shellResult = await engine.evaluateAction(config, 'shell_command', {
         userId: 'SYSTEM',
+        workspaceId: 'ws1',
       });
       expect(shellResult.requiresApproval).toBe(true);
 
-      const mcpResult = await engine.evaluateAction(config, 'mcp_tool', { userId: 'SYSTEM' });
+      const mcpResult = await engine.evaluateAction(config, 'mcp_tool', {
+        userId: 'SYSTEM',
+        workspaceId: 'ws1',
+      });
       expect(mcpResult.requiresApproval).toBe(true);
     });
 
@@ -230,7 +247,10 @@ describe('SafetyEngine', () => {
       const actions = ['code_change', 'deployment', 'file_operation', 'shell_command', 'mcp_tool'];
 
       for (const action of actions) {
-        const result = await engine.evaluateAction(config, action, { userId: 'SYSTEM' });
+        const result = await engine.evaluateAction(config, action, {
+          userId: 'SYSTEM',
+          workspaceId: 'ws1',
+        });
         expect(result.allowed).toBe(true);
         expect(result.requiresApproval).toBe(false);
       }
@@ -257,6 +277,7 @@ describe('SafetyEngine', () => {
       for (const resource of blockedResources) {
         const result = await engine.evaluateAction(config, 'file_operation', {
           userId: 'SYSTEM',
+          workspaceId: 'ws1',
           resource,
           toolName: 'fileWrite',
         });
@@ -276,6 +297,7 @@ describe('SafetyEngine', () => {
 
       const result = await engine.evaluateAction(config, 'file_operation', {
         userId: 'SYSTEM',
+        workspaceId: 'ws1',
         resource: 'src/app.ts',
         toolName: 'fileWrite',
       });
@@ -299,6 +321,7 @@ describe('SafetyEngine', () => {
       const result1 = await customEngine.evaluateAction(config, 'file_operation', {
         resource: 'src/main.ts',
         userId: 'SYSTEM',
+        workspaceId: 'ws1',
       });
       expect(result1.allowed).toBe(true);
 
@@ -306,6 +329,7 @@ describe('SafetyEngine', () => {
       const result2 = await customEngine.evaluateAction(config, 'file_operation', {
         resource: 'README.md',
         userId: 'SYSTEM',
+        workspaceId: 'ws1',
       });
       expect(result2.allowed).toBe(false);
       expect(result2.appliedPolicy).toBe('resource_not_allowed');
@@ -324,7 +348,10 @@ describe('SafetyEngine', () => {
       const mockDate = new Date('2026-04-08T14:00:00Z'); // Wednesday
       vi.setSystemTime(mockDate);
 
-      const result = await engine.evaluateAction(config, 'deployment', { userId: 'SYSTEM' });
+      const result = await engine.evaluateAction(config, 'deployment', {
+        userId: 'SYSTEM',
+        workspaceId: 'ws1',
+      });
 
       // Default PROD policy has weekday 9-17 restriction for deployment
       expect(result.requiresApproval).toBe(true);
@@ -345,7 +372,10 @@ describe('SafetyEngine', () => {
       const mockDate = new Date('2026-04-05T10:00:00Z');
       vi.setSystemTime(mockDate);
 
-      const result = await engine.evaluateAction(config, 'deployment', { userId: 'SYSTEM' });
+      const result = await engine.evaluateAction(config, 'deployment', {
+        userId: 'SYSTEM',
+        workspaceId: 'ws1',
+      });
 
       // PROD requires deployment approval regardless (either global or time-based).
       expect(result.requiresApproval).toBe(true);
@@ -375,6 +405,7 @@ describe('SafetyEngine', () => {
       const result = await customEngine.evaluateAction(config, 'mcp_tool', {
         toolName: 'dangerousTool',
         userId: 'SYSTEM',
+        workspaceId: 'ws1',
       });
 
       expect(result.requiresApproval).toBe(true);
@@ -390,7 +421,10 @@ describe('SafetyEngine', () => {
         trustScore: 95,
       } as IAgentConfig;
 
-      const result = await engine.evaluateAction(config, 'deployment', { userId: 'SYSTEM' });
+      const result = await engine.evaluateAction(config, 'deployment', {
+        userId: 'SYSTEM',
+        workspaceId: 'ws1',
+      });
 
       expect(result.requiresApproval).toBe(true);
       expect(result.reason).toContain(
@@ -409,7 +443,10 @@ describe('SafetyEngine', () => {
 
       const scheduleSpy = vi.spyOn((engine as any).evolutionScheduler, 'scheduleAction');
 
-      const result = await engine.evaluateAction(config, 'deployment', { userId: 'SYSTEM' });
+      const result = await engine.evaluateAction(config, 'deployment', {
+        userId: 'SYSTEM',
+        workspaceId: 'ws1',
+      });
 
       expect(result.allowed).toBe(true);
       expect(result.requiresApproval).toBe(false);
@@ -428,7 +465,10 @@ describe('SafetyEngine', () => {
 
       const scheduleSpy = vi.spyOn((engine as any).evolutionScheduler, 'scheduleAction');
 
-      const result = await engine.evaluateAction(config, 'deployment', { userId: 'SYSTEM' });
+      const result = await engine.evaluateAction(config, 'deployment', {
+        userId: 'SYSTEM',
+        workspaceId: 'ws1',
+      });
 
       expect(result.requiresApproval).toBe(true);
       expect(scheduleSpy).toHaveBeenCalledTimes(1);
@@ -449,7 +489,10 @@ describe('SafetyEngine', () => {
         trustScore: 95,
       } as IAgentConfig;
 
-      const result = await engine.evaluateAction(config, 'iam_change', { userId: 'SYSTEM' });
+      const result = await engine.evaluateAction(config, 'iam_change', {
+        userId: 'SYSTEM',
+        workspaceId: 'ws1',
+      });
 
       // iam_change now uses requireCodeApproval to determine if approval needed
       // In prod mock, requireCodeApproval is false, so approval is not required
@@ -465,7 +508,10 @@ describe('SafetyEngine', () => {
         trustScore: 80,
       } as IAgentConfig;
 
-      const result = await engine.evaluateAction(config, 'deployment', { userId: 'SYSTEM' });
+      const result = await engine.evaluateAction(config, 'deployment', {
+        userId: 'SYSTEM',
+        workspaceId: 'ws1',
+      });
 
       expect(result.requiresApproval).toBe(true);
       expect(result.reason).not.toContain('[ADVISORY]');
@@ -486,12 +532,18 @@ describe('SafetyEngine', () => {
 
       // First 5 should succeed (LOCAL tier allows execution without approval)
       for (let i = 0; i < 5; i++) {
-        const result = await engine.evaluateAction(config, 'iam_change', { userId: 'SYSTEM' });
+        const result = await engine.evaluateAction(config, 'iam_change', {
+          userId: 'SYSTEM',
+          workspaceId: 'ws1',
+        });
         expect(result.allowed).toBe(true);
       }
 
       // 6th should be blocked by blast radius
-      const result = await engine.evaluateAction(config, 'iam_change', { userId: 'SYSTEM' });
+      const result = await engine.evaluateAction(config, 'iam_change', {
+        userId: 'SYSTEM',
+        workspaceId: 'ws1',
+      });
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain('BLAST_RADIUS_EXCEEDED');
       expect(result.appliedPolicy).toBe('blast_radius_limit');
@@ -530,6 +582,7 @@ describe('SafetyEngine', () => {
       const config = { id: 'test-agent', safetyTier: SafetyTier.LOCAL } as IAgentConfig;
       const result = await engine.evaluateAction(config, 'trust_manipulation', {
         userId: 'SYSTEM',
+        workspaceId: 'ws1',
       });
 
       expect(result.allowed).toBe(false);
@@ -549,6 +602,7 @@ describe('SafetyEngine', () => {
       const result = await engine.evaluateAction(config, 'file_operation', {
         args,
         userId: 'SYSTEM',
+        workspaceId: 'ws1',
       });
 
       // .git/config is a protected resource
@@ -573,6 +627,7 @@ describe('SafetyEngine', () => {
 
       const result = await engine.evaluateAction(config, 'trust_manipulation', {
         isProactive: true,
+        workspaceId: 'ws1',
       });
 
       // Class D should always be blocked
@@ -593,6 +648,7 @@ describe('SafetyEngine', () => {
         isProactive: true,
         resource: 'core/lib/safety/safety-engine.ts', // Highly protected
         userId: 'SYSTEM',
+        workspaceId: 'ws1',
       });
 
       // System protected should always be blocked unless manuallyApproved (which it isn't here)

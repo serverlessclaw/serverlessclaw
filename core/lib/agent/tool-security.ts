@@ -107,8 +107,15 @@ export class ToolSecurityValidator {
         const { getIdentityManager } = await import('../session/identity');
         const identity = await getIdentityManager();
 
-        if (!execContext.userId || execContext.userId === 'SYSTEM') {
-          hasPermission = true;
+        if (execContext.userId === 'SYSTEM') {
+          // SYSTEM user skips individual permission checks but MUST have a valid workspaceId
+          // to ensure multi-tenant isolation during background tasks.
+          hasPermission = !!execContext.workspaceId;
+          if (!hasPermission) {
+            logger.error(`[SECURITY] SYSTEM request rejected: Missing mandatory workspaceId.`);
+          }
+        } else if (!execContext.userId) {
+          hasPermission = false;
         } else {
           for (const perm of tool.requiredPermissions) {
             hasPermission = await identity.hasPermission(

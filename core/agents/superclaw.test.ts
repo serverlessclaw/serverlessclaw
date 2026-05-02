@@ -99,9 +99,12 @@ describe('SuperClaw', () => {
           enabled: true,
           safetyTier: SafetyTier.PROD,
         } as any;
-        expect(await superclaw.requiresApproval(config, 'deployment', { userId: 'SYSTEM' })).toBe(
-          true
-        );
+        expect(
+          await superclaw.requiresApproval(config, 'deployment', {
+            userId: 'SYSTEM',
+            workspaceId: 'ws1',
+          })
+        ).toBe(true);
       });
 
       it('local does NOT require approval for deployments', async () => {
@@ -112,9 +115,12 @@ describe('SuperClaw', () => {
           enabled: true,
           safetyTier: SafetyTier.LOCAL,
         } as any;
-        expect(await superclaw.requiresApproval(config, 'deployment', { userId: 'SYSTEM' })).toBe(
-          false
-        );
+        expect(
+          await superclaw.requiresApproval(config, 'deployment', {
+            userId: 'SYSTEM',
+            workspaceId: 'ws1',
+          })
+        ).toBe(false);
       });
     });
 
@@ -127,7 +133,10 @@ describe('SuperClaw', () => {
           enabled: true,
           safetyTier: SafetyTier.PROD,
         } as any;
-        const result = await superclaw.evaluateAction(config, 'deployment', { userId: 'SYSTEM' });
+        const result = await superclaw.evaluateAction(config, 'deployment', {
+          userId: 'SYSTEM',
+          workspaceId: 'ws1',
+        });
         expect(result.allowed).toBe(false);
         expect(result.requiresApproval).toBe(true);
         expect(result.appliedPolicy).toBe('class_c_approval_required');
@@ -144,9 +153,12 @@ describe('SuperClaw', () => {
           enabled: true,
           safetyTier: SafetyTier.PROD,
         } as any;
-        expect(await superclaw.requiresApproval(config, 'deployment', { userId: 'SYSTEM' })).toBe(
-          false
-        );
+        expect(
+          await superclaw.requiresApproval(config, 'deployment', {
+            userId: 'SYSTEM',
+            workspaceId: 'ws1',
+          })
+        ).toBe(false);
       });
 
       it('sets tool safety override', async () => {
@@ -164,6 +176,7 @@ describe('SuperClaw', () => {
         const result = await superclaw.evaluateAction(config, 'mcp_tool', {
           toolName: 'sensitive_tool',
           userId: 'SYSTEM',
+          workspaceId: 'ws1',
         });
         expect(result.requiresApproval).toBe(true);
         expect(result.appliedPolicy).toBe('tool_override');

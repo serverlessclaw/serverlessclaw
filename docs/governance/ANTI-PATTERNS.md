@@ -401,7 +401,7 @@ return items.filter((i) => i.workspaceId === currentWs);
 return await db.query({
   KeyCondition: 'id = :id',
   FilterExpression: 'workspaceId = :ws',
-  ExpressionAttributeValues: { ':id': id, ':ws': currentWs }
+  ExpressionAttributeValues: { ':id': id, ':ws': currentWs },
 });
 ```
 

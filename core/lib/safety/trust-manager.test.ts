@@ -83,14 +83,16 @@ describe('TrustManager', () => {
       });
       mockAgentRegistry.atomicIncrementTrustScore.mockResolvedValueOnce(70);
 
-      const newScore = await TrustManager.recordFailure('test-agent', 'Test failure', 2);
+      const newScore = await TrustManager.recordFailure('test-agent', 'Test failure', 2, 0, {
+        workspaceId: 'ws1',
+      });
 
-      // Default penalty is -5, severity 2 -> penalty -10
+      // Default penalty is -5, severity 2, quality 0 (1.5x multiplier) -> penalty -15
       expect(newScore).toBe(70);
       expect(mockAgentRegistry.atomicIncrementTrustScore).toHaveBeenCalledWith(
         'test-agent',
-        -10,
-        expect.objectContaining({ workspaceId: undefined })
+        -15,
+        expect.objectContaining({ workspaceId: 'ws1' })
       );
     });
 
@@ -101,14 +103,22 @@ describe('TrustManager', () => {
       });
       mockAgentRegistry.atomicIncrementTrustScore.mockResolvedValueOnce(0);
 
-      const newScore = await TrustManager.recordFailure('low-trust-agent', 'Critical failure', 10);
+      const newScore = await TrustManager.recordFailure(
+        'low-trust-agent',
+        'Critical failure',
+        10,
+        0,
+        {
+          workspaceId: 'ws1',
+        }
+      );
 
-      // Score should be clamped to MIN_SCORE (0), not allowed to go negative
+      // Penalty: -5 * 10 * 1.5 = -75
       expect(newScore).toBe(0);
       expect(mockAgentRegistry.atomicIncrementTrustScore).toHaveBeenCalledWith(
         'low-trust-agent',
-        -50,
-        expect.objectContaining({ workspaceId: undefined, min: 0 })
+        -75,
+        expect.objectContaining({ workspaceId: 'ws1', min: 0 })
       );
     });
     it('applies quality weighting to failure penalties', async () => {
@@ -124,23 +134,25 @@ describe('TrustManager', () => {
       // Quality 0 -> 1.5x penalty. Base penalty = -5 * severity(1) = -5. Total = -7.5.
       mockAgentRegistry.getAgentConfig.mockResolvedValue(getConfig(50));
       mockAgentRegistry.atomicIncrementTrustScore.mockResolvedValueOnce(42.5);
-      const q0 = await TrustManager.recordFailure('test-agent', 'Q0', 1, 0);
+      const q0 = await TrustManager.recordFailure('test-agent', 'Q0', 1, 0, { workspaceId: 'ws1' });
       expect(q0).toBe(42.5);
       expect(mockAgentRegistry.atomicIncrementTrustScore).toHaveBeenCalledWith(
         'test-agent',
         -7.5,
-        expect.objectContaining({ workspaceId: undefined })
+        expect.objectContaining({ workspaceId: 'ws1' })
       );
 
       // Quality 10 -> 0.5x penalty. 50 + (-5 * 0.5) = 47.5. delta = -2.5
       mockAgentRegistry.getAgentConfig.mockResolvedValue(getConfig(50));
       mockAgentRegistry.atomicIncrementTrustScore.mockResolvedValueOnce(47.5);
-      const q10 = await TrustManager.recordFailure('test-agent', 'Q10', 1, 10);
+      const q10 = await TrustManager.recordFailure('test-agent', 'Q10', 1, 10, {
+        workspaceId: 'ws1',
+      });
       expect(q10).toBe(47.5);
       expect(mockAgentRegistry.atomicIncrementTrustScore).toHaveBeenCalledWith(
         'test-agent',
         -2.5,
-        expect.objectContaining({ workspaceId: undefined })
+        expect.objectContaining({ workspaceId: 'ws1' })
       );
     });
 
@@ -172,7 +184,7 @@ describe('TrustManager', () => {
         },
       ];
 
-      await TrustManager.recordAnomalies('anomaly-agent', anomalies);
+      await TrustManager.recordAnomalies('anomaly-agent', anomalies, { workspaceId: 'ws1' });
 
       // Critical (3x) + Low (0.1x) = 3.1x default penalty (-5) = -15.5.
       // expect(newScore).toBe(74.5); // Removed direct check as mock behavior changed
@@ -180,7 +192,10 @@ describe('TrustManager', () => {
         expect.any(String),
         'anomaly-agent',
         expect.any(Object),
-        expect.objectContaining({ increments: { trustScore: -15.5 } })
+        expect.objectContaining({
+          increments: { trustScore: -15.5 },
+          workspaceId: 'ws1',
+        })
       );
     });
   });
@@ -196,28 +211,34 @@ describe('TrustManager', () => {
       // Quality 10 -> 2x bump. Default bump = 1. Total bump = 2.
       mockAgentRegistry.getAgentConfig.mockResolvedValueOnce(getConfig(80));
       mockAgentRegistry.atomicIncrementTrustScore.mockResolvedValueOnce(82);
-      const highQualityScore = await TrustManager.recordSuccess('test-agent', 10);
+      const highQualityScore = await TrustManager.recordSuccess('test-agent', 10, {
+        workspaceId: 'ws1',
+      });
       expect(highQualityScore).toBe(82);
       expect(mockAgentRegistry.atomicIncrementTrustScore).toHaveBeenCalledWith(
         'test-agent',
         2,
-        expect.objectContaining({ workspaceId: undefined })
+        expect.objectContaining({ workspaceId: 'ws1' })
       );
 
       // Quality 5 -> 1x bump. 5 * 0.2 = 1. Total bump = 1.
       mockAgentRegistry.getAgentConfig.mockResolvedValueOnce(getConfig(80));
       mockAgentRegistry.atomicIncrementTrustScore.mockResolvedValueOnce(81);
-      const avgQualityScore = await TrustManager.recordSuccess('test-agent', 5);
+      const avgQualityScore = await TrustManager.recordSuccess('test-agent', 5, {
+        workspaceId: 'ws1',
+      });
       expect(avgQualityScore).toBe(81);
       expect(mockAgentRegistry.atomicIncrementTrustScore).toHaveBeenCalledWith(
         'test-agent',
         1,
-        expect.objectContaining({ workspaceId: undefined })
+        expect.objectContaining({ workspaceId: 'ws1' })
       );
 
       // Quality 0 -> 0x bump. 0 * 0.2 = 0. Total bump = 0.
       mockAgentRegistry.getAgentConfig.mockResolvedValueOnce(getConfig(80));
-      const zeroQualityScore = await TrustManager.recordSuccess('test-agent', 0);
+      const zeroQualityScore = await TrustManager.recordSuccess('test-agent', 0, {
+        workspaceId: 'ws1',
+      });
       expect(zeroQualityScore).toBe(80);
     });
 
@@ -228,14 +249,14 @@ describe('TrustManager', () => {
       });
       mockAgentRegistry.atomicIncrementTrustScore.mockResolvedValueOnce(100);
 
-      const newScore = await TrustManager.recordSuccess('top-agent', 10);
+      const newScore = await TrustManager.recordSuccess('top-agent', 10, { workspaceId: 'ws1' });
 
       // Score should be clamped to MAX_SCORE (100)
       expect(newScore).toBe(100);
       expect(mockAgentRegistry.atomicIncrementTrustScore).toHaveBeenCalledWith(
         'top-agent',
         2, // Quality 10 -> bump 2
-        expect.objectContaining({ workspaceId: undefined, max: 100 })
+        expect.objectContaining({ workspaceId: 'ws1', max: 100 })
       );
     });
   });
@@ -307,22 +328,24 @@ describe('TrustManager', () => {
       });
       mockAgentRegistry.atomicIncrementTrustScore.mockResolvedValueOnce(92);
 
-      const newScore = await TrustManager.recordSuccess('incomplete-agent', 10);
+      const newScore = await TrustManager.recordSuccess('incomplete-agent', 10, {
+        workspaceId: 'ws1',
+      });
 
       expect(newScore).toBe(92); // 90 (DEFAULT_SCORE) + 2 (bump with quality 10)
       expect(mockAgentRegistry.atomicIncrementTrustScore).toHaveBeenCalledWith(
         'incomplete-agent',
         2,
-        expect.objectContaining({ workspaceId: undefined })
+        expect.objectContaining({ workspaceId: 'ws1' })
       );
     });
 
     it('uses default score when config is null', async () => {
       mockAgentRegistry.getAgentConfig.mockResolvedValueOnce(null);
 
-      await expect(TrustManager.recordSuccess('missing-agent', 10)).rejects.toThrow(
-        'Agent missing-agent not found'
-      );
+      await expect(
+        TrustManager.recordSuccess('missing-agent', 10, { workspaceId: 'ws1' })
+      ).rejects.toThrow('Agent missing-agent not found');
     });
   });
 
@@ -335,7 +358,7 @@ describe('TrustManager', () => {
         enabled: false,
       });
 
-      const result = await TrustManager.recordSuccess('disabled-agent');
+      const result = await TrustManager.recordSuccess('disabled-agent', 5, { workspaceId: 'ws1' });
 
       // Should return current score without updating
       expect(result).toBe(75);
@@ -351,13 +374,13 @@ describe('TrustManager', () => {
       });
       mockAgentRegistry.atomicIncrementTrustScore.mockResolvedValueOnce(81);
 
-      const result = await TrustManager.recordSuccess('enabled-agent');
+      const result = await TrustManager.recordSuccess('enabled-agent', 5, { workspaceId: 'ws1' });
 
       expect(result).toBe(81); // Default bump of 1
       expect(mockAgentRegistry.atomicIncrementTrustScore).toHaveBeenCalledWith(
         'enabled-agent',
         1,
-        expect.objectContaining({ workspaceId: undefined })
+        expect.objectContaining({ workspaceId: 'ws1' })
       );
     });
 
@@ -370,13 +393,13 @@ describe('TrustManager', () => {
       });
       mockAgentRegistry.atomicIncrementTrustScore.mockResolvedValueOnce(81);
 
-      const result = await TrustManager.recordSuccess('legacy-agent');
+      const result = await TrustManager.recordSuccess('legacy-agent', 5, { workspaceId: 'ws1' });
 
       expect(result).toBe(81); // Default bump of 1
       expect(mockAgentRegistry.atomicIncrementTrustScore).toHaveBeenCalledWith(
         'legacy-agent',
         1,
-        expect.objectContaining({ workspaceId: undefined })
+        expect.objectContaining({ workspaceId: 'ws1' })
       );
     });
 
@@ -388,7 +411,9 @@ describe('TrustManager', () => {
         enabled: false,
       });
 
-      const result = await TrustManager.recordFailure('disabled-agent', 'Test failure');
+      const result = await TrustManager.recordFailure('disabled-agent', 'Test failure', 1, 0, {
+        workspaceId: 'ws1',
+      });
 
       expect(result).toBe(60);
       expect(mockAgentRegistry.atomicIncrementTrustScore).not.toHaveBeenCalled();
@@ -405,9 +430,9 @@ describe('TrustManager', () => {
       // Simulate DDB failure
       mockAgentRegistry.atomicIncrementTrustScore.mockRejectedValueOnce(new Error('DDB_FAILURE'));
 
-      await expect(TrustManager.recordFailure('agent-1', 'Critical error', 5)).rejects.toThrow(
-        'DDB_FAILURE'
-      );
+      await expect(
+        TrustManager.recordFailure('agent-1', 'Critical error', 5, 0, { workspaceId: 'ws1' })
+      ).rejects.toThrow('DDB_FAILURE');
 
       // Verify that no fallback was used (the error propagated)
       const { logger } = await import('../logger');

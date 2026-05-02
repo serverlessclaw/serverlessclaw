@@ -264,8 +264,17 @@ export class SafetyEngine extends SafetyBase {
     const { UserRole } = await import('../types/agent');
     const role = ctx.userRole;
 
-    // SYSTEM and autonomous background tasks skip RBAC as they represent the hive itself
+    // SYSTEM skips individual user-level RBAC but MUST have a workspaceId anchor
     if (ctx.userId === 'SYSTEM') {
+      if (!ctx.workspaceId) {
+        return this.handleViolation(
+          ctx,
+          tier,
+          action,
+          'system_rbac_unscoped',
+          `SYSTEM action '${action}' rejected: Missing mandatory workspaceId for background task.`
+        );
+      }
       return { allowed: true, requiresApproval: false };
     }
 

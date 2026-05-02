@@ -109,7 +109,10 @@ describe('Safety Engine Integration', () => {
       };
 
       // deployment should require approval in PROD
-      const result = await engine.evaluateAction(config, 'deployment', { userId: 'SYSTEM' });
+      const result = await engine.evaluateAction(config, 'deployment', {
+        userId: 'SYSTEM',
+        workspaceId: 'ws1',
+      });
       expect(result.requiresApproval).toBe(true);
       expect(result.appliedPolicy).toBe('class_c_approval_required');
     });
@@ -130,7 +133,10 @@ describe('Safety Engine Integration', () => {
       const actions = ['code_change', 'deployment', 'file_operation', 'shell_command', 'mcp_tool'];
 
       for (const action of actions) {
-        const result = await engine.evaluateAction(config, action, { userId: 'SYSTEM' });
+        const result = await engine.evaluateAction(config, action, {
+          userId: 'SYSTEM',
+          workspaceId: 'ws1',
+        });
         expect(result.allowed).toBe(true);
         expect(result.requiresApproval).toBe(false);
       }
@@ -149,6 +155,7 @@ describe('Safety Engine Integration', () => {
 
       const result = await engine.evaluateAction(config, 'file_operation', {
         userId: 'SYSTEM',
+        workspaceId: 'ws1',
         resource: '.env.production',
         toolName: 'fileWrite',
       });
@@ -169,6 +176,7 @@ describe('Safety Engine Integration', () => {
 
       const result = await engine.evaluateAction(config, 'file_operation', {
         userId: 'SYSTEM',
+        workspaceId: 'ws1',
         resource: 'src/components/Button.tsx',
         toolName: 'fileWrite',
       });
@@ -201,13 +209,22 @@ describe('Safety Engine Integration', () => {
         safetyTier: SafetyTier.LOCAL,
       };
 
-      const result1 = await testEngine.evaluateAction(config, 'deployment', { userId: 'SYSTEM' });
+      const result1 = await testEngine.evaluateAction(config, 'deployment', {
+        userId: 'SYSTEM',
+        workspaceId: 'ws1',
+      });
       expect(result1.allowed).toBe(true);
 
-      const result2 = await testEngine.evaluateAction(config, 'deployment', { userId: 'SYSTEM' });
+      const result2 = await testEngine.evaluateAction(config, 'deployment', {
+        userId: 'SYSTEM',
+        workspaceId: 'ws1',
+      });
       expect(result2.allowed).toBe(true);
 
-      const result3 = await testEngine.evaluateAction(config, 'deployment', { userId: 'SYSTEM' });
+      const result3 = await testEngine.evaluateAction(config, 'deployment', {
+        userId: 'SYSTEM',
+        workspaceId: 'ws1',
+      });
       expect(result3.allowed).toBe(false);
       expect(result3.reason).toContain('rate limit');
     });

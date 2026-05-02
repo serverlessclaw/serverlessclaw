@@ -182,12 +182,12 @@ describe('ClawTracer', () => {
       expect(cmd.input.ConditionExpression).toBe('attribute_not_exists(traceId)');
     });
 
-    it('should NOT use ConditionExpression when updating an existing summary', async () => {
+    it('should use ConditionExpression when updating an existing summary', async () => {
       mockSend.mockResolvedValue({});
       await tracer.updateSummary('COMPLETED', { isNew: false });
 
       const cmd = mockSend.mock.calls[0][0];
-      expect(cmd.input.ConditionExpression).toBeUndefined();
+      expect(cmd.input.ConditionExpression).toBe('attribute_exists(traceId)');
     });
   });
 });

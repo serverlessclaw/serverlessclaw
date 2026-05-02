@@ -87,11 +87,20 @@ describe('SafetyEngine RBAC [Phase 15]', () => {
     expect(result.appliedPolicy).toBe('class_d_blocked');
   });
 
-  it('allows background SYSTEM tasks to skip RBAC', async () => {
+  it('allows background SYSTEM tasks to skip RBAC when scoped to workspace', async () => {
+    const result = await engine.evaluateAction(config, 'deployment', {
+      userId: 'SYSTEM',
+      workspaceId: 'ws1',
+    });
+    expect(result.allowed).toBe(true);
+  });
+
+  it('rejects background SYSTEM tasks when missing workspaceId', async () => {
     const result = await engine.evaluateAction(config, 'deployment', {
       userId: 'SYSTEM',
     });
-    expect(result.allowed).toBe(true);
+    expect(result.allowed).toBe(false);
+    expect(result.appliedPolicy).toBe('system_rbac_unscoped');
   });
 
   it('requires RBAC even if agent has high trust (Non-Bypassable)', async () => {

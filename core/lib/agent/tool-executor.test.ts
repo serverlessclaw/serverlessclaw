@@ -106,6 +106,7 @@ function createExecContext(overrides: Partial<any> = {}) {
     currentInitiator: 'user1',
     depth: 0,
     userId: 'user1',
+    workspaceId: 'ws1', // Mandatory for SYSTEM identity remediation
     mainConversationId: 'conv1',
     userText: 'run test',
     sessionId: 'session1',
@@ -399,7 +400,7 @@ describe('ToolExecutor', () => {
       expect(messages[0].content).toBe('success');
     });
 
-    it('bypasses RBAC check when userId is empty', async () => {
+    it('rejects RBAC check when userId is empty', async () => {
       const tool = createTool({
         requiredPermissions: ['admin'],
         execute: vi.fn().mockResolvedValue('success'),
@@ -416,8 +417,8 @@ describe('ToolExecutor', () => {
         tracer
       );
 
-      expect(result.toolCallCount).toBe(1);
-      expect(messages[0].content).toBe('success');
+      expect(result.toolCallCount).toBe(0);
+      expect(messages[0].content).toContain('FAILED');
     });
 
     it('returns FAILED message when RBAC permission check fails', async () => {

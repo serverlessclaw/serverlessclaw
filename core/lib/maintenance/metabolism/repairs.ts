@@ -1,6 +1,7 @@
 import { logger } from '../../logger';
 import { BaseMemoryProvider } from '../../memory/base';
 import { IAgentConfig } from '../../types/index';
+import { EvolutionMode } from '../../types/agent/status';
 import { AgentRegistry } from '../../registry/AgentRegistry';
 import { archiveStaleGaps, cullResolvedGaps } from '../../memory/gap-operations';
 import { ConfigManager } from '../../registry/config';
@@ -131,6 +132,13 @@ export async function executeRepairs(
     }
   } catch (e) {
     logger.error('[Metabolism] S3 reclamation failed:', e);
+    repairFindings.push({
+      silo: 'Metabolism',
+      expected: 'S3 reclamation success',
+      actual: `S3 reclamation failed: ${e instanceof Error ? e.message : String(e)}`,
+      severity: 'P1',
+      recommendation: 'Check IAM permissions for staging bucket to restore metabolic hygiene.',
+    });
   }
 
   return repairFindings;

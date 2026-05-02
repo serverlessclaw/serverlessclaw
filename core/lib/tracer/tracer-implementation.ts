@@ -266,6 +266,42 @@ export class ClawTracer {
   }
 
   /**
+   * Adds multiple steps to the current trace node in a single atomic update.
+   * Sh5/Parallelism: Prevents write contention and improves throughput for batch tool execution.
+   *
+   * @param steps - Array of step contents and types.
+   */
+  async batchAddSteps(steps: Omit<TraceStep, 'stepId' | 'timestamp'>[]): Promise<void> {
+    if (steps.length === 0) return;
+
+    const fullSteps: TraceStep[] = steps.map((s) =>
+      filterPIIFromObject({
+        ...s,
+        stepId: uuidv4(),
+        timestamp: Date.now(),
+      })
+    ) as TraceStep[];
+
+    await this.docClient.send(
+      new UpdateCommand({
+        TableName: this.getTableName(),
+        Key: { traceId: this.traceId, nodeId: this.nodeId },
+        UpdateExpression: 'SET #steps = list_append(if_not_exists(#steps, :empty_list), :steps)',
+        ConditionExpression: 'attribute_exists(traceId)',
+        ExpressionAttributeNames: { '#steps': 'steps' },
+        ExpressionAttributeValues: {
+          ':steps': fullSteps,
+          ':empty_list': [],
+        },
+      })
+    );
+
+    await this.updateSummary(TRACE_STATUS.STARTED, {
+      extra: { lastStepType: steps[steps.length - 1].type },
+    });
+  }
+
+  /**
    * Ends the trace node with a final response and optional metadata.
    *
    * @param finalResponse - The final response sent to the user.

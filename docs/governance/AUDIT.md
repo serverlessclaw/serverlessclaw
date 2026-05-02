@@ -204,15 +204,15 @@ A poor path is:
 
 Use this table to map high-level silos to the primary code areas that should be investigated.
 
-| Silo  | Name           | Primary Code Focus                              | Implementation Vertical                   |
-| :---- | :------------- | :---------------------------------------------- | :---------------------------------------- |
-| **1** | The Spine      | `core/lib/routing/`, `core/lib/backbone.ts`     | [EVENTS.md](../interface/EVENTS.md)       |
-| **2** | The Hand       | `core/lib/mcp.ts`, `core/lib/agent/executor.ts` | [PROTOCOL.md](../interface/PROTOCOL.md)   |
-| **3** | The Shield     | `core/lib/safety/safety-engine.ts`              | [RESILIENCE.md](../system/RESILIENCE.md)  |
-| **4** | The Brain      | `core/lib/memory/`, `core/lib/rag/`             | [MEMORY.md](../intelligence/MEMORY.md)    |
-| **5** | The Eye        | `core/lib/metrics/`, `core/lib/tracer/`         | [DASHBOARD.md](../interface/DASHBOARD.md) |
-| **6** | The Scales     | `core/lib/safety/trust-manager.ts`              | [SAFETY.md](../intelligence/SAFETY.md)    |
-| **7** | The Metabolism | `core/lib/maintenance/metabolism.ts`, `core/lib/lifecycle/health.ts`, `core/lib/recovery/` | [METABOLISM.md](../system/METABOLISM.md) |
+| Silo  | Name           | Primary Code Focus                                                                         | Implementation Vertical                   |
+| :---- | :------------- | :----------------------------------------------------------------------------------------- | :---------------------------------------- |
+| **1** | The Spine      | `core/lib/routing/`, `core/lib/backbone.ts`                                                | [EVENTS.md](../interface/EVENTS.md)       |
+| **2** | The Hand       | `core/lib/mcp.ts`, `core/lib/agent/executor.ts`                                            | [PROTOCOL.md](../interface/PROTOCOL.md)   |
+| **3** | The Shield     | `core/lib/safety/safety-engine.ts`                                                         | [RESILIENCE.md](../system/RESILIENCE.md)  |
+| **4** | The Brain      | `core/lib/memory/`, `core/lib/rag/`                                                        | [MEMORY.md](../intelligence/MEMORY.md)    |
+| **5** | The Eye        | `core/lib/metrics/`, `core/lib/tracer/`                                                    | [DASHBOARD.md](../interface/DASHBOARD.md) |
+| **6** | The Scales     | `core/lib/safety/trust-manager.ts`                                                         | [SAFETY.md](../intelligence/SAFETY.md)    |
+| **7** | The Metabolism | `core/lib/maintenance/metabolism.ts`, `core/lib/lifecycle/health.ts`, `core/lib/recovery/` | [METABOLISM.md](../system/METABOLISM.md)  |
 
 ---
 
@@ -304,6 +304,7 @@ These perspectives intentionally span multiple silos to identify integration gap
 ### F. The "Metabolic Loop" (Metabolism ↔ Scales ↔ Spine)
 
 **Objective**: Verify that autonomous self-healing and cleanup do not disrupt trust or action integrity.
+**Diagram**: [Perspective G Diagram](../architecture/PERSPECTIVE-G-DIAGRAM.md)
 
 ---
 

@@ -42,6 +42,13 @@ export class TrustManager {
     qualityScore?: number,
     context?: TrustContext
   ): Promise<number> {
+    const workspaceId = context?.workspaceId;
+    if (!workspaceId && !AgentRegistry.isBackboneAgent(agentId)) {
+      logger.warn(`[TrustManager] recordFailure rejected for ${agentId}: Missing workspaceId.`);
+      const current = await AgentRegistry.getAgentConfig(agentId, { workspaceId });
+      return current?.trustScore ?? TRUST.DEFAULT_SCORE;
+    }
+
     let penaltyMultiplier = 1;
     if (qualityScore !== undefined) {
       // Range [0.5, 1.5]: low quality (0) = 1.5x penalty, high quality (10) = 0.5x penalty
@@ -49,7 +56,7 @@ export class TrustManager {
     }
     const penalty = TRUST.DEFAULT_PENALTY * severity * penaltyMultiplier;
 
-    const newScore = await this.updateTrustScore(agentId, penalty, context?.workspaceId);
+    const newScore = await this.updateTrustScore(agentId, penalty, workspaceId);
     await this.logPenalty(
       { agentId, timestamp: Date.now(), reason, delta: penalty, newScore },
       context
@@ -59,7 +66,7 @@ export class TrustManager {
       agentId,
       trustScore: newScore,
       metadata: { reason, delta: penalty, type: 'penalty' },
-      workspaceId: context?.workspaceId,
+      workspaceId,
       teamId: context?.teamId,
       staffId: context?.staffId,
     });
@@ -67,11 +74,22 @@ export class TrustManager {
     return newScore;
   }
 
+  /**
+   * Records a success for an agent and earns it trust.
+   * Capped at 2x DEFAULT_SUCCESS_BUMP to prevent rapid reputation inflation.
+   */
   static async recordSuccess(
     agentId: string,
     qualityScore?: number,
     context?: TrustContext
   ): Promise<number> {
+    const workspaceId = context?.workspaceId;
+    if (!workspaceId && !AgentRegistry.isBackboneAgent(agentId)) {
+      logger.warn(`[TrustManager] recordSuccess rejected for ${agentId}: Missing workspaceId.`);
+      const current = await AgentRegistry.getAgentConfig(agentId, { workspaceId });
+      return current?.trustScore ?? TRUST.DEFAULT_SCORE;
+    }
+
     let multiplier = 1;
     if (qualityScore !== undefined) {
       // Range [0, 2]: quality 0 = 0x, quality 5 = 1x, quality 10 = 2x
@@ -79,16 +97,16 @@ export class TrustManager {
     }
     const bump = TRUST.DEFAULT_SUCCESS_BUMP * multiplier;
 
-    const newScore = await this.updateTrustScore(agentId, bump, context?.workspaceId);
+    const newScore = await this.updateTrustScore(agentId, bump, workspaceId);
     logger.info(
-      `[TrustManager] Agent ${agentId} earned trust (WS: ${context?.workspaceId || 'global'}). Quality: ${qualityScore ?? 'N/A'}. New Score: ${newScore}`
+      `[TrustManager] Agent ${agentId} earned trust (WS: ${workspaceId || 'global'}). Quality: ${qualityScore ?? 'N/A'}. New Score: ${newScore}`
     );
 
     await emitEvent('system.trust', EventType.REPUTATION_UPDATE, {
       agentId,
       trustScore: newScore,
       metadata: { type: 'success_bump', qualityScore, bump },
-      workspaceId: context?.workspaceId,
+      workspaceId,
       teamId: context?.teamId,
       staffId: context?.staffId,
     });

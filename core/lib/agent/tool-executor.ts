@@ -118,6 +118,7 @@ export class ToolExecutor {
         // We use local arrays for messages and attachments to avoid race conditions during parallel execution
         const localMessages: Message[] = [];
         const localAttachments: NonNullable<Message['attachments']> = [];
+        const localSteps: any[] = [];
 
         const result = await this.executeSingleToolCall(
           toolCall,
@@ -126,25 +127,31 @@ export class ToolExecutor {
           localAttachments,
           execContext,
           tracer,
-          approvedToolCalls
+          approvedToolCalls,
+          localSteps
         );
 
-        return { result, localMessages, localAttachments };
+        return { result, localMessages, localAttachments, localSteps };
       })
     );
 
     // Merge results in original order
+    const allBatchedSteps: any[] = [];
     for (const res of parallelResults) {
       if (res.result.ui_blocks) ui_blocks.push(...res.result.ui_blocks);
       if (res.result.toolCallCount) toolCallCount += res.result.toolCallCount;
 
       messages.push(...res.localMessages);
       attachments.push(...res.localAttachments);
+      allBatchedSteps.push(...res.localSteps);
 
       // If any tool paused, we should probably stop and return.
       // Note: in parallel mode, some tools might have already finished.
       // Collect any pending side effects from completed tools before returning
       if (res.result.paused) {
+        // Even if paused, we emit the steps we collected so far
+        await tracer.batchAddSteps(allBatchedSteps);
+
         logger.warn(
           `[EXECUTOR] Parallel execution paused by tool ${res.result.responseText}. ${toolCalls.length - parallelResults.indexOf(res) - 1} tool(s) may still be in-flight.`
         );
@@ -155,6 +162,9 @@ export class ToolExecutor {
         };
       }
     }
+
+    // Flush all parallel steps in a single atomic update
+    await tracer.batchAddSteps(allBatchedSteps);
 
     return { toolCallCount, ui_blocks: ui_blocks.length > 0 ? ui_blocks : undefined };
   }
@@ -170,7 +180,8 @@ export class ToolExecutor {
     attachments: NonNullable<Message['attachments']>,
     execContext: ToolExecutionContext,
     tracer: ClawTracer,
-    approvedToolCalls?: string[]
+    approvedToolCalls?: string[],
+    stepCollector?: any[]
   ): Promise<{
     paused?: boolean;
     responseText?: string;
@@ -178,6 +189,13 @@ export class ToolExecutor {
     toolCallCount: number;
     ui_blocks?: Message['ui_blocks'];
   }> {
+    const addStep = async (step: any) => {
+      if (stepCollector) {
+        stepCollector.push(step);
+      } else {
+        await tracer.addStep(step);
+      }
+    };
     if (!tool) {
       logger.info(`Tool ${toolCall.function.name} requested but no local implementation found.`);
       messages.push({
@@ -385,7 +403,7 @@ export class ToolExecutor {
     logger.info(
       `[EXECUTOR] Calling tool: ${tool.name} | Args: ${JSON.stringify(args).substring(0, 100)}`
     );
-    await tracer.addStep({
+    await addStep({
       type: TRACE_TYPES.TOOL_CALL,
       content: { toolName: tool.name, args },
     });
@@ -552,7 +570,7 @@ export class ToolExecutor {
       }
     }
 
-    await tracer.addStep({
+    await addStep({
       type: TRACE_TYPES.TOOL_RESULT,
       content: { toolName: tool.name, result: rawResult },
     });

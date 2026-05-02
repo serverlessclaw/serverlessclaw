@@ -67,6 +67,7 @@ export class SuperClaw extends Agent {
       resource?: string;
       traceId?: string;
       userId?: string;
+      workspaceId?: string;
     }
   ): Promise<boolean> {
     const result = await this.safetyEngine.evaluateAction(agentConfig, actionType, context);
@@ -89,6 +90,7 @@ export class SuperClaw extends Agent {
       resource?: string;
       traceId?: string;
       userId?: string;
+      workspaceId?: string;
     }
   ) {
     return this.safetyEngine.evaluateAction(agentConfig, actionType, context);
