@@ -1,16 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  Calendar,
-  Clock,
-  Play,
-  Pause,
-  Trash2,
-  RefreshCw,
-  Plus,
-  Loader2,
-} from 'lucide-react';
+import { Calendar, Clock, Play, Pause, Trash2, RefreshCw, Plus, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import Typography from '@/components/ui/Typography';

@@ -1,11 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import PageHeader from '@/components/PageHeader';
-import {
-  ArrowLeft,
-  AlertTriangle,
-  Settings,
-} from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Settings } from 'lucide-react';
 import { AgentRegistry } from '@claw/core/lib/registry/AgentRegistry';
 import { DynamoMemory, getReputation } from '@claw/core/lib/memory';
 import Typography from '@/components/ui/Typography';
