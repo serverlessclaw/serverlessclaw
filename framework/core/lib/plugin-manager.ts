@@ -5,6 +5,8 @@ export interface ClawPlugin {
   id: string;
   agents?: Record<string, IAgentConfig>;
   tools?: Record<string, ITool>;
+  mcpServers?: Record<string, MCPServerConfig>;
+  prompts?: Record<string, string>;
   memoryProviders?: Record<string, IMemory>;
   llmProviders?: Record<string, IProvider>;
   onInit?: () => Promise<void>;
@@ -48,6 +50,46 @@ export class PluginManager {
       }
     }
     return tools;
+  }
+
+  static getRegisteredMCPServers(): Record<string, MCPServerConfig> {
+    const servers: Record<string, MCPServerConfig> = {};
+    for (const plugin of this.plugins.values()) {
+      if (plugin.mcpServers) {
+        Object.assign(servers, plugin.mcpServers);
+      }
+    }
+    return servers;
+  }
+
+  static getRegisteredPrompts(): Record<string, string> {
+    const prompts: Record<string, string> = {};
+    for (const plugin of this.plugins.values()) {
+      if (plugin.prompts) {
+        Object.assign(prompts, plugin.prompts);
+      }
+    }
+    return prompts;
+  }
+
+  static getRegisteredLLMProviders(): Record<string, IProvider> {
+    const providers: Record<string, IProvider> = {};
+    for (const plugin of this.plugins.values()) {
+      if (plugin.llmProviders) {
+        Object.assign(providers, plugin.llmProviders);
+      }
+    }
+    return providers;
+  }
+
+  static getRegisteredMemoryProviders(): Record<string, IMemory> {
+    const providers: Record<string, IMemory> = {};
+    for (const plugin of this.plugins.values()) {
+      if (plugin.memoryProviders) {
+        Object.assign(providers, plugin.memoryProviders);
+      }
+    }
+    return providers;
   }
 
   static async initialize() {

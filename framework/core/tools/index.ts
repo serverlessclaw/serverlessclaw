@@ -32,11 +32,15 @@ export async function initializeTools(): Promise<Record<string, ITool>> {
     getSystemTools(),
   ]);
 
+  const { PluginManager } = await import('../lib/plugin-manager');
+  const pluginTools = PluginManager.getRegisteredTools();
+
   Object.assign(TOOLS, {
     ...knowledge,
     ...collaboration,
     ...infra,
     ...system,
+    ...pluginTools,
   });
 
   return TOOLS;

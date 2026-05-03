@@ -18,6 +18,7 @@ import { MiniMaxProvider } from './minimax';
 import { FallbackProvider } from './fallback';
 import { SYSTEM, CONFIG_KEYS } from '../constants';
 import { ConfigManager } from '../registry/config';
+import { PluginManager } from '../plugin-manager';
 
 function resolveTraceId(messages: Message[]): string {
   const initial = messages.find((m) => m.traceId && m.traceId !== 'unknown')?.traceId ?? 'unknown';
@@ -104,6 +105,11 @@ export class ProviderManager implements IProvider {
    * Creates a single provider instance without fallback wrapping.
    */
   private static createSingleProvider(providerType: LLMProvider, model?: string): IProvider {
+    const pluginProviders = PluginManager.getRegisteredLLMProviders();
+    if (pluginProviders[providerType]) {
+      return pluginProviders[providerType];
+    }
+
     switch (providerType) {
       case LLMProvider.BEDROCK:
         return new BedrockProvider(model ?? SYSTEM.DEFAULT_BEDROCK_MODEL);
