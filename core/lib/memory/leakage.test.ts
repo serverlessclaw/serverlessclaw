@@ -29,20 +29,6 @@ describe('Memory Leakage & Visibility Audit (Post-Fix)', () => {
       ddbMock.on(QueryCommand).resolves({
         Items: [
           {
-            userId: 'WS#WS1#SYSTEM#GLOBAL',
-            timestamp: 1,
-            type: 'MEMORY:INSIGHT',
-            content: 'Secret from WS1',
-            workspaceId: 'WS1',
-          },
-          {
-            userId: 'WS#WS2#SYSTEM#GLOBAL',
-            timestamp: 2,
-            type: 'MEMORY:INSIGHT',
-            content: 'Secret from WS2',
-            workspaceId: 'WS2',
-          },
-          {
             userId: 'SYSTEM#GLOBAL',
             timestamp: 3,
             type: 'MEMORY:INSIGHT',
@@ -52,15 +38,17 @@ describe('Memory Leakage & Visibility Audit (Post-Fix)', () => {
         ],
       });
 
-      // Call search without workspaceId (e.g. as a global ADMIN)
       const result = await searchInsights(memory, {
         category: InsightCategory.SYSTEM_KNOWLEDGE,
       });
 
-      // EXPECTATION: It should ONLY return the truly global fact.
       expect(result.items.length).toBe(1);
       expect(result.items[0].content).toBe('Truly global fact');
-      expect(result.items.find((i) => i.workspaceId === 'WS1')).toBeUndefined();
+
+      const calls = ddbMock.commandCalls(QueryCommand);
+      expect(calls[0].args[0].input.FilterExpression).toContain(
+        'attribute_not_exists(workspaceId)'
+      );
     });
 
     it('should INCLUDE global lessons when a workspaceId is provided (Trust Loop)', async () => {
@@ -75,13 +63,6 @@ describe('Memory Leakage & Visibility Audit (Post-Fix)', () => {
             workspaceId: 'WS1',
           },
           {
-            userId: 'WS#WS2#SYSTEM#GLOBAL',
-            timestamp: 2,
-            type: 'MEMORY:INSIGHT',
-            content: 'WS2 secret',
-            workspaceId: 'WS2',
-          },
-          {
             userId: 'SYSTEM#GLOBAL',
             timestamp: 3,
             type: 'MEMORY:INSIGHT',
@@ -91,17 +72,17 @@ describe('Memory Leakage & Visibility Audit (Post-Fix)', () => {
         ],
       });
 
-      // Call search with workspaceId
       const result = await searchInsights(memory, {
         category: InsightCategory.SYSTEM_KNOWLEDGE,
         scope: { workspaceId: 'WS1' },
       });
 
-      // EXPECTATION: It should return WS1 items AND global items, but NOT WS2.
       expect(result.items.length).toBe(2);
       expect(result.items.find((i) => i.content === 'WS1 local lesson')).toBeDefined();
       expect(result.items.find((i) => i.content === 'Truly global lesson')).toBeDefined();
-      expect(result.items.find((i) => i.content === 'WS2 secret')).toBeUndefined();
+
+      const calls = ddbMock.commandCalls(QueryCommand);
+      expect(calls[0].args[0].input.FilterExpression).toContain('workspaceId = :workspaceId');
     });
 
     it('should INCLUDE truly global items when searching with resolvedUserId and orgId', async () => {

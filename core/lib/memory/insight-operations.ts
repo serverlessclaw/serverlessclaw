@@ -126,17 +126,19 @@ export async function addMemory(
   // 1. Check for similar memory to deduplicate (Atomic Similarity Boundary)
   const existing = await base.queryItems({
     KeyConditionExpression: 'userId = :pk',
-    ExpressionAttributeValues: { ':pk': pk },
+    FilterExpression: '#tp = :type AND metadata.category = :cat AND content = :content',
+    ExpressionAttributeNames: { '#tp': 'type' },
+    ExpressionAttributeValues: {
+      ':pk': pk,
+      ':type': 'MEMORY:INSIGHT',
+      ':cat': categoryToUse,
+      ':content': sanitizedContent,
+    },
+    Limit: 1, // We only need to know if at least one exists
   });
 
-  const similar = existing.find(
-    (item) =>
-      item.type === 'MEMORY:INSIGHT' &&
-      (item.metadata as Record<string, unknown>)?.category === categoryToUse &&
-      item.content === sanitizedContent
-  );
-
-  if (similar) {
+  if (existing.length > 0) {
+    const similar = existing[0];
     logger.info(`[Memory] Deduplicated similar content for ${pk}`);
     await recordMemoryHit(base, pk, String(similar.timestamp), scope);
     return similar.timestamp as string;
@@ -263,7 +265,7 @@ export async function searchInsights(
   if (resolvedLimit) params.Limit = resolvedLimit;
   if (lastEvaluatedKey) params.ExclusiveStartKey = lastEvaluatedKey;
 
-  // 3. Execute Query (Hierarchical fallback if needed)
+  // 4. Execute Query (Hierarchical fallback if needed)
   let items: MemoryInsight[];
 
   if (resolvedUserId && orgId) {
@@ -318,10 +320,12 @@ export async function searchInsights(
     const results = await Promise.all(queries);
     items = results.flatMap((r) => r);
   } else {
+    // For general search, ensure workspace isolation is applied to params
+    applyWorkspaceIsolation(params, resolvedScope);
     items = await queryByTypeAndMap(base, params);
   }
 
-  // 4. Application-level filtering
+  // 5. Application-level filtering for tags and categories (if not in query)
   let filtered = items;
   if (resolvedTags && resolvedTags.length > 0) {
     const searchTags = normalizeTags(resolvedTags);
@@ -333,7 +337,7 @@ export async function searchInsights(
   }
 
   return {
-    items: filtered.filter((f) => f.workspaceId === workspaceId || f.workspaceId === undefined),
+    items: filtered,
   };
 }
 
@@ -504,6 +508,23 @@ export async function recordFailurePattern(
 }
 
 /**
+ * Standardized update for insight metadata fields.
+ * Uses atomic update expressions to prevent overwriting other fields.
+ */
+export async function updateInsightMetadata(
+  base: BaseMemoryProvider,
+  userId: string,
+  timestamp: number | string,
+  metadata: Partial<InsightMetadata>,
+  scope?: string | ContextualScope
+): Promise<void> {
+  const pk = base.getScopedUserId(userId, scope);
+  const { atomicUpdateMetadata } = await import('./utils');
+
+  return atomicUpdateMetadata(base, pk, timestamp, metadata, scope);
+}
+
+/**
  * Refines an existing memory item atomically using UpdateCommand.
  * Scoped to Principle 13 (Atomic State Integrity).
  */
@@ -588,10 +609,12 @@ export async function recordMemoryHit(
  */
 export async function getLowUtilizationMemory(
   base: BaseMemoryProvider,
-  limit: number = 20
+  limit: number = 20,
+  scope?: string | ContextualScope
 ): Promise<Record<string, unknown>[]> {
   const staleThresholdMs = 14 * 24 * 60 * 60 * 1000; // 14 days
   const now = Date.now();
+  const workspaceId = resolveScopeId(scope);
 
   // 1. Fetch registered memory types from the registry
   const registryItems = await base.queryItems({
@@ -606,13 +629,16 @@ export async function getLowUtilizationMemory(
   // 2. For each type, query items and collect stale ones
   const allItems: Record<string, unknown>[] = [];
   for (const type of types) {
-    const typeItems = await base.queryItems({
+    const params: any = {
       IndexName: 'TypeTimestampIndex',
       KeyConditionExpression: '#tp = :type',
       ExpressionAttributeNames: { '#tp': 'type' },
       ExpressionAttributeValues: { ':type': type },
       Limit: limit,
-    });
+    };
+    applyWorkspaceIsolation(params, scope);
+
+    const typeItems = await base.queryItems(params);
     allItems.push(...(typeItems as Record<string, unknown>[]));
   }
 
@@ -621,6 +647,11 @@ export async function getLowUtilizationMemory(
     const meta = item['metadata'] as Record<string, unknown> | undefined;
     const hitCount = (meta?.['hitCount'] as number) ?? 0;
     const lastAccessed = (meta?.['lastAccessed'] as number) ?? 0;
+    const itemWorkspaceId = item['workspaceId'] as string | undefined;
+
+    // Double-check isolation even after server-side filter
+    if (workspaceId && itemWorkspaceId !== workspaceId) return false;
+
     return hitCount === 0 && now - lastAccessed > staleThresholdMs;
   });
 }

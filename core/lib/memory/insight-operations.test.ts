@@ -124,6 +124,10 @@ describe('Insight Operations', () => {
       expect(calls[0].args[0].input.IndexName).toBe('UserInsightIndex');
       expect(calls[0].args[0].input.KeyConditionExpression).toContain('#uid = :userId');
       expect(calls[0].args[0].input.KeyConditionExpression).toContain('#tp = :type');
+      // Should now include workspace isolation even for UserInsightIndex
+      expect(calls[0].args[0].input.FilterExpression).toContain(
+        'attribute_not_exists(workspaceId)'
+      );
     });
 
     it('should map items with createdAt correctly', async () => {
@@ -197,6 +201,9 @@ describe('Insight Operations', () => {
       const calls = ddbMock.commandCalls(QueryCommand);
       expect(calls[0].args[0].input.IndexName).toBe('TypeTimestampIndex');
       expect(calls[0].args[0].input.KeyConditionExpression).toBe('#tp = :type');
+      expect(calls[0].args[0].input.FilterExpression).toContain(
+        'attribute_not_exists(workspaceId)'
+      );
     });
 
     it('should filter by tags when provided', async () => {
@@ -250,7 +257,9 @@ describe('Insight Operations', () => {
       await memory.searchInsights('USER#1', '*', InsightCategory.USER_PREFERENCE);
 
       const calls = ddbMock.commandCalls(QueryCommand);
-      expect(calls[0].args[0].input.FilterExpression).toBeUndefined();
+      expect(calls[0].args[0].input.FilterExpression).toContain(
+        'attribute_not_exists(workspaceId)'
+      );
     });
 
     it('should apply content filter for non-wildcard queries', async () => {
@@ -269,7 +278,10 @@ describe('Insight Operations', () => {
       await memory.searchInsights('USER#1', 'specific query', InsightCategory.USER_PREFERENCE);
 
       const calls = ddbMock.commandCalls(QueryCommand);
-      expect(calls[0].args[0].input.FilterExpression).toBe('contains(content, :query)');
+      expect(calls[0].args[0].input.FilterExpression).toContain('contains(content, :query)');
+      expect(calls[0].args[0].input.FilterExpression).toContain(
+        'attribute_not_exists(workspaceId)'
+      );
       expect(calls[0].args[0].input.ExpressionAttributeValues?.[':query']).toBe('specific query');
     });
   });
@@ -470,6 +482,9 @@ describe('Insight Operations', () => {
       );
 
       expect(String(timestamp)).toBe('500');
+
+      const queryCalls = ddbMock.commandCalls(QueryCommand);
+      expect(queryCalls[0].args[0].input.FilterExpression).toContain('content = :content');
 
       const updateCalls = ddbMock.commandCalls(UpdateCommand);
       expect(updateCalls.length).toBeGreaterThanOrEqual(1);

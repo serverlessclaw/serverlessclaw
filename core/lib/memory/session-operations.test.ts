@@ -290,28 +290,30 @@ describe('session-operations', () => {
   });
 
   describe('saveLKGHash', () => {
-    it('should save LKG hash', async () => {
+    it('should save LKG hash with workspaceId when scope is provided', async () => {
       const { putWithCollisionRetry } = await import('./utils');
-      await saveLKGHash(mockBase, 'abc123');
+      await saveLKGHash(mockBase, 'abc123', 'ws-123');
 
       expect(putWithCollisionRetry).toHaveBeenCalledWith(
         mockBase,
         expect.objectContaining({
-          userId: 'SYSTEM#LKG',
+          userId: 'SYSTEM#LKG#ws-123',
           content: 'abc123',
+          workspaceId: 'ws-123',
         })
       );
     });
   });
 
   describe('getLatestLKGHash', () => {
-    it('should return latest LKG hash', async () => {
+    it('should return latest LKG hash from scoped PK', async () => {
       const { queryLatestContentByUserId } = await import('./utils');
       vi.mocked(queryLatestContentByUserId).mockResolvedValue(['hash123']);
 
-      const result = await getLatestLKGHash(mockBase);
+      const result = await getLatestLKGHash(mockBase, 'ws-123');
 
       expect(result).toBe('hash123');
+      expect(queryLatestContentByUserId).toHaveBeenCalledWith(mockBase, 'SYSTEM#LKG#ws-123', 1);
     });
 
     it('should return null when no hash exists', async () => {
@@ -325,16 +327,16 @@ describe('session-operations', () => {
   });
 
   describe('incrementRecoveryAttemptCount', () => {
-    it('should increment and return new count', async () => {
+    it('should increment scoped counter and return new count', async () => {
       const { atomicIncrement } = await import('./utils');
       vi.mocked(atomicIncrement).mockResolvedValue(5);
 
-      const result = await incrementRecoveryAttemptCount(mockBase);
+      const result = await incrementRecoveryAttemptCount(mockBase, 'ws-123');
 
       expect(result).toBe(5);
       expect(atomicIncrement).toHaveBeenCalledWith(
         mockBase,
-        'SYSTEM#RECOVERY#STATS',
+        'SYSTEM#RECOVERY#STATS#ws-123',
         0,
         'attempts',
         false
@@ -352,19 +354,14 @@ describe('session-operations', () => {
   });
 
   describe('resetRecoveryAttemptCount', () => {
-    it('should reset attempt count to zero', async () => {
-      await resetRecoveryAttemptCount(mockBase);
+    it('should reset scoped attempt count with condition expression', async () => {
+      await resetRecoveryAttemptCount(mockBase, 'ws-123');
 
       expect(mockBase.updateItem).toHaveBeenCalledWith(
         expect.objectContaining({
-          Key: { userId: 'SYSTEM#RECOVERY#STATS', timestamp: 0 },
+          Key: { userId: 'SYSTEM#RECOVERY#STATS#ws-123', timestamp: 0 },
           UpdateExpression: 'SET #field = :zero, updatedAt = :now',
-          ExpressionAttributeNames: {
-            '#field': 'attempts',
-          },
-          ExpressionAttributeValues: expect.objectContaining({
-            ':zero': 0,
-          }),
+          ConditionExpression: 'attribute_exists(userId)',
         })
       );
     });

@@ -143,7 +143,7 @@ export class DynamoMemoryInsights extends DynamoMemoryGaps implements IKnowledge
     metadata: Partial<InsightMetadata>,
     scope?: string | ContextualScope
   ): Promise<void> {
-    return InsightOps.refineMemory(this, userId, timestamp, undefined, metadata, scope);
+    return InsightOps.updateInsightMetadata(this, userId, timestamp, metadata, scope);
   }
 
   async getLowUtilizationMemory(limit?: number): Promise<Record<string, unknown>[]> {
@@ -158,10 +158,16 @@ export class DynamoMemoryInsights extends DynamoMemoryGaps implements IKnowledge
     return InsightOps.recordMemoryHit(this, userId, timestamp, scope);
   }
 
-  async saveDistilledRecoveryLog(traceId: string, task: string): Promise<void> {
-    await this.addMemory(`RECOVERY#${traceId}`, InsightCategory.FAILURE_PATTERN, task, {
-      type: 'RECOVERY_LOG',
-      traceId,
-    });
+  async saveDistilledRecoveryLog(traceId: string, task: string, scope?: string | ContextualScope): Promise<void> {
+    await this.addMemory(
+      `RECOVERY#${traceId}`,
+      InsightCategory.FAILURE_PATTERN,
+      task,
+      {
+        type: 'RECOVERY_LOG',
+        traceId,
+      } as any,
+      scope
+    );
   }
 }

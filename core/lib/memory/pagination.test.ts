@@ -116,7 +116,9 @@ describe('DynamoMemory Pagination & Search', () => {
 
       expect(result.items).toHaveLength(1);
       const calls = ddbMock.commandCalls(QueryCommand);
-      expect(calls[0].args[0].input.FilterExpression).toBeUndefined();
+      expect(calls[0].args[0].input.FilterExpression).toContain(
+        'attribute_not_exists(workspaceId)'
+      );
       expect(calls[0].args[0].input.Limit).toBe(5);
     });
 

@@ -260,15 +260,24 @@ export async function saveConversationMeta(
  *
  * @param base - The base memory provider instance.
  * @param hash - The Git commit hash or reference string.
+ * @param scope - Optional scope identifier for isolation.
  * @returns A promise resolving when the hash is saved.
  */
-export async function saveLKGHash(base: BaseMemoryProvider, hash: string): Promise<void> {
-  const { expiresAt, type } = await RetentionManager.getExpiresAt('DISTILLED', 'SYSTEM#LKG');
+export async function saveLKGHash(
+  base: BaseMemoryProvider,
+  hash: string,
+  scope?: string | import('../types/memory').ContextualScope
+): Promise<void> {
+  const pk = base.getScopedUserId('SYSTEM#LKG', scope);
+  const workspaceId = typeof scope === 'string' ? scope : scope?.workspaceId;
+  const { expiresAt, type } = await RetentionManager.getExpiresAt('DISTILLED', pk);
+
   await putWithCollisionRetry(base, {
-    userId: 'SYSTEM#LKG',
+    userId: pk,
     type,
     expiresAt,
     content: hash,
+    workspaceId: workspaceId || undefined,
   });
 }
 
@@ -276,11 +285,16 @@ export async function saveLKGHash(base: BaseMemoryProvider, hash: string): Promi
  * Retrieves the most recent Last Known Good (LKG) commit hash.
  *
  * @param base - The base memory provider instance.
+ * @param scope - Optional scope identifier for isolation.
  * @returns A promise resolving to the latest LKG hash or null if not found.
  * @since 2026-03-19
  */
-export async function getLatestLKGHash(base: BaseMemoryProvider): Promise<string | null> {
-  const results = await queryLatestContentByUserId(base, 'SYSTEM#LKG', 1);
+export async function getLatestLKGHash(
+  base: BaseMemoryProvider,
+  scope?: string | import('../types/memory').ContextualScope
+): Promise<string | null> {
+  const pk = base.getScopedUserId('SYSTEM#LKG', scope);
+  const results = await queryLatestContentByUserId(base, pk, 1);
   return results[0] ?? null;
 }
 
@@ -288,22 +302,32 @@ export async function getLatestLKGHash(base: BaseMemoryProvider): Promise<string
  * Atomically increments the system-wide recovery attempt count.
  *
  * @param base - The base memory provider instance.
+ * @param scope - Optional scope identifier for isolation.
  * @returns A promise resolving to the new recovery attempt count.
  */
-export async function incrementRecoveryAttemptCount(base: BaseMemoryProvider): Promise<number> {
-  return atomicIncrement(base, 'SYSTEM#RECOVERY#STATS', 0, 'attempts', false);
+export async function incrementRecoveryAttemptCount(
+  base: BaseMemoryProvider,
+  scope?: string | import('../types/memory').ContextualScope
+): Promise<number> {
+  const pk = base.getScopedUserId('SYSTEM#RECOVERY#STATS', scope);
+  return atomicIncrement(base, pk, 0, 'attempts', false);
 }
 
 /**
  * Resets the system-wide recovery attempt count.
  *
  * @param base - The base memory provider instance.
+ * @param scope - Optional scope identifier for isolation.
  * @returns A promise resolving when the counter is reset.
  */
-export async function resetRecoveryAttemptCount(base: BaseMemoryProvider): Promise<void> {
+export async function resetRecoveryAttemptCount(
+  base: BaseMemoryProvider,
+  scope?: string | import('../types/memory').ContextualScope
+): Promise<void> {
+  const pk = base.getScopedUserId('SYSTEM#RECOVERY#STATS', scope);
   await base.updateItem({
     Key: {
-      userId: 'SYSTEM#RECOVERY#STATS',
+      userId: pk,
       timestamp: 0,
     },
     UpdateExpression: 'SET #field = :zero, updatedAt = :now',
@@ -312,6 +336,7 @@ export async function resetRecoveryAttemptCount(base: BaseMemoryProvider): Promi
       ':zero': 0,
       ':now': Date.now(),
     },
+    ConditionExpression: 'attribute_exists(userId)', // Only reset if exists
   });
 }
 
@@ -339,20 +364,26 @@ export async function getSummary(
  * @param base - The base memory provider instance.
  * @param traceId - The trace identifier.
  * @param log - The distilled recovery log content.
+ * @param scope - Optional scope identifier for isolation.
  * @returns A promise resolving when the log is saved.
  */
 export async function saveDistilledRecoveryLog(
   base: BaseMemoryProvider,
   traceId: string,
-  log: string
+  log: string,
+  scope?: string | import('../types/memory').ContextualScope
 ): Promise<void> {
-  const { expiresAt, type } = await RetentionManager.getExpiresAt('DISTILLED', 'SYSTEM#RECOVERY');
+  const pk = base.getScopedUserId('DISTILLED#RECOVERY', scope);
+  const workspaceId = typeof scope === 'string' ? scope : scope?.workspaceId;
+  const { expiresAt, type } = await RetentionManager.getExpiresAt('DISTILLED', pk);
+
   await putWithCollisionRetry(base, {
-    userId: 'DISTILLED#RECOVERY',
+    userId: pk,
     type,
     expiresAt,
     content: log,
     traceId,
+    workspaceId: workspaceId || undefined,
   });
 }
 

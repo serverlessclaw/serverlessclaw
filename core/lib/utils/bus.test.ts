@@ -195,6 +195,26 @@ describe('Event Bus', () => {
       expect(result.success).toBe(false);
       expect(result.reason).toBe('DUPLICATE');
     });
+
+    it('should include workspaceId prefix in idempotency key when provided', async () => {
+      ddbMock.on(PutCommand).resolves({});
+      eventBridgeMock.on(PutEventsCommand).resolves({
+        FailedEntryCount: 0,
+        Entries: [{ EventId: 'ws-idem-id' }],
+      });
+
+      await emitEvent(
+        'test.source',
+        'test.event',
+        { data: 'test', workspaceId: 'ws-789' },
+        { idempotencyKey: 'idem-ws' }
+      );
+
+      const reserveCall = ddbMock.calls().find((c) => c.args[0] instanceof PutCommand);
+      expect((reserveCall?.args[0].input as PutCommandInput).Item?.userId).toBe(
+        'WS#ws-789#IDEMPOTENCY#idem-ws'
+      );
+    });
   });
 
   describe('DLQ operations', () => {

@@ -139,7 +139,13 @@ function categorizeError(error: unknown): ErrorCategory {
       message.includes('connection') ||
       message.includes('temporary') ||
       message.includes('service unavailable') ||
-      message.includes('too many requests')
+      message.includes('too many requests') ||
+      message.includes('internal error') ||
+      message.includes('500') ||
+      message.includes('503') ||
+      message.includes('socket') ||
+      message.includes('econnreset') ||
+      message.includes('etimedout')
     ) {
       return ErrorCategory.TRANSIENT;
     }
@@ -161,20 +167,22 @@ function categorizeError(error: unknown): ErrorCategory {
 /**
  * Reserves an idempotency key in DynamoDB to prevent concurrent duplicate processing.
  */
-async function reserveIdempotencyKey(key: string): Promise<boolean> {
+async function reserveIdempotencyKey(key: string, workspaceId?: string): Promise<boolean> {
   try {
     const tableName = await getMemoryTableName();
     const expiresAt = Math.floor(Date.now() / 1000) + IDEMPOTENCY_TTL_SECONDS;
+    const scopePrefix = workspaceId ? `WS#${workspaceId}#` : '';
 
     await getDb().send(
       new PutCommand({
         TableName: tableName,
         Item: {
-          userId: `${IDEMPOTENCY_PREFIX}${key}`,
+          userId: `${scopePrefix}${IDEMPOTENCY_PREFIX}${key}`,
           timestamp: 0,
           type: IDEMPOTENCY_TYPE,
           status: STATUS.RESERVED,
           expiresAt,
+          workspaceId,
         },
         ConditionExpression: 'attribute_not_exists(userId)',
       })
@@ -192,14 +200,19 @@ async function reserveIdempotencyKey(key: string): Promise<boolean> {
 /**
  * Commits an idempotency key once the event has been successfully emitted.
  */
-async function commitIdempotencyKey(key: string, eventId?: string): Promise<void> {
+async function commitIdempotencyKey(
+  key: string,
+  eventId?: string,
+  workspaceId?: string
+): Promise<void> {
   try {
     const tableName = await getMemoryTableName();
+    const scopePrefix = workspaceId ? `WS#${workspaceId}#` : '';
     await getDb().send(
       new UpdateCommand({
         TableName: tableName,
         Key: {
-          userId: `${IDEMPOTENCY_PREFIX}${key}`,
+          userId: `${scopePrefix}${IDEMPOTENCY_PREFIX}${key}`,
           timestamp: 0,
         },
         UpdateExpression: 'SET #status = :committed, eventId = :eventId, committedAt = :now',
@@ -301,10 +314,14 @@ export async function emitEvent(
     correlationId,
   } = options;
 
+  const workspaceId = (detail.workspaceId as string) || undefined;
+
   if (idempotencyKey) {
-    const reserved = await reserveIdempotencyKey(idempotencyKey);
+    const reserved = await reserveIdempotencyKey(idempotencyKey, workspaceId);
     if (!reserved) {
-      logger.info(`Duplicate event detected via idempotency key: ${idempotencyKey}`);
+      logger.info(
+        `Duplicate event detected via idempotency key: ${idempotencyKey} (WS: ${workspaceId || 'GLOBAL'})`
+      );
       return { success: false, reason: 'DUPLICATE' };
     }
   }
@@ -359,7 +376,7 @@ export async function emitEvent(
       }
 
       if (idempotencyKey) {
-        await commitIdempotencyKey(idempotencyKey, result.Entries?.[0]?.EventId);
+        await commitIdempotencyKey(idempotencyKey, result.Entries?.[0]?.EventId, workspaceId);
       }
 
       return { success: true, eventId: result.Entries?.[0]?.EventId };
