@@ -1,21 +1,23 @@
 /**
  * Predefined agent role types.
  */
-export enum AgentType {
-  SUPERCLAW = 'superclaw',
-  CODER = 'coder',
-  BUILD_MONITOR = 'monitor',
-  EVENT_HANDLER = 'events',
-  RECOVERY = 'recovery',
-  STRATEGIC_PLANNER = 'strategic-planner',
-  COGNITION_REFLECTOR = 'cognition-reflector',
-  QA = 'qa',
-  CRITIC = 'critic',
-  FACILITATOR = 'facilitator',
-  MERGER = 'merger',
-  RESEARCHER = 'researcher',
-  JUDGE = 'judge',
-}
+export const AgentType = {
+  SUPERCLAW: 'superclaw',
+  CODER: 'coder',
+  BUILD_MONITOR: 'monitor',
+  EVENT_HANDLER: 'events',
+  RECOVERY: 'recovery',
+  STRATEGIC_PLANNER: 'strategic-planner',
+  COGNITION_REFLECTOR: 'cognition-reflector',
+  QA: 'qa',
+  CRITIC: 'critic',
+  FACILITATOR: 'facilitator',
+  MERGER: 'merger',
+  RESEARCHER: 'researcher',
+  JUDGE: 'judge',
+} as const;
+
+export type AgentType = (typeof AgentType)[keyof typeof AgentType] | (string & {});
 
 /**
  * Categorization of agents to guide orchestration.

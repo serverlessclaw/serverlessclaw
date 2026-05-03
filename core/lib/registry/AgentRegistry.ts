@@ -12,11 +12,22 @@ import { PruningRegistry } from './PruningRegistry';
  * Refactored into a modular architecture to improve maintainability and AI signal clarity.
  */
 export class AgentRegistry {
+  private static appRegistry: Record<string, IAgentConfig> = {};
+
+  /**
+   * Registers application-specific agents (e.g., domain agents).
+   * This allows "Spoke" projects to extend the framework without modifying the core backbone.
+   */
+  static registerAppAgents(agents: Record<string, IAgentConfig>) {
+    this.appRegistry = { ...this.appRegistry, ...agents };
+    logger.info(`[AgentRegistry] Registered ${Object.keys(agents).length} app-specific agents.`);
+  }
+
   /**
    * Checks if an agent ID belongs to the system backbone.
    */
   static isBackboneAgent(agentId: string): boolean {
-    return agentId in BACKBONE_REGISTRY;
+    return agentId in BACKBONE_REGISTRY || agentId in this.appRegistry;
   }
 
   /**
@@ -38,7 +49,8 @@ export class AgentRegistry {
       IAgentConfig
     >;
     const dynamicConfig = agents?.[agentId];
-    const backboneConfig = BACKBONE_REGISTRY[agentId as keyof typeof BACKBONE_REGISTRY];
+    const backboneConfig =
+      this.appRegistry[agentId] || BACKBONE_REGISTRY[agentId as keyof typeof BACKBONE_REGISTRY];
 
     if (!dynamicConfig && !backboneConfig) return undefined;
 
@@ -92,9 +104,17 @@ export class AgentRegistry {
     ]);
 
     const all: Record<string, IAgentConfig> = {};
+
+    // Merge system backbone
     for (const [id, backboneCfg] of Object.entries(BACKBONE_REGISTRY)) {
       all[id] = this.mergeAgentConfig(id, dynamicAgents?.[id], backboneCfg, toolOverrides?.[id]);
     }
+
+    // Merge app-specific backbone
+    for (const [id, appCfg] of Object.entries(this.appRegistry)) {
+      all[id] = this.mergeAgentConfig(id, dynamicAgents?.[id], appCfg, toolOverrides?.[id]);
+    }
+
     if (dynamicAgents) {
       for (const [id, dynamicCfg] of Object.entries(dynamicAgents)) {
         if (!all[id]) {
