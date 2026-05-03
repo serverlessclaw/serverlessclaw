@@ -69,6 +69,17 @@ describe('recursion-tracker', () => {
       expect(cmd.input.ReturnValues).toBe('UPDATED_NEW');
     });
 
+    it('should be workspace aware (multi-tenant isolation)', async () => {
+      mockSend.mockResolvedValueOnce({
+        Attributes: { depth: 1 },
+      });
+
+      await incrementRecursionDepth('trace-1', 'sess-1', 'agent-1', { workspaceId: 'ws-123' });
+
+      const cmd = mockSend.mock.calls[0][0];
+      expect(cmd.input.Key.userId).toBe('WS#ws-123#RECURSION_STACK#trace-1');
+    });
+
     it('should use shorter TTL for mission-critical contexts', async () => {
       mockSend.mockResolvedValueOnce({
         Attributes: { depth: 1 },

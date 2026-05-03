@@ -210,7 +210,7 @@ export const handler = async (
       _traceId,
       sessionId || 'unknown',
       targetAgent,
-      { isMissionContext: isMission }
+      { isMissionContext: isMission, workspaceId: _workspaceId }
     );
 
     if (currentDepth === null) {

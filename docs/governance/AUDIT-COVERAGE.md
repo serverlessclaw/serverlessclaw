@@ -39,6 +39,8 @@ Last Updated: 2026-05-03
 
 | Date       | Report                                             | Silos Covered                    | Cross-Silo | Key Findings                                                                                                          |
 | :--------- | :------------------------------------------------- | :------------------------------- | :--------- | :-------------------------------------------------------------------------------------------------------------------- |
+| 2026-05-03 | `audit-2026-05-03-spine-recursion-isolation.md`    | Spine, Brain, Eye                | A          | FIXED: P1 Multi-tenant leakage in recursion tracking, P1 Partitioned token usage, P2 Telemetry/Doc drift.             |
+| 2026-05-03 | `audit-2026-05-03-utility-isolation.md`            | Metabolism, Hand, Spine          | G          | FIXED: P1 S3 Staging Isolation Breach, P1 Merger flow functional bug, P2 In-memory DLQ filtering.                     |
 | 2026-05-03 | `audit-2026-05-03-metabolism-hygiene-isolation.md` | Metabolism                       | F          | FIXED: P1 Inconsistent 'default' workspace fallback, P2 Shadowed workspaceId, P2 Telemetry gaps, P2 Hardcoded config. |
 | 2026-05-03 | `audit-2026-05-03-shield-recovery.md`              | Shield                           | E          | FIXED: P1 BlastRadiusStore Isolation Breach, P1 Non-idempotent Proactive Evolution, P2 Telemetry dimensions.          |
 | 2026-05-03 | `audit-2026-05-03-hand-eye-isolation.md`           | Hand, Eye                        | B, D       | FIXED: P1 Unscoped Budget PKs, P1 Missing workspace in MCP transport, P2 Global budget summaries, P2 Sort key drift.  |

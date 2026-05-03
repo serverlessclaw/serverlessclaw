@@ -159,6 +159,14 @@ describe('Merger Handler', () => {
       expect.any(Object)
     );
 
+    // Should upload with partitioned key
+    const { triggerDeployment } = await import('../../tools/infra/deployment');
+    expect(triggerDeployment.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stagingKey: `staged_trace-456.zip`,
+      })
+    );
+
     expect(result.success).toBe(true);
     expect(result.appliedCount).toBe(1);
     expect(result.summary).toContain('1/1 patches applied');

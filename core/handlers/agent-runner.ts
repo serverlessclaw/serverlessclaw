@@ -134,7 +134,7 @@ export async function handler(event: WorkerEvent, context: Context): Promise<str
     traceId || 'unknown',
     sessionId || 'unknown',
     agentId,
-    { isMissionContext: isMission }
+    { isMissionContext: isMission, workspaceId }
   );
 
   if (currentDepth === null) {

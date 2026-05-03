@@ -176,10 +176,15 @@ export async function handlePatchMerge(eventDetail: Record<string, unknown>): Pr
 
         if (stagingBucket) {
           const fileBuffer = await fs.readFile(zipPath);
+          const zipKey = traceId ? `staged_${traceId}.zip` : STORAGE.STAGING_ZIP;
+
+          logger.info(
+            `Merger: Uploading merged changes to S3 bucket: ${stagingBucket} (Key: ${zipKey})`
+          );
           await s3Client.send(
             new PutObjectCommand({
               Bucket: stagingBucket,
-              Key: STORAGE.STAGING_ZIP,
+              Key: zipKey,
               Body: fileBuffer,
             })
           );
@@ -193,6 +198,7 @@ export async function handlePatchMerge(eventDetail: Record<string, unknown>): Pr
             initiatorId,
             sessionId: sessionId ?? '',
             gapIds: [],
+            stagingKey: zipKey,
           });
           deploymentTriggered = true;
         }

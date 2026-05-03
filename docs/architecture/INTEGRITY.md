@@ -62,6 +62,26 @@ Token usage and recursion depth are tracked with strict `workspaceId` dimensioni
 |                                                             |
 +-------------------------------------------------------------+
 
+### 2c. Isolated S3 Staging Pipeline (Shield)
+
+To prevent data leakage and race conditions during parallel coder tasks, the system partitions S3 staging objects using `traceId`.
+
+```ascii
+[ Coder Agent 1 ] --(patch)--> [ stageChanges ] --(Upload: staged_T1.zip)--> [ S3 Staging ]
+                                                                                  |
+[ Coder Agent 2 ] --(patch)--> [ stageChanges ] --(Upload: staged_T2.zip)--> [ S3 Staging ]
+                                                                                  |
+                                                                                  v
+[ Merger Handler ] <---(Fetch: staged_T1.zip, staged_T2.zip)---------------- [ S3 Staging ]
+       |
+       |-- (Merge & Apply Patches)
+       |
+       +--(Upload Merged)--> [ S3 Staging: staged_trace-abc.zip ]
+                                       |
+                                       v
+[ Deployment Tool ] <---(staged_trace-abc.zip)--- [ CodeBuild ]
+```
+
 ### 2b. Class C Blast Radius Isolation (Shield)
 
 To prevent cross-tenant limit sharing, the `BlastRadiusStore` uses workspace-prefixed partition keys for sensitive action frequency tracking.

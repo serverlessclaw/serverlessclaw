@@ -65,6 +65,7 @@ export async function handler(
     const recursionLimit = await getRecursionLimit({ isMissionContext: isMission });
     const currentDepth = await incrementRecursionDepth(traceId, sessionId, 'system.spine', {
       isMissionContext: isMission,
+      workspaceId,
     });
 
     if (currentDepth > recursionLimit || currentDepth === -1) {

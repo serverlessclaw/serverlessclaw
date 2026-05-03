@@ -93,15 +93,18 @@ async function _updateTraceMetadata(
     names: Record<string, string>;
     values: Record<string, unknown>;
   },
-  ttlSeconds: number = RECURSION_TTL_SECONDS
+  options: { ttlSeconds?: number; workspaceId?: string } = {}
 ): Promise<Record<string, unknown> | null> {
-  const key = `${RECURSION_STACK_PREFIX}${traceId}`;
+  const { ttlSeconds = RECURSION_TTL_SECONDS, workspaceId } = options;
+  const scopePrefix = workspaceId ? `WS#${workspaceId}#` : '';
+  const key = `${scopePrefix}${RECURSION_STACK_PREFIX}${traceId}`;
   const expiresAt = Math.floor(Date.now() / 1000) + ttlSeconds;
 
   try {
+    const tableName = await getMemoryTableName();
     const response = await docClient.send(
       new UpdateCommand({
-        TableName: getMemoryTableName(),
+        TableName: tableName,
         Key: { userId: key, timestamp: 0 },
         UpdateExpression: updates.expression,
         ExpressionAttributeNames: {
@@ -119,7 +122,10 @@ async function _updateTraceMetadata(
     );
     return response.Attributes ?? null;
   } catch (error) {
-    logger.warn(`[RECURSION] Update failed for ${traceId}:`, error);
+    logger.warn(
+      `[RECURSION] Update failed for ${traceId} (WS: ${workspaceId || 'GLOBAL'}):`,
+      error
+    );
     return null;
   }
 }
@@ -131,7 +137,7 @@ export async function incrementRecursionDepth(
   traceId: string,
   sessionId: string,
   agentId: string,
-  options: { isMissionContext?: boolean } = {}
+  options: { isMissionContext?: boolean; workspaceId?: string } = {}
 ): Promise<number> {
   const ttlSeconds = options.isMissionContext
     ? MISSION_RECURSION_TTL_SECONDS
@@ -145,7 +151,7 @@ export async function incrementRecursionDepth(
       names: { '#depth': 'depth' },
       values: { ':zero': 0, ':one': 1, ':sessionId': sessionId, ':agentId': agentId },
     },
-    ttlSeconds
+    { ttlSeconds, workspaceId: options.workspaceId }
   );
 
   return (attributes?.depth as number) ?? -1;
@@ -154,15 +160,23 @@ export async function incrementRecursionDepth(
 /**
  * Atomically increments the token usage for a trace.
  */
-export async function incrementTokenUsage(traceId: string, tokens: number): Promise<number> {
+export async function incrementTokenUsage(
+  traceId: string,
+  tokens: number,
+  options: { workspaceId?: string } = {}
+): Promise<number> {
   if (!traceId || traceId === 'unknown') return -1;
 
-  const attributes = await _updateTraceMetadata(traceId, {
-    expression:
-      'SET tokens = if_not_exists(tokens, :zero) + :tokens, updatedAt = :now, expiresAt = if_not_exists(expiresAt, :exp), #type = if_not_exists(#type, :type)',
-    names: {},
-    values: { ':zero': 0, ':tokens': tokens },
-  });
+  const attributes = await _updateTraceMetadata(
+    traceId,
+    {
+      expression:
+        'SET tokens = if_not_exists(tokens, :zero) + :tokens, updatedAt = :now, expiresAt = if_not_exists(expiresAt, :exp), #type = if_not_exists(#type, :type)',
+      names: {},
+      values: { ':zero': 0, ':tokens': tokens },
+    },
+    { workspaceId: options.workspaceId }
+  );
 
   return (attributes?.tokens as number) ?? -1;
 }
@@ -170,18 +184,24 @@ export async function incrementTokenUsage(traceId: string, tokens: number): Prom
 /**
  * Retrieves the current token usage for a trace.
  */
-export async function getTraceUsage(traceId: string): Promise<number> {
+export async function getTraceUsage(traceId: string, workspaceId?: string): Promise<number> {
   try {
-    const key = `${RECURSION_STACK_PREFIX}${traceId}`;
+    const tableName = await getMemoryTableName();
+    const scopePrefix = workspaceId ? `WS#${workspaceId}#` : '';
+    const key = `${scopePrefix}${RECURSION_STACK_PREFIX}${traceId}`;
+
     const response = await docClient.send(
       new GetCommand({
-        TableName: getMemoryTableName(),
+        TableName: tableName,
         Key: { userId: key, timestamp: 0 },
       })
     );
     return (response.Item?.tokens as number) ?? 0;
   } catch (error) {
-    logger.warn(`[RecursionTracker] Failed to get usage for ${traceId}:`, error);
+    logger.warn(
+      `[RecursionTracker] Failed to get usage for ${traceId} (WS: ${workspaceId}):`,
+      error
+    );
     return -1;
   }
 }
@@ -198,14 +218,14 @@ export async function isBudgetExceeded(traceId: string, workspaceId?: string): P
       { workspaceId }
     );
 
-    const usage = await getTraceUsage(traceId);
+    const usage = await getTraceUsage(traceId, workspaceId);
 
     // Fail-Closed: If usage lookup failed, assume exceeded
     if (usage === -1) return true;
 
     if (usage >= (budget as number)) {
       logger.error(
-        `[RecursionTracker] Trace ${traceId} exceeded token budget (${usage} >= ${budget})`
+        `[RecursionTracker] Trace ${traceId} (WS: ${workspaceId || 'GLOBAL'}) exceeded token budget (${usage} >= ${budget})`
       );
       return true;
     }
@@ -213,13 +233,16 @@ export async function isBudgetExceeded(traceId: string, workspaceId?: string): P
     // Warning at 80%
     if (usage >= (budget as number) * 0.8) {
       logger.warn(
-        `[RecursionTracker] Trace ${traceId} at 80% budget capacity (${usage}/${budget})`
+        `[RecursionTracker] Trace ${traceId} (WS: ${workspaceId || 'GLOBAL'}) at 80% budget capacity (${usage}/${budget})`
       );
     }
 
     return false;
   } catch (e) {
-    logger.error(`[RecursionTracker] Failed to check budget for ${traceId}:`, e);
+    logger.error(
+      `[RecursionTracker] Failed to check budget for ${traceId} (WS: ${workspaceId}):`,
+      e
+    );
     // Fail-Closed Principle: If we can't verify budget, assume exceeded to prevent runaway costs
     return true;
   }
@@ -228,14 +251,18 @@ export async function isBudgetExceeded(traceId: string, workspaceId?: string): P
 /**
  * Get the current recursion depth for a trace
  * @param traceId - The trace ID for the execution chain
+ * @param workspaceId - Optional workspace context
  * @returns Current depth, -1 on error (sentinel value to distinguish from no entry)
  */
-export async function getRecursionDepth(traceId: string): Promise<number> {
+export async function getRecursionDepth(traceId: string, workspaceId?: string): Promise<number> {
   try {
-    const key = `${RECURSION_STACK_PREFIX}${traceId}`;
+    const tableName = await getMemoryTableName();
+    const scopePrefix = workspaceId ? `WS#${workspaceId}#` : '';
+    const key = `${scopePrefix}${RECURSION_STACK_PREFIX}${traceId}`;
+
     const response = await docClient.send(
       new GetCommand({
-        TableName: getMemoryTableName(),
+        TableName: tableName,
         Key: {
           userId: key,
           timestamp: 0,
@@ -248,7 +275,7 @@ export async function getRecursionDepth(traceId: string): Promise<number> {
     }
     return 0;
   } catch (error) {
-    logger.warn(`[RECURSION] Failed to get depth for ${traceId}:`, error);
+    logger.warn(`[RECURSION] Failed to get depth for ${traceId} (WS: ${workspaceId}):`, error);
     return -1; // Return -1 to distinguish errors from no-entry (0)
   }
 }
@@ -256,14 +283,17 @@ export async function getRecursionDepth(traceId: string): Promise<number> {
  * Clear recursion entries for a trace after completion.
  * Uses conditional delete to prevent clearing while another agent chain is actively using it.
  * @param traceId - The trace ID for the execution chain
+ * @param workspaceId - Optional workspace context
  */
-export async function clearRecursionStack(traceId: string): Promise<void> {
+export async function clearRecursionStack(traceId: string, workspaceId?: string): Promise<void> {
   try {
-    const key = `${RECURSION_STACK_PREFIX}${traceId}`;
+    const tableName = await getMemoryTableName();
+    const scopePrefix = workspaceId ? `WS#${workspaceId}#` : '';
+    const key = `${scopePrefix}${RECURSION_STACK_PREFIX}${traceId}`;
 
     await docClient.send(
       new DeleteCommand({
-        TableName: getMemoryTableName(),
+        TableName: tableName,
         Key: { userId: key, timestamp: 0 },
         ConditionExpression: 'attribute_exists(#depth)',
         ExpressionAttributeNames: {
@@ -272,18 +302,19 @@ export async function clearRecursionStack(traceId: string): Promise<void> {
       })
     );
 
-    logger.info(`[RECURSION] Cleared stack for trace ${traceId}`);
+    logger.info(`[RECURSION] Cleared stack for trace ${traceId} (WS: ${workspaceId || 'GLOBAL'})`);
   } catch (error) {
-    logger.warn(`[RECURSION] Failed to clear stack for ${traceId}:`, error);
+    logger.warn(`[RECURSION] Failed to clear stack for ${traceId} (WS: ${workspaceId}):`, error);
   }
 }
 
 /**
  * Check if trace is part of an active recursion chain
  * @param traceId - The trace ID for the execution chain
+ * @param workspaceId - Optional workspace context
  * @returns true if trace has existing recursion entries
  */
-export async function isRecursionActive(traceId: string): Promise<boolean> {
-  const depth = await getRecursionDepth(traceId);
+export async function isRecursionActive(traceId: string, workspaceId?: string): Promise<boolean> {
+  const depth = await getRecursionDepth(traceId, workspaceId);
   return depth > 0;
 }

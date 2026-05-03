@@ -294,7 +294,8 @@ The system architecture follows a **Distributed Spine** model where all critical
            |-- (7) Unified Config (ConfigManager: 60s Cached Dynamic Lookups)
            |-- (8) Security Enforcement (ToolSecurityValidator: Safety/RBAC/Breaker)
            |-- (9) Budget Enforcement (BudgetEnforcer + TokenBudgetEnforcer: Session + Task-level Tokens/Cost)
-           |-- (10) Isolated Workspace (/tmp/claw-workspaces/<traceId>)
+           |-- (10) Isolated Workspace (/tmp/workspace-<traceId> or /tmp/merge-<traceId>)
+           |-- (11) Partitioned S3 Staging (Key: staged_${traceId}.zip)
           v
   [ Outcome (Success/Failure) ]
           |

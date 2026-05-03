@@ -42,24 +42,25 @@ export function isMissionContext(eventType?: string, metadata?: Record<string, u
  * @param traceId - The trace ID for the execution chain.
  * @param sessionId - The session ID for the execution.
  * @param agentId - The agent ID performing the task.
- * @param isMission - Whether this is a mission-critical context.
+ * @param options - Configuration options.
  * @returns A promise resolving to the current depth if successful, or null if limit exceeded.
  */
 export async function checkAndPushRecursion(
   traceId: string,
   sessionId: string,
   agentId: string,
-  options: { isMissionContext?: boolean } = {}
+  options: { isMissionContext?: boolean; workspaceId?: string } = {}
 ): Promise<number | null> {
   const isMission = !!options.isMissionContext;
   const RECURSION_LIMIT = await getRecursionLimit({ isMissionContext: isMission });
   const newDepth = await incrementRecursionDepth(traceId, sessionId, agentId, {
     isMissionContext: isMission,
+    workspaceId: options.workspaceId,
   });
 
   if (newDepth > RECURSION_LIMIT || newDepth === -1) {
     logger.error(
-      `[RECURSION] Limit exceeded for trace ${traceId} at depth ${newDepth} (limit: ${RECURSION_LIMIT})`
+      `[RECURSION] Limit exceeded for trace ${traceId} at depth ${newDepth} (limit: ${RECURSION_LIMIT}) (WS: ${options.workspaceId || 'GLOBAL'})`
     );
     return null;
   }
@@ -116,7 +117,7 @@ export async function wakeupInitiator(
 
   if (depth >= RECURSION_LIMIT) {
     logger.error(
-      `Recursion Limit Exceeded (Depth: ${depth}) for user ${userId}. Aborting continuation.`
+      `Recursion Limit Exceeded (Depth: ${depth}) for user ${userId} (WS: ${workspaceId || 'GLOBAL'}). Aborting continuation.`
     );
     await handleRecursionLimitExceeded(
       userId,
@@ -124,7 +125,10 @@ export async function wakeupInitiator(
       'wakeup-initiator',
       `I have detected an infinite loop between agents (Depth: ${depth}). I've intervened to stop the process.`,
       traceId,
-      initiatorId
+      initiatorId,
+      workspaceId,
+      teamId,
+      staffId
     );
     return;
   }
@@ -193,7 +197,10 @@ export async function handleRecursionLimitExceeded(
       staffId,
     });
   } catch (err) {
-    logger.error('Failed to emit TASK_FAILED for recursion limit:', err);
+    logger.error(
+      `Failed to emit TASK_FAILED for recursion limit (WS: ${workspaceId || 'GLOBAL'}):`,
+      err
+    );
   }
 }
 

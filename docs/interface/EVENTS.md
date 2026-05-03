@@ -17,6 +17,7 @@ The Event Bus acts as the **Spine** of Serverless Claw, ensuring robust signal p
 To prevent infinite reasoning loops or event storms, the Spine enforces strict depth limits using a unified **Atomic Recursion Guard** (`checkAndPushRecursion`):
 
 - **Mechanism**: The `RECURSION_ENTRY` in DynamoDB tracks the current depth for a specific `traceId`.
+- **Multi-tenant Isolation (Principle 11)**: Recursion entries are partitioned by `workspaceId` (using the `WS#<workspaceId>#` prefix) to prevent cross-tenant interference or budget leakage.
 - **Atomic Monotonic Increment**: Depth tracking uses an atomic monotonic increment via `SET #depth = if_not_exists(#depth, :zero) + :one`. This ensures that every entry point into the system correctly advances the global depth counter, preventing race conditions or bypass in parallel swarm scenarios.
 - **Trace-level Continuity (Principle 15)**: Recursion depth is monotonic across the entire life of a trace. Unlike local counters, this stack is **never reset** by individual agent runners.
 - **Unified Guard**: Both the `EventHandler` and `AgentMultiplexer` utilize a centralized check to ensure consistency across different entry points.

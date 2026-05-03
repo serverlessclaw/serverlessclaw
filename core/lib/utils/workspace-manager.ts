@@ -13,7 +13,8 @@ async function setupWorkspace(
   basePath: string,
   traceId: string,
   commitMsg: string,
-  applyStagedChanges: boolean = false
+  applyStagedChanges: boolean = false,
+  stagingKey?: string
 ): Promise<string> {
   const workspacePath = `${basePath}-${traceId}-${Date.now()}`;
   await fs.rm(workspacePath, { recursive: true, force: true });
@@ -77,11 +78,12 @@ async function setupWorkspace(
 
       if (stagingBucket) {
         const s3Client = new S3Client({});
-        logger.info(`Fetching staged changes from S3 bucket: ${stagingBucket}`);
+        const zipKey = stagingKey || (traceId ? `staged_${traceId}.zip` : STORAGE.STAGING_ZIP);
+        logger.info(`Fetching staged changes from S3 bucket: ${stagingBucket} (Key: ${zipKey})`);
         const response = await s3Client.send(
           new GetObjectCommand({
             Bucket: stagingBucket,
-            Key: STORAGE.STAGING_ZIP,
+            Key: zipKey,
           })
         );
 
@@ -110,9 +112,16 @@ async function setupWorkspace(
  */
 export async function createWorkspace(
   traceId: string,
-  applyStagedChanges: boolean = false
+  applyStagedChanges: boolean = false,
+  stagingKey?: string
 ): Promise<string> {
-  return setupWorkspace(STORAGE.WORKSPACE_BASE, traceId, 'workspace init', applyStagedChanges);
+  return setupWorkspace(
+    STORAGE.WORKSPACE_BASE,
+    traceId,
+    'workspace init',
+    applyStagedChanges,
+    stagingKey
+  );
 }
 
 /**

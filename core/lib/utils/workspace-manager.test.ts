@@ -112,21 +112,42 @@ describe('WorkspaceManager', () => {
     }
   });
 
-  it('should apply staged changes from S3 if applyStagedChanges is true', async () => {
+  it('should apply staged changes from S3 using partitioned key by default', async () => {
     mockS3Send.mockResolvedValue({
       Body: {
         transformToByteArray: () => Promise.resolve(new Uint8Array([1, 2, 3])),
       },
     });
 
-    // Ensure the mock is used even with dynamic import
     const wsPath = await createWorkspace(traceId, true);
     createdPaths.push(wsPath);
 
-    expect(mockS3Send).toHaveBeenCalled();
-    expect(execSync).toHaveBeenCalledWith(
-      expect.stringContaining('unzip -o staged_changes.zip'),
-      expect.objectContaining({ cwd: wsPath })
+    expect(mockS3Send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          Key: `staged_${traceId}.zip`,
+        }),
+      })
+    );
+  });
+
+  it('should apply staged changes from S3 using custom stagingKey if provided', async () => {
+    mockS3Send.mockResolvedValue({
+      Body: {
+        transformToByteArray: () => Promise.resolve(new Uint8Array([1, 2, 3])),
+      },
+    });
+
+    const customKey = 'custom/staging/path.zip';
+    const wsPath = await createWorkspace(traceId, true, customKey);
+    createdPaths.push(wsPath);
+
+    expect(mockS3Send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          Key: customKey,
+        }),
+      })
     );
   });
 
