@@ -32,7 +32,7 @@ export async function executeRepairs(
       });
     }
   } catch (e) {
-    logger.error('[Metabolism] Registry tool pruning failed:', e);
+    logger.error(`[Metabolism] Registry tool pruning failed (WS: ${workspaceId || 'GLOBAL'}):`, e);
   }
 
   // Repair 2: Memory Bloat (Stale Gaps)
@@ -49,12 +49,12 @@ export async function executeRepairs(
       });
     }
   } catch (e) {
-    logger.error('[Metabolism] Memory repair failed:', e);
+    logger.error(`[Metabolism] Memory repair failed (WS: ${workspaceId || 'GLOBAL'}):`, e);
   }
 
   // Repair 3: Stale Feature Flags (Silo 7)
   try {
-    const prunedFlags = await FeatureFlags.pruneStaleFlags(30);
+    const prunedFlags = await FeatureFlags.pruneStaleFlags(30, workspaceId);
     if (prunedFlags > 0) {
       repairFindings.push({
         silo: 'Metabolism',
@@ -106,6 +106,10 @@ export async function executeRepairs(
     }
 
     if (disabledCount > 0 || promotedCount > 0) {
+      const workspaceId = typeof scope === 'string' ? scope : scope?.workspaceId;
+      logger.info(
+        `[Metabolism] Trust Metabolism: Disabled ${disabledCount} low-trust agents, Promoted ${promotedCount} to AUTO mode (WS: ${workspaceId || 'GLOBAL'}).`
+      );
       repairFindings.push({
         silo: 'Metabolism',
         expected: 'Trust-aligned agent modes',

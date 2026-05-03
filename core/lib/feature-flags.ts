@@ -45,18 +45,23 @@ export class FeatureFlags {
    * @param agentId - Optional ID of the agent performing the check.
    * @returns A promise resolving to true if the feature is active for the requester.
    */
-  static async isEnabled(flagName: string, agentId?: string): Promise<boolean> {
+  static async isEnabled(
+    flagName: string,
+    agentId?: string,
+    workspaceId?: string
+  ): Promise<boolean> {
     try {
       const flagsEnabled = await ConfigManager.getTypedConfig(
         CONFIG_DEFAULTS.FEATURE_FLAGS_ENABLED.configKey!,
-        CONFIG_DEFAULTS.FEATURE_FLAGS_ENABLED.code
+        CONFIG_DEFAULTS.FEATURE_FLAGS_ENABLED.code,
+        { workspaceId }
       );
       if (!flagsEnabled) return false;
     } catch {
       if (!CONFIG_DEFAULTS.FEATURE_FLAGS_ENABLED.code) return false;
     }
 
-    const flag = await this.getFlag(flagName);
+    const flag = await this.getFlag(flagName, workspaceId);
     if (!flag || !flag.enabled) return false;
 
     if (flag.targetAgents && flag.targetAgents.length > 0) {
@@ -71,30 +76,39 @@ export class FeatureFlags {
     return hash % 100 < flag.rolloutPercent;
   }
 
-  static async setFlag(flag: FeatureFlag): Promise<void> {
+  static async setFlag(flag: FeatureFlag, workspaceId?: string): Promise<void> {
     await ConfigManager.saveRawConfig(`${this.FLAG_KEY_PREFIX}${flag.name}`, flag, {
       author: 'system:feature-flags',
       skipVersioning: true,
+      workspaceId,
     });
 
     try {
       await ConfigManager.atomicAppendToList('feature_flags_list', [flag.name], {
         preventDuplicates: true,
+        workspaceId,
       });
     } catch (e) {
-      logger.warn(`Failed to atomically update feature_flags_list:`, e);
+      logger.warn(
+        `Failed to atomically update feature_flags_list (WS: ${workspaceId || 'GLOBAL'}):`,
+        e
+      );
     }
 
-    this.cache.delete(flag.name);
+    this.cache.delete(this.getCacheKey(flag.name, workspaceId));
   }
 
-  static async listFlags(): Promise<FeatureFlag[]> {
+  static async listFlags(workspaceId?: string): Promise<FeatureFlag[]> {
     try {
-      const rawFlags = await ConfigManager.getTypedConfig('feature_flags_list', [] as string[]);
-      const flags = await Promise.all(rawFlags.map((name: string) => this.getFlag(name)));
+      const rawFlags = await ConfigManager.getTypedConfig('feature_flags_list', [] as string[], {
+        workspaceId,
+      });
+      const flags = await Promise.all(
+        rawFlags.map((name: string) => this.getFlag(name, workspaceId))
+      );
       return flags.filter((f): f is FeatureFlag => f !== null);
     } catch (error) {
-      logger.warn('Failed to list feature flags:', error);
+      logger.warn(`Failed to list feature flags (WS: ${workspaceId || 'GLOBAL'}):`, error);
       return [];
     }
   }
@@ -110,12 +124,12 @@ export class FeatureFlags {
    * @param daysThreshold - Days after creation to consider stale if no expiresAt (default: 30)
    * @returns The number of flags pruned
    */
-  static async pruneStaleFlags(daysThreshold: number = 30): Promise<number> {
+  static async pruneStaleFlags(daysThreshold: number = 30, workspaceId?: string): Promise<number> {
     const thresholdMs = daysThreshold * TIME.MS_PER_DAY;
     const now = Date.now();
 
     try {
-      const flags = await this.listFlags();
+      const flags = await this.listFlags(workspaceId);
       const staleFlags = flags.filter((flag) => {
         if (flag.expiresAt && flag.expiresAt * 1000 < now) return true;
         if (flag.createdAt && now - flag.createdAt > thresholdMs) return true;
@@ -124,45 +138,62 @@ export class FeatureFlags {
 
       if (staleFlags.length === 0) return 0;
 
-      logger.info(`[FeatureFlags] Pruning ${staleFlags.length} stale flags`);
+      logger.info(
+        `[FeatureFlags] Pruning ${staleFlags.length} stale flags (WS: ${workspaceId || 'GLOBAL'})`
+      );
 
       const prunedNames: string[] = [];
       for (const flag of staleFlags) {
         try {
-          await ConfigManager.deleteConfig(`${this.FLAG_KEY_PREFIX}${flag.name}`);
+          await ConfigManager.deleteConfig(`${this.FLAG_KEY_PREFIX}${flag.name}`, { workspaceId });
           prunedNames.push(flag.name);
-          this.cache.delete(flag.name);
+          this.cache.delete(this.getCacheKey(flag.name, workspaceId));
         } catch (e) {
           logger.warn(`Failed to delete stale flag ${flag.name}:`, e);
         }
       }
 
       if (prunedNames.length > 0) {
-        await ConfigManager.atomicRemoveFromList('feature_flags_list', prunedNames);
+        await ConfigManager.atomicRemoveFromList('feature_flags_list', prunedNames, {
+          workspaceId,
+        });
       }
 
       return prunedNames.length;
     } catch (e) {
-      logger.error('[FeatureFlags] Failed to prune stale flags:', e);
+      logger.error(
+        `[FeatureFlags] Failed to prune stale flags (WS: ${workspaceId || 'GLOBAL'}):`,
+        e
+      );
       return 0;
     }
   }
 
-  private static async getFlag(flagName: string): Promise<FeatureFlag | null> {
-    const cached = this.cache.get(flagName);
+  private static async getFlag(
+    flagName: string,
+    workspaceId?: string
+  ): Promise<FeatureFlag | null> {
+    const cacheKey = this.getCacheKey(flagName, workspaceId);
+    const cached = this.cache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
       return cached.value;
     }
 
     try {
-      const flag = await ConfigManager.getRawConfig(`${this.FLAG_KEY_PREFIX}${flagName}`);
+      const flag = await ConfigManager.getRawConfig(`${this.FLAG_KEY_PREFIX}${flagName}`, {
+        workspaceId,
+      });
       const result = (flag as FeatureFlag) ?? null;
-      this.cache.set(flagName, { value: result, expiresAt: Date.now() + this.CACHE_TTL_MS });
+      this.cache.set(cacheKey, { value: result, expiresAt: Date.now() + this.CACHE_TTL_MS });
       return result;
     } catch (e) {
-      logger.warn(`Failed to fetch feature flag ${flagName}:`, e);
+      logger.warn(`Failed to fetch feature flag ${flagName} (WS: ${workspaceId || 'GLOBAL'}):`, e);
       return null;
     }
+  }
+
+  private static getCacheKey(name: string, workspaceId?: string): string {
+    return workspaceId ? `${workspaceId}:${name}` : name;
   }
 
   private static hashCode(str: string): number {

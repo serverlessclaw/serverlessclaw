@@ -1,14 +1,14 @@
-# Perspective G: The Regenerative Metabolism Loop
+# Perspective F & G: The Regenerative Metabolism & Isolation Loop
 
-This diagram visualizes the interaction between the **Metabolism (Silo 7)**, **Scales (Silo 6)**, and **Shield (Silo 3)** during autonomous self-healing and reputation calibration.
+This diagram visualizes the interaction between the **Metabolism (Silo 7)**, **Scales (Silo 6)**, and **Shield (Silo 3)** during autonomous self-healing, reputation calibration, and multi-tenant isolation.
 
 ```text
-                                Perspective G: Regenerative Loop
-                                ===============================
+                        Perspective F (Metabolic Loop) & G (Isolation)
+                        ==============================================
 
        [ Silo 5: The Eye ]
                |
-        (1) Anomaly Detected
+        (1) Anomaly Detected (Failures/Trace Errors)
                |
                v
        [ Silo 6: The Scales ] <----------------------------------+
@@ -29,16 +29,18 @@ This diagram visualizes the interaction between the **Metabolism (Silo 7)**, **S
                v                                                 |
        [ Silo 7: The Metabolism ] -------------------------------+
                |
-        (5) Autonomous Repairs (Regeneration)
-               |-- Prune Stale Overrides
-               |-- Cull Memory Bloat
-               |-- Reclaim S3 Staging (P1 Finding if fails)
+        (5) Autonomous Repairs (Regeneration - Perspective F)
+               |-- Prune Stale Overrides (WS Scoped)
+               |-- Cull Memory Bloat (WS Scoped)
+               |-- Atomic DLQ Recovery (FilterExpression Scoped)
+               |-- Feature Flag Pruning (WS Scoped)
+               |-- Reclaim S3 Staging (WS Prefix Scoped)
                |-- Trust-Based Mode Shifting (AUTO/HITL)
 ```
 
-## Key Mechanisms in Perspective G
+## Key Mechanisms
 
-1.  **Mandatory SYSTEM Scoping**: All autonomous repairs (Silo 7) and reputation updates (Silo 6) must be anchored to a `workspaceId`. Unscoped background tasks are rejected by the Shield to prevent cross-tenant elevation.
-2.  **Deferred Trace Batching**: During parallel tool execution, traces are collected locally and flushed in atomic batches to Silo 5, reducing IOPS and database contention.
+1.  **Perspective G: Mandatory SYSTEM Scoping**: All autonomous repairs (Silo 7) and reputation updates (Silo 6) must be anchored to a `workspaceId`. Unscoped background tasks are rejected by the Shield to prevent cross-tenant elevation.
+2.  **Perspective F: Atomic Regenerative Repairs**: Repairs utilize DynamoDB `ConditionExpression` and `FilterExpression` to ensure that maintenance tasks are idempotent and isolated. DLQ retrieval uses server-side filtering to prevent multi-tenant data leakage.
 3.  **Metabolic hygiene**: S3 staging reclamation and tool pruning are monitored; failures trigger P1 audit findings to notify the Eye and the Scales of hygiene blind spots.
 4.  **Trust-Based Shift**: High-trust agents are promoted to `AUTO` mode, while low-trust agents are mitigated via registry disabling, closing the metabolic loop.

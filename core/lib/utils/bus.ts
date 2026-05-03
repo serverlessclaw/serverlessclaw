@@ -184,7 +184,7 @@ async function reserveIdempotencyKey(key: string): Promise<boolean> {
     if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
       return false;
     }
-    logger.error(`Idempotency reservation failed for ${key}:`, error);
+    logger.error(`Idempotency reservation failed for ${key} (Possible system-level issue):`, error);
     return false; // Block the event if DDB is down - prevents duplicate emissions
   }
 }
@@ -369,8 +369,9 @@ export async function emitEvent(
       const isRetryable =
         errorCategory === ErrorCategory.TRANSIENT || errorCategory === ErrorCategory.UNKNOWN;
 
+      const workspaceId = (detail.workspaceId as string) || 'GLOBAL';
       logger.error(
-        `EventBridge emit attempt ${attempt}/${maxRetries} failed from ${source} (${errorCategory}):`,
+        `EventBridge emit attempt ${attempt}/${maxRetries} failed from ${source} (WS: ${workspaceId}) (${errorCategory}):`,
         error
       );
 
@@ -433,6 +434,7 @@ export async function getDlqEntries(
         TableName: tableName,
         IndexName: 'TypeTimestampIndex',
         KeyConditionExpression: '#type = :type AND #ts > :cutoff',
+        FilterExpression: workspaceId ? 'workspaceId = :ws' : undefined,
         ExpressionAttributeNames: {
           '#type': 'type',
           '#ts': 'timestamp',
@@ -440,19 +442,14 @@ export async function getDlqEntries(
         ExpressionAttributeValues: {
           ':type': DLQ_TYPE,
           ':cutoff': Date.now() - TIME.MS_PER_DAY, // Last 24 hours
+          ...(workspaceId ? { ':ws': workspaceId } : {}),
         },
         ScanIndexForward: false, // Newest first
-        Limit: workspaceId ? limit * 5 : limit, // Fetch more if filtering by workspace
+        Limit: limit,
       })
     );
 
-    let items = (result.Items ?? []) as DlqEntry[];
-
-    if (workspaceId) {
-      items = items.filter((item) => item.workspaceId === workspaceId);
-    }
-
-    return items.slice(0, limit);
+    return (result.Items ?? []) as DlqEntry[];
   } catch (error) {
     logger.error('Failed to get DLQ entries:', error);
     return [];

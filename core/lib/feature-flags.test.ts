@@ -160,7 +160,7 @@ describe('FeatureFlags', () => {
       expect(mockConfigManager.atomicAppendToList).toHaveBeenCalledWith(
         'feature_flags_list',
         ['new_flag'],
-        { preventDuplicates: true }
+        { preventDuplicates: true, workspaceId: undefined }
       );
     });
 
@@ -208,10 +208,14 @@ describe('FeatureFlags', () => {
 
       const result = await FeatureFlags.pruneStaleFlags(30);
       expect(result).toBe(1);
-      expect(mockConfigManager.deleteConfig).toHaveBeenCalledWith('feature_flag_expired_flag');
-      expect(mockConfigManager.atomicRemoveFromList).toHaveBeenCalledWith('feature_flags_list', [
-        'expired_flag',
-      ]);
+      expect(mockConfigManager.deleteConfig).toHaveBeenCalledWith('feature_flag_expired_flag', {
+        workspaceId: undefined,
+      });
+      expect(mockConfigManager.atomicRemoveFromList).toHaveBeenCalledWith(
+        'feature_flags_list',
+        ['expired_flag'],
+        { workspaceId: undefined }
+      );
     });
 
     it('should prune flags based on age threshold when no expiresAt', async () => {
@@ -229,9 +233,11 @@ describe('FeatureFlags', () => {
 
       const result = await FeatureFlags.pruneStaleFlags(30);
       expect(result).toBe(1);
-      expect(mockConfigManager.atomicRemoveFromList).toHaveBeenCalledWith('feature_flags_list', [
-        'old_flag',
-      ]);
+      expect(mockConfigManager.atomicRemoveFromList).toHaveBeenCalledWith(
+        'feature_flags_list',
+        ['old_flag'],
+        { workspaceId: undefined }
+      );
     });
 
     it('should not prune flags within threshold', async () => {
@@ -280,9 +286,11 @@ describe('FeatureFlags', () => {
       expect(result).toBe(1);
 
       // Verify list was updated via atomicRemoveFromList
-      expect(mockConfigManager.atomicRemoveFromList).toHaveBeenCalledWith('feature_flags_list', [
-        'stale_flag',
-      ]);
+      expect(mockConfigManager.atomicRemoveFromList).toHaveBeenCalledWith(
+        'feature_flags_list',
+        ['stale_flag'],
+        { workspaceId: undefined }
+      );
     });
   });
 });

@@ -4,7 +4,7 @@
 
 This document tracks which system silos and cross-silo perspectives have been audited across all rounds. It helps identify under-audited areas and guide future audit efforts.
 
-Last Updated: 2026-05-02
+Last Updated: 2026-05-03
 
 ---
 
@@ -12,13 +12,13 @@ Last Updated: 2026-05-02
 
 | Silo  | Name           | Primary Code Paths                              | Audit Count | Last Audited | Risk Level |
 | :---- | :------------- | :---------------------------------------------- | :---------- | :----------- | :--------- |
-| **1** | The Spine      | `core/handlers/events.ts`, `core/lib/bus.ts`    | 18          | 2026-05-02   | Low        |
+| **1** | The Spine      | `core/handlers/events.ts`, `core/lib/bus.ts`    | 19          | 2026-05-03   | Low        |
 | **2** | The Hand       | `core/lib/mcp.ts`, `core/lib/agent/executor.ts` | 11          | 2026-05-02   | Low        |
 | **3** | The Shield     | `core/lib/safety/safety-engine.ts`              | 19          | 2026-05-02   | Low        |
 | **4** | The Brain      | `core/lib/memory/`, `core/lib/rag/`             | 16          | 2026-05-02   | Low        |
 | **5** | The Eye        | `core/lib/metrics/`, `core/lib/tracer/`         | 16          | 2026-05-02   | Low        |
-| **6** | The Scales     | `core/lib/safety/trust-manager.ts`              | 16          | 2026-05-02   | Low        |
-| **7** | The Metabolism | `core/lib/maintenance/metabolism.ts`            | 9           | 2026-05-02   | Low        |
+| **6** | The Scales     | `core/lib/safety/trust-manager.ts`              | 17          | 2026-05-03   | Low        |
+| **7** | The Metabolism | `core/lib/maintenance/metabolism.ts`            | 10          | 2026-05-03   | Low        |
 
 ---
 
@@ -31,7 +31,7 @@ Last Updated: 2026-05-02
 | **C**       | Identity Journey  | Brain → Spine → Shield      | 10          | 2026-05-01  |
 | **D**       | Trust Loop        | Eye → Scales → Spine        | 12          | 2026-05-02  |
 | **E**       | Recovery Path     | Shield → Spine → Brain      | 10          | 2026-05-02  |
-| **F**       | Metabolic Loop    | Metabolism ↔ Scales ↔ Spine | 1           | 2026-05-02  |
+| **F**       | Metabolic Loop    | Metabolism ↔ Scales ↔ Spine | 2           | 2026-05-03  |
 
 ---
 
@@ -39,6 +39,7 @@ Last Updated: 2026-05-02
 
 | Date       | Report                                             | Silos Covered                    | Cross-Silo | Key Findings                                                                                                      |
 | :--------- | :------------------------------------------------- | :------------------------------- | :--------- | :---------------------------------------------------------------------------------------------------------------- |
+| 2026-05-03 | `audit-2026-05-03-metabolism-loop.md`              | Metabolism, Scales, Spine        | F          | FIXED: P1 Missing workspaceId in setGap, P2 In-memory DLQ filtering, P2 Global FeatureFlags pruning.              |
 | 2026-05-02 | `audit-2026-05-02-evolution-cycle-G.md`            | Hand, Shield, Eye, Scales, Met.  | G          | FIXED: P1 SYSTEM identity workspace scoping, P1 Trust success bump capping, P1 Metabolic hygiene reporting.       |
 | 2026-05-02 | `audit-2026-05-02-evolution-cycle.md`              | Hand, Shield, Eye, Scales        | B          | FIXED: P1 SYSTEM identity RBAC bypass, P1 Trust elevation loopholes, P1 Parallel trace write contention.          |
 | 2026-05-02 | `audit-2026-05-02-metabolic-loop.md`               | Metabolism, Scales, Spine        | F          | FIXED: P1 Disconnected autonomous mode shift, P1 Global backbone metabolism blind spot, P2 S3 listing efficiency. |

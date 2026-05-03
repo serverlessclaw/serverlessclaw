@@ -243,7 +243,10 @@ export class TrustManager {
       await this.recordHistory(agentId, newScore, { workspaceId });
       return newScore;
     } catch (err) {
-      logger.error(`[TrustManager] Failed to atomically update trust for ${agentId}:`, err);
+      logger.error(
+        `[TrustManager] Failed to atomically update trust for ${agentId} (WS: ${workspaceId || 'GLOBAL'}):`,
+        err
+      );
       throw err;
     }
   }
@@ -339,9 +342,11 @@ export class TrustManager {
       } catch (err: unknown) {
         if (err instanceof Error && err.name === 'ConditionalCheckFailedException') {
           // Already decayed by another process
-          return;
         }
-        logger.error(`[TrustManager] Failed to decay score for ${agentId}:`, err);
+        logger.error(
+          `[TrustManager] Failed to decay score for ${agentId} (WS: ${context?.workspaceId || 'GLOBAL'}):`,
+          err
+        );
       }
     }
   }

@@ -132,7 +132,8 @@ export async function remediateDashboardFailure(
     memory,
     `REMEDIATION-${failure.traceId}`,
     `Immediate remediation required: ${failure.error}`,
-    { category: InsightCategory.STRATEGIC_GAP, urgency: 5, impact: 8 }
+    { category: InsightCategory.STRATEGIC_GAP, urgency: 5, impact: 8 },
+    workspaceId
   );
 
   return undefined;

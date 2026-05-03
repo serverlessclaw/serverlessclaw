@@ -110,7 +110,7 @@ describe('MetabolismService', () => {
       expect(AgentRegistry.pruneLowUtilizationTools).toHaveBeenCalledWith('ws-1', 30);
       expect(archiveStaleGaps).toHaveBeenCalledWith(mockMemory, undefined, 'ws-1');
       expect(cullResolvedGaps).toHaveBeenCalledWith(mockMemory, undefined, 'ws-1');
-      expect(FeatureFlags.pruneStaleFlags).toHaveBeenCalledWith(30);
+      expect(FeatureFlags.pruneStaleFlags).toHaveBeenCalledWith(30, 'ws-1');
 
       expect(findings.some((f) => f.actual.includes('Pruned 5'))).toBe(true);
       expect(findings.some((f) => f.actual.includes('Metabolized memory state'))).toBe(true);
@@ -244,7 +244,8 @@ describe('MetabolismService', () => {
         mockMemory,
         'REMEDIATION-trace-123',
         expect.stringContaining('Immediate remediation required'),
-        expect.anything()
+        expect.anything(),
+        'ws-1'
       );
     });
 

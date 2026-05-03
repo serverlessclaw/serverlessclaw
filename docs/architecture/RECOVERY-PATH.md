@@ -47,8 +47,22 @@ graph TD
     C -- Failure --> G[Wait for next retry]
 ```
 
+## Atomic Multi-Tenant DLQ Retrieval
+
+To prevent "In-Memory Multi-Tenant Filtering" (Anti-Pattern 19), the system utilizes server-side `FilterExpression` for DLQ retrieval. This ensures that even if a GSI is shared across tenants, data is filtered at the database layer before being returned to the application.
+
+```ascii
+[ Request DLQ ] --(workspaceId)--> [ DynamoDB ]
+                                       |
+                                       |-- Index: TypeTimestampIndex
+                                       |-- FilterExpression: workspaceId = :ws
+                                       |
+                                   [ ISOLATED DATA ]
+```
+
 ## Key Mechanisms
 
 1.  **Deterministic Idempotency Keys**: Derived from unique message IDs (`resume:sessionId:msgId`) to ensure that even if metadata cleanup fails, the side effect (event emission) is only processed once.
 2.  **Emit-then-Purge Strategy**: In the DLQ retry path, the event is emitted _before_ the DLQ entry is purged. Idempotency guards prevent duplicates, and the purge only happens upon confirmed success or confirmed duplication.
 3.  **Fail-Closed Circuit Breakers**: Distributed state checks (`isCircuitOpen`, `consumeToken`) default to "Closed" (rejected) on system failures to prevent cascading instability.
+4.  **Monotonic DLQ Filtering**: Ensures that background recovery tasks never cross-contaminate tenant recovery queues.

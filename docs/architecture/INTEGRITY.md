@@ -73,6 +73,19 @@ Autonomous repairs ensure the system prunes its own technical debt and stale inf
 | Agent Tools   | `pruneLowUtilizationTools`  | Atomic Utilization Audit       |
 | Memory Gaps   | `cullResolvedGaps`          | Resolution Event               |
 | Dashboard     | `remediateDashboardFailure` | Real-time Exception Handler    |
+| DLQ Recovery  | `getDlqEntries`             | System Maintenance / Retry     |
+
+### 3b. Atomic Multi-Tenant Isolation (AP-19 Remediation)
+
+To ensure strict isolation during background maintenance, all query-based retrieval (such as DLQ scanning) MUST use server-side `FilterExpression`. In-memory multi-tenant filtering is prohibited as it creates a potential for data leakage if the filter is bypassed.
+
+```ascii
+[ Metabolism ] -> [ getDlqEntries(workspaceId) ]
+                        |
+                        v
+                [ Query (TypeTimestampIndex) ]
+                [ FilterExpression: workspaceId = :ws ]
+```
 
 ## 4. Recovery Path (Shield -> Spine -> Brain)
 
