@@ -1,8 +1,0 @@
-.next/
-.open-next/
-out/
-node_modules/
-.sst/
-.aiready/
-.git/
-pnpm-lock.yaml

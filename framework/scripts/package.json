@@ -1,7 +1,0 @@
-{
-  "type": "module",
-  "scripts": {
-    "type-check": "tsc --noEmit",
-    "format-check": "prettier --check . --ignore-path ../../.prettierignore"
-  }
-}
