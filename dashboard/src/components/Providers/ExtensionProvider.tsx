@@ -20,11 +20,21 @@ export interface DynamicComponentExtension {
   }>;
 }
 
+export type LayoutSlot = 'sidebar_top' | 'sidebar_bottom' | 'header_right' | 'main_top';
+
+export interface LayoutExtension {
+  id: string;
+  slot: LayoutSlot;
+  component: React.ComponentType<any>;
+}
+
 interface ExtensionContextType {
   sidebarExtensions: SidebarExtension[];
   dynamicComponents: Map<string, DynamicComponentExtension['component']>;
+  layoutExtensions: Map<LayoutSlot, LayoutExtension[]>;
   registerSidebarExtension: (extension: SidebarExtension) => void;
   registerDynamicComponent: (extension: DynamicComponentExtension) => void;
+  registerLayoutExtension: (extension: LayoutExtension) => void;
 }
 
 const ExtensionContext = createContext<ExtensionContextType | undefined>(undefined);
@@ -36,6 +46,7 @@ const ExtensionContext = createContext<ExtensionContextType | undefined>(undefin
 export function ExtensionProvider({ children }: { children: ReactNode }) {
   const [sidebarExtensions, setSidebarExtensions] = useState<SidebarExtension[]>([]);
   const [dynamicComponents] = useState<Map<string, DynamicComponentExtension['component']>>(new Map());
+  const [layoutExtensions, setLayoutExtensions] = useState<Map<LayoutSlot, LayoutExtension[]>>(new Map());
 
   const registerSidebarExtension = (extension: SidebarExtension) => {
     setSidebarExtensions((prev) => {
@@ -48,13 +59,25 @@ export function ExtensionProvider({ children }: { children: ReactNode }) {
     dynamicComponents.set(extension.type, extension.component);
   };
 
+  const registerLayoutExtension = (extension: LayoutExtension) => {
+    setLayoutExtensions((prev) => {
+      const next = new Map(prev);
+      const slotItems = next.get(extension.slot) || [];
+      if (slotItems.find((e) => e.id === extension.id)) return prev;
+      next.set(extension.slot, [...slotItems, extension]);
+      return next;
+    });
+  };
+
   return (
     <ExtensionContext.Provider
       value={{
         sidebarExtensions,
         dynamicComponents,
+        layoutExtensions,
         registerSidebarExtension,
         registerDynamicComponent,
+        registerLayoutExtension,
       }}
     >
       {children}

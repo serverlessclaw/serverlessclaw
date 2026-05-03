@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ROUTES } from '@/lib/constants';
 import { useTranslations } from '@/components/Providers/TranslationsProvider';
 import { useUICommand } from '@/components/Providers/UICommandProvider';
@@ -37,6 +37,7 @@ import { useRealtimeContext } from '@/components/Providers/RealtimeProvider';
 import { useExtensions } from '@/components/Providers/ExtensionProvider';
 import CyberTooltip from '@/components/CyberTooltip';
 import TenantSwitcher from '@/components/TenantSwitcher';
+import { Slot } from '@/components/Slot';
 import { logger } from '@claw/core/lib/logger';
 
 /**
@@ -47,6 +48,8 @@ import { logger } from '@claw/core/lib/logger';
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isEmbedded = searchParams?.get('mode') === 'embedded';
   const [isOpen, setIsOpen] = useState(false);
   const { isSidebarCollapsed: isCollapsed, setSidebarCollapsed, setActiveModal } = useUICommand();
   const { sidebarExtensions } = useExtensions();
@@ -67,8 +70,8 @@ export default function Sidebar() {
     }
   }, [pathname, isOpen]);
 
-  // Do not render sidebar on login page
-  if (pathname === '/login') {
+  // Do not render sidebar on login page or in embedded mode
+  if (pathname === '/login' || isEmbedded) {
     return null;
   }
 
@@ -223,6 +226,7 @@ export default function Sidebar() {
         ${isCollapsed ? 'lg:w-16 p-2' : 'lg:w-64 p-2'}
       `}
       >
+        <Slot name="sidebar_top" />
         <div
           className={`flex items-center justify-between gap-3 mb-6 ${isCollapsed ? 'flex-col' : 'px-2'} pt-4`}
         >
@@ -464,6 +468,7 @@ export default function Sidebar() {
             )}
           </div>
         </div>
+        <Slot name="sidebar_bottom" />
       </aside>
     </>
   );

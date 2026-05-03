@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { MessageSquare, X, Minimize2, Maximize2, Activity } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Typography from '@/components/ui/Typography';
@@ -20,6 +20,8 @@ import { ChatMessage } from './types';
  */
 export default function ChatBubble() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const isEmbedded = searchParams?.get('mode') === 'embedded';
 
   // --- State & Refs (Must be before early returns) ---
   const [isOpen, setIsOpen] = useState(false);
@@ -78,9 +80,9 @@ export default function ChatBubble() {
   }, [messages]);
 
   // --- Early Return (Must be after all hooks) ---
-  // Hide the bubble on the main chat page, home page, or login page to avoid
-  // redundancy and prevent duplicate data synchronization hooks from running.
-  if (pathname === '/chat' || pathname === '/' || pathname === '/login') {
+  // Hide the bubble on the main chat page, home page, login page, or in embedded mode
+  // to avoid redundancy and prevent duplicate data synchronization hooks from running.
+  if (pathname === '/chat' || pathname === '/' || pathname === '/login' || isEmbedded) {
     return null;
   }
 
