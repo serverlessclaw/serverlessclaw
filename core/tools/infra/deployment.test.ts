@@ -199,6 +199,7 @@ describe('Deployment Tools', () => {
       vi.mocked(getAgentContext).mockResolvedValue({
         memory: {
           getAllGaps: vi.fn().mockResolvedValue([]),
+          getSessionMetadata: vi.fn().mockResolvedValue({ workspaceId: 'ws-123' }),
         },
       } as any);
       codebuildMock.on(StartBuildCommand).resolves({ build: { id: 'build-env-123' } });
@@ -250,6 +251,7 @@ describe('Deployment Tools', () => {
               },
             },
           ]),
+          getSessionMetadata: vi.fn().mockResolvedValue({ workspaceId: 'ws-123' }),
         },
       } as any);
 
@@ -382,6 +384,7 @@ describe('Deployment Tools', () => {
       vi.mocked(getAgentContext).mockResolvedValue({
         memory: {
           getHistory: vi.fn().mockResolvedValue([{ content: 'VERIFICATION_SUCCESSFUL' }]),
+          getSessionMetadata: vi.fn().mockResolvedValue({ workspaceId: 'ws-123' }),
         },
       } as any);
 
@@ -398,6 +401,7 @@ describe('Deployment Tools', () => {
       vi.mocked(getAgentContext).mockResolvedValue({
         memory: {
           getHistory: vi.fn().mockResolvedValue([{ content: 'some other content' }]),
+          getSessionMetadata: vi.fn().mockResolvedValue({ workspaceId: 'ws-123' }),
         },
       } as any);
 
@@ -431,6 +435,7 @@ describe('Deployment Tools', () => {
               tool_calls: [{ function: { name: 'recallKnowledge' } }],
             },
           ]),
+          getSessionMetadata: vi.fn().mockResolvedValue({ workspaceId: 'ws-123' }),
         },
       } as any);
 
@@ -453,6 +458,7 @@ describe('Deployment Tools', () => {
               tool_calls: [{ function: { name: 'recallKnowledge' } }],
             },
           ]),
+          getSessionMetadata: vi.fn().mockResolvedValue({ workspaceId: 'ws-123' }),
         },
       } as any);
 
@@ -480,6 +486,7 @@ describe('Deployment Tools', () => {
       vi.mocked(getAgentContext).mockResolvedValue({
         memory: {
           getHistory: vi.fn().mockResolvedValue([{ content: 'some content' }]),
+          getSessionMetadata: vi.fn().mockResolvedValue({ workspaceId: 'ws-123' }),
         },
       } as any);
 
@@ -497,6 +504,7 @@ describe('Deployment Tools', () => {
       vi.mocked(getAgentContext).mockResolvedValue({
         memory: {
           getHistory: vi.fn().mockResolvedValue([{ content: 'VERIFICATION_SUCCESSFUL: partial' }]),
+          getSessionMetadata: vi.fn().mockResolvedValue({ workspaceId: 'ws-123' }),
         },
       } as any);
 
@@ -514,6 +522,7 @@ describe('Deployment Tools', () => {
       vi.mocked(getAgentContext).mockResolvedValue({
         memory: {
           getHistory: vi.fn().mockResolvedValue([{ content: 'VERIFICATION_SUCCESSFUL' }]),
+          getSessionMetadata: vi.fn().mockResolvedValue({ workspaceId: 'ws-123' }),
         },
       } as any);
 
@@ -536,6 +545,7 @@ describe('Deployment Tools', () => {
               tool_calls: [{ function: { name: 'recallKnowledge' } }],
             },
           ]),
+          getSessionMetadata: vi.fn().mockResolvedValue({ workspaceId: 'ws-123' }),
         },
       } as any);
 
@@ -559,6 +569,7 @@ describe('Deployment Tools', () => {
               tool_calls: [{ function: { name: 'recallKnowledge' } }],
             },
           ]),
+          getSessionMetadata: vi.fn().mockResolvedValue({ workspaceId: 'ws-123' }),
         },
       } as any);
 
@@ -610,6 +621,7 @@ describe('Deployment Tools', () => {
               tool_calls: [{ function: { name: 'recallKnowledge' } }],
             },
           ]),
+          getSessionMetadata: vi.fn().mockResolvedValue({ workspaceId: 'ws-123' }),
         },
       } as any);
 
@@ -662,6 +674,7 @@ describe('Deployment Tools', () => {
               tool_calls: [{ function: { name: 'recallKnowledge' } }],
             },
           ]),
+          getSessionMetadata: vi.fn().mockResolvedValue({ workspaceId: 'ws-123' }),
         },
       } as any);
 
@@ -712,6 +725,7 @@ describe('Deployment Tools', () => {
               tool_calls: [{ function: { name: 'recallKnowledge' } }],
             },
           ]),
+          getSessionMetadata: vi.fn().mockResolvedValue({ workspaceId: 'ws-123' }),
         },
       } as any);
 
@@ -753,6 +767,7 @@ describe('Deployment Tools', () => {
       vi.mocked(getAgentContext).mockResolvedValue({
         memory: {
           getHistory: vi.fn().mockRejectedValue(new Error('Memory error')),
+          getSessionMetadata: vi.fn().mockResolvedValue({ workspaceId: 'ws-123' }),
         },
       } as any);
 
