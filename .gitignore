@@ -1,58 +1,42 @@
-
-!LICENSE
-!README.md
-# Next.js Dashboard
-# Playwright auth state
-# SST auto-generated type definitions (all locations)
-# debug
-# dependencies
-# environment files
-# logs and reports
-# misc
-**/sst-env.d.ts
-*.log
-*.tmp
-*.tsbuildinfo
-*.txt
-*.zip
-.DS_Store
-.aiready
-.env
-.env.*
-.env.*.local
-.env.local
-.env.prod
-.kilo/
-.opencode/
+# Dependencies
+node_modules/
 .pnpm-debug.log*
-.sst
-.turbo/
-.vscode
-core/*.txt
-core/tests/tier2.log
-coverage
-dashboard/.next/
-dashboard/.open-next/
-dashboard/.sst/
-dashboard/build/
-dashboard/out/
-dist
-e2e/.auth/
-lint_report.json
-node_modules
+
+# Build outputs
+dist/
+build/
+.next/
+.sst/
+out/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS related
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+.nyc_output/
+
+# Logs
+*.log
 npm-debug.log*
-release-tier2.log
-reports/
-sst-env.d.ts
-test-results/
-tier2.log
-vitest_output.txt
 yarn-debug.log*
 yarn-error.log*
-scratch/
-node_modules/
-.sst/
-.next/
-dist/
-.env*
-!.env.example
+
+# Temp
+.tmp/
+temp/
