@@ -21,6 +21,19 @@ export interface ClawPlugin {
   eventMirrors?: IEventMirror[];
   telemetrySinks?: ITelemetrySink[];
   missionObservers?: IMissionObserver[];
+  // UI Extensions (Phase 1 & 4 bridge)
+  sidebarExtensions?: Array<{
+    id: string;
+    label: string;
+    href: string;
+    icon: string; // Icon name as string for serializability
+    section?: string;
+  }>;
+  layoutExtensions?: Array<{
+    id: string;
+    slot: string;
+    componentName: string; // Component name to be looked up in DynamicRegistry
+  }>;
   onInit?: () => Promise<void>;
 }
 
@@ -89,6 +102,13 @@ export class PluginManager {
     if (plugin.onInit) {
       await plugin.onInit();
     }
+  }
+
+  /**
+   * Retrieves all registered plugins.
+   */
+  static getAllPlugins(): ClawPlugin[] {
+    return Array.from(this.plugins.values());
   }
 
   static getRegisteredAgents(): Record<string, IAgentConfig> {
