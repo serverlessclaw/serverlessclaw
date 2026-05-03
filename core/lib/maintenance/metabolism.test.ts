@@ -267,7 +267,7 @@ describe('MetabolismService', () => {
         'agent_tool_overrides',
         'system-agent',
         ['system_check'],
-        { workspaceId: 'default' }
+        { workspaceId: undefined }
       );
       expect(finding?.actual).toContain('Pruned stale/failing tool overrides atomically');
     });

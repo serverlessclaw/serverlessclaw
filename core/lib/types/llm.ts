@@ -99,6 +99,10 @@ export interface Message {
   /** Required unique identifier for the message (used for streaming reconciliation). */
   messageId: string;
   /**
+   * Optional workspace identifier for multi-tenant isolation.
+   */
+  workspaceId?: string;
+  /**
    * Attachments (images, files) associated with the message. Defaults to [].
    */
   attachments?: Attachment[];
@@ -195,6 +199,7 @@ export function createMessage(params: {
       payload?: Record<string, unknown>;
     }>;
   }>;
+  workspaceId?: string;
 }): Message {
   return {
     role: params.role,
@@ -212,6 +217,7 @@ export function createMessage(params: {
     options: params.options ?? [],
     pageContext: params.pageContext,
     ui_blocks: params.ui_blocks ?? [],
+    workspaceId: params.workspaceId,
   };
 }
 

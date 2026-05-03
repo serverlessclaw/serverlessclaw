@@ -1,6 +1,5 @@
 import { logger } from '../../logger';
 import { AuditFinding } from '../../../agents/cognition-reflector/lib/audit-definitions';
-import { getConfigValue } from '../../config/config-defaults';
 
 /**
  * Runs the codebase audit via AIReady (AST) MCP server.
@@ -104,8 +103,11 @@ export async function runNativeAudit(_scope?: {
     const { readFile, readdir, stat } = await import('fs/promises');
     const { join } = await import('path');
 
+    const { ConfigManager } = await import('../../registry/config');
     const scanDir = async (dir: string, depth: number = 0): Promise<string[]> => {
-      const maxDepth = getConfigValue('AUDIT_SCAN_DEPTH');
+      const maxDepth = await ConfigManager.getTypedConfig('audit_scan_depth', 3, {
+        workspaceId: _scope?.workspaceId,
+      });
       if (depth > maxDepth) return [];
       const results: string[] = [];
       try {
@@ -143,7 +145,10 @@ export async function runNativeAudit(_scope?: {
       });
     }
   } catch (e) {
-    logger.warn('[Metabolism] Native debt scan failed:', e);
+    logger.warn(
+      `[Metabolism] Native debt scan failed (WS: ${_scope?.workspaceId || 'GLOBAL'}):`,
+      e
+    );
   }
   return findings;
 }

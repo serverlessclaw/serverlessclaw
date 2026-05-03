@@ -19,8 +19,7 @@ export async function remediateDashboardFailure(
   memory: BaseMemoryProvider,
   failure: FailureEventPayload
 ): Promise<AuditFinding | undefined> {
-  const workspaceId =
-    ((failure as Record<string, unknown>).workspaceId as string | undefined) || 'default';
+  const workspaceId = (failure as Record<string, unknown>).workspaceId as string | undefined;
 
   logger.info(
     `[Metabolism] Attempting immediate remediation for trace ${failure.traceId} in workspace ${workspaceId}`
@@ -124,7 +123,7 @@ export async function remediateDashboardFailure(
     timeoutMs: 3600000, // 1 hour
     traceId: failure.traceId,
     userId: failure.userId,
-    workspaceId,
+    workspaceId: workspaceId || 'SYSTEM',
   });
 
   // Also propagate as a strategic gap for visibility

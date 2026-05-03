@@ -65,7 +65,7 @@ export async function executeRepairs(
       });
     }
   } catch (e) {
-    logger.error('[Metabolism] Feature flag cleanup failed:', e);
+    logger.error(`[Metabolism] Feature flag cleanup failed (WS: ${workspaceId || 'GLOBAL'}):`, e);
   }
 
   // Repair 4: Low-Trust Mitigation & High-Trust Promotion (Perspective F: Metabolic Loop)
@@ -106,7 +106,6 @@ export async function executeRepairs(
     }
 
     if (disabledCount > 0 || promotedCount > 0) {
-      const workspaceId = typeof scope === 'string' ? scope : scope?.workspaceId;
       logger.info(
         `[Metabolism] Trust Metabolism: Disabled ${disabledCount} low-trust agents, Promoted ${promotedCount} to AUTO mode (WS: ${workspaceId || 'GLOBAL'}).`
       );
