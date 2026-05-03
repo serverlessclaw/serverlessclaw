@@ -83,7 +83,7 @@ export async function handler(event: PlannerEvent, _context: Context): Promise<P
   // Self-Scheduling: If this is a proactive review, or we are running for any reason,
   // ensure the NEXT proactive review is scheduled if not already present.
   if (isProactive) {
-    await manageProactiveScheduling(userId);
+    await manageProactiveScheduling(userId, workspaceId);
   }
 
   // Code Growth Tracking: Check if audit should be triggered based on code growth

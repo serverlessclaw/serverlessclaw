@@ -38,6 +38,8 @@ export interface ConversationMeta {
   expiresAt?: number;
   /** Mission-specific metadata for War Room mode. */
   mission?: MissionMetadata;
+  /** Multi-tenant workspace identifier. */
+  workspaceId?: string;
   /** Additional dynamic metadata */
   metadata?: Record<string, unknown>;
 }

@@ -24,12 +24,14 @@ export class DynamicScheduler {
    * @param payload - Data to be delivered when the schedule fires.
    * @param expression - Schedule expression (e.g., 'rate(1 day)', 'at(2026-03-15T12:00:00)', 'cron(0 12 * * ? *)').
    * @param description - Optional description of the goal.
+   * @param workspaceId - Optional workspaceId for multi-tenant isolation.
    */
   static async upsertSchedule(
     name: string,
     payload: Record<string, unknown>,
     expression: string,
-    description?: string
+    description?: string,
+    workspaceId?: string
   ): Promise<void> {
     const roleArn = process.env.SCHEDULER_ROLE_ARN;
     const targetArn = process.env.HEARTBEAT_HANDLER_ARN;
@@ -38,12 +40,18 @@ export class DynamicScheduler {
       throw new Error('SCHEDULER_ROLE_ARN or HEARTBEAT_HANDLER_ARN not configured in environment.');
     }
 
-    logger.info(`Upserting schedule: ${name} with expression: ${expression}`);
+    const scopedName = workspaceId ? `WS-${workspaceId}-${name}` : name;
+    // Limit name length to 64 chars as per AWS Scheduler requirements
+    const finalName = scopedName.length > 64 ? scopedName.substring(0, 64) : scopedName;
+
+    logger.info(
+      `Upserting schedule: ${finalName} with expression: ${expression} (WS: ${workspaceId || 'GLOBAL'})`
+    );
 
     try {
       await scheduler.send(
         new CreateScheduleCommand({
-          Name: name,
+          Name: finalName,
           ScheduleExpression: expression,
           Description:
             description ?? `Dynamic goal-oriented schedule for ${payload.agentId ?? 'system'}`,
@@ -51,7 +59,7 @@ export class DynamicScheduler {
           Target: {
             Arn: targetArn,
             RoleArn: roleArn,
-            Input: JSON.stringify(payload),
+            Input: JSON.stringify({ ...payload, workspaceId }),
           },
           ActionAfterCompletion: expression.startsWith('at(')
             ? ActionAfterCompletion.DELETE
@@ -64,13 +72,11 @@ export class DynamicScheduler {
         error instanceof Error &&
         (error as Error & { name: string }).name === 'ConflictException'
       ) {
-        // Handle update by deleting and recreating (Scheduler doesn't have UpdateSchedule in all SDK versions,
-        // or it's often easier to replace for simple dynamic tasks)
-        logger.info(`Schedule ${name} already exists, replacing...`);
-        await this.removeSchedule(name);
-        await this.upsertSchedule(name, payload, expression, description);
+        logger.info(`Schedule ${finalName} already exists, replacing...`);
+        await this.removeSchedule(finalName);
+        await this.upsertSchedule(name, payload, expression, description, workspaceId);
       } else {
-        logger.error(`Failed to create schedule ${name}:`, error);
+        logger.error(`Failed to create schedule ${finalName}:`, error);
         throw error;
       }
     }
@@ -80,19 +86,23 @@ export class DynamicScheduler {
    * Removes a dynamic schedule.
    *
    * @param name - Unique name of the schedule to delete.
+   * @param workspaceId - Optional workspaceId for multi-tenant isolation.
    */
-  static async removeSchedule(name: string): Promise<void> {
-    logger.info(`Removing schedule: ${name}`);
+  static async removeSchedule(name: string, workspaceId?: string): Promise<void> {
+    const scopedName = workspaceId ? `WS-${workspaceId}-${name}` : name;
+    const finalName = scopedName.length > 64 ? scopedName.substring(0, 64) : scopedName;
+
+    logger.info(`Removing schedule: ${finalName}`);
     try {
-      await scheduler.send(new DeleteScheduleCommand({ Name: name }));
+      await scheduler.send(new DeleteScheduleCommand({ Name: finalName }));
     } catch (error: unknown) {
       if (
         error instanceof Error &&
         (error as Error & { name: string }).name === 'ResourceNotFoundException'
       ) {
-        logger.warn(`Schedule ${name} not found, skipping deletion.`);
+        logger.warn(`Schedule ${finalName} not found, skipping deletion.`);
       } else {
-        logger.error(`Failed to delete schedule ${name}:`, error);
+        logger.error(`Failed to delete schedule ${finalName}:`, error);
         throw error;
       }
     }
@@ -101,11 +111,14 @@ export class DynamicScheduler {
   /**
    * Lists all dynamic schedules managed by the system.
    */
-  static async listSchedules(namePrefix?: string): Promise<unknown[]> {
+  static async listSchedules(namePrefix?: string, workspaceId?: string): Promise<unknown[]> {
+    const prefix = workspaceId ? `WS-${workspaceId}-` : '';
+    const finalPrefix = namePrefix ? `${prefix}${namePrefix}` : prefix;
+
     try {
       const response = await scheduler.send(
         new ListSchedulesCommand({
-          NamePrefix: namePrefix,
+          NamePrefix: finalPrefix || undefined,
         })
       );
       return response.Schedules ?? [];
@@ -117,10 +130,16 @@ export class DynamicScheduler {
 
   /**
    * Retrieves details of a specific schedule.
+   *
+   * @param name - Unique name of the schedule.
+   * @param workspaceId - Optional workspaceId for multi-tenant isolation.
    */
-  static async getSchedule(name: string): Promise<unknown> {
+  static async getSchedule(name: string, workspaceId?: string): Promise<unknown> {
+    const scopedName = workspaceId ? `WS-${workspaceId}-${name}` : name;
+    const finalName = scopedName.length > 64 ? scopedName.substring(0, 64) : scopedName;
+
     try {
-      const response = await scheduler.send(new GetScheduleCommand({ Name: name }));
+      const response = await scheduler.send(new GetScheduleCommand({ Name: finalName }));
       return response;
     } catch (error: unknown) {
       if (
@@ -144,10 +163,13 @@ export class DynamicScheduler {
     userId: string;
     frequencyHrs: number;
     metadata?: Record<string, unknown>;
+    workspaceId?: string;
   }): Promise<void> {
-    const existing = await this.getSchedule(params.goalId);
+    const existing = await this.getSchedule(params.goalId, params.workspaceId);
     if (!existing) {
-      logger.info(`Goal ${params.goalId} not found, scheduling proactive task.`);
+      logger.info(
+        `Goal ${params.goalId} not found for WS: ${params.workspaceId || 'GLOBAL'}, scheduling proactive task.`
+      );
       await this.upsertSchedule(
         params.goalId,
         {
@@ -158,7 +180,8 @@ export class DynamicScheduler {
           metadata: { ...params.metadata, isProactive: true },
         },
         `rate(${params.frequencyHrs} hours)`,
-        `Proactive goal for ${params.agentId}: ${params.task}`
+        `Proactive goal for ${params.agentId}: ${params.task}`,
+        params.workspaceId
       );
     }
   }
@@ -171,12 +194,14 @@ export class DynamicScheduler {
    * @param payload - Data to be delivered when the timeout fires.
    * @param targetTime - Unix timestamp (ms) when the timeout should fire.
    * @param eventType - The detail-type for the event. Defaults to CLARIFICATION_TIMEOUT.
+   * @param workspaceId - Optional workspaceId for multi-tenant isolation.
    */
   static async scheduleOneShotTimeout(
     timeoutId: string,
     payload: Record<string, unknown>,
     targetTime: number,
-    eventType: EventType = EventType.CLARIFICATION_TIMEOUT
+    eventType: EventType = EventType.CLARIFICATION_TIMEOUT,
+    workspaceId?: string
   ): Promise<void> {
     const roleArn = process.env.SCHEDULER_ROLE_ARN;
     const targetArn = process.env.EVENT_HANDLER_ARN ?? process.env.HEARTBEAT_HANDLER_ARN;
@@ -188,17 +213,20 @@ export class DynamicScheduler {
       return;
     }
 
+    const scopedId = workspaceId ? `WS-${workspaceId}-${timeoutId}` : timeoutId;
+    const finalId = scopedId.length > 64 ? scopedId.substring(0, 64) : scopedId;
+
     const date = new Date(targetTime);
     const atExpression = `at(${date.toISOString()})`;
 
     logger.info(
-      `Scheduling one-shot timeout: ${timeoutId} (${eventType}) for ${date.toISOString()}`
+      `Scheduling one-shot timeout: ${finalId} (${eventType}) for ${date.toISOString()} (WS: ${workspaceId || 'GLOBAL'})`
     );
 
     try {
       await scheduler.send(
         new CreateScheduleCommand({
-          Name: timeoutId,
+          Name: finalId,
           ScheduleExpression: atExpression,
           Description: `One-shot timeout for ${payload.traceId ?? 'unknown'}`,
           FlexibleTimeWindow: { Mode: FlexibleTimeWindowMode.OFF },
@@ -207,7 +235,7 @@ export class DynamicScheduler {
             RoleArn: roleArn,
             Input: JSON.stringify({
               'detail-type': eventType,
-              detail: payload,
+              detail: { ...payload, workspaceId },
             }),
           },
           ActionAfterCompletion: ActionAfterCompletion.DELETE,
@@ -219,11 +247,11 @@ export class DynamicScheduler {
         error instanceof Error &&
         (error as Error & { name: string }).name === 'ConflictException'
       ) {
-        logger.info(`Timeout ${timeoutId} already exists, replacing...`);
-        await this.removeSchedule(timeoutId);
-        await this.scheduleOneShotTimeout(timeoutId, payload, targetTime, eventType);
+        logger.info(`Timeout ${finalId} already exists, replacing...`);
+        await this.removeSchedule(timeoutId, workspaceId);
+        await this.scheduleOneShotTimeout(timeoutId, payload, targetTime, eventType, workspaceId);
       } else {
-        logger.error(`Failed to schedule one-shot timeout ${timeoutId}:`, error);
+        logger.error(`Failed to schedule one-shot timeout ${finalId}:`, error);
         throw error;
       }
     }

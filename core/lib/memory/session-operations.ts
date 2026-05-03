@@ -427,3 +427,44 @@ export async function updateSummary(
     }
   );
 }
+
+/**
+ * Retrieves metadata for a specific conversation session.
+ *
+ * @param base - The base memory provider instance.
+ * @param sessionId - The session identifier.
+ * @param scope - Optional scope identifier for isolation.
+ * @returns A promise resolving to the session metadata or null if not found.
+ */
+export async function getSessionMetadata(
+  base: BaseMemoryProvider,
+  sessionId: string,
+  scope?: string | import('../types/memory').ContextualScope
+): Promise<ConversationMeta | null> {
+  const pk = base.getScopedUserId(`SESSIONS#${sessionId}`, scope);
+  const sortKey = sessionIdToSortKey(sessionId);
+
+  const items = await base.queryItems({
+    KeyConditionExpression: 'userId = :pk AND #ts = :ts',
+    ExpressionAttributeNames: { '#ts': 'timestamp' },
+    ExpressionAttributeValues: {
+      ':pk': pk,
+      ':ts': sortKey,
+    },
+  });
+
+  const item = items[0];
+  if (!item) return null;
+
+  return {
+    sessionId: item.sessionId as string,
+    title: item.title as string,
+    lastMessage: item.content as string,
+    updatedAt: item.timestamp as number | string,
+    isPinned: !!item.isPinned,
+    expiresAt: item.expiresAt as number | undefined,
+    mission: item.mission as any,
+    workspaceId: item.workspaceId as string,
+    metadata: item.metadata as any,
+  };
+}

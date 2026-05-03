@@ -66,4 +66,10 @@ export class DynamoMemorySessions extends DynamoMemoryInsights implements IHisto
   ): Promise<void> {
     return SessionOps.updateSummary(this, userId, summary, scope);
   }
+  async getSessionMetadata(
+    sessionId: string,
+    scope?: string | ContextualScope
+  ): Promise<ConversationMeta | null> {
+    return SessionOps.getSessionMetadata(this, sessionId, scope);
+  }
 }

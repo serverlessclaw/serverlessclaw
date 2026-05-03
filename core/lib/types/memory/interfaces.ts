@@ -59,6 +59,11 @@ export interface IHistoryStore {
   getSummary(userId: string, scope?: string | ContextualScope): Promise<string | null>;
   /** Updates the latest summary for a conversation session. */
   updateSummary(userId: string, summary: string, scope?: string | ContextualScope): Promise<void>;
+  /** Retrieves metadata for a specific conversation session. */
+  getSessionMetadata(
+    sessionId: string,
+    scope?: string | ContextualScope
+  ): Promise<ConversationMeta | null>;
 }
 
 /**

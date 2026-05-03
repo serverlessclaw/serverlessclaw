@@ -138,6 +138,14 @@ export class CachedMemory implements IMemory {
     MemoryCaches.conversation.delete(CacheKeys.summary(userId, scope));
   }
 
+  async getSessionMetadata(
+    sessionId: string,
+    scope?: string | import('../types/memory').ContextualScope
+  ): Promise<ConversationMeta | null> {
+    // No caching for metadata yet, delegate to underlying
+    return this.underlying.getSessionMetadata(sessionId, scope);
+  }
+
   // --- USER DATA & INSIGHTS ---
 
   async getDistilledMemory(

@@ -130,6 +130,7 @@ describe('Merger Handler', () => {
       traceId: 'trace-456',
       initiatorId: 'superclaw',
       sessionId: 'session-789',
+      workspaceId: 'ws-123',
       overallStatus: 'success',
       results: [
         {
@@ -163,7 +164,7 @@ describe('Merger Handler', () => {
     const { triggerDeployment } = await import('../../tools/infra/deployment');
     expect(triggerDeployment.execute).toHaveBeenCalledWith(
       expect.objectContaining({
-        stagingKey: `staged_trace-456.zip`,
+        stagingKey: `workspaces/ws-123/staged_trace-456.zip`,
       })
     );
 

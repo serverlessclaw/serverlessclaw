@@ -105,6 +105,7 @@ describe('Deployment Tools', () => {
     vi.mocked(getAgentContext).mockResolvedValue({
       memory: {
         getAllGaps: vi.fn().mockResolvedValue([]),
+        getSessionMetadata: vi.fn().mockResolvedValue({ workspaceId: 'ws-123' }),
       },
     } as any);
   });

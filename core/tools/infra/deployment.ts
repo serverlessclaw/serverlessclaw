@@ -80,8 +80,17 @@ export const stageChanges = {
       return new Promise((resolve) => {
         output.on('close', async () => {
           try {
+            const { memory } = await getAgentContext();
+            const session = await memory.getSessionMetadata(sessionId);
+            const workspaceId = session?.workspaceId;
+
             const fileBuffer = await fs.readFile(zipPath);
-            const zipKey = traceId ? `staged_${traceId}.zip` : STORAGE.STAGING_ZIP;
+            const baseZipKey = traceId ? `staged_${traceId}.zip` : STORAGE.STAGING_ZIP;
+            const zipKey = workspaceId ? `workspaces/${workspaceId}/${baseZipKey}` : baseZipKey;
+
+            logger.info(
+              `Staging changes to S3 bucket: ${stagingBucket} (Key: ${zipKey}) (WS: ${workspaceId || 'GLOBAL'})`
+            );
             await s3Client.send(
               new PutObjectCommand({
                 Bucket: stagingBucket,
@@ -291,10 +300,10 @@ export const triggerDeployment = {
       const envOverrides = [{ name: 'DEPLOY_REASON', value: reason }];
       if (stagingKey) {
         envOverrides.push({ name: 'STAGING_ZIP_KEY', value: stagingKey });
-      } else if (traceId) {
-        envOverrides.push({ name: 'STAGING_ZIP_KEY', value: `staged_${traceId}.zip` });
       } else {
-        envOverrides.push({ name: 'STAGING_ZIP_KEY', value: 'latest/staging.zip' });
+        const baseZipKey = traceId ? `staged_${traceId}.zip` : 'latest/staging.zip';
+        const finalZipKey = workspaceId ? `workspaces/${workspaceId}/${baseZipKey}` : baseZipKey;
+        envOverrides.push({ name: 'STAGING_ZIP_KEY', value: finalZipKey });
       }
 
       // Atomic Sync: Ensure gapIds are passed if present in trace context

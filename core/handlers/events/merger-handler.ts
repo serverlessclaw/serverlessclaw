@@ -54,12 +54,13 @@ export interface MergeResult {
  * @returns A promise resolving to the result of the merge operation.
  */
 export async function handlePatchMerge(eventDetail: Record<string, unknown>): Promise<MergeResult> {
-  const { userId, sessionId, traceId, initiatorId, results } = eventDetail as {
+  const { userId, sessionId, traceId, initiatorId, results, workspaceId } = eventDetail as {
     userId: string;
     sessionId?: string;
     traceId?: string;
     initiatorId?: string;
     results: PatchResult[];
+    workspaceId?: string;
   };
 
   const emptyResult: MergeResult = {
@@ -176,10 +177,11 @@ export async function handlePatchMerge(eventDetail: Record<string, unknown>): Pr
 
         if (stagingBucket) {
           const fileBuffer = await fs.readFile(zipPath);
-          const zipKey = traceId ? `staged_${traceId}.zip` : STORAGE.STAGING_ZIP;
+          const baseZipKey = traceId ? `staged_${traceId}.zip` : STORAGE.STAGING_ZIP;
+          const zipKey = workspaceId ? `workspaces/${workspaceId}/${baseZipKey}` : baseZipKey;
 
           logger.info(
-            `Merger: Uploading merged changes to S3 bucket: ${stagingBucket} (Key: ${zipKey})`
+            `Merger: Uploading merged changes to S3 bucket: ${stagingBucket} (Key: ${zipKey}) (WS: ${workspaceId || 'GLOBAL'})`
           );
           await s3Client.send(
             new PutObjectCommand({
@@ -199,6 +201,7 @@ export async function handlePatchMerge(eventDetail: Record<string, unknown>): Pr
             sessionId: sessionId ?? '',
             gapIds: [],
             stagingKey: zipKey,
+            workspaceId,
           });
           deploymentTriggered = true;
         }
