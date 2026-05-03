@@ -166,10 +166,28 @@ export default $config({
     const { createBilling } = await import('./infra/billing.js');
     const { billingTopic } = createBilling();
 
+    // 10. Project-specific Integrations (Dynamic Spoke Stacks)
+    // This allows projects like 'voltx' or 'github' to add their own resources
+    const integrationResources: Record<string, any> = {};
+    try {
+      const { createGitHubStack } = await import('./integrations/github/stack.js');
+      integrationResources.github = createGitHubStack({
+        ...agentResources,
+        bus,
+        memoryTable,
+        traceTable,
+        stagingBucket,
+        knowledgeBucket,
+      });
+    } catch (e) {
+      // Integration not present or failed to load
+    }
+
     return {
       apiUrl: api.url,
       dashboardUrl: dashboard.url,
       billingTopicArn: billingTopic?.arn,
+      integrations: Object.keys(integrationResources),
     };
   },
 });
