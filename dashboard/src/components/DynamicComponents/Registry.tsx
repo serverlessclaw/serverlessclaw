@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { DynamicComponent } from '../Chat/types';
+import { useExtensions } from '../Providers/ExtensionProvider';
 import OperationCard from './OperationCard';
 import UICommand from './UICommand';
 import StatusFlow from './StatusFlow';
@@ -18,6 +19,14 @@ interface RegistryProps {
  * Registry of dynamic components that can be rendered in the chat.
  */
 export function DynamicComponentRegistry({ component, onAction }: RegistryProps) {
+  const { dynamicComponents } = useExtensions();
+
+  // Check for domain-specific extensions first
+  const ExtendedComponent = dynamicComponents.get(component.componentType);
+  if (ExtendedComponent) {
+    return <ExtendedComponent component={component} onAction={onAction} />;
+  }
+
   switch (component.componentType) {
     case 'operation-card':
     case 'action-card':

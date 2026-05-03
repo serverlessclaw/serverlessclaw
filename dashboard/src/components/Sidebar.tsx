@@ -34,6 +34,7 @@ import { useTheme } from 'next-themes';
 import Typography from '@/components/ui/Typography';
 import Button from '@/components/ui/Button';
 import { useRealtimeContext } from '@/components/Providers/RealtimeProvider';
+import { useExtensions } from '@/components/Providers/ExtensionProvider';
 import CyberTooltip from '@/components/CyberTooltip';
 import TenantSwitcher from '@/components/TenantSwitcher';
 import { logger } from '@claw/core/lib/logger';
@@ -48,6 +49,7 @@ export default function Sidebar() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const { isSidebarCollapsed: isCollapsed, setSidebarCollapsed, setActiveModal } = useUICommand();
+  const { sidebarExtensions } = useExtensions();
   const { t, locale, setLocale } = useTranslations();
   const { theme, setTheme } = useTheme();
   const { isConnected } = useRealtimeContext();
@@ -118,6 +120,9 @@ export default function Sidebar() {
       subtitle: t('COLLABORATION_SUBTITLE'),
       icon: Vote,
     },
+    ...sidebarExtensions
+      .filter((e) => !e.section || e.section === 'OPERATIONS')
+      .map((e) => ({ ...e, activePaths: [e.href] })),
 
     { label: t('INTELLIGENCE'), type: 'header' },
     { href: ROUTES.AGENTS, label: t('AGENTS'), subtitle: t('AGENTS_SUBTITLE'), icon: Users },
@@ -133,6 +138,9 @@ export default function Sidebar() {
       subtitle: t('CAPABILITIES_SUBTITLE'),
       icon: Wrench,
     },
+    ...sidebarExtensions
+      .filter((e) => e.section === 'INTELLIGENCE')
+      .map((e) => ({ ...e, activePaths: [e.href] })),
 
     { label: t('OBSERVABILITY'), type: 'header' },
     {

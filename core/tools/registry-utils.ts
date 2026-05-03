@@ -37,8 +37,11 @@ export async function getAgentTools(
   logger.info(`[TOOLS] Configured tools for ${agentId}: ${config.tools.join(', ')}`);
 
   // 1. Resolve local tools
+  const { PluginManager } = await import('../lib/plugin-manager');
+  const pluginTools = PluginManager.getRegisteredTools();
+  
   const localTools = config.tools
-    .map((name: string) => (TOOLS as Record<string, ITool>)[name])
+    .map((name: string) => (TOOLS as Record<string, ITool>)[name] || pluginTools[name])
     .filter((t: ITool | undefined): t is ITool => !!t);
 
   logger.info(`[TOOLS] Local tools found: ${localTools.map((t) => t.name).join(', ')}`);
