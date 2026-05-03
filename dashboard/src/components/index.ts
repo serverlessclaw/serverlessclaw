@@ -3,11 +3,8 @@
  * Export components here to make them available to other monorepo projects.
  */
 
-// UI Base
-export * from './ui/Button';
-export * from './ui/Card';
-export * from './ui/Typography';
-export * from './ui/Input';
+// UI Base (Inherited from @claw/ui framework)
+export * from '@claw/ui';
 
 // Layout
 export * from './Layout/MainLayout';
