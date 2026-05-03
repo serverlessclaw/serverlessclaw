@@ -112,6 +112,17 @@ endef
 verify-up-to-date: ## Verify local branch is up to date with remote
 	@$(call verify_up_to_date)
 
+# --- SYNC ---
+sync-downstream: ## Pull latest evolution from upstream framework (serverlessclaw)
+	@$(call log_step,Syncing downstream via subtree pull from upstream/main...)
+	@git subtree pull --prefix=framework upstream main --squash
+	@$(call log_success,Framework synced successfully.)
+
+sync-upstream: ## Push core framework improvements back to upstream
+	@$(call log_step,Pushing framework improvements via subtree push to upstream/main...)
+	@git subtree push --prefix=framework upstream main
+	@$(call log_success,Framework improvements promoted to upstream.)
+
 show-env: ## Show current environment variables (filtered)
 	@$(call load_env); \
 	$(call log_info,Current Environment Settings (Loaded from files):); \

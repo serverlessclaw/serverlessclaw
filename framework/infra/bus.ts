@@ -3,11 +3,12 @@
  *
  * @returns An object containing the AgentBus (EventBridge), RealtimeBus (IoT Core), and DLQ (SQS) instances.
  */
-export function createBus() {
+export function createBus(options: { pathPrefix?: string } = {}) {
+  const prefix = options.pathPrefix ?? '';
   const bus = new sst.aws.Bus('AgentBus');
   const realtime = new sst.aws.Realtime('RealtimeBus', {
     authorizer: {
-      handler: 'core/handlers/realtime-auth.handler',
+      handler: `${prefix}core/handlers/realtime-auth.handler`,
       logging: {
         retention: '1 month',
       },

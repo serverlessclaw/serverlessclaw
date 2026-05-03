@@ -4,4 +4,3 @@ packages:
   - 'dashboard'
   - 'cli'
   - 'integrations/*'
-  - 'packages/*'

@@ -8,6 +8,7 @@ import { LockManager } from '../lock/lock-manager';
 import { MCP } from '../constants/tools';
 import { DYNAMO_KEYS } from '../constants/system';
 import { DEFAULT_MCP_SERVERS } from './mcp-defaults';
+import { PluginManager } from '../plugin-manager';
 
 /**
  * MCPBridge coordinates connections to external Model Context Protocol (MCP) servers.
@@ -239,7 +240,7 @@ export class MCPBridge {
       logger.warn('[MCPBridge] Failed to parse MCP_SERVER_ARNS, using empty config:', e);
     }
 
-    const defaultServers = DEFAULT_MCP_SERVERS;
+    const defaultServers = { ...DEFAULT_MCP_SERVERS, ...PluginManager.getRegisteredMCPServers() };
 
     for (const [name, defaultConfig] of Object.entries(defaultServers)) {
       if (!finalConfig[name]) {

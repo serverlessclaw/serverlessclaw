@@ -304,21 +304,6 @@ export class AgentEmitter {
         usage,
       };
 
-      // 🚀 Phase 2: Agent Lifecycle Hooks - onMessage
-      try {
-        const { AgentHookRegistry } = await import('../registry/agent-hook');
-        // Run in background to avoid blocking realtime bridge
-        AgentHookRegistry.triggerMessage(payload, {
-          agentId: this.config?.id ?? 'unknown',
-          traceId,
-          sessionId,
-          workspaceId,
-          userId: baseUserId,
-        }).catch((err) => logger.error('Failed to trigger onMessage hook:', err));
-      } catch (err) {
-        // Silently ignore if registry can't be imported
-      }
-
       await publishToRealtime(topic, payload);
     } catch (e) {
       // Don't let chunk emission failures block the main loop

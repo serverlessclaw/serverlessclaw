@@ -31,7 +31,12 @@ export function createApi(_ctx: SharedContext): { api: sst.aws.ApiGatewayV2 } {
  * @param api - The API Gateway instance.
  * @param ctx - The shared context containing agents and other resources.
  */
-export function configureApiRoutes(api: sst.aws.ApiGatewayV2, ctx: SharedContext): void {
+export function configureApiRoutes(
+  api: sst.aws.ApiGatewayV2,
+  ctx: SharedContext,
+  options: { pathPrefix?: string } = {}
+): void {
+  const prefix = options.pathPrefix ?? '';
   const {
     memoryTable,
     traceTable,
@@ -75,7 +80,7 @@ export function configureApiRoutes(api: sst.aws.ApiGatewayV2, ctx: SharedContext
     : {};
 
   api.route('ANY /webhook', {
-    handler: 'core/handlers/webhook.handler',
+    handler: `${prefix}core/handlers/webhook.handler`,
     nodejs: { loader: NODEJS_LOADERS },
     link: [
       memoryTable,
@@ -108,7 +113,7 @@ export function configureApiRoutes(api: sst.aws.ApiGatewayV2, ctx: SharedContext
 
   // Health Probe
   api.route('GET /health', {
-    handler: 'core/handlers/health.handler',
+    handler: `${prefix}core/handlers/health.handler`,
     nodejs: { loader: NODEJS_LOADERS },
     link: [memoryTable, traceTable, configTable, stagingBucket, knowledgeBucket, bus],
     permissions: [

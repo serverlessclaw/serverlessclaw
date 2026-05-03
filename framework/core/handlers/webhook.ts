@@ -10,6 +10,7 @@ import {
   GapStatus,
 } from '../lib/types/agent';
 import { InputAdapter } from '../adapters/input/types';
+import { bootstrap } from '../lib/bootstrap';
 
 /**
  * Main entry point for webhooks (Telegram and other platforms).
@@ -19,6 +20,7 @@ export const handler = async (
   event: APIGatewayProxyEventV2,
   context: Context
 ): Promise<APIGatewayProxyResultV2> => {
+  await bootstrap();
   logger.info('[WEBHOOK] Start | Event:', event.body?.substring(0, 100));
 
   // 1. Identify Source and Initialize Adapter

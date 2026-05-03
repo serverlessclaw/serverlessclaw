@@ -1,39 +1,14 @@
 import { IAgentConfig, ITool, IMemory, IProvider } from './types';
 import { logger } from './logger';
-import { PromptDecorator, PromptDecoratorRegistry } from './registry/prompt-decorator';
-import { IAgentHooks, AgentHookRegistry } from './registry/agent-hook';
-import { IToolMiddleware, ToolMiddlewareRegistry } from './registry/tool-middleware';
-import { IAuditSink, AuditSinkRegistry } from './registry/audit-sink';
-import { IEventMirror, EventMirrorRegistry } from './registry/event-mirror';
-import { ITelemetrySink, TelemetrySinkRegistry } from './registry/telemetry-sink';
-import { IMissionObserver, MissionControlRegistry } from './registry/mission-control';
 
 export interface ClawPlugin {
   id: string;
   agents?: Record<string, IAgentConfig>;
   tools?: Record<string, ITool>;
+  mcpServers?: Record<string, MCPServerConfig>;
+  prompts?: Record<string, string>;
   memoryProviders?: Record<string, IMemory>;
   llmProviders?: Record<string, IProvider>;
-  promptDecorators?: PromptDecorator[];
-  hooks?: IAgentHooks;
-  toolMiddleware?: IToolMiddleware[];
-  auditSinks?: IAuditSink[];
-  eventMirrors?: IEventMirror[];
-  telemetrySinks?: ITelemetrySink[];
-  missionObservers?: IMissionObserver[];
-  // UI Extensions (Phase 1 & 4 bridge)
-  sidebarExtensions?: Array<{
-    id: string;
-    label: string;
-    href: string;
-    icon: string; // Icon name as string for serializability
-    section?: string;
-  }>;
-  layoutExtensions?: Array<{
-    id: string;
-    slot: string;
-    componentName: string; // Component name to be looked up in DynamicRegistry
-  }>;
   onInit?: () => Promise<void>;
 }
 
@@ -52,63 +27,9 @@ export class PluginManager {
     this.plugins.set(plugin.id, plugin);
     logger.info(`[PluginManager] Registered plugin: ${plugin.id}`);
 
-    // Register prompt decorators if any
-    if (plugin.promptDecorators) {
-      plugin.promptDecorators.forEach((decorator) => {
-        PromptDecoratorRegistry.register(decorator);
-      });
-    }
-
-    // Register agent hooks if any
-    if (plugin.hooks) {
-      AgentHookRegistry.register(plugin.hooks);
-    }
-
-    // Register tool middleware if any
-    if (plugin.toolMiddleware) {
-      plugin.toolMiddleware.forEach((mw) => {
-        ToolMiddlewareRegistry.register(mw);
-      });
-    }
-
-    // Register audit sinks if any
-    if (plugin.auditSinks) {
-      plugin.auditSinks.forEach((sink) => {
-        AuditSinkRegistry.register(sink);
-      });
-    }
-
-    // Register event mirrors if any
-    if (plugin.eventMirrors) {
-      plugin.eventMirrors.forEach((mirror) => {
-        EventMirrorRegistry.register(mirror);
-      });
-    }
-
-    // Register telemetry sinks if any
-    if (plugin.telemetrySinks) {
-      plugin.telemetrySinks.forEach((sink) => {
-        TelemetrySinkRegistry.register(sink);
-      });
-    }
-
-    // Register mission observers if any
-    if (plugin.missionObservers) {
-      plugin.missionObservers.forEach((observer) => {
-        MissionControlRegistry.register(observer);
-      });
-    }
-
     if (plugin.onInit) {
       await plugin.onInit();
     }
-  }
-
-  /**
-   * Retrieves all registered plugins.
-   */
-  static getAllPlugins(): ClawPlugin[] {
-    return Array.from(this.plugins.values());
   }
 
   static getRegisteredAgents(): Record<string, IAgentConfig> {
@@ -129,6 +50,46 @@ export class PluginManager {
       }
     }
     return tools;
+  }
+
+  static getRegisteredMCPServers(): Record<string, MCPServerConfig> {
+    const servers: Record<string, MCPServerConfig> = {};
+    for (const plugin of this.plugins.values()) {
+      if (plugin.mcpServers) {
+        Object.assign(servers, plugin.mcpServers);
+      }
+    }
+    return servers;
+  }
+
+  static getRegisteredPrompts(): Record<string, string> {
+    const prompts: Record<string, string> = {};
+    for (const plugin of this.plugins.values()) {
+      if (plugin.prompts) {
+        Object.assign(prompts, plugin.prompts);
+      }
+    }
+    return prompts;
+  }
+
+  static getRegisteredLLMProviders(): Record<string, IProvider> {
+    const providers: Record<string, IProvider> = {};
+    for (const plugin of this.plugins.values()) {
+      if (plugin.llmProviders) {
+        Object.assign(providers, plugin.llmProviders);
+      }
+    }
+    return providers;
+  }
+
+  static getRegisteredMemoryProviders(): Record<string, IMemory> {
+    const providers: Record<string, IMemory> = {};
+    for (const plugin of this.plugins.values()) {
+      if (plugin.memoryProviders) {
+        Object.assign(providers, plugin.memoryProviders);
+      }
+    }
+    return providers;
   }
 
   static async initialize() {

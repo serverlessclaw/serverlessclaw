@@ -35,6 +35,8 @@ The main `Makefile` at the root is the "Hub". It includes specialized "Spoke" fi
 | `make test-affected`  | Test     | Run only tests affected by recent changes (smart selection) |
 | `make security-scan`  | Test     | Scan dependencies for security vulnerabilities              |
 | `make docs-check`     | Test     | Validate documentation is in sync with code                 |
+| `make sync-downstream`| Sync     | Pull latest evolution from upstream framework (serverlessclaw)|
+| `make sync-upstream`  | Sync     | Push core framework improvements back to upstream            |
 | `make manifest`       | CI       | Generate a failure manifest from CI logs                    |
 
 Note: SST-related Make targets invoke the workspace-local SST binary (`./node_modules/.bin/sst`) directly. Run `pnpm install` first so this binary is available.

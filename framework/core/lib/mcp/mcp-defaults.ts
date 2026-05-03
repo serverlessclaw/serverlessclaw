@@ -4,7 +4,7 @@ import { MCPServerConfig } from '../types/mcp';
  * Default MCP servers provided by Serverless Claw.
  */
 export const DEFAULT_MCP_SERVERS: Record<string, MCPServerConfig> = {
-  ast: { type: 'local', command: 'npx -y @aiready/ast-mcp-server@0.4.8' },
+  ast: { type: 'local', command: 'npx -y @aiready/ast-mcp-server@0.8.6' },
   filesystem: {
     type: 'local',
     command: 'npx --no-install -y @modelcontextprotocol/server-filesystem@0.6.2',
