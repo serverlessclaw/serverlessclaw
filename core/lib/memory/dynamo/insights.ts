@@ -158,7 +158,11 @@ export class DynamoMemoryInsights extends DynamoMemoryGaps implements IKnowledge
     return InsightOps.recordMemoryHit(this, userId, timestamp, scope);
   }
 
-  async saveDistilledRecoveryLog(traceId: string, task: string, scope?: string | ContextualScope): Promise<void> {
+  async saveDistilledRecoveryLog(
+    traceId: string,
+    task: string,
+    scope?: string | ContextualScope
+  ): Promise<void> {
     await this.addMemory(
       `RECOVERY#${traceId}`,
       InsightCategory.FAILURE_PATTERN,

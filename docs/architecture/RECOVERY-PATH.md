@@ -36,7 +36,7 @@ sequenceDiagram
 
 ## DLQ Retry Flow (Spine Resilience)
 
-```mermaid
+````mermaid
 graph TD
     A[DLQ Entry] --> B{retryDlqEntry}
     B --> C[emitEvent with IdempotencyKey]
@@ -70,8 +70,9 @@ sequenceDiagram
             Note right of Scheduler: SKIP (already handled)
         end
     end
-```
-```
+````
+
+````
 
 ## Atomic Multi-Tenant DLQ Retrieval
 
@@ -84,7 +85,7 @@ To prevent "In-Memory Multi-Tenant Filtering" (Anti-Pattern 19), the system util
                                        |-- FilterExpression: workspaceId = :ws
                                        |
                                    [ ISOLATED DATA ]
-```
+````
 
 ## Key Mechanisms
 

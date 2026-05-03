@@ -44,7 +44,7 @@ To prevent overwrites when multiple collaborations share a participant at the sa
 
 Token usage and recursion depth are tracked with strict `workspaceId` dimensioning to prevent cross-tenant budget leakage.
 
-```ascii
+````ascii
 +-------------------------------------------------------------+
 | TokenBudgetEnforcer (Shield Layer)                          |
 +-------------------------------------------------------------+
@@ -77,8 +77,9 @@ To prevent cross-tenant limit sharing, the `BlastRadiusStore` uses workspace-pre
                                                             |
                                                             v
                                                    [ Count < 5/hour? ] --> ( ALLOW / BLOCK )
-```
-```
+````
+
+````
 
 ## 3. Regenerative Metabolism (Silo 7)
 
@@ -102,7 +103,7 @@ To ensure strict isolation during background maintenance, all query-based retrie
                         v
                 [ Query (TypeTimestampIndex) ]
                 [ FilterExpression: workspaceId = :ws ]
-```
+````
 
 ## 4. Recovery Path (Shield -> Spine -> Brain)
 

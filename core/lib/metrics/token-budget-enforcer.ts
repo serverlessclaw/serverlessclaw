@@ -364,7 +364,7 @@ export class TokenBudgetEnforcer {
       if (workspaceId && history.length > 0 && history[0].workspaceId !== workspaceId) {
         continue;
       }
- 
+
       summary.push({
         sessionId,
         costUsd: history.reduce((sum, r) => sum + r.estimatedCostUsd, 0),
