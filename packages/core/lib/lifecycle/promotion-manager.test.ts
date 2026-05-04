@@ -119,7 +119,7 @@ describe('PromotionManager', () => {
 
       expect(result).toBe(true);
       expect(ConfigManager.atomicUpdateMapEntity).toHaveBeenCalledWith(
-        'system_agents_config',
+        'agents_config',
         'agent-1',
         expect.objectContaining({ evolutionMode: EvolutionMode.AUTO }),
         expect.objectContaining({
