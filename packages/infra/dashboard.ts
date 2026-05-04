@@ -4,9 +4,14 @@ import { SharedContext, provisionDomainConfig, AGENT_CONFIG, getValidSecrets } f
  * Deploys the Next.js dashboard for monitoring and managing the agents.
  *
  * @param ctx - The shared context containing system resources.
+ * @param options - Optional configuration for infrastructure deployment (e.g., pathPrefix).
  * @returns An object containing the created dashboard resource.
  */
-export function createDashboard(ctx: SharedContext): { dashboard: sst.aws.Nextjs } {
+export function createDashboard(
+  ctx: SharedContext,
+  options: { pathPrefix?: string } = {}
+): { dashboard: sst.aws.Nextjs } {
+  const prefix = options.pathPrefix ?? '';
   const {
     memoryTable,
     traceTable,
@@ -22,7 +27,7 @@ export function createDashboard(ctx: SharedContext): { dashboard: sst.aws.Nextjs
   } = ctx;
 
   const dashboard = new sst.aws.Nextjs('ClawCenter', {
-    path: 'apps/dashboard',
+    path: `${prefix}apps/dashboard`,
     domain: provisionDomainConfig('dashboard'),
     link: [
       memoryTable,
