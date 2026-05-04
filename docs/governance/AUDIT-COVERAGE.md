@@ -39,6 +39,9 @@ Last Updated: 2026-05-03
 
 | Date       | Report                                             | Silos Covered                    | Cross-Silo | Key Findings                                                                                                         |
 | :--------- | :------------------------------------------------- | :------------------------------- | :--------- | :------------------------------------------------------------------------------------------------------------------- |
+| 2026-05-04 | `audit-2026-05-04-spine-dlq.md`                    | Spine                            | A          | FIXED: P1 Infinite replay loop in DLQ triage and permanent data loss of failed events.                               |
+| 2026-05-04 | `audit-2026-05-04-metabolism-trace-cleanup.md`     | Metabolism, Infra                | F          | FIXED: P1 Orphaned trace cleanup handler. Provisioned infrastructure and fixed missing TraceTable index.             |
+| 2026-05-04 | `audit-2026-05-04-webhook-isolation.md`            | Spine                            | A          | FIXED: P1 In-Memory Multi-Tenant Filtering (Anti-Pattern 19) in Webhook approval gap queries.                        |
 | 2026-05-03 | `audit-2026-05-03-metabolism-isolation.md`         | Metabolism, Hand, Scales         | F          | FIXED: P1 Schedule name collisions, P1 Unpartitioned S3 keys, P1 Metabolism cleanup blind spot.                      |
 | 2026-05-03 | `audit-2026-05-03-spine-recursion-isolation.md`    | Spine, Brain, Eye                | A          | FIXED: P1 Multi-tenant leakage in recursion tracking, P1 Partitioned token usage, P2 Telemetry/Doc drift.            |
 | 2026-05-03 | `audit-2026-05-03-utility-isolation.md`            | Metabolism, Hand, Spine          | G          | FIXED: P1 S3 Staging Isolation Breach, P1 Merger flow functional bug, P2 In-memory DLQ filtering.                    |

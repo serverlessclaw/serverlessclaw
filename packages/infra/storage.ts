@@ -35,6 +35,7 @@ export function createStorage() {
       timestamp: 'number',
       agentId: 'string',
       workspaceId: 'string',
+      status: 'string',
     },
     primaryIndex: { hashKey: 'traceId', rangeKey: 'nodeId' },
     globalIndexes: {
@@ -42,6 +43,7 @@ export function createStorage() {
       SummaryByNode: { hashKey: 'nodeId', rangeKey: 'timestamp' },
       AgentIdIndex: { hashKey: 'agentId', rangeKey: 'timestamp' },
       WorkspaceSummaryIndex: { hashKey: 'workspaceId', rangeKey: 'timestamp' },
+      'status-index': { hashKey: 'status', rangeKey: 'timestamp' },
     },
     ttl: 'expiresAt',
     transform: {

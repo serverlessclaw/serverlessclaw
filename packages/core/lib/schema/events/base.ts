@@ -72,6 +72,8 @@ export const BASE_EVENT_SCHEMA = z.object({
       totalTokens: z.number().default(0),
     })
     .optional(),
+  /** Track number of replays from Dead Letter Queue. */
+  replayCount: z.number().optional(),
 });
 
 /** Zod-inferred type for Attachment (matches ATTACHMENT_SCHEMA runtime output). */

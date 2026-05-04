@@ -216,7 +216,7 @@ export const handler = async (
         const memory = new DynamoMemory();
 
         // Find gaps in PENDING_APPROVAL status for this user
-        const pendingGaps = await memory.getAllGaps(GapStatus.PENDING_APPROVAL);
+        const pendingGaps = await memory.getAllGaps(GapStatus.PENDING_APPROVAL, workspaceId);
         // Filter by sessionId/requestingUserId in metadata since gaps store these in metadata
         const userGaps = pendingGaps.filter(
           (g) => g.metadata.sessionId === sessionId || g.metadata.requestingUserId === userId

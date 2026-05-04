@@ -50,6 +50,22 @@ export async function handler(
           traceId: (detail.traceId as string) ?? 'unknown',
           context: { envelopeId: record.messageId, originalDetailType: detailType },
         });
+
+        const { storeInDLQ } = await import('../lib/utils/bus/dlq');
+        const { EventPriority } = await import('../lib/utils/bus/types');
+        await storeInDLQ(
+          'DLQHandler',
+          detailType,
+          detail,
+          {
+            retryCount: replayCount,
+            maxRetries: MAX_REPLAY_ATTEMPTS,
+            lastError: `Exceeded max replay attempts (${MAX_REPLAY_ATTEMPTS})`,
+            priority: EventPriority.CRITICAL,
+          },
+          record.messageId
+        );
+
         continue;
       }
 

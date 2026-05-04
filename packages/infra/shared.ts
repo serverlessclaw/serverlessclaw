@@ -16,6 +16,7 @@ export interface AgentFunctionResources {
   heartbeatHandler: sst.aws.Function;
   concurrencyMonitor: sst.aws.Function;
   maintenanceHandler: sst.aws.Function;
+  traceCleanupHandler: sst.aws.Function;
   mergerAgent: sst.aws.Function;
   qaAgent: sst.aws.Function;
   researcherAgent: sst.aws.Function;

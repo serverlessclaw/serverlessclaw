@@ -36,6 +36,7 @@ This diagram visualizes the interaction between the **Metabolism (Silo 7)**, **S
                |-- Feature Flag Pruning (WS Scoped)
                |-- Reclaim S3 Staging (WS Prefix Scoped)
                |-- Trust-Based Mode Shifting (AUTO/HITL)
+               |-- Orphan Trace Cleanup (Status Index Scoped)
 ```
 
 ## Key Mechanisms
