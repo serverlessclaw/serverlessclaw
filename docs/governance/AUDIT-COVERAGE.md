@@ -12,13 +12,13 @@ Last Updated: 2026-05-03
 
 | Silo  | Name           | Primary Code Paths                              | Audit Count | Last Audited | Risk Level |
 | :---- | :------------- | :---------------------------------------------- | :---------- | :----------- | :--------- |
-| **1** | The Spine      | `core/handlers/events.ts`, `core/lib/bus.ts`    | 21          | 2026-05-04   | Low        |
+| **1** | The Spine      | `core/handlers/events.ts`, `core/lib/bus.ts`    | 22          | 2026-05-04   | Low        |
 | **2** | The Hand       | `core/lib/mcp.ts`, `core/lib/agent/executor.ts` | 12          | 2026-05-03   | Low        |
 | **3** | The Shield     | `core/lib/safety/safety-engine.ts`              | 21          | 2026-05-04   | Low        |
 | **4** | The Brain      | `core/lib/memory/`, `core/lib/rag/`             | 18          | 2026-05-04   | Low        |
 | **5** | The Eye        | `core/lib/metrics/`, `core/lib/tracer/`         | 17          | 2026-05-03   | Low        |
-| **6** | The Scales     | `core/lib/safety/trust-manager.ts`              | 17          | 2026-05-03   | Low        |
-| **7** | The Metabolism | `core/lib/maintenance/metabolism.ts`            | 12          | 2026-05-04   | Low        |
+| **6** | The Scales     | `core/lib/safety/trust-manager.ts`              | 18          | 2026-05-04   | Low        |
+| **7** | The Metabolism | `core/lib/maintenance/metabolism.ts`            | 13          | 2026-05-04   | Low        |
 
 ---
 
@@ -31,7 +31,7 @@ Last Updated: 2026-05-03
 | **C**       | Identity Journey  | Brain → Spine → Shield      | 10          | 2026-05-01  |
 | **D**       | Trust Loop        | Eye → Scales → Spine        | 13          | 2026-05-03  |
 | **E**       | Recovery Path     | Shield → Spine → Brain      | 12          | 2026-05-04  |
-| **F**       | Metabolic Loop    | Metabolism ↔ Scales ↔ Spine | 4           | 2026-05-04  |
+| **F**       | Metabolic Loop    | Metabolism ↔ Scales ↔ Spine | 5           | 2026-05-04  |
 
 ---
 
@@ -39,6 +39,7 @@ Last Updated: 2026-05-03
 
 | Date       | Report                                             | Silos Covered                    | Cross-Silo | Key Findings                                                                                                         |
 | :--------- | :------------------------------------------------- | :------------------------------- | :--------- | :------------------------------------------------------------------------------------------------------------------- |
+| 2026-05-04 | `audit-2026-05-04-metabolism-loop.md`              | Metabolism, Scales, Spine        | F          | FIXED: P1 Metabolic Memory Leak (Gaps), P2 Redundant Mode Shifting, P2 Promotion Race Condition, P2 S3 Isolation.    |
 | 2026-05-04 | `audit-2026-05-04-tenant-isolation.md`             | Shield, Spine, Brain, Met.       | E, F       | FIXED: P0 Multi-tenant Idempotency leakage, P0 Budget Race Conditions, P1 Orphaned Handlers.                         |
 | 2026-05-04 | `audit-2026-05-04-spine-dlq.md`                    | Spine                            | A          | FIXED: P1 Infinite replay loop in DLQ triage and permanent data loss of failed events.                               |
 | 2026-05-04 | `audit-2026-05-04-metabolism-trace-cleanup.md`     | Metabolism, Infra                | F          | FIXED: P1 Orphaned trace cleanup handler. Provisioned infrastructure and fixed missing TraceTable index.             |

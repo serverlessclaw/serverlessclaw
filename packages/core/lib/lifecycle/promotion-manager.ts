@@ -123,38 +123,62 @@ export class PromotionManager {
   /**
    * Promotes an agent to AUTO mode globally if their trust score is very high.
    * Fulfills Principle 9: Trust-Driven Mode Shifting.
+   * Uses atomic conditional update to prevent race conditions (Anti-Pattern 7).
    */
   static async promoteAgentToAuto(
     agentId: string,
     trustScore: number,
     scope?: { workspaceId?: string }
   ): Promise<boolean> {
+    const { TRUST, DYNAMO_KEYS } = await import('../constants/system');
+    const { ConfigManager } = await import('../registry/config');
+
+    if (trustScore < TRUST.AUTONOMY_THRESHOLD) return false;
+
     try {
-      const config = await AgentRegistry.getAgentConfig(agentId, scope);
-      if (!config || config.evolutionMode === EvolutionMode.AUTO) return false;
-
-      const { TRUST } = await import('../constants/system');
-      if (trustScore >= TRUST.AUTONOMY_THRESHOLD) {
-        logger.info(
-          `[PROMOTION] Autonomous Mode Shift: Promoting agent ${agentId} to AUTO mode (TrustScore: ${trustScore})`
-        );
-        await AgentRegistry.updateAgentConfig(
-          agentId,
-          { evolutionMode: EvolutionMode.AUTO },
-          scope
-        );
-
-        await emitEvent('promotion.manager', EventType.REPORT_BACK, {
-          userId: 'SYSTEM',
-          agentId,
-          task: `Autonomous Mode Shift: Agent ${agentId} promoted to AUTO mode due to high trust.`,
+      // Principle 13: Atomic State Integrity
+      await ConfigManager.atomicUpdateMapEntity(
+        DYNAMO_KEYS.AGENTS_CONFIG,
+        agentId,
+        {
+          evolutionMode: EvolutionMode.AUTO,
+          lastUpdated: new Date().toISOString(),
+          lastPromotedAt: new Date().toISOString(),
+        },
+        {
           workspaceId: scope?.workspaceId,
-          metadata: { trustScore, previousMode: config.evolutionMode },
-        });
+          increments: { version: 1 },
+          conditionExpression:
+            'attribute_exists(#val.#id) AND #val.#id.#mode <> :auto AND #val.#id.#trust >= :threshold',
+          expressionAttributeNames: {
+            '#mode': 'evolutionMode',
+            '#trust': 'trustScore',
+          },
+          expressionAttributeValues: {
+            ':auto': EvolutionMode.AUTO,
+            ':threshold': TRUST.AUTONOMY_THRESHOLD,
+          },
+        }
+      );
 
-        return true;
+      logger.info(
+        `[PROMOTION] Autonomous Mode Shift: Promoted agent ${agentId} to AUTO mode (TrustScore: ${trustScore}, WS: ${scope?.workspaceId || 'GLOBAL'})`
+      );
+
+      await emitEvent('promotion.manager', EventType.REPORT_BACK, {
+        userId: 'SYSTEM',
+        agentId,
+        task: `Autonomous Mode Shift: Agent ${agentId} promoted to AUTO mode due to high trust.`,
+        workspaceId: scope?.workspaceId,
+        metadata: { trustScore, newMode: EvolutionMode.AUTO },
+      });
+
+      return true;
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === 'ConditionalCheckFailedException') {
+        // Already promoted or trust decayed below threshold since last check
+        return false;
       }
-    } catch (e) {
       logger.error(`[PROMOTION] Failed to autonomously promote agent ${agentId}:`, e);
     }
     return false;

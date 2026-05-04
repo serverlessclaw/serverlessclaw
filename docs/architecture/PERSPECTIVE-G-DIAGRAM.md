@@ -27,9 +27,9 @@ This diagram visualizes the interaction between the **Metabolism (Silo 7)**, **S
         (4) Tool Execution (Deferred Trace Collection)           |
                |                                                 |
                v                                                 |
-       [ Silo 7: The Metabolism ] -------------------------------+
+       [ Silo 7: The Metabolism ] <--- (MetabolismService Consolidated)
                |
-        (5) Autonomous Repairs (Regeneration - Perspective F)
+        (5) Autonomous Repairs (Regenerative Metabolism)
                |-- Prune Stale Overrides (WS Scoped)
                |-- Cull Memory Bloat (WS Scoped)
                |-- Atomic DLQ Recovery (FilterExpression Scoped)
@@ -42,6 +42,6 @@ This diagram visualizes the interaction between the **Metabolism (Silo 7)**, **S
 ## Key Mechanisms
 
 1.  **Perspective G: Mandatory SYSTEM Scoping**: All autonomous repairs (Silo 7) and reputation updates (Silo 6) must be anchored to a `workspaceId`. Unscoped background tasks are rejected by the Shield to prevent cross-tenant elevation.
-2.  **Perspective F: Atomic Regenerative Repairs**: Repairs utilize DynamoDB `ConditionExpression` and `FilterExpression` to ensure that maintenance tasks are idempotent and isolated. DLQ retrieval uses server-side filtering to prevent multi-tenant data leakage.
+2.  **Perspective F: Atomic Regenerative Repairs**: Repairs utilize DynamoDB `ConditionExpression` and `FilterExpression` to ensure that maintenance tasks are idempotent and isolated. The `MetabolismService` centralizes these repairs to prevent logic drift in maintenance handlers.
 3.  **Metabolic hygiene**: S3 staging reclamation and tool pruning are monitored; failures trigger P1 audit findings to notify the Eye and the Scales of hygiene blind spots.
-4.  **Trust-Based Shift**: High-trust agents are promoted to `AUTO` mode, while low-trust agents are mitigated via registry disabling, closing the metabolic loop.
+4.  **Trust-Based Shift**: High-trust agents are promoted to `AUTO` mode via atomic conditional updates, while low-trust agents are mitigated via registry disabling, closing the metabolic loop.

@@ -13,6 +13,11 @@ vi.mock('../registry/AgentRegistry', () => ({
 }));
 vi.mock('../utils/bus');
 vi.mock('../logger');
+vi.mock('../registry/config', () => ({
+  ConfigManager: {
+    atomicUpdateMapEntity: vi.fn(),
+  },
+}));
 
 describe('PromotionManager', () => {
   beforeEach(() => {
@@ -107,19 +112,19 @@ describe('PromotionManager', () => {
 
   describe('promoteAgentToAuto', () => {
     it('should promote agent when trust is above threshold', async () => {
-      vi.mocked(AgentRegistry.getAgentConfig).mockResolvedValueOnce({
-        id: 'agent-1',
-        evolutionMode: EvolutionMode.HITL,
-        trustScore: 98,
-      } as any);
+      const { ConfigManager } = await import('../registry/config');
+      vi.mocked(ConfigManager.atomicUpdateMapEntity).mockResolvedValue(undefined as any);
 
       const result = await PromotionManager.promoteAgentToAuto('agent-1', 98);
 
       expect(result).toBe(true);
-      expect(AgentRegistry.updateAgentConfig).toHaveBeenCalledWith(
+      expect(ConfigManager.atomicUpdateMapEntity).toHaveBeenCalledWith(
+        'system_agents_config',
         'agent-1',
-        { evolutionMode: EvolutionMode.AUTO },
-        undefined
+        expect.objectContaining({ evolutionMode: EvolutionMode.AUTO }),
+        expect.objectContaining({
+          conditionExpression: expect.stringContaining('#val.#id.#mode <> :auto'),
+        })
       );
       expect(emitEvent).toHaveBeenCalledWith(
         'promotion.manager',
@@ -131,30 +136,23 @@ describe('PromotionManager', () => {
       );
     });
 
-    it('should not promote if already in AUTO mode', async () => {
-      vi.mocked(AgentRegistry.getAgentConfig).mockResolvedValueOnce({
-        id: 'agent-1',
-        evolutionMode: EvolutionMode.AUTO,
-        trustScore: 98,
-      } as any);
+    it('should return false if trust is below threshold', async () => {
+      const result = await PromotionManager.promoteAgentToAuto('agent-1', 90);
+
+      expect(result).toBe(false);
+      const { ConfigManager } = await import('../registry/config');
+      expect(ConfigManager.atomicUpdateMapEntity).not.toHaveBeenCalled();
+    });
+
+    it('should return false if atomic update fails with ConditionalCheckFailedException', async () => {
+      const { ConfigManager } = await import('../registry/config');
+      vi.mocked(ConfigManager.atomicUpdateMapEntity).mockRejectedValue({
+        name: 'ConditionalCheckFailedException',
+      });
 
       const result = await PromotionManager.promoteAgentToAuto('agent-1', 98);
 
       expect(result).toBe(false);
-      expect(AgentRegistry.updateAgentConfig).not.toHaveBeenCalled();
-    });
-
-    it('should not promote if trust is below threshold', async () => {
-      vi.mocked(AgentRegistry.getAgentConfig).mockResolvedValueOnce({
-        id: 'agent-1',
-        evolutionMode: EvolutionMode.HITL,
-        trustScore: 90,
-      } as any);
-
-      const result = await PromotionManager.promoteAgentToAuto('agent-1', 90);
-
-      expect(result).toBe(false);
-      expect(AgentRegistry.updateAgentConfig).not.toHaveBeenCalled();
     });
   });
 });

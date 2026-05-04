@@ -97,12 +97,11 @@ export async function executeRepairs(
       }
 
       // Case B: Exceptionally High Trust -> Promote to AUTO (Perspective F)
-      if (config.enabled !== false && config.evolutionMode !== EvolutionMode.AUTO) {
-        const promoted = await PromotionManager.promoteAgentToAuto(agentId, trustScore, {
-          workspaceId,
-        });
-        if (promoted) promotedCount++;
-      }
+      // Delegated to PromotionManager for atomic consistency
+      const promoted = await PromotionManager.promoteAgentToAuto(agentId, trustScore, {
+        workspaceId,
+      });
+      if (promoted) promotedCount++;
     }
 
     if (disabledCount > 0 || promotedCount > 0) {
@@ -169,7 +168,8 @@ export async function pruneStagingBucket(scope: { workspaceId?: string }): Promi
       const listResponse = await s3Client.send(
         new ListObjectsV2Command({
           Bucket: bucket,
-          Prefix: scope.workspaceId ? `workspaces/${scope.workspaceId}/` : undefined,
+          // Principle 11: Restrict global reclamation to global/ prefix to prevent cross-tenant impact
+          Prefix: scope.workspaceId ? `workspaces/${scope.workspaceId}/` : 'global/',
           ContinuationToken: continuationToken,
         })
       );

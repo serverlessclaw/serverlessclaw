@@ -27,12 +27,14 @@ export const handler = async (_event: unknown, _context: Context): Promise<void>
 
     const { PromotionManager } = await import('../lib/lifecycle/promotion-manager');
 
+    const { MetabolismService } = await import('../lib/maintenance/metabolism');
+    const { AgentRegistry } = await import('../lib/registry/AgentRegistry');
+
     try {
       const { listWorkspaceIds } = await import('../lib/memory/workspace-operations');
       const workspaceIds = await listWorkspaceIds();
 
-      const { AgentRegistry } = await import('../lib/registry/AgentRegistry');
-
+      // Maintenance loop over all workspaces
       for (const workspaceId of workspaceIds) {
         // Proactive evolution for each workspace
         const evolutionCount = await evolutionScheduler.triggerTimedOutActions(workspaceId);
@@ -40,25 +42,21 @@ export const handler = async (_event: unknown, _context: Context): Promise<void>
           logger.info(`[MAINTENANCE] Triggered ${evolutionCount} actions in WS: ${workspaceId}`);
         }
 
-        // Trust decay for each workspace
+        // Trust decay for each workspace (Silo 6)
         await TrustManager.decayTrustScores(workspaceId);
 
-        // Principle 9: Autonomous Mode Shift check
-        const workspaceConfigs = await AgentRegistry.getAllConfigs({ workspaceId });
-        for (const [id, cfg] of Object.entries(workspaceConfigs)) {
-          if (cfg.trustScore && cfg.trustScore >= 95) {
-            await PromotionManager.promoteAgentToAuto(id, cfg.trustScore, { workspaceId });
-          }
-        }
+        // Run full Metabolism Audit (including Repair 2: Gap Archival/Culling)
+        // This fixes the multi-tenant memory leak (Audit Finding 2)
+        await MetabolismService.runMetabolismAudit(memory, {
+          repair: true,
+          workspaceId,
+        });
       }
 
-      // Also check global agents
-      const globalConfigs = await AgentRegistry.getAllConfigs();
-      for (const [id, cfg] of Object.entries(globalConfigs)) {
-        if (cfg.trustScore && cfg.trustScore >= 95) {
-          await PromotionManager.promoteAgentToAuto(id, cfg.trustScore);
-        }
-      }
+      // Also check global agents and perform global repairs
+      await TrustManager.decayTrustScores();
+      await MetabolismService.runMetabolismAudit(memory, { repair: true });
+
     } catch (error) {
       logger.warn('[MAINTENANCE] Multi-tenant maintenance cycle failed:', error);
     }
@@ -68,7 +66,6 @@ export const handler = async (_event: unknown, _context: Context): Promise<void>
       CONFIG_DEFAULTS.TIE_BREAK_TIMEOUT_MS.code
     );
 
-    const { AgentRegistry } = await import('../lib/registry/AgentRegistry');
     const { TRUST } = await import('../lib/constants/system');
 
     for (const collab of staleCollabs) {
@@ -93,18 +90,6 @@ export const handler = async (_event: unknown, _context: Context): Promise<void>
           lastActivityAt: collab.lastActivityAt,
         },
       });
-    }
-
-    // 3. Stale Gap Archival
-    const archivedGaps = await memory.archiveStaleGaps(CONFIG_DEFAULTS.STALE_GAP_DAYS.code);
-    if (archivedGaps > 0) {
-      logger.info(`[MAINTENANCE] Archived ${archivedGaps} stale capability gaps`);
-    }
-
-    // 4. Cull resolved gaps
-    const culledGaps = await memory.cullResolvedGaps(CONFIG_DEFAULTS.GAPS_RETENTION_DAYS.code);
-    if (culledGaps > 0) {
-      logger.info(`[MAINTENANCE] Culled ${culledGaps} resolved capability gaps`);
     }
 
     logger.info('[MAINTENANCE] cycle completed successfully.');

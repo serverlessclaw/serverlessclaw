@@ -447,3 +447,9 @@ PluginManager.register(voltxPlugin);
 - [AUDIT.md](./AUDIT.md) - Audit framework
 - [PRINCIPLES.md](./PRINCIPLES.md) - Design principles
 - [AUDIT-COVERAGE.md](./AUDIT-COVERAGE.md) - Audit coverage matrix
+### 22. Metabolic Blindness (Scoping Omissions in Maintenance)
+**Description**: Maintenance or "Metabolism" loops that iterate over global resources without correctly scoping repairs to the current workspace or tenant.
+**Why it's bad**: Causes multi-tenant memory leaks (gaps not culled), performance degradation, and potential cross-tenant data leakage if global scans accidentally touch tenant-specific objects.
+**Principle**: [7. Resource Efficiency (Metabolic Balance)](./PRINCIPLES.md), [11. Multi-tenant Isolation](./PRINCIPLES.md).
+**Detection**: Audit maintenance handlers (`maintenance.ts`) for culling/archival loops that occur outside of workspace iteration blocks.
+**Remediation**: Use `MetabolismService.runMetabolismAudit` and ensure all repairs are passed a `workspaceId` scope during iteration.
