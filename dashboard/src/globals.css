@@ -2,18 +2,18 @@
 @source "./**/*.{ts,tsx}";
 
 @theme {
-  --color-brand-primary: var(--brand-primary);
-  --color-brand-secondary: var(--brand-secondary);
-  --color-background: var(--surface-background);
-  --color-foreground: var(--surface-foreground);
-  --color-card: var(--surface-card);
-  --color-card-elevated: var(--surface-card-elevated);
-  --color-border: var(--surface-border);
-  --color-muted-foreground: var(--text-muted);
-  --color-muted-more: var(--text-muted-more);
+  --color-cyber-green: var(--cyber-green);
+  --color-cyber-blue: var(--cyber-blue);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card-bg);
+  --color-card-elevated: var(--card-bg-elevated);
+  --color-border: var(--card-border);
+  --color-muted-foreground: var(--muted);
+  --color-muted-more: var(--muted-more);
   --shadow-premium: var(--shadow-premium);
-  --font-sans: var(--font-brand-sans), system-ui, sans-serif;
-  --font-mono: var(--font-brand-mono), monospace;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), monospace;
   @keyframes cyber-pulse {
     0%,
     100% {
@@ -27,63 +27,55 @@
 }
 
 :root {
-  /* Tokens */
-  --cyber-green: #008f5a;
-  --cyber-blue: #007a8a;
-  
-  /* Semantic Mappings (Default Theme) */
-  --brand-primary: var(--cyber-green);
-  --brand-secondary: var(--cyber-blue);
-  --surface-background: #ffffff;
-  --surface-foreground: #0a0a0a;
-  --surface-card: rgba(0, 0, 0, 0.02);
-  --surface-card-elevated: #ffffff;
-  --surface-border: rgba(0, 0, 0, 0.08);
-  --text-muted: rgba(0, 0, 0, 0.5);
-  --text-muted-more: rgba(0, 0, 0, 0.3);
-  --font-brand-sans: var(--font-inter);
-  --font-brand-mono: var(--font-jetbrains-mono);
-  
-  /* Shared Constants */
+  --background: #ffffff;
+  --foreground: #0a0a0a;
+  --cyber-green: #008f5a; /* Darker green for light mode contrast */
+  --cyber-blue: #007a8a; /* Darker blue for light mode contrast */
+  --card-bg: rgba(0, 0, 0, 0.02);
+  --card-bg-elevated: #ffffff;
+  --card-border: rgba(0, 0, 0, 0.08);
+  --muted: rgba(0, 0, 0, 0.5);
+  --muted-more: rgba(0, 0, 0, 0.3);
+  --border: rgba(0, 0, 0, 0.08);
   --input-bg: rgba(0, 0, 0, 0.03);
   --input-border: rgba(0, 0, 0, 0.1);
   --shadow-premium: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
 }
 
 .dark {
-  /* Token Overrides */
+  --background: #0a0a0a;
+  --foreground: #ededed;
   --cyber-green: #00ffa3;
   --cyber-blue: #00e0ff;
-
-  /* Semantic Overrides */
-  --surface-background: #0a0a0a;
-  --surface-foreground: #ededed;
-  --surface-card: rgba(255, 255, 255, 0.03);
-  --surface-card-elevated: rgba(255, 255, 255, 0.05);
-  --surface-border: rgba(255, 255, 255, 0.1);
-  --text-muted: rgba(255, 255, 255, 0.6);
-  --text-muted-more: rgba(255, 255, 255, 0.4);
+  --card-bg: rgba(255, 255, 255, 0.03);
+  --card-bg-elevated: rgba(255, 255, 255, 0.05);
+  --card-border: rgba(255, 255, 255, 0.1);
+  --muted: rgba(255, 255, 255, 0.6);
+  --muted-more: rgba(255, 255, 255, 0.4);
+  --border: rgba(255, 255, 255, 0.1);
+  --input-bg: rgba(255, 255, 255, 0.03);
+  --input-border: rgba(255, 255, 255, 0.1);
   --shadow-premium: 0 20px 50px -12px rgba(0, 0, 0, 0.5);
 }
 
 body {
-  background: var(--surface-background);
-  color: var(--surface-foreground);
-  font-family: var(--font-brand-mono);
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-mono);
   -webkit-font-smoothing: antialiased;
 }
 
 .glass-card {
-  background: var(--surface-card);
-  border: 1px solid var(--surface-border);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   backdrop-filter: blur(12px);
   border-radius: 8px;
   box-shadow: var(--shadow-premium);
 }
 
 .glass-card-elevated {
-  background: var(--surface-card-elevated);
-  border: 1px solid var(--surface-border);
+  background: var(--card-bg-elevated);
+  border: 1px solid var(--card-border);
   backdrop-filter: blur(12px);
   border-radius: 8px;
   box-shadow: var(--shadow-premium);
@@ -98,7 +90,7 @@ body {
 }
 
 .cyber-border {
-  border-left: 2px solid var(--brand-primary);
+  border-left: 2px solid var(--cyber-green);
 }
 
 /* Custom Utilities for Dynamic Theme Colors */

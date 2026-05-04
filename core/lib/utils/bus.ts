@@ -326,19 +326,6 @@ export async function emitEvent(
     }
   }
 
-  // 🚀 Phase 4: Event Mirroring
-  try {
-    const { EventMirrorRegistry } = await import('../registry/event-mirror');
-    // Mirror the event asynchronously to avoid blocking the main bus flow
-    EventMirrorRegistry.mirror({
-      source,
-      detailType: type as string,
-      detail,
-    }).catch((err) => logger.error('[BUS] Event mirror failed:', err));
-  } catch (err) {
-    // Registry might not be initialized in some environments, ignore
-  }
-
   const busName = await getBusName();
   const detailJson = JSON.stringify(detail);
 

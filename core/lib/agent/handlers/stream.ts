@@ -115,21 +115,6 @@ export async function* handleStream(
     }
   }
 
-  // 🚀 Phase 2: Agent Lifecycle Hooks - onStart
-  try {
-    const { AgentHookRegistry } = await import('../../registry/agent-hook');
-    await AgentHookRegistry.triggerStart({
-      agentId: agent.config?.id ?? 'unknown',
-      traceId,
-      sessionId,
-      workspaceId,
-      userId: baseUserId,
-      metadata: options.metadata,
-    });
-  } catch (err) {
-    logger.error('Failed to trigger onStart hook:', err);
-  }
-
   const { isHumanTakingControl } = await import('../../handoff');
   const ignoreHandoff = options.ignoreHandoff ?? false;
   if (!ignoreHandoff && (await isHumanTakingControl(baseUserId, sessionId))) {
@@ -210,7 +195,6 @@ export async function* handleStream(
         orgId,
         teamId,
         staffId,
-        metadata: options.metadata,
       }
     );
 
@@ -306,42 +290,9 @@ export async function* handleStream(
       );
     }
     await tracer.endTrace(fullContent);
-
-    // 🚀 Phase 2: Agent Lifecycle Hooks - onComplete
-    try {
-      const { AgentHookRegistry } = await import('../../registry/agent-hook');
-      await AgentHookRegistry.triggerComplete(
-        { content: fullContent, thought: fullThought },
-        {
-          agentId: agent.config?.id ?? 'unknown',
-          traceId,
-          sessionId,
-          workspaceId,
-          userId: baseUserId,
-          metadata: options.metadata,
-        }
-      );
-    } catch (err) {
-      logger.error('Failed to trigger onComplete hook:', err);
-    }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     await tracer.failTrace(errorMessage, { error: errorMessage });
-
-    // 🚀 Phase 2: Agent Lifecycle Hooks - onError
-    try {
-      const { AgentHookRegistry } = await import('../../registry/agent-hook');
-      await AgentHookRegistry.triggerError(error, {
-        agentId: agent.config?.id ?? 'unknown',
-        traceId,
-        sessionId,
-        workspaceId,
-        userId: baseUserId,
-        metadata: options.metadata,
-      });
-    } catch (err) {
-      logger.error('Failed to trigger onError hook:', err);
-    }
 
     if (!process.env.VITEST) {
       reportAgentMetrics({

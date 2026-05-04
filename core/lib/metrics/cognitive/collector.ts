@@ -60,25 +60,6 @@ export class MetricsCollector {
   ): Promise<void> {
     if (!this.config.enabled) return;
 
-    // 🚀 Phase 4: Telemetry Sink
-    try {
-      const { TelemetrySinkRegistry } = await import('../../registry/telemetry-sink');
-      TelemetrySinkRegistry.record({
-        traceId: (metadata?.traceId as string) || 'unknown',
-        agentId,
-        workspaceId,
-        operation: 'task_completion',
-        status: success ? 'success' : 'error',
-        durationMs: latencyMs,
-        metadata: {
-          ...metadata,
-          tokensUsed,
-        },
-      }).catch((err) => logger.error('[METRICS] Telemetry recording failed:', err));
-    } catch (err) {
-      // Ignore if registry not available
-    }
-
     const baseTimestamp = Date.now();
     this.buffer.push(
       {

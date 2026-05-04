@@ -4,6 +4,7 @@ import { Context } from 'aws-lambda';
 import { handleWarmup } from '../lib/utils/agent-helpers';
 import { SessionStateManager } from '../lib/session/session-state';
 import { checkCollaborationTimeout } from '../lib/conflict-resolution';
+import { bootstrap } from '../lib/bootstrap';
 
 /**
  * Agent Multiplexer (Mono-lambda).
@@ -14,6 +15,7 @@ export const handler = async (
   event: Record<string, unknown>,
   context: Context
 ): Promise<unknown> => {
+  await bootstrap();
   const detailType = (event['detail-type'] as string) || (event.type as string);
 
   // 1. Handle Centralized Warmup

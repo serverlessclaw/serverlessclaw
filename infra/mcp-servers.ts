@@ -24,7 +24,11 @@ export interface MCPServerResources {
  * @param ctx - The shared infrastructure context.
  * @returns The created MCP multiplexer functions.
  */
-export function createMCPServers(ctx: SharedContext): MCPServerResources {
+export function createMCPServers(
+  ctx: SharedContext,
+  options: { pathPrefix?: string } = {}
+): MCPServerResources {
+  const prefix = options.pathPrefix ?? '';
   const { memoryTable, configTable, secrets, stagingBucket } = ctx;
   const validSecrets = getValidSecrets(secrets);
 
@@ -37,7 +41,7 @@ export function createMCPServers(ctx: SharedContext): MCPServerResources {
   };
 
   const commonProps = {
-    handler: 'core/mcp-servers/multiplexer.handler',
+    handler: `${prefix}core/mcp-servers/multiplexer.handler`,
     dev: false as const,
     architecture: LAMBDA_ARCHITECTURE as 'arm64' | 'x86_64',
     nodejs: { loader: NODEJS_LOADERS },

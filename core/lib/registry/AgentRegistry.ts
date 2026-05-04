@@ -6,6 +6,7 @@ import { ConfigManager } from './config';
 import { ToolUsageRegistry } from './ToolUsageRegistry';
 import { TrustRegistry } from './TrustRegistry';
 import { PruningRegistry } from './PruningRegistry';
+import { PluginManager } from '../plugin-manager';
 
 /**
  * AgentRegistry handles discovery and configuration of agents.
@@ -27,7 +28,11 @@ export class AgentRegistry {
    * Checks if an agent ID belongs to the system backbone.
    */
   static isBackboneAgent(agentId: string): boolean {
-    return agentId in BACKBONE_REGISTRY || agentId in this.appRegistry;
+    return (
+      agentId in BACKBONE_REGISTRY ||
+      agentId in this.appRegistry ||
+      agentId in PluginManager.getRegisteredAgents()
+    );
   }
 
   /**
@@ -50,7 +55,9 @@ export class AgentRegistry {
     >;
     const dynamicConfig = agents?.[agentId];
     const backboneConfig =
-      this.appRegistry[agentId] || BACKBONE_REGISTRY[agentId as keyof typeof BACKBONE_REGISTRY];
+      this.appRegistry[agentId] ||
+      PluginManager.getRegisteredAgents()[agentId] ||
+      BACKBONE_REGISTRY[agentId as keyof typeof BACKBONE_REGISTRY];
 
     if (!dynamicConfig && !backboneConfig) return undefined;
 
@@ -75,6 +82,11 @@ export class AgentRegistry {
       ...dynamicConfig,
       id: agentId,
       name: dynamicConfig?.name ?? backboneConfig?.name ?? agentId,
+      systemPrompt:
+        dynamicConfig?.systemPrompt ??
+        PluginManager.getRegisteredPrompts()[agentId] ??
+        backboneConfig?.systemPrompt ??
+        '',
       enabled: dynamicConfig?.enabled ?? backboneConfig?.enabled ?? true,
     };
 
@@ -113,6 +125,13 @@ export class AgentRegistry {
     // Merge app-specific backbone
     for (const [id, appCfg] of Object.entries(this.appRegistry)) {
       all[id] = this.mergeAgentConfig(id, dynamicAgents?.[id], appCfg, toolOverrides?.[id]);
+    }
+    
+    // Merge plugin-registered agents
+    for (const [id, pluginCfg] of Object.entries(PluginManager.getRegisteredAgents())) {
+      if (!all[id]) {
+        all[id] = this.mergeAgentConfig(id, dynamicAgents?.[id], pluginCfg, toolOverrides?.[id]);
+      }
     }
 
     if (dynamicAgents) {

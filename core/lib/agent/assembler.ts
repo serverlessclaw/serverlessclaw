@@ -52,7 +52,6 @@ export class AgentAssembler {
       orgId?: string;
       teamId?: string;
       staffId?: string;
-      metadata?: Record<string, any>;
     }
   ): Promise<ContextResult> {
     const {
@@ -158,19 +157,6 @@ export class AgentAssembler {
       - AUDIENCE: ${isIsolated ? 'Orchestrator' : 'Human User'}
       - BEHAVIOR: ${isIsolated ? 'Be technical, precise, and structured.' : 'Be friendly, direct, and conversational. Skip internal monologue.'}
       `;
-
-    // 🚀 Phase 2: Cognitive Extensibility - Apply project-specific decorations
-    try {
-      const { PromptDecoratorRegistry } = await import('../registry/prompt-decorator');
-      contextPrompt = await PromptDecoratorRegistry.decorate(contextPrompt, {
-        workspaceId,
-        agentId: agentId || config?.id || 'unknown',
-        userId: baseUserId,
-        metadata: options.metadata,
-      });
-    } catch (err) {
-      logger.error('Failed to apply prompt decorators:', err);
-    }
 
     const [{ MessageRole }, summary] = await Promise.all([
       import('../types/index'),

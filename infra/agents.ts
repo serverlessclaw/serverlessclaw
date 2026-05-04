@@ -104,8 +104,10 @@ function createScheduledInvocation(
  */
 export function createAgents(
   ctx: SharedContext,
-  mcpServers?: MCPServerResources
+  mcpServers?: MCPServerResources,
+  options: { pathPrefix?: string } = {}
 ): AgentFunctionResources {
+  const prefix = options.pathPrefix ?? '';
   const {
     memoryTable,
     traceTable,
@@ -160,7 +162,7 @@ export function createAgents(
 
   // 4.5 Proactive Heartbeat Handler (Target for Dynamic Scheduler)
   const heartbeatHandler = new sst.aws.Function('HeartbeatHandler', {
-    handler: 'core/handlers/heartbeat.handler',
+    handler: `${prefix}core/handlers/heartbeat.handler`,
     dev: liveInLocalOnly,
     link: baseLink,
     permissions: basePermissions,
@@ -246,7 +248,7 @@ export function createAgents(
 
   // 1. High-Power Multiplexer (Coder, Researcher, Strategic Planner)
   const highPowerMultiplexer = new sst.aws.Function('HighPowerMultiplexer', {
-    handler: 'core/handlers/agent-multiplexer.handler',
+    handler: `${prefix}core/handlers/agent-multiplexer.handler`,
     dev: liveInLocalOnly,
     link: [...baseLink, stagingBucket, deployerLink],
     permissions: [...basePermissions, ...schedulerPermissions],
@@ -273,7 +275,7 @@ export function createAgents(
 
   // 2. Standard Multiplexer (QA, Facilitator)
   const standardMultiplexer = new sst.aws.Function('StandardMultiplexer', {
-    handler: 'core/handlers/agent-multiplexer.handler',
+    handler: `${prefix}core/handlers/agent-multiplexer.handler`,
     dev: liveInLocalOnly,
     link: [...baseLink, deployerLink],
     permissions: [...basePermissions, ...schedulerPermissions],
@@ -300,7 +302,7 @@ export function createAgents(
 
   // 3. Light Multiplexer (Critic, Reflector, Merger)
   const lightMultiplexer = new sst.aws.Function('LightMultiplexer', {
-    handler: 'core/handlers/agent-multiplexer.handler',
+    handler: `${prefix}core/handlers/agent-multiplexer.handler`,
     dev: liveInLocalOnly,
     link: [...baseLink, stagingBucket, deployerLink],
     permissions: [...basePermissions, ...schedulerPermissions],
@@ -336,7 +338,7 @@ export function createAgents(
 
   // 2. Build Monitor
   const buildMonitor = new sst.aws.Function('BuildMonitor', {
-    handler: 'core/handlers/monitor.handler',
+    handler: `${prefix}core/handlers/monitor.handler`,
     dev: liveInLocalOnly,
     link: [...baseLink, stagingBucket, deployerLink, ...(ctx.multiplexer ? [ctx.multiplexer] : [])],
     architecture: LAMBDA_ARCHITECTURE,
@@ -367,7 +369,7 @@ export function createAgents(
 
   // 4. Dead Man's Switch
   const deadMansSwitch = new sst.aws.Function('DeadMansSwitch', {
-    handler: 'core/handlers/recovery.handler',
+    handler: `${prefix}core/handlers/recovery.handler`,
     dev: liveInLocalOnly,
     link: [...baseLink, deployerLink, ctx.api],
     permissions: [
@@ -438,7 +440,7 @@ export function createAgents(
 
   // 3. Event Handler (System errors)
   const eventHandler = new sst.aws.Function('EventHandler', {
-    handler: 'core/handlers/events.handler',
+    handler: `${prefix}core/handlers/events.handler`,
     dev: liveInLocalOnly,
     link: baseLink,
     permissions: [
@@ -512,7 +514,7 @@ export function createAgents(
 
   // 8. Notifier
   const notifier = new sst.aws.Function('Notifier', {
-    handler: 'core/handlers/notifier.handler',
+    handler: `${prefix}core/handlers/notifier.handler`,
     dev: liveInLocalOnly,
     link: baseLink,
     permissions: basePermissions,
@@ -538,7 +540,7 @@ export function createAgents(
 
   // 8. Generic Agent Runner (Handles dynamic user-defined agents)
   const agentRunner = new sst.aws.Function('AgentRunner', {
-    handler: 'core/handlers/agent-runner.handler',
+    handler: `${prefix}core/handlers/agent-runner.handler`,
     dev: liveInLocalOnly,
     link: baseLink,
     architecture: LAMBDA_ARCHITECTURE,
@@ -565,7 +567,7 @@ export function createAgents(
 
   // 9. Realtime Bridge (EventBridge -> IoT Core)
   const bridge = new sst.aws.Function('RealtimeBridge', {
-    handler: 'core/handlers/bridge.handler',
+    handler: `${prefix}core/handlers/bridge.handler`,
     dev: liveInLocalOnly,
     link: [...(ctx.realtime ? [ctx.realtime] : []), bus],
     permissions: basePermissions,
@@ -599,7 +601,7 @@ export function createAgents(
 
   // 10. Concurrency Monitor (System health)
   const concurrencyMonitor = new sst.aws.Function('ConcurrencyMonitor', {
-    handler: 'core/handlers/concurrency-monitor.handler',
+    handler: `${prefix}core/handlers/concurrency-monitor.handler`,
     dev: liveInLocalOnly,
     link: [memoryTable, bus],
     architecture: LAMBDA_ARCHITECTURE,
@@ -614,7 +616,7 @@ export function createAgents(
 
   // 11. Maintenance Handler (Proactive evolution & Tie-breaks)
   const maintenanceHandler = new sst.aws.Function('MaintenanceHandler', {
-    handler: 'core/handlers/maintenance.handler',
+    handler: `${prefix}core/handlers/maintenance.handler`,
     dev: liveInLocalOnly,
     link: [memoryTable, bus],
     permissions: basePermissions,
@@ -664,7 +666,7 @@ export function createAgents(
   let dlqHandler: sst.aws.Function | undefined;
   if (dlq) {
     dlqHandler = new sst.aws.Function('DLQHandler', {
-      handler: 'core/handlers/dlq-handler.handler',
+      handler: `${prefix}core/handlers/dlq-handler.handler`,
       dev: liveInLocalOnly,
       link: [...baseLink, dlq],
       architecture: LAMBDA_ARCHITECTURE,

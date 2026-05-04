@@ -407,6 +407,31 @@ return await db.query({
 
 **Occurrences**: Fixed in `ClawTracer.getTrace` (Audit 2026-05-02).
 
+### 20. Domain Pollution (Hardcoded Business Logic)
+
+**What**: Hardcoding application-specific logic (e.g., domain agents, custom tool names, or business-specific MCP configs) directly into the core framework directories (`framework/core/lib`).
+
+**Risk**: High maintenance debt and extreme merge friction during two-way syncs between the Mother Hub and Spokes. Bloats the core engine for all other consumers.
+
+**Pattern**:
+
+```typescript
+// ❌ WRONG (in framework/core/lib/backbone.ts)
+[AgentType.BUSINESS]: {
+  id: 'business',
+  tools: [...BUSINESS_TOOLS], // Domain tools in core!
+}
+
+// ✅ CORRECT (in apps/voltx/src/plugin.ts)
+const voltxPlugin: ClawPlugin = {
+  id: 'voltx',
+  agents: { /* custom voltx agents */ }
+};
+PluginManager.register(voltxPlugin);
+```
+
+**Occurrences**: Reverted and refactored into `PluginManager` architecture in audit round 2026-05-04.
+
 ## How to Use This Document
 
 1. **During Code Review**: Check this document before submitting

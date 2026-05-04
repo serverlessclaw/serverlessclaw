@@ -39,12 +39,6 @@ vi.mock('./context-manager', () => ({
     summarize: vi.fn(() => Promise.resolve()),
   },
 }));
- 
-vi.mock('../registry/prompt-decorator', () => ({
-  PromptDecoratorRegistry: {
-    decorate: vi.fn((prompt: string) => Promise.resolve(`${prompt}\n[DECORATED_PROMPT]`)),
-  },
-}));
 
 function createMockMemory(overrides: Partial<any> = {}) {
   return {
@@ -283,31 +277,6 @@ describe('AgentAssembler', () => {
       );
 
       expect(result.contextLimit).toBeGreaterThan(0);
-    });
-
-    it('applies prompt decorations', async () => {
-      const memory = createMockMemory();
-      const provider = createMockProvider();
-      const { PromptDecoratorRegistry } = await import('../registry/prompt-decorator');
-
-      const result = await AgentAssembler.prepareContext(
-        memory as any,
-        provider as any,
-        undefined,
-        'user1',
-        'storage1',
-        'hello',
-        undefined,
-        { ...defaultOptions, metadata: { foo: 'bar' } }
-      );
-
-      expect(PromptDecoratorRegistry.decorate).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          metadata: { foo: 'bar' },
-        })
-      );
-      expect(result.contextPrompt).toContain('[DECORATED_PROMPT]');
     });
   });
 });

@@ -68,27 +68,6 @@ export class ToolSecurityValidator {
       logger.warn(
         `[SECURITY] Action blocked for agent '${execContext.agentId}': ${safetyResult.reason}`
       );
-
-      // 🚀 Phase 3: Governance - Audit Sink
-      try {
-        const { AuditSinkRegistry } = await import('../registry/audit-sink');
-        await AuditSinkRegistry.broadcast({
-          type: 'safety_violation',
-          agentId: execContext.agentId,
-          traceId: execContext.traceId,
-          sessionId: execContext.sessionId,
-          workspaceId: execContext.workspaceId,
-          userId: execContext.userId,
-          details: {
-            toolName: tool.name,
-            reason: safetyResult.reason,
-            source: 'safety_engine',
-          },
-        });
-      } catch (auditErr) {
-        logger.error('[SECURITY] Failed to broadcast audit event:', auditErr);
-      }
-
       return { allowed: false, reason: `PERMISSION_DENIED - ${safetyResult.reason}` };
     }
 
@@ -121,40 +100,7 @@ export class ToolSecurityValidator {
       return { allowed: false, requiresApproval: true, reason: safetyResult.reason };
     }
 
-    // 4. Middleware Interception (Phase 3: Governance)
-    try {
-      const { ToolMiddlewareRegistry } = await import('../registry/tool-middleware');
-      const mwResult = await ToolMiddlewareRegistry.execute(tool, args, execContext);
-      if (!mwResult.allowed) {
-        logger.warn(`[SECURITY] Action blocked by custom middleware for agent '${execContext.agentId}': ${mwResult.reason}`);
-        
-        // 🚀 Phase 3: Governance - Audit Sink
-        try {
-          const { AuditSinkRegistry } = await import('../registry/audit-sink');
-          await AuditSinkRegistry.broadcast({
-            type: 'security_block',
-            agentId: execContext.agentId,
-            traceId: execContext.traceId,
-            sessionId: execContext.sessionId,
-            workspaceId: execContext.workspaceId,
-            userId: execContext.userId,
-            details: { toolName: tool.name, reason: mwResult.reason, source: 'middleware' },
-          });
-        } catch (auditErr) {
-          logger.error('[SECURITY] Failed to broadcast audit event:', auditErr);
-        }
-
-        return { allowed: false, reason: `POLICY_VIOLATION - ${mwResult.reason}` };
-      }
-      if (mwResult.modifiedArgs) {
-        // Update local args for subsequent checks
-        Object.assign(args, mwResult.modifiedArgs);
-      }
-    } catch (err) {
-      logger.error('[SECURITY] Middleware execution failed:', err);
-    }
-
-    // 5. RBAC Check
+    // 4. RBAC Check
     if (tool.requiredPermissions && tool.requiredPermissions.length > 0) {
       let hasPermission = false;
       try {
@@ -186,30 +132,9 @@ export class ToolSecurityValidator {
 
       if (!hasPermission) {
         logger.warn(`RBAC validation failed for user ${execContext.userId} on tool ${tool.name}`);
-
-        // 🚀 Phase 3: Governance - Audit Sink
-        try {
-          const { AuditSinkRegistry } = await import('../registry/audit-sink');
-          await AuditSinkRegistry.broadcast({
-            type: 'security_block',
-            agentId: execContext.agentId,
-            traceId: execContext.traceId,
-            sessionId: execContext.sessionId,
-            workspaceId: execContext.workspaceId,
-            userId: execContext.userId,
-            details: {
-              toolName: tool.name,
-              reason: `Unauthorized. Missing permissions: ${tool.requiredPermissions?.join(', ')}`,
-              source: 'rbac',
-            },
-          });
-        } catch (auditErr) {
-          logger.error('[SECURITY] Failed to broadcast audit event:', auditErr);
-        }
-
         return {
           allowed: false,
-          reason: `Unauthorized. You do not have the required permissions (${tool.requiredPermissions?.join(', ')}) to execute this tool.`,
+          reason: `Unauthorized. You do not have the required permissions (${tool.requiredPermissions.join(', ')}) to execute this tool.`,
         };
       }
     }

@@ -18,14 +18,10 @@ function getBudgetTableName(): string {
 export interface BudgetConfig {
   /** Maximum cost in USD for a single session. */
   maxSessionCostUsd: number;
-  /** Maximum cost in USD for a single workspace (per 30 days). */
-  maxWorkspaceCostUsd: number;
   /** Maximum cost in USD for a single agent call. */
   maxAgentCostUsd: number;
   /** Maximum tokens for a single session. */
   maxSessionTokens: number;
-  /** Maximum tokens for a single workspace (per 30 days). */
-  maxWorkspaceTokens: number;
   /** Maximum tokens for a single agent call. */
   maxAgentTokens: number;
   /** Cost per 1K input tokens (USD) for estimation. */
@@ -36,10 +32,8 @@ export interface BudgetConfig {
 
 const DEFAULT_CONFIG: BudgetConfig = {
   maxSessionCostUsd: 5.0,
-  maxWorkspaceCostUsd: 50.0, // Default $50/mo per tenant
   maxAgentCostUsd: 2.0,
   maxSessionTokens: 500_000,
-  maxWorkspaceTokens: 5_000_000,
   maxAgentTokens: 100_000,
   costPer1kInputTokens: 0.003, // GPT-5-mini estimate
   costPer1kOutputTokens: 0.012,
@@ -161,70 +155,6 @@ export class TokenBudgetEnforcer {
   }
 
   /**
-   * Persists workspace-level aggregate usage.
-   */
-  private async persistWorkspaceAggregate(
-    workspaceId: string,
-    costDelta: number,
-    tokensDelta: number
-  ): Promise<void> {
-    try {
-      const userId = `WS#${workspaceId}#BUDGET#AGGREGATE`;
-      const now = Math.floor(Date.now() / 1000);
-      const expiresAt = now + TTL_DAYS_BUDGET * TIME.SECONDS_IN_DAY;
-
-      // Use UpdateCommand to atomically increment workspace totals
-      const { UpdateCommand } = await import('@aws-sdk/lib-dynamodb');
-      await docClient.send(
-        new UpdateCommand({
-          TableName: getBudgetTableName(),
-          Key: { userId, timestamp: 0 }, // Using timestamp 0 for aggregates
-          UpdateExpression:
-            'ADD totalCostUsd :cost, totalTokens :tokens, callCount :one SET workspaceId = :wsId, lastUpdated = :now, expiresAt = :exp',
-          ExpressionAttributeValues: {
-            ':cost': costDelta,
-            ':tokens': tokensDelta,
-            ':one': 1,
-            ':wsId': workspaceId,
-            ':now': now,
-            ':exp': expiresAt,
-          },
-        })
-      );
-    } catch (e) {
-      logger.warn(`[TokenBudgetEnforcer] Failed to persist workspace aggregate for ${workspaceId}:`, e);
-    }
-  }
-
-  /**
-   * Loads workspace-level aggregate usage.
-   */
-  async loadWorkspaceAggregate(
-    workspaceId: string
-  ): Promise<{ totalCostUsd: number; totalTokens: number } | null> {
-    try {
-      const userId = `WS#${workspaceId}#BUDGET#AGGREGATE`;
-      const { Items } = await docClient.send(
-        new QueryCommand({
-          TableName: getBudgetTableName(),
-          KeyConditionExpression: 'userId = :pk',
-          ExpressionAttributeValues: { ':pk': userId },
-        })
-      );
-      if (Items && Items.length > 0) {
-        return {
-          totalCostUsd: Items[0].totalCostUsd || 0,
-          totalTokens: Items[0].totalTokens || 0,
-        };
-      }
-      return { totalCostUsd: 0, totalTokens: 0 };
-    } catch (e) {
-      logger.error(`[TokenBudgetEnforcer] Failed to load workspace aggregate for ${workspaceId}:`, e);
-      return null;
-    }
-  }
-
-  /**
    * Estimates cost from token usage.
    */
   estimateCost(promptTokens: number, completionTokens: number): number {
@@ -292,62 +222,6 @@ export class TokenBudgetEnforcer {
     const sessionCostUsd = history.reduce((sum, r) => sum + r.estimatedCostUsd, 0);
     const sessionTokens = history.reduce((sum, r) => sum + r.promptTokens + r.completionTokens, 0);
     const percentUsed = (sessionCostUsd / this.config.maxSessionCostUsd) * 100;
-
-    // Workspace aggregate check (Phase 3: Governance)
-    if (workspaceId) {
-      try {
-        const workspaceAggregate = await this.loadWorkspaceAggregate(workspaceId);
-        if (workspaceAggregate) {
-          const newTotalCost = workspaceAggregate.totalCostUsd + estimatedCostUsd;
-          const newTotalTokens = workspaceAggregate.totalTokens + promptTokens + completionTokens;
-
-          if (newTotalCost >= this.config.maxWorkspaceCostUsd) {
-            logger.warn(
-              `[TokenBudgetEnforcer] Workspace ${workspaceId} exceeded aggregate budget: ` +
-                `$${newTotalCost.toFixed(4)} / $${this.config.maxWorkspaceCostUsd.toFixed(2)}`
-            );
-            return {
-              allowed: false,
-              reason: `Workspace aggregate budget exhausted: $${newTotalCost.toFixed(4)} / $${this.config.maxWorkspaceCostUsd.toFixed(2)}`,
-              sessionCostUsd,
-              sessionTokens,
-              percentUsed: 100,
-            };
-          }
-
-          if (newTotalTokens >= this.config.maxWorkspaceTokens) {
-            logger.warn(
-              `[TokenBudgetEnforcer] Workspace ${workspaceId} exceeded token budget: ` +
-                `${newTotalTokens} / ${this.config.maxWorkspaceTokens}`
-            );
-            return {
-              allowed: false,
-              reason: `Workspace token budget exhausted: ${newTotalTokens} / ${this.config.maxWorkspaceTokens}`,
-              sessionCostUsd,
-              sessionTokens,
-              percentUsed: 100,
-            };
-          }
-
-          // Persist workspace delta
-          this.persistWorkspaceAggregate(
-            workspaceId,
-            estimatedCostUsd,
-            promptTokens + completionTokens
-          ).catch(() => {});
-        }
-      } catch (err) {
-        logger.error(`[TokenBudgetEnforcer] Workspace budget check failed for ${workspaceId}:`, err);
-        // Fail-closed for safety
-        return {
-          allowed: false,
-          reason: 'Workspace budget check failed (fail-closed)',
-          sessionCostUsd,
-          sessionTokens,
-          percentUsed: 0,
-        };
-      }
-    }
 
     // Check session budget
     if (sessionCostUsd >= this.config.maxSessionCostUsd) {

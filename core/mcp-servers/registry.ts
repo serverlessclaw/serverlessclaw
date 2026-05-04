@@ -68,7 +68,7 @@ export const MCP_SERVER_REGISTRY: Record<string, StdioServerParameters> = {
   },
   ast: {
     command: 'npx',
-    args: ['--offline', '@aiready/ast-mcp-server@0.1.6'],
+    args: ['--offline', '@aiready/ast-mcp-server@0.8.6'],
     env: {
       HOME: '/tmp',
       NPM_CONFIG_CACHE: '/tmp/npm-cache',

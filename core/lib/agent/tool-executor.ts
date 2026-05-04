@@ -430,23 +430,6 @@ export class ToolExecutor {
         messageId: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       });
 
-      // 🚀 Phase 2: Agent Lifecycle Hooks - onToolCall (Failure)
-      try {
-        const { AgentHookRegistry } = await import('../registry/agent-hook');
-        await AgentHookRegistry.triggerToolCall(
-          { toolName: tool.name, args, error: execError },
-          {
-            agentId: execContext.agentId,
-            traceId: execContext.traceId,
-            sessionId: execContext.sessionId,
-            workspaceId: execContext.workspaceId,
-            userId: execContext.userId,
-          }
-        );
-      } catch {
-        // Silently ignore
-      }
-
       // Record execution crash as a trust penalty
       try {
         const { TrustManager } = await import('../safety/trust-manager');
@@ -468,23 +451,6 @@ export class ToolExecutor {
       return { toolCallCount: 0 };
     }
     const toolDurationMs = performance.now() - toolStart;
-
-    // 🚀 Phase 2: Agent Lifecycle Hooks - onToolCall (Success)
-    try {
-      const { AgentHookRegistry } = await import('../registry/agent-hook');
-      await AgentHookRegistry.triggerToolCall(
-        { toolName: tool.name, args, result: rawResult, durationMs: toolDurationMs },
-        {
-          agentId: execContext.agentId,
-          traceId: execContext.traceId,
-          sessionId: execContext.sessionId,
-          workspaceId: execContext.workspaceId,
-          userId: execContext.userId,
-        }
-      );
-    } catch {
-      // Silently ignore
-    }
 
     const resultText =
       typeof rawResult === 'string'

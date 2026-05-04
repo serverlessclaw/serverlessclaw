@@ -144,9 +144,6 @@ export async function loadAgentConfig(
   agentId: string | AgentType,
   options?: { workspaceId?: string }
 ): Promise<import('../types/index').IAgentConfig> {
-  const { initializePlugins } = await import('../plugins');
-  await initializePlugins();
-  
   const { AgentRegistry } = await import('../registry');
   const config = await AgentRegistry.getAgentConfig(agentId, options);
 
