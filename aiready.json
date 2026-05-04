@@ -52,7 +52,7 @@
       "maxFragmentation": 0.4,
       "focus": "all",
       "includeNodeModules": false,
-      "exclude": ["core/tools/index.ts"]
+      "exclude": ["packages/core/tools/index.ts"]
     },
     "naming-consistency": {
       "checkNaming": true,
@@ -137,11 +137,11 @@
       "trainingCutoffYear": 2023
     },
     "change-amplification": {
-      "exclude": []
+      "exclude": ["packages/core/tools/index.ts"]
     }
   },
   "visualizer": {
-    "groupingDirs": ["core", "dashboard", "infra", "scripts"],
+    "groupingDirs": ["packages", "apps", "scripts"],
     "graph": {
       "maxNodes": 5000,
       "maxEdges": 10000

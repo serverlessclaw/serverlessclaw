@@ -19,10 +19,10 @@ export default defineConfig({
     // Increase default test timeout to accommodate larger import/setup times
     // when running the full monorepo test suite on CI or local machines.
     testTimeout: 20000,
-    setupFiles: [path.resolve(__dirname, './core/tests/setup.ts')],
+    setupFiles: [path.resolve(__dirname, './packages/core/tests/setup.ts')],
     alias: {
-      '@': path.resolve(__dirname, './dashboard/src'),
-      '@claw/core': path.resolve(__dirname, './core'),
+      '@': path.resolve(__dirname, './apps/dashboard/src'),
+      '@claw/core': path.resolve(__dirname, './packages/core'),
     },
     // Ensure TSX files are transformed for the web environment (jsdom)
     browser: {
@@ -30,12 +30,16 @@ export default defineConfig({
     },
     server: {
       deps: {
-        inline: [/dashboard/],
+        inline: [/apps\/dashboard/],
       },
     },
     coverage: {
       provider: 'v8',
-      include: ['core/**/*.ts', 'infra/**/*.ts', 'dashboard/src/**/*.{ts,tsx}'],
+      include: [
+        'packages/core/**/*.ts',
+        'packages/infra/**/*.ts',
+        'apps/dashboard/src/**/*.{ts,tsx}',
+      ],
       exclude: [
         '**/*.test.ts',
         '**/*.test.tsx',

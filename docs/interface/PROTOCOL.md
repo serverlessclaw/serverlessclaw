@@ -38,7 +38,7 @@ Input adapters receive events from external systems (via webhooks or API polling
 
 For specialized or heavy integrations, adapters are maintained in dedicated workspaces within the monorepo to ensure isolation while sharing core types:
 
-- **GitHub**: `@serverlessclaw/integration-github` (lives in `integrations/github`)
+- **GitHub**: `@serverlessclaw/integration-github` (lives in `packages/integration-github`)
 - **Slack**: `@serverlessclaw/integration-slack` (planned consolidation)
 - **Jira**: Logic currently remains in `core` but follows the `IssueTrackerAction` interface.
 

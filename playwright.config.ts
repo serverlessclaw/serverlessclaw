@@ -17,7 +17,7 @@ export default defineConfig({
   webServer: process.env.BASE_URL
     ? undefined // skip local server when testing a deployed URL
     : {
-        command: 'pnpm --filter dashboard dev',
+        command: 'pnpm --filter @serverlessclaw/dashboard dev',
         port: 7777,
         reuseExistingServer: !process.env.CI,
         timeout: 300_000,

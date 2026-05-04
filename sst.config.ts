@@ -61,13 +61,13 @@ export default $config({
   },
   async run() {
     // SST v4 Modular Infrastructure via Dynamic Imports
-    const { createStorage } = await import('./infra/storage.js');
-    const { createBus } = await import('./infra/bus.js');
-    const { createDeployer } = await import('./infra/deployer.js');
-    const { createApi, configureApiRoutes } = await import('./infra/api.js');
-    const { createMCPServers } = await import('./infra/mcp-servers.js');
-    const { createAgents } = await import('./infra/agents.js');
-    const { createDashboard } = await import('./infra/dashboard.js');
+    const { createStorage } = await import('./packages/infra/storage.js');
+    const { createBus } = await import('./packages/infra/bus.js');
+    const { createDeployer } = await import('./packages/infra/deployer.js');
+    const { createApi, configureApiRoutes } = await import('./packages/infra/api.js');
+    const { createMCPServers } = await import('./packages/infra/mcp-servers.js');
+    const { createAgents } = await import('./packages/infra/agents.js');
+    const { createDashboard } = await import('./packages/infra/dashboard.js');
 
     // 1. Storage & Secrets
     const { memoryTable, traceTable, configTable, stagingBucket, knowledgeBucket, secrets } =
@@ -163,7 +163,7 @@ export default $config({
     });
 
     // 9. Billing & Cost Alerts ($5/day Daily Budget)
-    const { createBilling } = await import('./infra/billing.js');
+    const { createBilling } = await import('./packages/infra/billing.js');
     const { billingTopic } = createBilling();
 
     return {

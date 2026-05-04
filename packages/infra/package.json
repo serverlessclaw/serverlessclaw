@@ -1,0 +1,21 @@
+{
+  "name": "@serverlessclaw/infra",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "eslint": "^10.2.0",
+    "prettier": "^3.8.1",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.2"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test-silent": "vitest run --reporter=dot --config ../vitest.config.ts",
+    "test-coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "type-check": "tsc --noEmit",
+    "format-check": "prettier --check . --ignore-path ../../.prettierignore",
+    "aiready": "aiready scan"
+  }
+}

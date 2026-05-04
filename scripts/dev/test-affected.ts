@@ -35,7 +35,7 @@ export const CONFIG_TRIGGERS = [
   'vitest.config.ts',
   'vitest.config.mts',
   'tsconfig.json',
-  'dashboard/tsconfig.json',
+  'apps/dashboard/tsconfig.json',
   'package.json',
   'pnpm-lock.yaml',
 ];

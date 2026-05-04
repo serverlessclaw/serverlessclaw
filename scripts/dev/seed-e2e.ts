@@ -5,9 +5,9 @@
  */
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
-import { getMemoryTableName, getTraceTableName } from '../../core/lib/utils/ddb-client';
-import { GapStatus } from '../../core/lib/types/agent';
-import { MEMORY_KEYS } from '../../core/lib/constants';
+import { getMemoryTableName, getTraceTableName } from '../../packages/core/lib/utils/ddb-client';
+import { GapStatus } from '../../packages/core/lib/types/agent';
+import { MEMORY_KEYS } from '../../packages/core/lib/constants';
 
 async function seed() {
   console.log('🌱 Starting E2E Data Seeding...');

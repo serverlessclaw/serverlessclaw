@@ -385,7 +385,7 @@ export class DocumentationValidator {
     console.log('Validating agent roster...\n');
 
     const agentsDocPath = join(this.rootDir, 'docs/intelligence/AGENTS.md');
-    const agentsDirPath = join(this.rootDir, 'core/agents');
+    const agentsDirPath = join(this.rootDir, 'packages/core/agents');
 
     if (!existsSync(agentsDocPath) || !existsSync(agentsDirPath)) {
       return;
@@ -409,7 +409,7 @@ export class DocumentationValidator {
     const documentedAgents = new Set<string>();
 
     // Match table rows with agent links like `core/agents/coder.ts`
-    const agentRefRegex = /core\/agents\/([a-z][a-z0-9-]+)\.ts/g;
+    const agentRefRegex = /packages\/core\/agents\/([a-z][a-z0-9-]+)\.ts/g;
     let match;
     while ((match = agentRefRegex.exec(docContent)) !== null) {
       documentedAgents.add(match[1]);
@@ -421,7 +421,7 @@ export class DocumentationValidator {
         this.issues.push({
           type: 'agent_roster_mismatch',
           file: 'docs/intelligence/AGENTS.md',
-          message: `Agent '${agent}' exists in core/agents/ but is not documented in AGENTS.md`,
+          message: `Agent '${agent}' exists in packages/core/agents/ but is not documented in AGENTS.md`,
           severity: 'warning',
         });
       }
@@ -433,7 +433,7 @@ export class DocumentationValidator {
         this.issues.push({
           type: 'agent_roster_mismatch',
           file: 'docs/intelligence/AGENTS.md',
-          message: `Agent '${agent}' is documented in AGENTS.md but has no file in core/agents/`,
+          message: `Agent '${agent}' is documented in AGENTS.md but has no file in packages/core/agents/`,
           severity: 'warning',
         });
       }
@@ -447,7 +447,7 @@ export class DocumentationValidator {
     console.log('Validating tool registry...\n');
 
     const toolsDocPath = join(this.rootDir, 'docs/intelligence/TOOLS.md');
-    const constantsPath = join(this.rootDir, 'core/lib/constants.ts');
+    const constantsPath = join(this.rootDir, 'packages/core/lib/constants.ts');
 
     if (!existsSync(toolsDocPath) || !existsSync(constantsPath)) {
       return;
@@ -486,7 +486,7 @@ export class DocumentationValidator {
         this.issues.push({
           type: 'tool_registry_mismatch',
           file: 'docs/intelligence/TOOLS.md',
-          message: `Tool '${tool}' exists in TOOLS enum (core/lib/constants.ts) but is not documented in TOOLS.md`,
+          message: `Tool '${tool}' exists in TOOLS enum (packages/core/lib/constants.ts) but is not documented in TOOLS.md`,
           severity: 'warning',
         });
       }

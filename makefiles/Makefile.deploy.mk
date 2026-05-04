@@ -45,9 +45,9 @@ diff: ## Show SST infrastructure changes
 	@$(call log_info,SST diff for $(ENV)...)
 	@$(call load_env); $(SST) diff --stage $(ENV)
 
-synth: ## Synthesize SST resources
-	@$(call log_info,SST synth for $(ENV)...)
-	@$(call load_env); $(SST) synth --stage $(ENV)
+synth: ## Synthesize SST resources (mapped to sst diff in v4)
+	@$(call log_info,Validating SST resources for $(ENV)...)
+	@$(call load_env); $(SST) diff --stage $(ENV)
 
 remove: ## Remove SST resources for the specified environment
 	@$(call log_warning,WARNING: Removing SST resources for stage $(ENV)!)

@@ -25,7 +25,7 @@ interface Finding {
   severity: 'P0' | 'P1' | 'P2' | 'P3';
 }
 
-const CORE_DIR = join(process.cwd(), 'core');
+const CORE_DIR = join(process.cwd(), 'packages/core');
 
 function verifyFailClosed(): Finding[] {
   const findings: Finding[] = [];

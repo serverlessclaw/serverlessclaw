@@ -7,10 +7,10 @@ pnpm-lock.yaml
 .aiready/
 .kilo/
 .opencode/
-dashboard/.next/
-dashboard/.open-next/
-dashboard/out/
-dashboard/build/
+apps/dashboard/.next/
+apps/dashboard/.open-next/
+apps/dashboard/out/
+apps/dashboard/build/
 .open-next/
 *.log
 *.zip

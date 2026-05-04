@@ -12,16 +12,16 @@
     "skipLibCheck": true,
     "types": ["node", "aws-lambda", "vitest/globals"],
     "paths": {
-      "@serverlessclaw/integration-github": ["./integrations/github/src/index.ts"],
-      "@serverlessclaw/core/*": ["./core/*"]
+      "@serverlessclaw/integration-github": ["./packages/integration-github/src/index.ts"],
+      "@serverlessclaw/core/*": ["./packages/core/*"]
     }
   },
   "include": [
-    "core/**/*.ts",
-    "infra/**/*.ts",
+    "packages/core/**/*.ts",
+    "packages/infra/**/*.ts",
     "sst.config.ts",
     ".sst/platform/config.d.ts",
     "sst-env.d.ts"
   ],
-  "exclude": ["node_modules", "dashboard/src"]
+  "exclude": ["node_modules", "apps/dashboard/src"]
 }
