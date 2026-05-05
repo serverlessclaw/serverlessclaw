@@ -126,6 +126,13 @@ export class SafetyEngine extends SafetyBase {
 
     const normalizedAction = normalizeSafetyAction(action, context?.toolName);
     const policy = await this.getResolvedPolicy(tier, workspaceId, context?.orgId);
+    if (!policy) {
+      return {
+        allowed: false,
+        requiresApproval: false,
+        reason: `Unknown safety tier: ${tier}`,
+      };
+    }
 
     // 1. Hard Security Blocks
     const staticResult = await validateStaticPolicies(

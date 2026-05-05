@@ -15,7 +15,7 @@ export async function getHandlerForEvent(
   eventDetail: any
 ) {
   const { logger: localLogger } = await import('../../lib/logger');
-  const workspaceId = (eventDetail.workspaceId as string) || undefined;
+  const workspaceId = (eventDetail?.workspaceId as string) || undefined;
   const scope = { workspaceId };
 
   // Fetch routing configuration

@@ -19,6 +19,7 @@ vi.mock('../lib/utils/distributed-state', () => ({
   DistributedState: {
     isCircuitOpen: vi.fn().mockResolvedValue(false),
     consumeToken: vi.fn().mockResolvedValue(true),
+    recordFailure: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
