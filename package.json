@@ -47,7 +47,7 @@
     "node": ">=24 <25"
   },
   "dependencies": {
-    "@aiready/ast-mcp-server": "0.8.6",
+    "@aiready/ast-mcp-server": "0.8.7",
     "@octokit/rest": "^22.0.1",
     "@opennextjs/aws": "3.10.4",
     "dotenv": "^17.4.0",
