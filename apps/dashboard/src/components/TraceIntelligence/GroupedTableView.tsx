@@ -3,11 +3,10 @@
 import React from 'react';
 import { Zap } from 'lucide-react';
 import Typography from '@/components/ui/Typography';
-import { Trace } from '@/lib/types/ui';
-import { TranslationFn } from './types';
+import { EnrichedTrace, TranslationFn } from './types';
 
 interface GroupedTableViewProps {
-  groupedData: Array<[string, Trace[]]>;
+  groupedData: Array<[string, EnrichedTrace[]]>;
   t: TranslationFn;
   onExpand: (groupName: string) => void;
 }
@@ -39,7 +38,7 @@ export default function GroupedTableView({ groupedData, t, onExpand }: GroupedTa
           <tbody className="divide-y divide-border">
             {groupedData.map(([groupName, groupTraces]) => {
               const totalTokens = groupTraces.reduce(
-                (acc, t) => acc + ((t as any).totalTokens || 0),
+                (acc, t) => acc + (t.totalTokens || 0),
                 0
               );
               const errorCount = groupTraces.filter((t) => t.status === 'error').length;

@@ -20,7 +20,7 @@ import StatsBar from './TraceIntelligence/StatsBar';
 import FilterBar from './TraceIntelligence/FilterBar';
 import TraceCard from './TraceIntelligence/TraceCard';
 import GroupedTableView from './TraceIntelligence/GroupedTableView';
-import { TabType } from './TraceIntelligence/types';
+import { TabType, EnrichedTrace } from './TraceIntelligence/types';
 
 const CollaborationCanvas = dynamic(() => import('@/components/CollaborationCanvas'), {
   ssr: false,
@@ -69,7 +69,7 @@ export default function TraceIntelligenceView({
     setMountTime(Date.now());
   }, []);
 
-  const traces = useMemo(() => {
+  const traces = useMemo<EnrichedTrace[]>(() => {
     return initialTraces.map((trace) => {
       const toolsUsed = trace.steps
         ? Array.from(

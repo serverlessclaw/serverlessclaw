@@ -6,8 +6,10 @@ import { Clock, ChevronRight, Zap } from 'lucide-react';
 import DeleteTraceButton from '@/components/DeleteTraceButton';
 import { Trace } from '@/lib/types/ui';
 
+import { EnrichedTrace } from './types';
+
 interface TraceCardProps {
-  trace: Trace & { toolsUsed: string[]; totalTokens: number };
+  trace: EnrichedTrace;
 }
 
 export default function TraceCard({ trace }: TraceCardProps) {
@@ -34,7 +36,7 @@ export default function TraceCard({ trace }: TraceCardProps) {
               {trace.source ?? 'UNKNOWN'}
             </div>
             <div className="text-sm font-medium text-foreground/90 truncate max-w-[200px] md:max-w-md">
-              {(trace as any).initialContext?.userText ?? 'System Task'}
+              {trace.initialContext?.userText ?? 'System Task'}
             </div>
           </div>
           <div className="flex items-center justify-between md:justify-end gap-3 md:gap-6 text-[11px] text-foreground/90 pr-14">

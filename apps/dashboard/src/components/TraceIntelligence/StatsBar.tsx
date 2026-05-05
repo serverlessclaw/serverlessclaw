@@ -5,10 +5,10 @@ import { Activity, LayoutGrid, Wrench, Zap } from 'lucide-react';
 import Typography from '@/components/ui/Typography';
 import { Trace } from '@/lib/types/ui';
 
-import { TranslationFn } from './types';
+import { EnrichedTrace, TranslationFn } from './types';
 
 interface StatsBarProps {
-  traces: Trace[];
+  traces: EnrichedTrace[];
   t: TranslationFn;
 }
 
@@ -22,19 +22,19 @@ export default function StatsBar({ traces, t }: StatsBarProps) {
     },
     {
       label: t('ACTIVE_SESSIONS'),
-      value: new Set(traces.map((t) => t.sessionId || (t as any).initialContext?.sessionId)).size,
+      value: new Set(traces.map((t) => t.sessionId || t.initialContext?.sessionId)).size,
       icon: LayoutGrid,
       color: 'text-purple-400',
     },
     {
       label: t('TOOLS_INVOKED'),
-      value: new Set(traces.flatMap((t) => (t as any).toolsUsed || [])).size,
+      value: new Set(traces.flatMap((t) => t.toolsUsed || [])).size,
       icon: Wrench,
       color: 'text-yellow-400',
     },
     {
       label: t('TOKEN_COST'),
-      value: `${(traces.reduce((acc, t) => acc + ((t as any).totalTokens || 0), 0) / 1000).toFixed(1)}k`,
+      value: `${(traces.reduce((acc, t) => acc + (t.totalTokens || 0), 0) / 1000).toFixed(1)}k`,
       icon: Zap,
       color: 'text-cyber-green',
     },
