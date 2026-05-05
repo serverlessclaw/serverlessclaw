@@ -299,8 +299,8 @@ importers:
         specifier: 0.8.6
         version: 0.8.6(eslint@10.3.0(jiti@2.6.1))(typescript@6.0.3)
       '@anthropic-ai/sdk':
-        specifier: ^0.92.0
-        version: 0.92.0(zod@4.4.3)
+        specifier: ^0.93.0
+        version: 0.93.0(zod@4.4.3)
       '@aws-sdk/client-bedrock-runtime':
         specifier: ^3.1010.0
         version: 3.1041.0
@@ -531,8 +531,8 @@ packages:
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
     engines: {node: '>=10'}
 
-  '@anthropic-ai/sdk@0.92.0':
-    resolution: {integrity: sha512-l653JFC83wCglH8H83t1xpgDurCyPyslYW1maPRdCsfuNuGbLvQjQ81sWd3Go3LWRm0jNspzAhuqAYV8r9joSw==}
+  '@anthropic-ai/sdk@0.93.0':
+    resolution: {integrity: sha512-q9vaSZQVFx6B/gPxetGYfLXSJD5v0sOmh0OpZDq7yCrTSA+Rscvrtyol7JJTW40wEpQB4U1B4JXzxQitbQ3CAA==}
     hasBin: true
     peerDependencies:
       zod: ^3.25.0 || ^4.0.0
@@ -6855,7 +6855,7 @@ snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
 
-  '@anthropic-ai/sdk@0.92.0(zod@4.4.3)':
+  '@anthropic-ai/sdk@0.93.0(zod@4.4.3)':
     dependencies:
       json-schema-to-ts: 3.1.1
     optionalDependencies:
