@@ -1,8 +1,6 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { handler } from './maintenance';
 import { TrustManager } from '../lib/safety/trust-manager';
-import { AgentRegistry } from '../lib/registry/AgentRegistry';
-import { PromotionManager } from '../lib/lifecycle/promotion-manager';
 
 vi.mock('../lib/safety/trust-manager', () => ({
   TrustManager: {
