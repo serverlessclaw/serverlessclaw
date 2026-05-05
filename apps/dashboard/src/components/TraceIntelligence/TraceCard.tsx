@@ -4,7 +4,6 @@ import React from 'react';
 import Link from 'next/link';
 import { Clock, ChevronRight, Zap } from 'lucide-react';
 import DeleteTraceButton from '@/components/DeleteTraceButton';
-import { Trace } from '@/lib/types/ui';
 
 import { EnrichedTrace } from './types';
 

@@ -3,7 +3,6 @@
 import React from 'react';
 import { Activity, LayoutGrid, Wrench, Zap } from 'lucide-react';
 import Typography from '@/components/ui/Typography';
-import { Trace } from '@/lib/types/ui';
 
 import { EnrichedTrace, TranslationFn } from './types';
 

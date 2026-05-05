@@ -85,7 +85,7 @@ export default function FilterBar({
 
         <select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as any)}
+          onChange={(e) => setStatusFilter(e.target.value as 'all' | 'completed' | 'started' | 'error')}
           className="bg-foreground/5 border border-border rounded-lg px-3 py-2 text-[10px] font-bold uppercase text-muted-foreground focus:outline-none focus:border-cyber-blue/50 flex-1 md:flex-none min-w-[100px]"
         >
           <option value="all">{t('STATUS_ALL')}</option>
@@ -107,7 +107,7 @@ export default function FilterBar({
 
         <select
           value={dateFilter}
-          onChange={(e) => setDateFilter(e.target.value as any)}
+          onChange={(e) => setDateFilter(e.target.value as 'all' | '24h' | '7d')}
           className="bg-foreground/5 border border-border rounded-lg px-3 py-2 text-[10px] font-bold uppercase text-muted-foreground focus:outline-none focus:border-cyber-blue/50 flex-1 md:flex-none min-w-[100px]"
         >
           <option value="all">All Time (30 Days)</option>
