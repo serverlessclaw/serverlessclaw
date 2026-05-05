@@ -37,10 +37,7 @@ export default function GroupedTableView({ groupedData, t, onExpand }: GroupedTa
           </thead>
           <tbody className="divide-y divide-border">
             {groupedData.map(([groupName, groupTraces]) => {
-              const totalTokens = groupTraces.reduce(
-                (acc, t) => acc + (t.totalTokens || 0),
-                0
-              );
+              const totalTokens = groupTraces.reduce((acc, t) => acc + (t.totalTokens || 0), 0);
               const errorCount = groupTraces.filter((t) => t.status === 'error').length;
 
               return (
