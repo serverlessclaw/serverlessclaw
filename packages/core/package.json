@@ -37,7 +37,7 @@
     "@modelcontextprotocol/server-filesystem": "^2026.1.14",
     "@openai/agents-core": "^0.11.0",
     "@serverlessclaw/integration-github": "workspace:*",
-    "adm-zip": "^0.5.17",
+    "adm-zip": "^0.6.0",
     "archiver": "^7.0.1",
     "http-node": "^1.2.0",
     "isomorphic-git": "^1.25.10",
