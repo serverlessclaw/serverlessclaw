@@ -89,8 +89,8 @@
     "@typescript-eslint/parser": "^8.58.0",
     "@vitejs/plugin-react": "^6.0.1",
     "@vitejs/plugin-react-swc": "^4.3.0",
-    "@vitest/coverage-v8": "4.1.5",
-    "@vitest/ui": "^4.1.2",
+    "@vitest/coverage-v8": "5.0.0",
+    "@vitest/ui": "^5.0.0",
     "aws-sdk-client-mock": "^4.1.0",
     "eslint": "^10.2.0",
     "eslint-config-prettier": "^10.1.8",
@@ -103,7 +103,7 @@
     "turbo": "^2.9.12",
     "typescript-eslint": "^8.58.0",
     "vite-tsconfig-paths": "^6.1.1",
-    "vitest": "^4.1.2",
+    "vitest": "^5.0.0",
     "react": "19.2.6",
     "react-dom": "19.2.6"
   }
