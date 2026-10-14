@@ -30,5 +30,5 @@ overrides:
   hono: 4.13.7
   '@hono/node-server': 2.0.10
   '@modelcontextprotocol/server-filesystem': '2026.1.14'
-  '@modelcontextprotocol/sdk': 1.29.0
+  '@modelcontextprotocol/sdk': 1.31.0
   private-ip: 3.0.2
