@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@aiready/ast-mcp-server": "0.8.8",
-    "@anthropic-ai/sdk": "^0.95.0",
+    "@anthropic-ai/sdk": "^1.0.0",
     "@aws-sdk/client-bedrock-runtime": "^3.1010.0",
     "@aws-sdk/client-cloudwatch": "^3.1014.0",
     "@aws-sdk/client-cloudwatch-logs": "^3.1009.0",
