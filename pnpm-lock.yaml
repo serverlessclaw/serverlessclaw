@@ -229,8 +229,8 @@ importers:
         specifier: ^0.5.21
         version: 0.5.21
       '@xyflow/react':
-        specifier: ^12.10.1
-        version: 12.10.2(@types/react@19.2.14)(immer@11.1.6)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+        specifier: ^13.0.0
+        version: 13.0.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(immer@11.1.6)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(use-sync-external-store@1.6.0(react@19.2.6))
       lucide-react:
         specifier: ^1.0.0
         version: 1.14.0(react@19.2.6)
@@ -3173,14 +3173,23 @@ packages:
   '@xtuc/long@4.2.2':
     resolution: {integrity: sha512-NuHqBY1PB/D8xU6s/thBgOAiAP7HOYDQ32+BFZILJ8ivkUkAHQnWfn6WhL79Owj1qmUnoN/YPhktdIoucipkAQ==}
 
-  '@xyflow/react@12.10.2':
-    resolution: {integrity: sha512-CgIi6HwlcHXwlkTpr0fxLv/0sRVNZ8IdwKLzzeCscaYBwpvfcH1QFOCeaTCuEn1FQEs/B8CjnTSjhs8udgmBgQ==}
+  '@xyflow/react@13.0.3':
+    resolution: {integrity: sha512-deKfJUYe1aAMd2j6g/LL+5YRbqIeebOXNfwHhdu6qk4L+h7XRY9UcBgqVSYT8WyXSX+3k6ZGr/hnfx7hLfgUtA==}
+    engines: {node: '>=20'}
     peerDependencies:
+      '@types/react': 19.2.14
+      '@types/react-dom': 19.2.3
       react: 19.2.6
       react-dom: 19.2.6
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      '@types/react-dom':
+        optional: true
 
-  '@xyflow/system@0.0.76':
-    resolution: {integrity: sha512-hvwvnRS1B3REwVDlWexsq7YQaPZeG3/mKo1jv38UmnpWmxihp14bW6VtEOuHEwJX2FvzFw8k77LyKSk/wiZVNA==}
+  '@xyflow/system@1.0.1':
+    resolution: {integrity: sha512-0vMyv9EbnV9lNe15USaIbBxJVuLF2awbzZNT+foIOd59Mpc2rw04oaozoms1TaSetTa376aHl7mJ/YNKqIoqJA==}
+    engines: {node: '>=20'}
 
   abort-controller@3.0.0:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
@@ -5955,6 +5964,11 @@ packages:
     peerDependencies:
       webpack: ^4.0.0 || ^5.0.0
 
+  react-compiler-runtime@1.0.0:
+    resolution: {integrity: sha512-rRfjYv66HlG8896yPUDONgKzG5BxZD1nV9U6rkm+7VCuvQc903C4MjcoZR4zPw53IKSOX9wMQVpA1IAbRtzQ7w==}
+    peerDependencies:
+      react: 19.2.6
+
   react-dom@19.2.6:
     resolution: {integrity: sha512-0prMI+hvBbPjsWnxDLxlCGyM8PN6UuWjEUCYmZhO67xIV9Xasa/r/vDnq+Xyq4Lo27g8QSbO5YzARu0D1Sps3g==}
     peerDependencies:
@@ -7195,19 +7209,22 @@ packages:
   zod@4.6.6:
     resolution: {integrity: sha512-4UmzQUF5fxvfcYHlbjBmejU+w+hbDnWFx4aS8kBx7nPBHcO2SqPbpAG8snbdg+Xse4pRefR98hgjFgIMCI/UhA==}
 
-  zustand@4.5.7:
-    resolution: {integrity: sha512-CHOUy7mu3lbD6o6LJLfllpjkzhHXSBlX8B9+qPddUsIfeF5S/UZ5q0kmCsnRqT1UHFQZchNFDDzMbQsuesHWlw==}
-    engines: {node: '>=12.7.0'}
+  zustand@5.1.0:
+    resolution: {integrity: sha512-ciJZlP48M1PTQbVQq81CGVFxHTLpZNrFjKqwjtCU34AWuXTZT/jrF3p9+fI84Cf1eSCMLapxqBy/SNTfwOBuqA==}
+    engines: {node: '>=12.20.0'}
     peerDependencies:
       '@types/react': 19.2.14
       immer: '>=9.0.6'
       react: 19.2.6
+      use-sync-external-store: '>=1.2.0'
     peerDependenciesMeta:
       '@types/react':
         optional: true
       immer:
         optional: true
       react:
+        optional: true
+      use-sync-external-store:
         optional: true
 
   zwitch@2.0.4:
@@ -11067,18 +11084,22 @@ snapshots:
 
   '@xtuc/long@4.2.2': {}
 
-  '@xyflow/react@12.10.2(@types/react@19.2.14)(immer@11.1.6)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+  '@xyflow/react@13.0.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(immer@11.1.6)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(use-sync-external-store@1.6.0(react@19.2.6))':
     dependencies:
-      '@xyflow/system': 0.0.76
+      '@xyflow/system': 1.0.1
       classcat: 5.0.5
       react: 19.2.6
+      react-compiler-runtime: 1.0.0(react@19.2.6)
       react-dom: 19.2.6(react@19.2.6)
-      zustand: 4.5.7(@types/react@19.2.14)(immer@11.1.6)(react@19.2.6)
+      zustand: 5.1.0(@types/react@19.2.14)(immer@11.1.6)(react@19.2.6)(use-sync-external-store@1.6.0(react@19.2.6))
+    optionalDependencies:
+      '@types/react': 19.2.14
+      '@types/react-dom': 19.2.3(@types/react@19.2.14)
     transitivePeerDependencies:
-      - '@types/react'
       - immer
+      - use-sync-external-store
 
-  '@xyflow/system@0.0.76':
+  '@xyflow/system@1.0.1':
     dependencies:
       '@types/d3-drag': 3.0.7
       '@types/d3-interpolate': 3.0.4
@@ -14343,6 +14364,10 @@ snapshots:
       schema-utils: 3.3.0
       webpack: 5.106.2(@swc/core@1.15.33(@swc/helpers@0.5.23))(esbuild@0.27.7)
 
+  react-compiler-runtime@1.0.0(react@19.2.6):
+    dependencies:
+      react: 19.2.6
+
   react-dom@19.2.6(react@19.2.6):
     dependencies:
       react: 19.2.6
@@ -15824,12 +15849,11 @@ snapshots:
 
   zod@4.6.6: {}
 
-  zustand@4.5.7(@types/react@19.2.14)(immer@11.1.6)(react@19.2.6):
-    dependencies:
-      use-sync-external-store: 1.6.0(react@19.2.6)
+  zustand@5.1.0(@types/react@19.2.14)(immer@11.1.6)(react@19.2.6)(use-sync-external-store@1.6.0(react@19.2.6)):
     optionalDependencies:
       '@types/react': 19.2.14
       immer: 11.1.6
       react: 19.2.6
+      use-sync-external-store: 1.6.0(react@19.2.6)
 
   zwitch@2.0.4: {}

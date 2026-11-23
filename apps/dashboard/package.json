@@ -21,7 +21,7 @@
     "@aws-sdk/lib-dynamodb": "^3.1004.0",
     "@serverlessclaw/core": "workspace:*",
     "@swc/helpers": "^0.5.21",
-    "@xyflow/react": "^12.10.1",
+    "@xyflow/react": "^13.0.0",
     "lucide-react": "^1.0.0",
     "mqtt": "^5.15.0",
     "next": "16.4.5",
